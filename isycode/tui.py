@@ -32,6 +32,7 @@ from agents.provider import Provider, ProviderError
 from hosts.simulator.engines import LegacyHost
 from relay.loopback import LoopbackRelay
 from isymotron.contracts import HostDescription, HostIdentity, CapabilityManifest
+from isycode.gateway_client import GatewayClient, GatewayError, mutation_fails_closed
 
 
 # ── Palette (Crush-inspired but softer) ───────────────────────────
@@ -207,7 +208,37 @@ class TUIApp(App):
         self.query_one("#prompt-input", Input).focus()
         self._append("◇ ISyCode TUI — IsyMotron capability fabric", CYAN)
         self._append("  Type an intent. Nemotron proposes. The host decides.", MUTED)
-        self._append("  Awaiting model connection...", MUTED)
+        self._check_gateway()
+        self.run_worker(self._check_model(), exclusive=True)
+
+    def _check_gateway(self) -> None:
+        """Check gateway availability and update status."""
+        try:
+            client = GatewayClient()
+            if client.is_available():
+                self._append("  Gateway: connected", GREEN)
+            else:
+                self._append("  Gateway: DEGRADED MODE — mutations fail closed", YELLOW)
+        except Exception:
+            self._append("  Gateway: unavailable — DEGRADED MODE", RED)
+
+    async def _check_model(self) -> None:
+        """Eager model check: is the NVIDIA key present and configured?"""
+        try:
+            key = os.environ.get("ISYMOTRON_API_KEY") or open(
+                "/home/danny/Development/NVAPI.txt").read().strip()
+            provider = Provider(name="nvidia", api_key=key)
+            if provider.configured():
+                self._append(
+                    f"  Model: {provider.model} via {provider.label} — ready", GREEN)
+            else:
+                self._append(
+                    f"  Model: key found but not configured ({provider.key_env})", YELLOW)
+        except FileNotFoundError:
+            self._append("  Model: no API key found (NVAPI.txt missing)", RED)
+            self._append("  Set ISYMOTRON_API_KEY or place the key file.", MUTED)
+        except Exception as e:
+            self._append(f"  Model: error — {type(e).__name__}: {e}", RED)
 
     def _append(self, text: str, color: str = TEXT) -> None:
         self.chat_messages.append(f"[{color}]{text}[/{color}]")
@@ -216,7 +247,7 @@ class TUIApp(App):
         except NoMatches:
             pass
 
-    def on_submitted(self, message: Input.Submitted) -> None:
+    def on_input_submitted(self, message: Input.Submitted) -> None:
         intent = message.value.strip()
         if not intent:
             return
