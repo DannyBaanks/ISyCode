@@ -33,7 +33,8 @@ from agents.planner import Planner, PlanRejected
 from agents.provider import Provider, ProviderError
 from hosts.simulator.engines import LegacyHost
 from relay.loopback import LoopbackRelay
-from isymotron.contracts import HostDescription, HostIdentity, CapabilityManifest
+from isymotron.contracts import HostDescription, HostIdentity, CapabilityManifest, ExecutionRequest
+import time as _time
 from isycode.gateway_client import GatewayClient, GatewayError, mutation_fails_closed
 
 
@@ -188,6 +189,7 @@ class TUIApp(App):
     """
 
     BINDINGS = [
+        Binding("r", "run_plan", "Run plan"),
         Binding("ctrl+p", "command_palette", "Commands"),
         Binding("ctrl+l", "focus_input", "Focus"),
         Binding("ctrl+j", "newline", "Newline"),
@@ -197,8 +199,11 @@ class TUIApp(App):
 
     def __init__(self):
         super().__init__()
-        self.chat_messages: list[str] = []
+        self.chat_messages: list[tuple[str, str]] = []
         self._loop_task: asyncio.Task | None = None
+        self._last_plan = None
+        self._last_relay = None
+        self._armed_at: float = 0.0
 
     def compose(self) -> ComposeResult:
         yield Banner(id="banner")
@@ -263,6 +268,58 @@ class TUIApp(App):
             return
         self._loop_task = asyncio.create_task(self._run_plan(intent))
 
+    def action_run_plan(self) -> None:
+        """Double-R confirm: first R arms, second R within 10s executes."""
+        if self._last_plan is None or self._last_relay is None:
+            self._append("  No plan to run. Type an intent first.", MUTED)
+            return
+        now = _time.time()
+        if now - self._armed_at > 10.0:
+            self._armed_at = now
+            n = len(self._last_plan.steps)
+            self._append(
+                f"\n  Preflight: {n} steps against granted capabilities.", YELLOW)
+            for i, s in enumerate(self._last_plan.steps, 1):
+                self._append(f"    {i}. [{s.host}] {s.capability}", TEXT)
+            self._append("  Press R again within 10s to execute.", YELLOW)
+            return
+        self._armed_at = 0.0
+        asyncio.create_task(self._execute_stored_plan())
+
+    async def _execute_stored_plan(self) -> None:
+        """Lease -> preflight -> execute -> receipt, per step."""
+        plan, relay = self._last_plan, self._last_relay
+        self._append("\n  Executing...", CYAN)
+        ok_count, deny_count = 0, 0
+        for i, step in enumerate(plan.steps):
+            # Preflight: resolve params (executor-style $from/$join left literal
+            # here would be sent literally — refuse prose placeholders)
+            try:
+                lease, decision = relay.request_lease(
+                    step.host, "isycode-tui", step.capability, 60.0, {})
+                if lease is None:
+                    self._append(f"    {i+1}. DENY — no lease: {decision}", RED)
+                    deny_count += 1
+                    continue
+                req = ExecutionRequest.make(
+                    host_id=step.host, subject="isycode-tui",
+                    capability=step.capability, params=dict(step.params),
+                    lease_id=lease.lease_id, plan_id=plan.plan_id)
+                receipt = relay.execute(req)
+                verdict = receipt.decision.decision.name
+                if verdict == "ALLOW":
+                    ok_count += 1
+                    self._append(f"    {i+1}. ALLOW — receipt {receipt.receipt_id[:12]}", GREEN)
+                else:
+                    deny_count += 1
+                    self._append(f"    {i+1}. DENY — {receipt.decision.reason}", RED)
+            except Exception as e:
+                deny_count += 1
+                self._append(f"    {i+1}. ERROR — {type(e).__name__}: {e}", RED)
+        self._append(
+            f"\n  Done: {ok_count} allowed, {deny_count} denied/refused.", CYAN)
+        self._last_plan, self._last_relay = None, None
+
     async def _run_plan(self, intent: str) -> None:
         try:
             relay = LoopbackRelay()
@@ -312,7 +369,9 @@ class TUIApp(App):
                 self._append(f"\n  This plan carries no authority.", MUTED)
                 self._append(f"  Each step is judged by the host that runs it.", MUTED)
                 self._append(f"  Tokens: {plan.completion.prompt_tokens + plan.completion.completion_tokens}", MUTED)
-                self._append(f"\n  [Run this plan] would execute here (M1.5 safety gate pending)", MUTED)
+                self._last_plan = plan
+                self._last_relay = relay
+                self._append(f"\n  Press R to preflight + run this plan (M1.5 firewall active).", YELLOW)
             else:
                 self._append(f"\n  Refused: {plan.refused or 'no plan possible'}", RED)
                 self._append(f"  This is correct behavior, not a failure.", MUTED)
