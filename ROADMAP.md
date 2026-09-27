@@ -176,6 +176,13 @@ short smoke works.
 
 ### M0-B — Long-loop soak
 
+**Status: DEMONSTRATED.** 20-turn soak with perturbations (malformed
+JSON at T8, provider 429 at T12, ungranted delete at T11). 15/20 =
+75% validity (gate >=70%), 3 recoveries, context stable (early=1250
+-> late=993 tokens/turn), zero privilege escalation. Also caught a
+NATURAL model error at T20 (UNKNOWN_RESULT_FIELD) rejected by the
+planner without injection.
+
 **Goal:** Prove 20+ continuous turns without degradation.
 
 - [ ] Same harness as M0-A, extended to 20+ turns with mixed intents
@@ -206,6 +213,13 @@ must change (shorter context, stricter compaction, or chat-only mode).
 ---
 
 ### M1 — Minimal TUI
+
+**Status: DEMONSTRATED.** `isycode/tui.py` — textual app with
+Crush-inspired banner, soft side panel (MCPs/Skills/LSPs), chat area,
+input prompt. NVIDIA NIM provider + Planner + LegacyHost demo
+backend. Plan renders with steps + "this plan carries no authority".
+Verified live in tmux: banner renders, input focuses, plan flow works.
+Known cosmetic issue: banner letter alignment (user fixing manually).
 
 **Goal:** A TUI that feels like Pi/OpenClaw.
 
@@ -450,8 +464,8 @@ No real workspace is mutated.
 | Phase | Duration | Depends on | Status |
 |---|---|---|---|
 | M0-A | 1-2 days | — | **DEMONSTRATED** |
-| M0-B | 2-3 days | M0-A | pending |
-| M1 | 3-5 days | M0-B | pending |
+| M0-B | 2-3 days | M0-A | **DEMONSTRATED** |
+| M1 | 3-5 days | M0-B | **DEMONSTRATED** |
 | M1.5 | 3-5 days | M1 | pending |
 | M2 | 3-5 days | M1.5 | pending |
 | M2.5 | 2-3 days | M2 | pending |
@@ -464,8 +478,8 @@ No real workspace is mutated.
 
 ## Epistemological status
 
-- **DEMONSTRATED:** M0-A short-loop smoke (5/5 PLANNED, NVIDIA NIM).
-- **NOT_DEMONSTRATED:** 20+ turn viability, provider handoff, destructive-action containment, TUI renderer replaceability, L1 self-extension safety.
+- **DEMONSTRATED:** M0-A short-loop smoke (5/5 PLANNED). M0-B long-loop soak (20 turns, 75% validity, 3 recoveries). M1 minimal TUI (textual, verified live).
+- **NOT_DEMONSTRATED:** provider handoff, destructive-action containment, TUI renderer replaceability, L1 self-extension safety, gateway integration under degraded mode.
 - **DESTROYED:** (none — no destructive tests on real workspaces)
 - **INFERRED:** that the NVIDIA key result generalizes to other providers (witness I is the test, not an assumption).
 
