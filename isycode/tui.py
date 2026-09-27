@@ -332,19 +332,26 @@ class TUIApp(App):
             def do_stream() -> dict:
                 return stream_complete(
                     provider.base_url, provider.api_key, provider.model,
-                    self._history, max_tokens=1024, on_chunk=on_chunk)
+                    self._history, max_tokens=2048, on_chunk=on_chunk)
 
             try:
                 await asyncio.to_thread(do_stream)
             except StreamError:
                 comp = await asyncio.to_thread(
-                    provider.complete, self._history, max_tokens=1024)
+                    provider.complete, self._history, max_tokens=2048)
                 content_buf.append(comp.text)
                 self.call_from_thread(_content_line)
 
             full = "".join(content_buf).strip()
             if full:
                 self._history.append({"role": "assistant", "content": full})
+            elif reason_buf:
+                # Thinking streamed but no answer: the token budget ran out
+                # mid-thought (finish_reason=length). Say so instead of
+                # silently showing a truncated reasoning block.
+                self._append(
+                    "  (thinking hit the token budget before an answer — "
+                    "reask or simplify the question)", YELLOW)
         except Exception as e:
             self._append(f"  Error: {type(e).__name__}: {e}", RED)
         finally:
