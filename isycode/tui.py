@@ -30,6 +30,8 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 
 from agents.planner import Planner, PlanRejected
+from agents.provider import Completion
+from isycode.streaming import stream_complete, StreamError
 from agents.provider import Provider, ProviderError
 from hosts.simulator.engines import LegacyHost
 from relay.loopback import LoopbackRelay
@@ -321,6 +323,18 @@ class TUIApp(App):
             f"\n  Done: {ok_count} allowed, {deny_count} denied/refused.", CYAN)
         self._last_plan, self._last_relay = None, None
 
+    def _update_thinking(self, idx: int, elapsed: float, n_chunks: int) -> None:
+        """Refresh the thinking line with elapsed time + chunks received."""
+        if 0 <= idx < len(self.chat_messages):
+            text, _ = self.chat_messages[idx]
+            # Keep the color, update the text
+            self.chat_messages[idx] = (
+                f"  Thinking... {elapsed:.0f}s ({n_chunks} chunks)", MUTED)
+            try:
+                self.query_one(ChatArea).messages = self.chat_messages
+            except NoMatches:
+                pass
+
     async def _run_plan(self, intent: str) -> None:
         try:
             relay = LoopbackRelay()
@@ -358,10 +372,48 @@ class TUIApp(App):
             self._append(f"  Model: {provider.model} via {provider.label}", MUTED)
             self._append(f"  Host: win98-retrobox (demo) | 4/4 capabilities granted", MUTED)
 
-            # provider.complete() is blocking urllib: offload to a thread
-            # so Enter stays instant while Nemotron thinks.
-            plan = await asyncio.to_thread(
-                planner.plan, intent, descriptions, 2000)
+            # Stream the plan so the user watches tokens arrive instead
+            # of staring at a frozen "Thinking..." for 10-20s.
+            from agents.planner import SYSTEM as PLANNER_SYSTEM
+            cat = Planner.catalogue(descriptions)
+            messages = [
+                {"role": "system", "content": PLANNER_SYSTEM},
+                {"role": "user", "content": f"CATALOGUE\n{cat}\n\nREQUEST\n{intent}"},
+            ]
+            think_idx = len(self.chat_messages)
+            self._append("  Thinking... 0s", MUTED)
+            t_start = _time.time()
+            chunks = {"n": 0}
+
+            def on_chunk(kind: str, text: str) -> None:
+                chunks["n"] += 1
+                elapsed = _time.time() - t_start
+                # Update the thinking line in place (thread-safe via app call)
+                self.call_from_thread(self._update_thinking, think_idx, elapsed, chunks["n"])
+
+            def do_stream() -> dict:
+                return stream_complete(
+                    provider.base_url, provider.api_key, provider.model,
+                    messages, max_tokens=2000, on_chunk=on_chunk)
+
+            try:
+                result = await asyncio.to_thread(do_stream)
+            except StreamError as e:
+                self._append(f"\n  Stream error: {e}", RED)
+                self._append("  Falling back to non-streaming request...", MUTED)
+                plan = await asyncio.to_thread(
+                    planner.plan, intent, descriptions, 2000)
+            else:
+                usage = result.get("usage") or {}
+                completion = Completion(
+                    text=result["text"], model=provider.model,
+                    provider=provider.name, latency_s=result["latency_s"],
+                    prompt_tokens=usage.get("prompt_tokens"),
+                    completion_tokens=usage.get("completion_tokens"),
+                    finish_reason=result.get("finish_reason"),
+                    reasoning=result.get("reasoning", ""))
+                plan = Planner.parse(
+                    result["text"], descriptions, raw_completion=completion)
 
             if plan.verdict() == "PLANNED":
                 self._append(f"\n  Understood: {plan.understood}", TEXT)
