@@ -112,12 +112,14 @@ class SidePanel(Static):
 class ChatArea(Static):
     """Main chat area: messages, plans, receipts."""
 
-    messages: reactive[list[str]] = reactive(list)
+    # (text, color) tuples — explicit styles, never markup, so a plan
+    # containing "[win98-retrobox]" cannot be parsed as a style tag.
+    messages: reactive[list[tuple[str, str]]] = reactive(list)
 
     def render(self) -> Text:
         out = Text()
-        for m in self.messages:
-            out.append_text(Text.from_markup(m + "\n"))
+        for text, color in self.messages:
+            out.append(text + "\n", style=color)
         return out
 
 
@@ -243,7 +245,7 @@ class TUIApp(App):
             self._append(f"  Model: error — {type(e).__name__}: {e}", RED)
 
     def _append(self, text: str, color: str = TEXT) -> None:
-        self.chat_messages.append(f"[{color}]{text}[/{color}]")
+        self.chat_messages.append((text, color))
         try:
             self.query_one(ChatArea).messages = self.chat_messages
         except NoMatches:
