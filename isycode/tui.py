@@ -258,10 +258,7 @@ class TUIApp(App):
 
     def _append(self, text: str, color: str = TEXT) -> None:
         self.chat_messages.append((text, color))
-        try:
-            self.query_one(ChatArea).messages = self.chat_messages
-        except NoMatches:
-            pass
+        self._refresh()
 
     def _register_builtin_plugins(self) -> None:
         """IsyMotron ships as a plugin, not as the whole app."""
@@ -364,28 +361,39 @@ class TUIApp(App):
             # Keep the color, update the text
             self.chat_messages[idx] = (
                 f"  Thinking... {elapsed:.0f}s ({n_chunks} chunks)", MUTED)
-            try:
-                self.query_one(ChatArea).messages = self.chat_messages
-            except NoMatches:
-                pass
+            self._refresh()
 
     async def _run_chat(self, text: str) -> None:
-        """Default path: instant streaming chat. No planner, no JSON."""
+        """Default path: instant streaming chat. Reasoning streams live.
+
+        Nemotron emits reasoning_content first (visible in <1s) and the
+        actual content at the end. We show the reasoning live, dimmed,
+        then collapse it to 'thought for Xs' when the answer arrives —
+        so the screen is never dead while the model thinks.
+        """
         self._history.append({"role": "user", "content": text})
-        resp_idx = len(self.chat_messages)
-        self._append("  ...", MUTED)
-        buf: list[str] = []
-        self._chat_buf = buf
-        self._chat_idx = resp_idx
+        reason_idx = len(self.chat_messages)
+        self._append("\u22ef thinking...", MUTED)
+        reason_buf: list[str] = []
+        content_buf: list[str] = []
+        self._reason_buf = reason_buf
+        self._chat_buf = content_buf
+        self._reason_idx = reason_idx
+        self._chat_idx = -1  # content line not created yet
+        t0 = _time.time()
+
         try:
             key = os.environ.get("ISYMOTRON_API_KEY") or open(
                 "/home/danny/Development/NVAPI.txt").read().strip()
             provider = Provider(name="nvidia", api_key=key)
 
             def on_chunk(kind: str, chunk: str) -> None:
-                if kind == "content":
-                    buf.append(chunk)
-                    self.call_from_thread(self._update_chat_line, resp_idx)
+                if kind == "reasoning":
+                    reason_buf.append(chunk)
+                    self.call_from_thread(self._refresh_line, "reason")
+                elif kind == "content":
+                    content_buf.append(chunk)
+                    self.call_from_thread(self._refresh_line, "content")
 
             def do_stream() -> dict:
                 return stream_complete(
@@ -398,29 +406,59 @@ class TUIApp(App):
                 # Fallback: single non-streaming completion
                 comp = await asyncio.to_thread(
                     provider.complete, self._history, max_tokens=1024)
-                buf.append(comp.text)
-                self._update_chat_line(resp_idx)
-            full = "".join(buf).strip()
-            if full:
-                self._history.append({"role": "assistant", "content": full})
-        except Exception as e:
-            self._update_chat_line(resp_idx, error=f"{type(e).__name__}: {e}")
+                content_buf.append(comp.text)
 
-    def _update_chat_line(self, idx: int | None = None,
-                            error: str | None = None) -> None:
-        """Refresh the in-progress assistant line (thread-safe entry)."""
-        idx = self._chat_idx if idx is None else idx
-        if error is not None:
-            text, color = f"  Error: {error}", RED
-        else:
-            text = "  " + "".join(getattr(self, "_chat_buf", [])) or "  ..."
-            color = TEXT
-        if 0 <= idx < len(self.chat_messages):
-            self.chat_messages[idx] = (text, color)
-            try:
-                self.query_one(ChatArea).messages = self.chat_messages
-            except NoMatches:
-                pass
+            # Finalize: collapse reasoning, render content
+            elapsed = _time.time() - t0
+            thought = "".join(reason_buf).strip()
+            if thought:
+                self.chat_messages[self._reason_idx] = (
+                    f"\u22ef thought for {elapsed:.0f}s", MUTED)
+            full = "".join(content_buf).strip()
+            if full:
+                if self._chat_idx < 0:
+                    # No content line was created (non-streaming path)
+                    self._chat_idx = len(self.chat_messages)
+                    self.chat_messages.append((full, TEXT))
+                else:
+                    self.chat_messages[self._chat_idx] = (full, TEXT)
+                self._history.append({"role": "assistant", "content": full})
+            self._refresh()
+        except Exception as e:
+            self.chat_messages[reason_idx] = (
+                f"  Error: {type(e).__name__}: {e}", RED)
+            self._refresh()
+
+    def _refresh_line(self, which: str) -> None:
+        """Update the reasoning or content line in place (thread-safe entry)."""
+        if which == "reason":
+            idx = getattr(self, "_reason_idx", -1)
+            if 0 <= idx < len(self.chat_messages):
+                text = "\u22ef " + "".join(self._reason_buf)
+                self.chat_messages[idx] = (text, MUTED)
+        elif which == "content":
+            idx = getattr(self, "_chat_idx", -1)
+            if idx < 0:
+                # First content chunk: create the line under the reasoning
+                idx = getattr(self, "_reason_idx", -1) + 1
+                self.chat_messages.insert(idx, ("", TEXT))
+                self._chat_idx = idx
+            if idx < len(self.chat_messages):
+                self.chat_messages[idx] = (
+                    "".join(self._chat_buf), TEXT)
+        self._refresh()
+
+    def _refresh(self) -> None:
+        """Push the message list to the ChatArea.
+
+        Assigns a COPY: Textual's reactive skips the update when the
+        same (mutated) object is reassigned, so identical-object
+        assignment never re-rendered. A fresh list always differs.
+        """
+        try:
+            self.query_one(ChatArea).messages = list(self.chat_messages)
+        except NoMatches:
+            pass
 
     async def _run_plan(self, intent: str) -> None:
         try:
