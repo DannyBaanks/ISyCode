@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""ISyCode Gateway Client — HTTP client for the OpenISy Gateway.
+
+DEGRADED MODE (INV-2): if the gateway is unavailable, mutating operations
+FAIL CLOSED. No silent bash fallback. Raw shell is never invoked.
+"""
+from __future__ import annotations
+
+import os
+import json
+import urllib.request
+import urllib.error
+import urllib.parse
+from dataclasses import dataclass
+
+
+@dataclass
+class GatewayError(Exception):
+    code: str
+    message: str
+    status: int = 0
+
+
+class GatewayClient:
+    """HTTP client for the OpenISy Gateway (files, search, read, write)."""
+
+    def __init__(self, base_url: str = "http://127.0.0.1:8787",
+                 api_key: str | None = None, timeout_s: float = 10.0):
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key or os.environ.get("GATEWAY_API_KEY", "")
+        self.timeout_s = timeout_s
+        self._available: bool | None = None
+
+    def _request(self, method: str, path: str, body: dict | None = None) -> dict:
+        url = f"{self.base_url}{path}"
+        data = json.dumps(body).encode() if body else None
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Authorization", f"Bearer {self.api_key}")
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode(errors="replace")
+            try:
+                err = json.loads(err_body)
+                raise GatewayError(
+                    err.get("error", {}).get("code", "HTTP_ERROR"),
+                    err.get("error", {}).get("message", err_body), e.code)
+            except (json.JSONDecodeError, KeyError):
+                raise GatewayError("HTTP_ERROR", err_body, e.code)
+        except (urllib.error.URLError, OSError) as e:
+            self._available = False
+            raise GatewayError("GATEWAY_UNAVAILABLE", f"gateway unreachable: {e}", 0)
+
+    def is_available(self) -> bool:
+        if self._available is not None:
+            return self._available
+        try:
+            self._request("GET", "/health")
+            self._available = True
+        except GatewayError:
+            self._available = False
+        return self._available
+
+    def read(self, path: str) -> dict:
+        return self._request("GET", f"/v1/read?path={urllib.parse.quote(path)}")
+
+    def list_files(self, path: str = "", recursive: bool = False) -> dict:
+        q = f"?path={urllib.parse.quote(path)}&recursive={str(recursive).lower()}"
+        return self._request("GET", f"/v1/files{q}")
+
+    def search(self, query: str, path: str = "") -> dict:
+        q = f"?q={urllib.parse.quote(query)}&path={urllib.parse.quote(path)}"
+        return self._request("GET", f"/v1/search{q}")
+
+    def write(self, path: str, content: str) -> dict:
+        if not self.is_available():
+            raise GatewayError("DEGRADED_MODE",
+                "Gateway unavailable: mutation failed closed. No bash fallback.")
+        return self._request("POST", "/v1/write", {"path": path, "content": content})
+
+
+def mutation_fails_closed(client: GatewayClient, operation: str) -> tuple[bool, str]:
+    if not client.is_available():
+        return False, (f"DEGRADED MODE: gateway unavailable. "
+                       f"'{operation}' failed closed. No bash fallback.")
+    return True, "gateway available"
