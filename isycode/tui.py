@@ -114,7 +114,7 @@ class ChatArea(Static):
     def render(self) -> Text:
         out = Text()
         for m in self.messages:
-            out.append(m + "\n")
+            out.append_text(Text.from_markup(m + "\n"))
         return out
 
 
