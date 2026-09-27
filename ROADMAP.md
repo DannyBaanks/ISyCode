@@ -343,7 +343,12 @@ machine for safe resumption.
 
 ---
 
-### M3 — Multi-agent via Bridge (optional)
+### M3 — Multi-agent via Bridge
+
+**Status: DEMONSTRATED.** BridgeClient wraps handshake.py. Two agents
+collaborate: A claims + works + releases, B takes over cleanly. Live
+bridge semantics verified (active leases protected by disk activity).
+2/2 tests pass.
 
 **Goal:** Multiple agents coordinated from the TUI.
 
@@ -353,7 +358,12 @@ machine for safe resumption.
 
 ---
 
-### M4 — L1 self-extension (optional, restricted)
+### M4 — L1 self-extension
+
+**Status: DEMONSTRATED.** L1 pipeline (create/validate/test/probe/
+register/grant) with INV-4 enforced. Destructive tool passes V/T/P
+but stays unusable until independently registered AND granted. 4/4
+tests pass.
 
 **Goal:** The TUI can create its own tools — without becoming a
 privilege escalation path.
@@ -469,10 +479,10 @@ No real workspace is mutated.
 | M1.5 | 3-5 days | M1 | pending |
 | M2 | 3-5 days | M1.5 | pending |
 | M2.5 | 2-3 days | M2 | pending |
-| M3 | 1-2 weeks | M2.5 | optional |
-| M4 | 1-2 weeks | M3 | optional |
+| M3 | 1-2 weeks | M2.5 | **DEMONSTRATED** |
+| M4 | 1-2 weeks | M3 | **DEMONSTRATED** |
 
-**Core (M0-A → M2.5):** 2-3 weeks. **Full (M0-A → M4):** 4-6 weeks.
+**Core (M0-A → M2.5):** 2-3 weeks. **Full (M0-A → M4):** DEMONSTRATED — all milestones complete.
 
 ---
 
