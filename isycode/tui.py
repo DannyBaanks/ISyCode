@@ -32,6 +32,7 @@ from rich.syntax import Syntax
 from agents.planner import Planner, PlanRejected
 from agents.provider import Completion
 from isycode.streaming import stream_complete, StreamError
+from isycode.plugins import PluginRegistry, Plugin, PluginCommand
 from agents.provider import Provider, ProviderError
 from hosts.simulator.engines import LegacyHost
 from relay.loopback import LoopbackRelay
@@ -206,6 +207,9 @@ class TUIApp(App):
         self._last_plan = None
         self._last_relay = None
         self._armed_at: float = 0.0
+        self._history: list[dict] = []
+        self._plugins = PluginRegistry()
+        self._register_builtin_plugins()
 
     def compose(self) -> ComposeResult:
         yield Banner(id="banner")
@@ -259,17 +263,47 @@ class TUIApp(App):
         except NoMatches:
             pass
 
+    def _register_builtin_plugins(self) -> None:
+        """IsyMotron ships as a plugin, not as the whole app."""
+        async def _plan_cmd(app: "TUIApp", arg: str) -> None:
+            if not arg.strip():
+                app._append("  Usage: /plan <intent>", MUTED)
+                return
+            await app._run_plan(arg.strip())
+
+        async def _help_cmd(app: "TUIApp", arg: str) -> None:
+            for line in app._plugins.help_text():
+                app._append(line, MUTED)
+            app._append("  Anything else is plain chat with Nemotron.", MUTED)
+
+        self._plugins.register(Plugin(
+            name="isymotron",
+            description="capability-fabric planner (Nemotron proposes, host decides)",
+            commands=[
+                PluginCommand("plan", "plan an intent via IsyMotron", _plan_cmd),
+                PluginCommand("help", "list commands", _help_cmd),
+            ],
+        ))
+
     def on_input_submitted(self, message: Input.Submitted) -> None:
-        intent = message.value.strip()
-        if not intent:
+        text = message.value.strip()
+        if not text:
             return
         message.input.value = ""
-        self._append(f"\n> {intent}", CYAN)
-        self._append("  Thinking...", MUTED)
+        plugin, cmd, arg = self._plugins.route(text)
+        if cmd is not None:
+            self._append(f"\n> {text}", CYAN)
+            if self._loop_task and not self._loop_task.done():
+                self._append("  (already running)", YELLOW)
+                return
+            self._loop_task = asyncio.create_task(cmd.handler(self, arg))
+            return
+        # Default path: fast streaming chat, no planner involved.
+        self._append(f"\n> {text}", CYAN)
         if self._loop_task and not self._loop_task.done():
             self._append("  (already running)", YELLOW)
             return
-        self._loop_task = asyncio.create_task(self._run_plan(intent))
+        self._loop_task = asyncio.create_task(self._run_chat(text))
 
     def action_run_plan(self) -> None:
         """Double-R confirm: first R arms, second R within 10s executes."""
@@ -330,6 +364,59 @@ class TUIApp(App):
             # Keep the color, update the text
             self.chat_messages[idx] = (
                 f"  Thinking... {elapsed:.0f}s ({n_chunks} chunks)", MUTED)
+            try:
+                self.query_one(ChatArea).messages = self.chat_messages
+            except NoMatches:
+                pass
+
+    async def _run_chat(self, text: str) -> None:
+        """Default path: instant streaming chat. No planner, no JSON."""
+        self._history.append({"role": "user", "content": text})
+        resp_idx = len(self.chat_messages)
+        self._append("  ...", MUTED)
+        buf: list[str] = []
+        self._chat_buf = buf
+        self._chat_idx = resp_idx
+        try:
+            key = os.environ.get("ISYMOTRON_API_KEY") or open(
+                "/home/danny/Development/NVAPI.txt").read().strip()
+            provider = Provider(name="nvidia", api_key=key)
+
+            def on_chunk(kind: str, chunk: str) -> None:
+                if kind == "content":
+                    buf.append(chunk)
+                    self.call_from_thread(self._update_chat_line, resp_idx)
+
+            def do_stream() -> dict:
+                return stream_complete(
+                    provider.base_url, provider.api_key, provider.model,
+                    self._history, max_tokens=1024, on_chunk=on_chunk)
+
+            try:
+                await asyncio.to_thread(do_stream)
+            except StreamError:
+                # Fallback: single non-streaming completion
+                comp = await asyncio.to_thread(
+                    provider.complete, self._history, max_tokens=1024)
+                buf.append(comp.text)
+                self._update_chat_line(resp_idx)
+            full = "".join(buf).strip()
+            if full:
+                self._history.append({"role": "assistant", "content": full})
+        except Exception as e:
+            self._update_chat_line(resp_idx, error=f"{type(e).__name__}: {e}")
+
+    def _update_chat_line(self, idx: int | None = None,
+                            error: str | None = None) -> None:
+        """Refresh the in-progress assistant line (thread-safe entry)."""
+        idx = self._chat_idx if idx is None else idx
+        if error is not None:
+            text, color = f"  Error: {error}", RED
+        else:
+            text = "  " + "".join(getattr(self, "_chat_buf", [])) or "  ..."
+            color = TEXT
+        if 0 <= idx < len(self.chat_messages):
+            self.chat_messages[idx] = (text, color)
             try:
                 self.query_one(ChatArea).messages = self.chat_messages
             except NoMatches:
