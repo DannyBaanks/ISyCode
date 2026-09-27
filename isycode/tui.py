@@ -12,6 +12,8 @@ import asyncio
 from typing import Any
 
 ISYMOTRON_ROOT = "/home/danny/Development/ISyCo Git/IsyMotron"
+ISYCODE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ISYCODE_ROOT)
 sys.path.insert(0, ISYMOTRON_ROOT)
 sys.path.insert(0, os.path.join(ISYMOTRON_ROOT, "core"))
 sys.path.insert(0, os.path.join(ISYMOTRON_ROOT, "hosts"))
