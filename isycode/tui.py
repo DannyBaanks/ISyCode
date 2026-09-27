@@ -217,14 +217,15 @@ class TUIApp(App):
         self.query_one("#prompt-input", Input).focus()
         self._append("◇ ISyCode TUI — IsyMotron capability fabric", CYAN)
         self._append("  Type an intent. Nemotron proposes. The host decides.", MUTED)
-        self._check_gateway()
-        self.run_worker(self._check_model(), exclusive=True)
+        self.run_worker(self._check_gateway_async(), exclusive=False)
+        self.run_worker(self._check_model(), exclusive=False)
 
-    def _check_gateway(self) -> None:
-        """Check gateway availability and update status."""
+    async def _check_gateway_async(self) -> None:
+        """Check gateway availability without blocking the event loop."""
         try:
             client = GatewayClient()
-            if client.is_available():
+            available = await asyncio.to_thread(client.is_available)
+            if available:
                 self._append("  Gateway: connected", GREEN)
             else:
                 self._append("  Gateway: DEGRADED MODE — mutations fail closed", YELLOW)
@@ -357,7 +358,10 @@ class TUIApp(App):
             self._append(f"  Model: {provider.model} via {provider.label}", MUTED)
             self._append(f"  Host: win98-retrobox (demo) | 4/4 capabilities granted", MUTED)
 
-            plan = planner.plan(intent, descriptions, max_tokens=2000)
+            # provider.complete() is blocking urllib: offload to a thread
+            # so Enter stays instant while Nemotron thinks.
+            plan = await asyncio.to_thread(
+                planner.plan, intent, descriptions, 2000)
 
             if plan.verdict() == "PLANNED":
                 self._append(f"\n  Understood: {plan.understood}", TEXT)
