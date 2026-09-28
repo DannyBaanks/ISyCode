@@ -54,6 +54,7 @@ class ActionRequest:
     workspace_root: Path
     target: str = ""
     parameters: Mapping[str, Any] | None = None
+    execution_owner: str = ""
 
     def __post_init__(self) -> None:
         if not isinstance(self.action_id, str) or not self.action_id or len(self.action_id) > 160:
@@ -66,6 +67,8 @@ class ActionRequest:
             raise ValueError("Workspace root must resolve to a real directory.")
         if not isinstance(self.target, str) or len(self.target) > 4096:
             raise ValueError("Action target must be a bounded string.")
+        if not isinstance(self.execution_owner, str) or len(self.execution_owner) > 120:
+            raise ValueError("Action request execution-owner identity must be bounded text.")
         frozen = _freeze(self.parameters or {})
         encoded = json.dumps(_plain(frozen), ensure_ascii=False, sort_keys=True,
                              separators=(",", ":"))
@@ -81,6 +84,7 @@ class ActionRequest:
             "workspace_root": str(self.workspace_root),
             "target": self.target,
             "parameters": _plain(self.parameters),
+            "execution_owner": self.execution_owner,
         }
         canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True,
                                separators=(",", ":"))

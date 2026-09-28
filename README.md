@@ -49,7 +49,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 
 ### Parcial o pendiente
 
-- **ISySentinel / M15:** la separación de Workspace Authority y Sentinel está en progreso. El Sentinel actual sigue siendo prototipo y no gobierna todavía todos los owners. No declarar el producto listo para uso diario con acciones mutadoras.
+- **ISySentinel / M15:** `security.py` agrega decisiones de forma pura y Workspace Authority conserva grants por root. Los flujos conectados atan el digest de solicitud a un owner y acción registrados; las acciones sin owner quedan denegadas aunque tengan grant. M15 sigue abierto: faltan auditoría durable, auditoría universal de callsites y owners para Mobile Host, Bridge, L1 y mutaciones generales.
 - **Ejecución de herramientas del modelo:** una respuesta de texto como `{"tool":"bash",...}` es texto y no se ejecuta. No hay ejecución arbitraria de shell ni escritura general del workspace desde el chat.
 - **Gateway en vivo:** el cliente/owner semántico está conectado en ISyCode, pero falta demostrar una operación contra el Gateway real con grant local, scope remoto e IDs de workspace coincidentes.
 - **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. No hay bucle de tools del modelo.
@@ -136,9 +136,11 @@ El engranaje **Settings** incluye el mapa completo de atajos.
 
 El orden de trabajo y los criterios de salida están en [`ROADMAP.md`](ROADMAP.md). Las brechas por superficie, evidencia y estado demostrado están en [`docs/product/tui-feature-matrix.md`](docs/product/tui-feature-matrix.md).
 
+La estrategia tiene dos etapas: primero publicar **ISyCode Secure**, con el conjunto actual de acciones tipadas y permisos mínimos; después ampliar hacia **ISyCode Full** agregando capacidades y grants explícitos. Full no desactiva Sentinel ni convierte grants en ejecución arbitraria: cada capacidad nueva requiere su propio owner, límites y registro de resultado.
+
 Prioridades abiertas:
 
-1. Terminar M15: conectar Workspace Authority + IsySentinel, approvals y execution owners en todas las acciones; añadir auditoría durable.
+1. Terminar M15: auditar cobertura de Workspace Authority + IsySentinel + approvals + execution owners en todas las acciones y añadir auditoría durable.
 2. Cerrar M16: sesiones recuperables, configuración/diagnósticos, cobertura UX y matriz con testigos reproducibles.
 3. Demostrar el Gateway semántico real con identidad, scopes y grants correctos.
 4. Completar Mobile Host con adapters, sesiones/stream, cancelación y approvals.

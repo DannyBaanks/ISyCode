@@ -452,7 +452,8 @@ def provision_requests(workspace: Path, project: Path, recipe: BrokerRecipe,
     build = ActionRequest(
         "broker.build", root, str(project),
         {**common, "operation": "build", "source_root": str(recipe.source_root),
-         "build_network": "docker-daemon-default", "image": image})
+         "build_network": "docker-daemon-default", "image": image},
+        execution_owner="broker_provision")
     start = ActionRequest(
         "broker.start", root, str(project),
         {**common, "operation": "start", "image": image,
@@ -461,7 +462,8 @@ def provision_requests(workspace: Path, project: Path, recipe: BrokerRecipe,
          "network": "internal", "mount_read_only": True,
          "bind_host": "127.0.0.1", "credentials_mounted": False,
          "read_only": True, "cap_drop": "ALL", "no_new_privileges": True,
-         "pids_limit": 128, "memory_limit": "2g", "tmpfs_limit": "128m"})
+         "pids_limit": 128, "memory_limit": "2g", "tmpfs_limit": "128m"},
+        execution_owner="broker_provision")
     return build, start
 
 
@@ -473,14 +475,15 @@ class BrokerPreviewOwner:
         self.workspace = workspace.expanduser().resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
-        self.gate = ProductActionGate(self.workspace, authority)
+        self.gate = ProductActionGate(self.workspace, authority, owner_id="broker_preview")
 
     def preview(self, selected_root: Path, approval: ActionApproval | None) -> ActionOutcome:
         try:
             project = _canonical_project_root(self.workspace, selected_root)
             recipe = load_reviewed_recipe()
             read_request = ActionRequest(
-                "workspace.files.read", self.workspace, str(project), {"path": str(project)})
+                "workspace.files.read", self.workspace, str(project), {"path": str(project)},
+                execution_owner="broker_preview")
             _, read_decision = self.gate.authorize(read_request)
             if not read_decision.allowed:
                 return ActionOutcome(
@@ -489,7 +492,8 @@ class BrokerPreviewOwner:
             request = ActionRequest(
                 "broker.preview", self.workspace, str(project),
                 {"recipe_digest": recipe.digest, "source_root": str(recipe.source_root),
-                 "mount": "read-only", "network": "internal-only", "port_host": "127.0.0.1"})
+                 "mount": "read-only", "network": "internal-only", "port_host": "127.0.0.1"},
+                execution_owner="broker_preview")
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
             return ActionOutcome("Broker preview denied.", "DENY", None,
                                  f"recipe/root unavailable ({type(exc).__name__})")
@@ -524,7 +528,7 @@ class BrokerProvisionOwner:
         self.workspace = workspace.expanduser().resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
-        self.gate = ProductActionGate(self.workspace, authority)
+        self.gate = ProductActionGate(self.workspace, authority, owner_id="broker_provision")
 
     def provision(self, selected_root: Path, build_approval: ActionApproval | None,
                   start_approval: ActionApproval | None) -> ActionOutcome:
@@ -545,7 +549,8 @@ class BrokerProvisionOwner:
                                  f"root/recipe unavailable ({type(exc).__name__})")
 
         read_request = ActionRequest(
-            "workspace.files.read", self.workspace, str(project), {"path": str(project)})
+            "workspace.files.read", self.workspace, str(project), {"path": str(project)},
+            execution_owner="broker_provision")
         _, read_decision = self.gate.authorize(read_request)
         if not read_decision.allowed:
             return ActionOutcome("Semantic broker provisioning denied.", "DENY", None,
@@ -715,7 +720,7 @@ class BrokerManagementOwner:
             raise FileNotFoundError("Docker executable is unavailable")
         self.docker = str(Path(docker).expanduser().resolve(strict=True))
         self.registry = BrokerRegistry()
-        self.gate = ProductActionGate(self.workspace, authority)
+        self.gate = ProductActionGate(self.workspace, authority, owner_id="broker_management")
 
     def request_for(self, project_root: Path, operation: str) -> tuple[ActionRequest, dict[str, Any]]:
         action_id = {"health": "broker.health", "logs": "broker.logs",
@@ -736,7 +741,8 @@ class BrokerManagementOwner:
         }
         if operation == "start":
             parameters["managed_existing"] = True
-        return ActionRequest(action_id, self.workspace, item["container"], parameters), item
+        return ActionRequest(action_id, self.workspace, item["container"], parameters,
+                             execution_owner="broker_management"), item
 
     def perform(self, project_root: Path, operation: str,
                 approval: ActionApproval | None = None) -> ActionOutcome:

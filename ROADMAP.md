@@ -6,6 +6,8 @@ Estado de este documento: **plan de trabajo**, no declaración de que las integr
 
 **Actualización de arquitectura (2026-09-27):** ISySentinel + Workspace Authority son el modelo de seguridad de producto. Los hitos escritos antes de M15 que dicen “autoridad IsyMotron” describen el adapter legado existente, no el destino de arquitectura; M15 debe retirar esa dependencia de seguridad antes de habilitar acciones con efectos. Para Gateway HTTP se exige además su Sentinel remoto. Ver [contrato de fronteras](docs/design/isysentinel-security-boundaries.md).
 
+**Estrategia de producto (2026-09-28):** primero cerrar **ISyCode Secure**, con capacidades pequeñas, tipadas y deny-by-default. Después abrir una línea **ISyCode Full** para ampliar los permisos que el usuario concede. Full no es una omisión de Sentinel ni una elevación implícita: mantiene Workspace Authority, owners, approvals para efectos sensibles, límites y recibos; agrega adapters/acciones una por una. No se porta ni se copia la implementación de otra CLI.
+
 ## 1. Producto que queremos construir
 
 ISyCode es un agente para terminal que se abre en el directorio actual (`cwd`) y trabaja sobre ese proyecto. La interfaz combina:
@@ -432,13 +434,13 @@ Reglas de frontera:
 
 ### M15 — ISySentinel y fronteras de seguridad
 
-**Estado:** contrato auditado y documentado en [docs/design/isysentinel-security-boundaries.md](docs/design/isysentinel-security-boundaries.md). La implementación actual `isycode/isysentinel.py` todavía mezcla carga de política, autorización, checks, consumo de approvals y escritura de auditoría; es un prototipo y no está conectado a todas las acciones. También se inspeccionaron el Runtime Sentinel/Systembilities de ISyCo y el Sentinel HTTP del Gateway sin modificar esos repos.
+**Estado:** `isycode/security.py` ya contiene el request inmutable y el agregador ISySentinel puro; `isycode/workspace_authority.py` mantiene grants por root y `isycode/approvals.py` gestiona approvals de un uso. `isycode/isysentinel.py` conserva un prototipo legado y no debe describirse como la implementación activa. Este avance añade binding explícito de request a owner y deny para cualquier pareja owner/acción sin implementación registrada. M15 continúa abierto: el catálogo de acciones supera a los owners conectados, y faltan auditoría durable y cobertura universal. Ver [contrato de fronteras](docs/design/isysentinel-security-boundaries.md).
 
 **Objetivo:** hacer de ISySentinel la decisión de seguridad de ISyCode, con autoridad explícita por `.isyroot`, Systembilities de solo lectura y ejecución posterior por adapters. Mantener Gateway HTTP Sentinel como gate remoto independiente.
 
 - [ ] Separar `Workspace Authority` (política explícita per-root) de `IsySentinel` (agregación pura de Systembilities); `.isyroot` solo fija el límite máximo.
 - [ ] Evaluar todos los checks aplicables y reportarlos; error, excepción, acción desconocida o conjunto vacío → DENY.
-- [ ] Añadir binding verificable entre `ActionRequest` inmutable y execution owner antes de ALLOW.
+- [x] Añadir binding verificable entre `ActionRequest` inmutable y execution owner antes de ALLOW; el digest incluye el owner y el Sentinel comprueba la pareja contra el registro explícito de owners implementados.
 - [ ] Mover prompts, emisión/consumo de approvals, auditoría y recibos fuera de Sentinel; ligar approvals a digest/target con expiración y un solo uso.
 - [ ] Definir política y modelo de estado por workspace fuera del checkout, con permisos por action y scope; estado faltante o inválido → DENY.
 - [ ] Conectar el gate a cada execution owner: filesystem/context, provider, Gateway, MCP/skills, LSP, broker Docker, sesiones, Mobile Host, Bridge, L1, clipboard y picker.
@@ -499,13 +501,13 @@ Reglas de frontera:
 
 ### M16 — Producto diario, Settings y superficie de release
 
-**Estado (actualización 2026-09-28):** compose aprobado el 2026-09-27. El inventario está en [tui-feature-matrix.md](docs/product/tui-feature-matrix.md) y la comparativa en [cli-competitive-audit.md](docs/product/cli-competitive-audit.md). La TUI real se capturó con un workspace temporal sin grants; el árbol muestra su límite sin enumerar contenidos. Pyright completó `initialize` y `workspace/symbol` en un proyecto temporal y el sandbox bloqueó sockets/escritura. El owner de broker completó build/start/health con Docker y un witness semántico local; los grants fueron temporales. Esto no acredita una llamada al Gateway real ni authority sobre el workspace del usuario. Chat, Files/context, solicitudes de provider y discovery pasan por gates locales donde están conectados; los owners aún no son universales. El Gateway semántico cuenta con cliente/owner pero no tiene witness remoto. Gateway MCP conserva la aprobación manual por llamada. `{"tool":"bash",...}` sigue siendo texto no ejecutable. M15 permanece abierto; Docker no es un shell arbitrario y Mobile Host no tiene aún sesiones/adapters operativos.
+**Estado (actualización 2026-09-28):** compose aprobado el 2026-09-27. El inventario está en [tui-feature-matrix.md](docs/product/tui-feature-matrix.md) y la comparativa en [cli-competitive-audit.md](docs/product/cli-competitive-audit.md). La TUI real se capturó con un workspace temporal sin grants; el árbol muestra su límite sin enumerar contenidos. Pyright completó `initialize` y `workspace/symbol` en un proyecto temporal y el sandbox bloqueó sockets/escritura. El owner de broker completó build/start/health con Docker y un witness semántico local; los grants fueron temporales. Esto no acredita una llamada al Gateway real ni authority sobre el workspace del usuario. Los owners conectados ahora incluyen un binding de ejecución que también forma parte del digest: un grant no basta para activar una acción sin owner registrado. Chat, Files/context, provider, discovery, Gateway/MCP, sesión delete, LSP y broker tienen owners tipados en sus flujos conectados; esto no afirma cobertura de Mobile Host, Bridge, L1, mutaciones generales o todas las acciones del catálogo. Faltan auditoría durable y revisión integral de todos los callsites. El Gateway semántico no tiene witness remoto. Gateway MCP conserva aprobación manual por llamada. `{"tool":"bash",...}` sigue siendo texto no ejecutable. M15 permanece abierto; Docker no es un shell arbitrario y Mobile Host no tiene aún sesiones/adapters operativos.
 
 **Objetivo:** hacer de ISyCode un TUI diario coherente sin convertirlo en framework ni exponer capacidades no autorizadas. Seguir las etapas del compose y actualizar la matriz con evidencia, no con checkboxes heredados.
 
 - [x] A — inventario inicial de superficies y evidencia en `docs/product/tui-feature-matrix.md`.
 - [x] A2 — comparación con las CLIs instaladas y brechas priorizadas en `docs/product/cli-competitive-audit.md` (Crush no estaba en PATH; su instalación local no se pudo validar).
-- [ ] B — M15 parcial: gates locales cubren provider, lectura de archivos/contexto, Gateway/MCP/catalog discovery y el flujo Pyright; faltan receipts durables y conectar/revisar Authority + Systembilities + Sentinel en todos los owners, incluidas sesiones, Mobile, Bridge, L1 y mutaciones.
+- [ ] B — M15 parcial: owner binding ahora cubre los flujos conectados y falla cerrado para acciones del catálogo sin owner; faltan receipts durables, revisión universal de Authority + Systembilities + Sentinel, y owners de Mobile, Bridge, L1 y mutaciones.
 - [ ] C — consolidar configuración no secreta versionada y precedencia.
 - [ ] D — navegación/atajos/Help: el mapa del shell ahora sale de `isycode/shortcuts.py`; faltan cobertura de atajos modales, rebinds honestos y paleta universal completa.
 - [ ] E — ciclo de sesiones y ergonomía de chat: create/list/resume/rename/fork/search y delete con confirmación, grant temporal ligado a sesión y aprobación de un uso ya aparecen en el manager; faltan export/import UI, recuperación de provider/role/context y retry/drafts.
@@ -519,7 +521,9 @@ Reglas de frontera:
 - [x] Corregir la salida de pseudo tool calls: no tratar JSON `bash` en texto como ejecución y mostrar explícitamente `NOT_EXECUTED`.
 - [ ] Añadir ejecución de acciones tipadas solo cuando exista schema de tool, Authority, Systembilities, Sentinel, approval cuando aplique y execution owner. `bash`/shell arbitrario no se habilita por este compose.
 
-**Gate de release:** no declarar daily-driver-ready mientras M15 esté pendiente, existan pantallas sin config coherente, una integración parezca runnable sin adapter, o una acción pueda saltarse el execution owner. El estado detallado y las áreas que faltan permanecen en la matriz.
+**Gate de Secure:** no declarar la versión segura lista mientras M15 esté pendiente, existan pantallas sin config coherente, una integración parezca runnable sin adapter, o una acción pueda saltarse owner, Authority, Sentinel, aprobación requerida o receipt. Las acciones no implementadas se mantienen DENY aunque exista una grant.
+
+**Fase posterior — Full:** tras cerrar y publicar el perfil Secure, ampliar permisos de manera explícita y por adapter: shell/comandos tipados, escrituras y más integraciones. Cada capability nueva requiere owner concreto, scope/grant visible, clasificación de riesgo, approval apropiada, límites de ejecución y receipt. No habrá un interruptor global que evite Sentinel; Full significa mayor cobertura de acciones concedibles, no menor seguridad.
 
 ## 5. Orden y puertas de dependencia
 

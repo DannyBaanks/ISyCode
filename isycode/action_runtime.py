@@ -461,10 +461,44 @@ class BrokerManagementSystembility:
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
-    def __init__(self, root: Path, authority: WorkspaceAuthority):
+    _OWNER_ACTIONS = {
+        "workspace_read": READ_ACTIONS,
+        "provider_network": frozenset({"provider.request"}),
+        "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
+        "session_delete": frozenset({"session.delete"}),
+        "gateway_mcp": frozenset({"mcp.invoke"}),
+        "gateway_semantic": frozenset({"gateway.semantic.read"}),
+        "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
+        "broker_preview": frozenset({"workspace.files.read", "broker.preview"}),
+        "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
+        "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
+                                         "broker.stop", "broker.remove"}),
+    }
+
+    def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str):
         canonical = root.resolve(strict=True)
+        self.owner_id = owner_id if isinstance(owner_id, str) else ""
+        allowed_actions = self._OWNER_ACTIONS.get(self.owner_id, frozenset())
+
+        class ExecutionOwnerBindingSystembility:
+            name = "ExecutionOwnerBinding"
+
+            def evaluate(inner_self, request: ActionRequest,
+                         authority_decision: AuthorityDecision) -> SystembilityResult:
+                bound = request.execution_owner == self.owner_id and request.action_id in allowed_actions
+                if not self.owner_id or not allowed_actions:
+                    reason = "no execution owner is registered for this gate"
+                elif request.execution_owner != self.owner_id:
+                    reason = "request is bound to a different execution owner"
+                elif request.action_id not in allowed_actions:
+                    reason = "execution owner has no implementation for this action"
+                else:
+                    reason = "action is registered to this concrete execution owner"
+                return SystembilityResult(inner_self.name, bound, reason)
+
         self.authority = authority
         self.sentinel = IsySentinel([
+            ExecutionOwnerBindingSystembility(),
             WorkspaceReadSystembility(canonical), ProviderNetworkSystembility(),
             RemoteReadSystembility(), SessionDeleteSystembility(), MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
@@ -486,13 +520,14 @@ class SessionDeleteOwner:
         self.authority = authority
         self.store = store
         self.approvals = approvals
-        self.gate = ProductActionGate(self.root, authority)
+        self.gate = ProductActionGate(self.root, authority, owner_id="session_delete")
 
     def delete(self, session_id: str, title: str,
                approval: ActionApproval | None) -> ActionOutcome:
         try:
             request = ActionRequest("session.delete", self.root, session_id,
-                                    {"session_id": session_id, "title": title[:80]})
+                                    {"session_id": session_id, "title": title[:80]},
+                                    execution_owner="session_delete")
         except (TypeError, ValueError):
             return ActionOutcome("Session deletion denied.", "DENY", None,
                                  "invalid session delete request")
@@ -538,7 +573,7 @@ class GatewayMCPInvocationOwner:
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
-        self.gate = ProductActionGate(self.root, authority)
+        self.gate = ProductActionGate(self.root, authority, owner_id="gateway_mcp")
 
     async def invoke(self, tool_name: str, arguments: dict[str, Any], url: str,
                      schema_digest: str, discovered_tools: list[dict[str, Any]],
@@ -554,7 +589,8 @@ class GatewayMCPInvocationOwner:
             request = ActionRequest(
                 "mcp.invoke", self.root, self.target_for(url),
                 {"server": self.SERVER_ID, "tool": tool_name,
-                 "arguments": arguments, "url": url, "schema_digest": schema_digest})
+                 "arguments": arguments, "url": url, "schema_digest": schema_digest},
+                execution_owner="gateway_mcp")
         except (TypeError, ValueError):
             return ActionOutcome("MCP invocation denied.", "DENY", None,
                                  "invalid MCP invocation request")
@@ -604,7 +640,7 @@ class GatewaySemanticOwner:
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
-        self.gate = ProductActionGate(self.root, authority)
+        self.gate = ProductActionGate(self.root, authority, owner_id="gateway_semantic")
 
     def invoke(self, operation: str, payload: Mapping[str, Any], url: str,
                workspace_id: str, approval: ActionApproval | None) -> ActionOutcome:
@@ -621,7 +657,7 @@ class GatewaySemanticOwner:
                 "gateway.semantic.read", self.root,
                 GatewayMCPInvocationOwner.target_for(url).split("@", 1)[1],
                 {"url": url, "operation": operation, "payload": normalized_payload,
-                 "workspace_id": workspace_id})
+                 "workspace_id": workspace_id}, execution_owner="gateway_semantic")
         except (OSError, ValueError, RuntimeError) as exc:
             return ActionOutcome("Semantic Gateway operation denied.", "DENY", None,
                                  f"invalid or unbound semantic request ({type(exc).__name__})")
@@ -674,7 +710,7 @@ class LPSSymbolOwner:
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
-        self.gate = ProductActionGate(self.root, authority)
+        self.gate = ProductActionGate(self.root, authority, owner_id="lsp_symbols")
 
     async def search(self, server_id: str, query: str, approval: ActionApproval | None,
                      catalog: list[dict[str, Any]]) -> ActionOutcome:
@@ -691,7 +727,8 @@ class LPSSymbolOwner:
         # The language server can inspect the whole selected root. Require the
         # same explicit filesystem.read grant used by Files before mounting it.
         read_request = ActionRequest(
-            "workspace.files.read", self.root, str(self.root), {"path": str(self.root)})
+            "workspace.files.read", self.root, str(self.root), {"path": str(self.root)},
+            execution_owner="lsp_symbols")
         _, read_decision = self.gate.authorize(read_request)
         if not read_decision.allowed:
             reason = "; ".join(check.reason for check in read_decision.checks if not check.passed)
@@ -704,7 +741,8 @@ class LPSSymbolOwner:
                  "query": query, "workspace_root": str(self.root),
                  "executable": server["sandbox_executable"],
                  "server_executable": server["server_executable"],
-                 "node_executable": server["node_executable"]})
+                 "node_executable": server["node_executable"]},
+                execution_owner="lsp_symbols")
         except (TypeError, ValueError):
             return ActionOutcome("LSP operation denied.", "DENY", None,
                                  "invalid LSP request")
@@ -735,7 +773,7 @@ class LocalWorkspaceReadOwner:
     def __init__(self, root: Path, authority: WorkspaceAuthority):
         self.root = root.resolve(strict=True)
         self.authority = authority
-        self.gate = ProductActionGate(self.root, authority)
+        self.gate = ProductActionGate(self.root, authority, owner_id="workspace_read")
 
     def execute(self, action_id: str, arguments: dict[str, Any]) -> ActionOutcome:
         if action_id not in READ_ACTIONS:
@@ -753,7 +791,8 @@ class LocalWorkspaceReadOwner:
         except (OSError, RuntimeError, ValueError) as exc:
             return ActionOutcome("ISySentinel denied this action.", "DENY", None,
                                  str(exc)[:300])
-        request = ActionRequest(action_id, self.root, target, arguments)
+        request = ActionRequest(action_id, self.root, target, arguments,
+                                execution_owner="workspace_read")
         try:
             authority, decision = self.gate.authorize(request)
         except Exception:

@@ -2762,7 +2762,7 @@ class TUIApp(App):
                 "mcp.invoke", self._workspace_root, GatewayMCPInvocationOwner.target_for(endpoint),
                 {"server": GatewayMCPInvocationOwner.SERVER_ID, "tool": name,
                  "arguments": arguments, "url": endpoint,
-                 "schema_digest": tool_schema_digest(tool)})
+                 "schema_digest": tool_schema_digest(tool)}, execution_owner="gateway_mcp")
             approval = self._action_approvals.issue(request, ttl_seconds=30)
             owner = GatewayMCPInvocationOwner(
                 self._workspace_root, WorkspaceAuthority(self._workspace_root),
@@ -2814,7 +2814,7 @@ class TUIApp(App):
             request = ActionRequest(
                 "gateway.semantic.read", self._workspace_root, target,
                 {"url": endpoint, "operation": operation, "payload": payload,
-                 "workspace_id": workspace_id})
+                 "workspace_id": workspace_id}, execution_owner="gateway_semantic")
             approval = self._action_approvals.issue(request, ttl_seconds=30)
             owner = GatewaySemanticOwner(
                 self._workspace_root, WorkspaceAuthority(self._workspace_root),
@@ -2898,8 +2898,10 @@ class TUIApp(App):
                 self._workspace_root, selected, recipe, docker)
             project = Path(build_request.target)
             read_request = ActionRequest(
-                "workspace.files.read", self._workspace_root, str(project), {"path": str(project)})
-            _, read_decision = ProductActionGate(self._workspace_root, authority).authorize(read_request)
+                "workspace.files.read", self._workspace_root, str(project), {"path": str(project)},
+                execution_owner="broker_preview")
+            _, read_decision = ProductActionGate(
+                self._workspace_root, authority, owner_id="broker_preview").authorize(read_request)
             if not read_decision.allowed:
                 self._append(
                     "  Broker denied: grant workspace.files.read for this exact folder in Settings first.",
@@ -3078,7 +3080,8 @@ class TUIApp(App):
                  "query": query, "workspace_root": str(self._workspace_root),
                  "executable": server["sandbox_executable"],
                  "server_executable": server["server_executable"],
-                 "node_executable": server["node_executable"]})
+                 "node_executable": server["node_executable"]},
+                execution_owner="lsp_symbols")
             approval = self._action_approvals.issue(request, ttl_seconds=30)
             owner = LPSSymbolOwner(
                 self._workspace_root, authority,
@@ -3889,9 +3892,11 @@ class TUIApp(App):
         if not host:
             return False, "endpoint host is missing"
         try:
-            request = ActionRequest(action_id, self._workspace_root, host, {"url": url})
+            request = ActionRequest(action_id, self._workspace_root, host, {"url": url},
+                                    execution_owner="remote_catalog")
             authority, decision = ProductActionGate(
-                self._workspace_root, WorkspaceAuthority(self._workspace_root)).authorize(request)
+                self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                owner_id="remote_catalog").authorize(request)
         except Exception:
             return False, "authorization is unavailable"
         if not decision.allowed:
@@ -4329,7 +4334,8 @@ class TUIApp(App):
             authority.set_grant("session.delete", enabled=True, targets=targets)
             request = ActionRequest(
                 "session.delete", self._workspace_root, session_id,
-                {"session_id": session_id, "title": session.title[:80]})
+                {"session_id": session_id, "title": session.title[:80]},
+                execution_owner="session_delete")
             approval = self._action_approvals.issue(request, ttl_seconds=30)
             owner = SessionDeleteOwner(
                 self._workspace_root, authority, self._chat_sessions, self._action_approvals)
@@ -4393,7 +4399,8 @@ class TUIApp(App):
     def _workspace_request(self, action_id: str, path: str, **extra: str) -> ActionRequest:
         arguments = {"path": path, **extra}
         target = self._workspace_read_owner()._lexical_target(path)
-        return ActionRequest(action_id, self._workspace_root, str(target), arguments)
+        return ActionRequest(action_id, self._workspace_root, str(target), arguments,
+                             execution_owner="workspace_read")
 
     def _authorize_provider_request(self, provider: Provider):
         parsed = urlparse(provider.base_url)
@@ -4403,9 +4410,11 @@ class TUIApp(App):
         request = ActionRequest(
             "provider.request", self._workspace_root, host,
             {"provider": provider.name, "model": provider.model, "url": provider.base_url},
+            execution_owner="provider_network",
         )
         gate = ProductActionGate(
-            self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            owner_id="provider_network")
         authority, decision = gate.authorize(request)
         return host, request, authority, decision
 
