@@ -15,9 +15,11 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from isycode.actions import ACTION_BY_ID
+from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import (
-    ActionRequest, AuthorityDecision, IsySentinel, SystembilityResult,
+    ActionRequest, AuthorityDecision, DecisionCheck, IsySentinel, SentinelDecision,
+    SystembilityResult,
 )
 from isycode.workspace_authority import WorkspaceAuthority
 
@@ -497,6 +499,10 @@ class ProductActionGate:
                 return SystembilityResult(inner_self.name, bound, reason)
 
         self.authority = authority
+        try:
+            self.audit: ActionAuditJournal | None = ActionAuditJournal(canonical)
+        except ActionAuditError:
+            self.audit = None
         self.sentinel = IsySentinel([
             ExecutionOwnerBindingSystembility(),
             WorkspaceReadSystembility(canonical), ProviderNetworkSystembility(),
@@ -508,7 +514,27 @@ class ProductActionGate:
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
                   approval: ActionApproval | None = None):
         authority = self.authority.evaluate(request, approvals=approvals, approval=approval)
-        return authority, self.sentinel.evaluate(request, authority)
+        decision = self.sentinel.evaluate(request, authority)
+        try:
+            if self.audit is None:
+                raise ActionAuditError("journal is unavailable")
+            self.audit.record_decision(request, authority, decision)
+        except ActionAuditError:
+            decision = SentinelDecision(
+                decision.action_id, decision.request_digest,
+                decision.checks + (DecisionCheck(
+                    "DurableActionJournal", False,
+                    "authorization could not be durably recorded; action denied"),))
+        return authority, decision
+
+    def persist_receipt(self, request: ActionRequest, receipt: ActionReceipt) -> bool:
+        try:
+            if self.audit is None:
+                return False
+            self.audit.record_receipt(request, receipt)
+        except ActionAuditError:
+            return False
+        return True
 
 
 class SessionDeleteOwner:
@@ -548,6 +574,9 @@ class SessionDeleteOwner:
         if not receipt.verify(request, result):
             return ActionOutcome("Session receipt failed verification.", "NOT_VERIFIABLE", None,
                                  "local request/result digest did not match")
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Session receipt could not be persisted.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         return ActionOutcome(result, "ALLOW", receipt, "approved one-session deletion")
 
 
@@ -625,6 +654,9 @@ class GatewayMCPInvocationOwner:
         if not receipt.verify(request, result_text):
             return ActionOutcome("MCP receipt failed verification.", "NOT_VERIFIABLE", None,
                                  "local request/result digest did not match")
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("MCP receipt could not be persisted.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         visible = result_text[:MAX_OUTPUT_CHARS]
         if len(result_text) > MAX_OUTPUT_CHARS:
             visible += "\n… display truncated at 24,000 characters; receipt covers the full bounded result …"
@@ -695,6 +727,10 @@ class GatewaySemanticOwner:
             return ActionOutcome("Semantic search receipt failed verification.",
                                  "NOT_VERIFIABLE", None,
                                  "local request/result digest did not match")
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Semantic receipt could not be persisted.",
+                                 "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         visible = result_text[:MAX_OUTPUT_CHARS]
         if len(result_text) > MAX_OUTPUT_CHARS:
             visible += "\n… display truncated at 24,000 characters; receipt covers the full bounded result …"
@@ -763,6 +799,9 @@ class LPSSymbolOwner:
         if not receipt.verify(request, result_text):
             return ActionOutcome("LSP receipt failed verification.", "NOT_VERIFIABLE", None,
                                  "local request/result digest did not match")
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("LSP receipt could not be persisted.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         return ActionOutcome(result_text[:MAX_OUTPUT_CHARS], "ALLOW", receipt,
                              "LSP handshake and workspace/symbol response verified")
 
@@ -823,6 +862,10 @@ class LocalWorkspaceReadOwner:
         if not receipt.verify(request, result):
             return ActionOutcome("Receipt verification failed; result blocked.",
                                  "NOT_VERIFIABLE", None, "local receipt did not match request/result")
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Receipt persistence failed; result blocked.",
+                                 "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         return ActionOutcome(result, "ALLOW", receipt, "verified local read-only operation")
 
     def _lexical_target(self, path: str) -> Path:

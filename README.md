@@ -49,7 +49,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 
 ### Parcial o pendiente
 
-- **ISySentinel / M15:** `security.py` agrega decisiones de forma pura y Workspace Authority conserva grants por root. Los flujos conectados atan el digest de solicitud a un owner y acción registrados; las acciones sin owner quedan denegadas aunque tengan grant. M15 sigue abierto: faltan auditoría durable, auditoría universal de callsites y owners para Mobile Host, Bridge, L1 y mutaciones generales.
+- **ISySentinel / M15:** `security.py` agrega decisiones de forma pura y Workspace Authority conserva grants por root. Los flujos conectados atan el digest de solicitud a un owner y acción registrados; las acciones sin owner quedan denegadas aunque tengan grant. Sus decisiones y receipts verificados se guardan en un journal privado hash-chain. M15 sigue abierto: faltan revisión universal de callsites, inspección/validación del historial y owners para Mobile Host, Bridge, L1 y mutaciones generales.
 - **Ejecución de herramientas del modelo:** una respuesta de texto como `{"tool":"bash",...}` es texto y no se ejecuta. No hay ejecución arbitraria de shell ni escritura general del workspace desde el chat.
 - **Gateway en vivo:** el cliente/owner semántico está conectado en ISyCode, pero falta demostrar una operación contra el Gateway real con grant local, scope remoto e IDs de workspace coincidentes.
 - **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. No hay bucle de tools del modelo.

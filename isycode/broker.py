@@ -703,6 +703,10 @@ class BrokerProvisionOwner:
         if not receipt.verify(start_request, report):
             return ActionOutcome("Semantic broker receipt failed verification.", "NOT_VERIFIABLE", None,
                                  "request/result digest did not match")
+        if not self.gate.persist_receipt(start_request, receipt):
+            return ActionOutcome("Semantic broker receipt could not be persisted.",
+                                 "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         return ActionOutcome(report, "ALLOW", receipt,
                              "reviewed Docker image built; isolated loopback broker passed /health")
 
@@ -770,6 +774,10 @@ class BrokerManagementOwner:
         if not receipt.verify(request, text):
             return ActionOutcome("Broker action receipt failed verification.", "NOT_VERIFIABLE", None,
                                  "request/result digest did not match")
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Broker receipt could not be persisted.",
+                                 "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
         return ActionOutcome(text, "ALLOW", receipt, f"registered broker {operation} completed")
 
     def _run(self, args: list[str], *, timeout: int = 15,
