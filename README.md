@@ -39,7 +39,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 
 - Provider chat/model requests pasan por los controles locales de red; requieren credencial y host autorizado.
 - `.isyroot`, directorio de lanzamiento, sesiones externas, paleta, selector de providers/roles, búsqueda de consola y Settings.
-- Preview local de archivos mediante el host existente de IsyMotron en Linux, con grants de filesystem explícitos. El alcance efectivo está limitado por esos grants; el marker no los crea ni amplía.
+- Files/context se leen mediante owners nativos de ISyCode, grants explícitos de Workspace Authority e ISySentinel; `.isyroot` limita el árbol pero nunca concede acceso.
 - Once operaciones semánticas read-only del Gateway con payloads tipados, revisión explícita y gates locales/remotos independientes.
 - Gateway MCP: listar herramientas y flujo manual para revisar payload y aprobar una llamada individual.
 - Contexto `AGENTS.md`/`AGENT.md`, selector nativo de README y consultas de símbolos Pyright pasan por owners y permisos específicos cuando se configuran.
@@ -114,7 +114,7 @@ También se pueden guardar claves nombradas en el vault del sistema. Sin una cla
 
 - **ISyCo Gateway:** define `GATEWAY_URL` y una clave con scope `isyco.semantic`. Para rutas no locales usa HTTPS. La configuración también requiere un ID opaco coincidente entre Gateway e ISyCode; ese ID es un binding operativo, no prueba identidad física del filesystem.
 - **Catálogo externo OpenISy:** define `OPENISY_API_URL`; puede leer estados/metadatos de MCP, Skills y providers, sujeto a autorización de host. Descubrir no activa ni invoca.
-- **IsyMotron:** es un adapter opcional y fuente del host Linux read-only de archivos. Configura `ISYMOTRON_ROOT` si no se descubre automáticamente.
+- **IsyMotron:** conserva un planner/runtime opcional para proponer planes. En el perfil Secure, las peticiones al provider requieren el grant de host de ISyCode y la ejecución heredada de planes está deshabilitada; sus grants nunca autorizan acciones del producto.
 - **Mobile Host:** por defecto escucha en `127.0.0.1:8765`. El bind remoto exige certificado y llave TLS; pairing y health no significan que haya runtime remoto operativo.
 
 ## Atajos principales

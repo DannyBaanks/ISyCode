@@ -32,7 +32,7 @@ class PlanOutcome:
 
 @runtime_checkable
 class AgentRuntime(Protocol):
-    """Planner/executor facade; authority remains in IsyMotron hosts."""
+    """Planner/runtime facade; it is not an ISyCode authorization boundary."""
 
     async def plan(
         self,
@@ -51,7 +51,7 @@ class AgentRuntime(Protocol):
 
 @runtime_checkable
 class WorkspaceProvider(Protocol):
-    """Read-only tree boundary plus independently scoped IsyMotron grants."""
+    """Workspace display contract; authority is checked by native action owners."""
 
     @property
     def workspace_root(self) -> Path: ...

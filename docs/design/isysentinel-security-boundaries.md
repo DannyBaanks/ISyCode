@@ -118,19 +118,28 @@ short-lived, one-use request-bound approvals. `isycode/actions.py` centralizes
 the semantic action catalog. The old combined implementation remains in
 `isycode/isysentinel.py` as `LegacyIsySentinelPrototype`; it is not canonical.
 
-The local provider request owner and bounded workspace list/read/name-search
-owner now call Workspace Authority and the pure IsySentinel through
+The provider request owner and bounded workspace list/read/name-search owner
+call Workspace Authority and the pure IsySentinel through
 `isycode/action_runtime.py`. Settings has a user-consented management flow to
 grant or revoke the exact read-only workspace scope and the active provider
-host. Provider credentials do not imply network scope. Local read receipts
-match the immutable request and result digests but are currently in-memory,
-not a durable audit log.
+host. Provider credentials do not imply network scope. The request digest
+includes a registered execution-owner identity; the aggregate gate denies
+owner/action pairs absent from its closed registry. `isycode/action_audit.py`
+stores decision and verified receipt digests in a private per-workspace
+hash-chain journal outside the checkout. Journal failure denies before an
+action or returns NOT_VERIFIABLE after an effect. The Files rail and context
+picker use the native ISyCode read owner; IsyMotron's old read adapter remains
+in the repository only as a legacy adapter.
 
-This is partial enforcement, not a complete product boundary. Applicable
-Systembilities, grant UI and verified receipts for Gateway/MCP/LSP/Docker,
-Mobile Host, Bridge and L1 are not wired. The Files rail and context picker
-still use the legacy IsyMotron read adapter. Until each remaining owner calls
-the canonical gate, those catalog entries must not be described as executable.
+This is partial enforcement, not a complete product boundary. Connected
+owners now include Workspace, provider, Gateway/MCP discovery and invocation,
+LSP, sessions delete, and semantic broker. Mobile Host, Bridge, L1, general
+workspace mutation and other unimplemented action families remain
+unavailable. The IsyMotron Planner may produce a proposal after provider-host
+authorization, but its legacy Executor is disabled in Secure. The action
+journal has no UI inspector/verifier yet, and code has only received syntax
+and diff checks for the latest journal changes; do not claim a live journal
+witness or complete coverage.
 
 The semantic workspace-binding work updates only the Gateway HTTP identity
 contract; it does not change `bridge_core` or the Gateway key/scope policy.

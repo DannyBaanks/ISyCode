@@ -1,6 +1,6 @@
 # ADR 0001: ISyCode runtime and OpenISy boundary
 
-- **Status:** Proposed implementation direction; validate at M0 before broad integration.
+- **Status:** Superseded for security authority by [ISySentinel security boundaries](../design/isysentinel-security-boundaries.md). The renderer/MCP integration direction remains relevant; the IsyMotron-only execution authority decision below is historical and must not be used by Secure.
 - **Date:** 2026-09-27
 
 ## Context
@@ -11,7 +11,7 @@ ISyCode and IsyMotron are Python projects. OpenISy is a TypeScript/Bun fork with
 
 Keep the current Textual application as the first ISyCode renderer. Keep agent and workspace behavior behind Python runtime/provider interfaces. Consume OpenISy capabilities through their standard/configured interfaces: MCP protocol for tools and skill manifests/configuration for skill discovery. Consume Gateway through its HTTP API and Bridge through its handshake contract. Do not import OpenISy source files into Python or reimplement IsyMotron policy.
 
-The UI remains a client. IsyMotron's host, grants, scopes, leases, executor and receipt verifier remain the only authority for local execution. A discovered MCP or skill is not a grant.
+The UI remains a client. The original decision made IsyMotron the local execution authority; that portion is superseded. Secure uses ISyCode Workspace Authority + ISySentinel and typed execution owners. IsyMotron may provide a proposal/runtime adapter but its grants, scopes, leases, executor and receipts do not authorize product actions. A discovered MCP or skill is not a grant.
 
 ## Alternatives considered
 
@@ -28,7 +28,7 @@ Before M3 is considered complete, demonstrate a read-only spike that discovers o
 - UI, policy and side effects can be changed independently.
 - MCP and skill lists must be populated from real sources and carry availability/permission state separately.
 - The first version will not reuse OpenISy's live session store or session-specific MCP state unless a documented interface is available.
-- Moving the UI into OpenISy later remains possible without changing IsyMotron's authority contract.
+- Moving the UI into OpenISy later remains possible without changing ISyCode's authority contract.
 
 ## Implementation update
 

@@ -4685,6 +4685,14 @@ class TUIApp(App):
                     setattr, block, "title", f"thinking {elapsed:.0f}s")
 
             runtime = self._runtime_factory(self._workspace_root)
+            host, _, _, decision = self._authorize_provider_request(runtime.provider)
+            if not decision.allowed:
+                failed = "; ".join(
+                    check.reason for check in decision.checks if not check.passed)
+                self._append(
+                    f"  Planning request DENY · {host}. Grant this provider host in "
+                    f"Settings → Authority & Security. {failed[:300]}", YELLOW)
+                return
             outcome = await runtime.plan(intent, on_chunk=on_chunk)
             plan = outcome.plan
             self._append(f"  Model: {outcome.model} via {outcome.provider_label}", MUTED)
@@ -4697,23 +4705,18 @@ class TUIApp(App):
                     params_str = ", ".join(f"{k}={v}" for k, v in step.params.items())
                     self._append(f"    {i}. [{step.host}] {step.capability}({params_str})", TEXT)
                     self._append(f"       ↳ {step.why}", MUTED)
-                self._append("\n  This plan carries no authority.", MUTED)
-                self._append("  Each step is judged by the host that runs it.", MUTED)
+                self._append("\n  Proposal only · it carries no authority.", MUTED)
+                self._append(
+                    "  Execution is disabled in Secure until each step has an ISyCode owner, "
+                    "grant, Sentinel decision and required approval.", MUTED)
                 if plan.completion and plan.completion.prompt_tokens is not None and plan.completion.completion_tokens is not None:
                     self._append(f"  Tokens: {plan.completion.prompt_tokens + plan.completion.completion_tokens}", MUTED)
-                context_digest = runtime.approval_context()
-                self._last_plan = plan
-                self._last_runtime = runtime
-                self._last_plan_origin = outcome.origin
-                self._last_plan_host = outcome.host_name
-                self._last_plan_context = context_digest
+                self._clear_pending_plan()
                 review = self.query_one("#review-plan", Button)
-                review.disabled = False
-                review.label = ("Review local read-only plan"
-                                if outcome.origin == "local-read-only"
-                                else "Review demo plan")
+                review.disabled = True
+                review.label = "Execution unavailable in Secure"
                 self._append(
-                    f"\n  {outcome.origin} plan ready. Use the Review button in Overview.",
+                    f"\n  {outcome.origin} proposal is ready for inspection; it cannot be run through IsyMotron.",
                     YELLOW)
             else:
                 self._append(f"\n  Refused: {plan.refused or 'no plan possible'}", RED)

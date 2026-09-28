@@ -23,6 +23,10 @@ class GrantSnapshotChanged(AuthorityContextChanged):
     """The local IsyMotron grant file changed after a plan was created."""
 
 
+class SecureExecutionUnavailable(RuntimeError):
+    """Legacy IsyMotron execution is disabled until native ISyCode owners exist."""
+
+
 class IsyMotronRuntime:
     """IsyMotron runtime with a safe demo default and optional read-only host."""
 
@@ -171,17 +175,11 @@ class IsyMotronRuntime:
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     async def execute(self, plan, *, expected_context: str):
-        """Run only a plan reviewed against the current IsyMotron authority."""
-        from agents.executor import Executor
-
-        if self.approval_context() != expected_context:
-            raise AuthorityContextChanged(
-                "Host identity, capabilities, grants, or scopes changed after review; "
-                "review a newly generated plan.")
-
-        lease_ttl = min(getattr(self.host, "max_lease_ttl_s", 60.0), 60.0)
-        executor = Executor(self.relay, subject=self.SUBJECT, lease_ttl_s=lease_ttl)
-        return await asyncio.to_thread(executor.run, plan)
+        """Refuse legacy execution; its grants are not ISyCode authorization."""
+        del plan, expected_context
+        raise SecureExecutionUnavailable(
+            "Plan execution is disabled in ISyCode Secure until every step is routed "
+            "through Workspace Authority, ISySentinel, and a native execution owner.")
 
 
     def verify_execution(self, execution):

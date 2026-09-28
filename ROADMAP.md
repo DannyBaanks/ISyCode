@@ -144,7 +144,7 @@ Reglas de frontera:
 
 ### M2 — Explorador del workspace actual
 
-**Estado:** browser read-only implementado vía `filesystem.read`/lease de IsyMotron: el host recibe únicamente `filesystem.read`, estrechado en memoria a la intersección de grants existentes con el cwd. Cada lectura compara grants antes y después de la operación y solo entrega contenido si el recibo verifica `PASS`; si cambian durante la lectura, bloquea el resultado. Navegación, búsqueda y preview muestran carga, e ignoran resultados tardíos que ya no corresponden a la selección actual. Lista el cwd autorizado, filtra `.gitignore` con opción explícita para incluir ignorados, ofrece búsqueda difusa acotada y preview limitado. Rechaza rutas sensibles comunes y symlinks; muestra estado de recibo. Faltan fixtures y validación visual/funcional.
+**Estado (perfil Secure):** Files/context usan owners nativos ISyCode (`LocalWorkspaceReadOwner`) bajo Workspace Authority + ISySentinel; cada autorización se ata al owner registrado y su decisión/receipt se persiste en el journal privado. El browser queda read-only, parte de `workspace_root`, filtra `.gitignore`, nombres sensibles y symlinks, acota búsquedas/previews y bloquea resultados sin grant. La clase IsyMotronWorkspace sigue como compatibilidad legada, pero no es la ruta del TUI Secure. Faltan fixtures y validación visual/funcional de estos flows.
 
 **Objetivo:** permitir encontrar y leer archivos del directorio donde se invocó `isycode`.
 
@@ -153,11 +153,11 @@ Reglas de frontera:
 - [x] Resolver el root como `cwd` canónico al iniciar y mostrarlo en header y vista Files.
 - [x] Cargar directorios bajo demanda; ordenar carpetas primero; soportar búsqueda difusa acotada (máximo 300 directorios/6,000 entradas por búsqueda).
 - [x] Respetar `.gitignore` y permitir incluir ignorados con acción explícita. Si el archivo listado desaparece o no puede leerse, bloquear el listing en vez de aplicar un filtro parcial. Ocultar siempre `.git`, `.isycode`/estado local, claves, `.env` y otros nombres protegidos por el browser.
-- [x] No subir al padre del root. No seguir symlink/junction fuera del root. Rechazar paths externos y traversal mediante scope de IsyMotron.
+- [x] No subir al padre del root. No seguir symlink/junction fuera del root. Rechazar paths externos y traversal mediante `.isyroot` + scope de Workspace Authority.
 - [x] Al seleccionar archivo, abrir preview de texto de solo lectura con ruta relativa, tamaño, encoding/estado binario y truncación explícita. No interpretar archivos como comandos; archivos sensibles comunes se ocultan y el host exige grant para cualquier lectura.
 - [ ] Abrir editor externo solo como acción optativa documentada; el TUI no cambia permisos por hacerlo.
-- [x] Usar `filesystem.read` del host de IsyMotron con URI lógica y un grant existente estrechado al workspace; si el host/grant no cubre el root o el snapshot cambió, bloquear con un mensaje claro. El renderer no usa `Path.read_text()` como bypass.
-- [x] Entregar preview/listing solo después de verificar recibo `PASS`; `REJECT` y `NOT_VERIFIABLE` bloquean los datos.
+- [x] Usar `workspace.files.list/read/search` de ISyCode con grant explícito por ruta; un grant ausente, fallo del owner o decisión DENY bloquea la lectura.
+- [x] Entregar preview/listing solo después de verificar el recibo ligado al digest de request/result y persistir sus digests; `DENY`, `REJECT` y `NOT_VERIFIABLE` bloquean los datos.
 - [ ] Si el Gateway ofrece el mismo root, puede alimentar búsqueda/read según su scope. Si su `IESY_ROOT` es distinto, mostrarlo como workspace remoto separado o no ofrecerlo; nunca mezclarlo con Files local.
 
 **Criterios de aceptación:**
@@ -199,24 +199,25 @@ Reglas de frontera:
 
 ### M4 — Runtime de IsyMotron detrás del contrato de ISyCode
 
-**Estado:** `isycode/runtime.py` delega plan y ejecución a IsyMotron `Planner`/`Executor`. El modo predeterminado usa `LegacyHost` simulado; `ISYCODE_RUNTIME=local-readonly` usa `LinuxHost` con una copia en memoria de los grants que retiene solo `filesystem.read` y limita sus roots a la intersección con el cwd capturado. La UI permite revisar y confirmar ese plan; no se modifica el grant file ni se habilita write. `AgentRuntime` se inyecta por factory y el verificador centralizado distingue PASS/REJECT/NOT_VERIFIABLE; `UNKNOWN` y recibos no PASS no cuentan como ejecución demostrada. Los mensajes de fallo de Provider/Planner/Executor ya omiten cuerpo/URL de excepción; si Executor no devuelve estado, la UI declara el resultado desconocido y recomienda comprobar recibos antes de reintentar. Falta cancelación real, estado consultable, validación con grants/hosts reales y aportar witnesses.
+**Estado (perfil Secure, actualización 2026-09-28):** IsyMotron Planner puede producir una propuesta; la solicitud de provider pasa primero por el host grant de Workspace Authority e ISySentinel. La TUI ya no arma ni confirma su salida como una acción ejecutable, y `IsyMotronRuntime.execute()` rechaza toda ejecución heredada. Sus grants, leases y receipts no son autoridad de producto. Files/context ahora usan owners nativos ISyCode. Los pasos de una propuesta solo podrán ejecutarse cuando cada capability tenga schema, owner, Authority/Systembility, Sentinel y aprobación requerida. Falta implementar motores nativos para las acciones que aún no existen.
 
-**Objetivo:** hacer que todo `/plan`/ejecución pase por Provider → Planner → host/Enforcer → Executor/Relay → receipt/verifier.
+**Objetivo:** conservar `/plan` como proposal-only y sustituir gradualmente cualquier uso de IsyMotron como autoridad por el pipeline de ISyCode: provider con host grant → planner → owner tipado → Workspace Authority → ISySentinel → approval requerida → ejecución acotada → receipt/journal.
 
 **Trabajo:**
 
-- [ ] Completar la fachada `isycode/runtime.py` y sus adapters con métodos para catálogo, plan, ejecutar, cancelar, estado y recibo. La primera fachada asíncrona de plan/ejecución demo ya existe; cancelación, status y providers inyectables siguen pendientes.
+- [ ] Completar el runtime nativo de ISyCode para catálogo, plan, acciones tipadas, cancelación, estado y receipts. La interfaz de propuesta existe; la ejecución heredada se mantiene deshabilitada hasta migrar cada acción.
 - [x] Sustituir la creación de `LegacyHost` y `LoopbackRelay` dentro de widgets por un runtime. Mantener LegacyHost solo en modo demo explícito.
-- [x] Mostrar el origen/host (demo/local) antes de cualquier ejecución y en la revisión contextual.
+- [x] Mostrar el origen/host para propuestas y declarar que no tienen autoridad ni se ejecutan en Secure.
 - [ ] Convertir errores de Provider/Planner/Host a estados tipados y mensajes útiles; no ocultar error en salida normal ni continuar con planes previos. La UI ya traduce fallos comunes del Provider y evita imprimir cuerpos/URLs; el contrato aún no devuelve estados tipados.
 - [x] Renderizar plan en pasos con host, capability, parámetros revisables y explicación; marcar claramente `propuesta, sin autoridad`.
-- [x] Mantener el provider elegible por `ISYMOTRON_PROVIDER`/`ISYMOTRON_MODEL`; usar streaming compatible y conservar `Planner.parse`.
+- [x] Autorizar el host del provider con Workspace Authority + ISySentinel antes de solicitar una propuesta; conservar `Planner.parse` como formato de propuesta.
 - [x] Mostrar decisiones/recibos por paso como eventos individuales; en modo local read-only, presentar el texto de archivo solo tras receipt `PASS`; directorios remiten al browser filtrado.
 
 **Criterios de aceptación:**
 
-- Demo de 4 pasos en LegacyHost completa desde TUI y cada paso genera un resultado/recibo del host.
-- Plan con host/capability/param desconocidos se rechaza antes de ejecutar.
+- Un plan de LegacyHost no se ejecuta desde la TUI aunque tenga grants de IsyMotron.
+- Provider sin host grant explícito no recibe la solicitud del planner.
+- Cada capability añadida a la ejecución nativa obtiene su propio owner y tests/witnesses antes de habilitarse.
 - Cambiar renderer por un harness fake no cambia decisión del host ni verificación del recibo.
 - Inyectar Provider caído, timeout, JSON truncado y tarea cancelada deja estados coherentes y no inicia ejecución oculta.
 
@@ -257,13 +258,13 @@ Reglas de frontera:
 
 **Estado:** el file browser usa `filesystem.read` del host actual y el runtime optativo ejecuta planes read-only bajo grants IsyMotron existentes. ISyCode ahora muestra disponibilidad del Gateway sin decir que está conectado al workspace local; admite `GATEWAY_URL`, exige HTTPS fuera de loopback y bloquea redirects a otro origen para no filtrar el bearer token. Gateway y el resto de capacidades siguen sin integrarse en el runtime; cualquier escritura real continúa pendiente de M5. El health endpoint oculta intencionalmente `IESY_ROOT`, por lo que hoy no existe evidencia para comparar el root con `cwd` ni para montar el explorador remoto.
 
-**Objetivo:** habilitar gradualmente operaciones reales sin convertir MCP, Gateway o shell en un bypass de IsyMotron.
+**Objetivo:** habilitar gradualmente operaciones reales sin convertir MCP, Gateway o shell en un bypass de Workspace Authority + ISySentinel.
 
 **Trabajo:**
 
 - [ ] Acordar con Gateway una identidad remota no sensible y verificable (por ejemplo, ID configurado del workspace); no exponer el path físico en `/health`. Hasta tenerla, Gateway se limita a estado de disponibilidad y sus archivos no aparecen en Files.
 - [ ] En la primera entrega habilitar solo read/list/search del workspace remoto identificado, con scope al root y límites/redacción del host.
-- [ ] Mapear operaciones Gateway a capabilities/hosts explícitos. Confirmar quién autoriza cada integración; permisos Gateway (`isyco.read`, `isyco.write`) y grants IsyMotron no se sustituyen entre sí.
+- [ ] Mapear operaciones Gateway a capabilities/hosts explícitos. Confirmar quién autoriza cada integración; permisos Gateway (`isyco.read`, `isyco.write`) y grants locales de Workspace Authority son gates independientes.
 - [ ] Activar write solo cuando Gateway root coincide con el workspace remoto seleccionado y tanto el key scope como host grant permiten la acción; indicar overwrite/create antes de pedir aprobación.
 - [ ] Mantener Drive, Email, GitHub y MCP en su superficie específica. `email.send`, upload, crear issue y otras mutaciones externas necesitan aprobación/efecto visible propio.
 - [ ] Dejar delete, chmod, move, `sudo` y shell deshabilitados hasta que exista capability, engine y política IsyMotron auditados para cada una.

@@ -25,7 +25,7 @@ class CLIAction:
 COMMAND_BRANCHES: tuple[tuple[str, tuple[CLIAction, ...]], ...] = (
     ("Agent", (
         CLIAction("Agent", "Chat", "Open a new conversation in ISyCode."),
-        CLIAction("Agent", "Plan", "Draft an intent for IsyMotron to review.", prompt="/plan "),
+        CLIAction("Agent", "Plan", "Draft a proposal through an authorized provider; execution is disabled in Secure.", prompt="/plan "),
         CLIAction("Agent", "External review", "Preview a text artifact and request one tool-free GPT-6 Luna review.", prompt="/review "),
         CLIAction("Agent", "Help", "Show the commands registered by ISyCode.", prompt="/help"),
         CLIAction("Agent", "Choose role", "Choose an ISyCode workspace role; this does not grant tools.", view="roles"),
