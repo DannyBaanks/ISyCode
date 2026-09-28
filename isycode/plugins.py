@@ -38,6 +38,13 @@ class PluginRegistry:
                 raise ValueError(f"command already registered: /{cmd.name}")
             self._commands[cmd.name] = (plugin, cmd)
 
+    def command_items(self) -> list[tuple[str, str]]:
+        """Return registered command names and descriptions for UI menus."""
+        return [
+            (name, command.description)
+            for name, (_, command) in sorted(self._commands.items())
+        ]
+
     def route(self, text: str):
         """Returns (plugin, command, arg) or (None, None, text)."""
         if not text.startswith("/"):

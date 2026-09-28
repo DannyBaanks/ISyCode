@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIRECTORY=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ISYCODE_REPOSITORY=$(CDPATH= cd -- "$SCRIPT_DIRECTORY/.." && pwd)
+ISYCODE_LAUNCHER="$ISYCODE_REPOSITORY/scripts/isycode"
+ISYCODE_BIN_DIR=${ISYCODE_BIN_DIR:-"${HOME:?HOME is not set}/.local/bin"}
+ISYCODE_COMMAND="$ISYCODE_BIN_DIR/isycode"
+
+mkdir -p -- "$ISYCODE_BIN_DIR"
+if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
+    if [ -L "$ISYCODE_COMMAND" ] \
+        && [ "$(readlink -f -- "$ISYCODE_COMMAND")" = "$(readlink -f -- "$ISYCODE_LAUNCHER")" ]; then
+        printf 'ISyCode launcher already installed at %s\n' "$ISYCODE_COMMAND"
+        exit 0
+    fi
+    printf 'Refusing to replace existing command: %s\n' "$ISYCODE_COMMAND" >&2
+    exit 1
+fi
+
+ln -s -- "$ISYCODE_LAUNCHER" "$ISYCODE_COMMAND"
+printf 'Installed ISyCode launcher at %s\n' "$ISYCODE_COMMAND"
+case ":${PATH:-}:" in
+    *":$ISYCODE_BIN_DIR:"*) ;;
+    *) printf 'Add this to your shell profile: export PATH="%s:$PATH"\n' "$ISYCODE_BIN_DIR" ;;
+esac

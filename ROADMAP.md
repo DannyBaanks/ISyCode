@@ -1,506 +1,610 @@
-# ISyCode — TUI Agent Roadmap
+# ISyCode — Roadmap de producto y ejecución
 
-**One AI. Many hosts. One capability fabric. Now in your terminal.**
+**Una TUI de ISyCo con la experiencia visual de Crush, capacidades propias de ISyCo/OpenISy y seguridad deny-by-default de ISySentinel.**
 
-ISyCode is a minimalist TUI (terminal user interface) for AI agents, built on
-the IsyMotron capability fabric and the OpenISy coordination layer. It brings
-the "model proposes, host decides, receipts record" model to a keyboard-first
-interface — no browser, no mouse, no web server.
+Estado de este documento: **plan de trabajo**, no declaración de que las integraciones ya estén completas. Última auditoría de fuentes: 2026-09-27. No se modificaron IsyMotron, OpenISy ni IsyVM durante esa auditoría.
 
-**The model can propose a destructive operation. It can never decide its own
-blast radius. The host resolves it first.**
+**Actualización de arquitectura (2026-09-27):** ISySentinel + Workspace Authority son el modelo de seguridad de producto. Los hitos escritos antes de M15 que dicen “autoridad IsyMotron” describen el adapter legado existente, no el destino de arquitectura; M15 debe retirar esa dependencia de seguridad antes de habilitar acciones con efectos. Para Gateway HTTP se exige además su Sentinel remoto. Ver [contrato de fronteras](docs/design/isysentinel-security-boundaries.md).
 
----
+## 1. Producto que queremos construir
 
-## Why this exists
+ISyCode es un agente para terminal que se abre en el directorio actual (`cwd`) y trabaja sobre ese proyecto. La interfaz combina:
 
-IsyMotron already has the full agent backend: provider seam, strict planner,
-deny-by-default enforcer, sealed receipts, demo-host fixtures. What it lacks
-is a surface that feels like Pi or OpenClaw — a fast, keyboard-driven TUI
-where you can watch Nemotron plan, approve execution, and inspect receipts
-without leaving the terminal.
+- **Chat principal** amplio, con streaming, historial, comandos y estados de tarea claros.
+- **Panel lateral derecho** inspirado visualmente en Crush: MCPs y skills reales, estado/conteo de herramientas y acceso al explorador del proyecto.
+- **Explorador de archivos del proyecto actual**: árbol navegable, búsqueda y vista previa de archivos. El root se captura al iniciar ISyCode; no se convierte silenciosamente en el root global del Gateway.
+- **ISySentinel + Workspace Authority** para evaluar acciones deny-by-default bajo la identidad `.isyroot`; el execution owner ejecuta solo después de ALLOW y registra el resultado por separado.
+- **Adapters opcionales** para IsyMotron, Gateway, MCP, LSP, Mobile Host, Bridge y L1. Cada servicio conserva su propia frontera y sus credenciales; ninguno sustituye los grants del workspace.
+- **Superficies OpenISy/ISyCo** existentes: MCP, skills, Gateway, capacidades/Bridge y, más adelante, L1. Se integran por interfaces existentes; no se reimplementan dentro del renderer.
 
-OpenISy already has the coordination substrate: bridge mailbox, capability
-registry, role system, gateway HTTP API, L1 self-extension pipeline. What it
-lacks is an agent that uses it.
+### Dirección visual
 
-**ISyCode is the missing piece: a TUI that connects the two — and refuses to
-let model confidence become authority.**
+Crush es referencia visual, no una dependencia ni una copia de marca. Queremos una terminal oscura y legible, identidad ASCII compacta, colores con significado, conversación como zona dominante y una columna lateral útil. En terminales anchas, el chat ocupa aproximadamente 70–75% del ancho y la barra lateral el resto, con un ancho objetivo de 32–38 columnas. En terminales angostas, la barra lateral se reduce o se oculta con un comando; el chat conserva el espacio.
 
----
+La barra lateral tendrá vistas seleccionables **Overview** y **Files**. Overview presenta las conexiones reales de MCP y las skills disponibles; Files presenta el árbol del directorio de lanzamiento y permite abrir una vista previa. Un indicador compacto conserva el número/estado de MCPs y skills al cambiar de vista. No se colocará un panel de diffs en esa columna. Si más adelante hace falta inspeccionar un diff, será una acción explícita en el chat/editor, nunca el contenido por defecto del panel.
 
-## Architecture
+Los estados serán datos reales: conectado, desconectado, autenticación requerida, error, cargando o vacío. Ninguna integración aparecerá verde por estar escrita en una lista estática.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  ISyCode TUI (textual / rich) — NO policy semantics     │
-│  stdin/stdout → render plans, receipts, leases, tools   │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│  Agent Runtime Contract                                 │
-│  capability discovery · effect classes · resumable state │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-         ┌─────────────┼─────────────┐
-         ▼             ▼             ▼
-   ┌──────────┐  ┌──────────┐  ┌──────────┐
-   │ OpenISy  │  │IsyMotron │  │ OpenISy  │
-   │ Gateway  │  │ Provider │  │ Bridge   │
-   │ (I/O)    │  │ Planner  │  │ (coord)  │
-   │          │  │ Enforcer │  │          │
-   │ files    │  │ Host     │  │ leases   │
-   │ search   │  │ Receipts │  │ identity │
-   │ semantic │  │          │  │          │
-   │ drive    │  │          │  │          │
-   │ email    │  │          │  │          │
-   │ github   │  │          │  │          │
-   └──────────┘  └──────────┘  └──────────┘
-```
+### Decisión de arquitectura propuesta
 
-**IsyMotron** = the brain (provider → planner → enforcer → receipts)
-**OpenISy Gateway** = the eyes and hands (files, search, semantic, drive, email, github)
-**OpenISy Bridge** = coordination (if multiple agents)
-**OpenISy L1** = self-extension (model-authored tools)
+Conservar inicialmente la TUI Python/Textual de ISyCode y su contrato del renderer, integrar OpenISy mediante MCP/configuración de skills y consumir el Gateway por HTTP. ISyCode será dueño de ISySentinel, Workspace Authority y las decisiones de permisos ligadas a `.isyroot`; IsyMotron podrá ser un adapter/runtime opcional, nunca la autoridad de seguridad del producto. Esto evita importar código TypeScript/Bun de OpenISy directamente en Python y permite reemplazar el renderer sin cambiar las decisiones de política.
 
----
+**Puerta de arquitectura M0:** comparar esta opción con alojar la UI dentro del TUI TypeScript de OpenISy. La opción propuesta se confirma solo si un spike demuestra que podemos leer estados y herramientas MCP, descubrir skills y mantener el contrato de ISySentinel sin duplicar la sesión de OpenISy. Si no, el spike deja un ADR corto con la decisión y el costo antes de que empiece una integración amplia.
 
-## Invariants
+## 2. Auditoría de los proyectos y qué reutilizar
 
-These are non-negotiable. No milestone may weaken them.
-
-### INV-1: Model ≠ Authority
-
-Model output is untrusted intent.
-
-No model gains authority by:
-- confidence;
-- reasoning quality;
-- system prompt;
-- model identity;
-- user trust.
-
-Authority comes exclusively from the host / policy / lease / capability
-fabric. The model never self-amplifies its lease.
-
-### INV-2: Gateway down never increases privilege
-
-If Gateway / authority surface is unavailable:
-
-- read-only operations continue ONLY if a local capability is explicitly authorized;
-- mutating operations FAIL CLOSED;
-- no `filesystem.write` / `delete` / `move` / `chmod` / `process kill` / `sudo`
-  silently becomes shell;
-- raw shell may exist ONLY as an explicit, separate, user-visible capability
-  with its own authority.
-
-**"Gateway down" never widens the blast radius.**
-
-### INV-3: TUI is a client, not an owner
-
-The renderer (Textual / Rich / prompt_toolkit) contains no policy semantics.
-
-```
-TUI → Agent Runtime Contract → Planner / Fabric / Authority / Receipts
-```
-
-Renderer may change. Authority, receipts, and execution semantics may not.
-
-### INV-4: Creation ≠ activation ≠ grant ≠ execution approval
-
-An L1-created tool passing gates V/T/P/S is still unusable until its
-capability and effect class are independently registered and granted.
-Self-extension is never a privilege escalation path.
-
----
-
-## Effect classes
-
-Minimal classification — not a DSL:
-
-| Class | Examples | Default posture |
-|---|---|---|
-| `READ` | `filesystem.read`, `search`, `system.info` | Allow within granted roots |
-| `WRITE` | `filesystem.write` (create/overwrite) | Lease + budget |
-| `DESTRUCTIVE` | `delete`, `move`, `rmdir`, `chmod` | Explicit approval + preflight |
-| `PROCESS` | `apps.launch`, `kill` | Allowlist + lease |
-| `NETWORK` | HTTP fetch, relay send | Explicit grant |
-| `PRIVILEGED` | `sudo`, `requires_admin` | Human approval only |
-
-`filesystem.delete` does NOT share authority with `filesystem.read`.
-Policy may demand different approval / budget per class.
-
----
-
-## What is reused (not rebuilt)
-
-| Component | Source | What it gives ISyCode |
-|---|---|---|
-| `Provider.complete()` | IsyMotron `agents/provider.py` | One call to Nebius/NVIDIA/Ollama/llama.cpp |
-| `Planner.plan()` | IsyMotron `agents/planner.py` | Intent → typed capability request, strict schema |
-| `Enforcer.decide()` | IsyMotron `core/isymotron/policy.py` | Pure function, deny-by-default, closed vocabularies |
-| `Host` (authority) | IsyMotron `core/isymotron/host.py` | lease + execute + receipt minting |
-| `LoopbackRelay` | IsyMotron `relay/loopback.py` | In-process transport, no network needed |
-| Demo-host fixtures | IsyMotron `hosts/simulator/engines.py` | ModernHost/LegacyHost — real authority, fake OS |
-| `Grants` | IsyMotron `hosts/windows/grants.py` | Local authority, JSON, deny-by-default |
-| `verify_receipt()` | IsyMotron `core/isymotron/verify.py` | Re-derive decisions, show provenance |
-| Gateway HTTP | OpenISy `gateway/app.py` | files, search, semantic, drive, email, github |
-| Bridge mailbox | OpenISy `bridge_core/capabilities/cap.agent_bridge/` | hello/peek/send/release, leases, identity |
-| Capability registry | OpenISy `bridge_core/capabilities/` (81 caps) | `Registry.list()/search()/get()` |
-| Role system | OpenISy `.opencode/role_doctor/contracts.json` | 8 roles with owns/must_not/handoffs |
-| L1 pipeline | OpenISy `OpenISy/packages/opencode/src/l1/` | Model-authored tools with gates V/T/P/S |
-| Hook session | OpenISy `.claude/hooks/bridge_session.py` | Session lifecycle (start/beat/end) |
-
-**Not rebuilt:** HTTP server, avatar, browser auto-open, CSP headers, LAN tier, `link/` subsystem (remote-only).
-
-**Built from scratch:** TUI render (plans, receipts, leases), agent loop (context, tool dispatch, recovery), interactive permissions (grant/revoke), safety substrate (preflight, budgets, TOCTOU protection), resumable session state.
-
----
-
-## Milestones
-
-### M0-A — Short-loop viability
-
-**Status: DEMONSTRATED.** 5 multi-step intents via Provider + Planner
-against NVIDIA NIM with LegacyHost demo backend. 5/5 PLANNED, 100%
-tool-call validity, ~8000 tokens total, avg latency 6.0s. No
-hallucinations / rejections / truncations observed in those five cases.
-
-**This does NOT prove the 20+ turn objective.** It proves only that a
-short smoke works.
-
-**Gate (already passed):** >=70% valid tool calls over 5 turns.
-
----
-
-### M0-B — Long-loop soak
-
-**Status: DEMONSTRATED.** 20-turn soak with perturbations (malformed
-JSON at T8, provider 429 at T12, ungranted delete at T11). 15/20 =
-75% validity (gate >=70%), 3 recoveries, context stable (early=1250
--> late=993 tokens/turn), zero privilege escalation. Also caught a
-NATURAL model error at T20 (UNKNOWN_RESULT_FIELD) rejected by the
-planner without injection.
-
-**Goal:** Prove 20+ continuous turns without degradation.
-
-- [ ] Same harness as M0-A, extended to 20+ turns with mixed intents
-- [ ] Measure per-turn:
-  - tool-call validity rate;
-  - recovery after malformed output;
-  - context growth (tokens in / tokens out);
-  - tokens/turn;
-  - latency;
-  - provider failures (4xx/5xx, timeouts);
-  - state continuity (does the loop remember earlier constraints?);
-  - repeated capability use (same cap 3+ times);
-  - whether earlier constraints remain obeyed late in the loop
-- [ ] Introduce deliberate perturbations:
-  - one malformed model output (truncated JSON) mid-loop;
-  - one provider 429/503;
-  - one attempt to use an ungranted capability
-- [ ] **Gate (falsifiable):** >=70% valid tool calls at turn 20; at least
-  one successful recovery after a malformed output; no privilege escalation
-  after any perturbation.
-
-**Acceptance:** A transcript of 20+ turns with per-turn metrics printed,
-recovery events logged, and the gate evaluated at the end.
-
-**Rollback:** If the loop degrades below 70% by turn 20, the TUI design
-must change (shorter context, stricter compaction, or chat-only mode).
-
----
-
-### M1 — Minimal TUI
-
-**Status: DEMONSTRATED.** `isycode/tui.py` — textual app with
-Crush-inspired banner, soft side panel (MCPs/Skills/LSPs), chat area,
-input prompt. NVIDIA NIM provider + Planner + LegacyHost demo
-backend. Plan renders with steps + "this plan carries no authority".
-Verified live in tmux: banner renders, input focuses, plan flow works.
-Known cosmetic issue: banner letter alignment (user fixing manually).
-
-**Goal:** A TUI that feels like Pi/OpenClaw.
-
-- [ ] `textual` or `rich` + `prompt_toolkit` — layout: input at bottom, scroll above
-- [ ] Integrate `Provider.complete()` with streaming
-- [ ] Render tool calls (capability + params + result)
-- [ ] Render receipts (seal, verdict, digest)
-- [ ] `LoopbackRelay` + `LegacyHost` (demo-host) for testing without keys
-- [ ] **Gate:** 4-step plan executes end-to-end in the TUI
-
-**Acceptance:** `python -m isycode` opens a TUI, user types an intent,
-Nemotron plans, user approves, host executes, receipts render.
-
-**Renderer-agnostic (INV-3):** the renderer only reads plan / receipt
-objects from the Agent Runtime Contract. No policy logic in the TUI.
-
----
-
-### M1.5 — Safety substrate (destructive-action firewall)
-
-**Goal:** Before any real write, the host — not the model — owns the blast radius.
-
-This milestone must complete BEFORE M2 (first real write to a real tree).
-
-**Contract:**
-
-```
-REQUEST → RESOLVE → PREFLIGHT → POLICY → APPROVAL (when required)
-       → EXECUTE → VERIFY → RECEIPT
-```
-
-**Capabilities to build:**
-
-1. **Canonical path resolution.** Resolve relative paths, symlinks,
-   Windows junctions / reparse points, mount boundaries, real paths.
-   `followlinks=false` is NOT the whole filesystem semantics.
-
-2. **Granted roots.** Every filesystem operation lives inside granted
-   roots. Canonical resolution that escapes → DENY.
-
-3. **Protected roots.** Explicit paths that cannot be destroyed by
-   accident: `.git`, receipt / provenance stores, ISyCode config /
-   state, workspace metadata, user-declared directories. Policy is
-   extensible but minimal — not a hardcoded list.
-
-4. **Delete / write budgets.** Authority may limit per lease: file
-   count, total bytes, directories, recursive depth, operation type.
-   Crossing a budget requires new authorization or DENY.
-
-5. **Blast-radius manifest.** Before any destructive execution, produce:
-   exact targets, canonical targets, count, bytes (where knowable),
-   crossing of links / mounts, protected-path collisions, resulting
-   policy decision.
-
-6. **TOCTOU protection.** Human approval corresponds to the SAME
-   resolved plan that executes. Hash / seal the approved manifest. If
-   the target set changes between approval and execution → DENY and
-   recompute.
-
-7. **Reversible-first destructive behavior.** Where viable:
-   quarantine / trash > irreversible delete. Never promise
-   reversibility the host cannot demonstrate.
-
-8. **Receipts.** After execution, record: requested intent, resolved
-   capability, resolved targets, policy, authority / lease, approval
-   (if required), actual effects, partial failures, verification,
-   digest / seal.
-
-**Gate (falsifiable):** The adversarial suite (below) passes on
-disposable fixtures. No real workspace is mutated.
-
----
-
-### M2 — Gateway integration
-
-**Goal:** The TUI can read / search / write real files through the
-gateway — under the safety substrate, never around it.
-
-- [ ] HTTP client for `gateway/app.py` (or direct tool calls)
-- [ ] Real tool calling: `filesystem.read`, `filesystem.write`, `search`
-- [ ] Interactive permissions: TUI asks ALLOW/DENY before each tool
-- [ ] **DEGRADED MODE (INV-2):** If gateway is down, mutating operations
-  FAIL CLOSED. No silent bash fallback. Raw shell is a separate,
-  explicit, user-visible capability with its own authority.
-- [ ] **Gate:** TUI reads a repo, searches a symbol, writes a file — all
-  through the gateway. Then: gateway stops → mutation fails, reads
-  continue only if a local capability is explicitly authorized.
-
-**Rollback:** If the gateway is down and no local read capability
-exists, the TUI shows a clear degraded banner and refuses mutations.
-
----
-
-### M2.5 — Resumable sessions / provider handoff
-
-**Goal:** ISyCode survives provider death, outage, 429, timeout,
-malformed output, and deliberate model change.
-
-- [ ] Durable session state (NOT only in model context):
-  - current intent;
-  - accepted plan;
-  - executed steps;
-  - outstanding steps;
-  - receipts;
-  - capabilities;
-  - approvals;
-  - lease;
-  - session identity
-- [ ] On provider failure: retry with same provider; on repeated failure,
-  allow handoff to a different provider.
-- [ ] Replacement model resumes from verifiable durable state —
-  WITHOUT pretending private memory of the first model.
-- [ ] **No duplicate execution:** a step that already produced a receipt
-  is never replayed after recovery.
-- [ ] **Gate:** Provider dies after step 2/4 → replacement model
-  continues from step 3, no successful write is replayed, receipt chain
-  stays intact.
-
-**Out of scope now:** full semantic memory. Only the minimal state
-machine for safe resumption.
-
----
-
-### M3 — Multi-agent via Bridge
-
-**Status: DEMONSTRATED.** BridgeClient wraps handshake.py. Two agents
-collaborate: A claims + works + releases, B takes over cleanly. Live
-bridge semantics verified (active leases protected by disk activity).
-2/2 tests pass.
-
-**Goal:** Multiple agents coordinated from the TUI.
-
-- [ ] `handshake.py` hello/peek/send/release
-- [ ] Leases visualized in the TUI
-- [ ] **Gate:** Two agents collaborate on a task without collision
-
----
-
-### M4 — L1 self-extension
-
-**Status: DEMONSTRATED.** L1 pipeline (create/validate/test/probe/
-register/grant) with INV-4 enforced. Destructive tool passes V/T/P
-but stays unusable until independently registered AND granted. 4/4
-tests pass.
-
-**Goal:** The TUI can create its own tools — without becoming a
-privilege escalation path.
-
-- [ ] `l1_create_tool` / `l1_activate_tool` / `l1_list`
-- [ ] Staging browser in the TUI
-- [ ] **INV-4 enforced:** a tool created by L1 does NOT inherit
-  authority by existing. It passes V/T/P/S, then its capability and
-  effect class must be independently registered and granted before it
-  enters the authority surface.
-- [ ] **Gate:** TUI creates a destructive tool → tool remains unusable
-  until independently registered and granted. Creation != activation
-  != grant != execution approval.
-
----
-
-## Dependencies
-
-```
-M0-A (DEMONSTRATED)
-  └─ M0-B (long-loop soak)
-       └─ M1 (TUI)
-            └─ M1.5 (safety substrate)  ← BEFORE first real write
-                 └─ M2 (gateway + degraded mode)
-                      └─ M2.5 (resumable sessions)
-                           └─ M3 (bridge, optional)
-                                └─ M4 (L1, optional)
-```
-
-M0-A is done. M0-B is the critical path for viability. M1.5 is the
-critical path for safety. M2-M2.5 are the core value. M3-M4 are
-stretch goals.
-
----
-
-## Safety witnesses
-
-All destructive tests run on **disposable fixtures / temp trees only**.
-No real workspace is mutated.
-
-| ID | Witness | Expected | Proves |
+| Proyecto y ubicación | Ya existe | Reutilización prevista | Límite que debe respetarse |
 |---|---|---|---|
-| A | Recursive delete inside disposable sandbox | ALLOW per policy | Sandbox escapes are contained |
-| B | Delete traverses symlink / junction outside granted root | DENY | Canonical resolution is real |
-| C | 10 files approved, tree changes to 1000 before execution | Stale manifest → DENY / replan | TOCTOU protection works |
-| D | Delete touches `.git` / protected root | DENY unless explicit separate authority | Protected roots hold |
-| E | Gateway unavailable | Mutation fails closed; no silent bash fallback | INV-2 holds |
-| F | Provider dies after step 2/4 | Replacement model resumes from durable state; no replay of successful writes | Resumability works |
-| G | Model requests capability it was not granted | DENY | Granted-only catalogue holds |
-| H | L1 creates destructive tool | Tool unusable until independently registered / granted | INV-4 holds |
-| I | Same safe operation through two different models | Authority decision remains host-determined | INV-1 holds |
-| J | User explicitly grants narrow destructive op | Only the approved resolved target set executes | Human approval binds to resolved targets |
+| **ISyCode** — este repositorio | Prototipo Textual en `isycode/tui.py`; streaming en `isycode/streaming.py`; cliente HTTP en `isycode/gateway_client.py`; plugins; módulos de sesiones/seguridad/Bridge | Punto de partida para el shell de chat, comandos y adapters | El primer corte ya añade launcher, configuración, explorer read-only y descubrimiento MCP/skills vía HTTP cuando se configura el servidor OpenISy. El runtime de planes aún usa LegacyHost simulado y no habilita escrituras reales. |
+| **ISySentinel (ISyCode)** | Pendiente de separar Authority, Systembilities, consenso Sentinel, execution owners y recibos | Fuente de verdad de permisos por workspace y veredicto ALLOW/DENY | Sentinel solo combina resultados; no ejecuta, no concede permisos y no altera el request. `.isyroot` solo limita el máximo root. |
+| **IsyMotron** — adapter externo configurable | `Provider`, `Planner`, `Executor`, `Host`, `Enforcer`, leases, motores y recibos | Adapter/runtime opcional y referencia para flujos que el usuario active | Sus grants/leases/recibos no se convierten en permiso de ISyCode. No modificar su semántica para completar el modelo de seguridad del producto. |
+| **OpenISy** — integración en checkout separado | Fork de OpenCode con TUI, sesiones/proveedores, MCP, skills, permisos y pipeline L1 | Fuente primaria para las capacidades de OpenISy. Preferir MCP y formatos/configuración existentes frente a una segunda implementación | Su runtime L1 es experimental y sujeto a flag. No importar su estado como autoridad de filesystem. |
+| **Gateway de ISyCo** — servicio externo | API de archivos/búsqueda, operaciones semánticas y conectores Drive/Email/GitHub; auth con scopes, contención de paths, redacción, límites y audit log | File/search/semantic remoto solo cuando el Gateway esté configurado y su root coincida con el workspace que se muestra | Tiene un único `IESY_ROOT`; no asumir que es igual al `cwd`. Las escrituras requieren scope dedicado. El Gateway documenta que no ofrece delete ni ejecución de comandos. Indisponibilidad no autoriza fallback a shell. |
+| **Bridge/capacidades** — protocolo externo | `cap.agent_bridge/handshake.py`, registro de capacidades y coordinación/leases | Integración de coordinación optativa después del flujo single-agent | Es un protocolo separado y nunca es autoridad de filesystem. |
+| **IsyVM** — prototipo externo | TUI Textual, sidebar responsive, status bar, comandos, modos y explorador Qt | Referencia de diseño e interacción para sidebar responsive, foco/atajos, file tree y contratos de layout | No reutilizar su `PolicyEngine`/Layer A como seguridad de ISyCode: Layer A es best-effort y Layer B está pendiente. |
 
----
+### Estado honesto al iniciar este roadmap
 
-## Risks
+- M0-A/M0-B y la TUI mínima tienen evidencia descrita en el roadmap anterior: 5-turn smoke y 20-turn soak; la TUI se había inspeccionado en tmux. Esa evidencia prueba los escenarios anotados, no producción ni integraciones completas.
+- ISyCode aún no tiene ISySentinel separado y conectado en todas las rutas de ejecución; existe un prototipo monolítico y algunos adapters acoplados a IsyMotron. No anunciar el nuevo modelo como operativo hasta migrar esos callsites.
+- OpenISy ya ofrece MCP/skills y un TUI propio; el panel actual de ISyCode no lee el estado real de esos servicios.
+- El file tree de IsyVM sirve como referencia, pero no es un browser de terminal listo para importar.
+- No se verificó visualmente la TUI de ISyCode durante esta revisión, no se ejecutaron pruebas y no se revisaron como limpias las modificaciones locales de OpenISy/IsyVM.
+- Los checks existentes en `isycode/test_safety.py` no bastan para declarar seguridad completa: varios witnesses son simulaciones/incompletos y el TUI no consume todavía el contrato de ISySentinel en todas las acciones.
 
-| Risk | Likelihood | Impact | Mitigation | Verification gate |
-|---|---|---|---|---|
-| Nemotron tool-calling degrades over long loops | Medium | High | M0-B gate — pivot to chat-only if <70% at turn 20 | M0-B soak transcript |
-| Destructive filesystem traversal | Medium | High | Canonical path resolution + granted roots (M1.5) | Witness B |
-| Symlink / junction / reparse point semantics | Medium | High | `realpath` + mount-boundary check; never trust `followlinks=false` | Witness B |
-| TOCTOU between approval and execution | Medium | High | Seal approved manifest; recompute on mismatch | Witness C |
-| Authority escalation through bash fallback | Low | Critical | INV-2: no silent shell fallback; shell is explicit capability | Witness E |
-| L1-created capability escalation | Medium | High | INV-4: creation != activation != grant != approval | Witness H |
-| Provider death mid-plan | Medium | High | Durable session state + receipt-based resumption | Witness F |
-| Duplicate execution after recovery | Medium | High | Receipts are idempotent keys; executed steps never replayed | Witness F |
-| Stale plan against changed host state | Medium | Medium | Re-validate capabilities before each execution step | Witness C |
-| `textual` too heavy for the use case | Low | Medium | Fall back to `rich` + `prompt_toolkit` | M1 gate |
-| Gateway unstable / not running | Medium | Medium | DEGRADED MODE: reads fail closed or use explicit local caps; mutations refuse | Witness E |
-| Bridge coordination bugs | Medium | Low | Single-agent fallback | M3 gate |
-| L1 gates too slow for interactive use | High | Low | Pre-built tools only | M4 gate |
+## 3. Contratos y límites entre componentes
 
----
+```text
+Textual UI (chat, Overview, Files, approvals, receipts)
+                 │ renderiza y envía intención
+                 ▼
+ISyCode Runtime Contract (sesión, catálogo, tarea, resultado)
+       ┌─────────┼────────────┬─────────────┐
+       ▼         ▼            ▼             ▼
+  ISySentinel     OpenISy MCP   Skills    Gateway HTTP Sentinel
+  Authority       discovery     catalog   remote key/op gate
+  Systembilities  LSP / Docker  Bridge    Mobile Host / L1
+  execution owners per adapter; outcomes/receipts are separate
+```
 
-## Success criteria
+Reglas de frontera:
 
-### Demonstrated (as of this revision)
+1. La TUI renderiza estados y solicita acciones; no resuelve paths físicos para conceder autoridad ni implementa política.
+2. El modelo propone intención y parámetros. El catálogo enviado al modelo contiene solo capacidades concedidas.
+3. Workspace Authority evalúa grants explícitos ligados al `.isyroot`; ISySentinel agrega todas las Systembilities y devuelve ALLOW/DENY. Un plan del modelo nunca es autorización.
+4. El explorador empieza en `workspace_root`, pero solo enumera y lee paths cubiertos por grants explícitos. `.isyroot` nunca habilita lectura. `..`, paths fuera del root y enlaces que escapen se rechazan.
+5. MCP/skills se descubren y presentan desde sus servicios/configuración reales. Su presencia en la barra no concede permiso de ejecución.
+6. Gateway y Bridge permanecen adapters separados. Una falla de conexión no amplía permisos, no habilita shell y no convierte una escritura remota en escritura local.
+7. Toda acción con efectos devuelve resultado y recibo. La UI distingue `PASS`, `REJECT`, `NOT_VERIFIABLE` y ausencia de recibo; nunca reduce esos estados a un check verde genérico.
+8. L1 no se activa desde el panel por estar listado: creación, gates, activación, registro de capability, grant y aprobación de ejecución son estados diferentes.
+9. Para HTTP Gateway, ISySentinel local y Gateway HTTP Sentinel deben permitir independientemente. API keys autentican el perímetro remoto; no son grants locales.
 
-- [x] M0-A: 100% tool-call validity over 5 short turns (DEMONSTRATED, not extrapolated)
+## 4. Milestones
 
-### Pending — viability
+### M0 — Cerrar auditoría, baseline y decisión de runtime
 
-- [ ] M0-B: >=70% tool-call validity over 20+ continuous turns
-- [ ] M0-B: at least one recovery after malformed output
-- [ ] M0-B: no privilege escalation after any perturbation
+**Estado:** en curso. Ya hay launcher global que conserva el cwd, discovery del `.isyroot` vacío más cercano, separación de `launch_dir`/`workspace_root`/grants, onboarding recurrente opt-in y sesiones de chat reanudables en estado privado externo. Las sesiones temporales se borran al salir; los títulos nacen del primer mensaje. `isycode/contracts.py` define interfaces estructurales para runtime, workspace, MCP, skills y verificación; la TUI acepta factories para sustituir runtime/workspace/OpenISy y el verificador de IsyMotron se comparte entre browser y runtime. Sigue pendiente cerrar el spike/compatibilidad OpenISy.
 
-### Pending — safety
+**Objetivo:** fijar qué contratos consumirá ISyCode y cómo se conectará a OpenISy sin reconstruir su runtime.
 
-- [ ] M1.5: adversarial safety suite (witnesses A-J) passes on disposable fixtures
-- [ ] M2: no mutation escalation when Gateway disappears
-- [ ] M2: exact receipts for every side-effecting action
+**Trabajo:**
 
-### Pending — robustness
+- [ ] Confirmar el backend primario de UI: mantener Python/Textual o alojar el panel de ISyMotron dentro del TUI TypeScript de OpenISy. Hacer un spike acotado con lectura de MCP/skills y una operación demo, sin mutaciones reales.
+- [x] Añadir ADR al repo con la elección, alternativas, lifecycle de consulta, timeout y política de errores. El ADR sigue propuesto hasta validar su endpoint experimental contra OpenISy.
+- [x] Definir `AgentRuntime`, `WorkspaceProvider`, `MCPProvider`, `SkillCatalog` y `ReceiptVerifier` como interfaces Python sin lógica de permisos en widgets. El runtime, workspace y cliente OpenISy se inyectan por factories; el verificador compartido delega en IsyMotron.
+- [x] Capturar el cwd canónico como `launch_dir`, resolver el `.isyroot` vacío más cercano como `workspace_root` y mantener los roots de autoridad como dato separado; mostrar identidad y procedencia en la TUI.
+- [x] Añadir launcher PATH (`~/.local/bin/isycode`) que resuelve el checkout sin cambiar el cwd de invocación, además de `python -m isycode`; evitar literales de rutas personales.
+- [x] Preguntar si el directorio inicial será recurrente. Solo un sí crea el `.isyroot` vacío; un no conserva el fallback y mantiene el historial temporal fuera del workspace.
+- [x] Añadir conversaciones con título automático desde el primer mensaje, guardado privado fuera del repo y reanudación desde **Sessions** para roots marcados.
+- [x] Invalidar plan y confirmación armada al iniciar una petición nueva o un plan, rechazarlo o fallar; la confirmación guarda el digest exacto del plan presentado. La cancelación del runtime aún no está implementada.
 
-- [ ] M2.5: provider handoff witness — replacement model resumes without replaying writes
-- [ ] M1: TUI renderer replaceable without changing authority semantics
+**Criterios de aceptación:**
 
-### Optional
+- La TUI arranca desde un proyecto con espacios en el path y desde otra carpeta distinta al repo ISyCode.
+- Se puede iniciar desde un directorio arbitrario y el header, explorer y operaciones nombran el mismo root.
+- El adapter de prueba muestra capacidades MCP/skills reales del endpoint configurado o un estado explícito vacío/error; no tiene nombres verdes hardcodeados.
+- Un plan rechazado no puede volver a ejecutarse al presionar la tecla de confirmación.
+- ADR indica las llamadas exactas a IsyMotron/OpenISy y qué código existente se reutiliza.
 
-- [ ] M3: two agents coordinate without collision
-- [ ] M4: L1-created tool registered, granted, and used — without escalation
+**No incluye:** habilitar escritura real ni portar el TUI completo de OpenISy.
 
----
+### M1 — Shell visual y navegación de la TUI
 
-## Timeline
+**Estado:** iteración visual ejecutable: chat principal y rail `Overview`/`Files`; header compacto con ruta de workspace; MCP/skills de OpenISy; sección LSP con estado explícito “sin adapters configurados”; selector de archivos con acciones `Copy path`/`Open preview`; barra inferior `Sidebar`, `Sessions`, `Providers`, `Role`, `Context` y `⚙`; la paleta `/`/`Ctrl+P` tiene diez ramas semánticas con listas anidadas, scroll y búsqueda. `Ctrl+F` busca en la salida completa del chat y permite recorrer coincidencias. `Context → Choose AGENTS.md…` abre el selector nativo de Linux y conserva el gate de `filesystem.read` de IsyMotron. El rail usa fondo gris grafito y texto lavanda/gris de contraste moderado. Las respuestas del chat y Roundtrip pasan por parser Markdown con estilos para encabezados, negritas, listas, código en línea y bloques con resaltado de sintaxis. `Esc` cancela el stream activo y descarta su respuesta parcial; cuando no hay generación, vuelve del menú o enfoca el composer sin borrar el borrador. Faltan capturas en varios tamaños y la integración de acciones MCP/skills.
 
-| Phase | Duration | Depends on | Status |
-|---|---|---|---|
-| M0-A | 1-2 days | — | **DEMONSTRATED** |
-| M0-B | 2-3 days | M0-A | **DEMONSTRATED** |
-| M1 | 3-5 days | M0-B | **DEMONSTRATED** |
-| M1.5 | 3-5 days | M1 | pending |
-| M2 | 3-5 days | M1.5 | pending |
-| M2.5 | 2-3 days | M2 | pending |
-| M3 | 1-2 weeks | M2.5 | **DEMONSTRATED** |
-| M4 | 1-2 weeks | M3 | **DEMONSTRATED** |
+**Objetivo:** acercarse a la composición de Crush: chat despejado, panel lateral útil y estados de integración confiables.
 
-**Core (M0-A → M2.5):** 2-3 weeks. **Full (M0-A → M4):** DEMONSTRATED — all milestones complete.
+**Trabajo:**
 
----
+- [ ] Definir tokens de color/espaciado y componentes reutilizables: header/banner, chat log, bloque de razonamiento opcional, input multilínea, status bar, rail derecho y tarjetas de actividad. (El popup y la barra inferior ya siguen la guía visual aprobada.)
+- [x] Implementar el rail `Overview`/`Files` ajustable con F7/Shift+F7: 32–38 columnas ancho y 22–34 compacto; falta validar el reparto visual en capturas.
+- [x] Overview: secciones compactas `MCPs`, `LSPs` y `Skills`; estado MCP/skill derivado del adapter, declarar ausencia de adapter LSP sin simular conexión, `Enter` abre detalle y descripción. Conteos solo cuando la API real los exponga.
+- [x] Files: pestaña visible en el mismo rail; navegación por árbol, expansión/cierre, búsqueda, selección, preview y acciones `Copy path`/`Open preview`; regresar al chat sin perder borrador.
+- [x] Atajos documentados y sin colisiones con escritura: `Ctrl+F` buscar en consola, `Ctrl+B` mostrar/ocultar rail, `Ctrl+P` abrir paleta semántica, `F6` Files, `Shift+F6` Overview, `F7`/`Shift+F7` ajustar ancho, `Ctrl+L` enfoca el composer, `Esc` cancela el stream activo y en reposo vuelve del menú/enfoca el composer, `Enter` seleccionar/enviar y `Shift+Enter` nueva línea. Los atajos viven en el engranaje; las confirmaciones no se activan al teclear en el composer.
+- [x] `Context → Choose AGENTS.md…` abre el selector de archivos de Linux sin pedir una ruta escrita; la lectura sigue limitada por el grant existente de IsyMotron y recibo verificado.
+- [x] Renderizar Markdown del chat y Roundtrip con jerarquía de encabezados, negritas, listas, código en línea y bloques resaltados; mostrar el stream incrementalmente.
+- [x] Mantener rail y popup en paleta gris grafito con contraste legible; conservar acentos de color para estados y selección.
+- [x] Loading, error, vacío, desconectado y auth requerida tienen texto distinto en OpenISy; el refresh deshabilita su botón mientras consulta. No usar solo color para distinguirlos.
+- [x] Representar estado ocupado de chat/plan, espera de confirmación y listo en una línea persistente independiente del banner temporal de razonamiento.
+- [x] Una entrada enviada mientras el agente trabaja conserva el texto en el composer y muestra que el usuario debe reenviarlo al terminar; no se imprime como si estuviera en cola.
+- [x] Streaming interrumpido después de recibir texto se marca como parcial/no completado y no se guarda como respuesta completa del historial. Faltan witnesses de timeout/cierre del stream.
+- [x] Adaptar sidebar para terminal estrecha: bajo 100 columnas se compacta; bajo 80 se oculta y puede reabrirse con Ctrl+B. Las capturas de aceptación siguen pendientes.
 
-## Epistemological status
+**Criterios de aceptación visual/funcional:**
 
-- **DEMONSTRATED:** M0-A short-loop smoke (5/5 PLANNED). M0-B long-loop soak (20 turns, 75% validity, 3 recoveries). M1 minimal TUI (textual, verified live).
-- **NOT_DEMONSTRATED:** provider handoff, destructive-action containment, TUI renderer replaceability, L1 self-extension safety, gateway integration under degraded mode.
-- **DESTROYED:** (none — no destructive tests on real workspaces)
-- **INFERRED:** that the NVIDIA key result generalizes to other providers (witness I is the test, not an assumption).
+- Capturas de estados `welcome`, `MCPs conectados`, `sin integraciones`, `Files`, `plan`, `aprobación`, `DENY` y `recibo verificado` en 80×24, 100×30 y 140×40.
+- En 140 columnas el chat usa al menos 68% del ancho útil y el rail no causa scroll horizontal.
+- A 80×24 la entrada, chat y navegación siguen utilizables; ningún control clave desaparece sin un atajo alterno anunciado.
+- MCP/skill con error no se ve verde; los conteos concuerdan con lo reportado por el adapter.
+- Las pruebas Textual verifican foco, atajos, redimensionamiento, input ocupado, vistas del rail y estado de streaming.
 
-No absolute safety promises are made anywhere in this roadmap. Every
-claim is tied to a witness, a gate, or an explicit NOT_DEMONSTRATED.
+**No incluye:** clonar colores, logo o arte propietario de Charm/Crush; diff como pantalla inicial; activar herramientas automáticamente.
 
----
+### M2 — Explorador del workspace actual
 
-## References
+**Estado:** browser read-only implementado vía `filesystem.read`/lease de IsyMotron: el host recibe únicamente `filesystem.read`, estrechado en memoria a la intersección de grants existentes con el cwd. Cada lectura compara grants antes y después de la operación y solo entrega contenido si el recibo verifica `PASS`; si cambian durante la lectura, bloquea el resultado. Navegación, búsqueda y preview muestran carga, e ignoran resultados tardíos que ya no corresponden a la selección actual. Lista el cwd autorizado, filtra `.gitignore` con opción explícita para incluir ignorados, ofrece búsqueda difusa acotada y preview limitado. Rechaza rutas sensibles comunes y symlinks; muestra estado de recibo. Faltan fixtures y validación visual/funcional.
 
-- IsyMotron: `../IsyMotron/` — provider, planner, enforcer, receipts
-- OpenISy: `/home/danny/Development/ISyCo/` — bridge, gateway, roles, L1
-- Hackathon: Nebius x NVIDIA Global AI Hackathon (deadline Oct 30, 2026)
-- M0 evidence: `m0_agent_loop.py` (this repo)
+**Objetivo:** permitir encontrar y leer archivos del directorio donde se invocó `isycode`.
+
+**Trabajo:**
+
+- [x] Resolver el root como `cwd` canónico al iniciar y mostrarlo en header y vista Files.
+- [x] Cargar directorios bajo demanda; ordenar carpetas primero; soportar búsqueda difusa acotada (máximo 300 directorios/6,000 entradas por búsqueda).
+- [x] Respetar `.gitignore` y permitir incluir ignorados con acción explícita. Si el archivo listado desaparece o no puede leerse, bloquear el listing en vez de aplicar un filtro parcial. Ocultar siempre `.git`, `.isycode`/estado local, claves, `.env` y otros nombres protegidos por el browser.
+- [x] No subir al padre del root. No seguir symlink/junction fuera del root. Rechazar paths externos y traversal mediante scope de IsyMotron.
+- [x] Al seleccionar archivo, abrir preview de texto de solo lectura con ruta relativa, tamaño, encoding/estado binario y truncación explícita. No interpretar archivos como comandos; archivos sensibles comunes se ocultan y el host exige grant para cualquier lectura.
+- [ ] Abrir editor externo solo como acción optativa documentada; el TUI no cambia permisos por hacerlo.
+- [x] Usar `filesystem.read` del host de IsyMotron con URI lógica y un grant existente estrechado al workspace; si el host/grant no cubre el root o el snapshot cambió, bloquear con un mensaje claro. El renderer no usa `Path.read_text()` como bypass.
+- [x] Entregar preview/listing solo después de verificar recibo `PASS`; `REJECT` y `NOT_VERIFIABLE` bloquean los datos.
+- [ ] Si el Gateway ofrece el mismo root, puede alimentar búsqueda/read según su scope. Si su `IESY_ROOT` es distinto, mostrarlo como workspace remoto separado o no ofrecerlo; nunca mezclarlo con Files local.
+
+**Criterios de aceptación:**
+
+- El explorador abre ISyCode desde ISyCode y desde cualquier repo de usuario; ambos muestran el root correcto.
+- Fixture con archivo normal, archivo binario, nombre Unicode, carpeta ignorada, `.env`, `.git`, symlink interno y symlink a fuera: solo se ven/abren los casos permitidos por política.
+- No puede navegar arriba del root por UI, búsqueda ni ruta escrita.
+- Preview de archivo grande se limita y explica la truncación.
+- Abrir/cerrar Files no interrumpe la conversación ni cambia el workspace autorizado.
+
+**No incluye:** editor de archivos propio, Git diff browser, delete/move/rename.
+
+### M3 — Integración de MCP y Skills de OpenISy
+
+**Estado:** adapter read-only contra `/mcp` y `/skill` del HTTP API experimental de OpenISy, con cwd, auth opcional, refresh manual y lista completa seleccionable de estados/skills; al refrescar, ambos catálogos muestran `Loading` y el botón se deshabilita hasta obtener resultado; respuestas de refresh anteriores no pisan una más reciente. Al elegir skill muestra origen, descripción y una guía que deja claro que solo el runtime de OpenISy la puede activar hoy. Sin servidor configurado aparecen estados explícitos; errores y auth pendiente se etiquetan. `/mcp` no devuelve conteo de tools; `/experimental/tool` cuenta el registry interno de OpenISy, no el catálogo MCP, así que no se presenta como tal. Este catálogo externo sigue siendo de descubrimiento; la invocación manual descrita en M14 aplica solo al Gateway MCP.
+
+**Objetivo:** hacer que el lateral represente el inventario real de OpenISy y que las skills sean descubribles sin duplicar su cargador.
+
+**Trabajo:**
+
+- [ ] Consumir estado, configuración y catálogo del servidor MCP desde una interfaz soportada por OpenISy (preferir MCP/contrato público a imports internos TS desde Python).
+- [ ] Completar el catálogo de herramientas por un contrato estable o MCP estándar. El GET `/mcp` actual solo publica estados de servidor; la UI indica explícitamente que no tiene conteos.
+- [ ] Mostrar nombre, connected/disabled/failed/needs-auth, cantidad de herramientas y error seguro/resumido. Actualizar por evento si existe o refresco con intervalo y comando manual.
+- [ ] Mostrar skills encontradas por OpenISy con nombre, descripción y origen (`project`, usuario, builtin/remoto); diferenciar instaladas de activas/disponibles para esta sesión.
+- [x] Permitir seleccionar una skill para ver su descripción, origen e instrucción de invocación dentro de OpenISy.
+- [ ] Integrar activación/inyección de skills únicamente mediante el runtime de OpenISy; ISyCode no simula ni reconstruye esa autoridad.
+- [ ] Mostrar eventos del catálogo externo en el transcript solo cuando un contrato runtime real permita una activación/call; el flujo manual Gateway MCP pertenece a M14. El catálogo visible nunca autoriza una llamada.
+- [ ] Integrar autenticación requerida con instrucciones claras sin imprimir tokens ni variables secretas.
+- [ ] Confirmar compatibilidad de versión OpenISy y fail closed si el contrato es desconocido.
+
+**Criterios de aceptación:**
+
+- Dos fixtures de MCP (uno disponible, otro desconectado) producen estados correctos y número de herramientas correcto; prueba adicional con auth pendiente.
+- Skill de proyecto nueva se refleja tras refrescar sin recompilar la TUI; skill denegada no aparece invocable.
+- Caída/reinicio de MCP no bloquea escritura en chat ni borra transcript.
+- No se presenta una skill o herramienta como “permitida” por el mero hecho de estar descubierta.
+
+**No incluye:** duplicar el framework de plugins de OpenISy ni activar L1.
+
+### M4 — Runtime de IsyMotron detrás del contrato de ISyCode
+
+**Estado:** `isycode/runtime.py` delega plan y ejecución a IsyMotron `Planner`/`Executor`. El modo predeterminado usa `LegacyHost` simulado; `ISYCODE_RUNTIME=local-readonly` usa `LinuxHost` con una copia en memoria de los grants que retiene solo `filesystem.read` y limita sus roots a la intersección con el cwd capturado. La UI permite revisar y confirmar ese plan; no se modifica el grant file ni se habilita write. `AgentRuntime` se inyecta por factory y el verificador centralizado distingue PASS/REJECT/NOT_VERIFIABLE; `UNKNOWN` y recibos no PASS no cuentan como ejecución demostrada. Los mensajes de fallo de Provider/Planner/Executor ya omiten cuerpo/URL de excepción; si Executor no devuelve estado, la UI declara el resultado desconocido y recomienda comprobar recibos antes de reintentar. Falta cancelación real, estado consultable, validación con grants/hosts reales y aportar witnesses.
+
+**Objetivo:** hacer que todo `/plan`/ejecución pase por Provider → Planner → host/Enforcer → Executor/Relay → receipt/verifier.
+
+**Trabajo:**
+
+- [ ] Completar la fachada `isycode/runtime.py` y sus adapters con métodos para catálogo, plan, ejecutar, cancelar, estado y recibo. La primera fachada asíncrona de plan/ejecución demo ya existe; cancelación, status y providers inyectables siguen pendientes.
+- [x] Sustituir la creación de `LegacyHost` y `LoopbackRelay` dentro de widgets por un runtime. Mantener LegacyHost solo en modo demo explícito.
+- [x] Mostrar el origen/host (demo/local) antes de cualquier ejecución y en la revisión contextual.
+- [ ] Convertir errores de Provider/Planner/Host a estados tipados y mensajes útiles; no ocultar error en salida normal ni continuar con planes previos. La UI ya traduce fallos comunes del Provider y evita imprimir cuerpos/URLs; el contrato aún no devuelve estados tipados.
+- [x] Renderizar plan en pasos con host, capability, parámetros revisables y explicación; marcar claramente `propuesta, sin autoridad`.
+- [x] Mantener el provider elegible por `ISYMOTRON_PROVIDER`/`ISYMOTRON_MODEL`; usar streaming compatible y conservar `Planner.parse`.
+- [x] Mostrar decisiones/recibos por paso como eventos individuales; en modo local read-only, presentar el texto de archivo solo tras receipt `PASS`; directorios remiten al browser filtrado.
+
+**Criterios de aceptación:**
+
+- Demo de 4 pasos en LegacyHost completa desde TUI y cada paso genera un resultado/recibo del host.
+- Plan con host/capability/param desconocidos se rechaza antes de ejecutar.
+- Cambiar renderer por un harness fake no cambia decisión del host ni verificación del recibo.
+- Inyectar Provider caído, timeout, JSON truncado y tarea cancelada deja estados coherentes y no inicia ejecución oculta.
+
+### M5 — Seguridad, aprobación ligada al plan y recibos (bloquea mutaciones reales)
+
+**Estado:** enforcement y leases se usan para Files y el simulador. El UI llama al verificador real y distingue `PASS`, `REJECT` y `NOT_VERIFIABLE`; solo cuenta como demostrada una ejecución con evidencia del engine y recibo `PASS`. Cada evento de ejecución muestra el sello, status exacto, claim/request/decision match, decisión re-derivada y razón. La revisión muestra host, host ID/engine, capabilities concedidas, bounds lógicos y parámetros. El digest del plan y un fingerprint del contexto de autoridad se comparan al revisar, confirmar e inmediatamente antes de `Executor`; en `local-readonly` también se compara de nuevo el grant file. Un cambio invalida la operación antes de enviar pasos al host. Sigue bloqueando escrituras reales: faltan witnesses completos y validación con hosts reales; no existe cancelación dentro de Executor.
+
+**Objetivo:** garantizar que la aprobación cubre exactamente lo que el host vuelve a validar y ejecutar.
+
+**Trabajo:**
+
+- [x] Construir catálogo desde `HostDescription.granted`; IsyMotron `Planner.catalogue` filtra las capacidades no concedidas antes de enviar el catálogo al modelo.
+- [x] En modo `local-readonly`, volver a leer IsyMotron grants antes de ejecutar y rechazar el plan si difieren del snapshot usado al crear el runtime.
+- [x] Ligar el doble paso de revisión/confirmación al digest del plan y fingerprint de identidad/catálogo/grants/bounds; volver a comparar el contexto antes de ejecutar. La UI muestra identidad, grants, bounds y parámetros revisados.
+- [ ] Usar scope de host y concesiones verificables por cada operación. Para filesystem, conceder el root explícito del workspace; no usar la policy experimental de IsyVM ni `isycode/safety.py` como autoridad paralela.
+- [ ] Presentar una pantalla/confirmación que identifique host, capability/efecto, rutas lógicas afectadas y parámetros. Para operación destructiva, presentar manifest/blast radius solo si el host real puede resolverlo y volver a comprobarlo.
+- [ ] Ampliar el binding de confirmación para manifests/leases cuando haya operaciones que los creen antes de la aprobación. Hoy la ejecución no emite leases hasta después de confirmar; para el runtime actual se liga plan + contexto de autoridad y la aprobación caduca en 10 segundos.
+- [ ] No permitir doble-R sobre un buffer global. Usar acción contextual/confirmación modal; el foco del input no puede disparar mutaciones.
+- [ ] Invalidar plan anterior al empezar cualquier petición nueva, incluso si la petición falla o es rechazada.
+- [ ] Ejecutar únicamente mediante `Executor`/`Host`; no escribir archivos directamente desde la UI, ni añadir fallback a `bash`, terminal, `shutil` o Gateway cuando falle el host.
+- [x] Verificar recibos con `verify_receipt` y renderizar seal, request/claim match, decision re-derivada, razón y estatus exacto. No ocultar `NOT_VERIFIABLE`.
+- [ ] Al cancelar o interrumpir, no marcar step como terminado sin recibo; refrescar plan/scope antes de reintento.
+
+**Gate bloqueante:** no se expone botón/atajo de write para workspace real hasta que todos los siguientes witnesses pasen con hosts de fixture/desechables y receipt verifier real.
+
+**Criterios de aceptación / witnesses:**
+
+1. Capability ausente del grant → no se lista al modelo y el host deniega si se fuerza manualmente.
+2. Path fuera del root, traversal, enlace/junction escape y root protegido → host DENY; ninguna modificación observable.
+3. Cambiar el plan o manifest después de aprobar → digest mismatch, cancelación y nueva revisión requerida.
+4. Lease expirado, revocado o para otro host/capability/sujeto → DENY.
+5. Recibo alterado, claim distinto o request digest diferente → verifier devuelve REJECT; UI nunca muestra PASS.
+6. Gateway desconectado → cualquier mutación por Gateway falla cerrada; ninguna ruta shell/local alternativa se intenta.
+7. Error del engine no se etiqueta ALLOW exitoso; resultado parcial/unknown se representa sin fabricar recibo.
+8. Mismo request con distinto provider/model → la autoridad sale del host/grant, no de identidad ni confianza en el modelo.
+
+### M6 — File operations y capacidades OpenISy bajo grants explícitos
+
+**Estado:** el file browser usa `filesystem.read` del host actual y el runtime optativo ejecuta planes read-only bajo grants IsyMotron existentes. ISyCode ahora muestra disponibilidad del Gateway sin decir que está conectado al workspace local; admite `GATEWAY_URL`, exige HTTPS fuera de loopback y bloquea redirects a otro origen para no filtrar el bearer token. Gateway y el resto de capacidades siguen sin integrarse en el runtime; cualquier escritura real continúa pendiente de M5. El health endpoint oculta intencionalmente `IESY_ROOT`, por lo que hoy no existe evidencia para comparar el root con `cwd` ni para montar el explorador remoto.
+
+**Objetivo:** habilitar gradualmente operaciones reales sin convertir MCP, Gateway o shell en un bypass de IsyMotron.
+
+**Trabajo:**
+
+- [ ] Acordar con Gateway una identidad remota no sensible y verificable (por ejemplo, ID configurado del workspace); no exponer el path físico en `/health`. Hasta tenerla, Gateway se limita a estado de disponibilidad y sus archivos no aparecen en Files.
+- [ ] En la primera entrega habilitar solo read/list/search del workspace remoto identificado, con scope al root y límites/redacción del host.
+- [ ] Mapear operaciones Gateway a capabilities/hosts explícitos. Confirmar quién autoriza cada integración; permisos Gateway (`isyco.read`, `isyco.write`) y grants IsyMotron no se sustituyen entre sí.
+- [ ] Activar write solo cuando Gateway root coincide con el workspace remoto seleccionado y tanto el key scope como host grant permiten la acción; indicar overwrite/create antes de pedir aprobación.
+- [ ] Mantener Drive, Email, GitHub y MCP en su superficie específica. `email.send`, upload, crear issue y otras mutaciones externas necesitan aprobación/efecto visible propio.
+- [ ] Dejar delete, chmod, move, `sudo` y shell deshabilitados hasta que exista capability, engine y política IsyMotron auditados para cada una.
+- [ ] En modo Gateway degradado, mostrar estado y conservar tareas/read local solo si la capability local fue concedida por IsyMotron.
+
+**Criterios de aceptación:**
+
+- Demo con Gateway `IESY_ROOT` igual y diferente al `cwd`: el ID del workspace permite verificar coincidencia; diferencia aparece como workspace separado y nunca se mezcla. Hasta que exista ese contrato, ambas condiciones deben resultar en “root remoto no verificado”, sin montar rutas Gateway en Files.
+- Para todas las rutas de mutación soportadas, quitar scope del Gateway o grant del host causa DENY y ninguna escritura.
+- Pruebas con redacción de secretos, límites de tamaño, timeout y rate-limit preservan UI usable sin exponer key/token.
+- Cada side effect tiene un receipt de host y un evento visible en transcript.
+
+### M7 — Sesiones, fallos y recuperación
+
+**Estado:** `isycode/session.py` tiene IDs estrictos, directorio real 0700, escritura atómica con fsync, límites de tamaño y lectura que rechaza symlinks/archivos no regulares. El parser valida estructura; `verify_chain()` rechaza gaps, duplicados, referencias vacías y pasos que no coinciden con el plan. `load_for_resume()` añade una compuerta separada que exige la huella de autoridad vigente y un callback para volver a verificar cada recibo; al aceptar, borra approvals y lease de la copia recuperada. `load()` conserva su comportamiento de inspección por compatibilidad. Aún no se invoca desde TUI/runtime: no reanuda ejecución, no obtiene la huella/grants actuales por sí solo y el callback canónico de IsyMotron todavía no está conectado. Tampoco hay política completa de redacción/allowlist para datos persistidos.
+
+**Objetivo:** reanudar trabajo sin confiar en memoria privada del modelo ni repetir side effects exitosos.
+
+**Trabajo:**
+
+- [ ] Persistir session id, intento actual, plan aceptado/digest, snapshot de grants, pasos con recibos, pendientes, approvals/lease con expiración, provider/model y timestamps.
+- [ ] Persistencia atómica con permisos de archivo restrictivos; nunca guardar API keys, OAuth tokens, contenido secreto innecesario o chain-of-thought crudo.
+- [x] Base fail-closed: verificar estructura y continuidad de la cadena; `load_for_resume()` rechaza cadena inválida y exige revalidación de cada recibo. Sigue pendiente conectarlo al verificador IsyMotron y al flujo de inspección/export del TUI.
+- [x] Base de reanudación: la compuerta descarta approvals y lease heredados y rechaza huella de autoridad distinta. Sigue pendiente recalcular grants desde los hosts actuales y pedir nueva aprobación contextual desde el TUI/runtime.
+- [ ] Manejar provider 429/5xx/timeout, output malformado y cierre del proceso con reintentos acotados, cancelación y handoff optativo.
+- [ ] Retener comportamiento de UI: mensaje truncado se marca parcial; no se mezcla con respuesta completa ni se manda de vuelta como respuesta terminada.
+
+**Criterios de aceptación:**
+
+- Caída después del paso 2 de 4 reanuda en el primer paso sin recibo válido; los pasos con receipts nunca se repiten.
+- Receipt faltante/digest corrupto/gap en cadena impide ejecución y muestra razón.
+- Provider replacement recibe intent/plan/receipts/outstanding, no reasoning privado del provider anterior.
+- Soak reproducible de 20 turnos con malformed JSON, timeout/429 y una capability no concedida: imprimir métricas por turno y cero escalación.
+
+### M8 — Bridge y coordinación multi-agente (opcional)
+
+**Estado:** wrapper `isycode/bridge.py` y handshake existen; superficie visual y gates de coordinación pendientes.
+
+**Objetivo:** exponer presencia, mensajes y leases del Bridge sin confundir coordinación con autoridad local.
+
+**Trabajo:**
+
+- [ ] Mostrar identidad del agente, status, peers y lease con expiración, owner, topic y path lógico.
+- [ ] Integrar heartbeat/peek/send/claim/release por adapter; mostrar expiración y error de red.
+- [ ] Un lease del Bridge es señal de coordinación y nunca equivale a un grant de capability IsyMotron.
+- [ ] Evitar claim con path físico fuera del workspace autorizado; credenciales/tokens del bridge no aparecen en transcript.
+
+**Criterios de aceptación:** dos agentes comparten tarea, conflicto de lease se muestra y bloquea colisión; aun con lease adquirido, operación no concedida por host recibe DENY.
+
+### M9 — L1 / herramientas creadas por OpenISy (opcional y al final)
+
+**Estado:** OpenISy tiene pipeline L1; TUI de ISyCode no lo integra.
+
+**Objetivo:** permitir descubrimiento/inspección de herramientas autoextendidas sin convertir creación en autoridad.
+
+**Trabajo:**
+
+- [ ] Lectura/listado de estado L1 y detalle de generación/evidencias en panel OpenISy.
+- [ ] Activación solo tras gates reales de OpenISy: validate → test → probe → seal → active; respeto a safe mode y flag experimental.
+- [ ] Mostrar capability, effect y estado registration/grant de IsyMotron por separado.
+- [ ] Una tool `ACTIVE` en OpenISy no entra al catálogo de ejecución hasta que esté registrada y concedida en autoridad IsyMotron. Cambiar implementación invalida freshness/evidence según OpenISy.
+
+**Criterios de aceptación:** herramienta nueva (incluida una destructiva) puede existir/probarse y permanece no invocable hasta registro y grant independientes; safe mode deshabilita su carga; rollback deja evidencia y herramienta previa intacta.
+
+### M10 — Navegador semántico `isyco cli`
+
+**Estado:** `isyco cli` abre un árbol interactivo con ramas Agent, Workspace, Integrations, Providers, Session y Settings. El árbol se puede filtrar por nombre/descripción y recorrer con teclado; Enter inspecciona una hoja y `Open selected` lleva a vistas o comandos que ya existen en ISyCode. `/session` muestra workspace/provider/model/rol sin exponer historial. No lanza shell ni crea autoridad paralela. Falta inspección visual manual del nuevo filtro en terminales pequeñas.
+
+**Objetivo:** ofrecer una entrada CLI fácil de descubrir, organizada como carpetas por intención y conectada a las vistas reales de ISyCode.
+
+**Trabajo:**
+
+- [x] Conservar el `isyco` existente y añadir `cli` como ruta explícita a ISyCode; conservar `isycode` como launcher directo de la TUI.
+- [x] Abrir `isyco cli` como navegador interactivo con seis ramas semánticas y descripción de cada acción; ninguna hoja se abre antes de `Open selected`.
+- [x] Conectar Chat, Plan prellenado, Help, Files, OpenISy Overview, Providers, Roles, Settings y estado de sesión a vistas/comandos reales de la TUI.
+- [x] Expandir ramas/hojas para capacidades implementadas: sesión, configuración, MCP/skills, provider/modelo y ayuda; describir efectos y pedir confirmación de apertura.
+- [x] Incorporar filtro por nombre/descripción y navegación de teclado con Tree (↑/↓, ←/→, Enter, Esc); Esc limpia el filtro y luego vuelve/sale.
+- [x] Documentar instalación/uso y conservar el dispatcher `isyco` existente; los motores con autoridad no se sustituyen por aliases ni por nuevas ejecuciones del navegador.
+
+**Criterios de aceptación:**
+
+- `isycode` abre la TUI; `isyco cli` abre el árbol de intenciones; `isyco` sin argumentos muestra uso breve.
+- Cada hoja lleva a una acción implementada y no dispara ejecución externa al seleccionarla; cancelar vuelve al shell sin cambiar workspace ni autoridad.
+- Las ramas se pueden navegar con teclado, buscar por nombre/descrición y entender antes de abrir. Inspección de legibilidad en terminal pequeña pendiente.
+- No se muestra una integración como disponible si el adapter reporta desconexión/error, y no se inventan comandos que aún no existen.
+
+### M11 — Catálogo de providers y colaboración Roundtrip
+
+**Estado:** ISyCode tiene un seam local para providers OpenAI-compatible (OpenAI, NVIDIA NIM, Nebius, Ollama y llama.cpp); importar y usar chat no requiere IsyMotron. La clave se busca primero en la bóveda de ISyCode (secretos en el keyring del SO, metadatos privados), después en variables de entorno y al final en el almacén heredado de IsyMotron. El selector muestra esa presencia sin leer ni revelar el valor; Settings permite añadir, reemplazar y revocar claves. Reemplazar guarda la clave nueva antes de retirar la anterior. La rama Models consulta el catálogo del provider solo si el usuario lo pide. GPT-6 Luna, Nemotron 550B y Roundtrip conservan el comportamiento documentado abajo; no se hizo una llamada real al provider. Siguen pendientes validar conexión desde Settings, persistir provider/modelo predeterminados, capacidades tipadas y estados conectada/ejecutable, presupuesto/costo, telemetría, proxy cancelable y OAuth nativo. OAuth descubierto desde servicios remotos no se presenta como autenticación de ISyCode.
+
+**Objetivo:** elegir y conectar providers desde ISyCode y permitir que un segundo modelo revise una tarea en un ciclo acotado. Las acciones locales obedecen a ISySentinel + Workspace Authority; IsyMotron solo puede actuar como adapter/runtime opcional.
+
+**M11-A — Providers y autenticación**
+
+- [ ] Definir un catálogo tipado: id, nombre, modelos disponibles, capacidades del endpoint, métodos de autenticación, estado de conexión y configuración elegida. Separar modelos del provider primario y del modelo revisor.
+- [x] Añadir OpenAI API al seam de IsyMotron con `OPENAI_API_KEY`; GPT-6 Chat Completions usa `max_completion_tokens`, `reasoning_effort` y omite `temperature` cuando effort no es `none`. La misma configuración llega al stream del TUI.
+- [x] Conectar el catálogo a la TUI: `/providers` muestra presets/credenciales, `/provider <id> [model]` selecciona por sesión y `/provider models` consulta los modelos de la cuenta.
+- [x] Reemplazar el listado textual por el selector visual inferior de catálogo, manteniendo `/providers` y `/provider <id> [model]` por comando.
+- [x] Añadir `gpt-6-luna` como default configurable y `ISYMOTRON_REASONING_EFFORT` para seleccionar esfuerzo. Falta disponibilidad por cuenta, prueba de API y presentar tokens/costo en UI.
+- [x] Seleccionar `nvidia/nemotron-3-ultra-550b-a55b` como default NVIDIA NIM de ISyCode y respetar `ISYMOTRON_MODEL` explícito; no cambia el default compartido de IsyMotron.
+- [x] Tratar API key y OAuth como flujos distintos: API key es una entrada enmascarada persistida fuera del repo; OAuth reportado por OpenISy se marca como propio de OpenISy y no se acepta como credencial IsyMotron.
+- [x] Migrar el guardado de credenciales nuevas al keyring del sistema mediante la bóveda de ISyCode; mantener env y almacén heredado como transición de lectura. El TUI no muestra el valor en pantalla, logs ni recibos.
+- [ ] Nunca reutilizar cookies, sesión de Codex/ChatGPT ni credenciales internas de OpenCode como login de API. Una clave OpenAI de API usa facturación y límites de API independientes.
+- [ ] Mantener selección equivalente por configuración/env para automatización y recuperar estado claro si el provider, modelo o permiso API no está disponible.
+
+**M11-B — Roundtrip con segundo modelo**
+
+- [x] Añadir `/review <text>` como acción explícita con el provider/modelo secundario fijo OpenAI API / GPT-6 Luna.
+- [x] Delimitar cada roundtrip al texto escrito por el usuario, mostrarlo completo y permitir cancelar antes de enviar.
+- [x] Mostrar la respuesta en un panel propio; solo el botón `Iterate with this review` prepara el contenido para el modelo principal, que queda editable en el composer hasta Enter.
+- [x] Mantener una revisión por sesión y tope de salida de 1,200 tokens; el botón `Cancel review` cancela la tarea de conexión/stream y descarta salida parcial sin reintento automático.
+- [ ] Definir límite/presupuesto de costo configurable y persistir el uso reportado sin guardar artefacto ni chain-of-thought.
+- [x] El revisor no recibe herramientas con efectos ni puede aprobar/ejecutar planes. Cualquier plan posterior sigue pasando por IsyMotron.
+- [ ] Persistir telemetría mínima de provider/modelo/uso/errores sin secretos ni chain-of-thought; UI muestra proveedor y tokens cuando la API los devuelve.
+
+**Criterios de aceptación:**
+
+- El selector distingue listo, falta credencial, OAuth pendiente, desconectado, modelo no disponible y error; ningún estado se marca conectado solo por aparecer en catálogo.
+- Una llamada de OpenAI API usa el modelo id seleccionado y muestra tokens/costo reportados; falla cerrada si la API rechaza el modelo o el permiso.
+- Un revisor puede detectar y devolver un problema; no puede ejecutar una herramienta ni ampliar authority; el usuario controla si esa revisión regresa al modelo principal.
+- Cancelar, alcanzar presupuesto o recibir error termina el Roundtrip sin perder la conversación primaria ni repetir llamadas en secreto.
+- Dos iteraciones como máximo por defecto y límite total verificable de llamadas/tokens; IsyMotron conserva el gate de cada side effect.
+
+### M12 — Paleta semántica, opciones y selector de roles
+
+**Estado:** implementado en la TUI: barra inferior compacta, popup `/` de dos niveles con diez ramas, lista desplazable y búsqueda; engranaje con comandos/atajos; selector Provider y Role. El selector presenta los cinco presets que el runtime IsyMotron puede ejecutar y, si hay una integración configurada, su inventario más auth metadata. Los agentes de chat y los ocho motores operativos ISyCo permanecen separados. Cada motor transfiere al contexto del rol su flujo ordenado, alcance de capacidades, comandos y límites; usa el provider/modelo que ya seleccionó IsyMotron. La selección no concede tools ni ejecuta comandos CLI desde el chat. Ver [diseño aprobado](docs/design/2026-09-27-tui-navigation.md) y [plan](docs/plans/2026-09-27-tui-navigation.md).
+
+**Criterios entregados:**
+
+- [x] `/` abre las ramas Skills, Models, MCP, LSP, Files, Roles, Providers, Session, Workspace y Commands; las ramas abren su inventario actual.
+- [x] Búsqueda, scroll, Enter para seleccionar y Escape para volver/cerrar.
+- [x] Footer global oculto; Sidebar, Providers, Role y ⚙ están en la barra, sin botón de envío.
+- [x] Gear incluye lista de atajos activos, controles de workspace, refresh de catálogos y limpiar rol.
+- [x] La clave del provider se captura enmascarada y se guarda atómicamente fuera del repo; no se imprime su contenido.
+- [x] Agentes de chat y ocho motores operativos ISyCo se muestran en secciones distintas; el catálogo incluye workflow, alcance, comandos, restricciones y kernel compartido.
+
+**Pendiente para completar los catálogos conectados:**
+
+- [ ] Conectar discovery de LSP cuando ISyCode tenga una interfaz/adaptador LSP real.
+- [x] Completar el acceso visual a los modelos por cuenta: Models permite cargar el catálogo remoto del provider activo de forma explícita y selecciona un ID para esta sesión. Aún no se consultaron modelos contra una cuenta real en este trabajo.
+- [ ] No habilitar OAuth desde ISyCode hasta tener un puente de inferencia sin tools y con callback/state/refresh correctamente aislados.
+- [ ] Añadir acciones de activación MCP/skills solo mediante contratos runtime que preserven IsyMotron y la autoridad de OpenISy.
+
+### M13 — Mobile Host: sustrato de ISyCode Móvil
+
+**Estado:** primera etapa implementada en ISyCode. La TUI inicia un host versionado y muestra liveness y clientes autenticados en Settings. `docs/mobile-host-v1.md` define el contrato que consume Móvil. Pairing usa PIN local de seis dígitos, un solo uso y cinco minutos; el host devuelve una credencial aleatoria por una hora y almacena únicamente su hash. El keystore queda en XDG state con permisos restrictivos. El default es loopback; cualquier bind no local exige TLS. El inventario detecta comandos instalados pero mantiene todos los adapters no seleccionables. No se modificó el Bridge ni el checkout móvil.
+
+**Entregado en esta etapa:**
+
+- [x] Arranque/parada del host ligados al ciclo de vida de la TUI; el refresh del estado no reinicia catálogos ni workspace.
+- [x] `GET /v1/health`, `GET /v1/status` protegido por scope, `POST /v1/pair/exchange`, `GET /v1/runtimes`, `POST /v1/runtimes/select` (respuesta explícita `409` mientras falten adapters) y `POST /v1/clients/heartbeat`.
+- [x] Rate limits por peer y global para intentos fallidos; credenciales bearer revocables/expirables por el almacén interno, con scopes y allowlist de runtime.
+- [x] Settings diferencia host vivo de clientes conectados y permite generar un PIN nuevo localmente.
+- [x] Contrato y límites de esta versión documentados en `docs/mobile-host-v1.md`, README y GUIA.
+
+**Pendiente antes de llamar usable a ISyCode Móvil:**
+
+- [ ] Migrar cliente móvil al contrato sin romper sus pairings actuales; acordar esquema de identidad del dispositivo, rotación/renovación y revocación visible para usuario.
+- [ ] Añadir administración de credenciales desde Settings (nombre, grants por runtime/acción, expiración, revocar y recibo de creación).
+- [ ] Implementar adapters de runtime reales y solo listar como seleccionables los que puedan crear sesiones bajo la autoridad IsyMotron.
+- [ ] Definir y servir `POST/GET /v1/sessions`, reanudación segura, ownership por credencial y aislamiento por workspace.
+- [ ] Definir WebSocket de eventos con secuencia/replay/backpressure, estados de error y reconexión.
+- [ ] Implementar cancelación y approvals con expiración, binding a sesión/turno/capability, auditoría y validación del host.
+- [ ] Diseñar acceso remoto TLS/Tailscale y lifecycle del host independiente de una terminal interactiva; no exponer bind público como workaround.
+- [ ] Cerrar threat model, límites de requests, revocación, recuperación/crash y pruebas de integración host-cliente antes de marcar la feature completa.
+
+**Gate de seguridad:** el cliente nunca elige un runtime solo porque aparece en el catálogo; toda operación de sesión valida credencial, workspace, runtime, acción, grant y estado de IsyMotron. Health permanece mínimo y no revela nombres de dispositivos ni pairing.
+
+### M15 — ISySentinel y fronteras de seguridad
+
+**Estado:** contrato auditado y documentado en [docs/design/isysentinel-security-boundaries.md](docs/design/isysentinel-security-boundaries.md). La implementación actual `isycode/isysentinel.py` todavía mezcla carga de política, autorización, checks, consumo de approvals y escritura de auditoría; es un prototipo y no está conectado a todas las acciones. También se inspeccionaron el Runtime Sentinel/Systembilities de ISyCo y el Sentinel HTTP del Gateway sin modificar esos repos.
+
+**Objetivo:** hacer de ISySentinel la decisión de seguridad de ISyCode, con autoridad explícita por `.isyroot`, Systembilities de solo lectura y ejecución posterior por adapters. Mantener Gateway HTTP Sentinel como gate remoto independiente.
+
+- [ ] Separar `Workspace Authority` (política explícita per-root) de `IsySentinel` (agregación pura de Systembilities); `.isyroot` solo fija el límite máximo.
+- [ ] Evaluar todos los checks aplicables y reportarlos; error, excepción, acción desconocida o conjunto vacío → DENY.
+- [ ] Añadir binding verificable entre `ActionRequest` inmutable y execution owner antes de ALLOW.
+- [ ] Mover prompts, emisión/consumo de approvals, auditoría y recibos fuera de Sentinel; ligar approvals a digest/target con expiración y un solo uso.
+- [ ] Definir política y modelo de estado por workspace fuera del checkout, con permisos por action y scope; estado faltante o inválido → DENY.
+- [ ] Conectar el gate a cada execution owner: filesystem/context, provider, Gateway, MCP/skills, LSP, broker Docker, sesiones, Mobile Host, Bridge, L1, clipboard y picker.
+- [ ] Exponer en Settings grants por `.isyroot`, y mostrar Authority, cada Systembility, Gateway cuando aplique, y estado de ejecución/receipt por separado.
+- [ ] Revisar el perímetro HTTP Gateway en paralelo: HTTPS real, no fail-open por config deshabilitada, revocación persistente/rate limit distribuido donde haga falta, y logs sin prefijos de credencial.
+- [ ] Verificar root/path/symlink, autoridad vacía, fallos/excepciones, approvals stale, execution bypass, keys inválidas/revocadas/expiradas, allowlist y rate limit antes de marcarlo.
+
+### M14 — Gateway semántico nativo, LSP y provisionamiento de brokers
+
+**Estado:** implementación nativa conectada; live witness parcial. El reporte de Maintainer aportado por Danny (MCP v0.2.1 → Gateway → broker Docker; `tools/list` reportó 31 tools; pruebas reportadas 18/18 del broker y 9/9 del MCP) describe el stack de ISyCo, no una verificación hecha por ISyCode. ISyCode conserva discovery e invocación manual Gateway MCP bajo owner/grant/approval separados. Las once operaciones semánticas HTTP tienen allowlist, payloads estrictos, selector/revisión en TUI, owner, grant local, aprobación de un uso y recibo local en memoria; el resultado permanece fuera del contexto del modelo. Gateway ahora expone un ID opaco protegido por `isyco.semantic` y compara ese ID en cada operación. El ID requiere configuración coincidente en ambos lados: es una afirmación de binding del operador, no prueba criptográfica de igualdad física de árboles. No se hizo una operación semántica contra el Gateway real: el Gateway actual no tiene ID configurado y la autoridad local no tiene grants. Health del Gateway devolvió HTTP 200. Pyright respondió `initialize` y `workspace/symbol` reales contra un workspace temporal y devolvió `HandshakeWitness`; pruebas negativas confirmaron que el sandbox deniega sockets y escritura al workspace. Este host no permite crear namespace de red, así que Bubblewrap conserva el namespace host y un bootstrap confiable instala seccomp para denegar sockets e io_uring antes de ejecutar Pyright. El root activo se resolvió como fallback al directorio de lanzamiento porque no hay `.isyroot`; su autoridad está vacía, así que no se inició ningún servidor LSP sobre el código del usuario. Broker: build y arranque reales con Docker demostrados para ISyCode; recipe digest `58b69a41…`, montaje read-only, `cap_drop: ALL`, `no-new-privileges`, límites de recursos y credenciales ausentes. La red es Docker `internal` sin publish; un proxy host aparte escucha solo en `127.0.0.1`, valida las once rutas HTTP semánticas, limita cuerpos/respuestas a 1 MiB y reintenta health por hasta 20 s. Health pasó mediante el owner registrado; `definition` respondió `source: jedi`, `degraded: false`; `symbols/search` también respondió 200 indicando honestamente `source: fallback`; `/v1/delete` respondió 404. Se verificó el ciclo Start de un broker previamente detenido. Los grants y approvals de esta ejecución fueron temporales y no se guardaron en Workspace Authority; el broker quedó registrado en estado privado local. El inventario conserva identidad de contenedor/red y del proxy para Health/Logs/Start/Stop/Remove; Logs redacta patrones comunes y Remove conserva la imagen compartida. Los lifecycle tests siguen usando Docker simulado; falta un informe de métricas persistente y una operación Gateway real autorizada. `rust-analyzer` se detecta pero sigue sin adapter seguro. El broker Jedi/AST y `pyright` CLI no se presentan como protocolo LSP.
+
+**Objetivo:** ofrecer operaciones semánticas como herramientas nativas de ISyCode sobre el Gateway HTTP, permitir crear un broker read-only para una carpeta elegida y reportar resultados medibles. No duplicar MCP, OAuth, IsyMotron ni el código dueño del Gateway.
+
+**M14-A — Contrato nativo Gateway (read-only primero)**
+
+- [x] Mantener `SemanticGatewayClient` sobre HTTP con allowlist exacta de once operaciones semánticas; ninguna escritura se incluye en el adapter.
+- [x] Usar `GATEWAY_URL` y una key con scope `isyco.semantic` desde `CredentialVault`; no pedir OAuth para operaciones locales/semánticas ni mostrar, persistir en transcript o pasar la key al broker de análisis.
+- [x] Extender el catálogo de credenciales por servicio: API keys con nombre, propósito y service/provider se guardan en el keyring del sistema; Settings presenta metadatos y presencia, permite revocar y nunca vuelve a revelar el secreto. OAuth sigue como flujo distinto y no se simula con una API key.
+- [x] Presentar las once operaciones semánticas como herramienta nativa en `/` → MCP, con etiqueta HTTP para distinguirlas de `tools/call`; no se inyectan al contexto del modelo.
+- [x] Enlazar `symbols/search` a ISySentinel/Workspace Authority local, aprobación por llamada y recibo en memoria. La key autentica al Gateway, pero no sustituye el grant local; el Gateway mantiene su Sentinel HTTP remoto.
+- [x] Mostrar el JSON del resultado, con los campos disponibles (`source`, `degraded`, `truncated`) y errores seguros; no inferir semántica completa de una respuesta `fallback`.
+- [x] Excluir `write_file`, `applyEdit` y rutas mutadoras del owner semántico. Fallos del Gateway no activan shell ni MCP como fallback.
+- [x] Añadir owners/UI con payloads tipados para las otras diez operaciones semánticas y exigir un ID de workspace configurado que coincida entre cliente y Gateway.
+- [ ] Configurar ambos IDs en una instalación real y demostrar identidad + una operación semántica completa con grants locales y scope remoto autorizados.
+
+**M14-B — Provisionar un broker para una carpeta elegida**
+
+- [x] Reusar el picker Linux para elegir el root canónico; limitarlo al `.isyroot` activo, comprobar symlinks e identidad. El owner también comprueba el grant `workspace.files.read` del subárbol elegido antes de incluirlo en el plan.
+- [x] Fijar el primer preview a la receta del broker semántico en el checkout ISyCo configurado, leer una allowlist acotada y mostrar hashes reproducibles. El preview no ejecuta scripts ni Docker.
+- [x] Revisar y confirmar en una pantalla la receta externa antes de build; explicar que el build usa la red del daemon para descargar dependencias.
+- [x] Antes de build, presentar carpeta/root, hashes de archivos de receta, imagen, puerto loopback y efectos exactos; pedir approvals separadas ligadas a digest/root por Authority y Sentinel.
+- [x] Enviar build/start al execution owner tipado tras ISySentinel ALLOW; no ejecutar `docker`, shell ni Compose directamente desde widgets ni montar el socket Docker dentro del broker.
+- [x] Montar el proyecto elegido read-only en `/workspace`; `read_only`, `cap_drop: ALL`, `no-new-privileges`, límites de PIDs/CPU/memoria y filesystem temporal limitado. No montar secretos ni credenciales.
+- [x] Mantener configuración e inventario privado fuera del proyecto; un ID por root detecta conflictos y permite abrir un broker registrado sin rebuild.
+- [x] Añadir acciones explícitas `Build`, `Start`, `Health`, `Logs`, `Stop` y `Remove`, con owners por identidad y approvals para operaciones sensibles.
+- [x] Exponer el servicio local mediante un proxy host con bind exclusivo a `127.0.0.1`; el contenedor permanece en una red Docker `internal` sin publicar puertos.
+- [x] Ejecutar con Docker build/start/health reales y probar una operación Jedi no degradada (`definition`) y una operación fallback etiquetada; negar rutas fuera de allowlist con 404. El owner reintenta el health check de forma acotada.
+- [ ] Mostrar un reporte completo y durable de operaciones semánticas con source, duración, truncamiento y métricas agregadas.
+
+**M14-C — Adapter LSP real**
+
+- [x] Implementar inventario sin lanzar servidores y un primer adapter LSP stdio para Pyright `workspace/symbol`; `rust-analyzer` se detecta como no soportado.
+- [x] Mantener el root del LSP bajo Bubblewrap y read-only; exigir grant exacto del ejecutable, grant `workspace.files.read` para el root y aprobación de un uso. El bloqueo de red se aplica por seccomp cuando el host impide crear network namespaces.
+- [x] Responder solicitudes entrantes soportadas (`workspace/configuration`, registro/capacidad) y rechazar métodos no admitidos con `-32601` para evitar esperas sin respuesta.
+- [x] Ejecutar y verificar `initialize` + `workspace/symbol` en un workspace temporal con un símbolo conocido; probar denegación de sockets y escritura.
+- [x] Agregar modo compatible para hosts que bloquean network namespaces: mantener filesystem/user/process isolation y denegar sockets/io_uring mediante seccomp antes de ejecutar el servidor.
+- [x] Derivar estados del inventario (`sandbox_ready`, `installed_unavailable`, `installed_unsupported`) y mostrar progreso/error del proceso efímero junto con su recibo. Pyright se inicia y cierra por consulta, por lo que no se presenta un estado `running` persistente ni un `configured` sin configuración real.
+
+**Criterios de aceptación:**
+
+- Con Gateway activo, una llamada semántica nativa devuelve resultado real con source/truncation visibles; MCP puede estar apagado y el resultado sigue funcionando.
+- Sin `isyco.semantic`, con key inválida, Gateway caído, root no coincidente o recibo no verificable, la operación falla cerrada sin fallback a MCP, shell ni filesystem local.
+- Los owners de lifecycle usan Docker simulado en pruebas y ya tienen un witness real de build/start/health y operaciones semánticas; falta instrumentar métricas durables y confirmar el Gateway remoto con grants locales y scope remoto.
+- Receta cambiada, ruta symlink, script no reconocido, build fallido, timeout y contenedor ya existente requieren estado visible y no producen una segunda autoridad.
+- LSP queda demostrado para Pyright con el testigo temporal `HandshakeWitness`; no hay grants para inspeccionar el workspace activo del usuario ni se marca `rust-analyzer` como adapter.
+
+**No incluye:** ejecución de scripts arbitrarios, montaje writable del repo, herramientas MCP invocadas implícitamente, OAuth propio de ISyCode, ni Docker accesible desde red pública.
+
+### M16 — Producto diario, Settings y superficie de release
+
+**Estado (actualización 2026-09-28):** compose aprobado el 2026-09-27. El inventario está en [tui-feature-matrix.md](docs/product/tui-feature-matrix.md) y la comparativa en [cli-competitive-audit.md](docs/product/cli-competitive-audit.md). La TUI real se capturó con un workspace temporal sin grants; el árbol muestra su límite sin enumerar contenidos. Pyright completó `initialize` y `workspace/symbol` en un proyecto temporal y el sandbox bloqueó sockets/escritura. El owner de broker completó build/start/health con Docker y un witness semántico local; los grants fueron temporales. Esto no acredita una llamada al Gateway real ni authority sobre el workspace del usuario. Chat, Files/context, solicitudes de provider y discovery pasan por gates locales donde están conectados; los owners aún no son universales. El Gateway semántico cuenta con cliente/owner pero no tiene witness remoto. Gateway MCP conserva la aprobación manual por llamada. `{"tool":"bash",...}` sigue siendo texto no ejecutable. M15 permanece abierto; Docker no es un shell arbitrario y Mobile Host no tiene aún sesiones/adapters operativos.
+
+**Objetivo:** hacer de ISyCode un TUI diario coherente sin convertirlo en framework ni exponer capacidades no autorizadas. Seguir las etapas del compose y actualizar la matriz con evidencia, no con checkboxes heredados.
+
+- [x] A — inventario inicial de superficies y evidencia en `docs/product/tui-feature-matrix.md`.
+- [x] A2 — comparación con las CLIs instaladas y brechas priorizadas en `docs/product/cli-competitive-audit.md` (Crush no estaba en PATH; su instalación local no se pudo validar).
+- [ ] B — M15 parcial: gates locales cubren provider, lectura de archivos/contexto, Gateway/MCP/catalog discovery y el flujo Pyright; faltan receipts durables y conectar/revisar Authority + Systembilities + Sentinel en todos los owners, incluidas sesiones, Mobile, Bridge, L1 y mutaciones.
+- [ ] C — consolidar configuración no secreta versionada y precedencia.
+- [ ] D — navegación/atajos/Help: el mapa del shell ahora sale de `isycode/shortcuts.py`; faltan cobertura de atajos modales, rebinds honestos y paleta universal completa.
+- [ ] E — ciclo de sesiones y ergonomía de chat: create/list/resume/rename/fork/search y delete con confirmación, grant temporal ligado a sesión y aprobación de un uso ya aparecen en el manager; faltan export/import UI, recuperación de provider/role/context y retry/drafts.
+- [ ] F parcial — providers/models: selección no secreta provider/model persiste fuera del repo y las claves usan vault; faltan prueba de conexión, reemplazo/revocación gated, controles de razonamiento/tokens y estado conectado/ejecutable.
+- [x] G parcial — Workspace/Context/Files usan grants raíz explícitos y Sentinel; `.isyroot` sigue siendo solo frontera. Faltan otras acciones de Files y UI de metadata bloqueada.
+- [ ] H parcial — Gateway/MCP/catálogo requieren host grant local. Gateway MCP tiene invocación manual revisada; las once operaciones semánticas tienen owner y payloads tipados pero falta el witness contra Gateway real con IDs/scopes/grants configurados. El Sentinel remoto sigue separado.
+- [ ] I — Activity, approvals, receipts, diagnostics y logging con redacción.
+- [ ] J — opciones avanzadas Mobile Host/Bridge/L1, solo donde exista adapter.
+- [ ] K — accesibilidad, tamaños de terminal, rendimiento y reducción de animación.
+- [ ] L — release witnesses y matriz reconciliada con comportamiento real.
+- [x] Corregir la salida de pseudo tool calls: no tratar JSON `bash` en texto como ejecución y mostrar explícitamente `NOT_EXECUTED`.
+- [ ] Añadir ejecución de acciones tipadas solo cuando exista schema de tool, Authority, Systembilities, Sentinel, approval cuando aplique y execution owner. `bash`/shell arbitrario no se habilita por este compose.
+
+**Gate de release:** no declarar daily-driver-ready mientras M15 esté pendiente, existan pantallas sin config coherente, una integración parezca runnable sin adapter, o una acción pueda saltarse el execution owner. El estado detallado y las áreas que faltan permanecen en la matriz.
+
+## 5. Orden y puertas de dependencia
+
+```text
+M0 contrato/ADR/startup
+  → M1 shell visual
+  → M2 file browser read-only
+  → M3 MCP + Skills reales
+  → M15 ISySentinel + Workspace Authority
+  → M4 runtime adapters (IsyMotron opcional)
+  → M5 approvals/receipts ───────┐
+  → M7 persistencia/resume        ├→ M6 acciones con grants
+  → M8 Bridge (opcional)          │
+  → M9 L1 (opcional, después de M15/M6)
+  → M10 navegador semántico CLI (paralelo a M1–M3; solo enlaza capacidades existentes)
+  → M11 providers + Roundtrip (providers requieren adapter configurado; review no autoriza acciones)
+  → M13 Mobile Host substrate (sesiones requieren adapters y gates M15/M6)
+  → M14 Gateway/LSP/broker (Gateway requiere gates local/remoto; Docker usa execution owner tipado)
+  → M16 daily-driver product completion + release witnesses
+```
+
+M15 es prerequisite de toda acción con efectos: M6 no habilita escrituras hasta conectar Authority, Sentinel y execution owners. M14 puede avanzar en la interfaz read-only, pero sus llamadas remotas necesitan ambos gates (ISySentinel local y Gateway HTTP Sentinel remoto). No se implementa delete/shell como atajo para completar una demo. M8/M9 son extras; no retrasan el valor single-agent de M1–M7.
+
+## 6. Pruebas de producto y calidad
+
+Cada milestone trae pruebas unitarias y de integración para su contrato; no se cierra un milestone por apariencia o porque “arrancó”. Las suites reales se ejecutan en el repo dueño de cada componente y con evidencia guardada en ISyCode. No reutilizar resultados de tests de un checkout modificado como si fueran baseline limpio.
+
+### UX y layout
+
+- Capturas terminales de inicio/chat/plan/Files/Overview y todos los estados de conexión para 80×24, 100×30, 140×40.
+- Test de foco teclado en input, rail, selector, modal, preview y retorno al chat.
+- Texto en español/Unicode, nombres de archivo largos, wrap, scroll y terminal sin color.
+- Chat conserva al menos 68% de ancho a 140 columnas; rail no corta status ni ruta; estado no se comunica solo con color.
+- Entrada enviada durante operación aparece en cola o permanece editable; nunca desaparece silenciosamente.
+
+### Integridad y seguridad
+
+- Resolver root una sola vez y probar espacios, symlink, traversal, path absoluto, nombre Unicode, `.git`, `.env`, ignored y archivos gigantes.
+- Por cada side effect contar: request, grant, decision, lease, host execution, receipt y verify status. Toda discrepancia bloquea el gate.
+- Fallar el Gateway, MCP, Bridge, provider y receipt verifier uno por uno. Un servicio caído no debe ensanchar authority ni disparar otro executor.
+- Pruebas de UI aseguran que confirmación no puede dispararse desde el input y que el digest mostrado es el digest ejecutado.
+- No ejecutar destructivos contra el repo de usuario en pruebas; solo fixtures temporales/hosts simulados.
+
+## 7. Registro de riesgos
+
+| Riesgo | Mitigación | Gate |
+|---|---|---|
+| Acoplar ISyCode a internals TS/Bun inestables | MCP/HTTP/CLI con versión; ADR M0 | Spike/ADR aprobado |
+| Root del Gateway diferente al directorio de lanzamiento | Identificar root y mostrarlo; roots separados | Fixture root igual/diferente M6 |
+| Plan viejo ejecutado por una confirmación nueva | Invalidar en cada transición y ligar digest | Rechazo/cancelación M0 + M5 |
+| UI dice “allow” sin recibo verificable | Estados explícitos; ejecutar verificador IsyMotron | Witness receipt M5 |
+| Sidebar oculta funciones en terminal pequeña | Breakpoints, Ctrl+B y capturas | M1 layout suite |
+| El tree filtra secretos o sale del workspace por symlink | Resolver en host, denylist, no seguir enlaces externos | M2 containment suite |
+| OpenISy/IsyVM checkout dirty cambia mientras se integra | Leer solo; revisar diff/contrato al iniciar implementación | Gate M0 por repo |
+| Gateway caído induce fallback a filesystem/shell | No fallback; DENY de mutación | Witness degradado M5/M6 |
+| L1 `ACTIVE` se confunde con permiso de uso | Presentar estados separados y grant independiente | Witness L1 M9 |
+| IsyVM Layer A se toma por sandbox de seguridad | Reutilizar solo referencias UI; IsyMotron gobierna authority | Revisión de frontera M0/M5 |
+
+## 8. Fuera de alcance de la primera versión
+
+- Replicar toda la TUI TypeScript de OpenISy/OpenCode dentro de Python.
+- Editor/diff viewer permanente en el panel lateral.
+- Terminal shell con privilegios implícitos, `sudo`, delete/chmod o ejecución arbitraria.
+- Exponer reasoning interno del modelo como característica de producto por defecto.
+- Activar capacidades por confianza en un provider, por una skill o por presencia de un MCP.
+- Prometer seguridad de una sandbox IsyVM Layer A.
+
+## 9. Checklist de release inicial
+
+- [ ] M0 ADR y punto de entrada instalable completados.
+- [ ] M1 capturas y contratos de layout aprobados.
+- [ ] M2 file browser permanece confinado al `cwd` y soporta preview read-only.
+- [ ] M3 MCP/Skills reflejan estados reales de OpenISy.
+- [ ] M4 ejecución demo pasa por IsyMotron, no por widgets.
+- [ ] M5 todos los witnesses de autoridad/receipt/degraded mode pasan.
+- [ ] M6 solo habilita mutaciones con los scopes y grants de ambos lados.
+- [ ] M7 recuperación no repite side effects ni revive approvals vencidas.
+- [ ] M13 solo se declara completo después de adapters reales, sesiones/stream, cancelación, approvals, gestión de credenciales y migración móvil versionada.
+- [x] README muestra instalación, configuración, atajos, roots y modo demo.
+- [ ] No hay rutas absolutas personales, credenciales en logs, MCPs/skills ficticios ni claims `DEMONSTRATED` sin evidencia reproducible.
+
+## Referencias locales auditadas
+
+- ISyCode: `isycode/tui.py`, `isycode/gateway_client.py`, `isycode/safety.py`, `isycode/session.py`, `isycode/bridge.py`.
+- IsyMotron: `agents/provider.py`, `agents/planner.py`, `agents/executor.py`, `core/isymotron/policy.py`, `core/isymotron/host.py`, `core/isymotron/verify.py`, `hosts/linux/host.py`, `hosts/simulator/engines.py`.
+- OpenISy: `packages/opencode/src/mcp/index.ts`, `src/skill/index.ts`, `src/cli/cmd/tui.ts`, `src/l1/` (checkout separado).
+- Gateway/Bridge: `gateway/app.py`, `gateway/paths.py`, `gateway/auth.py`, `bridge_core/capabilities/cap.agent_bridge/handshake.py` (componentes separados).
+- IsyVM: `core/agent/chat.py`, `ui/panels/workspace.py`, `ui/main_window.py`, `tests/test_ui_layout.py` (prototipo separado).

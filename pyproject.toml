@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isycode"
+version = "0.1.0"
+description = "ISyCo terminal agent with ISyCode-owned workspace authority and integrations"
+requires-python = ">=3.10"
+dependencies = [
+  "rich>=13.7,<15",
+  "pathspec>=0.12,<2",
+  "textual>=0.80,<2",
+  "aiohttp>=3.9,<4",
+  "keyring>=25.7,<26",
+]
+
+[project.scripts]
+isycode = "isycode.launcher:main"
+
+[tool.setuptools.packages.find]
+include = ["isycode*"]

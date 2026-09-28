@@ -19,7 +19,9 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-ISYMOTRON_ROOT = "/home/danny/Development/ISyCo Git/IsyMotron"
+ISYMOTRON_ROOT = os.environ.get("ISYMOTRON_ROOT")
+if not ISYMOTRON_ROOT:
+    raise SystemExit("Set ISYMOTRON_ROOT to the IsyMotron checkout before running this prototype.")
 sys.path.insert(0, ISYMOTRON_ROOT)
 sys.path.insert(0, os.path.join(ISYMOTRON_ROOT, "core"))
 sys.path.insert(0, os.path.join(ISYMOTRON_ROOT, "hosts"))
@@ -30,7 +32,9 @@ from hosts.simulator.engines import LegacyHost
 from relay.loopback import LoopbackRelay
 from isymotron.contracts import HostDescription, HostIdentity, CapabilityManifest
 
-NVIDIA_KEY = open("/home/danny/Development/NVAPI.txt").read().strip()
+NVIDIA_KEY = os.environ.get("NVIDIA_NIM_API_KEY")
+if not NVIDIA_KEY:
+    raise SystemExit("Set NVIDIA_NIM_API_KEY before running this prototype.")
 
 # 20 intents: mix of valid multi-step, simple, and edge cases
 INTENTS = [

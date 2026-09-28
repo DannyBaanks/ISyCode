@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """M0 — Does Nemotron survive a 10-turn agent loop?
 
-Runs the IsyMotron planner against the NVIDIA NIM provider (the "payasa"
-key) with a LegacyHost demo backend. Measures tool-call validity rate,
+Runs the IsyMotron planner against the NVIDIA NIM provider with a LegacyHost
+demo backend. Measures tool-call validity rate,
 tokens/turn, and recovery. Gate: >=70% valid tool calls after 10 turns.
 """
 from __future__ import annotations
@@ -12,7 +12,9 @@ import sys
 import time
 import json
 
-ISYMOTRON_ROOT = "/home/danny/Development/ISyCo Git/IsyMotron"
+ISYMOTRON_ROOT = os.environ.get("ISYMOTRON_ROOT")
+if not ISYMOTRON_ROOT:
+    raise SystemExit("Set ISYMOTRON_ROOT to the IsyMotron checkout before running this prototype.")
 sys.path.insert(0, ISYMOTRON_ROOT)
 sys.path.insert(0, os.path.join(ISYMOTRON_ROOT, "core"))
 sys.path.insert(0, os.path.join(ISYMOTRON_ROOT, "hosts"))
@@ -41,7 +43,9 @@ def descriptions_from_relay(relay: LoopbackRelay) -> list[HostDescription]:
         ))
     return out
 
-NVIDIA_KEY = open("/home/danny/Development/NVAPI.txt").read().strip()
+NVIDIA_KEY = os.environ.get("NVIDIA_NIM_API_KEY")
+if not NVIDIA_KEY:
+    raise SystemExit("Set NVIDIA_NIM_API_KEY before running this prototype.")
 
 # Intents that require real multi-step tool use (read -> write -> launch)
 TURNS = [

@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_REAL_PATH=$(readlink -f -- "$0")
+SCRIPT_DIRECTORY=$(CDPATH= cd -- "$(dirname -- "$SCRIPT_REAL_PATH")" && pwd)
+ISYCODE_REPOSITORY=$(CDPATH= cd -- "$SCRIPT_DIRECTORY/.." && pwd)
+ISYCODE_PYTHON=${ISYCODE_PYTHON:-python3}
+
+if [ -n "${PYTHONPATH:-}" ]; then
+    PYTHONPATH="$ISYCODE_REPOSITORY:$PYTHONPATH"
+else
+    PYTHONPATH="$ISYCODE_REPOSITORY"
+fi
+export PYTHONPATH
+exec "$ISYCODE_PYTHON" -m isycode "$@"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ISyCode Gateway Client — HTTP client for the OpenISy Gateway.
+"""ISyCode Gateway Client — HTTP client for the ISyCo Gateway.
 
 DEGRADED MODE (INV-2): if the gateway is unavailable, mutating operations
 FAIL CLOSED. No silent bash fallback. Raw shell is never invoked.
@@ -14,6 +14,18 @@ import urllib.parse
 from dataclasses import dataclass
 
 
+class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Do not forward a Gateway bearer token to a different origin."""
+
+    def redirect_request(self, request, fp, code, message, headers, new_url):
+        old = urllib.parse.urlsplit(request.full_url)
+        new = urllib.parse.urlsplit(new_url)
+        if (old.hostname != new.hostname or old.port != new.port
+                or (old.scheme == "https" and new.scheme != "https")):
+            return None
+        return super().redirect_request(request, fp, code, message, headers, new_url)
+
+
 @dataclass
 class GatewayError(Exception):
     code: str
@@ -24,21 +36,44 @@ class GatewayError(Exception):
 class GatewayClient:
     """HTTP client for the OpenISy Gateway (files, search, read, write)."""
 
-    def __init__(self, base_url: str = "http://127.0.0.1:8787",
+    def __init__(self, base_url: str | None = None,
                  api_key: str | None = None, timeout_s: float = 10.0):
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or os.environ.get("GATEWAY_URL")
+                         or "http://127.0.0.1:8787").strip().rstrip("/")
+        self._validate_base_url(self.base_url)
         self.api_key = api_key or os.environ.get("GATEWAY_API_KEY", "")
+        if not self.api_key:
+            try:
+                from isycode.credentials import CredentialVault, CredentialVaultError
+
+                self.api_key = CredentialVault().latest_secret_for_service("isyco-gateway") or ""
+            except (CredentialVaultError, OSError, ValueError):
+                self.api_key = ""
         self.timeout_s = timeout_s
         self._available: bool | None = None
+
+    @staticmethod
+    def _validate_base_url(base_url: str) -> None:
+        parsed = urllib.parse.urlsplit(base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("GATEWAY_URL must be an http(s) server URL.")
+        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError("GATEWAY_URL must not contain credentials, query, or fragment.")
+        host = parsed.hostname.lower()
+        local_http = host == "localhost" or host == "::1" or host.startswith("127.")
+        if parsed.scheme != "https" and not local_http:
+            raise ValueError("Gateway bearer credentials require HTTPS unless the server is loopback.")
 
     def _request(self, method: str, path: str, body: dict | None = None) -> dict:
         url = f"{self.base_url}{path}"
         data = json.dumps(body).encode() if body else None
         req = urllib.request.Request(url, data=data, method=method)
-        req.add_header("Authorization", f"Bearer {self.api_key}")
+        if self.api_key:
+            req.add_header("Authorization", f"Bearer {self.api_key}")
         req.add_header("Content-Type", "application/json")
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+            opener = urllib.request.build_opener(_SameOriginRedirectHandler)
+            with opener.open(req, timeout=self.timeout_s) as resp:
                 return json.loads(resp.read())
         except urllib.error.HTTPError as e:
             err_body = e.read().decode(errors="replace")
