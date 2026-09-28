@@ -25,10 +25,10 @@ class StaticSystembility:
         return self.result
 
 
-def request(action="workspace.files.read"):
+def request(root, action="workspace.files.read"):
     return ActionRequest(
         action_id=action,
-        workspace_root=Path("/workspace"),
+        workspace_root=root,
         target="src/main.py",
         parameters={"line": 4},
     )
@@ -38,12 +38,12 @@ def grant_for(action):
     return AuthorityDecision(True, "grant-1", "explicit grant", action.digest)
 
 
-def test_sentinel_allows_only_explicit_authority_and_passing_systembilities():
+def test_sentinel_allows_only_explicit_authority_and_passing_systembilities(tmp_path):
     sentinel = IsySentinel((StaticSystembility(
         "workspace-boundary", SystembilityResult("workspace-boundary", True, "inside root")
     ),))
 
-    action = request()
+    action = request(tmp_path)
     decision = sentinel.evaluate(action, grant_for(action))
 
     assert decision.status == "ALLOW"
@@ -53,16 +53,16 @@ def test_sentinel_allows_only_explicit_authority_and_passing_systembilities():
     ]
 
 
-def test_sentinel_denies_when_no_systembilities_are_configured():
+def test_sentinel_denies_when_no_systembilities_are_configured(tmp_path):
     decision = IsySentinel(()).evaluate(
-        request(), grant_for(request())
+        request(tmp_path), grant_for(request(tmp_path))
     )
 
     assert decision.status == "DENY"
     assert any(check.name == "SystembilitySet" and not check.passed for check in decision.checks)
 
 
-def test_sentinel_evaluates_every_systembility_after_a_failure():
+def test_sentinel_evaluates_every_systembility_after_a_failure(tmp_path):
     calls = []
     checks = (
         StaticSystembility("first", SystembilityResult("first", False, "blocked"), calls),
@@ -70,7 +70,7 @@ def test_sentinel_evaluates_every_systembility_after_a_failure():
     )
 
     decision = IsySentinel(checks).evaluate(
-        request(), grant_for(request())
+        request(tmp_path), grant_for(request(tmp_path))
     )
 
     assert calls == ["first", "second"]
@@ -80,7 +80,7 @@ def test_sentinel_evaluates_every_systembility_after_a_failure():
     ]
 
 
-def test_sentinel_converts_systembility_exception_to_deny_and_continues():
+def test_sentinel_converts_systembility_exception_to_deny_and_continues(tmp_path):
     calls = []
 
     class Exploding:
@@ -92,7 +92,7 @@ def test_sentinel_converts_systembility_exception_to_deny_and_continues():
         "second", SystembilityResult("second", True, "checked"), calls
     ))
     decision = IsySentinel(checks).evaluate(
-        request(), grant_for(request())
+        request(tmp_path), grant_for(request(tmp_path))
     )
 
     assert calls == ["exploding", "second"]
@@ -100,10 +100,10 @@ def test_sentinel_converts_systembility_exception_to_deny_and_continues():
     assert "secret detail" not in repr(decision)
 
 
-def test_unknown_action_denies_even_if_authority_and_checks_allow():
+def test_unknown_action_denies_even_if_authority_and_checks_allow(tmp_path):
     decision = IsySentinel((StaticSystembility(
         "check", SystembilityResult("check", True, "ok")
-    ),)).evaluate(request("made.up.action"), grant_for(request("made.up.action")))
+    ),)).evaluate(request(tmp_path, "made.up.action"), grant_for(request(tmp_path, "made.up.action")))
 
     assert decision.status == "DENY"
     assert any(check.name == "KnownAction" and not check.passed for check in decision.checks)
@@ -111,7 +111,8 @@ def test_unknown_action_denies_even_if_authority_and_checks_allow():
 
 def test_action_request_copies_and_freezes_nested_parameters():
     parameters = {"path": "src/main.py", "options": {"limit": 3}}
-    action = ActionRequest("workspace.files.read", Path("/workspace"), parameters=parameters)
+    root = Path.cwd()
+    action = ActionRequest("workspace.files.read", root, parameters=parameters)
     parameters["options"]["limit"] = 99
 
     assert action.parameters["options"]["limit"] == 3

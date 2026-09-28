@@ -7,15 +7,28 @@ import json
 import os
 import stat
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isycode.actions import ACTION_BY_ID
 from isycode.security import ActionRequest, AuthorityDecision, SentinelDecision
 from isycode.workspace_setup import state_root
 
 
 class ActionAuditError(RuntimeError):
     """The private action journal is unsafe, corrupt, or unavailable."""
+
+
+@dataclass(frozen=True)
+class ActionAuditReport:
+    status: str
+    records: int
+    decisions: int
+    receipts: int
+    unverifiable: int
+    recent: tuple[dict[str, Any], ...]
+    reason: str = ""
 
 
 class ActionAuditJournal:
@@ -40,6 +53,17 @@ class ActionAuditJournal:
         if os.name == "posix":
             directory.chmod(0o700)
         self.path = directory / f"actions-{root_id}.jsonl"
+
+    @classmethod
+    def for_read_only_inspection(cls, workspace_root: Path,
+                                 *, state_directory: Path | None = None) -> "ActionAuditJournal":
+        """Build a verifier handle without creating or changing state files."""
+        root = Path(workspace_root).expanduser().resolve(strict=True)
+        root_id = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
+        directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
+        instance = cls.__new__(cls)
+        instance.path = directory / f"actions-{root_id}.jsonl"
+        return instance
 
     def record_decision(self, request: ActionRequest, authority: AuthorityDecision,
                         decision: SentinelDecision) -> None:
@@ -77,6 +101,146 @@ class ActionAuditJournal:
             "receipt_id": str(receipt.receipt_id)[:160],
             "result_digest": str(receipt.result_digest)[:128],
         })
+
+    def verify(self, *, recent_limit: int = 80) -> ActionAuditReport:
+        """Verify the journal without repairing, rewriting, or following links."""
+        if not isinstance(recent_limit, int) or not 0 <= recent_limit <= 500:
+            raise ValueError("recent_limit must be between 0 and 500")
+        try:
+            parent_info = self.path.parent.lstat()
+        except FileNotFoundError:
+            return ActionAuditReport("NOT_VERIFIABLE", 0, 0, 0, 0, (),
+                                     "no durable journal exists for this workspace")
+        except OSError:
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal directory metadata is unavailable")
+        if (not stat.S_ISDIR(parent_info.st_mode) or self.path.parent.is_symlink()
+                or (os.name == "posix" and
+                    (parent_info.st_uid != os.getuid() or parent_info.st_mode & 0o077))):
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal directory is unsafe")
+        try:
+            info = self.path.lstat()
+        except FileNotFoundError:
+            return ActionAuditReport("NOT_VERIFIABLE", 0, 0, 0, 0, (),
+                                     "no durable journal exists for this workspace")
+        except OSError:
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal metadata is unavailable")
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                or info.st_size > self.MAX_BYTES
+                or (os.name == "posix" and
+                    (info.st_uid != os.getuid() or info.st_mode & 0o077))):
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal file is unsafe or exceeds its size limit")
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(self.path, flags)
+            try:
+                opened = os.fstat(fd)
+                if (not stat.S_ISREG(opened.st_mode) or opened.st_ino != info.st_ino
+                        or opened.st_dev != info.st_dev or opened.st_size > self.MAX_BYTES):
+                    raise ValueError("journal changed during verification")
+                chunks: list[bytes] = []
+                while True:
+                    chunk = os.read(fd, 64 * 1024)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                after = os.fstat(fd)
+                if (after.st_size != opened.st_size
+                        or after.st_mtime_ns != opened.st_mtime_ns
+                        or after.st_ctime_ns != opened.st_ctime_ns):
+                    raise ValueError("journal changed during verification")
+            finally:
+                os.close(fd)
+            raw = b"".join(chunks)
+            if len(raw) > self.MAX_BYTES or (raw and not raw.endswith(b"\n")):
+                raise ValueError("journal is truncated or exceeds its size limit")
+            lines = raw.decode("utf-8").splitlines()
+            previous = "0" * 64
+            decisions_by_digest: dict[str, list[tuple[str, str, bool]]] = {}
+            receipt_ids: set[str] = set()
+            records: list[dict[str, Any]] = []
+            decisions = receipts = unverifiable = 0
+            for line_number, line in enumerate(lines, 1):
+                if len(line.encode("utf-8")) > self.MAX_RECORD_BYTES:
+                    raise ValueError(f"record {line_number} exceeds the record limit")
+                record = json.loads(line)
+                if not isinstance(record, dict):
+                    raise ValueError(f"record {line_number} is not an object")
+                digest = record.get("digest")
+                body = {key: value for key, value in record.items() if key != "digest"}
+                if (not isinstance(digest, str) or len(digest) != 64
+                        or any(char not in "0123456789abcdef" for char in digest)
+                        or body.get("previous") != previous):
+                    raise ValueError(f"record {line_number} has invalid chain metadata")
+                canonical = json.dumps(body, ensure_ascii=False, sort_keys=True,
+                                       separators=(",", ":"))
+                expected = hashlib.sha256((previous + canonical).encode("utf-8")).hexdigest()
+                if not hmac.compare_digest(digest, expected):
+                    raise ValueError(f"record {line_number} digest mismatch")
+                kind = body.get("kind")
+                action = body.get("action")
+                owner = body.get("owner")
+                request_digest = body.get("request_digest")
+                if (kind not in {"decision", "receipt"} or action not in ACTION_BY_ID
+                        or not isinstance(owner, str) or len(owner) > 120
+                        or not isinstance(request_digest, str) or len(request_digest) != 64
+                        or any(char not in "0123456789abcdef" for char in request_digest)
+                        or not isinstance(body.get("time"), (int, float))
+                        or not isinstance(body.get("workspace"), str)
+                        or len(body["workspace"]) != 32):
+                    raise ValueError(f"record {line_number} has invalid identity or structure")
+                version = body.get("version")
+                if version not in {None, 1}:
+                    raise ValueError(f"record {line_number} has an unsupported format version")
+                if version is None:
+                    unverifiable += 1
+                if kind == "decision":
+                    if (not isinstance(body.get("authority"), bool)
+                            or body.get("sentinel") not in {"ALLOW", "DENY"}
+                            or not isinstance(body.get("failed_checks"), list)
+                            or not all(isinstance(item, str) for item in body["failed_checks"])):
+                        raise ValueError(f"decision {line_number} has invalid status fields")
+                    # A frozen request can be re-evaluated after grant state changes.
+                    # Keep each chronological decision; a later DENY does not erase an
+                    # earlier successful execution receipt.
+                    decisions_by_digest.setdefault(request_digest, []).append(
+                        (action, owner, body["authority"] and body["sentinel"] == "ALLOW"))
+                    decisions += 1
+                    if not owner:
+                        unverifiable += 1
+                else:
+                    receipt_id = body.get("receipt_id")
+                    result_digest = body.get("result_digest")
+                    decision_bindings = decisions_by_digest.get(request_digest, [])
+                    if (not isinstance(receipt_id, str) or not receipt_id
+                            or receipt_id in receipt_ids
+                            or not isinstance(result_digest, str) or len(result_digest) != 64
+                            or any(char not in "0123456789abcdef" for char in result_digest)
+                            or (action, owner, True) not in decision_bindings):
+                        raise ValueError(f"receipt {line_number} is invalid, replayed, or unbound")
+                    receipt_ids.add(receipt_id)
+                    receipts += 1
+                    if not owner:
+                        unverifiable += 1
+                records.append(body)
+                previous = digest
+            safe_recent = tuple({
+                "kind": item["kind"], "time": item["time"], "action": item["action"],
+                "owner": item["owner"], "request_digest": item["request_digest"],
+                "authority": item.get("authority"), "sentinel": item.get("sentinel"),
+                "failed_checks": item.get("failed_checks", []),
+                "receipt_id": item.get("receipt_id"),
+                "result_digest": item.get("result_digest"),
+            } for item in records[-recent_limit:] if recent_limit)
+            status = "NOT_VERIFIABLE" if unverifiable else "PASS"
+            return ActionAuditReport(status, len(records), decisions, receipts,
+                                     unverifiable, safe_recent)
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     f"journal verification failed ({type(exc).__name__})")
 
     def _append(self, body: dict[str, Any]) -> None:
         try:
@@ -134,6 +298,7 @@ class ActionAuditJournal:
                         TypeError, ValueError) as exc:
                     raise ActionAuditError("private action journal integrity check failed") from exc
             body["previous"] = previous
+            body.setdefault("version", 1)
             canonical = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             body["digest"] = hashlib.sha256((previous + canonical).encode("utf-8")).hexdigest()
             encoded = (json.dumps(body, ensure_ascii=False, sort_keys=True,
@@ -161,4 +326,4 @@ class ActionAuditJournal:
             os.close(fd)
 
 
-__all__ = ["ActionAuditError", "ActionAuditJournal"]
+__all__ = ["ActionAuditError", "ActionAuditJournal", "ActionAuditReport"]

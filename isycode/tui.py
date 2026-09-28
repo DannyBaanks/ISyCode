@@ -29,10 +29,6 @@ from isycode.config import (
 )
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
-from isycode.file_picker import (
-    FilePickerUnavailable, choose_context_file, choose_workspace_directory,
-    choose_workspace_file,
-)
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import WorkspaceSetupStore
 from isycode.shortcuts import APP_SHORTCUTS
@@ -49,6 +45,8 @@ from isycode.action_runtime import (
     LocalWorkspaceReadOwner,
     LPSSymbolOwner, ProductActionGate, SessionDeleteOwner, TOOL_ACTIONS,
 )
+from isycode.action_audit import ActionAuditJournal
+from isycode.action_coverage import owner_coverage_report
 from isycode.broker import (
     BrokerManagementOwner, BrokerPreviewOwner, BrokerProvisionOwner, BrokerRegistry,
     load_reviewed_recipe, provision_requests,
@@ -110,7 +108,6 @@ from isycode.workspace import IsyMotronWorkspace, WorkspaceUnavailable
 from isycode.openisy_client import OpenIsyClient
 from isycode.runtime import AuthorityContextChanged, IsyMotronRuntime
 from isycode.mobile_host import MobileHost
-from isycode.bridge import BridgeClient, BridgeError, BridgeStatus, bridge_enabled, save_bridge_enabled
 import time as _time
 
 
@@ -203,7 +200,7 @@ class SidePanel(Vertical):
             yield Input(placeholder="Search workspace paths…", id="file-search")
             yield Tree("Workspace", id="workspace-tree")
             with Horizontal(id="file-actions"):
-                yield Button("Copy path", id="file-copy-path", disabled=True)
+                yield Button("Copy path · owner pending", id="file-copy-path", disabled=True)
                 yield Button("Open preview", id="file-open-preview", disabled=True)
             with VerticalScroll(id="file-preview-scroll"):
                 yield Static("Select a file to preview it.", id="file-preview", classes="rail-copy")
@@ -1457,9 +1454,8 @@ class TUIApp(App):
         self._pending_review: tuple[str, str] | None = None
         self._review_request_task: asyncio.Task | None = None
         self._mobile_host = MobileHost()
-        self._bridge_enabled = bridge_enabled()
-        self._bridge_client: BridgeClient | None = None
-        self._bridge_status: BridgeStatus | None = None
+        # Saved Bridge opt-in is intentionally ignored until an execution owner is wired.
+        self._bridge_enabled = False
         self._agent_context: dict[str, str] | None = None
         self._mcp_snapshot = CatalogSnapshot(False, [], "not_checked", "")
         self._skill_snapshot = CatalogSnapshot(False, [], "not_checked", "")
@@ -1546,22 +1542,14 @@ class TUIApp(App):
         ]
         self._append("◇ ISyCode TUI — local-first agent host", CYAN)
         self._append("  Type / to browse. /plan <intent> uses the optional IsyMotron runtime.", MUTED)
-        self.run_worker(self._start_mobile_host(), exclusive=True, group="mobile-host")
-        self.set_interval(3.0, self._refresh_mobile_host_status)
         self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup")
-        self.set_interval(30.0, self._bridge_tick)
-        if self._bridge_enabled:
-            self.run_worker(self._enable_bridge(startup=True), exclusive=True, group="bridge")
+        # Mobile Host and Bridge have catalog actions but no product execution owners yet.
+        # A saved preference is not an Authority grant, approval, or Sentinel decision.
+        self._bridge_enabled = False
 
     async def on_unmount(self, event) -> None:
-        """Stop the shared mobile service when the owning TUI exits."""
+        """Release local temporary state; unowned optional services never start in Secure."""
         del event
-        await self._mobile_host.stop()
-        if self._bridge_enabled and self._bridge_client is not None:
-            try:
-                await asyncio.to_thread(self._bridge_client.goodbye)
-            except BridgeError:
-                pass
         if self._temporary_chat_root is not None:
             shutil.rmtree(self._temporary_chat_root, ignore_errors=True)
 
@@ -1589,14 +1577,10 @@ class TUIApp(App):
             else:
                 self.query_one("#prompt-input", PromptArea).focus()
 
-            if recurring:
-                store_root = setup_store.sessions_root(self._workspace_root)
-            else:
-                self._temporary_chat_root = Path(tempfile.mkdtemp(prefix="isycode-chat-"))
-                store_root = self._temporary_chat_root / "isyrcodesessions"
-            session_store = ChatSessionStore(store_root)
-            self._chat_sessions = session_store
-            # Do not leave one empty transcript on disk every time ISyCode opens.
+            # Persistent transcript writes are disabled until session.create/append
+            # have a request-bound owner. A recurrence choice is workspace identity,
+            # not permission to persist prompts or responses.
+            self._chat_sessions = None
             self._active_chat_session_id = None
             await self._initialize_workspace()
             self._refresh_lsp_status()
@@ -1605,6 +1589,9 @@ class TUIApp(App):
             self.run_worker(self._check_model(), exclusive=False)
             if not recurring:
                 self._append("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
+            self._append(
+                "  Session persistence is blocked in Secure · current conversation stays in memory only.",
+                YELLOW)
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
 
@@ -1619,8 +1606,9 @@ class TUIApp(App):
         self.query_one("#workspace-source-label", Static).update(f"Root source · {source}")
 
     async def _start_mobile_host(self) -> None:
-        await self._mobile_host.start()
-        self._refresh_mobile_host_status()
+        self._set_activity(
+            "Mobile Host is blocked in Secure · no Authority/Sentinel execution owner is connected",
+            YELLOW)
 
     def _refresh_mobile_host_status(self) -> None:
         status = self._mobile_host.status()
@@ -1975,7 +1963,8 @@ class TUIApp(App):
             await self._load_directory(uri)
             return
         self._selected_file_path = uri
-        self.query_one("#file-copy-path", Button).disabled = False
+        # Clipboard access is an effectful action and has no registered owner yet.
+        self.query_one("#file-copy-path", Button).disabled = True
         self.query_one("#file-open-preview", Button).disabled = False
         await self._preview_file(uri)
 
@@ -2057,9 +2046,7 @@ class TUIApp(App):
             self.query_one("#action-search", Input).display = True
             self.query_one("#action-list", OptionList).focus()
         elif button_id == "file-copy-path":
-            if self._selected_file_path:
-                self.copy_to_clipboard(self._selected_file_path)
-                self._set_activity("Copied workspace path", GREEN)
+            self._set_activity("Copy path blocked · clipboard.copy has no registered owner", YELLOW)
         elif button_id == "file-open-preview":
             if self._selected_file_path:
                 await self._preview_file(self._selected_file_path)
@@ -2251,11 +2238,11 @@ class TUIApp(App):
     def _open_settings_menu(self) -> None:
         entries = [
             self._entry("Mobile host status", "mobile_host_status", ""),
-            self._entry("Generate new mobile pairing code", "mobile_host_pairing", ""),
-            self._entry("Bridge coordination · " + ("enabled" if self._bridge_enabled else "disabled"),
+            self._entry("Bridge coordination · blocked in Secure",
                         "bridge_settings", ""),
             self._entry("Named API keys", "named_credentials", ""),
             self._entry("Authority & Security", "authority_open", ""),
+            self._entry("Action journal · verify / inspect", "security_journal", ""),
             self._entry("Inject AGENTS.md context", "context_inject", ""),
             self._entry("Commands & shortcuts", "shortcuts", ""),
             self._entry("Workspace files", "files", ""),
@@ -2266,30 +2253,18 @@ class TUIApp(App):
         self._render_menu("settings", "Settings", entries)
 
     def _open_bridge_settings(self) -> None:
-        status = self._bridge_status
-        state = "Enabled" if self._bridge_enabled else "Disabled"
         entries = [self._entry(
-            f"{state} · " + ("active session" if self._bridge_client and self._bridge_client.token else "no active handshake"),
-            "info", "", "Bridge coordinates peers; it does not grant filesystem or tool permission. No daemon is started.")]
-        if status:
-            active_peers = sum(1 for agent in status.agents.values()
-                               if agent.get("status", "").casefold() not in {"gone", "dead", "offline"})
-            entries.append(self._entry(
-                f"Peers {active_peers} · leases {len(status.leases)} · pending messages {status.pending_messages}",
-                "info", "", "Mailbox payloads are not injected into model context."))
-        entries.extend([
-            self._entry("Turn Bridge off" if self._bridge_enabled else "Turn Bridge on",
-                        "bridge_toggle", "off" if self._bridge_enabled else "on"),
-            self._entry("Refresh Bridge status", "bridge_refresh", ""),
-            self._entry("Back to Settings", "settings_back", ""),
-        ])
+            "Blocked · no registered action owner",
+            "info", "", "Bridge leases are coordination signals, never Workspace Authority grants. "
+            "Secure does not run hello, heartbeat, peek, send, lease, or wake until each path has an owner and gate."),
+            self._entry("Back to Settings", "settings_back", "")]
         if self._menu_mode != "bridge_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("bridge_settings", "Settings · Bridge coordination", entries)
 
     def _open_context_menu(self) -> None:
-        entries = [self._entry("Choose AGENTS.md…", "context_inject", "",
-                               "Choose an AGENTS.md/AGENT.md inside this workspace; Workspace Authority and IsySentinel will authorize the bounded read.")]
+        entries = [self._entry("Inject AGENTS.md… · owner pending", "context_inject", "",
+                               "Blocked in Secure: desktop.file_picker has no registered execution owner. No dialog or file read will occur.")]
         if self._agent_context:
             entries.insert(0, self._entry(
                 f"Injected · {self._agent_context['path']}", "context_info", "",
@@ -2302,161 +2277,40 @@ class TUIApp(App):
         return "Context: AGENTS" if self._agent_context else "Context"
 
     async def _inject_agent_context(self) -> None:
-        try:
-            raw_path = await choose_context_file(self._workspace_root)
-            if raw_path is None:
-                self._set_activity("Context file selection cancelled", MUTED)
-                return
-            raw_path = raw_path.expanduser()
-            if not raw_path.is_absolute():
-                raise WorkspaceUnavailable("The file chooser returned a non-absolute path.")
-            if raw_path.is_symlink():
-                raise WorkspaceUnavailable("Refusing to inject a symbolic link.")
-            file_path = raw_path.resolve(strict=True)
-            if not file_path.is_file() or file_path.name.casefold() not in {"agents.md", "agent.md"}:
-                raise WorkspaceUnavailable("Select a regular AGENTS.md or AGENT.md file.")
-            if file_path != self._workspace_root and self._workspace_root not in file_path.parents:
-                raise WorkspaceUnavailable("Choose context inside the current .isyroot workspace boundary.")
-            read = await asyncio.to_thread(
-                self._workspace_read_owner().execute, "workspace.context.inject", {"path": str(file_path)})
-            request = self._workspace_request("workspace.context.inject", str(file_path))
-            if (read.decision != "ALLOW" or read.receipt is None
-                    or not read.receipt.verify(request, read.text)):
-                raise WorkspaceUnavailable(
-                    "Context access denied. Check the workspace read grant in Settings · Authority & Security.")
-            body = json.loads(read.text).get("text")
-            if not isinstance(body, str):
-                raise WorkspaceUnavailable("ISyCode did not return a complete UTF-8 context file.")
-            if len(body.encode("utf-8")) > 64 * 1024:
-                raise WorkspaceUnavailable("AGENTS context exceeds the 64 KiB injection limit.")
-            self._agent_context = {
-                "path": str(file_path), "receipt_id": read.receipt.receipt_id,
-                "verification": "PASS", "text": body,
-            }
-            self.query_one("#context-button", Button).label = self._context_button_label()
-            self._set_activity(
-                f"Injected {file_path.name} · ISyCode receipt {read.receipt.receipt_id[:12]} PASS",
-                GREEN)
-            self._append(
-                f"  Context loaded from {file_path} · receipt {read.receipt.receipt_id[:12]} verified PASS. "
-                "Instructions remain subordinate to ISyCode authority and your request.", MUTED)
-            self._open_context_menu()
-        except (FilePickerUnavailable, OSError, WorkspaceUnavailable, ValueError) as exc:
-            self._set_activity(f"Context injection denied · {exc}", YELLOW)
-            self._open_context_menu()
+        self._set_activity(
+            "Context injection blocked · desktop.file_picker has no registered action owner", YELLOW)
 
     async def _set_bridge_enabled(self, enabled: bool) -> None:
-        if enabled == self._bridge_enabled and (not enabled or self._bridge_client is not None):
-            self._open_bridge_settings()
-            return
-        if not enabled:
-            # Persist off first so shutdown will not attempt another handshake.
-            try:
-                await asyncio.to_thread(save_bridge_enabled, False)
-            except BridgeError as exc:
-                self._set_activity(f"Could not disable Bridge preference · {exc}", RED)
-                self._open_bridge_settings()
-                return
-            self._bridge_enabled = False
-            client, self._bridge_client = self._bridge_client, None
-            self._bridge_status = None
-            if client is not None and client.token:
-                try:
-                    await asyncio.to_thread(client.goodbye)
-                    message = "Bridge disabled · goodbye handshake completed"
-                except BridgeError:
-                    message = "Bridge disabled locally · goodbye could not be confirmed"
-            else:
-                message = "Bridge disabled · no active handshake"
-            self._refresh_bridge_status_text()
-            self._set_activity(message, MUTED)
-            self._open_bridge_settings()
-            return
-
-        self._bridge_enabled = True
-        if self._bridge_client is None:
-            identity = f"isycode-{os.getpid()}-{uuid.uuid4().hex[:10]}"
-            try:
-                self._bridge_client = BridgeClient(identity, caps="isycode,tui")
-            except BridgeError as exc:
-                self._bridge_enabled = False
-                self._set_activity(f"Bridge unavailable · {exc}", YELLOW)
-                self._refresh_bridge_status_text()
-                self._open_bridge_settings()
-                return
-        try:
-            await asyncio.to_thread(self._bridge_client.hello)
-            if not self._bridge_client.token:
-                raise BridgeError("Bridge hello did not issue an identity token")
-            await asyncio.to_thread(save_bridge_enabled, True)
-            self._set_activity("Bridge enabled · hello handshake complete", GREEN)
-            await self._bridge_tick(force=True)
-        except BridgeError as exc:
-            if self._bridge_client is not None and self._bridge_client.token:
-                try:
-                    await asyncio.to_thread(self._bridge_client.goodbye)
-                except BridgeError:
-                    pass
-            self._bridge_enabled = False
-            self._bridge_client = None
-            try:
-                await asyncio.to_thread(save_bridge_enabled, False)
-            except BridgeError:
-                pass
-            self._set_activity(f"Bridge handshake failed · {exc}", YELLOW)
+        # There is deliberately no Bridge execution owner in Secure yet.
+        # Persisted opt-in and a Bridge lease are not product authorization.
+        del enabled
+        self._bridge_enabled = False
+        self._set_activity("Bridge is blocked in Secure · execution owner not connected", YELLOW)
         self._refresh_bridge_status_text()
         self._open_bridge_settings()
 
     async def _enable_bridge(self, startup: bool = False) -> None:
-        # Honor the saved opt-in preference; each TUI process gets a fresh identity.
-        self._bridge_enabled = True
-        identity = f"isycode-{os.getpid()}-{uuid.uuid4().hex[:10]}"
-        try:
-            self._bridge_client = BridgeClient(identity, caps="isycode,tui")
-            await asyncio.to_thread(self._bridge_client.hello)
-            if not self._bridge_client.token:
-                raise BridgeError("Bridge hello did not issue an identity token")
-            await self._bridge_tick(force=True)
-            if not startup:
-                self._set_activity("Bridge enabled · hello handshake complete", GREEN)
-        except BridgeError as exc:
-            self._bridge_client = None
-            self._set_activity(f"Bridge unavailable · {exc}", YELLOW)
+        del startup
+        self._bridge_enabled = False
+        self._set_activity("Bridge startup blocked in Secure · no execution owner is connected", YELLOW)
         self._refresh_bridge_status_text()
 
     async def _bridge_tick(self, force: bool = False) -> None:
-        if not self._bridge_enabled or self._bridge_client is None:
-            return
-        try:
-            await asyncio.to_thread(self._bridge_client.heartbeat)
-            self._bridge_status = await asyncio.to_thread(self._bridge_client.status)
-            self._refresh_bridge_status_text()
-            if force and self._menu_mode == "bridge_settings":
-                self._open_bridge_settings()
-        except BridgeError as exc:
-            self._set_activity(f"Bridge status unavailable · {exc}", YELLOW)
-            if self.is_mounted:
-                self.query_one("#bridge-status", Static).update("Enabled · Bridge not responding")
+        del force
+        # No direct Bridge subprocess calls are reachable from Secure.
+        self._bridge_enabled = False
+        self._refresh_bridge_status_text()
 
     def _refresh_bridge_status_text(self) -> None:
         if not self.is_mounted:
             return
-        if not self._bridge_enabled:
-            text = "Disabled · no Bridge handshake"
-        elif self._bridge_client is None:
-            text = "Enabled · waiting for Bridge handshake"
-        elif self._bridge_status is None:
-            text = f"Enabled · {self._bridge_client.identity} · connecting"
-        else:
-            active = sum(1 for agent in self._bridge_status.agents.values()
-                         if agent.get("status", "").casefold() not in {"gone", "dead", "offline"})
-            text = (f"Connected · {self._bridge_client.identity}\n"
-                    f"Peers {active} · leases {len(self._bridge_status.leases)} · "
-                    f"pending {self._bridge_status.pending_messages}")
+        text = "Blocked in Secure · no Bridge owner"
         self.query_one("#bridge-status", Static).update(text)
 
     def _open_credentials_menu(self) -> None:
-        entries = [self._entry("Add a named API key", "add_named_credential", "")]
+        entries = [self._entry(
+            "Adding credentials is blocked in Secure",
+            "info", "", "credentials.add has no registered execution owner yet; no key was read or stored.")]
         try:
             credentials = CredentialVault().list_metadata()
         except Exception:
@@ -2577,21 +2431,29 @@ class TUIApp(App):
         except (WorkspaceAuthorityError, OSError, ValueError):
             entries.append(self._entry(
                 "Workspace Authority policy unavailable · actions must deny", "info"))
+        coverage = owner_coverage_report()
+        ownerless = len(coverage["unowned_effectful_actions"])
+        ambiguous = len(coverage["ambiguous_actions"])
+        covered = sum(1 for row in coverage["actions"] if row["status"] == "COVERED")
         entries.append(self._entry(
-            "Workspace read owner · connected for list/read/name-search", "info", "",
-            "These three actions check the request-bound grant, WorkspaceReadBoundary Systembility, "
-            "and pure IsySentinel; a local receipt matches request/result digests. No durable audit log is written yet."))
+            f"Owner coverage · {covered} actions bound · {ownerless} effect actions unowned · {ambiguous} ambiguous",
+            "info", "", "Generated from the explicit action/owner registry. This is not a source-code oracle; "
+            "the callsite inventory and known gaps are listed in docs/product/tui-feature-matrix.md."))
+        entries.append(self._entry(
+            "Workspace read owner · connected", "info", "",
+            "Filesystem list/read/name-search/context requests bind a named owner, explicit grant, boundary checks, "
+            "Sentinel decision, result receipt metadata, and durable journal record. Journal does not retain targets or content."))
         entries.append(self._entry(
             "Session delete owner · connected", "info", "",
             "Deletion requires a named-session confirmation, a one-use digest-bound approval and a temporary session-id grant. "
             "The temporary grant is removed after the operation."))
         entries.append(self._entry(
-            "Other execution owners · partial", "info", "",
-            "Semantic broker Build+Start now has a reviewed recipe, temporary exact-Docker grants, one-use approvals, "
-            "internal network, read-only mount, and health receipt. Broker Logs/Stop/Remove, Mobile sessions, "
-            "Bridge mutations, L1, credential replacement/revocation, and workspace writes still need owners."))
+            "Secure remains open · unowned surfaces are blocked or not wired", "info", "",
+            "Mobile Host and Bridge do not start from Secure. Credential entry is blocked. Remaining gaps include "
+            "Mobile Host class routes, Bridge adapter methods, L1, workspace mutation, native file picker, persistent "
+            "session create/append, and several cataloged broker lifecycle actions. No fallback owner is used."))
         entries.append(self._entry(
-            "Gateway semantic owner · eleven read-only operations connected", "info", "",
+            "Gateway semantic owner · typed read-only operations connected", "info", "",
             "Uses the native HTTP API, a host grant, exact query review, one-use approval, local receipt, "
                 "and the Gateway's independent isyco.semantic scope. Requests require a matching operator-configured workspace ID; that label is not a filesystem grant."))
         entries.append(self._entry(
@@ -2840,115 +2702,12 @@ class TUIApp(App):
         self._set_activity(f"Native Gateway {operation} completed", GREEN)
 
     async def _open_broker_preview(self) -> None:
-        try:
-            selected = await choose_workspace_directory(
-                self._workspace_root, title="Choose a project folder for the semantic broker")
-        except FilePickerUnavailable as exc:
-            self._append(f"  Broker folder picker unavailable: {exc}", YELLOW)
-            return
-        if selected is None:
-            self._set_activity("Semantic broker preview cancelled", MUTED)
-            return
-        try:
-            authority = WorkspaceAuthority(self._workspace_root)
-            grant = authority.policy().get("grants", {}).get("broker.preview", {})
-        except (WorkspaceAuthorityError, OSError, ValueError):
-            self._append("  Workspace Authority is unavailable; broker preview is denied.", RED)
-            return
-        if not grant.get("enabled", False):
-            accepted = await self.push_screen_wait(BrokerPreviewGrantScreen(self._workspace_root))
-            if not accepted:
-                self._append("  Broker preview grant declined; nothing was read or executed.", MUTED)
-                return
-            try:
-                authority.set_grant("broker.preview", enabled=True)
-            except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  Broker preview grant could not be saved; request denied.", RED)
-                return
-        self._set_activity("Semantic broker · checking project read grant and recipe", YELLOW)
-        outcome = await asyncio.to_thread(
-            BrokerPreviewOwner(self._workspace_root, authority, self._action_approvals)
-            .preview, selected, None)
-        if outcome.decision != "ALLOW":
-            self._append(f"  Broker preview {outcome.decision} · {outcome.reason[:300]}", YELLOW)
-            self._set_activity("Broker preview denied · grant workspace.files.read for the chosen folder", YELLOW)
-            return
-        self.query_one(ChatArea).mount(Static(Text(
-            "Semantic broker plan · PREVIEW ONLY · Docker was not executed\n" + outcome.text,
-            style=TEXT)))
-        self._set_activity("Broker recipe preview completed · no container started", GREEN)
+        self._set_activity(
+            "Broker preview blocked · desktop.file_picker has no registered action owner", YELLOW)
 
     async def _provision_broker(self) -> None:
-        try:
-            selected = await choose_workspace_directory(
-                self._workspace_root, title="Choose a project folder for the semantic broker")
-        except FilePickerUnavailable as exc:
-            self._append(f"  Broker folder picker unavailable: {exc}", YELLOW)
-            return
-        if selected is None:
-            self._set_activity("Semantic broker provisioning cancelled", MUTED)
-            return
-        authority = WorkspaceAuthority(self._workspace_root)
-        try:
-            recipe = load_reviewed_recipe()
-            docker = shutil.which("docker")
-            if not docker:
-                raise FileNotFoundError("Docker is not installed")
-            build_request, start_request = provision_requests(
-                self._workspace_root, selected, recipe, docker)
-            project = Path(build_request.target)
-            read_request = ActionRequest(
-                "workspace.files.read", self._workspace_root, str(project), {"path": str(project)},
-                execution_owner="broker_preview")
-            _, read_decision = ProductActionGate(
-                self._workspace_root, authority, owner_id="broker_preview").authorize(read_request)
-            if not read_decision.allowed:
-                self._append(
-                    "  Broker denied: grant workspace.files.read for this exact folder in Settings first.",
-                    YELLOW)
-                return
-        except (OSError, RuntimeError, TypeError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Broker recipe/root unavailable ({type(exc).__name__}); nothing was executed.", RED)
-            return
-        accepted = await self.push_screen_wait(
-            BrokerProvisionConfirmScreen(project, recipe, build_request.parameters["image"]))
-        if not accepted:
-            self._append("  Broker build/start declined; no Docker command was run.", MUTED)
-            return
-
-        docker_path = str(Path(docker).resolve(strict=True))
-        try:
-            authority.set_grant("broker.build", enabled=True, executables=[docker_path])
-            authority.set_grant("broker.start", enabled=True, executables=[docker_path])
-            build_approval = self._action_approvals.issue(build_request, ttl_seconds=120)
-            start_approval = self._action_approvals.issue(start_request, ttl_seconds=120)
-            self._set_activity("Semantic broker · building reviewed recipe and starting isolated container", YELLOW)
-            outcome = await asyncio.to_thread(
-                BrokerProvisionOwner(self._workspace_root, authority, self._action_approvals)
-                .provision, project, build_approval, start_approval)
-        except (OSError, RuntimeError, TypeError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Broker provisioning failed before completion ({type(exc).__name__}).", RED)
-            return
-        finally:
-            # These grants exist only for the reviewed build/start attempt.
-            for action_id in ("broker.build", "broker.start"):
-                try:
-                    authority.set_grant(action_id, enabled=False, executables=[])
-                except (WorkspaceAuthorityError, OSError, ValueError):
-                    pass
-        if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  Broker provisioning {outcome.decision} · {outcome.reason[:300]}", YELLOW)
-            self._set_activity("Semantic broker did not reach verified health", YELLOW)
-            return
-        if not outcome.receipt.verify(start_request, outcome.text):
-            self._append("  Broker receipt verification failed; endpoint is not trusted.", RED)
-            return
-        self.query_one(ChatArea).mount(Static(Text(
-            "Semantic broker · live health verified\n" + outcome.text, style=TEXT)))
-        self._append(
-            f"  ISySentinel ALLOW · receipt {outcome.receipt.receipt_id[:12]} verified",
-            GREEN)
-        self._set_activity("Semantic broker healthy · loopback only · project mount read-only", GREEN)
+        self._set_activity(
+            "Broker provisioning blocked · desktop.file_picker has no registered action owner", YELLOW)
 
     async def _manage_broker(self, project: Path) -> None:
         try:
@@ -3123,70 +2882,59 @@ class TUIApp(App):
                 self._append(f"  Workspace grant could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()
 
-    async def _add_named_credential(self) -> None:
-        result = await self.push_screen_wait(AddCredentialScreen())
-        if not result:
-            self._open_credentials_menu()
-            return
-        secret = result.pop("secret", "")
-        try:
-            CredentialVault().add(
-                result.get("name", ""), result.get("service", ""),
-                result.get("purpose", ""), secret)
-        except Exception as exc:
-            self._append(
-                f"  API key was not saved ({type(exc).__name__}). The secret is not shown.", RED)
-            self._open_credentials_menu()
-            return
-        self._append(
-            f"  Saved {result['name']} for {result['service']}. The value stays hidden.", GREEN)
-        self._open_credentials_menu()
-
     def _render_mobile_host_status(self) -> None:
         status = self._mobile_host.status()
         entries: list[dict[str, str]] = []
+        entries.append(self._entry(
+            "Blocked in Secure · no registered execution owner",
+            "info", "", "The host does not start, pair devices, or issue credentials from the TUI. "
+            "A mobile credential authenticates a caller; it does not grant workspace or runtime authority."))
         if status.alive:
-            scheme = "https" if status.secure_transport else "http"
-            transport = "TLS enabled" if status.secure_transport else "loopback only; remote access requires TLS"
             entries.append(self._entry(
-                f"Host alive · {scheme}://{status.address}:{status.port}", "info", "", transport))
-            code = self._mobile_host.pairing_code_for_local_settings()
-            if code:
-                remaining = max(0, int((status.pairing_expires_at or 0) - _time.time()))
-                entries.append(self._entry(
-                    f"Pairing code · {code} · {remaining // 60}m {remaining % 60}s left",
-                    "info", "", "Single-use PIN; successful pairing issues a one-hour scoped bearer credential."))
-            else:
-                entries.append(self._entry(
-                    "No active pairing code", "info", "", "Generate a fresh code from Settings."))
-            if status.clients:
-                for client in status.clients:
-                    entries.append(self._entry(
-                        f"Connected · {client['device_name']}",
-                        "info", "", "Authenticated mobile client; runtime/session adapters are not connected yet."))
-            else:
-                entries.append(self._entry("No connected mobile clients", "info"))
-            try:
-                key_count = len(self._mobile_host.key_store.list_metadata())
-            except Exception:
-                key_count = -1
-            key_label = (f"Keystore · {key_count} credential(s)" if key_count >= 0
-                         else "Keystore · unavailable")
-            entries.append(self._entry(
-                key_label, "info", "",
-                "Only credential hashes are stored; plaintext keys are returned once at pairing."))
-        elif status.state == "error":
-            entries.append(self._entry(
-                f"Host unavailable · {status.error or 'startup failed'}", "info", "",
-                "The TUI stays available; inspect ISYCODE_MOBILE_HOST_* configuration."))
+                "Unexpected active listener · stop ISyCode and investigate",
+                "info", "", "Secure TUI has no authorized Mobile Host start path."))
         else:
-            entries.append(self._entry("Host is stopped", "info"))
-        entries.extend([
-            self._entry("Refresh mobile host status", "mobile_host_status_refresh", ""),
-            self._entry("Generate new mobile pairing code", "mobile_host_pairing", ""),
-            self._entry("Back to Settings", "settings_back", ""),
-        ])
+            entries.append(self._entry("Listener stopped · no pairing credentials issued", "info"))
+        entries.append(self._entry("Back to Settings", "settings_back", ""))
         self._render_menu("mobile_host_status", "Settings · Mobile host", entries)
+
+    def _open_action_journal(self) -> None:
+        try:
+            report = ActionAuditJournal.for_read_only_inspection(
+                self._workspace_root).verify()
+        except (OSError, RuntimeError, ValueError):
+            report = None
+        if report is None:
+            entries = [self._entry("JOURNAL_INVALID · verifier unavailable", "info")]
+        else:
+            entries = [self._entry(
+                f"Integrity · {report.status} · {report.records} records · {report.decisions} decisions · {report.receipts} receipts",
+                "info", "", report.reason or
+                "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored.")]
+            if report.unverifiable:
+                entries.append(self._entry(
+                    f"NOT_VERIFIABLE · {report.unverifiable} records lack an owner identity", "info"))
+            paired_receipts = {item["request_digest"]: item for item in report.recent
+                               if item["kind"] == "receipt"}
+            for item in reversed(report.recent):
+                if item["kind"] != "decision":
+                    continue
+                digest = item["request_digest"]
+                receipt = paired_receipts.get(digest)
+                authority = "ALLOW" if item["authority"] else "DENY"
+                result_state = ("receipt metadata recorded" if receipt
+                                else "execution/result not demonstrated")
+                entries.append(self._entry(
+                    f"{item['sentinel']} · {item['action']} · {item['owner'] or 'owner unknown'} · {result_state}",
+                    "info", "", f"Time: {_time.strftime('%Y-%m-%d %H:%M:%S', _time.localtime(item['time']))}\n"
+                    f"Request: {digest[:12]}… · Authority: {authority}\n"
+                    f"Failed checks: {', '.join(item['failed_checks']) or 'none recorded'}\n"
+                    "Receipt binds a request digest and result digest, but the request/result payload is not retained. "
+                    "Target and successful Systembility details are not persisted; no secret or prompt is shown."))
+            if not report.recent:
+                entries.append(self._entry("No durable decisions recorded for this workspace", "info"))
+        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        self._render_menu("security_journal", "Security · Action journal (read-only)", entries)
 
     def _render_menu(self, mode: str, title: str, entries: list[dict[str, str]]) -> None:
         self._menu_mode = mode
@@ -3226,11 +2974,14 @@ class TUIApp(App):
             self._open_bridge_settings()
             return
         if kind == "bridge_toggle":
-            self.run_worker(self._set_bridge_enabled(value == "on"),
-                            exclusive=True, group="bridge")
+            self._set_activity("Bridge is blocked in Secure · no execution owner is connected", YELLOW)
+            self._open_bridge_settings()
             return
         if kind == "bridge_refresh":
-            self.run_worker(self._bridge_tick(force=True), exclusive=True, group="bridge")
+            self._open_bridge_settings()
+            return
+        if kind == "security_journal":
+            self._open_action_journal()
             return
         if kind == "context_inject":
             self.run_worker(self._inject_agent_context(), exclusive=True, group="context-inject")
@@ -3432,9 +3183,6 @@ class TUIApp(App):
         if kind == "context_menu":
             self._open_context_menu()
             return
-        if kind == "add_named_credential":
-            self.run_worker(self._add_named_credential(), exclusive=True, group="credential-entry")
-            return
         if kind == "credential_info":
             item = next((record for record in CredentialVault().list_metadata()
                          if record["id"] == value), None)
@@ -3456,14 +3204,9 @@ class TUIApp(App):
                 self._open_settings_menu()
             return
         if kind == "mobile_host_pairing":
-            if not self._mobile_host.status().alive:
-                self._append("  Mobile host is not running; no pairing code was created.", YELLOW)
-            else:
-                code, expires_at = self._mobile_host.rotate_pairing_code()
-                remaining = max(0, int(expires_at - _time.time()))
-                self._append(
-                    f"  Mobile pairing code: {code} · expires in {remaining // 60}m {remaining % 60}s",
-                    GREEN)
+            self._append(
+                "  Mobile pairing is blocked in Secure · no Authority/Sentinel execution owner is connected.",
+                YELLOW)
             self._open_settings_menu()
             return
         if kind == "files":
@@ -3690,33 +3433,16 @@ class TUIApp(App):
             self._append(f"  Selected for this session · {provider.label} · {provider.model}", GREEN)
             self._close_menu()
             return
-        self._provider_key_target = name
-        self.query_one("#key-entry-label", Static).update(
-            f"Enter {provider.key_env}. The value stays masked and is saved to ISyCode's credential vault.")
-        self.query_one("#action-list", OptionList).display = False
-        self.query_one("#action-search", Input).display = False
-        self.query_one("#key-entry", Vertical).display = True
-        self.query_one("#provider-key-input", Input).value = ""
-        self.query_one("#provider-key-input", Input).focus()
+        self._append(
+            f"  {provider.label} has no configured credential. Secure credential entry is blocked "
+            "until credentials.add has an Authority/Sentinel owner.", YELLOW)
+        self._close_menu()
 
     def _save_provider_key(self) -> None:
-        value = self.query_one("#provider-key-input", Input).value
-        try:
-            name = self._provider_key_target
-            preset = PRESETS[name]
-            CredentialVault().add(
-                f"{preset['label']} API key", name, "Inference provider", value)
-            provider = Provider(name=self._provider_key_target,
-                                model=provider_default_model(self._provider_key_target),
-                                api_key=load_provider_key(self._provider_key_target) or None)
-        except (ConfigurationError, CredentialVaultError, ProviderError, ValueError):
-            self.query_one("#key-entry-label", Static).update(
-                "Could not save this key. Check the OS credential vault and provider selection.")
-            return
+        # Keep this defensive entry point inert even if an obsolete menu event arrives.
         self.query_one("#provider-key-input", Input).value = ""
         self._provider_key_target = ""
-        self._append("  Credential saved in the ISyCode vault · value hidden.", GREEN)
-        self._append(f"  {provider.label} · {provider.model} is selected for this session.", MUTED)
+        self._append("  Credential was not saved · credentials.add has no execution owner in Secure.", YELLOW)
         self._close_menu()
 
     # ── helpers ──────────────────────────────────────────────────
@@ -3946,34 +3672,8 @@ class TUIApp(App):
 
         async def _readme_cmd(app: "TUIApp", arg: str) -> None:
             del arg
-            try:
-                selected = await choose_workspace_file(
-                    app._workspace_root, title="Choose README.md", pattern="README.md")
-                if selected is None:
-                    app._set_activity("README selection cancelled", MUTED)
-                    return
-                if selected.is_symlink():
-                    raise WorkspaceUnavailable("Refusing a symbolic link.")
-                path = selected.resolve(strict=True)
-                if (path.name.casefold() != "readme.md"
-                        or (path != app._workspace_root and app._workspace_root not in path.parents)):
-                    raise WorkspaceUnavailable("Choose README.md inside the current workspace.")
-                outcome = await asyncio.to_thread(
-                    app._workspace_read_owner().execute, "workspace.files.read", {"path": str(path)})
-                request = app._workspace_request("workspace.files.read", str(path))
-                if (outcome.decision != "ALLOW" or outcome.receipt is None
-                        or not outcome.receipt.verify(request, outcome.text)):
-                    raise WorkspaceUnavailable(
-                        "README read denied. Grant bounded workspace reading in Settings · Authority & Security.")
-                content = json.loads(outcome.text).get("text")
-                if not isinstance(content, str):
-                    raise WorkspaceUnavailable("README is not a bounded UTF-8 text file.")
-                app.query_one(ChatArea).mount(Static(Text(f"README · {path}", style=CYAN)))
-                app.query_one(ChatArea).mount(Static(RichMarkdown(content[:32_000], code_theme="monokai")))
-                app._set_activity(
-                    f"README preview · local receipt {outcome.receipt.receipt_id[:12]} verified", GREEN)
-            except (FilePickerUnavailable, WorkspaceUnavailable, OSError, ValueError) as exc:
-                app._append(f"  README preview unavailable · {exc}", YELLOW)
+            app._set_activity(
+                "README picker blocked · desktop.file_picker has no registered action owner", YELLOW)
 
         async def _session_cmd(app: "TUIApp", arg: str) -> None:
             import os
@@ -4286,40 +3986,9 @@ class TUIApp(App):
             self.query_one("#activity-status", Static).update(Text(message, style=color))
 
     async def _show_chat_sessions(self) -> None:
-        if self._chat_sessions is None:
-            self._append("  Chat sessions are still initializing.", YELLOW)
-            return
-        choice = await self.push_screen_wait(
-            ChatSessionsScreen(self._chat_sessions))
-        if choice is None:
-            return
-        if choice.startswith("__delete__:"):
-            await self._delete_chat_session(choice.removeprefix("__delete__:"))
-            return
-        if choice == "__new__":
-            session = self._chat_sessions.create()
-            self._active_chat_session_id = session.session_id
-            self._history.clear()
-            await self.query_one(ChatArea).remove_children()
-            self._set_activity("New conversation · ready", GREEN)
-            self.query_one("#prompt-input", PromptArea).focus()
-            return
-        try:
-            session = self._chat_sessions.load(choice)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Could not open that conversation ({type(exc).__name__}).", RED)
-            return
-        self._active_chat_session_id = session.session_id
-        self._history = [dict(message) for message in session.messages]
-        chat = self.query_one(ChatArea)
-        await chat.remove_children()
-        for message in session.messages:
-            if message["role"] == "user":
-                self._append(f"> {message['content']}", CYAN)
-            else:
-                chat.mount(Static(RichMarkdown(message["content"], code_theme="monokai")))
-        self._set_activity(f"Resumed · {session.title}", GREEN)
-        self.query_one("#prompt-input", PromptArea).focus()
+        self._append(
+            "  Persistent sessions are blocked in Secure until create/read/append have a registered owner.",
+            YELLOW)
 
     async def _delete_chat_session(self, session_id: str) -> None:
         if self._chat_sessions is None:
@@ -4362,18 +4031,8 @@ class TUIApp(App):
             f"  Deleted conversation · receipt {outcome.receipt.receipt_id[:12]} verified.", GREEN)
 
     def _persist_chat_message(self, role: str, content: str) -> None:
-        if self._chat_sessions is None:
-            return
-        try:
-            if self._active_chat_session_id is None:
-                if role != "user":
-                    return
-                self._active_chat_session_id = self._chat_sessions.create(content).session_id
-            session = self._chat_sessions.append(
-                self._active_chat_session_id, role, content)
-            self._set_activity(f"Session · {session.title}", MUTED)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Chat history could not be saved ({type(exc).__name__}).", YELLOW)
+        # Never persist prompts/transcripts until session owners are connected.
+        del role, content
 
     # ── chat (default path) ──────────────────────────────────────
 

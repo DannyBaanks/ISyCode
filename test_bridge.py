@@ -75,7 +75,8 @@ def test_heartbeat_and_peek():
     a.hello()
     a.heartbeat("m3-alive")
     peek = a.peek()
-    assert isinstance(peek, str)
+    assert isinstance(peek, list)
+    assert all(isinstance(item, dict) for item in peek)
 
 
 if __name__ == "__main__":

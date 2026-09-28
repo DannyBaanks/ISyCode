@@ -59,6 +59,24 @@ MAX_OUTPUT_CHARS = 24_000
 MAX_SCAN_ENTRIES = 6_000
 
 
+# Explicit closed registry. Requests still bind the selected owner in their digest;
+# there is no default or fallback owner. Shared file reads are helper requests
+# nested inside four separately bound owners and are reported as such.
+OWNER_ACTIONS = {
+    "workspace_read": READ_ACTIONS,
+    "provider_network": frozenset({"provider.request"}),
+    "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
+    "session_delete": frozenset({"session.delete"}),
+    "gateway_mcp": frozenset({"mcp.invoke"}),
+    "gateway_semantic": frozenset({"gateway.semantic.read"}),
+    "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
+    "broker_preview": frozenset({"workspace.files.read", "broker.preview"}),
+    "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
+    "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
+                                      "broker.stop", "broker.remove"}),
+}
+
+
 @dataclass(frozen=True)
 class ActionReceipt:
     receipt_id: str
@@ -463,24 +481,10 @@ class BrokerManagementSystembility:
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
-    _OWNER_ACTIONS = {
-        "workspace_read": READ_ACTIONS,
-        "provider_network": frozenset({"provider.request"}),
-        "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
-        "session_delete": frozenset({"session.delete"}),
-        "gateway_mcp": frozenset({"mcp.invoke"}),
-        "gateway_semantic": frozenset({"gateway.semantic.read"}),
-        "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
-        "broker_preview": frozenset({"workspace.files.read", "broker.preview"}),
-        "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
-        "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
-                                         "broker.stop", "broker.remove"}),
-    }
-
     def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
-        allowed_actions = self._OWNER_ACTIONS.get(self.owner_id, frozenset())
+        allowed_actions = OWNER_ACTIONS.get(self.owner_id, frozenset())
 
         class ExecutionOwnerBindingSystembility:
             name = "ExecutionOwnerBinding"

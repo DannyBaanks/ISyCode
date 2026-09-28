@@ -92,6 +92,8 @@ def test_provision_owner_requires_grants_and_uses_bound_approvals(
         calls.append(tuple(args[1:]))
         if args[1:] == ["inspect", start.parameters["container"]]:
             return SimpleNamespace(returncode=1, stdout="")
+        if args[1:3] == ["network", "inspect"]:
+            return SimpleNamespace(returncode=0, stdout="true\n")
         if args[1] == "port":
             return SimpleNamespace(returncode=0, stdout="127.0.0.1:41001\n")
         return SimpleNamespace(returncode=0, stdout="container-id\n")
@@ -114,6 +116,9 @@ def test_provision_owner_requires_grants_and_uses_bound_approvals(
 
     monkeypatch.setattr(broker_module.subprocess, "run", fake_run)
     monkeypatch.setattr(broker_module, "build_opener", lambda *_args: Opener())
+    monkeypatch.setattr(broker_module, "_container_ip", lambda *_args: "172.20.0.2")
+    monkeypatch.setattr(broker_module, "_start_proxy", lambda *_args: (41001, 4242))
+    monkeypatch.setattr(broker_module, "_wait_for_health", lambda *_args: None)
 
     outcome = BrokerProvisionOwner(workspace, authority, approvals).provision(
         project, build_approval, start_approval)
@@ -126,7 +131,7 @@ def test_provision_owner_requires_grants_and_uses_bound_approvals(
     run_args = next(args for args in calls if args and args[0] == "run")
     assert "--read-only" in run_args
     assert "--cap-drop" in run_args and "ALL" in run_args
-    assert "127.0.0.1::8791" in run_args
+    assert not any(argument in {"--publish", "-p"} for argument in run_args)
     assert not any("--privileged" in args for args in calls)
     registry = BrokerRegistry()
     registered = registry.get(workspace, project)
@@ -203,7 +208,7 @@ def test_broker_management_requires_request_bound_log_approval(
         calls.append(args[1:])
         if args[1:3] == ["network", "inspect"]:
             return SimpleNamespace(returncode=0, stdout=(
-                f'{{"isycode.managed":"true","isycode.root":"{root_id}"}}'))
+                f'{{"isycode.managed":"true","isycode.root":"{root_id}"}}|true'))
         if args[1] == "inspect":
             return SimpleNamespace(returncode=0, stdout=(
                 f'{{"isycode.managed":"true","isycode.root":"{root_id}"}}|'
@@ -253,7 +258,7 @@ def test_broker_management_restarts_registered_container_and_verifies_health(
         calls.append(args[1:])
         if args[1:3] == ["network", "inspect"]:
             return SimpleNamespace(returncode=0, stdout=(
-                f'{{"isycode.managed":"true","isycode.root":"{root_id}"}}'))
+                f'{{"isycode.managed":"true","isycode.root":"{root_id}"}}|true'))
         if args[1] == "inspect":
             running = "true" if any(call and call[0] == "start" for call in calls) else "false"
             return SimpleNamespace(returncode=0, stdout=(
@@ -280,6 +285,7 @@ def test_broker_management_restarts_registered_container_and_verifies_health(
 
     monkeypatch.setattr(broker_module.subprocess, "run", fake_run)
     monkeypatch.setattr(broker_module, "build_opener", lambda *_args: Opener())
+    monkeypatch.setattr(broker_module, "_wait_for_health", lambda *_args: None)
     request, _ = owner.request_for(project, "start")
     outcome = owner.perform(project, "start", approvals.issue(request))
 
