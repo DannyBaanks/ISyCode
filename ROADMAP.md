@@ -85,7 +85,7 @@ Reglas de frontera:
 
 ### M0 — Cerrar auditoría, baseline y decisión de runtime
 
-**Estado:** en curso. Ya hay launcher global que conserva el cwd, discovery del `.isyroot` vacío más cercano, separación de `launch_dir`/`workspace_root`/grants, onboarding recurrente opt-in y sesiones de chat reanudables en estado privado externo. Las sesiones temporales se borran al salir; los títulos nacen del primer mensaje. `isycode/contracts.py` define interfaces estructurales para runtime, workspace, MCP, skills y verificación; la TUI acepta factories para sustituir runtime/workspace/OpenISy y el verificador de IsyMotron se comparte entre browser y runtime. Sigue pendiente cerrar el spike/compatibilidad OpenISy.
+**Estado:** en curso. Ya hay launcher global que conserva el cwd, discovery del `.isyroot` vacío más cercano, separación de `launch_dir`/`workspace_root`/grants, onboarding recurrente opt-in y sesiones de chat reanudables en estado privado externo. Las sesiones temporales se borran al salir; los títulos nacen del primer mensaje. `isycode/contracts.py` define interfaces estructurales para runtime, workspace, MCP, skills y verificación; la TUI acepta factories para sustituir runtime/workspace/OpenISy. Los adapters IsyMotron conservan su verificador legado, pero no autorizan Files ni efectos del perfil Secure. Sigue pendiente cerrar el spike/compatibilidad OpenISy.
 
 **Objetivo:** fijar qué contratos consumirá ISyCode y cómo se conectará a OpenISy sin reconstruir su runtime.
 
@@ -112,7 +112,7 @@ Reglas de frontera:
 
 ### M1 — Shell visual y navegación de la TUI
 
-**Estado:** iteración visual ejecutable: chat principal y rail `Overview`/`Files`; header compacto con ruta de workspace; MCP/skills de OpenISy; sección LSP con estado explícito “sin adapters configurados”; selector de archivos con acciones `Copy path`/`Open preview`; barra inferior `Sidebar`, `Sessions`, `Providers`, `Role`, `Context` y `⚙`; la paleta `/`/`Ctrl+P` tiene diez ramas semánticas con listas anidadas, scroll y búsqueda. `Ctrl+F` busca en la salida completa del chat y permite recorrer coincidencias. `Context → Choose AGENTS.md…` abre el selector nativo de Linux y conserva el gate de `filesystem.read` de IsyMotron. El rail usa fondo gris grafito y texto lavanda/gris de contraste moderado. Las respuestas del chat y Roundtrip pasan por parser Markdown con estilos para encabezados, negritas, listas, código en línea y bloques con resaltado de sintaxis. `Esc` cancela el stream activo y descarta su respuesta parcial; cuando no hay generación, vuelve del menú o enfoca el composer sin borrar el borrador. Faltan capturas en varios tamaños y la integración de acciones MCP/skills.
+**Estado:** iteración visual ejecutable: chat principal y rail `Overview`/`Files`; header compacto con ruta de workspace; MCP/skills de OpenISy; sección LSP con estado explícito “sin adapters configurados”; selector de archivos con acciones `Copy path`/`Open preview`; barra inferior `Sidebar`, `Sessions`, `Providers`, `Role`, `Context` y `⚙`; la paleta `/`/`Ctrl+P` tiene diez ramas semánticas con listas anidadas, scroll y búsqueda. `Ctrl+F` busca en la salida completa del chat y permite recorrer coincidencias. `Context → Choose AGENTS.md…` abre el selector nativo de Linux; la lectura la autoriza Workspace Authority + ISySentinel. El rail usa fondo gris grafito y texto lavanda/gris de contraste moderado. Las respuestas del chat y Roundtrip pasan por parser Markdown con estilos para encabezados, negritas, listas, código en línea y bloques con resaltado de sintaxis. `Esc` cancela el stream activo y descarta su respuesta parcial; cuando no hay generación, vuelve del menú o enfoca el composer sin borrar el borrador. Faltan capturas en varios tamaños y la integración de acciones MCP/skills.
 
 **Objetivo:** acercarse a la composición de Crush: chat despejado, panel lateral útil y estados de integración confiables.
 
@@ -123,7 +123,7 @@ Reglas de frontera:
 - [x] Overview: secciones compactas `MCPs`, `LSPs` y `Skills`; estado MCP/skill derivado del adapter, declarar ausencia de adapter LSP sin simular conexión, `Enter` abre detalle y descripción. Conteos solo cuando la API real los exponga.
 - [x] Files: pestaña visible en el mismo rail; navegación por árbol, expansión/cierre, búsqueda, selección, preview y acciones `Copy path`/`Open preview`; regresar al chat sin perder borrador.
 - [x] Atajos documentados y sin colisiones con escritura: `Ctrl+F` buscar en consola, `Ctrl+B` mostrar/ocultar rail, `Ctrl+P` abrir paleta semántica, `F6` Files, `Shift+F6` Overview, `F7`/`Shift+F7` ajustar ancho, `Ctrl+L` enfoca el composer, `Esc` cancela el stream activo y en reposo vuelve del menú/enfoca el composer, `Enter` seleccionar/enviar y `Shift+Enter` nueva línea. Los atajos viven en el engranaje; las confirmaciones no se activan al teclear en el composer.
-- [x] `Context → Choose AGENTS.md…` abre el selector de archivos de Linux sin pedir una ruta escrita; la lectura sigue limitada por el grant existente de IsyMotron y recibo verificado.
+- [x] `Context → Choose AGENTS.md…` abre el selector de archivos de Linux sin pedir una ruta escrita; la lectura requiere `workspace.context.inject` en Workspace Authority + ISySentinel.
 - [x] Renderizar Markdown del chat y Roundtrip con jerarquía de encabezados, negritas, listas, código en línea y bloques resaltados; mostrar el stream incrementalmente.
 - [x] Mantener rail y popup en paleta gris grafito con contraste legible; conservar acentos de color para estados y selección.
 - [x] Loading, error, vacío, desconectado y auth requerida tienen texto distinto en OpenISy; el refresh deshabilita su botón mientras consulta. No usar solo color para distinguirlos.
@@ -256,7 +256,7 @@ Reglas de frontera:
 
 ### M6 — File operations y capacidades OpenISy bajo grants explícitos
 
-**Estado:** el file browser usa `filesystem.read` del host actual y el runtime optativo ejecuta planes read-only bajo grants IsyMotron existentes. ISyCode ahora muestra disponibilidad del Gateway sin decir que está conectado al workspace local; admite `GATEWAY_URL`, exige HTTPS fuera de loopback y bloquea redirects a otro origen para no filtrar el bearer token. Gateway y el resto de capacidades siguen sin integrarse en el runtime; cualquier escritura real continúa pendiente de M5. El health endpoint oculta intencionalmente `IESY_ROOT`, por lo que hoy no existe evidencia para comparar el root con `cwd` ni para montar el explorador remoto.
+**Estado:** Files/context usan owners nativos ISyCode. El planner IsyMotron queda en modo proposal-only, y el Executor heredado está bloqueado en Secure aunque IsyMotron tenga grants. ISyCode muestra disponibilidad del Gateway sin decir que está conectado al workspace local; admite `GATEWAY_URL`, exige HTTPS fuera de loopback y bloquea redirects a otro origen para no filtrar el bearer token. Gateway y el resto de capacidades siguen sin integrarse en un runtime nativo universal; cualquier escritura real continúa pendiente de M15/M6. El health endpoint oculta intencionalmente `IESY_ROOT`, por lo que hoy no existe evidencia para comparar el root con `cwd` ni para montar el explorador remoto.
 
 **Objetivo:** habilitar gradualmente operaciones reales sin convertir MCP, Gateway o shell en un bypass de Workspace Authority + ISySentinel.
 
@@ -309,7 +309,7 @@ Reglas de frontera:
 
 - [ ] Mostrar identidad del agente, status, peers y lease con expiración, owner, topic y path lógico.
 - [ ] Integrar heartbeat/peek/send/claim/release por adapter; mostrar expiración y error de red.
-- [ ] Un lease del Bridge es señal de coordinación y nunca equivale a un grant de capability IsyMotron.
+- [ ] Un lease del Bridge es señal de coordinación y nunca equivale a un grant de Workspace Authority.
 - [ ] Evitar claim con path físico fuera del workspace autorizado; credenciales/tokens del bridge no aparecen en transcript.
 
 **Criterios de aceptación:** dos agentes comparten tarea, conflicto de lease se muestra y bloquea colisión; aun con lease adquirido, operación no concedida por host recibe DENY.
@@ -324,7 +324,7 @@ Reglas de frontera:
 
 - [ ] Lectura/listado de estado L1 y detalle de generación/evidencias en panel OpenISy.
 - [ ] Activación solo tras gates reales de OpenISy: validate → test → probe → seal → active; respeto a safe mode y flag experimental.
-- [ ] Mostrar capability, effect y estado registration/grant de IsyMotron por separado.
+- [ ] Mostrar capability, effect y estado registration/grant de Workspace Authority por separado.
 - [ ] Una tool `ACTIVE` en OpenISy no entra al catálogo de ejecución hasta que esté registrada y concedida en autoridad IsyMotron. Cambiar implementación invalida freshness/evidence según OpenISy.
 
 **Criterios de aceptación:** herramienta nueva (incluida una destructiva) puede existir/probarse y permanece no invocable hasta registro y grant independientes; safe mode deshabilita su carga; rollback deja evidencia y herramienta previa intacta.
@@ -431,7 +431,7 @@ Reglas de frontera:
 - [ ] Diseñar acceso remoto TLS/Tailscale y lifecycle del host independiente de una terminal interactiva; no exponer bind público como workaround.
 - [ ] Cerrar threat model, límites de requests, revocación, recuperación/crash y pruebas de integración host-cliente antes de marcar la feature completa.
 
-**Gate de seguridad:** el cliente nunca elige un runtime solo porque aparece en el catálogo; toda operación de sesión valida credencial, workspace, runtime, acción, grant y estado de IsyMotron. Health permanece mínimo y no revela nombres de dispositivos ni pairing.
+**Gate de seguridad:** el cliente nunca elige un runtime solo porque aparece en el catálogo; toda operación de sesión valida credencial, workspace, runtime, acción y grant/approval de Workspace Authority + ISySentinel antes de dispatch. Health permanece mínimo y no revela nombres de dispositivos ni pairing.
 
 ### M15 — ISySentinel y fronteras de seguridad
 

@@ -35,7 +35,9 @@ dark palette.
 
 ## Security and truthful states
 
-- IsyMotron remains the only authority for local capabilities and receipts.
+- Workspace Authority + ISySentinel are the security authority for local
+  product actions. The earlier IsyMotron-only execution direction is superseded
+  by `docs/design/isysentinel-security-boundaries.md`.
 - A listed MCP, skill, OAuth method, role, or provider does not imply it can be
   invoked by this TUI.
 - Credentials remain outside the project tree, are masked at input, saved with
