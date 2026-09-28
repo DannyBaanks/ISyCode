@@ -16,13 +16,13 @@ Las capturas muestran la TUI real de Textual con un workspace temporal de demost
 
 - **Chat en terminal:** conversación con streaming y cancelación con `Esc`; OpenAI, NVIDIA NIM, Nebius, Ollama y llama.cpp usan la interfaz de provider disponible en esta versión.
 - **Workspace con límite explícito:** encuentra el `.isyroot` más cercano o usa el directorio de inicio como fallback. Guarda `launch_dir` y `workspace_root` por separado.
-- **Explorador integrado:** árbol, búsqueda acotada, selección, copiar ruta y preview. La identidad `.isyroot` no es un permiso: la lectura exige grants aplicables y el host de archivos disponible.
-- **Sesiones:** crear, buscar, reanudar, renombrar y bifurcar conversaciones; las sesiones recurrentes viven fuera del repositorio. El primer mensaje genera un nombre.
+- **Explorador integrado:** árbol, búsqueda acotada, selección y preview gated. Copiar ruta está deshabilitado hasta que `clipboard.copy` tenga owner; los pickers nativos de Context, README y broker también quedan bloqueados en Secure mientras `desktop.file_picker` no tenga owner. La identidad `.isyroot` no es un permiso: la lectura exige grants aplicables y el host de archivos disponible.
+- **Sesiones:** Secure conserva la conversación activa solo en memoria. Crear/reanudar/guardar sesiones persistentes está bloqueado hasta que `session.create/read/append` tenga owner y scope verificados.
 - **Integraciones visibles:** estados de MCP, Skills, LSP, Gateway, Mobile Host y Bridge; los elementos descubiertos se distinguen de los que se pueden invocar.
 - **Roles:** agentes conversacionales de ISyCode y los ocho motores operativos de ISyCo aparecen en catálogos separados. Se transfiere el flujo, propósito y guardrails del motor; elegir un rol no ejecuta sus comandos ni le concede permisos.
 - **CLI por intención:** `isycode cli` abre ramas semánticas para explorar las acciones disponibles sin ejecutar shell arbitrario. En la instalación integrada de ISyCo, `isyco cli` deriva al mismo navegador.
 - **Búsqueda y ayuda:** `Ctrl+F` busca en la consola actual; `/` y `Ctrl+P` abren el navegador de Skills, Models, MCP, LSP, Files, Roles, Providers, Sessions, Workspace y Commands.
-- **Providers y claves:** selector de provider/modelo y claves con nombre guardadas en el vault del sistema cuando está disponible. Una clave no concede permiso de red.
+- **Providers y claves:** selector de provider/modelo; ISyCode puede usar credenciales ya presentes en el vault o el entorno. Añadir claves desde la TUI está bloqueado en Secure mientras `credentials.add` no tenga owner. Una clave no concede permiso de red.
 
 ## Estado comprobable
 
@@ -38,18 +38,18 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 ### Implementado con configuración y grants
 
 - Provider chat/model requests pasan por los controles locales de red; requieren credencial y host autorizado.
-- `.isyroot`, directorio de lanzamiento, sesiones externas, paleta, selector de providers/roles, búsqueda de consola y Settings.
+- `.isyroot`, directorio de lanzamiento, conversación en memoria, paleta, selector de providers/roles, búsqueda de consola y Settings.
 - Files/context se leen mediante owners nativos de ISyCode, grants explícitos de Workspace Authority e ISySentinel; `.isyroot` limita el árbol pero nunca concede acceso.
 - Once operaciones semánticas read-only del Gateway con payloads tipados, revisión explícita y gates locales/remotos independientes.
 - Gateway MCP: listar herramientas y flujo manual para revisar payload y aprobar una llamada individual.
-- Contexto `AGENTS.md`/`AGENT.md`, selector nativo de README y consultas de símbolos Pyright pasan por owners y permisos específicos cuando se configuran.
-- Primer corte de Mobile Host: health local, pairing PIN de un uso, credencial temporal hasheada, inventario de runtimes y heartbeat de clientes.
+- Lectura de archivos y consultas de símbolos Pyright pasan por owners y permisos específicos cuando se configuran. En Secure están bloqueados la inyección por picker de `AGENTS.md`/`AGENT.md`, el selector de README, la selección de carpeta para broker y copiar ruta porque sus acciones de picker/clipboard aún no tienen owners. Las utilidades nativas se conservan como código, pero no se invocan desde la TUI.
+- El módulo Mobile Host contiene health, pairing e inventario de runtimes, pero Secure no lo arranca ni emite pairing desde la TUI porque sus rutas aún no tienen owner.
 
 “Implementado” significa que hay un flujo en el código; cada integración puede seguir necesitando instalación, credencial, grants y configuración externa. Mira las columnas de evidencia de la [matriz de features](docs/product/tui-feature-matrix.md).
 
 ### Parcial o pendiente
 
-- **ISySentinel / M15:** `security.py` agrega decisiones de forma pura y Workspace Authority conserva grants por root. Los flujos conectados atan el digest de solicitud a un owner y acción registrados; las acciones sin owner quedan denegadas aunque tengan grant. Sus decisiones y receipts verificados se guardan en un journal privado hash-chain. M15 sigue abierto: faltan revisión universal de callsites, inspección/validación del historial y owners para Mobile Host, Bridge, L1 y mutaciones generales.
+- **ISySentinel / M15:** `security.py` agrega decisiones de forma pura; Workspace Authority conserva grants por root. Los flujos conectados atan el digest a owners registrados y el journal privado encadena decisiones/receipts. Secure bloquea desde la TUI Mobile Host, Bridge, guardado de credenciales nuevas, sesiones persistentes, file picker y clipboard cuando no hay owner. El verificador e inspector del journal reportan integridad de cadena, pero no pueden recomputar request/result sin guardar esos datos. M15 sigue abierto por acciones sin owner, APIs directas aún no mediadas (incluidas utilidades picker, Mobile Host y Bridge), sesiones directas, mutaciones y la auditoría universal incompleta.
 - **Ejecución de herramientas del modelo:** una respuesta de texto como `{"tool":"bash",...}` es texto y no se ejecuta. No hay ejecución arbitraria de shell ni escritura general del workspace desde el chat.
 - **Gateway en vivo:** el cliente/owner semántico está conectado en ISyCode, pero falta demostrar una operación contra el Gateway real con grant local, scope remoto e IDs de workspace coincidentes.
 - **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. No hay bucle de tools del modelo.
@@ -57,7 +57,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 - **Mobile Host:** aún faltan sesiones remotas, streaming, cancelación, approvals, adapters operativos y administración completa de credenciales.
 - **Providers:** OAuth todavía no está implementado. Los métodos OAuth leídos de un catálogo externo son metadatos.
 - **OpenISy L0/L1:** sus contratos se documentan como integración futura; el ciclo de staging, activación, worker aislado, receipts y rollback no está integrado en ISyCode.
-- **Auditoría duradera y release:** receipts durables, diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners siguen en el roadmap.
+- **Auditoría duradera y release:** hay journal hash-chain con verificador read-only e inspector; la cadena puede verificarse, pero payloads de request/result no se conservan para recomputar sus digests. Faltan diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners.
 
 ## Seguridad y límites
 
