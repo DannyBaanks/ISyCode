@@ -18,12 +18,14 @@ from pathlib import Path
 import secrets
 import sys
 import tempfile
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Callable, Literal, Mapping
 from urllib import request as urlrequest
 
 from isycode.action_runtime import (
     ActionOutcome, ActionReceipt, ProductActionGate, TailscaleAuthorityFacts,
+    tailscale_stage_operations,
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
@@ -38,6 +40,8 @@ MAX_PACKAGE = 80 * 1024 * 1024
 MAX_INDEXES = 32 * 1024 * 1024
 APT_TIMEOUT = 90.0
 INSTALL_TIMEOUT = 240.0
+STAGE_TIMEOUT = 600.0
+FINAL_TIMEOUT = 360.0
 SUPPORTED = {
     "ubuntu": frozenset({"focal", "jammy", "noble"}),
     "debian": frozenset({"bullseye", "bookworm", "trixie"}),
@@ -165,6 +169,16 @@ class PreparedTransaction:
                                separators=(",", ":")).encode())
 
     @property
+    def stage_operations(self) -> tuple[tuple[str, ...], ...]:
+        artifacts = tuple((item.relative_name, str(item.source), item.size, item.sha256)
+                          for item in self.stage_artifacts)
+        return tailscale_stage_operations(str(self.stage_directory), artifacts)
+
+    @property
+    def stage_operations_digest(self) -> str:
+        return _sha(json.dumps(self.stage_operations, separators=(",", ":")).encode())
+
+    @property
     def privilege_argv(self) -> tuple[str, ...]:
         return ("/usr/bin/pkexec", "/usr/bin/env",
                 f"APT_CONFIG={self.stage_directory / 'apt.conf'}",
@@ -196,8 +210,15 @@ class PreparedTransaction:
         }
 
     def stage_request(self, root: Path) -> ActionRequest:
+        parameters = self._parameters()
+        parameters.update({
+            "stage_artifacts": tuple((item.relative_name, str(item.source),
+                                      item.size, item.sha256) for item in self.stage_artifacts),
+            "stage_operations": self.stage_operations,
+            "stage_operations_digest": self.stage_operations_digest,
+        })
         return ActionRequest("tailscale.install.stage", root, "tailscale",
-                             self._parameters(), execution_owner="tailscale_package_install")
+                             parameters, execution_owner="tailscale_package_install")
 
     def request(self, root: Path) -> ActionRequest:
         return ActionRequest("tailscale.install", root, "tailscale",
@@ -206,11 +227,18 @@ class PreparedTransaction:
     def stage_preview(self) -> str:
         entries = "".join(f"- {item.relative_name}: {item.size} bytes, SHA256 {item.sha256}\n"
                           for item in self.stage_artifacts)
+        operations = "".join("- " + " ".join(argv) + "\n"
+                             for argv in self.stage_operations)
         return (f"Root-owned private Tailscale stage: {self.stage_directory}\n"
                 f"Approved artifact manifest: {self.stage_manifest_digest}\n"
+                f"Approved operation manifest: {self.stage_operations_digest}\n"
                 f"Copy exactly {len(self.stage_artifacts)} bounded files:\n{entries}"
-                "Then verify root "
-                "ownership, restrictive modes, size, and SHA256. No package is installed.\n")
+                "Check parent ownership and modes before each directory creation. "
+                "Create private directories only if absent (UID 0, mode 0700). "
+                "Require each staged file to be a single-link regular file owned by UID 0, "
+                "mode 0400, with the listed size and SHA256. Mode 0000 quarantines a failed "
+                "stage. Run these exact fixed privileged operations as applicable:\n"
+                f"{operations}No package is installed.\n")
 
     def preview(self) -> str:
         return (f"Official Tailscale source: {self.plan.repository_uri} "
@@ -429,6 +457,7 @@ def _bounded_privileged(argv: tuple[str, ...], *, env: Mapping[str, str],
     chunks = {process.stdout: bytearray(), process.stderr: bytearray()}
     selector = selectors.DefaultSelector()
     deadline = time.monotonic() + timeout
+    completed = False
     try:
         for pipe in chunks:
             os.set_blocking(pipe.fileno(), False)
@@ -445,15 +474,23 @@ def _bounded_privileged(argv: tuple[str, ...], *, env: Mapping[str, str],
                     chunks[key.fileobj].extend(data)
                     if sum(len(value) for value in chunks.values()) > max_output:
                         raise ValueError("privileged apt output exceeded limit")
-        process.wait(timeout=max(0.1, deadline - time.monotonic()))
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("privileged apt operation timed out")
+        process.wait(timeout=remaining)
+        completed = True
         return TailscaleCommandResult(process.returncode,
                                      chunks[process.stdout].decode(errors="replace"),
                                      chunks[process.stderr].decode(errors="replace"))
     finally:
         selector.close()
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.wait()
+        if not completed:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            if process.poll() is None:
+                process.wait()
         for pipe in chunks:
             pipe.close()
 
@@ -483,6 +520,10 @@ class TailscalePackageInstallOwner:
         self._prepared: UbuntuDebianInstallPlan | None = None
         self._transaction: PreparedTransaction | None = None
         self._staged: PreparedTransaction | None = None
+        self._phase_deadline: ContextVar[float | None] = ContextVar(
+            "tailscale_package_phase_deadline", default=None)
+        self._stage_allowed: ContextVar[frozenset[tuple[str, ...]] | None] = ContextVar(
+            "tailscale_stage_allowed_argv", default=None)
 
     def plan(self) -> UbuntuDebianInstallPlan:
         if self._platform != "linux":
@@ -525,8 +566,15 @@ class TailscalePackageInstallOwner:
 
     def _checked_run(self, plan: UbuntuDebianInstallPlan,
                      argv: tuple[str, ...], *, timeout: float = APT_TIMEOUT) -> str:
+        deadline = self._phase_deadline.get()
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic())
+            if timeout <= 0:
+                raise TimeoutError("package action deadline elapsed")
         result = self._run(argv, env=self._environment(plan),
                            timeout=timeout, max_output=MAX_OUTPUT)
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError("package action deadline elapsed")
         if result.returncode != 0:
             raise ValueError("bounded package process failed")
         return result.stdout
@@ -544,9 +592,21 @@ class TailscalePackageInstallOwner:
         self._assert_apt_config(plan, self._checked_run(plan, ("/usr/bin/apt-config", "dump")))
 
     def _root_run(self, argv: tuple[str, ...], *, timeout: float = APT_TIMEOUT):
-        return self._privileged_run(("/usr/bin/pkexec", *argv),
-                                    env={"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
-                                    timeout=timeout, max_output=MAX_OUTPUT)
+        full_argv = ("/usr/bin/pkexec", *argv)
+        allowed = self._stage_allowed.get()
+        if allowed is not None and full_argv not in allowed:
+            raise ValueError("privileged stage operation differs from approved manifest")
+        deadline = self._phase_deadline.get()
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic())
+            if timeout <= 0:
+                raise TimeoutError("package action deadline elapsed")
+        result = self._privileged_run(full_argv,
+                                      env={"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
+                                      timeout=timeout, max_output=MAX_OUTPUT)
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError("package action deadline elapsed")
+        return result
 
     def _root_checked(self, argv: tuple[str, ...], *, timeout: float = APT_TIMEOUT) -> str:
         result = self._root_run(argv, timeout=timeout)
@@ -773,6 +833,8 @@ class TailscalePackageInstallOwner:
         phase = "root stage path check"
         stage = transaction.stage_directory
         created = False
+        allowed_token = self._stage_allowed.set(frozenset(transaction.stage_operations))
+        deadline_token = self._phase_deadline.set(time.monotonic() + STAGE_TIMEOUT)
         try:
             self._require_root_directory(Path("/var"), private=False)
             self._require_root_directory(Path("/var/lib"), private=False)
@@ -808,6 +870,9 @@ class TailscalePackageInstallOwner:
                 except (OSError, ValueError, TypeError, TimeoutError, subprocess.TimeoutExpired):
                     pass
             return self._receipt(gate, request, "FAILURE", phase)
+        finally:
+            self._stage_allowed.reset(allowed_token)
+            self._phase_deadline.reset(deadline_token)
 
     def install(self, request: ActionRequest,
                 approval: ActionApproval | None) -> ActionOutcome:
@@ -828,6 +893,7 @@ class TailscalePackageInstallOwner:
             return ActionOutcome("Tailscale installation denied.", "DENY", None,
                                  "installation plan or durable journal unavailable")
         phase = "transaction recheck"
+        deadline_token = self._phase_deadline.set(time.monotonic() + FINAL_TIMEOUT)
         try:
             self._verify_stage(transaction)
             stage_plan = UbuntuDebianInstallPlan.for_release(
@@ -857,6 +923,8 @@ class TailscalePackageInstallOwner:
             return self._receipt(gate, request, "SUCCESS", "exact Tailscale package installed")
         except (OSError, ValueError, TypeError, TimeoutError, subprocess.TimeoutExpired):
             return self._receipt(gate, request, "FAILURE", phase)
+        finally:
+            self._phase_deadline.reset(deadline_token)
 
 
 __all__ = ["TailscalePackageInstallOwner", "UbuntuDebianInstallPlan", "PreparedTransaction"]

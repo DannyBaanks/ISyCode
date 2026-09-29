@@ -95,6 +95,11 @@ downloaded package files. It records a one-package simulation. A separate
 `tailscale.install.stage` approval binds the exact file manifest and a unique
 root-owned path under `/var/lib/isycode/tailscale`; fixed bounded copies are
 checked with privileged ownership, mode, size, and SHA256 observations.
+The stage request and preview bind every permitted fixed privilege argv,
+artifact source and destination, byte cap, final mode, verification operation,
+and conditional directory creation. Stage and final install each have one
+monotonic wall-clock deadline spanning every privilege prompt and subprocess;
+each call receives only its remaining budget.
 `tailscale.install` needs a third fresh approval bound to that verified stage,
 rechecks the stage and transaction, and sets `DEBIAN_FRONTEND=noninteractive`.
 The final apt process reads only the root-owned stage. Unsupported transactions

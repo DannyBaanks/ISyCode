@@ -247,6 +247,65 @@ def test_simulation_binds_single_package_version_hash_actions_and_service_effect
     assert not setup[3].privileged
 
 
+def test_stage_request_and_preview_bind_every_privileged_operation(setup):
+    transaction = prepared(setup)
+    owner, authority, approvals, fake, _ = setup
+    request = transaction.stage_request(owner.root)
+    operations = request.parameters["stage_operations"]
+    preview = transaction.stage_preview()
+    assert operations
+    assert all(operation[0] == "/usr/bin/pkexec" for operation in operations)
+    for item in transaction.stage_artifacts:
+        target = transaction.stage_directory / item.relative_name
+        assert str(item.source) in preview and str(target) in preview
+        assert str(item.size) in preview and item.sha256 in preview
+        assert any(operation[1] == "/usr/bin/dd" and
+                   f"if={item.source}" in operation and f"of={target}" in operation and
+                   f"count={item.size + 1}" in operation for operation in operations)
+        assert any(operation[1] == "/usr/bin/sha256sum" and str(target) in operation
+                   for operation in operations)
+    assert "install -d -m 0700" in preview
+    assert "chmod 0400" in preview
+    assert "stat" in preview and "sha256sum" in preview
+    authority.set_grant("tailscale.install.stage", enabled=True,
+                        executables=[request.parameters["executable"]])
+    altered = replace(request, parameters={**request.parameters,
+                                           "stage_operations": operations[:-1]})
+    assert owner.stage(altered, approvals.issue(altered)).decision == "DENY"
+    assert not fake.privileged
+    assert owner.stage(request, approvals.issue(request)).decision == "ALLOW"
+    assert set(fake.privileged) <= set(operations)
+
+
+@pytest.mark.parametrize("phase", ["stage", "install"])
+def test_total_deadline_exhausts_across_multiple_privilege_prompts(setup, monkeypatch, phase):
+    import isycode.tailscale_install as installer
+
+    transaction = prepared(setup) if phase == "stage" else staged(setup)
+    owner, authority, approvals, fake, _ = setup
+    clock = [0.0]
+    timeouts = []
+    original = fake.privileged_run
+
+    def delayed(argv, *, env, timeout, max_output):
+        timeouts.append(timeout)
+        clock[0] += 2.0
+        return original(argv, env=env, timeout=timeout, max_output=max_output)
+
+    owner._privileged_run = delayed
+    monkeypatch.setattr(installer.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(installer, "STAGE_TIMEOUT" if phase == "stage" else "FINAL_TIMEOUT", 5.0)
+    request = transaction.stage_request(owner.root) if phase == "stage" else transaction.request(owner.root)
+    authority.set_grant(request.action_id, enabled=True,
+                        executables=[request.parameters["executable"]])
+    outcome = (owner.stage(request, approvals.issue(request)) if phase == "stage"
+               else owner.install(request, approvals.issue(request)))
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert len(timeouts) >= 2 and all(0 < later < earlier
+                                      for earlier, later in zip(timeouts, timeouts[1:]))
+    assert not any(call[1:] == transaction.privilege_argv[1:] for call in fake.privileged)
+
+
 def test_install_requires_separate_verified_root_stage(setup):
     transaction = prepared(setup)
     owner, authority, approvals, fake, _ = setup

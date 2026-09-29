@@ -591,6 +591,39 @@ _SUPPORTED_TAILSCALE_APT = {
 }
 
 
+def tailscale_stage_operations(stage_directory: str,
+                               artifacts: tuple[tuple[str, str, int, str], ...]
+                               ) -> tuple[tuple[str, ...], ...]:
+    """All fixed privileged argv allowed by one stage approval."""
+    stage = Path(stage_directory)
+    commands: list[tuple[str, ...]] = []
+
+    def add(*argv: str) -> None:
+        command = ("/usr/bin/pkexec", *argv)
+        if command not in commands:
+            commands.append(command)
+
+    metadata = "--printf=%u\t%a\t%F\t%h\t%s"
+    for directory in (Path("/var"), Path("/var/lib")):
+        add("/usr/bin/stat", metadata, "--", str(directory))
+    for directory in (stage.parent.parent, stage.parent, stage,
+                      stage / "lists", stage / "cache",
+                      stage / "lists" / "partial", stage / "cache" / "partial"):
+        add("/usr/bin/stat", "--printf=%F", "--", str(directory))
+        add("/usr/bin/install", "-d", "-m", "0700", "--", str(directory))
+        add("/usr/bin/stat", metadata, "--", str(directory))
+    for relative, source, size, _ in artifacts:
+        target = stage / relative
+        add("/usr/bin/dd", f"if={source}", f"of={target}",
+            "iflag=count_bytes", f"count={size + 1}",
+            "oflag=excl", "conv=fsync", "status=none")
+        add("/usr/bin/chmod", "0400", "--", str(target))
+        add("/usr/bin/stat", metadata, "--", str(target))
+        add("/usr/bin/sha256sum", "--binary", "--", str(target))
+    add("/usr/bin/chmod", "0000", "--", str(stage))
+    return tuple(commands)
+
+
 def _canonical_executable_identity(value: object, expected_name: str) -> bool:
     """Check the canonical path shape; the adapter resolves it before supplying facts."""
     if not isinstance(value, str) or not value or len(value) > 4096:
@@ -649,6 +682,9 @@ class TailscalePackageSystembility:
                               "simulation_digest", "package_actions", "stage_directory",
                               "stage_manifest_digest", "install_argv",
                               "privilege_argv"}
+            if request.action_id == "tailscale.install.stage":
+                expected_keys |= {"stage_artifacts", "stage_operations",
+                                  "stage_operations_digest"}
         valid = (isinstance(facts, TailscaleAuthorityFacts)
                  and request.target == "tailscale"
                  and set(params) == expected_keys
@@ -702,6 +738,54 @@ class TailscalePackageSystembility:
                      and all(isinstance(params.get(key), str)
                              and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
                              for key in ("source_sha256", "config_sha256")))
+        if valid and request.action_id == "tailscale.install.stage":
+            artifacts = params.get("stage_artifacts")
+            private = Path(params["private_directory"])
+            prefix = f"pkgs.tailscale.com_stable_{facts.os_id}_dists_{facts.os_codename}_"
+            valid = isinstance(artifacts, tuple) and 5 <= len(artifacts) <= 16
+            if valid:
+                names = []
+                total = 0
+                for item in artifacts:
+                    if (not isinstance(item, tuple) or len(item) != 4
+                            or not isinstance(item[0], str) or not isinstance(item[1], str)
+                            or type(item[2]) is not int or not isinstance(item[3], str)):
+                        valid = False
+                        break
+                    relative, source, size, digest = item
+                    expected_source = {
+                        "keyring.gpg": private / "keyring.gpg",
+                        "source.list": private / "stage-source.list",
+                        "apt.conf": private / "stage-apt.conf",
+                    }.get(relative)
+                    if relative.startswith("lists/"):
+                        name = relative.removeprefix("lists/")
+                        if (name.startswith(prefix)
+                                and re.fullmatch(r"[A-Za-z0-9_.+%-]{1,240}", name)):
+                            expected_source = private / "lists" / name
+                    if relative == f"cache/{params['archive_name']}":
+                        expected_source = private / "cache" / params["archive_name"]
+                    if (expected_source is None or source != str(expected_source)
+                            or relative in names or not 0 < size <= 80 * 1024 * 1024
+                            or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                        valid = False
+                        break
+                    names.append(relative)
+                    total += size
+                valid = (valid and names[:3] == ["keyring.gpg", "source.list", "apt.conf"]
+                         and names[-1] == f"cache/{params['archive_name']}"
+                         and sum(name.startswith("lists/") for name in names) >= 2
+                         and total <= 32 * 1024 * 1024 + 80 * 1024 * 1024 + 4 * 16 * 1024)
+            if valid:
+                manifest = [(relative, size, digest) for relative, _, size, digest in artifacts]
+                expected_digest = hashlib.sha256(json.dumps(
+                    (params["stage_directory"], manifest), separators=(",", ":")).encode()).hexdigest()
+                operations = tailscale_stage_operations(params["stage_directory"], artifacts)
+                operations_digest = hashlib.sha256(json.dumps(
+                    operations, separators=(",", ":")).encode()).hexdigest()
+                valid = (params["stage_manifest_digest"] == expected_digest
+                         and params.get("stage_operations") == operations
+                         and params.get("stage_operations_digest") == operations_digest)
         return SystembilityResult(self.name, bool(valid),
                                   "supported OS and exact official stable package recipe required")
 

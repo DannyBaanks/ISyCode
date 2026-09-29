@@ -42,6 +42,11 @@ Entry point: **Settings → Remote access → Private access (Tailscale)**.
    possible daemon restart. Root apt receives
    `DEBIAN_FRONTEND=noninteractive`. If staging integrity or the exact
    one-package simulation fails, the wizard offers manual instructions.
+   The stage preview and approval include the complete permitted fixed
+   privilege command manifest and each artifact's source, destination, byte
+   limit, final mode, owner, size, and hash checks. Staging and final install
+   each use one total monotonic deadline across all authorization prompts and
+   subprocesses.
    Package maintainer scripts and host dpkg triggers may still run as part of
    the official package transaction; simulation does not enumerate them.
 3. **Join the user's tailnet.** If Tailscale is installed but signed out, show
