@@ -115,7 +115,7 @@ def test_failed_atomic_replace_preserves_existing_state(tmp_path, monkeypatch):
     store = PrivateAccessStateStore(tmp_path / "state")
     store.record_owned_route(route())
     before = store.state_path.read_bytes()
-    def fail_replace(*_args):
+    def fail_replace(*_args, **_kwargs):
         raise OSError("injected replacement failure")
     monkeypatch.setattr("isycode.private_access.os.replace", fail_replace)
     with pytest.raises(OSError):
@@ -134,3 +134,32 @@ def test_wrong_adapter_version_is_rejected(tmp_path):
     store.state_path.chmod(0o600)
     with pytest.raises(ValueError):
         store.load()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX directory descriptor guarantees")
+def test_ancestor_swap_cannot_redirect_state_creation(tmp_path, monkeypatch):
+    real_parent = tmp_path / "real-parent"
+    evil_parent = tmp_path / "evil-parent"
+    real_parent.mkdir()
+    evil_parent.mkdir()
+    parent_link = tmp_path / "state-parent"
+    parent_link.mkdir()
+    original_hook = PrivateAccessStateStore._after_directory_open
+    swapped = False
+
+    def swap_after_open(store, path, descriptor):
+        nonlocal swapped
+        original_hook(store, path, descriptor)
+        if path == parent_link and not swapped:
+            parent_link.rename(tmp_path / "state-parent-original")
+            parent_link.symlink_to(evil_parent, target_is_directory=True)
+            swapped = True
+
+    monkeypatch.setattr(PrivateAccessStateStore, "_after_directory_open", swap_after_open)
+    store = PrivateAccessStateStore(parent_link / "state")
+    store.record_owned_route(route())
+    assert swapped
+    assert not (evil_parent / "state").exists()
+    assert (tmp_path / "state-parent-original" / "state").is_dir()
+    monkeypatch.undo()
+    assert store.load().owned_routes == (route(),)

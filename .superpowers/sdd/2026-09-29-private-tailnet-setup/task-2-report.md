@@ -58,3 +58,23 @@ symlinked-parent rejection, and wrong adapter-version rejection.
 
 TDD evidence: before the fix, the new route-count and symlinked-parent tests
 failed (**2 failed, 13 passed**). After the fix, `pytest -q test_private_access.py` reported **15 passed** and `git diff --check` passed.
+
+## Review follow-up 2: race-resistant state directory access
+
+Replaced component `lstat` followed by path-based creation with a POSIX walk
+that opens each directory relative to its already-pinned parent descriptor,
+using `O_DIRECTORY | O_NOFOLLOW`. Missing components are created with
+`mkdirat` semantics through `dir_fd`, then opened the same way. File inspection,
+temporary-file creation, atomic replacement, permission setting, and cleanup
+are all anchored to the retained state-directory descriptor, so later pathname
+swaps cannot redirect those operations. The non-POSIX fallback retains the
+platform's path checks.
+
+A deterministic regression test injects an ancestor rename and symlink swap
+after that ancestor descriptor is opened but before the child is created. The
+old path-based implementation failed by creating under the attacker-selected
+target. With descriptor-anchored operations, no state directory appears at
+that target and the store can read back its record via the pinned descriptor.
+
+TDD evidence: the race test failed before the change because the swapped target
+received the state directory. After the change, `pytest -q test_private_access.py` reported **16 passed** and `git diff --check` passed.

@@ -46,25 +46,54 @@ class PrivateAccessStateStore:
         if not requested.is_absolute():
             requested = Path.cwd() / requested
         requested = Path(os.path.abspath(requested))
-        cursor = Path(requested.anchor)
-        for part in requested.parts[1:]:
-            cursor = cursor / part
-            try:
-                metadata = cursor.lstat()
-            except FileNotFoundError:
-                continue
-            except OSError as exc:
-                raise ValueError("Private access state path cannot be inspected") from exc
-            if stat.S_ISLNK(metadata.st_mode):
-                raise ValueError("Private access state path cannot traverse symlinks")
         self.state_directory = requested
-        self.state_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if self.state_directory.is_symlink() or not self.state_directory.is_dir():
-            raise ValueError("Private access state directory must be a real directory")
-        self.state_directory = self.state_directory.resolve(strict=True)
+        self._directory_fd = self._open_state_directory()
         if os.name == "posix":
-            self.state_directory.chmod(0o700)
+            os.fchmod(self._directory_fd, 0o700)
         self.state_path = self.state_directory / "tailscale-serve.json"
+
+    def _after_directory_open(self, path: Path, descriptor: int) -> None:
+        """Test seam called after each component is pinned by descriptor."""
+
+    def _open_state_directory(self) -> int:
+        if os.name != "posix":
+            # Windows does not provide dir_fd operations consistently; retain
+            # the existing real-directory and reparse-point checks there.
+            cursor = Path(self.state_directory.anchor)
+            for part in self.state_directory.parts[1:]:
+                cursor = cursor / part
+                try:
+                    metadata = cursor.lstat()
+                except FileNotFoundError:
+                    continue
+                if stat.S_ISLNK(metadata.st_mode):
+                    raise ValueError("Private access state path cannot traverse symlinks")
+            self.state_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if self.state_directory.is_symlink() or not self.state_directory.is_dir():
+                raise ValueError("Private access state directory must be a real directory")
+            return -1
+
+        directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+        descriptor = os.open(self.state_directory.anchor, directory_flags)
+        cursor = Path(self.state_directory.anchor)
+        try:
+            for part in self.state_directory.parts[1:]:
+                cursor = cursor / part
+                try:
+                    child = os.open(part, directory_flags, dir_fd=descriptor)
+                except FileNotFoundError:
+                    try:
+                        os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                    except FileExistsError:
+                        pass
+                    child = os.open(part, directory_flags, dir_fd=descriptor)
+                os.close(descriptor)
+                descriptor = child
+                self._after_directory_open(cursor, descriptor)
+            return descriptor
+        except OSError as exc:
+            os.close(descriptor)
+            raise ValueError("Private access state path must contain only real directories") from exc
 
     @staticmethod
     def _safe_file(info: os.stat_result) -> bool:
@@ -98,7 +127,10 @@ class PrivateAccessStateStore:
 
     def load(self) -> PrivateAccessState:
         try:
-            before = self.state_path.lstat()
+            if os.name == "posix":
+                before = os.stat(self.state_path.name, dir_fd=self._directory_fd, follow_symlinks=False)
+            else:
+                before = self.state_path.lstat()
         except FileNotFoundError:
             return PrivateAccessState()
         except OSError as exc:
@@ -107,7 +139,10 @@ class PrivateAccessStateStore:
             raise ValueError("Private access state is not a bounded private regular file")
         flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
         try:
-            fd = os.open(self.state_path, flags)
+            if os.name == "posix":
+                fd = os.open(self.state_path.name, flags, dir_fd=self._directory_fd)
+            else:
+                fd = os.open(self.state_path, flags)
             try:
                 opened = os.fstat(fd)
                 if (not self._safe_file(opened) or opened.st_dev != before.st_dev
@@ -166,20 +201,31 @@ class PrivateAccessStateStore:
         payload = json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
         if len(payload) > self.MAX_BYTES:
             raise ValueError("Private access state exceeds its size limit")
-        temporary = self.state_directory / (".private-access-" + secrets.token_hex(8) + ".tmp")
+        temporary = ".private-access-" + secrets.token_hex(8) + ".tmp"
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(temporary, flags, 0o600)
+        if os.name == "posix":
+            fd = os.open(temporary, flags, 0o600, dir_fd=self._directory_fd)
+        else:
+            fd = os.open(self.state_directory / temporary, flags, 0o600)
         try:
             with os.fdopen(fd, "wb") as stream:
                 stream.write(payload)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(temporary, self.state_path)
             if os.name == "posix":
-                self.state_path.chmod(0o600)
+                os.replace(temporary, self.state_path.name,
+                           src_dir_fd=self._directory_fd, dst_dir_fd=self._directory_fd)
+            else:
+                os.replace(self.state_directory / temporary, self.state_path)
+            if os.name == "posix":
+                os.chmod(self.state_path.name, 0o600, dir_fd=self._directory_fd,
+                         follow_symlinks=False)
         finally:
             try:
-                temporary.unlink()
+                if os.name == "posix":
+                    os.unlink(temporary, dir_fd=self._directory_fd)
+                else:
+                    (self.state_directory / temporary).unlink()
             except FileNotFoundError:
                 pass
 
