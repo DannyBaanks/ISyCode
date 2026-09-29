@@ -98,6 +98,9 @@ class ActionAuditJournal:
         receipt_action = getattr(receipt, "action_id", None)
         receipt_id = getattr(receipt, "receipt_id", None)
         result_digest = getattr(receipt, "result_digest", None)
+        outcome = getattr(receipt, "outcome", None)
+        valid_outcome = (outcome == "SUCCESS" or
+                         (request.action_id == "tailscale.install" and outcome == "FAILURE"))
         action_matches = receipt_action == request.action_id or (
             request.action_id == "broker.start"
             and request.execution_owner == "broker_provision"
@@ -106,7 +109,7 @@ class ActionAuditJournal:
         if (getattr(receipt, "request_digest", None) != request.digest
                 or not action_matches
                 or getattr(receipt, "decision", None) != "ALLOW"
-                or getattr(receipt, "outcome", None) != "SUCCESS"
+                or not valid_outcome
                 or not isinstance(receipt_id, str) or not receipt_id or len(receipt_id) > 160
                 or not isinstance(result_digest, str) or len(result_digest) != 64
                 or any(char not in "0123456789abcdef" for char in result_digest)):
@@ -118,6 +121,7 @@ class ActionAuditJournal:
             "request_digest": request.digest,
             "receipt_id": receipt_id,
             "result_digest": result_digest,
+            "outcome": outcome,
         })
 
     def verify(self, *, recent_limit: int = 80) -> ActionAuditReport:
@@ -243,9 +247,12 @@ class ActionAuditJournal:
                 else:
                     receipt_id = body.get("receipt_id")
                     result_digest = body.get("result_digest")
+                    outcome = body.get("outcome", "SUCCESS")
                     decision_bindings = decisions_by_digest.get(request_digest, [])
                     if (not isinstance(receipt_id, str) or not receipt_id
                             or receipt_id in receipt_ids
+                            or (outcome != "SUCCESS" and
+                                not (action == "tailscale.install" and outcome == "FAILURE"))
                             or not isinstance(result_digest, str) or len(result_digest) != 64
                             or any(char not in "0123456789abcdef" for char in result_digest)
                             or (action, owner, True) not in decision_bindings):
@@ -264,6 +271,7 @@ class ActionAuditJournal:
                 "checks": item.get("checks", []),
                 "receipt_id": item.get("receipt_id"),
                 "result_digest": item.get("result_digest"),
+                "outcome": item.get("outcome", "SUCCESS") if item["kind"] == "receipt" else None,
             } for item in records[-recent_limit:] if recent_limit)
             status = "NOT_VERIFIABLE" if unverifiable else "PASS"
             return ActionAuditReport(status, len(records), decisions, receipts,

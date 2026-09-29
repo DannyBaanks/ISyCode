@@ -6,16 +6,13 @@ and inventory boundaries are injectable so tests never change the host.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 from pathlib import Path
 import secrets
-import stat
 import sys
 import tempfile
-import time
 from dataclasses import dataclass
-from typing import Callable, Literal, Mapping, Sequence
+from typing import Callable, Literal, Mapping
 from urllib import request as urlrequest
 
 from isycode.action_runtime import (
@@ -23,9 +20,8 @@ from isycode.action_runtime import (
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
-from isycode.tailscale import TailscaleAdapter, TailscaleCommandResult, _bounded_run
+from isycode.tailscale import _bounded_run
 from isycode.workspace_authority import WorkspaceAuthority
-from isycode.workspace_setup import state_root
 
 
 KEY_FINGERPRINT = "2596A99EAAB33821893C0A79458CA832957F5868"
@@ -40,7 +36,6 @@ SUPPORTED = {
 MAX_FETCH = 16 * 1024
 MAX_OUTPUT = 64 * 1024
 FETCH_TIMEOUT = 8.0
-COMMAND_TIMEOUT = 120.0
 
 
 @dataclass(frozen=True)
@@ -101,7 +96,9 @@ class UbuntuDebianInstallPlan:
                 f"Repository source: {SOURCE_PATH}\n{self.source_text}"
                 f"Isolated signed package indexes: {APT_LISTS_PATH}\n"
                 f"Package changes: apt-get update; apt-get install {self.package}\n"
-                "Package maintainer script may start or restart tailscaled.\n")
+                "Package maintainer script may start or restart tailscaled.\n"
+                "Automated install awaits a separately approved repository preparation "
+                "and an exact transaction preview.\n")
 
 
 def _read_os_release() -> Mapping[str, str]:
@@ -145,75 +142,34 @@ def _inspect_key(data: bytes) -> str:
             timeout=5.0, max_output=MAX_OUTPUT)
     if result.returncode:
         raise ValueError("Tailscale signing key could not be inspected")
-    primary = [line.split(":")[9] for line in result.stdout.splitlines()
-               if line.startswith("fpr:")]
-    if len(primary) != 2 or not all(len(item) == 40 for item in primary):
+    primary_keys = 0
+    primary_fingerprint = None
+    awaiting_primary_fingerprint = False
+    for line in result.stdout.splitlines():
+        fields = line.split(":")
+        if fields[0] == "pub":
+            primary_keys += 1
+            awaiting_primary_fingerprint = True
+        elif fields[0] == "fpr" and awaiting_primary_fingerprint:
+            primary_fingerprint = fields[9] if len(fields) > 9 else None
+            awaiting_primary_fingerprint = False
+        elif fields[0] != "fpr":
+            awaiting_primary_fingerprint = False
+    if (primary_keys != 1 or not isinstance(primary_fingerprint, str)
+            or len(primary_fingerprint) != 40):
         raise ValueError("Tailscale signing key has unexpected structure")
-    return primary[0]
-
-
-def _privileged_run(argv: Sequence[str], *, timeout: float,
-                    max_output: int) -> TailscaleCommandResult:
-    return _bounded_run(argv, env={"PATH": "/usr/bin:/bin", "LANG": "C",
-                                   "LC_ALL": "C", "DEBIAN_FRONTEND": "noninteractive"},
-                        timeout=timeout, max_output=max_output)
-
-
-def _installed_file_state(path: Path) -> str:
-    try:
-        info = path.lstat()
-    except FileNotFoundError:
-        return "absent"
-    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > MAX_FETCH:
-        return "conflict"
-    return "present"
-
-
-class _InstallAttemptJournal:
-    """Durable, minimal attempt status without network data or process output."""
-
-    def __init__(self, root: Path):
-        directory = state_root() / "tailscale-install"
-        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if directory.is_symlink() or not directory.is_dir():
-            raise OSError("install receipt directory is unsafe")
-        directory.chmod(0o700)
-        identity = hashlib.sha256(str(root).encode()).hexdigest()[:32]
-        self.path = directory / f"attempts-{identity}.jsonl"
-
-    def record(self, request: ActionRequest, *, phase: str, status: str) -> None:
-        allowed_phases = {"authorized", "key", "source", "keyring", "repository",
-                          "update", "install", "inventory", "complete"}
-        if phase not in allowed_phases or status not in {"started", "failed", "success"}:
-            raise ValueError("invalid install receipt status")
-        body = {"time": time.time(), "action": "tailscale.install",
-                "request_digest": request.digest, "phase": phase, "status": status}
-        encoded = (json.dumps(body, sort_keys=True, separators=(",", ":")) + "\n").encode()
-        descriptor = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT |
-                             getattr(os, "O_NOFOLLOW", 0), 0o600)
-        try:
-            info = os.fstat(descriptor)
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > 1_000_000:
-                raise OSError("install receipt file is unsafe or full")
-            os.fchmod(descriptor, 0o600)
-            os.write(descriptor, encoded)
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+    return primary_fingerprint
 
 
 class TailscalePackageInstallOwner:
-    """Install only the pinned official stable apt package after exact approval."""
+    """Validate a request and fail closed until transaction approval exists."""
 
     def __init__(self, root: Path, authority: WorkspaceAuthority,
                  approvals: ActionApprovalStore, *, platform: str | None = None,
                  os_release: Callable[[], Mapping[str, str]] = _read_os_release,
                  apt_executable: str = "/usr/bin/apt-get",
                  fetch: Callable = _fetch_exact,
-                 key_fingerprint: Callable[[bytes], str] = _inspect_key,
-                 privileged_run: Callable = _privileged_run,
-                 inventory: Callable = lambda: TailscaleAdapter().inspect(),
-                 installed_file_state: Callable[[Path], str] = _installed_file_state):
+                 key_fingerprint: Callable[[bytes], str] = _inspect_key):
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
@@ -222,9 +178,6 @@ class TailscalePackageInstallOwner:
         self._apt_executable = apt_executable
         self._fetch = fetch
         self._key_fingerprint = key_fingerprint
-        self._privileged_run = privileged_run
-        self._inventory = inventory
-        self._installed_file_state = installed_file_state
 
     def plan(self) -> UbuntuDebianInstallPlan:
         if self._platform != "linux":
@@ -254,8 +207,6 @@ class TailscalePackageInstallOwner:
             if not decision.allowed:
                 return ActionOutcome("Tailscale installation denied.", "DENY", None,
                                      "workspace grant, Sentinel, approval, or journal denied")
-            journal = _InstallAttemptJournal(self.root)
-            journal.record(request, phase="authorized", status="started")
         except (OSError, ValueError, TypeError):
             return ActionOutcome("Tailscale installation denied.", "DENY", None,
                                  "installation plan or durable journal unavailable")
@@ -270,62 +221,21 @@ class TailscalePackageInstallOwner:
             source = self._fetch(plan.list_url, timeout=FETCH_TIMEOUT, max_bytes=MAX_FETCH)
             if source != plan.source_text.encode("utf-8"):
                 raise ValueError("official repository source mismatch")
-            with tempfile.TemporaryDirectory(prefix="isycode-tailinstall-") as directory:
-                key_file = Path(directory) / "keyring.gpg"
-                source_file = Path(directory) / "tailscale.list"
-                key_file.write_bytes(key)
-                source_file.write_bytes(source)
-                for label, path, expected in (("keyring", KEYRING_PATH, key),
-                                               ("repository", SOURCE_PATH, source)):
-                    phase = label
-                    state = self._installed_file_state(path)
-                    if state not in {"absent", "present"}:
-                        raise ValueError("existing repository file conflicts with the plan")
-                    if state == "present" and path.read_bytes() != expected:
-                        raise ValueError("existing repository file conflicts with the plan")
-                    if state == "absent":
-                        staged = key_file if label == "keyring" else source_file
-                        self._run_step(("/usr/bin/pkexec", "/usr/bin/install", "-m", "0644",
-                                        str(staged), str(path)))
-                phase = "repository"
-                self._run_step(("/usr/bin/pkexec", "/usr/bin/install", "-d", "-m", "0755",
-                                str(APT_LISTS_PATH)))
-                phase = "update"
-                self._run_step(("/usr/bin/pkexec", *plan.update_argv))
-                phase = "install"
-                self._run_step(("/usr/bin/pkexec", *plan.install_argv))
-            phase = "inventory"
-            self._inventory()
-            result = "Tailscale package installation completed; inventory refreshed."
-            receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), request.action_id,
-                                    request.digest, "ALLOW", "SUCCESS",
-                                    hashlib.sha256(result.encode()).hexdigest())
+            phase = "transaction"
+            raise ValueError("exact apt transaction approval is unavailable")
+        except (OSError, ValueError, TypeError, TimeoutError):
+            receipt = ActionReceipt(
+                "rcpt_" + secrets.token_hex(8), request.action_id, request.digest,
+                "ALLOW", "FAILURE", hashlib.sha256(f"failed:{phase}".encode()).hexdigest())
             if not gate.persist_receipt(request, receipt):
-                raise OSError("durable action journal rejected success receipt")
-            journal.record(request, phase="complete", status="success")
-            return ActionOutcome(result, "ALLOW", receipt, "official apt recipe completed")
-        except (OSError, ValueError, TypeError, TimeoutError) as exc:
-            try:
-                journal.record(request, phase=phase, status="failed")
-            except (OSError, ValueError):
                 return ActionOutcome("Tailscale installation status is not verifiable.",
                                      "NOT_VERIFIABLE", None,
-                                     "durable failure receipt unavailable; inspect package state")
+                                     "durable failure receipt unavailable")
             reason = ("signing key verification failed" if phase == "key" else
                       "repository verification failed" if phase == "source" else
-                      "OS authorization cancelled or package operation failed" if phase in
-                      {"keyring", "repository", "update", "install"} else
-                      "post-install inventory or receipt unavailable")
-            return ActionOutcome("Tailscale installation did not complete; inspect package state.",
-                                 "ERROR", None, reason)
-
-    def _run_step(self, argv: tuple[str, ...]) -> None:
-        result = self._privileged_run(argv, timeout=COMMAND_TIMEOUT,
-                                      max_output=MAX_OUTPUT)
-        if (not isinstance(result, TailscaleCommandResult)
-                or len(result.stdout.encode()) + len(result.stderr.encode()) > MAX_OUTPUT
-                or result.returncode != 0):
-            raise ValueError("privileged package operation failed")
+                      "exact package transaction preview and approval are unavailable")
+            return ActionOutcome("Tailscale installation was not started.",
+                                 "ERROR", receipt, reason)
 
 
 __all__ = ["TailscalePackageInstallOwner", "UbuntuDebianInstallPlan"]

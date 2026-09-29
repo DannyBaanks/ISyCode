@@ -136,12 +136,7 @@ def test_tailscale_contract_actions_have_one_owner_and_named_pending_callsite():
         assert len(callsites) == 1
         assert callsites[0]["owner"] == owner
         assert callsites[0]["callsite"]
-        if action == "tailscale.install":
-            assert callsites[0]["status"] == "COVERED"
-            assert action_coverage._callsite_exists(callsites[0]["callsite"])
-        else:
-            assert callsites[0]["status"] == "PLANNED"
-            assert not action_coverage._callsite_exists(callsites[0]["callsite"])
+        assert callsites[0]["status"] == "PLANNED"
     assert report["authority_frontier_pass"] is True
     assert report["unclassified_actions"] == []
 

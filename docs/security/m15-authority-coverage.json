@@ -770,7 +770,7 @@
       "owners": [
         "tailscale_package_install"
       ],
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "TailscalePackageBoundary"
       ],
@@ -854,7 +854,7 @@
       "action": "tailscale.install",
       "callsite": "TailscalePackageInstallOwner.install",
       "owner": "tailscale_package_install",
-      "status": "COVERED"
+      "status": "PLANNED"
     },
     {
       "action": "tailscale.login",
@@ -1256,7 +1256,7 @@
       "action": "tailscale.install",
       "callable": "isycode.tailscale_install.UbuntuDebianInstallPlan.request",
       "file": "isycode/tailscale_install.py",
-      "line": 89,
+      "line": 84,
       "owner": "tailscale_package_install"
     },
     {
