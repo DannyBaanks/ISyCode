@@ -69,6 +69,7 @@ _ENTRIES = [
     ("clipboard.copy", "Desktop", "Copy a path or text to clipboard", "external", True),
     ("desktop.file_picker", "Desktop", "Open the native file picker", "process", True),
     ("tailscale.inspect", "Private access", "Inspect local Tailscale status", "read", False),
+    ("tailscale.install.prepare", "Private access", "Prepare an isolated signed Tailscale package", "process", True),
     ("tailscale.install", "Private access", "Install the official Tailscale package", "process", True),
     ("tailscale.login", "Private access", "Start Tailscale browser login", "process", True),
     ("tailscale.serve.enable", "Private access", "Enable private Gateway Serve route", "process", True),

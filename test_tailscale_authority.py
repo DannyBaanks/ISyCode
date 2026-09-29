@@ -15,6 +15,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 
 ACTION_OWNER = {
     "tailscale.inspect": "tailscale_read",
+    "tailscale.install.prepare": "tailscale_package_install",
     "tailscale.install": "tailscale_package_install",
     "tailscale.login": "tailscale_login",
     "tailscale.serve.enable": "tailscale_serve",
@@ -26,7 +27,8 @@ DIGEST = "a" * 64
 
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     root = tmp_path / "workspace"
     root.mkdir()
     cli = tmp_path / "tailscale"
@@ -52,6 +54,8 @@ def setup(tmp_path):
 
 def request_for(setup, action_id, **changes):
     root, cli, apt, _, _, _, _ = setup
+    private_directory = str(root.parent / "state" / "isycode" / "tailscale-apt" /
+                            ("a" * 16 + "-" + "b" * 32))
     parameters = {
         "tailscale.inspect": {"executable": str(cli), "gateway_url": GATEWAY,
                               "gateway_port": 8787},
@@ -61,6 +65,31 @@ def request_for(setup, action_id, **changes):
             "repository_list_url": "https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list",
             "package": "tailscale",
             "package_service_effect": "may_start_or_restart_tailscaled",
+            "private_directory": private_directory,
+            "key_fingerprint": "2596A99EAAB33821893C0A79458CA832957F5868",
+            "key_sha256": DIGEST, "source_sha256": DIGEST,
+            "config_sha256": DIGEST, "indexes_digest": DIGEST,
+            "package_version": "1.2.3", "archive_sha256": DIGEST,
+            "archive_name": "tailscale_1.2.3_amd64.deb",
+            "simulation_digest": DIGEST,
+            "package_actions": ("Inst tailscale=1.2.3", "Conf tailscale=1.2.3"),
+            "install_argv": (str(apt), "install", "--yes", "--no-upgrade",
+                             "--no-remove", "--no-download", "--no-install-recommends",
+                             "tailscale=1.2.3"),
+            "privilege_argv": ("/usr/bin/pkexec", "/usr/bin/env",
+                               f"APT_CONFIG={private_directory}/apt.conf", str(apt),
+                               "install", "--yes", "--no-upgrade", "--no-remove",
+                               "--no-download", "--no-install-recommends", "tailscale=1.2.3"),
+        },
+        "tailscale.install.prepare": {
+            "executable": str(apt), "os_id": "ubuntu", "os_codename": "noble",
+            "repository_key_url": "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg",
+            "repository_list_url": "https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list",
+            "package": "tailscale", "package_service_effect": "may_start_or_restart_tailscaled",
+            "private_directory": private_directory,
+            "key_fingerprint": "2596A99EAAB33821893C0A79458CA832957F5868",
+            "source_sha256": DIGEST, "config_sha256": DIGEST,
+            "update_argv": (str(apt), "update"),
         },
         "tailscale.login": {"executable": str(cli), "operation": "login"},
         "tailscale.serve.enable": {
@@ -92,6 +121,7 @@ def test_tailscale_catalog_effects_and_approval_contract():
     assert {(action, ACTION_BY_ID[action].effect, ACTION_BY_ID[action].approval_required)
             for action in ACTION_OWNER} == {
         ("tailscale.inspect", "read", False),
+        ("tailscale.install.prepare", "process", True),
         ("tailscale.install", "process", True),
         ("tailscale.login", "process", True),
         ("tailscale.serve.enable", "process", True),
@@ -137,7 +167,7 @@ def test_tailscale_request_parameters_fail_closed(setup, action_id):
     else:
         authority.set_grant(action_id, enabled=True, executables=[cli, apt, wrong])
     invalid_changes = [{"executable": str(wrong)}, {"unexpected": True}]
-    if action_id == "tailscale.install":
+    if action_id in {"tailscale.install", "tailscale.install.prepare"}:
         invalid_changes += [{"package": "other"}, {"os_id": "fedora"},
                             {"repository_key_url": "https://evil.example/key"},
                             {"package_service_effect": "no_service_start"}]

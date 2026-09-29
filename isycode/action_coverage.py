@@ -79,7 +79,8 @@ KNOWN_EFFECT_CALLSITES = (
     # Task 3 registers authority contracts. Remaining PLANNED owners do not
     # claim effect reachability until their concrete methods exist.
     ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "PLANNED"),
-    ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "PLANNED"),
+    ("tailscale.install.prepare", "TailscalePackageInstallOwner.prepare", "tailscale_package_install", "COVERED"),
+    ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "COVERED"),
     ("tailscale.login", "TailscaleLoginOwner.begin_login", "tailscale_login", "PLANNED"),
     ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "PLANNED"),
     ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "PLANNED"),
