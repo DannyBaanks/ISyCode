@@ -51,10 +51,37 @@ class WorkspaceAuthority:
             return {"version": self.VERSION, "workspace_root": str(self.root), "grants": {}}
         except OSError as exc:
             raise WorkspaceAuthorityError("Workspace grant policy cannot be inspected.") from exc
-        if not stat.S_ISREG(info.st_mode) or info.st_size > self.MAX_POLICY_BYTES:
+        if not self._policy_file_safe(info) or info.st_size > self.MAX_POLICY_BYTES:
             raise WorkspaceAuthorityError("Workspace grant policy is not a bounded regular file.")
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
         try:
-            data = json.loads(self.policy_path.read_text(encoding="utf-8"))
+            descriptor = os.open(self.policy_path, flags)
+            try:
+                opened = os.fstat(descriptor)
+                if (not self._policy_file_safe(opened)
+                        or opened.st_dev != info.st_dev or opened.st_ino != info.st_ino
+                        or opened.st_size > self.MAX_POLICY_BYTES):
+                    raise WorkspaceAuthorityError("Workspace grant policy changed during inspection.")
+                chunks: list[bytes] = []
+                remaining = self.MAX_POLICY_BYTES + 1
+                while remaining:
+                    chunk = os.read(descriptor, min(remaining, 64 * 1024))
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    remaining -= len(chunk)
+                after = os.fstat(descriptor)
+                if (after.st_size != opened.st_size or after.st_mtime_ns != opened.st_mtime_ns
+                        or after.st_ctime_ns != opened.st_ctime_ns):
+                    raise WorkspaceAuthorityError("Workspace grant policy changed while reading.")
+                payload = b"".join(chunks)
+            finally:
+                os.close(descriptor)
+            if len(payload) > self.MAX_POLICY_BYTES:
+                raise WorkspaceAuthorityError("Workspace grant policy exceeds its size limit.")
+            data = json.loads(payload.decode("utf-8"))
+        except WorkspaceAuthorityError:
+            raise
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise WorkspaceAuthorityError("Workspace grant policy is unreadable or malformed.") from exc
         if (not isinstance(data, dict) or data.get("version") != self.VERSION
@@ -71,6 +98,14 @@ class WorkspaceAuthority:
                 if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
                     raise WorkspaceAuthorityError("Workspace grant scopes are malformed.")
         return data
+
+    @staticmethod
+    def _policy_file_safe(info: os.stat_result) -> bool:
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            return False
+        if os.name == "posix":
+            return info.st_uid == os.getuid() and not (info.st_mode & 0o077)
+        return True
 
     def set_grant(self, action_id: str, *, enabled: bool,
                   path_prefixes: list[str | Path] | None = None,
@@ -139,7 +174,7 @@ class WorkspaceAuthority:
                 return AuthorityDecision(False, "", "network host is not explicitly granted", digest)
 
         elif spec.effect == "process":
-            executable = request.parameters.get("executable", "")
+            executable = (request.parameters or {}).get("executable", "")
             try:
                 binary = str(Path(executable).expanduser().resolve(strict=True))
             except (OSError, TypeError, ValueError):

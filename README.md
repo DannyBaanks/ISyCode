@@ -14,7 +14,7 @@ Las capturas muestran la TUI real de Textual con un workspace temporal de demost
 
 ## Qué ofrece
 
-- **Chat en terminal:** conversación con streaming y cancelación con `Esc`; OpenAI, NVIDIA NIM, Nebius, Ollama y llama.cpp usan la interfaz de provider disponible en esta versión.
+- **Chat en terminal:** conversación con streaming y cancelación con `Esc`; el alcance actual de APIs cloud con clave es OpenAI, NVIDIA NIM, Nebius, Groq y OpenRouter. Ollama y llama.cpp permanecen como endpoints locales opcionales, fuera de la validación de APIs cloud.
 - **Workspace con límite explícito:** encuentra el `.isyroot` más cercano o usa el directorio de inicio como fallback. Guarda `launch_dir` y `workspace_root` por separado.
 - **Explorador integrado:** árbol, búsqueda acotada, selección y preview gated. Copiar ruta está deshabilitado hasta que `clipboard.copy` tenga owner; los pickers nativos de Context, README y broker también quedan bloqueados en Secure mientras `desktop.file_picker` no tenga owner. La identidad `.isyroot` no es un permiso: la lectura exige grants aplicables y el host de archivos disponible.
 - **Sesiones:** Secure conserva la conversación activa solo en memoria. Crear/reanudar/guardar sesiones persistentes está bloqueado hasta que `session.create/read/append` tenga owner y scope verificados.
@@ -49,7 +49,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 
 ### Parcial o pendiente
 
-- **ISySentinel / M15:** `security.py` agrega decisiones de forma pura; Workspace Authority conserva grants por root. Los flujos conectados atan el digest a owners registrados y el journal privado encadena decisiones/receipts. Secure bloquea desde la TUI Mobile Host, Bridge, guardado de credenciales nuevas, sesiones persistentes, file picker y clipboard cuando no hay owner. El verificador e inspector del journal reportan integridad de cadena, pero no pueden recomputar request/result sin guardar esos datos. M15 sigue abierto por acciones sin owner, APIs directas aún no mediadas (incluidas utilidades picker, Mobile Host y Bridge), sesiones directas, mutaciones y la auditoría universal incompleta.
+- **ISySentinel / M15:** `security.py` agrega decisiones puras; Workspace Authority conserva grants por root. Los owners locales enlazan material de request, Authority/Sentinel y receipts en el journal privado. La cobertura clasifica las 54 acciones sin ambigüedad; 34 capacidades sin owner permanecen DENY y `broker.start` tiene dos variantes separadas; [el snapshot M15](docs/security/m15-authority-coverage.json) registra el frontier y los callsites. Secure bloquea Mobile Host, Bridge, credenciales nuevas, sesiones persistentes, picker, clipboard y mutaciones sin owner. La suite local: 163 passed; Pyright de TUI/runtime/action owners/security: 0 errores. En la revisión Gateway del 28-09, FastAPI demostró auth/scopes, revocación, límites por proceso, redacción y HTTPS cuando se configura; el antiguo `gateway/sentinel.py` está desconectado. El health del Gateway dice `read_only: true` pese a exponer rutas mutadoras con scopes. Quedan reconciliar su test estructural, corregir ese health, verificar HTTPS/proxy del despliegue y demostrar una operación remota con ambos gates. Ver [la auditoría Gateway](docs/security/m15-gateway-audit-2026-09-28.md). Las acciones sin owner no se presentan como listas.
 - **Ejecución de herramientas del modelo:** una respuesta de texto como `{"tool":"bash",...}` es texto y no se ejecuta. No hay ejecución arbitraria de shell ni escritura general del workspace desde el chat.
 - **Gateway en vivo:** el cliente/owner semántico está conectado en ISyCode, pero falta demostrar una operación contra el Gateway real con grant local, scope remoto e IDs de workspace coincidentes.
 - **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. No hay bucle de tools del modelo.
@@ -67,7 +67,7 @@ ISyCode separa tres conceptos:
 2. **`workspace_root`:** el límite lógico detectado por `.isyroot`, o `launch_dir` si no hay marker.
 3. **Autoridad:** los permisos efectivos concedidos para acciones concretas. El marker nunca concede acceso.
 
-Las acciones con efectos deben pasar por Workspace Authority, IsySentinel, approval cuando corresponda y un execution owner compatible. La política aún no está conectada de forma completa; por eso varias capacidades permanecen bloqueadas o parciales. El Gateway mantiene además su Sentinel remoto. Los receipts de algunas rutas siguen siendo locales/en memoria, no una auditoría durable.
+Las acciones habilitadas pasan por Workspace Authority, IsySentinel, approval cuando corresponde y un execution owner compatible. Las capacidades sin owner permanecen bloqueadas. El Gateway mantiene además autenticación y scopes remotos independientes. Las decisiones y receipts conectados quedan en el journal privado; approvals de un solo uso se mantienen en memoria durante el proceso.
 
 El diseño y límites están en [fronteras de seguridad](docs/design/isysentinel-security-boundaries.md), [contrato Mobile Host](docs/mobile-host-v1.md) y [decisión de runtime](docs/decisions/0001-runtime-boundary.md).
 
@@ -105,10 +105,10 @@ Selecciona un provider desde **Providers** o configura `ISYCODE_PROVIDER` y `ISY
 | OpenAI | `OPENAI_API_KEY` |
 | NVIDIA NIM | `NVIDIA_NIM_API_KEY` |
 | Nebius | `NEBIUS_API_KEY` |
-| Ollama | `OLLAMA_API_KEY` |
-| llama.cpp | `LLAMACPP_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
 
-También se pueden guardar claves nombradas en el vault del sistema. Sin una clave, ISyCode arranca en estado no configurado. Antes de hacer una solicitud se debe autorizar el host del provider en **Settings → Authority & Security**. OAuth no está disponible todavía.
+Las APIs cloud cubiertas actualmente son OpenAI, NVIDIA NIM, Nebius, Groq y OpenRouter; la compatibilidad del preset no implica que se haya validado una clave real de cada servicio. La captura de uso compartida por el usuario demuestra una respuesta real de NVIDIA NIM tras autorizar el host; Nebius ya había sido probado por el equipo. OpenAI, Groq y OpenRouter todavía no tienen evidencia de prueba real registrada. Ollama y llama.cpp siguen disponibles como endpoints locales opcionales, no como parte de la matriz de validación cloud. Cualquier otro proveedor/API queda abierto para propuesta por PR o issue. También se pueden guardar claves nombradas en el vault del sistema. Sin una clave, ISyCode arranca en estado no configurado. Antes de hacer una solicitud se debe autorizar el host del provider en **Settings → Authority & Security**. OAuth no está disponible todavía.
 
 ## Integraciones
 
@@ -140,9 +140,9 @@ La estrategia tiene dos etapas: primero publicar **ISyCode Secure**, con el conj
 
 Prioridades abiertas:
 
-1. Terminar M15: auditar cobertura de Workspace Authority + IsySentinel + approvals + execution owners en todas las acciones y añadir auditoría durable.
+1. Cerrar los pendientes remotos de M15: corregir el checker estructural del Gateway, verificar HTTPS/proxy de despliegue y demostrar una operación semántica con grant y scope; estado en [auditoría Gateway](docs/security/m15-gateway-audit-2026-09-28.md).
 2. Cerrar M16: sesiones recuperables, configuración/diagnósticos, cobertura UX y matriz con testigos reproducibles.
-3. Demostrar el Gateway semántico real con identidad, scopes y grants correctos.
+3. Completar la operación real del Gateway semántico como parte del witness M15, con identidad, scopes y grants correctos.
 4. Completar Mobile Host con adapters, sesiones/stream, cancelación y approvals.
 5. Añadir las acciones de archivos y capacidades runtime únicamente detrás de owners tipados y permisos verificables.
 6. Evaluar L0/L1 después de cerrar la base de seguridad; no se incluye como capacidad activa de esta versión.

@@ -26,22 +26,39 @@ Systembility before the aggregate decision is ALLOW.
 
 ### Gateway HTTP Sentinel
 
-`gateway/sentinel.py` is a remote API perimeter, not a Systembility aggregator.
-It hashes presented keys, checks registered key status and expiry, operation
-allowlists, applies an in-memory per-process rate limit, and returns key
-metadata/scopes. Gateway HTTP auth remains an independent gate for every
-request, even when ISyCode's local decision allows the action.
+Gateway HTTP authentication is an independent gate for every request, even
+when ISyCode's local decision allows the action. The current FastAPI app uses
+`gateway.auth.KeyStore`, `_authenticated`, and route-specific scope dependencies.
+Its tests demonstrate key/scope rejection, immediate persisted-key revocation,
+secret-free audit output, and per-process rate limits. The old
+`gateway/sentinel.py` module is not imported by `gateway.app` and has no
+production callsite in the inspected Gateway tree. Its disabled-pass behavior
+and key-prefix logging are legacy-code risks, not evidence that the current
+FastAPI request path bypasses authentication. It should remain disconnected or
+be retired; it must not be mistaken for the active HTTP gate.
 
-The inspected Gateway implementation also has limits that ISyCode must not
-mistake for guarantees: the settings argument is unused by key loading;
-`enabled=False` allows every request; `require_https` is declared but not
-enforced in `validate`; rate buckets and revocations are process-local; and
-unknown-key logging writes the first eight characters of the supplied key.
-These audit observations remain; the semantic workspace-identity change does
-not alter key verification, HTTPS enforcement, rate limits, revocation, or
-logging. ISyCode uses HTTPS/origin checks in its client, keeps credentials in
-its own protected vault, sends only the minimum required key to the Gateway,
-and reports remote Gateway auth separately from local workspace authorization.
+The current app defaults `GATEWAY_REQUIRE_HTTPS` to false for local use. It
+rejects plain HTTP when that setting is enabled, and trusts
+`X-Forwarded-Proto` only when the operator separately enables forwarded-proxy
+trust. Its token-bucket limits are explicitly in-memory and per process, so
+multiple workers multiply the effective limit. These are deployment
+conditions, not local ISyCode grants. The Gateway tests run on 2026-09-28
+passed key, scope, revocation, path, rate, HTTPS-when-enabled, and redaction
+checks. One structural “write surface” test fails because it scans standalone
+`cli.py` and `provider_vault.py` for imports as though they were mounted HTTP
+modules; the live route set matches the test's explicit list of scoped write
+routes. A live local health response also reports `read_only: true` while the
+app mounts scoped file-write, Drive-upload, email-send, and GitHub-issue
+endpoints. ISyCode does not use that field as an authorization signal; the
+Gateway should correct the misleading health metadata. See the
+[Gateway perimeter audit](../security/m15-gateway-audit-2026-09-28.md) for
+exact commands and remaining evidence.
+
+ISyCode uses HTTPS/origin checks in its client, keeps credentials in its own
+protected vault, sends only the minimum required key to the Gateway, and
+reports remote Gateway auth separately from local workspace authorization.
+This does not prove the production endpoint is configured for HTTPS or that a
+live Gateway request has both local and remote grants.
 
 ## ISyCode's contract
 
@@ -120,27 +137,37 @@ the semantic action catalog. The old combined implementation remains in
 
 The provider request owner and bounded workspace list/read/name-search owner
 call Workspace Authority and the pure IsySentinel through
-`isycode/action_runtime.py`. Settings has a user-consented management flow to
-grant or revoke the exact read-only workspace scope and the active provider
-host. Provider credentials do not imply network scope. The request digest
-includes a registered execution-owner identity; the aggregate gate denies
-owner/action pairs absent from its closed registry. `isycode/action_audit.py`
-stores decision and verified receipt digests in a private per-workspace
-hash-chain journal outside the checkout. Journal failure denies before an
-action or returns NOT_VERIFIABLE after an effect. The Files rail and context
-picker use the native ISyCode read owner; IsyMotron's old read adapter remains
-in the repository only as a legacy adapter.
+`isycode/action_runtime.py`. Provider requests bind a digest of their complete
+request material and append a result receipt without storing prompt or result
+content. Settings has a user-consented management flow to grant or revoke the
+exact read-only workspace scope and active provider host. Provider credentials
+do not imply network scope. The request digest includes a registered
+execution-owner identity; the aggregate gate denies owner/action pairs absent
+from its closed registry. `isycode/action_audit.py` stores decisions and
+verified receipt digests in a private per-workspace hash-chain journal outside
+the checkout. Journal failure denies before an action or returns
+NOT_VERIFIABLE after an effect. The Files rail and context injection use the
+native read owner. Native picker invocation remains unavailable in Secure;
+IsyMotron's old read adapter remains only as a legacy adapter.
 
-This is partial enforcement, not a complete product boundary. Connected
-owners now include Workspace, provider, Gateway/MCP discovery and invocation,
-LSP, sessions delete, and semantic broker. Mobile Host, Bridge, L1, general
-workspace mutation and other unimplemented action families remain
-unavailable. The IsyMotron Planner may produce a proposal after provider-host
-authorization, but its legacy Executor is disabled in Secure. The action
-journal has no UI inspector/verifier yet, and code has only received syntax
-and diff checks for the latest journal changes; do not claim a live journal
-witness or complete coverage.
+The local Secure frontier is closed: active Workspace, provider, Gateway MCP,
+semantic Gateway, LSP, broker, and session-delete owners use the central gate
+and write their supported receipts. Mobile Host, Bridge, L1, general workspace
+mutation, persistent session creation/resume, clipboard, and file pickers
+remain unavailable because those owners are not connected. This is an
+intentional Secure boundary, not a claim that these features are implemented.
+The IsyMotron Planner's provider call now runs through `ProviderNetworkOwner`;
+its legacy Executor remains disabled. The action journal has a read-only UI
+inspector/verifier; local receipt and HTTP redirect tests use isolated fixtures.
+M15 is still open for the production Gateway deployment witness and a real
+remote-Gateway operation. The current server source and isolated tests
+demonstrate authentication, scopes, revocation, HTTPS enforcement when
+configured, and redaction. They do not prove the deployed origin enables
+HTTPS, uses a trusted proxy correctly, or has a suitable worker/rate-limit
+configuration. Local client HTTPS/origin checks do not prove any of those
+deployment facts.
 
 The semantic workspace-binding work updates only the Gateway HTTP identity
 contract; it does not change `bridge_core` or the Gateway key/scope policy.
-Other Gateway perimeter findings above remain separate work.
+The failed structural test and deployment witness remain separate work; no
+Gateway source was changed from the ISyCode checkout.

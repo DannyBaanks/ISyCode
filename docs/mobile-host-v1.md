@@ -45,7 +45,10 @@ codes and a short text reason.
 Pair-issued credentials currently carry `runtime:read`, `runtime:select`, and
 `client:heartbeat`, scoped to the runtime wildcard. A heartbeat proves client
 liveness only. The host ignores client-supplied runtime/session state. Detailed
-status is never exposed by the unauthenticated health route.
+status is never exposed by the unauthenticated health route. The credential
+store rejects every scope outside those three, including the reserved file,
+session, and operator scopes; those stay unavailable until their action owners
+and approval flows exist.
 
 ## Explicitly not implemented yet
 

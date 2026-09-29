@@ -11,12 +11,13 @@ import stat
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
 from isycode.actions import ACTION_BY_ID
 from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.approvals import ActionApproval, ActionApprovalStore
+from isycode.config import gateway_workspace_id
 from isycode.security import (
     ActionRequest, AuthorityDecision, DecisionCheck, IsySentinel, SentinelDecision,
     SystembilityResult,
@@ -57,6 +58,67 @@ TOOL_ACTIONS = {
 MAX_FILE_BYTES = 128 * 1024
 MAX_OUTPUT_CHARS = 24_000
 MAX_SCAN_ENTRIES = 6_000
+
+# Actions with no Secure execution owner are explicit denials in the owner
+# binding check. A catalog addition is not enabled by adding a workspace grant.
+EXPLICIT_DENY_ACTIONS = frozenset({
+    "workspace.files.write", "workspace.files.move", "workspace.files.delete",
+    "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
+    "credentials.add", "credentials.use", "credentials.revoke", "lsp.stop",
+    "mobile.host.start", "mobile.host.stop", "mobile.pair",
+    "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
+    "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
+    "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
+    "l1.disable", "l1.rollback", "session.create", "clipboard.copy",
+    "desktop.file_picker", "bridge.peek", "lsp.discover", "mobile.session.read",
+    "session.resume",
+})
+
+
+@dataclass(frozen=True)
+class OwnerActionVariant:
+    """Parameter discriminator for intentionally shared action identifiers."""
+
+    action_id: str
+    owner_id: str
+    required_parameters: tuple[tuple[str, Any], ...]
+    absent_parameters: tuple[str, ...] = ()
+
+    def matches(self, request: ActionRequest) -> bool:
+        parameters = request.parameters
+        return (
+            request.action_id == self.action_id
+            and request.execution_owner == self.owner_id
+            and all(parameters.get(key) == value for key, value in self.required_parameters)
+            and all(key not in parameters for key in self.absent_parameters)
+        )
+
+
+OWNER_ACTION_VARIANTS = (
+    OwnerActionVariant(
+        "broker.start", "broker_provision",
+        (("operation", "start"),), ("managed_existing",),
+    ),
+    OwnerActionVariant(
+        "broker.start", "broker_management",
+        (("operation", "start"), ("managed_existing", True)),
+    ),
+)
+
+OWNER_REQUIRED_SYSTEMBILITIES = {
+    "workspace_read": frozenset({"WorkspaceReadBoundary"}),
+    "provider_network": frozenset({"ProviderNetworkBoundary"}),
+    "remote_catalog": frozenset({"RemoteReadBoundary"}),
+    "session_delete": frozenset({"SessionDeleteBoundary"}),
+    "gateway_mcp": frozenset({"MCPInvocationBoundary"}),
+    "gateway_semantic": frozenset({"GatewaySemanticBoundary"}),
+    "lsp_symbols": frozenset({"WorkspaceReadBoundary", "LSPProcessBoundary"}),
+    "broker_preview": frozenset({"WorkspaceReadBoundary", "BrokerRecipeBoundary"}),
+    "broker_provision": frozenset({
+        "WorkspaceReadBoundary", "BrokerProvisionBoundary", "BrokerRegistryBoundary",
+    }),
+    "broker_management": frozenset({"BrokerRegistryBoundary"}),
+}
 
 
 # Explicit closed registry. Requests still bind the selected owner in their digest;
@@ -281,7 +343,10 @@ class GatewaySemanticSystembility:
         workspace_id = request.parameters.get("workspace_id")
         if not isinstance(operation, str) or not isinstance(payload, Mapping):
             return SystembilityResult(self.name, False, "semantic operation payload is invalid")
-        expected_identity = os.environ.get("ISYCODE_GATEWAY_WORKSPACE_ID", "").strip()
+        try:
+            expected_identity = gateway_workspace_id(request.workspace_root)
+        except (OSError, RuntimeError, ValueError):
+            return SystembilityResult(self.name, False, "workspace root cannot be resolved for Gateway binding")
         if (not expected_identity or not isinstance(workspace_id, str)
                 or workspace_id != expected_identity):
             return SystembilityResult(self.name, False, "Gateway workspace identity is not explicitly bound")
@@ -484,23 +549,34 @@ class ProductActionGate:
     def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
-        allowed_actions = OWNER_ACTIONS.get(self.owner_id, frozenset())
+        owner_id = self.owner_id
+        allowed_actions = OWNER_ACTIONS.get(owner_id, frozenset())
 
         class ExecutionOwnerBindingSystembility:
             name = "ExecutionOwnerBinding"
 
-            def evaluate(inner_self, request: ActionRequest,
-                         authority_decision: AuthorityDecision) -> SystembilityResult:
-                bound = request.execution_owner == self.owner_id and request.action_id in allowed_actions
-                if not self.owner_id or not allowed_actions:
+            def evaluate(self, request: ActionRequest,
+                         authority: AuthorityDecision) -> SystembilityResult:
+                variants = [item for item in OWNER_ACTION_VARIANTS
+                            if item.action_id == request.action_id]
+                owner_variants = [item for item in variants if item.owner_id == owner_id]
+                denied = request.action_id in EXPLICIT_DENY_ACTIONS
+                bound = (not denied and request.execution_owner == owner_id
+                         and request.action_id in allowed_actions
+                         and (not variants or any(item.matches(request) for item in owner_variants)))
+                if denied:
+                    reason = "action is explicitly denied in Secure"
+                elif not owner_id or not allowed_actions:
                     reason = "no execution owner is registered for this gate"
-                elif request.execution_owner != self.owner_id:
+                elif request.execution_owner != owner_id:
                     reason = "request is bound to a different execution owner"
                 elif request.action_id not in allowed_actions:
                     reason = "execution owner has no implementation for this action"
+                elif variants and not any(item.matches(request) for item in owner_variants):
+                    reason = "request does not match this owner's declared action variant"
                 else:
-                    reason = "action is registered to this concrete execution owner"
-                return SystembilityResult(inner_self.name, bound, reason)
+                    reason = "action is registered to this concrete execution owner and variant"
+                return SystembilityResult(self.name, bound, reason)
 
         self.authority = authority
         try:
@@ -686,7 +762,7 @@ class GatewaySemanticOwner:
 
             normalized_payload = validate_semantic_payload(operation, payload)
             client = SemanticGatewayClient(base_url=url)
-            expected_identity = os.environ.get("ISYCODE_GATEWAY_WORKSPACE_ID", "").strip()
+            expected_identity = gateway_workspace_id(self.root)
             if not expected_identity or workspace_id != expected_identity:
                 raise ValueError("workspace identity is not explicitly bound")
             request = ActionRequest(
@@ -808,6 +884,66 @@ class LPSSymbolOwner:
                                  "durable action journal is unavailable")
         return ActionOutcome(result_text[:MAX_OUTPUT_CHARS], "ALLOW", receipt,
                              "LSP handshake and workspace/symbol response verified")
+
+
+class ProviderNetworkOwner:
+    """Authorize one provider request and durably receipt its bounded response.
+
+    The transport callback is supplied by trusted ISyCode code, never by a
+    model or workspace file. Its request material is hashed into the immutable
+    action identity; neither prompt nor response contents enter the journal.
+    """
+
+    MAX_RESULT_BYTES = 2_000_000
+
+    def __init__(self, root: Path, authority: WorkspaceAuthority):
+        self.root = root.resolve(strict=True)
+        self.authority = authority
+        self.gate = ProductActionGate(self.root, authority, owner_id="provider_network")
+
+    async def execute(self, provider: Any, request_material: Any,
+                      send: Callable[[], Awaitable[Any]]) -> tuple[Any | None, ActionOutcome]:
+        try:
+            url = provider.base_url
+            parsed = urlsplit(url)
+            host = (parsed.hostname or "").casefold().rstrip(".")
+            if parsed.port:
+                host += f":{parsed.port}"
+            material = json.dumps(request_material, ensure_ascii=False, sort_keys=True,
+                                  separators=(",", ":"))
+            material_digest = hashlib.sha256(material.encode("utf-8")).hexdigest()
+            request = ActionRequest(
+                "provider.request", self.root, host,
+                {"provider": provider.name, "model": provider.model,
+                 "url": url, "payload_digest": material_digest},
+                execution_owner="provider_network")
+        except (AttributeError, TypeError, ValueError, OSError):
+            return None, ActionOutcome("Provider request denied.", "DENY", None,
+                                       "provider request identity is invalid")
+
+        authority, decision = self.gate.authorize(request)
+        if not decision.allowed:
+            reason = "; ".join(check.reason for check in decision.checks if not check.passed)
+            return None, ActionOutcome("Provider request denied.", "DENY", None,
+                                       reason or authority.reason)
+        response = await send()
+        try:
+            result_text = json.dumps(response, ensure_ascii=False, sort_keys=True,
+                                     separators=(",", ":"))
+        except (TypeError, ValueError):
+            return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
+                                       "provider result is not JSON serializable")
+        if len(result_text.encode("utf-8")) > self.MAX_RESULT_BYTES:
+            return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
+                                       "provider result exceeded the 2 MB receipt limit")
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "provider.request", request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(result_text.encode("utf-8")).hexdigest())
+        if not receipt.verify(request, result_text) or not self.gate.persist_receipt(request, receipt):
+            return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
+                                       "durable provider receipt could not be verified or persisted")
+        return response, ActionOutcome(result_text, "ALLOW", receipt,
+                                       "provider response is bound to the authorized request digest")
 
 
 class LocalWorkspaceReadOwner:

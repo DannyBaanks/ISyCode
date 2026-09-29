@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from isycode.actions import ACTION_BY_ID
-from isycode.security import ActionRequest, AuthorityDecision, SentinelDecision
+from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
 from isycode.workspace_setup import state_root
 
 
@@ -67,8 +67,19 @@ class ActionAuditJournal:
 
     def record_decision(self, request: ActionRequest, authority: AuthorityDecision,
                         decision: SentinelDecision) -> None:
-        if not isinstance(request, ActionRequest) or not isinstance(decision, SentinelDecision):
+        if (not isinstance(request, ActionRequest)
+                or not isinstance(authority, AuthorityDecision)
+                or not isinstance(decision, SentinelDecision)):
             raise ActionAuditError("action decision is malformed")
+        if (authority.request_digest != request.digest
+                or decision.action_id != request.action_id
+                or decision.request_digest != request.digest):
+            raise ActionAuditError("action decision does not match its immutable request")
+        if (len(decision.checks) > 64 or any(
+                not isinstance(check, DecisionCheck) or not isinstance(check.name, str)
+                or not isinstance(check.passed, bool)
+                for check in decision.checks)):
+            raise ActionAuditError("action decision checks are malformed")
         failed = [check.name[:120] for check in decision.checks if not check.passed]
         self._append({
             "kind": "decision", "time": time.time(),
@@ -77,12 +88,16 @@ class ActionAuditJournal:
             "request_digest": request.digest,
             "authority": bool(isinstance(authority, AuthorityDecision) and authority.allowed),
             "sentinel": decision.status, "failed_checks": failed[:64],
+            "checks": [{"name": check.name[:120], "passed": check.passed}
+                       for check in decision.checks[:64]],
         })
 
     def record_receipt(self, request: ActionRequest, receipt: Any) -> None:
         if not isinstance(request, ActionRequest):
             raise ActionAuditError("action receipt request is malformed")
         receipt_action = getattr(receipt, "action_id", None)
+        receipt_id = getattr(receipt, "receipt_id", None)
+        result_digest = getattr(receipt, "result_digest", None)
         action_matches = receipt_action == request.action_id or (
             request.action_id == "broker.start"
             and request.execution_owner == "broker_provision"
@@ -91,15 +106,18 @@ class ActionAuditJournal:
         if (getattr(receipt, "request_digest", None) != request.digest
                 or not action_matches
                 or getattr(receipt, "decision", None) != "ALLOW"
-                or getattr(receipt, "outcome", None) != "SUCCESS"):
+                or getattr(receipt, "outcome", None) != "SUCCESS"
+                or not isinstance(receipt_id, str) or not receipt_id or len(receipt_id) > 160
+                or not isinstance(result_digest, str) or len(result_digest) != 64
+                or any(char not in "0123456789abcdef" for char in result_digest)):
             raise ActionAuditError("action receipt does not match its request")
         self._append({
             "kind": "receipt", "time": time.time(),
             "workspace": hashlib.sha256(str(request.workspace_root).encode()).hexdigest()[:32],
             "action": request.action_id, "owner": request.execution_owner,
             "request_digest": request.digest,
-            "receipt_id": str(receipt.receipt_id)[:160],
-            "result_digest": str(receipt.result_digest)[:128],
+            "receipt_id": receipt_id,
+            "result_digest": result_digest,
         })
 
     def verify(self, *, recent_limit: int = 80) -> ActionAuditReport:
@@ -203,6 +221,17 @@ class ActionAuditJournal:
                             or not isinstance(body.get("failed_checks"), list)
                             or not all(isinstance(item, str) for item in body["failed_checks"])):
                         raise ValueError(f"decision {line_number} has invalid status fields")
+                    checks = body.get("checks")
+                    if checks is None:
+                        unverifiable += 1
+                        checks = []
+                    if (not isinstance(checks, list) or len(checks) > 64
+                            or any(not isinstance(item, dict)
+                                   or not isinstance(item.get("name"), str)
+                                   or len(item["name"]) > 120
+                                   or not isinstance(item.get("passed"), bool)
+                                   for item in checks)):
+                        raise ValueError(f"decision {line_number} has invalid check metadata")
                     # A frozen request can be re-evaluated after grant state changes.
                     # Keep each chronological decision; a later DENY does not erase an
                     # earlier successful execution receipt.
@@ -232,6 +261,7 @@ class ActionAuditJournal:
                 "owner": item["owner"], "request_digest": item["request_digest"],
                 "authority": item.get("authority"), "sentinel": item.get("sentinel"),
                 "failed_checks": item.get("failed_checks", []),
+                "checks": item.get("checks", []),
                 "receipt_id": item.get("receipt_id"),
                 "result_digest": item.get("result_digest"),
             } for item in records[-recent_limit:] if recent_limit)

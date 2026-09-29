@@ -33,11 +33,10 @@ PAIR_MAX_GLOBAL_FAILURES = 20
 CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,96}$")
 PAIR_SCOPES = frozenset({"runtime:read", "runtime:select", "client:heartbeat"})
 DEFAULT_SCOPES = PAIR_SCOPES
-VALID_SCOPES = frozenset({
-    "runtime:read", "session:create", "session:read", "session:write",
-    "session:approve", "files:read", "files:write", "client:heartbeat",
-    "runtime:select", "host:status",
-})
+# Secure only mints the narrow pairing scopes backed by current read/select/
+# heartbeat endpoints. Session, file, and operator scopes stay unissuable until
+# their execution owners and approval paths exist.
+VALID_SCOPES = PAIR_SCOPES
 
 
 def _state_dir() -> Path:
@@ -121,10 +120,24 @@ class ApiKeyStore:
             return None
         if not hmac.compare_digest(row["digest"], digest):
             return None
+        try:
+            scope_values = json.loads(row["scopes"])
+            runtime_values = json.loads(row["runtimes"])
+        except (TypeError, json.JSONDecodeError):
+            return None
+        if (not isinstance(scope_values, list)
+                or any(not isinstance(scope, str) for scope in scope_values)):
+            return None
+        scopes = frozenset(scope_values)
+        if not scopes or not scopes <= VALID_SCOPES:
+            return None
+        if (not isinstance(runtime_values, list)
+                or any(not isinstance(runtime, str) for runtime in runtime_values)):
+            return None
         return {
             "id": row["id"], "name": row["name"],
-            "scopes": frozenset(json.loads(row["scopes"])),
-            "runtimes": frozenset(json.loads(row["runtimes"])),
+            "scopes": scopes,
+            "runtimes": frozenset(runtime_values),
             "expires_at": row["expires_at"],
         }
 

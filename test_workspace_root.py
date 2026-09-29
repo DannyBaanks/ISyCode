@@ -218,3 +218,24 @@ def test_workspace_identity_keeps_launch_and_root_as_distinct_values(tmp_path: P
     assert identity.workspace_root == root.resolve()
     assert identity.launch_dir == launch.resolve()
     assert identity.workspace_root != identity.launch_dir
+
+
+def test_gateway_workspace_id_is_stable_and_scoped_to_canonical_root(tmp_path: Path, monkeypatch):
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    monkeypatch.delenv("ISYCODE_GATEWAY_WORKSPACE_ID", raising=False)
+
+    first_id = config.gateway_workspace_id(first)
+
+    assert first_id == config.gateway_workspace_id(first.resolve())
+    assert first_id.startswith("isyco-ws-")
+    assert len(first_id) == len("isyco-ws-") + 32
+    assert first_id != config.gateway_workspace_id(second)
+
+
+def test_gateway_workspace_id_honors_explicit_operator_override(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("ISYCODE_GATEWAY_WORKSPACE_ID", "operator-workspace")
+
+    assert config.gateway_workspace_id(tmp_path) == "operator-workspace"

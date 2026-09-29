@@ -178,27 +178,22 @@ class BridgeClient:
         )
 
     def agents(self) -> dict[str, dict[str, Any]]:
-        registry = self.handshake.parents[3] / "workspace" / "agents" / "bridge" / "agents.json"
-        if registry.is_symlink():
-            raise BridgeError("Bridge agent registry is a symbolic link")
-        try:
-            data = json.loads(registry.read_text(encoding="utf-8-sig"))
-        except FileNotFoundError:
-            return {}
-        except (OSError, json.JSONDecodeError) as exc:
-            raise BridgeError("Could not read Bridge agent registry") from exc
-        if not isinstance(data, dict):
-            return {}
         result = {}
-        for name, item in data.items():
-            if not isinstance(name, str) or not isinstance(item, dict):
+        output = self._run("agents")
+        entry = re.compile(
+            r"^\s{2}([A-Za-z0-9_.-]{1,64})\s+caps=\[(.*?)\]"
+            r"\s+last_hb=(\S+)\s+status=(\S+)\s*$"
+        )
+        for line in output.splitlines():
+            match = entry.fullmatch(line)
+            if match is None:
                 continue
-            capabilities = item.get("capabilities", [])
+            name, raw_capabilities, last_heartbeat, status = match.groups()
+            capabilities = [item.strip() for item in raw_capabilities.split(",")]
             result[name] = {
-                "status": str(item.get("status", "unknown"))[:32],
-                "last_heartbeat": str(item.get("last_heartbeat", ""))[:32],
-                "capabilities": [str(value)[:64] for value in capabilities[:16]
-                                 if isinstance(value, str)] if isinstance(capabilities, list) else [],
+                "status": status[:32],
+                "last_heartbeat": last_heartbeat[:32],
+                "capabilities": [value[:64] for value in capabilities[:16] if value],
             }
         return result
 

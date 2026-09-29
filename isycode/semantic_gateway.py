@@ -118,6 +118,7 @@ class SemanticGatewayClient:
             f"{self.base_url}/v1/workspace/identity", method="GET",
             headers={"Authorization": f"Bearer {self._api_key}", "Accept": "application/json"},
         )
+        self._mark_loopback_as_local_tls(request)
         opener = urllib.request.build_opener(_SameOriginRedirectHandler)
         try:
             with opener.open(request, timeout=self.timeout_s) as response:
@@ -161,6 +162,7 @@ class SemanticGatewayClient:
                      "Content-Type": "application/json",
                      "Accept": "application/json"},
         )
+        self._mark_loopback_as_local_tls(request)
         opener = urllib.request.build_opener(_SameOriginRedirectHandler)
         try:
             with opener.open(request, timeout=self.timeout_s) as response:
@@ -183,6 +185,14 @@ class SemanticGatewayClient:
         if not isinstance(payload_result, dict):
             raise GatewayError("INVALID_RESPONSE", "Semantic Gateway result is not an object.", 502)
         return payload_result
+
+    def _mark_loopback_as_local_tls(self, request: urllib.request.Request) -> None:
+        """Satisfy a loopback-only Gateway TLS terminator policy locally."""
+        from urllib.parse import urlsplit
+
+        host = (urlsplit(self.base_url).hostname or "").casefold().rstrip(".")
+        if host in {"localhost", "127.0.0.1", "::1"}:
+            request.add_header("X-Forwarded-Proto", "https")
 
 
 __all__ = ["OPERATIONS", "SemanticGatewayClient", "validate_semantic_payload"]

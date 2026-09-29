@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 import tempfile
 import stat
+import hashlib
+from importlib import import_module
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -24,6 +26,22 @@ class WorkspaceIdentity:
     launch_dir: Path
     workspace_root: Path
     workspace_root_source: Literal["isyroot", "fallback"]
+
+
+def gateway_workspace_id(workspace_root: Path) -> str:
+    """Return the non-secret Gateway binding label for one canonical workspace.
+
+    The label binds the remote semantic service to this logical root. It is
+    deliberately not a grant, proof of a shared filesystem, or credential.
+    An explicit environment override remains available for operator-managed
+    deployments and fixtures.
+    """
+    override = os.environ.get("ISYCODE_GATEWAY_WORKSPACE_ID", "").strip()
+    if override:
+        return override
+    root = Path(workspace_root).expanduser().resolve(strict=True)
+    digest = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
+    return f"isyco-ws-{digest}"
 
 
 def discover_workspace_identity(launch_dir: Path | None = None) -> WorkspaceIdentity:
@@ -112,6 +130,8 @@ def load_api_key(provider_name: str | None = None) -> str:
             "openai": "OPENAI_API_KEY",
             "nvidia": "NVIDIA_NIM_API_KEY",
             "nebius": "NEBIUS_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
             "ollama": "OLLAMA_API_KEY",
             "llamacpp": "LLAMACPP_API_KEY",
         }.get(provider)
@@ -278,9 +298,25 @@ def save_api_key(provider_name: str, value: str) -> Path:
 
 
 def _provider_preset(provider_name: str) -> dict:
-    """Resolve provider metadata from the installed IsyMotron source."""
+    """Resolve first-party provider metadata, retaining legacy adapter fallback."""
     try:
-        from agents.provider import PRESETS
+        from isycode.providers import PRESETS as ISYCODE_PRESETS
+        preset = ISYCODE_PRESETS.get(provider_name.casefold())
+        if preset is not None:
+            return preset
+    except ImportError:
+        pass
+    try:
+        PRESETS = import_module("agents.provider").PRESETS
         return PRESETS[provider_name.casefold()]
     except (ImportError, KeyError) as exc:
         raise ConfigurationError(f"Unknown provider: {provider_name}") from exc
+
+
+def isymotron_provider_available(provider_name: str) -> bool:
+    """Return whether the optional legacy planner adapter knows this provider."""
+    try:
+        PRESETS = import_module("agents.provider").PRESETS
+    except ImportError:
+        return False
+    return provider_name.casefold() in PRESETS

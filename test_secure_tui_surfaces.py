@@ -57,6 +57,54 @@ def test_secure_tui_does_not_persist_chat_sessions_without_an_owner():
     assert not (_method_calls(methods["_show_chat_sessions"]) & {"push_screen_wait", "create", "load"})
 
 
+def test_secure_tui_session_delete_does_not_mint_its_own_authority_or_approval():
+    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    app = next(node for node in module.body
+               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+    methods = {node.name: node for node in app.body
+               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+    delete_calls = _method_calls(methods["_delete_chat_session"])
+    assert "set_grant" not in delete_calls
+    assert "issue" not in delete_calls
+    assert "delete" not in delete_calls
+
+
+def test_authority_settings_does_not_claim_unwired_session_owner_is_connected():
+    source = SOURCE.read_text(encoding="utf-8")
+
+    assert "Session delete owner · not connected to session UI" in source
+    assert 'row["classification"] in {' in source
+    assert '"OWNER_VALID", "OWNER_SHARED_READ", "OWNER_VARIANTS"' in source
+
+
+def test_authority_settings_never_presents_an_explicit_deny_as_granted():
+    from isycode.tui import _authority_action_state
+
+    assert _authority_action_state("mobile.host.start", False) == "DENY · no Secure owner"
+    assert _authority_action_state("mobile.host.start", True) == (
+        "DENY · no Secure owner · saved grant ignored")
+    assert _authority_action_state("provider.request", True) == "grant on"
+
+
+def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():
+    source = SOURCE.read_text(encoding="utf-8")
+
+    assert '"Systembilities: {checks}\\n"' in source
+    assert '"Request: {digest[:12]}… · Authority: {authority}\\n"' in source
+
+
+def test_semantic_navigation_keeps_lsp_and_files_branches_reachable():
+    from isycode.tui import TUIApp
+
+    app = TUIApp()
+    lsp_entries = app._branch_entries("lsp")
+    file_entries = app._branch_entries("files")
+
+    assert any(item["kind"] == "lsp_server" for item in lsp_entries)
+    assert file_entries[0]["kind"] == "files"
+
+
 def test_tui_does_not_launch_native_file_pickers_without_an_owner():
     source = SOURCE.read_text(encoding="utf-8")
     module = ast.parse(source)

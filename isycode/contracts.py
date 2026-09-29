@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol, TYPE_CHECKING, runtime_checkable
 
 if TYPE_CHECKING:
+    from isycode.providers import Provider
     from isycode.workspace import DirectoryListing, SearchOutcome, WorkspaceRead
 
 
@@ -33,6 +34,9 @@ class PlanOutcome:
 @runtime_checkable
 class AgentRuntime(Protocol):
     """Planner/runtime facade; it is not an ISyCode authorization boundary."""
+
+    @property
+    def provider(self) -> Provider: ...
 
     async def plan(
         self,

@@ -2,7 +2,7 @@ from pathlib import Path
 import hashlib
 import json
 
-from isycode.action_audit import ActionAuditJournal
+from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.action_runtime import ActionReceipt
 from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
 
@@ -20,7 +20,8 @@ def test_journal_verifier_accepts_decision_and_matching_receipt(tmp_path):
     journal, request = _journal(tmp_path)
     authority = AuthorityDecision(True, "grant:workspace.files.read", "matched", request.digest)
     decision = SentinelDecision("workspace.files.read", request.digest,
-                                (DecisionCheck("Authority", True, "matched"),))
+                                (DecisionCheck("Authority", True, "matched"),
+                                 DecisionCheck("WorkspaceReadBoundary", True, "inside root")))
     journal.record_decision(request, authority, decision)
     result = "README content"
     receipt = ActionReceipt("receipt-1", request.action_id, request.digest,
@@ -33,6 +34,41 @@ def test_journal_verifier_accepts_decision_and_matching_receipt(tmp_path):
     assert report.status == "PASS"
     assert report.records == 2
     assert report.receipts == 1
+    assert report.recent[0]["checks"] == [
+        {"name": "Authority", "passed": True},
+        {"name": "WorkspaceReadBoundary", "passed": True},
+    ]
+    assert "inside root" not in repr(report.recent)
+
+
+def test_journal_rejects_decision_results_bound_to_another_request(tmp_path):
+    journal, request = _journal(tmp_path)
+    other = ActionRequest("workspace.files.read", request.workspace_root,
+                          target="other.txt", execution_owner="workspace_read")
+    authority = AuthorityDecision(True, "grant:workspace.files.read", "matched", other.digest)
+    decision = SentinelDecision(request.action_id, request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+
+    try:
+        journal.record_decision(request, authority, decision)
+    except ActionAuditError as exc:
+        assert "immutable request" in str(exc)
+    else:
+        raise AssertionError("journal accepted an Authority result for a different request")
+
+
+def test_journal_rejects_sentinel_result_for_another_action(tmp_path):
+    journal, request = _journal(tmp_path)
+    authority = AuthorityDecision(True, "grant:workspace.files.read", "matched", request.digest)
+    decision = SentinelDecision("workspace.files.search", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+
+    try:
+        journal.record_decision(request, authority, decision)
+    except ActionAuditError as exc:
+        assert "immutable request" in str(exc)
+    else:
+        raise AssertionError("journal accepted a Sentinel result for another action")
 
 
 def test_journal_verifier_rejects_tampered_record(tmp_path):

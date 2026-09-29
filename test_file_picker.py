@@ -1,6 +1,5 @@
 from pathlib import Path
 import asyncio
-from types import SimpleNamespace
 
 import pytest
 
@@ -29,25 +28,15 @@ def test_unknown_picker_is_rejected(tmp_path: Path):
         build_linux_file_picker_command("/usr/bin/file-dialog", tmp_path)
 
 
-def test_native_picker_returns_selected_file_without_shell(monkeypatch, tmp_path: Path):
-    selected = tmp_path / "AGENTS.md"
-    calls = []
+@pytest.mark.parametrize("picker_name", [
+    "choose_context_file", "choose_workspace_file", "choose_workspace_directory",
+])
+def test_native_picker_direct_api_is_denied_until_an_execution_owner_is_connected(
+        tmp_path: Path, picker_name: str):
+    picker = getattr(file_picker, picker_name)
 
-    async def communicate():
-        return str(selected).encode(), None
+    with pytest.raises(file_picker.FilePickerUnavailable, match="execution owner"):
+        asyncio.run(picker(tmp_path))
 
-    async def create_process(*command, **kwargs):
-        calls.append((command, kwargs))
-        return SimpleNamespace(returncode=0, communicate=communicate)
-
-    monkeypatch.setattr(file_picker.sys, "platform", "linux")
-    monkeypatch.setattr(
-        file_picker.shutil, "which",
-        lambda name: "/usr/bin/zenity" if name == "zenity" else None)
-    monkeypatch.setattr(file_picker.asyncio, "create_subprocess_exec", create_process)
-
-    result = asyncio.run(choose_context_file(tmp_path))
-
-    assert result == selected
-    assert calls[0][0][0:2] == ("/usr/bin/zenity", "--file-selection")
-    assert "shell" not in calls[0][1]
+    assert not hasattr(file_picker, "_run_picker")
+    assert "create_subprocess_exec" not in Path(file_picker.__file__).read_text(encoding="utf-8")

@@ -1,4 +1,8 @@
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+
+import pytest
 
 from isycode.approvals import ActionApprovalStore
 from isycode.security import ActionRequest
@@ -34,8 +38,10 @@ def test_approval_for_one_target_cannot_authorize_another(tmp_path):
     token = approvals.issue(approved)
 
     decision = authority.evaluate(changed, approvals=approvals, approval=token)
+    original_decision = authority.evaluate(approved, approvals=approvals, approval=token)
 
     assert not decision.allowed
+    assert original_decision.allowed
 
 
 def test_action_requiring_approval_denies_without_fresh_human_token(tmp_path):
@@ -57,3 +63,52 @@ def test_approval_token_does_not_reveal_secret_in_repr(tmp_path):
     token = ActionApprovalStore().issue(request)
 
     assert token.token not in repr(token)
+
+
+def test_concurrent_approval_replay_can_succeed_only_once(tmp_path):
+    request = ActionRequest("role.select", tmp_path)
+    store = ActionApprovalStore()
+    approval = store.issue(request)
+    barrier = Barrier(8)
+
+    def consume():
+        barrier.wait()
+        return store.consume(request, approval)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        outcomes = list(pool.map(lambda _index: consume(), range(8)))
+
+    assert outcomes.count(True) == 1
+    assert outcomes.count(False) == 7
+
+
+@pytest.mark.parametrize("ttl", [float("nan"), float("inf"), "not-a-number"])
+def test_approval_rejects_non_finite_or_invalid_lifetime(tmp_path, ttl):
+    request = ActionRequest("role.select", tmp_path)
+
+    with pytest.raises(ValueError, match="finite number"):
+        ActionApprovalStore().issue(request, ttl_seconds=ttl)
+
+
+def test_approval_pending_store_has_a_hard_capacity(tmp_path, monkeypatch):
+    request = ActionRequest("role.select", tmp_path)
+    store = ActionApprovalStore()
+    monkeypatch.setattr(ActionApprovalStore, "MAX_PENDING_APPROVALS", 1)
+    store.issue(request)
+
+    with pytest.raises(RuntimeError, match="Too many pending approvals"):
+        store.issue(request)
+
+
+def test_expired_approval_is_removed_and_cannot_authorize(tmp_path, monkeypatch):
+    import isycode.approvals as approvals_module
+
+    request = ActionRequest("role.select", tmp_path)
+    now = 100.0
+    monkeypatch.setattr(approvals_module.time, "monotonic", lambda: now)
+    store = ActionApprovalStore()
+    approval = store.issue(request, ttl_seconds=1)
+    now += 2
+
+    assert not store.consume(request, approval)
+    assert approval.token not in store._tokens

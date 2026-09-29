@@ -68,6 +68,13 @@ class GatewayClient:
         url = f"{self.base_url}{path}"
         data = json.dumps(body).encode() if body else None
         req = urllib.request.Request(url, data=data, method=method)
+        parsed = urllib.parse.urlsplit(self.base_url)
+        if parsed.hostname and parsed.hostname.casefold().rstrip(".") in {"localhost", "127.0.0.1", "::1"}:
+            # The local Gateway is bound to host loopback and enforces HTTPS
+            # based on the trusted tunnel's forwarded-proto header. This
+            # marker is sent only to loopback so the local client can use the
+            # same deployment policy without weakening remote TLS checks.
+            req.add_header("X-Forwarded-Proto", "https")
         if self.api_key:
             req.add_header("Authorization", f"Bearer {self.api_key}")
         req.add_header("Content-Type", "application/json")

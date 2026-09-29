@@ -11,7 +11,7 @@ import hashlib
 import json
 import math
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Protocol
@@ -53,7 +53,7 @@ class ActionRequest:
     action_id: str
     workspace_root: Path
     target: str = ""
-    parameters: Mapping[str, Any] | None = None
+    parameters: Mapping[str, Any] = field(default_factory=dict)
     execution_owner: str = ""
 
     def __post_init__(self) -> None:
