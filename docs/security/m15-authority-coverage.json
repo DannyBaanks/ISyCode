@@ -778,6 +778,22 @@
       "variants": []
     },
     {
+      "action": "tailscale.install.stage",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
+      "owners": [
+        "tailscale_package_install"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "TailscalePackageBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
       "action": "tailscale.install",
       "approval_required": true,
       "authority": "Workspace Authority",
@@ -869,6 +885,12 @@
     {
       "action": "tailscale.install.prepare",
       "callsite": "TailscalePackageInstallOwner.prepare",
+      "owner": "tailscale_package_install",
+      "status": "COVERED"
+    },
+    {
+      "action": "tailscale.install.stage",
+      "callsite": "TailscalePackageInstallOwner.stage",
       "owner": "tailscale_package_install",
       "status": "COVERED"
     },
@@ -1154,7 +1176,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1211,
+      "line": 1216,
       "owner": "workspace_read"
     },
     {
@@ -1187,49 +1209,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1083,
+      "line": 1088,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1211,
+      "line": 1216,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 872,
+      "line": 877,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 936,
+      "line": 941,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1006,
+      "line": 1011,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1092,
+      "line": 1097,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1153,
+      "line": 1158,
       "owner": "provider_network"
     },
     {
@@ -1278,14 +1300,21 @@
       "action": "tailscale.install.prepare",
       "callable": "isycode.tailscale_install.UbuntuDebianInstallPlan.prepare_request",
       "file": "isycode/tailscale_install.py",
-      "line": 112,
+      "line": 113,
+      "owner": "tailscale_package_install"
+    },
+    {
+      "action": "tailscale.install.stage",
+      "callable": "isycode.tailscale_install.PreparedTransaction.stage_request",
+      "file": "isycode/tailscale_install.py",
+      "line": 199,
       "owner": "tailscale_package_install"
     },
     {
       "action": "tailscale.install",
       "callable": "isycode.tailscale_install.PreparedTransaction.request",
       "file": "isycode/tailscale_install.py",
-      "line": 157,
+      "line": 203,
       "owner": "tailscale_package_install"
     },
     {
@@ -1327,13 +1356,13 @@
   "secure_tui_direct_api_bypasses": [],
   "stale_callsites": [],
   "summary": {
-    "actions": 60,
+    "actions": 61,
     "ambiguous": 0,
     "authority_frontier_pass": true,
-    "effectful": 47,
+    "effectful": 48,
     "explicit_deny": 34,
     "owner_shared_read": 1,
-    "owner_valid": 23,
+    "owner_valid": 24,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

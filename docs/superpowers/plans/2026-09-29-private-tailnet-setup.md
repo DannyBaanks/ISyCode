@@ -89,6 +89,20 @@
 - [ ] Bound runtime/output, redact URLs and secrets from diagnostics, record success/failure receipt, and re-run read-only inventory afterward. The official package's maintainer script may start or restart `tailscaled`; show this effect in the exact install preview, bind it into the immutable request and Systembility, and require the user's fresh approval before installation. Do not issue an additional explicit service-manager start or log in as a side effect. The TUI must also offer official manual instructions with no local mutation. Do not offer automated "keep service stopped" until a separately reviewed and safely scoped service-suppression owner exists.
 - [ ] Run `pytest -q test_tailscale_install.py test_tailscale_authority.py`.
 
+**Reviewed staged contract (2026-09-29):** `tailscale.install.prepare` requires its own
+approval and writes only isolated XDG private key, source, signed index, and
+downloaded package files. It records a one-package simulation. A separate
+`tailscale.install.stage` approval binds the exact file manifest and a unique
+root-owned path under `/var/lib/isycode/tailscale`; fixed bounded copies are
+checked with privileged ownership, mode, size, and SHA256 observations.
+`tailscale.install` needs a third fresh approval bound to that verified stage,
+rechecks the stage and transaction, and sets `DEBIAN_FRONTEND=noninteractive`.
+The final apt process reads only the root-owned stage. Unsupported transactions
+go to the later TUI manual-instructions path. Apt simulation does not enumerate
+all host dpkg triggers or package maintainer-script behavior; the approval
+discloses that official package scripts and triggers run as root and may start
+or restart `tailscaled`.
+
 ## Task 5: Implement explicit interactive login without collecting credentials
 
 **Files:**
