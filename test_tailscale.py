@@ -109,6 +109,18 @@ def test_existing_serve_routes_and_conflict_are_explicit(monkeypatch):
     assert unknown.inspect().serve_state == "conflict"
 
 
+@pytest.mark.parametrize("port,listener", [
+    ("443", {"UnknownMode": True}),
+    ("443", {"HTTPS": "true"}),
+    ("70000", {"HTTPS": True}),
+    ("443", {"HTTPS": True, "TCPForward": "127.0.0.1:8787"}),
+    ("443", {"TerminateTLS": "desk.tailnet.ts.net"}),
+])
+def test_malformed_tcp_listener_is_conflict(monkeypatch, port, listener):
+    instance, _ = adapter(monkeypatch, replies(node={"TCP": {port: listener}}))
+    assert instance.inspect().serve_state == "conflict"
+
+
 def test_services_inventory_and_node_routes_are_both_visible(monkeypatch):
     service_config = {"version": "0.0.1", "services": {
         "svc:printer": {"endpoints": {"tcp:443": "http://127.0.0.1:9998"}}}}

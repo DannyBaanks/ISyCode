@@ -183,8 +183,22 @@ def _parse_serve(value: dict) -> tuple[str, tuple[ServeRoute, ...]]:
                                      not bool(funnel.get(host))))
             if len(routes) > MAX_ROUTES:
                 raise ValueError("too many Serve routes")
-    if any(not isinstance(key, str) or not isinstance(val, dict) for key, val in tcp.items()):
-        raise ValueError("invalid Serve listener")
+    for port, listener in tcp.items():
+        if (not isinstance(port, str) or not re.fullmatch(r"[1-9][0-9]{0,4}", port)
+                or int(port) > 65535 or not isinstance(listener, dict)
+                or not set(listener) <= {"HTTP", "HTTPS", "TCPForward", "TerminateTLS",
+                                      "ProxyProtocol"}):
+            raise ValueError("unknown Serve listener schema")
+        http, https = listener.get("HTTP", False), listener.get("HTTPS", False)
+        forward = listener.get("TCPForward", "")
+        tls_name = listener.get("TerminateTLS", "")
+        proxy_protocol = listener.get("ProxyProtocol", 0)
+        if (type(http) is not bool or type(https) is not bool
+                or not isinstance(forward, str) or not isinstance(tls_name, str)
+                or type(proxy_protocol) is not int or proxy_protocol not in {0, 1, 2}
+                or sum((http, https, bool(forward))) != 1
+                or (tls_name and not forward) or (proxy_protocol and not forward)):
+            raise ValueError("invalid Serve listener")
     if any(not isinstance(key, str) or not isinstance(val, bool) for key, val in funnel.items()):
         raise ValueError("invalid Funnel field")
     if any(funnel.values()):
