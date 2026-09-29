@@ -40,8 +40,8 @@ def setup(tmp_path, monkeypatch):
     for path in (cli, apt, wrong):
         path.write_text("#!/bin/sh\n", encoding="utf-8")
         path.chmod(0o700)
-    route = ServeRoute(HOST, "/", GATEWAY, True)
-    owned = OwnedServeRoute("isycode-gateway", HOST, "/", GATEWAY,
+    route = ServeRoute(HOST, "/isycode", GATEWAY, True)
+    owned = OwnedServeRoute("isycode-gateway", HOST, "/isycode", GATEWAY,
                             "2026-09-29T00:00:00Z", "online")
     facts = action_runtime.TailscaleAuthorityFacts(
         cli_executable=str(cli), package_manager=str(apt), os_id="ubuntu",
@@ -102,17 +102,25 @@ def request_for(setup, action_id, **changes):
         "tailscale.login": {"executable": str(cli), "operation": "login"},
         "tailscale.serve.enable": {
             "executable": str(cli), "gateway_url": GATEWAY, "gateway_port": 8787,
-            "route_id": "isycode-gateway", "route_host": HOST, "route_path": "/",
+            "route_id": "isycode-gateway", "route_host": HOST, "route_path": "/isycode",
             "route_target": GATEWAY, "serve_digest": DIGEST, "mode": "private",
             "funnel": False,
         },
         "tailscale.serve.disable": {
             "executable": str(cli), "gateway_url": GATEWAY, "gateway_port": 8787,
-            "route_id": "isycode-gateway", "route_host": HOST, "route_path": "/",
+            "route_id": "isycode-gateway", "route_host": HOST, "route_path": "/isycode",
             "route_target": GATEWAY, "serve_digest": DIGEST, "mode": "private",
             "funnel": False,
         },
     }
+    for action in ("tailscale.serve.enable", "tailscale.serve.disable"):
+        operation = (str(cli), "serve", "--https=443", "--set-path=/isycode", "--bg", GATEWAY)
+        if action.endswith("disable"):
+            operation += ("off",)
+        route = ServeRoute(HOST, "/isycode", GATEWAY, True)
+        all_parameters[action]["serve_argv"] = operation
+        all_parameters[action]["serve_delta_digest"] = action_runtime.tailscale_serve_delta_digest(
+            action, DIGEST, route, operation)
     staged = dict(all_parameters["tailscale.install"])
     stage_dir = staged["stage_directory"]
     archive_name = staged["archive_name"]
@@ -259,9 +267,9 @@ def test_tailscale_matching_but_unowned_existing_route_cannot_enable(setup):
 
 @pytest.mark.parametrize("live_routes,owned,complete,expected", [
     ((), False, True, "ALLOW"),
-    ((ServeRoute("other.tail123.ts.net", "/", GATEWAY, True),), False, True, "ALLOW"),
-    ((ServeRoute(HOST, "/", "http://127.0.0.1:9999", True),), False, True, "DENY"),
-    ((ServeRoute(HOST, "/", GATEWAY, False),), False, True, "DENY"),
+    ((ServeRoute("other.tail123.ts.net", "/isycode", GATEWAY, True),), False, True, "ALLOW"),
+    ((ServeRoute(HOST, "/isycode", "http://127.0.0.1:9999", True),), False, True, "DENY"),
+    ((ServeRoute(HOST, "/isycode", GATEWAY, False),), False, True, "DENY"),
     ((), True, True, "DENY"),  # Stale ownership record must be resolved.
     (None, False, False, "DENY"),  # Unknown inventory is not a free target.
     ((), False, False, "DENY"),
@@ -279,9 +287,9 @@ def test_tailscale_enable_requires_verified_free_or_owned_target(
 
 
 @pytest.mark.parametrize("live_routes,complete", [
-    ((), True),
-    ((ServeRoute(HOST, "/", "http://127.0.0.1:9999", True),), True),
-    ((ServeRoute(HOST, "/", GATEWAY, False),), True),
+    ((), True),  # Saved ownership permits clearing a stale local record.
+    ((ServeRoute(HOST, "/isycode", "http://127.0.0.1:9999", True),), True),
+    ((ServeRoute(HOST, "/isycode", GATEWAY, False),), True),
     (None, False),
 ])
 def test_tailscale_disable_requires_fresh_matching_live_route(
@@ -290,8 +298,9 @@ def test_tailscale_disable_requires_fresh_matching_live_route(
     authority.set_grant("tailscale.serve.disable", enabled=True, executables=[cli])
     request = request_for(setup, "tailscale.serve.disable")
     observed = replace(facts, live_routes=live_routes, serve_inventory_complete=complete)
+    expected = "ALLOW" if live_routes == () and complete else "DENY"
     assert authorize(setup, request, facts=observed,
-                     approval=approvals.issue(request)).status == "DENY"
+                     approval=approvals.issue(request)).status == expected
 
 
 def test_tailscale_missing_adapter_facts_deny_even_with_grant_and_approval(setup):
@@ -311,6 +320,22 @@ def test_tailscale_approval_for_different_valid_route_digest_denies(setup):
     updated_facts = replace(facts, serve_digest="b" * 64)
     assert authorize(setup, different, facts=updated_facts,
                      approval=approvals.issue(original)).status == "DENY"
+
+
+@pytest.mark.parametrize("key,value", [
+    ("serve_argv", ("/usr/bin/tailscale", "serve", "reset")),
+    ("serve_delta_digest", "b" * 64),
+    ("funnel", True),
+])
+def test_serve_authority_binds_fixed_private_delta(setup, key, value):
+    root, cli, _, _, facts, authority, approvals = setup
+    authority.set_grant("tailscale.serve.enable", enabled=True, executables=[cli])
+    params = dict(request_for(setup, "tailscale.serve.enable").parameters)
+    params[key] = value
+    request = ActionRequest("tailscale.serve.enable", root, "tailscale", params,
+                            execution_owner="tailscale_serve")
+    assert authorize(setup, request, facts=facts,
+                     approval=approvals.issue(request)).status == "DENY"
 
 
 def test_tailscale_expired_approval_denies(setup, monkeypatch):

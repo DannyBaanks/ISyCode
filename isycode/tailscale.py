@@ -57,6 +57,8 @@ class TailscaleSnapshot:
     serve_digest: str | None = None
     gateway_url: str | None = None
     gateway_healthy: bool = False
+    serve_node_config: str | None = None
+    serve_services_config: str | None = None
 
 
 def _bounded_run(argv: Sequence[str], *, env: Mapping[str, str], timeout: float,
@@ -313,8 +315,10 @@ class TailscaleAdapter:
                 node_result = self._run(executable, ("serve", "status", "--json"))
                 if services_result.returncode or node_result.returncode:
                     raise ValueError("Serve inventory unavailable")
-                service_routes = _parse_services(_bounded_json(services_result.stdout))
-                node_state, node_routes = _parse_serve(_bounded_json(node_result.stdout))
+                service_config = _bounded_json(services_result.stdout)
+                node_config = _bounded_json(node_result.stdout)
+                service_routes = _parse_services(service_config)
+                node_state, node_routes = _parse_serve(node_config)
                 routes = service_routes + node_routes
                 if len(routes) > MAX_ROUTES:
                     raise ValueError("too many Serve routes")
@@ -323,8 +327,11 @@ class TailscaleAdapter:
                 digest = hashlib.sha256(
                     services_result.stdout.encode("utf-8") + b"\0" +
                     node_result.stdout.encode("utf-8")).hexdigest()
-                return TailscaleSnapshot(state, serve_state, executable, version, dns,
-                    routes, digest, gateway_url, healthy)
+                return TailscaleSnapshot(
+                    state, serve_state, executable, version, dns, routes, digest,
+                    gateway_url, healthy,
+                    json.dumps(node_config, sort_keys=True, separators=(",", ":")),
+                    json.dumps(service_config, sort_keys=True, separators=(",", ":")))
             except (OSError, ValueError, TypeError, UnicodeError, RecursionError,
                     subprocess.TimeoutExpired):
                 return TailscaleSnapshot(state, "conflict", executable, version, dns,

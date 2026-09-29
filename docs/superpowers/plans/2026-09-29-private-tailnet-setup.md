@@ -129,12 +129,14 @@ or restart `tailscaled`.
 - Create `test_tailscale_serve.py`
 - Modify `test_private_access.py` if state needs a typed route identity field
 
-- [ ] Add failing tests for an empty Serve config, compatible existing routes, a conflicting route, unknown CLI schema, wrong Gateway bind/port, public Funnel mode, route drift after preview, repeated enable/disable, and preservation of unrelated routes. Include `test_approval_is_bound_to_exact_serve_delta` and `test_enable_disable_preserve_unowned_routes`.
-- [ ] Define `ServePreview` and `TailscaleServeOwner.preview(snapshot) -> ServePreview` with the exact source loopback endpoint, private tailnet destination, route ID, and serialized configuration delta. Only allow the approved local Gateway address and configured port. Reject public/Funnel flags and any bind address except loopback.
-- [ ] Define `TailscaleServeOwner.enable(request, approval, preview)` and `disable(request, approval, owned_route)`. Re-fetch live Serve state after approval and compare its digest to the preview before any write. If the config changed, require a new preview and approval.
-- [ ] Use only fixed typed Tailscale Serve operations supported by the detected CLI version. Never use a reset/clear-all command. If installed CLI cannot safely add/remove one route while preserving other routes, leave the config untouched and report unsupported/conflict.
-- [ ] After enable, verify the exact private mapping and local Gateway health. Persist route ownership only after verification. Disable only when the state record and live config match; clear the record only after verified removal. Issue redacted durable receipts for every attempt.
-- [ ] Run `pytest -q test_tailscale_serve.py test_private_access.py test_tailscale_authority.py`.
+- [x] Add failing tests for an empty Serve config, compatible existing routes, a conflicting route, unknown CLI schema, wrong Gateway bind/port, public Funnel mode, route drift after preview, repeated enable/disable, and preservation of unrelated routes. Include exact delta-binding and unowned-route preservation cases.
+- [x] Define `ServePreview` and `TailscaleServeOwner` with the exact source loopback endpoint, private tailnet destination, route ID, and serialized configuration delta. Only allow the approved local Gateway address and configured port. Reject public/Funnel flags and any bind address except loopback.
+- [x] Require the same immutable preview/request and fresh approval. Re-fetch live Serve state after approval and compare the exact digest before any write.
+- [x] Use only fixed typed Tailscale Serve operations supported by the detected CLI version. Never use a reset/clear-all command. Refuse unknown or incomplete configuration.
+- [x] Verify the exact private mapping, Gateway health, and preservation of every other node/service config. The adapter retains canonical raw node and Services configuration; owner compares it after projecting out only `/isycode`. Persist an ownership hint only after seeing the mapping live; disable requires that hint and exact live route.
+- [x] Run focused route, authority, adapter, state, journal, and coverage suites; `124 passed`. `git diff --check` passed.
+
+**Task 6 evidence (2026-09-29):** Offline fake-runner witnesses demonstrate exact `/isycode` enable/disable, one-use approval, route ownership, preservation of unrelated Web routes, TCP listeners and Services, fail-closed drift, redacted receipts, and no reset/Funnel. The full suite reached 307 passed before the final coverage snapshot refresh; focused suite after refresh passed 124. Tailscale daemon/device behavior and real tailnet reachability remain **NOT_DEMONSTRATED**. `pyright isycode/tailscale_serve.py` is clean; `action_runtime.py` still reports 11 existing optional-fact type errors in package-install/Gateway contracts (none in the new private-Serve boundary).
 
 ## Task 7: Add the Settings wizard and explicit approval screens
 

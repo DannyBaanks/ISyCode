@@ -54,6 +54,10 @@ DYNAMIC_ACTION_RESOLVERS = {
         "owner": "remote_catalog",
         "actions": ("catalog.external.read", "gateway.files.read", "mcp.discover"),
     },
+    "isycode.tailscale_serve.TailscaleServeOwner._prepare": {
+        "owner": "tailscale_serve",
+        "actions": ("tailscale.serve.enable", "tailscale.serve.disable"),
+    },
 }
 
 _SECURE_DIRECT_API_METHODS = {
@@ -83,8 +87,8 @@ KNOWN_EFFECT_CALLSITES = (
     ("tailscale.install.stage", "TailscalePackageInstallOwner.stage", "tailscale_package_install", "COVERED"),
     ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "COVERED"),
     ("tailscale.login", "TailscaleLoginOwner.begin_login", "tailscale_login", "COVERED"),
-    ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "PLANNED"),
-    ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "PLANNED"),
+    ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "COVERED"),
+    ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "COVERED"),
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
     ("workspace.files.read", "LocalWorkspaceReadOwner.execute", "workspace_read", "COVERED"),
     ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
