@@ -745,6 +745,91 @@
       "variants": []
     },
     {
+      "action": "tailscale.inspect",
+      "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
+      "owners": [
+        "tailscale_read"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "TailscaleExecutableBoundary",
+        "TailscaleGatewayBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "tailscale.install",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
+      "owners": [
+        "tailscale_package_install"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "TailscalePackageBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "tailscale.login",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
+      "owners": [
+        "tailscale_login"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "TailscaleExecutableBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "tailscale.serve.enable",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
+      "owners": [
+        "tailscale_serve"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "TailscaleExecutableBoundary",
+        "TailscaleGatewayBoundary",
+        "TailscalePrivateServeBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "tailscale.serve.disable",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
+      "owners": [
+        "tailscale_serve"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "TailscaleExecutableBoundary",
+        "TailscaleGatewayBoundary",
+        "TailscalePrivateServeBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
       "action": "role.select",
       "approval_required": false,
       "authority": "not an effect authority action",
@@ -759,6 +844,36 @@
   ],
   "ambiguous_actions": [],
   "callsites": [
+    {
+      "action": "tailscale.inspect",
+      "callsite": "TailscaleReadOwner.inspect",
+      "owner": "tailscale_read",
+      "status": "PLANNED"
+    },
+    {
+      "action": "tailscale.install",
+      "callsite": "TailscalePackageInstallOwner.install",
+      "owner": "tailscale_package_install",
+      "status": "PLANNED"
+    },
+    {
+      "action": "tailscale.login",
+      "callsite": "TailscaleLoginOwner.begin_login",
+      "owner": "tailscale_login",
+      "status": "PLANNED"
+    },
+    {
+      "action": "tailscale.serve.enable",
+      "callsite": "TailscaleServeOwner.enable",
+      "owner": "tailscale_serve",
+      "status": "PLANNED"
+    },
+    {
+      "action": "tailscale.serve.disable",
+      "callsite": "TailscaleServeOwner.disable",
+      "owner": "tailscale_serve",
+      "status": "PLANNED"
+    },
     {
       "action": "provider.request",
       "callsite": "ProviderNetworkOwner.execute",
@@ -1017,7 +1132,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 973,
+      "line": 1152,
       "owner": "workspace_read"
     },
     {
@@ -1050,49 +1165,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 845,
+      "line": 1024,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 973,
+      "line": 1152,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 634,
+      "line": 813,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 698,
+      "line": 877,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 768,
+      "line": 947,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 854,
+      "line": 1033,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 915,
+      "line": 1094,
       "owner": "provider_network"
     },
     {
@@ -1176,13 +1291,13 @@
   "secure_tui_direct_api_bypasses": [],
   "stale_callsites": [],
   "summary": {
-    "actions": 54,
+    "actions": 59,
     "ambiguous": 0,
     "authority_frontier_pass": true,
-    "effectful": 42,
+    "effectful": 46,
     "explicit_deny": 34,
     "owner_shared_read": 1,
-    "owner_valid": 17,
+    "owner_valid": 22,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

@@ -76,6 +76,13 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
 KNOWN_EFFECT_CALLSITES = (
+    # Task 3 registers the authority contracts. These concrete owner methods
+    # are implemented in Tasks 4-6; PLANNED does not claim effect reachability.
+    ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "PLANNED"),
+    ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "PLANNED"),
+    ("tailscale.login", "TailscaleLoginOwner.begin_login", "tailscale_login", "PLANNED"),
+    ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "PLANNED"),
+    ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "PLANNED"),
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
     ("workspace.files.read", "LocalWorkspaceReadOwner.execute", "workspace_read", "COVERED"),
     ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
@@ -200,7 +207,8 @@ def owner_coverage_report() -> dict[str, Any]:
                  for action, callsite, owner, status in KNOWN_EFFECT_CALLSITES]
     direct_api_bypasses = secure_tui_direct_api_bypasses()
     stale_callsites = sorted(item["callsite"] for item in callsites
-                             if not _callsite_exists(item["callsite"]))
+                             if item["status"] != "PLANNED"
+                             and not _callsite_exists(item["callsite"]))
     request_constructors = discover_action_request_constructors()
     dynamic_constructors = [item for item in request_constructors
                             if item["action"] is None or item["owner"] is None]
@@ -243,7 +251,8 @@ def owner_coverage_report() -> dict[str, Any]:
         "ambiguous_actions": conflicts,
         "unowned_effectful_actions": unowned_effectful,
         "effectful_callsites_without_mediation": [
-            item for item in callsites if item["status"] in {"UNWIRED", "BYPASS_RISK", "NOT_DEMONSTRATED"}
+            item for item in callsites if item["status"] in {"UNWIRED", "BYPASS_RISK",
+                                                         "NOT_DEMONSTRATED", "PLANNED"}
         ],
         "secure_tui_direct_api_bypasses": direct_api_bypasses,
         "secure_tui_closed": (
