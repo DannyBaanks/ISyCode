@@ -8,6 +8,7 @@ import asyncio
 import secrets
 import shutil
 import stat
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,8 @@ from isycode.security import (
     SystembilityResult,
 )
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.private_access import OwnedServeRoute
+from isycode.tailscale import ServeRoute, _valid_gateway
 
 
 READ_ACTIONS = frozenset({
@@ -118,6 +121,11 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
         "WorkspaceReadBoundary", "BrokerProvisionBoundary", "BrokerRegistryBoundary",
     }),
     "broker_management": frozenset({"BrokerRegistryBoundary"}),
+    "tailscale_read": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary"}),
+    "tailscale_package_install": frozenset({"TailscalePackageBoundary"}),
+    "tailscale_login": frozenset({"TailscaleExecutableBoundary"}),
+    "tailscale_serve": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary",
+                                   "TailscalePrivateServeBoundary"}),
 }
 
 
@@ -136,7 +144,32 @@ OWNER_ACTIONS = {
     "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
                                       "broker.stop", "broker.remove"}),
+    "tailscale_read": frozenset({"tailscale.inspect"}),
+    "tailscale_package_install": frozenset({"tailscale.install"}),
+    "tailscale_login": frozenset({"tailscale.login"}),
+    "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
 }
+
+
+@dataclass(frozen=True)
+class TailscaleAuthorityFacts:
+    """Trusted, immutable adapter observations supplied by the concrete owner.
+
+    Request parameters alone cannot establish executable, route, or ownership
+    identity. The owner must obtain these facts from its read adapter and state
+    store immediately before authorization; an absent fact denies.
+    """
+
+    cli_executable: str | None = None
+    package_manager: str | None = None
+    os_id: str | None = None
+    os_codename: str | None = None
+    gateway_url: str | None = None
+    gateway_port: int | None = None
+    route_id: str | None = None
+    serve_route: ServeRoute | None = None
+    owned_route: OwnedServeRoute | None = None
+    serve_digest: str | None = None
 
 
 @dataclass(frozen=True)
@@ -543,10 +576,152 @@ class BrokerManagementSystembility:
                                   "operation is bound to the registered broker and its exact workspace")
 
 
+_TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install", "tailscale.login",
+                                "tailscale.serve.enable", "tailscale.serve.disable"})
+_TAILSCALE_SERVE_ACTIONS = frozenset({"tailscale.serve.enable", "tailscale.serve.disable"})
+_TAILSCALE_SERVE_KEYS = frozenset({"executable", "gateway_url", "gateway_port", "route_id",
+                                   "route_host", "route_path", "route_target", "serve_digest",
+                                   "mode", "funnel"})
+_SUPPORTED_TAILSCALE_APT = {
+    "ubuntu": frozenset({"focal", "jammy", "noble"}),
+    "debian": frozenset({"bullseye", "bookworm", "trixie"}),
+}
+
+
+def _canonical_executable_identity(value: object, expected_name: str) -> bool:
+    """Check the canonical path shape; the adapter resolves it before supplying facts."""
+    if not isinstance(value, str) or not value or len(value) > 4096:
+        return False
+    return (os.path.isabs(value) and os.path.normpath(value) == value
+            and Path(value).name == expected_name)
+
+
+class TailscaleExecutableSystembility:
+    """Bind the CLI to the canonical executable observed by the read adapter."""
+
+    name = "TailscaleExecutableBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in _TAILSCALE_ACTIONS - {"tailscale.install"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        executable = request.parameters.get("executable")
+        valid = (request.target == "tailscale" and isinstance(self.facts, TailscaleAuthorityFacts)
+                 and executable == self.facts.cli_executable
+                 and _canonical_executable_identity(executable, "tailscale"))
+        if request.action_id == "tailscale.login":
+            valid = (valid and set(request.parameters) == {"executable", "operation"}
+                     and request.parameters.get("operation") == "login")
+        return SystembilityResult(self.name, bool(valid),
+                                  "canonical observed Tailscale executable required")
+
+
+class TailscalePackageSystembility:
+    """Restrict installation to one observed Ubuntu/Debian stable apt recipe."""
+
+    name = "TailscalePackageBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "tailscale.install":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        facts = self.facts
+        valid = (isinstance(facts, TailscaleAuthorityFacts)
+                 and request.target == "tailscale"
+                 and set(params) == {"executable", "os_id", "os_codename",
+                                     "repository_key_url", "repository_list_url", "package"}
+                 and params.get("executable") == facts.package_manager
+                 and _canonical_executable_identity(facts.package_manager, "apt-get")
+                 and facts.os_id in _SUPPORTED_TAILSCALE_APT
+                 and facts.os_codename in _SUPPORTED_TAILSCALE_APT.get(facts.os_id, ())
+                 and params.get("os_id") == facts.os_id
+                 and params.get("os_codename") == facts.os_codename
+                 and params.get("package") == "tailscale")
+        if valid:
+            base = f"https://pkgs.tailscale.com/stable/{facts.os_id}/{facts.os_codename}"
+            valid = (params.get("repository_key_url") == base + ".noarmor.gpg"
+                     and params.get("repository_list_url") == base + ".tailscale-keyring.list")
+        return SystembilityResult(self.name, bool(valid),
+                                  "supported OS and exact official stable package recipe required")
+
+
+class TailscaleGatewaySystembility:
+    """Keep the configured Gateway on its exact loopback endpoint and port."""
+
+    name = "TailscaleGatewayBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in _TAILSCALE_SERVE_ACTIONS | {"tailscale.inspect"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        facts = self.facts
+        valid = (isinstance(facts, TailscaleAuthorityFacts)
+                 and request.target == "tailscale"
+                 and _valid_gateway(facts.gateway_url or "", facts.gateway_port)
+                 and params.get("gateway_url") == facts.gateway_url
+                 and type(params.get("gateway_port")) is int
+                 and params.get("gateway_port") == facts.gateway_port)
+        if request.action_id == "tailscale.inspect":
+            valid = valid and set(params) == {"executable", "gateway_url", "gateway_port"}
+        return SystembilityResult(self.name, bool(valid),
+                                  "exact configured loopback Gateway endpoint required")
+
+
+class TailscalePrivateServeSystembility:
+    """Bind one private route to the observed config and recorded ownership."""
+
+    name = "TailscalePrivateServeBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in _TAILSCALE_SERVE_ACTIONS:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        facts = self.facts
+        route = facts.serve_route if isinstance(facts, TailscaleAuthorityFacts) else None
+        valid = (request.target == "tailscale" and set(params) == _TAILSCALE_SERVE_KEYS
+                 and isinstance(route, ServeRoute) and route.private is True
+                 and isinstance(facts.route_id, str)
+                 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", facts.route_id) is not None
+                 and isinstance(route.host, str)
+                 and re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*\.ts\.net", route.host) is not None
+                 and route.path == "/" and route.target == facts.gateway_url
+                 and isinstance(facts.serve_digest, str)
+                 and re.fullmatch(r"[0-9a-f]{64}", facts.serve_digest) is not None
+                 and params.get("route_id") == facts.route_id
+                 and params.get("route_host") == route.host
+                 and params.get("route_path") == route.path
+                 and params.get("route_target") == route.target
+                 and params.get("serve_digest") == facts.serve_digest
+                 and params.get("mode") == "private" and params.get("funnel") is False)
+        if valid and request.action_id == "tailscale.serve.disable":
+            owned = facts.owned_route
+            valid = (isinstance(owned, OwnedServeRoute)
+                     and (owned.route_id, owned.host, owned.path, owned.target)
+                     == (facts.route_id, route.host, route.path, route.target))
+        return SystembilityResult(self.name, bool(valid),
+                                  "private Serve route must match live config and owned identity")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
-    def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str):
+    def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str,
+                 tailscale_facts: TailscaleAuthorityFacts | None = None):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
         owner_id = self.owner_id
@@ -589,6 +764,10 @@ class ProductActionGate:
             RemoteReadSystembility(), SessionDeleteSystembility(), MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),
+            TailscaleExecutableSystembility(tailscale_facts),
+            TailscalePackageSystembility(tailscale_facts),
+            TailscaleGatewaySystembility(tailscale_facts),
+            TailscalePrivateServeSystembility(tailscale_facts),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,

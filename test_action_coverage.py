@@ -119,6 +119,29 @@ def test_declared_effect_callsites_reference_catalog_actions():
     assert {item[0] for item in action_coverage.KNOWN_EFFECT_CALLSITES} <= set(ACTION_BY_ID)
 
 
+def test_tailscale_contract_actions_have_one_owner_and_named_pending_callsite():
+    report = action_coverage.owner_coverage_report()
+    expected = {
+        "tailscale.inspect": "tailscale_read",
+        "tailscale.install": "tailscale_package_install",
+        "tailscale.login": "tailscale_login",
+        "tailscale.serve.enable": "tailscale_serve",
+        "tailscale.serve.disable": "tailscale_serve",
+    }
+    rows = {row["action"]: row for row in report["actions"]}
+    for action, owner in expected.items():
+        assert rows[action]["classification"] == "OWNER_VALID"
+        assert rows[action]["owners"] == [owner]
+        callsites = [item for item in report["callsites"] if item["action"] == action]
+        assert len(callsites) == 1
+        assert callsites[0]["owner"] == owner
+        assert callsites[0]["callsite"]
+        assert callsites[0]["status"] == "PLANNED"
+        assert not action_coverage._callsite_exists(callsites[0]["callsite"])
+    assert report["authority_frontier_pass"] is True
+    assert report["unclassified_actions"] == []
+
+
 def test_every_catalog_action_has_an_explicit_authority_classification():
     report = action_coverage.owner_coverage_report()
 
