@@ -42,3 +42,19 @@ ownership inference was added.
 This task adds storage only. Task 6 must supply the fresh live configuration
 and route-status comparisons before any route removal; this store does not
 claim that a saved record proves ownership.
+
+## Review follow-up: bounded writes and directory traversal
+
+Addressed review findings in a follow-up commit. The store now checks every
+existing path component for symlinks before creating or resolving the state
+directory. Writes validate the route count and exact route values, serialize
+before replacement, and reject payloads above `MAX_BYTES`; therefore each
+successful write satisfies the same count and byte bounds enforced on load.
+
+Additional regression tests verify the eight-route boundary, rejection of a
+ninth route without changing the previous file, encoded-size rejection before
+replacement, preservation of existing state when atomic replacement fails,
+symlinked-parent rejection, and wrong adapter-version rejection.
+
+TDD evidence: before the fix, the new route-count and symlinked-parent tests
+failed (**2 failed, 13 passed**). After the fix, `pytest -q test_private_access.py` reported **15 passed** and `git diff --check` passed.
