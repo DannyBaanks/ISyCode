@@ -638,14 +638,17 @@ class TailscalePackageSystembility:
         valid = (isinstance(facts, TailscaleAuthorityFacts)
                  and request.target == "tailscale"
                  and set(params) == {"executable", "os_id", "os_codename",
-                                     "repository_key_url", "repository_list_url", "package"}
+                                     "repository_key_url", "repository_list_url", "package",
+                                     "package_service_effect"}
                  and params.get("executable") == facts.package_manager
                  and _canonical_executable_identity(facts.package_manager, "apt-get")
                  and facts.os_id in _SUPPORTED_TAILSCALE_APT
                  and facts.os_codename in _SUPPORTED_TAILSCALE_APT.get(facts.os_id, ())
                  and params.get("os_id") == facts.os_id
                  and params.get("os_codename") == facts.os_codename
-                 and params.get("package") == "tailscale")
+                 and params.get("package") == "tailscale"
+                 and params.get("package_service_effect") ==
+                     "may_start_or_restart_tailscaled")
         if valid:
             base = f"https://pkgs.tailscale.com/stable/{facts.os_id}/{facts.os_codename}"
             valid = (params.get("repository_key_url") == base + ".noarmor.gpg"

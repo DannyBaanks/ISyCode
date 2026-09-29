@@ -60,6 +60,7 @@ def request_for(setup, action_id, **changes):
             "repository_key_url": "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg",
             "repository_list_url": "https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list",
             "package": "tailscale",
+            "package_service_effect": "may_start_or_restart_tailscaled",
         },
         "tailscale.login": {"executable": str(cli), "operation": "login"},
         "tailscale.serve.enable": {
@@ -138,7 +139,8 @@ def test_tailscale_request_parameters_fail_closed(setup, action_id):
     invalid_changes = [{"executable": str(wrong)}, {"unexpected": True}]
     if action_id == "tailscale.install":
         invalid_changes += [{"package": "other"}, {"os_id": "fedora"},
-                            {"repository_key_url": "https://evil.example/key"}]
+                            {"repository_key_url": "https://evil.example/key"},
+                            {"package_service_effect": "no_service_start"}]
     if action_id in {"tailscale.inspect", "tailscale.serve.enable", "tailscale.serve.disable"}:
         invalid_changes += [{"gateway_url": "http://0.0.0.0:8787"},
                             {"gateway_port": 8788}]

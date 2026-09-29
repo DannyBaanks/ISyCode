@@ -58,7 +58,6 @@ def setup(tmp_path, monkeypatch):
         key_fingerprint=lambda _: KEY_FINGERPRINT,
         privileged_run=privilege, inventory=inventory,
         installed_file_state=lambda _: "absent",
-        service_start_guard=lambda: True,
     )
     return owner, authority, approvals, privilege, fetched, inventory_calls
 
@@ -94,6 +93,8 @@ def test_plan_preview_binds_official_source_and_exact_package(setup):
     assert SOURCE.splitlines()[1] in preview
     assert "apt-get update" in preview and "apt-get install tailscale" in preview
     assert "/var/lib/apt/lists/isycode-tailscale" in preview
+    assert request.parameters["package_service_effect"] == "may_start_or_restart_tailscaled"
+    assert "may start or restart tailscaled" in preview
 
 
 def test_install_requires_exact_grant_and_fresh_approval_before_effect(setup):
@@ -181,11 +182,15 @@ def test_timeout_records_failure_without_following_steps(setup):
     assert "hidden" not in outcome.reason + outcome.text
 
 
-def test_default_owner_refuses_package_that_can_start_daemon(setup):
-    owner, _, _, privilege, _, _ = setup
-    owner._service_start_guard = lambda: False
+def test_service_effect_change_invalidates_approval_before_privilege(setup):
+    owner, _, approvals, privilege, fetched, _ = setup
     request, approval = approved(setup)
-    outcome = owner.install(request, approval)
-    assert outcome.decision == "ERROR"
-    assert "daemon" in outcome.reason
-    assert privilege.calls == []
+    understated = replace(request, parameters={**request.parameters,
+                          "package_service_effect": "no_service_start"})
+    omitted = replace(request, parameters={key: value for key, value in
+                      request.parameters.items() if key != "package_service_effect"})
+    assert owner.install(understated, approval).decision == "DENY"
+    assert owner.install(understated, approvals.issue(understated)).decision == "DENY"
+    assert owner.install(omitted, approvals.issue(omitted)).decision == "DENY"
+    assert privilege.calls == [] and fetched == []
+    assert owner.install(request, approval).decision == "ALLOW"

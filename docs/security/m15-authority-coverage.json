@@ -1132,7 +1132,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1164,
+      "line": 1167,
       "owner": "workspace_read"
     },
     {
@@ -1165,49 +1165,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1036,
+      "line": 1039,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1164,
+      "line": 1167,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 825,
+      "line": 828,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 889,
+      "line": 892,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 959,
+      "line": 962,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1045,
+      "line": 1048,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1106,
+      "line": 1109,
       "owner": "provider_network"
     },
     {
@@ -1256,7 +1256,7 @@
       "action": "tailscale.install",
       "callable": "isycode.tailscale_install.UbuntuDebianInstallPlan.request",
       "file": "isycode/tailscale_install.py",
-      "line": 86,
+      "line": 89,
       "owner": "tailscale_package_install"
     },
     {
