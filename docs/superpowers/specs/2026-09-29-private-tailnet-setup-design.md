@@ -194,7 +194,13 @@ unrelated system state.
 5. **Future adapters:** add each additional tunnel or MCP manager only after
    its own owner/security design and user-reviewed scope.
 
-**Review note:** Approval of this design authorizes writing a sequenced
-implementation plan, not implementation or privileged installation. Each
-future install/login/tunnel/MCP change still requires the final user approval
-described above.
+## Implementation evidence (2026-09-29)
+
+- **DEMONSTRATED (offline):** exact `/isycode` preview, Authority/IsySentinel binding, fresh approval, one-use receipt, enable/readback/disable, preservation of unrelated Web handlers, TCP listeners and Services, cancellation without mutation, and fail-closed route drift.
+- **DEMONSTRATED (UI smoke):** Settings renders the Private access branch and the missing-CLI install/manual choices in a temporary workspace. The smoke created no `.isyroot` and made no system change.
+- **NOT_DEMONSTRATED:** installing on a real host, completing browser login, enabling/disabling a real Serve route, reaching the Gateway from another tailnet device, rejecting access outside the tailnet, and rechecking Gateway API-key/workspace scopes over the tunnel.
+- Additional providers, tunnel products and MCP managers remain future adapters with their own owner and approval design.
+
+**Review note:** The implementation exposes guided opt-in steps. No package installation,
+login, or Serve change occurred during development; those operations still require
+their own explicit Authority grant, preview, and final per-step user approval.

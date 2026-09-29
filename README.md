@@ -42,6 +42,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 - Files/context se leen mediante owners nativos de ISyCode, grants explícitos de Workspace Authority e ISySentinel; `.isyroot` limita el árbol pero nunca concede acceso.
 - Once operaciones semánticas read-only del Gateway con payloads tipados, revisión explícita y gates locales/remotos independientes.
 - Gateway MCP: listar herramientas y flujo manual para revisar payload y aprobar una llamada individual.
+- **Acceso privado opcional por Tailscale:** Settings descubre el cliente local bajo un owner read-only. El wizard ofrece la guía oficial o una instalación automatizada de paquetes Ubuntu/Debian en tres pasos aprobados, login de navegador sin guardar credenciales y una ruta Tailscale Serve privada `/isycode` hacia el Gateway loopback. Grants por workspace y ejecutable, IsySentinel, aprobación fresca y receipts siguen siendo obligatorios; no se usa `serve reset` ni Funnel. Ver [evidencia y límites de Tailscale](docs/superpowers/specs/2026-09-29-private-tailnet-setup-design.md).
 - Lectura de archivos y consultas de símbolos Pyright pasan por owners y permisos específicos cuando se configuran. En Secure están bloqueados la inyección por picker de `AGENTS.md`/`AGENT.md`, el selector de README, la selección de carpeta para broker y copiar ruta porque sus acciones de picker/clipboard aún no tienen owners. Las utilidades nativas se conservan como código, pero no se invocan desde la TUI.
 - El módulo Mobile Host contiene health, pairing e inventario de runtimes, pero Secure no lo arranca ni emite pairing desde la TUI porque sus rutas aún no tienen owner.
 
@@ -56,6 +57,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 - **LSP:** Pyright ofrece `workspace/symbol`; Rust Analyzer se detecta como no soportado. No hay todavía diagnósticos, autocompletado ni navegación completa.
 - **Mobile Host:** aún faltan sesiones remotas, streaming, cancelación, approvals, adapters operativos y administración completa de credenciales.
 - **Providers:** OAuth todavía no está implementado. Los métodos OAuth leídos de un catálogo externo son metadatos.
+- **Tailscale real:** el flujo de owners/UI y la preservación de configuración pasan pruebas offline y un smoke visual temporal. No se instaló software, no se inició sesión real, no se cambió Serve y no se probó acceso desde otro dispositivo; la conectividad de tailnet permanece **NOT_DEMONSTRATED**. El installer queda limitado a Ubuntu/Debian compatible; las demás plataformas muestran pasos manuales.
 - **OpenISy L0/L1:** sus contratos se documentan como integración futura; el ciclo de staging, activación, worker aislado, receipts y rollback no está integrado en ISyCode.
 - **Auditoría duradera y release:** hay journal hash-chain con verificador read-only e inspector; la cadena puede verificarse, pero payloads de request/result no se conservan para recomputar sus digests. Faltan diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners.
 

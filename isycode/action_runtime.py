@@ -678,6 +678,12 @@ class TailscalePackageSystembility:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         facts = self.facts
+        if (not isinstance(facts, TailscaleAuthorityFacts)
+                or not isinstance(facts.package_manager, str)
+                or not isinstance(facts.os_id, str)
+                or not isinstance(facts.os_codename, str)):
+            return SystembilityResult(self.name, False,
+                                      "supported OS and exact official stable package recipe required")
         expected_keys = {"executable", "os_id", "os_codename",
                          "repository_key_url", "repository_list_url", "package",
                          "package_service_effect"}
@@ -694,8 +700,7 @@ class TailscalePackageSystembility:
             if request.action_id == "tailscale.install.stage":
                 expected_keys |= {"stage_artifacts", "stage_operations",
                                   "stage_operations_digest"}
-        valid = (isinstance(facts, TailscaleAuthorityFacts)
-                 and request.target == "tailscale"
+        valid = (request.target == "tailscale"
                  and set(params) == expected_keys
                  and params.get("executable") == facts.package_manager
                  and _canonical_executable_identity(facts.package_manager, "apt-get")
@@ -722,16 +727,17 @@ class TailscalePackageSystembility:
             version = params.get("package_version")
             actions = params.get("package_actions")
             argv = params.get("install_argv")
+            expected_argv = (facts.package_manager, "install", "--yes", "--no-upgrade",
+                             "--no-remove", "--no-download", "--no-install-recommends",
+                             f"tailscale={version}")
             valid = (isinstance(version, str)
                      and re.fullmatch(r"[A-Za-z0-9.+:~_-]{1,160}", version) is not None
                      and actions == (f"Inst tailscale={version}", f"Conf tailscale={version}")
-                     and argv == (facts.package_manager, "install", "--yes", "--no-upgrade",
-                                  "--no-remove", "--no-download", "--no-install-recommends",
-                                  f"tailscale={version}")
+                     and argv == expected_argv
                      and params.get("privilege_argv") ==
                      ("/usr/bin/pkexec", "/usr/bin/env",
                       f"APT_CONFIG={params['stage_directory']}/apt.conf",
-                      "DEBIAN_FRONTEND=noninteractive", *argv)
+                      "DEBIAN_FRONTEND=noninteractive", *expected_argv)
                      and params.get("stage_directory") ==
                      f"/var/lib/isycode/tailscale/{Path(params['private_directory']).name}"
                      and all(isinstance(params.get(key), str)
@@ -748,10 +754,12 @@ class TailscalePackageSystembility:
                              and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
                              for key in ("source_sha256", "config_sha256")))
         if valid and request.action_id == "tailscale.install.stage":
-            artifacts = params.get("stage_artifacts")
+            raw_artifacts = params.get("stage_artifacts")
             private = Path(params["private_directory"])
             prefix = f"pkgs.tailscale.com_stable_{facts.os_id}_dists_{facts.os_codename}_"
-            valid = isinstance(artifacts, tuple) and 5 <= len(artifacts) <= 16
+            valid = isinstance(raw_artifacts, tuple) and 5 <= len(raw_artifacts) <= 16
+            artifacts = raw_artifacts if isinstance(raw_artifacts, tuple) else ()
+            typed_artifacts: list[tuple[str, str, int, str]] = []
             if valid:
                 names = []
                 total = 0
@@ -781,15 +789,18 @@ class TailscalePackageSystembility:
                         break
                     names.append(relative)
                     total += size
+                    typed_artifacts.append((relative, source, size, digest))
                 valid = (valid and names[:3] == ["keyring.gpg", "source.list", "apt.conf"]
                          and names[-1] == f"cache/{params['archive_name']}"
                          and sum(name.startswith("lists/") for name in names) >= 2
                          and total <= 32 * 1024 * 1024 + 80 * 1024 * 1024 + 4 * 16 * 1024)
             if valid:
-                manifest = [(relative, size, digest) for relative, _, size, digest in artifacts]
+                manifest = [(relative, size, digest)
+                            for relative, _, size, digest in typed_artifacts]
                 expected_digest = hashlib.sha256(json.dumps(
                     (params["stage_directory"], manifest), separators=(",", ":")).encode()).hexdigest()
-                operations = tailscale_stage_operations(params["stage_directory"], artifacts)
+                operations = tailscale_stage_operations(params["stage_directory"],
+                                                        tuple(typed_artifacts))
                 operations_digest = hashlib.sha256(json.dumps(
                     operations, separators=(",", ":")).encode()).hexdigest()
                 valid = (params["stage_manifest_digest"] == expected_digest
@@ -813,8 +824,12 @@ class TailscaleGatewaySystembility:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         facts = self.facts
-        valid = (isinstance(facts, TailscaleAuthorityFacts)
-                 and request.target == "tailscale"
+        if (not isinstance(facts, TailscaleAuthorityFacts)
+                or not isinstance(facts.gateway_url, str)
+                or type(facts.gateway_port) is not int):
+            return SystembilityResult(self.name, False,
+                                      "exact configured loopback Gateway endpoint required")
+        valid = (request.target == "tailscale"
                  and _valid_gateway(facts.gateway_url or "", facts.gateway_port)
                  and params.get("gateway_url") == facts.gateway_url
                  and type(params.get("gateway_port")) is int

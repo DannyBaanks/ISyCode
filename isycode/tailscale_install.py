@@ -20,7 +20,7 @@ import sys
 import tempfile
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Callable, Literal, Mapping
+from typing import Callable, IO, Literal, Mapping, cast
 from urllib import request as urlrequest
 
 from isycode.action_runtime import (
@@ -270,7 +270,7 @@ def _read_os_release() -> Mapping[str, str]:
 
 
 class _NoRedirect(urlrequest.HTTPRedirectHandler):
-    def redirect_request(self, request, fp, code, msg, headers, newurl):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise ValueError("repository redirect is not allowed")
 
 
@@ -454,7 +454,12 @@ def _bounded_privileged(argv: tuple[str, ...], *, env: Mapping[str, str],
     process = subprocess.Popen(argv, stdin=subprocess.DEVNULL,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                env=dict(env), close_fds=True, start_new_session=True)
-    chunks = {process.stdout: bytearray(), process.stderr: bytearray()}
+    stdout, stderr = process.stdout, process.stderr
+    if stdout is None or stderr is None:
+        process.kill()
+        process.wait()
+        raise RuntimeError("privileged process output pipes are unavailable")
+    chunks: dict[IO[bytes], bytearray] = {stdout: bytearray(), stderr: bytearray()}
     selector = selectors.DefaultSelector()
     deadline = time.monotonic() + timeout
     completed = False
@@ -467,21 +472,22 @@ def _bounded_privileged(argv: tuple[str, ...], *, env: Mapping[str, str],
             if remaining <= 0:
                 raise TimeoutError("privileged apt operation timed out")
             for key, _ in selector.select(remaining):
-                data = os.read(key.fileobj.fileno(), 4096)
+                pipe = cast(IO[bytes], key.fileobj)
+                data = os.read(pipe.fileno(), 4096)
                 if not data:
-                    selector.unregister(key.fileobj)
+                    selector.unregister(pipe)
                 else:
-                    chunks[key.fileobj].extend(data)
+                    chunks[pipe].extend(data)
                     if sum(len(value) for value in chunks.values()) > max_output:
                         raise ValueError("privileged apt output exceeded limit")
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError("privileged apt operation timed out")
-        process.wait(timeout=remaining)
+        returncode = process.wait(timeout=remaining)
         completed = True
-        return TailscaleCommandResult(process.returncode,
-                                     chunks[process.stdout].decode(errors="replace"),
-                                     chunks[process.stderr].decode(errors="replace"))
+        return TailscaleCommandResult(returncode,
+                                     chunks[stdout].decode(errors="replace"),
+                                     chunks[stderr].decode(errors="replace"))
     finally:
         selector.close()
         if not completed:
@@ -536,8 +542,11 @@ class TailscalePackageInstallOwner:
             raise ValueError("apt-get executable is unavailable")
         root_id = _sha(str(self.root).encode())[:16]
         directory = state_root().expanduser().absolute() / "tailscale-apt" / f"{root_id}-{self._nonce}"
-        return UbuntuDebianInstallPlan.for_release(
-            release.get("ID"), release.get("VERSION_CODENAME"), str(executable), directory)
+        os_id = release.get("ID")
+        codename = release.get("VERSION_CODENAME")
+        if not isinstance(os_id, str) or not isinstance(codename, str):
+            raise ValueError("supported OS identity is unavailable")
+        return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
 
     def _gate(self, plan: UbuntuDebianInstallPlan) -> ProductActionGate:
         facts = TailscaleAuthorityFacts(package_manager=plan.apt_executable,

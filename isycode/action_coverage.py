@@ -58,6 +58,10 @@ DYNAMIC_ACTION_RESOLVERS = {
         "owner": "tailscale_serve",
         "actions": ("tailscale.serve.enable", "tailscale.serve.disable"),
     },
+    "isycode.tailscale_read.TailscaleReadOwner.inspect": {
+        "owner": "tailscale_read",
+        "actions": ("tailscale.inspect",),
+    },
 }
 
 _SECURE_DIRECT_API_METHODS = {
@@ -80,9 +84,7 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
 KNOWN_EFFECT_CALLSITES = (
-    # Task 3 registers authority contracts. Remaining PLANNED owners do not
-    # claim effect reachability until their concrete methods exist.
-    ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "PLANNED"),
+    ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "COVERED"),
     ("tailscale.install.prepare", "TailscalePackageInstallOwner.prepare", "tailscale_package_install", "COVERED"),
     ("tailscale.install.stage", "TailscalePackageInstallOwner.stage", "tailscale_package_install", "COVERED"),
     ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "COVERED"),
