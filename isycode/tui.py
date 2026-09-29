@@ -114,6 +114,12 @@ from isycode.workspace import IsyMotronWorkspace, WorkspaceUnavailable
 from isycode.openisy_client import OpenIsyClient
 from isycode.runtime import AuthorityContextChanged, IsyMotronRuntime
 from isycode.mobile_host import MobileHost
+from isycode.tailscale import DEFAULT_GATEWAY_PORT, TailscaleAdapter, TailscaleSnapshot
+from isycode.tailscale_read import TailscaleReadOwner
+from isycode.tailscale_login import TailscaleLoginOwner
+from isycode.tailscale_install import TailscalePackageInstallOwner
+from isycode.tailscale_serve import TailscaleServeOwner
+from isycode.private_access import PrivateAccessStateStore
 import time as _time
 
 
@@ -306,6 +312,42 @@ ReviewConsentScreen { align: center middle; background: #000000 65%; }
         self.dismiss(event.button.id == "review-send")
 
     def action_cancel_review(self) -> None:
+        self.dismiss(False)
+
+
+class TailscaleConfirmScreen(ModalScreen[bool]):
+    """Show one exact private-access operation before approval is issued."""
+
+    CSS = """
+    TailscaleConfirmScreen { align: center middle; background: #000000 65%; }
+    #tailscale-confirm-card { width: 92%; max-width: 104; height: 80%; max-height: 32; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #tailscale-confirm-title { height: 2; color: #bb8cff; text-style: bold; }
+    #tailscale-confirm-copy { height: 1fr; border: round #48494e; padding: 1; overflow-y: auto; }
+    #tailscale-confirm-actions { height: 3; align-horizontal: right; }
+    #tailscale-confirm-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel"),
+                Binding("ctrl+c", "cancel", "Cancel", show=False)]
+
+    def __init__(self, title: str, details: str, confirm_label: str):
+        super().__init__()
+        self.title_text = title
+        self.details = details
+        self.confirm_label = confirm_label
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="tailscale-confirm-card"):
+            yield Static(self.title_text, id="tailscale-confirm-title")
+            with VerticalScroll(id="tailscale-confirm-copy"):
+                yield Static(Text(self.details))
+            with Horizontal(id="tailscale-confirm-actions"):
+                yield Button("Cancel", id="tailscale-cancel")
+                yield Button(self.confirm_label, id="tailscale-confirm", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "tailscale-confirm")
+
+    def action_cancel(self) -> None:
         self.dismiss(False)
 
 
@@ -1492,6 +1534,10 @@ class TUIApp(App):
         self._pending_review: tuple[str, str] | None = None
         self._review_request_task: asyncio.Task | None = None
         self._mobile_host = MobileHost()
+        self._tailscale_adapter = TailscaleAdapter(gateway_port=DEFAULT_GATEWAY_PORT)
+        self._tailscale_snapshot: TailscaleSnapshot | None = None
+        self._tailscale_login_owner: TailscaleLoginOwner | None = None
+        self._tailscale_login_attempt: str | None = None
         # Saved Bridge opt-in is intentionally ignored until an execution owner is wired.
         self._bridge_enabled = False
         self._agent_context: dict[str, str] | None = None
@@ -2290,6 +2336,7 @@ class TUIApp(App):
             self._entry("Bridge coordination · blocked in Secure",
                         "bridge_settings", ""),
             self._entry("Named API keys", "named_credentials", ""),
+            self._entry("Private access · Tailscale", "private_access", ""),
             self._entry("Authority & Security", "authority_open", ""),
             self._entry("Action journal · verify / inspect", "security_journal", ""),
             self._entry("Inject AGENTS.md context", "context_inject", ""),
@@ -2373,6 +2420,341 @@ class TUIApp(App):
         return {"name": name, "kind": kind,
                 "description": str(selected.get("description", "")),
                 "engine": str(selected.get("engine", "ISyCode selected provider and model"))}
+
+    def _open_private_access_menu(self) -> None:
+        if self._menu_mode != "private_access":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("private_access", "Settings · Private access", [
+            self._entry("Checking local Tailscale status…", "info"),
+            self._entry("Permissions and authority…", "tailscale_permissions", ""),
+            self._entry("Refresh status", "tailscale_refresh", ""),
+            self._entry("Manual setup steps", "tailscale_manual", ""),
+            self._entry("Back to Settings", "settings_back", ""),
+        ])
+        self.run_worker(self._refresh_private_access(), exclusive=True,
+                        group="tailscale-status")
+
+    async def _refresh_private_access(self) -> None:
+        owner = TailscaleReadOwner(
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            self._action_approvals, adapter=self._tailscale_adapter)
+        try:
+            snapshot, outcome = await asyncio.to_thread(owner.inspect)
+        except (OSError, RuntimeError, TypeError, ValueError, WorkspaceAuthorityError):
+            snapshot = TailscaleSnapshot("unavailable")
+            outcome = None
+        self._tailscale_snapshot = snapshot
+        status = snapshot.state.replace("_", " ").title()
+        if outcome is not None and outcome.decision == "DENY":
+            status = "Detected · read-only status grant required"
+        if snapshot.serve_state == "conflict":
+            status = "Serve conflict · no change allowed"
+        elif snapshot.serve_state == "unavailable" and snapshot.state == "signed_in":
+            status = "Verification unavailable · no change allowed"
+        try:
+            owned_route = next((route for route in PrivateAccessStateStore().load().owned_routes
+                                if route.route_id == "isycode-gateway"), None)
+        except (OSError, ValueError):
+            owned_route = None
+        if owned_route is not None:
+            live_route = next((route for route in snapshot.routes
+                               if (route.host, route.path, route.target) ==
+                               (owned_route.host, owned_route.path, owned_route.target)), None)
+            if live_route is not None:
+                status = "Private route online" if snapshot.gateway_healthy else "Private route offline"
+        entries = [self._entry(f"Tailscale · {status}", "info", "",
+                               f"Installed CLI: {snapshot.executable or 'not detected'}\n"
+                               f"Tailnet identity: {snapshot.dns_name or 'not verified'}\n"
+                               f"Serve inventory: {snapshot.serve_state}\n"
+                               f"Gateway: {snapshot.gateway_url or 'not configured'} · "
+                               f"{'healthy' if snapshot.gateway_healthy else 'not verified'}\n"
+                               "Tailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.")]
+        if snapshot.state == "not_authorized":
+            entries.append(self._entry("Grant read-only Tailscale inventory", "tailscale_permissions", ""))
+        elif snapshot.state == "missing_cli":
+            try:
+                TailscalePackageInstallOwner(
+                    self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                    self._action_approvals).plan()
+                entries.append(self._entry(
+                    "Install Tailscale · supported Ubuntu/Debian · three approvals",
+                    "tailscale_install", ""))
+            except (OSError, RuntimeError, TypeError, ValueError):
+                entries.append(self._entry(
+                    "Automated installation unavailable on this system", "info", "",
+                    "Use the official manual instructions; ISyCode will not run an unverified installer."))
+            entries.append(self._entry("Manual installation steps", "tailscale_manual", ""))
+        elif snapshot.state == "unsupported_os":
+            entries.append(self._entry(
+                "Automated installation unavailable on this system", "info", "",
+                "ISyCode automates only the reviewed Ubuntu/Debian package transaction."))
+            entries.append(self._entry("Manual installation steps", "tailscale_manual", ""))
+        elif snapshot.state == "signed_out":
+            entries.append(self._entry("Log in to this tailnet…", "tailscale_login", ""))
+            if self._tailscale_login_owner and self._tailscale_login_attempt:
+                entries.extend([
+                    self._entry("Check browser login status", "tailscale_login_check", ""),
+                    self._entry("Cancel local login process", "tailscale_login_cancel", ""),
+                ])
+        elif snapshot.state == "signed_in":
+            try:
+                owned = any(route.route_id == "isycode-gateway"
+                            for route in PrivateAccessStateStore().load().owned_routes)
+            except (OSError, ValueError):
+                owned = False
+            if owned:
+                entries.append(self._entry("Disable ISyCode private Gateway route…",
+                                           "tailscale_serve_disable", ""))
+            elif snapshot.serve_state in {"empty", "existing"}:
+                entries.append(self._entry("Enable private Gateway route…",
+                                           "tailscale_serve_enable", ""))
+            else:
+                entries.append(self._entry("Serve inventory is unavailable or conflicting",
+                                           "info", "",
+                                           "ISyCode will not change unknown or conflicting Serve configuration."))
+        entries.extend([
+            self._entry("Permissions and authority…", "tailscale_permissions", ""),
+            self._entry("Refresh status", "tailscale_refresh", ""),
+            self._entry("Manual setup steps", "tailscale_manual", ""),
+            self._entry("Back to Settings", "settings_back", ""),
+        ])
+        self._render_menu("private_access", "Settings · Private access", entries)
+
+    def _open_tailscale_permissions(self) -> None:
+        if self._menu_mode != "tailscale_permissions" and self._menu_mode:
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        try:
+            cli = self._tailscale_adapter.resolve_executable()
+        except (OSError, RuntimeError, ValueError):
+            cli = None
+        apt = shutil.which("apt-get")
+        apt_executable = str(Path(apt).resolve(strict=True)) if apt else None
+        scopes = []
+        if cli:
+            scopes.extend(("tailscale.inspect", "tailscale.login",
+                           "tailscale.serve.enable", "tailscale.serve.disable"))
+        if apt:
+            scopes.extend(("tailscale.install.prepare", "tailscale.install.stage",
+                           "tailscale.install"))
+        entries = []
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            for action in scopes:
+                executable = cli if action in {
+                    "tailscale.inspect", "tailscale.login", "tailscale.serve.enable",
+                    "tailscale.serve.disable"} else apt_executable
+                if executable is None:
+                    continue
+                grant = grants.get(action, {})
+                enabled = (grant.get("enabled") is True
+                           and executable in grant.get("executables", []))
+                payload = json.dumps({"action": action, "executable": executable,
+                                      "enabled": enabled})
+                entries.append(self._entry(
+                    f"{'Revoke' if enabled else 'Grant'} {action} · {executable}",
+                    "tailscale_grant", payload,
+                    "This permission is scoped to this workspace and exact executable. "
+                    "Mutations still need a fresh approval."))
+        except (OSError, ValueError, WorkspaceAuthorityError):
+            entries.append(self._entry("Authority policy unavailable · all actions deny", "info"))
+        if not entries:
+            entries.append(self._entry("No supported Tailscale CLI or apt-get was found.", "info"))
+        entries.append(self._entry("Back", "private_access_back", ""))
+        self._render_menu("tailscale_permissions", "Private access · Authority grants", entries)
+
+    async def _change_tailscale_grant(self, payload: str) -> None:
+        try:
+            data = json.loads(payload)
+            action = data["action"]
+            executable = data["executable"]
+            enabled = not data["enabled"]
+            accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                "Workspace Authority · Tailscale",
+                f"{'Grant' if enabled else 'Revoke'} `{action}` for this workspace?\n\n"
+                f"Exact executable: {executable}\n\n"
+                "A grant permits only this owner and executable to request the action. "
+                "It does not log in, install packages, expose the Gateway, or bypass "
+                "IsySentinel. Every mutation still needs its own one-use approval.",
+                "Save grant" if enabled else "Revoke grant"))
+            if not accepted:
+                self._append("  Tailscale authority change cancelled; no grant changed.", MUTED)
+                return
+            WorkspaceAuthority(self._workspace_root).set_grant(
+                action, enabled=enabled, executables=[executable])
+            self._append(f"  Workspace grant {'saved' if enabled else 'revoked'} · {action}.", GREEN)
+            self._open_tailscale_permissions()
+        except (KeyError, json.JSONDecodeError, OSError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Tailscale grant was not changed ({type(exc).__name__}).", RED)
+
+    async def _run_tailscale_install(self) -> None:
+        try:
+            owner = TailscalePackageInstallOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                self._action_approvals)
+            plan = owner.plan()
+            for action_id, request, details, operation in (
+                ("tailscale.install.prepare", plan.prepare_request(self._workspace_root),
+                 plan.prepare_preview(), owner.prepare),
+            ):
+                if not self._tailscale_grant_exists(action_id, plan.apt_executable):
+                    self._append("  Installation blocked · explicitly grant this exact action in "
+                                 "Settings → Private access → Permissions.", YELLOW)
+                    self._open_tailscale_permissions()
+                    return
+                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Prepare official Tailscale package", details,
+                    "Download and verify"))
+                if not accepted:
+                    self._append("  Package preparation cancelled; no package transaction ran.", MUTED)
+                    return
+                approval = self._action_approvals.issue(request, ttl_seconds=30)
+                outcome = await asyncio.to_thread(operation, request, approval)
+                if outcome.decision != "ALLOW":
+                    self._append(f"  Package preparation {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                    return
+            transaction = await asyncio.to_thread(owner.simulate)
+            for action_id, request, details, operation in (
+                ("tailscale.install.stage", transaction.stage_request(self._workspace_root),
+                 transaction.stage_preview(), owner.stage),
+                ("tailscale.install", transaction.request(self._workspace_root),
+                 transaction.preview(), owner.install),
+            ):
+                if not self._tailscale_grant_exists(action_id, transaction.plan.apt_executable):
+                    self._append("  Installation blocked · explicitly grant this exact action in "
+                                 "Settings → Private access → Permissions.", YELLOW)
+                    self._open_tailscale_permissions()
+                    return
+                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Stage verified package as root" if action_id.endswith("stage")
+                    else "Install exact Tailscale package", details,
+                    "Approve this step"))
+                if not accepted:
+                    self._append("  Installation cancelled before this step; no later step ran.", MUTED)
+                    return
+                approval = self._action_approvals.issue(request, ttl_seconds=30)
+                outcome = await asyncio.to_thread(operation, request, approval)
+                if outcome.decision != "ALLOW":
+                    self._append(f"  Tailscale install {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                    return
+                self._append(f"  Tailscale step complete · {action_id} · receipt verified.", GREEN)
+            await self._refresh_private_access()
+        except (OSError, RuntimeError, TypeError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Automated Tailscale install unavailable ({type(exc).__name__}). "
+                         "Use the official manual instructions.", YELLOW)
+
+    def _tailscale_grant_exists(self, action_id: str, executable: str) -> bool:
+        try:
+            grant = WorkspaceAuthority(self._workspace_root).policy()["grants"].get(action_id, {})
+            return (grant.get("enabled") is True
+                    and str(Path(executable).resolve(strict=True)) in grant.get("executables", []))
+        except (OSError, RuntimeError, ValueError, WorkspaceAuthorityError):
+            return False
+
+    async def _run_tailscale_login(self) -> None:
+        owner = TailscaleLoginOwner(
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            self._action_approvals, adapter=self._tailscale_adapter)
+        try:
+            executable = self._tailscale_adapter.resolve_executable()
+            if not executable or not self._tailscale_grant_exists("tailscale.inspect", executable):
+                self._append("  Login status check blocked · grant read-only inventory first.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            request = owner.login_request()
+            if not self._tailscale_grant_exists("tailscale.login", request.parameters["executable"]):
+                self._append("  Login blocked · grant this exact Tailscale executable in "
+                             "Settings → Private access → Permissions.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            details = owner.preview(request)
+            if not await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Sign in to Tailscale", details, "Start browser login")):
+                self._append("  Tailscale login cancelled; no process started.", MUTED)
+                return
+            approval = self._action_approvals.issue(request, ttl_seconds=30)
+            outcome = await asyncio.to_thread(owner.begin_login, request, approval)
+            if outcome.decision != "ALLOW":
+                self._append(f"  Tailscale login {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                return
+            self._tailscale_login_owner = owner
+            self._tailscale_login_attempt = outcome.text.split(": ", 1)[-1]
+            status = await asyncio.to_thread(owner.poll, self._tailscale_login_attempt)
+            if status.login_url:
+                self._append(f"  Open this official login link in your browser: {status.login_url}", CYAN)
+            self._append(f"  Tailscale login · {status.state} · {status.reason}", YELLOW)
+            self._open_private_access_menu()
+        except (OSError, RuntimeError, TypeError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Tailscale login could not start ({type(exc).__name__}).", RED)
+
+    async def _check_tailscale_login(self, cancel: bool = False) -> None:
+        owner = self._tailscale_login_owner
+        attempt = self._tailscale_login_attempt
+        if owner is None or attempt is None:
+            self._append("  No active Tailscale login attempt in this process.", MUTED)
+            return
+        status = await asyncio.to_thread(owner.cancel if cancel else owner.poll, attempt)
+        if status.login_url:
+            self._append(f"  Official Tailscale login link: {status.login_url}", CYAN)
+        self._append(f"  Tailscale login · {status.state} · {status.reason}",
+                     GREEN if status.state == "signed_in" else YELLOW)
+        if status.state != "pending":
+            self._tailscale_login_owner = None
+            self._tailscale_login_attempt = None
+        self._open_private_access_menu()
+
+    async def _run_tailscale_serve(self, enabling: bool) -> None:
+        owner = TailscaleServeOwner(
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            self._action_approvals, adapter=self._tailscale_adapter)
+        action_id = "tailscale.serve.enable" if enabling else "tailscale.serve.disable"
+        try:
+            executable = self._tailscale_adapter.resolve_executable()
+            if not executable or not self._tailscale_grant_exists("tailscale.inspect", executable):
+                self._append("  Serve inventory blocked · grant read-only Tailscale status first.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            preview = owner.preview_enable() if enabling else owner.preview_disable()
+            executable = preview.request.parameters["executable"]
+            if not self._tailscale_grant_exists(action_id, executable):
+                self._append("  Serve change blocked · grant this exact Tailscale executable in "
+                             "Settings → Private access → Permissions.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            label = "Enable private route" if enabling else "Disable owned private route"
+            if not await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Private Tailscale Serve", preview.description, label)):
+                self._append("  Tailscale Serve change cancelled; no command ran.", MUTED)
+                return
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=30)
+            operation = owner.enable if enabling else owner.disable
+            outcome = await asyncio.to_thread(operation, preview, approval)
+            self._append(f"  Tailscale Serve · {outcome.decision} · {outcome.text}",
+                         GREEN if outcome.decision == "ALLOW" else YELLOW)
+            if outcome.receipt:
+                self._append(f"  Receipt · {outcome.receipt.receipt_id}", MUTED)
+            self._open_private_access_menu()
+        except (OSError, RuntimeError, TypeError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Private Serve is unavailable or conflicting ({type(exc).__name__}). "
+                         "No route change was approved.", YELLOW)
+
+    async def _show_tailscale_manual_steps(self) -> None:
+        details = (
+            "1. Install Tailscale using the official Linux guide: "
+            "https://tailscale.com/docs/install/linux\n"
+            "2. Return here and grant read-only local Tailscale inventory.\n"
+            "3. Sign in from the Tailscale browser login flow.\n"
+            "4. Grant `tailscale.serve.enable`, then review the exact `/isycode` route before enabling it.\n\n"
+            "ISyCode's automated installer supports only the verified Ubuntu/Debian package recipe. "
+            "Manual installation does not grant permissions, sign in, change Serve, or install a daemon "
+            "through this TUI. Tailscale Serve is private to the tailnet; Gateway keys/scopes and "
+            "workspace filesystem grants remain separate.")
+        await self.push_screen_wait(TailscaleConfirmScreen(
+            "Manual private-access setup", details, "Done"))
+        self._open_private_access_menu()
 
     def _open_bridge_settings(self) -> None:
         entries = [self._entry(
@@ -3136,6 +3518,55 @@ class TUIApp(App):
             return
         if kind == "bridge_settings":
             self._open_bridge_settings()
+            return
+        if kind == "private_access":
+            self._open_private_access_menu()
+            return
+        if kind == "tailscale_permissions":
+            self._open_tailscale_permissions()
+            return
+        if kind == "tailscale_grant":
+            self.run_worker(self._change_tailscale_grant(value), exclusive=True,
+                            group="tailscale-authority")
+            return
+        if kind == "tailscale_refresh":
+            self.run_worker(self._refresh_private_access(), exclusive=True,
+                            group="tailscale-status")
+            return
+        if kind == "tailscale_install":
+            self.run_worker(self._run_tailscale_install(), exclusive=True,
+                            group="tailscale-install")
+            return
+        if kind == "tailscale_manual":
+            self.run_worker(self._show_tailscale_manual_steps(), exclusive=True,
+                            group="tailscale-manual")
+            return
+        if kind == "tailscale_login":
+            self.run_worker(self._run_tailscale_login(), exclusive=True,
+                            group="tailscale-login")
+            return
+        if kind == "tailscale_login_check":
+            self.run_worker(self._check_tailscale_login(), exclusive=True,
+                            group="tailscale-login")
+            return
+        if kind == "tailscale_login_cancel":
+            self.run_worker(self._check_tailscale_login(cancel=True), exclusive=True,
+                            group="tailscale-login")
+            return
+        if kind == "tailscale_serve_enable":
+            self.run_worker(self._run_tailscale_serve(True), exclusive=True,
+                            group="tailscale-serve")
+            return
+        if kind == "tailscale_serve_disable":
+            self.run_worker(self._run_tailscale_serve(False), exclusive=True,
+                            group="tailscale-serve")
+            return
+        if kind == "private_access_back":
+            if self._menu_stack:
+                mode, title, entries = self._menu_stack.pop()
+                self._render_menu(mode, title, entries)
+            else:
+                self._open_private_access_menu()
             return
         if kind == "bridge_toggle":
             self._set_activity("Bridge is blocked in Secure · no execution owner is connected", YELLOW)

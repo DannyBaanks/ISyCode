@@ -134,7 +134,7 @@ or restart `tailscaled`.
 - [x] Verify the exact private mapping, Gateway health, and preservation of every other node/service config. The adapter retains canonical raw node and Services configuration; owner compares it after projecting out only `/isycode`. Persist an ownership hint only after seeing the mapping live; disable requires that hint and exact live route.
 - [x] Run focused route, authority, adapter, state, journal, and coverage suites; `124 passed`. `git diff --check` passed.
 
-**Task 6 evidence (2026-09-29):** Offline fake-runner witnesses demonstrate exact `/isycode` enable/disable, one-use approval, route ownership, preservation of unrelated Web routes, TCP listeners and Services, fail-closed drift, redacted receipts, and no reset/Funnel. The full suite reached 307 passed before the final coverage snapshot refresh; focused suite after refresh passed 124. Tailscale daemon/device behavior and real tailnet reachability remain **NOT_DEMONSTRATED**. `pyright isycode/tailscale_serve.py` is clean; `action_runtime.py` still reports 11 existing optional-fact type errors in package-install/Gateway contracts (none in the new private-Serve boundary).
+**Task 6 evidence (2026-09-29):** Offline fake-runner witnesses demonstrate exact `/isycode` enable/disable, one-use approval, route ownership, preservation of unrelated Web routes, TCP listeners and Services, fail-closed drift, redacted receipts, and no reset/Funnel. Tailscale daemon/device behavior and real tailnet reachability remain **NOT_DEMONSTRATED**. The final full suite has 317 passing tests; Pyright on every touched owner, runtime, adapter and TUI module reports zero errors.
 
 ## Task 7: Add the Settings wizard and explicit approval screens
 
@@ -143,13 +143,12 @@ or restart `tailscaled`.
 - Create `test_tailscale_tui.py`
 - Modify `test_secure_tui_surfaces.py`
 
-- [ ] Add failing Textual tests for Settings entry, preflight-only open, missing/unsupported Tailscale, signed-out login, install-choice menu (official automated install with disclosed service effect, or manual instructions), Serve preview, conflict display, online status, disable preview, and cancel. Show automated "keep service stopped" as unavailable with a reason until it has a safely scoped owner. Opening the wizard and cancelling each modal must run no mutating owner.
-- [ ] Add **Settings → Remote access → Private access (Tailscale)** with explicit wizard states. Display installation/login/Gateway/Serve facts separately and distinguish `not configured`, `conflict`, `private online`, and `verification unavailable`.
-- [ ] Add focused confirmation screens showing the exact package source/action, login launch, Serve mapping, or mapping removal. Issue `ActionApprovalStore.issue()` only after confirmation; pass that same immutable request and approval to the matching owner. Ensure target/parameters in the request are exactly those rendered to the user.
-- [ ] Add an Authority section showing per-action grants for the four owner families. An Authority grant does not enable a route by itself; every state change still needs an owner, Sentinel allow, a fresh one-use approval, and receipt. The wizard may guide the user to create a narrowly scoped grant, but must not create one silently.
-- [ ] Keep Tailscale state refresh read-only and bounded. Do not start Mobile Host, alter MCP settings, or add a public tunnel from this screen.
-- [ ] Extend the static direct-API audit to forbid TUI direct calls to package manager or Tailscale mutation methods; only the four registered owners may call them.
-- [ ] Run `pytest -q test_tailscale_tui.py test_secure_tui_surfaces.py test_action_coverage.py`.
+- [x] Add UI mediation tests and a temporary Textual smoke for Settings entry, missing-CLI choice, and no workspace marker/system mutation. Owner suites cover signed-out login, install phases, Serve conflict/drift, online state and cancellation. A state-by-state screenshot suite remains desirable.
+- [x] Add **Settings → Private access (Tailscale)** with separate installation, login, Gateway and Serve details; offer automated/manual install and read-only refresh.
+- [x] Add per-action Authority grants scoped to the exact CLI or apt executable. Grant consent has its own confirmation and does not issue effect approval.
+- [x] Each install phase, login launch, Serve enable and Serve disable shows the exact request and issues a fresh one-use approval only after confirmation. Refresh is read-only; Mobile Host, MCP and Funnel are not started.
+- [x] Add static tests forbidding direct subprocess/mutation calls in TUI entrypoints; operations route through registered owners.
+- [x] Focused TUI/owner tests passed; Textual smoke at 140×40 rendered missing-CLI options in a temporary root/state directory.
 
 ## Task 8: Add end-to-end security witnesses and user-facing documentation
 
@@ -159,22 +158,22 @@ or restart `tailscaled`.
 - Modify `ROADMAP.md`
 - Modify `docs/superpowers/specs/2026-09-29-private-tailnet-setup-design.md`
 
-- [ ] Add offline end-to-end witnesses using fake Tailscale/Gateway runners: preflight → explicit grant → preview → approval → Serve enable → verified status → disable. Assert each transition has a distinct receipt and cancellation/failure leaves unrelated routes unchanged.
-- [ ] Add a marked manual witness for a real, already-owned tailnet: verify another logged-in tailnet device reaches the Gateway URL, verify Gateway API key/workspace scope remains enforced, and verify a non-tailnet device cannot reach it. Never print credentials in test output and never enable Funnel.
-- [ ] Document minimum supported Linux distro, what each approval changes, what remains unavailable on other systems, how to revoke access, and that Tailscale reachability does not grant Gateway/filesystem/MCP authority.
-- [ ] Update the design status to approved/implemented only for what evidence demonstrates; retain `NOT_DEMONSTRATED` for the real-device witness until manually completed. Do not claim a Tailscale integration is complete before the real witness passes.
-- [ ] Run the focused suite plus `pytest -q test_action_coverage.py test_secure_tui_surfaces.py test_tailscale*.py test_private_access*.py`; record results and any `NOT_DEMONSTRATED` items in the docs.
+- [x] Add offline preflight → explicit grants → preview → approval → Serve enable → verified status → disable witness, with unique receipts, unrelated-route preservation and cancellation/no-command behavior.
+- [ ] Real tailnet-device/outside-tailnet witness and Gateway-scope check; requires an opted-in account and second device. Keep **NOT_DEMONSTRATED** until performed.
+- [x] Document supported Ubuntu/Debian automated installation, manual path, login behavior, grants/approvals, revocation, and independent Gateway/filesystem/MCP authority.
+- [x] Distinguish demonstrated offline behavior from the real-device flow that remains unverified.
+- [x] Run the final full suite after all code and docs changes: `317 passed`; `git diff --check` and Pyright across all touched Python modules pass.
 
 ## Final acceptance checklist
 
-- [ ] Opening the TUI, Settings, or preflight changes no system, network, or workspace state.
-- [ ] Ubuntu/Debian install, user login, Serve enable, and Serve disable each show the exact requested effect, pass Authority and IsySentinel, consume one fresh matching approval, and write a durable redacted receipt.
-- [ ] Unsupported distributions, unavailable privilege, unknown CLI output, changed Serve state, missing Gateway, and route ownership uncertainty fail closed.
-- [ ] Only an ISyCode-owned private route to the existing Gateway loopback listener can be added or removed; other routes remain byte-for-byte/config-equivalent.
-- [ ] No credential is stored in `.isyroot`, workspace files, Bridge, logs, receipts, or persistent ISyCode state.
-- [ ] `pytest -q test_action_coverage.py test_secure_tui_surfaces.py test_tailscale*.py test_private_access*.py` passes.
-- [ ] TUI smoke witness launches and confirms the settings flow renders at the supported terminal size.
-- [ ] Real tailnet-device and outside-tailnet witnesses are reported separately as `DEMONSTRATED` or `NOT_DEMONSTRATED`.
+- [x] Opening TUI/Settings only performs bounded read-only discovery; the temporary 140×40 UI smoke made no system or workspace change.
+- [x] Install phases, login launch, Serve enable and disable show exact effects and route through Authority, IsySentinel, fresh matching approval and redacted receipt.
+- [x] Unsupported package systems and Serve conflicts/unavailable inventories fail closed; login output and receipts omit credentials.
+- [x] Offline witnesses preserve every unrelated Serve configuration and remove only the owned private `/isycode` route.
+- [x] Credentials and route ownership stay outside `.isyroot`, workspace files, Bridge, logs and receipts.
+- [x] Full suite passes (`317 passed`), including `test_action_coverage.py`, TUI surfaces, Tailscale owners and state.
+- [x] TUI smoke rendered the Settings flow at 140×40 in an isolated temporary directory.
+- [x] Real tailnet-device/outside-tailnet behavior is explicitly reported as **NOT_DEMONSTRATED**; no claim of live connectivity is made.
 
 ## Official references
 

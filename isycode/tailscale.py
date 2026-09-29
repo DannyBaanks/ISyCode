@@ -18,7 +18,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from typing import Callable, Mapping, Sequence
+from typing import Any, Callable, IO, Mapping, Sequence, cast
 from urllib.parse import urlsplit
 
 
@@ -67,7 +67,12 @@ def _bounded_run(argv: Sequence[str], *, env: Mapping[str, str], timeout: float,
     process = subprocess.Popen(list(argv), stdin=subprocess.DEVNULL,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                env=dict(env), close_fds=True)
-    chunks = {process.stdout: bytearray(), process.stderr: bytearray()}
+    stdout, stderr = process.stdout, process.stderr
+    if stdout is None or stderr is None:
+        process.kill()
+        process.wait()
+        raise RuntimeError("Tailscale output pipes are unavailable")
+    chunks: dict[IO[bytes], bytearray] = {stdout: bytearray(), stderr: bytearray()}
     deadline = time.monotonic() + timeout
     selector = selectors.DefaultSelector()
     try:
@@ -79,7 +84,7 @@ def _bounded_run(argv: Sequence[str], *, env: Mapping[str, str], timeout: float,
             if remaining <= 0:
                 raise subprocess.TimeoutExpired(argv, timeout)
             for key, _ in selector.select(remaining):
-                pipe = key.fileobj
+                pipe = cast(IO[bytes], key.fileobj)
                 data = os.read(pipe.fileno(), min(4096, max_output + 1))
                 if not data:
                     selector.unregister(pipe)
@@ -90,11 +95,11 @@ def _bounded_run(argv: Sequence[str], *, env: Mapping[str, str], timeout: float,
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise subprocess.TimeoutExpired(argv, timeout)
-        process.wait(timeout=remaining)
+        returncode = process.wait(timeout=remaining)
         return TailscaleCommandResult(
-            process.returncode,
-            chunks[process.stdout].decode("utf-8", errors="replace"),
-            chunks[process.stderr].decode("utf-8", errors="replace"),
+            returncode,
+            chunks[stdout].decode("utf-8", errors="replace"),
+            chunks[stderr].decode("utf-8", errors="replace"),
         )
     finally:
         selector.close()
@@ -107,6 +112,8 @@ def _bounded_run(argv: Sequence[str], *, env: Mapping[str, str], timeout: float,
 
 def _gateway_health(url: str) -> bool:
     parsed = urlsplit(url)
+    if parsed.hostname is None or parsed.port is None:
+        return False
     connection = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=1)
     try:
         connection.request("GET", "/health")
@@ -137,7 +144,7 @@ def _bounded_json(raw: str) -> dict:
     value = json.loads(raw)
     if not isinstance(value, dict):
         raise ValueError("expected JSON object")
-    pending = [(value, 0)]
+    pending: list[tuple[Any, int]] = [(value, 0)]
     nodes = 0
     while pending:
         item, depth = pending.pop()
@@ -258,18 +265,27 @@ class TailscaleAdapter:
             raise ValueError("invalid or oversized Tailscale result")
         return result
 
-    def inspect(self) -> TailscaleSnapshot:
+    def resolve_executable(self) -> str | None:
+        """Resolve the fixed local CLI path without launching a process."""
         if self._platform != "linux":
-            return TailscaleSnapshot("unsupported_os")
+            return None
         candidate = shutil.which("tailscale")
         if candidate is None:
-            return TailscaleSnapshot("missing_cli")
+            return None
         try:
             executable = str(Path(candidate).resolve(strict=True))
             if not Path(executable).is_file() or not os.access(executable, os.X_OK):
-                return TailscaleSnapshot("unavailable")
+                return None
+            return executable
         except (OSError, RuntimeError):
-            return TailscaleSnapshot("unavailable")
+            return None
+
+    def inspect(self) -> TailscaleSnapshot:
+        if self._platform != "linux":
+            return TailscaleSnapshot("unsupported_os")
+        executable = self.resolve_executable()
+        if executable is None:
+            return TailscaleSnapshot("missing_cli")
         gateway_url = (self._gateway_url if _valid_gateway(self._gateway_url, self._gateway_port)
                        else None)
         try:

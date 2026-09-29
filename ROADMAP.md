@@ -535,6 +535,16 @@ Reglas de frontera:
 
 **Fase posterior — Full:** tras cerrar y publicar el perfil Secure, ampliar permisos de manera explícita y por adapter: shell/comandos tipados, escrituras y más integraciones. Cada capability nueva requiere owner concreto, scope/grant visible, clasificación de riesgo, approval apropiada, límites de ejecución y receipt. No habrá un interruptor global que evite Sentinel; Full significa mayor cobertura de acciones concedibles, no menor seguridad.
 
+### Integración opcional: acceso privado por Tailscale
+
+- [x] Inventario local read-only mediante `TailscaleReadOwner`; grant por workspace y ejecutable.
+- [x] Instalación automatizada solo en Ubuntu/Debian soportado: preparación de fuente/paquete firmado, staging root-owned y apt exacto, cada fase con confirmación propia. Se ofrece guía manual para el resto.
+- [x] Login explícito en navegador oficial: no se reciben ni guardan contraseñas, auth keys u OAuth tokens.
+- [x] Serve privado al Gateway loopback en `/isycode`; nunca Funnel ni `serve reset`. Configuración Web, TCP y Services ajena a ISyCode se compara antes/después.
+- [x] Cada efecto usa Workspace Authority, IsySentinel, approval de un uso y receipt persistente; revocar el grant no borra una ruta automáticamente.
+- [x] Witnesses offline de habilitar, verificar y deshabilitar conservan otras rutas; smoke temporal de Settings mostró la opción de instalación sin crear `.isyroot`.
+- [ ] Verificar login/instalación en un equipo opt-in y acceso desde otro dispositivo del tailnet; confirmar rechazo desde fuera del tailnet y scopes independientes del Gateway. Estado actual: **NOT_DEMONSTRATED**; no se ejecutaron cambios reales en el equipo.
+
 ## 5. Orden y puertas de dependencia
 
 ```text
