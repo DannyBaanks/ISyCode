@@ -100,7 +100,7 @@ class ActionAuditJournal:
         result_digest = getattr(receipt, "result_digest", None)
         outcome = getattr(receipt, "outcome", None)
         valid_outcome = (outcome == "SUCCESS" or
-                         (request.action_id in {"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}
+                         (request.action_id in {"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install", "tailscale.login"}
                           and outcome == "FAILURE"))
         action_matches = receipt_action == request.action_id or (
             request.action_id == "broker.start"
@@ -253,7 +253,7 @@ class ActionAuditJournal:
                     if (not isinstance(receipt_id, str) or not receipt_id
                             or receipt_id in receipt_ids
                             or (outcome != "SUCCESS" and
-                                not (action in {"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}
+                                not (action in {"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install", "tailscale.login"}
                                      and outcome == "FAILURE"))
                             or not isinstance(result_digest, str) or len(result_digest) != 64
                             or any(char not in "0123456789abcdef" for char in result_digest)

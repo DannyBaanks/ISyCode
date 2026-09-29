@@ -63,6 +63,26 @@ def test_journal_accepts_redacted_tailscale_failure_receipt(tmp_path):
     assert "token=" not in journal.path.read_text(encoding="utf-8")
 
 
+def test_journal_accepts_redacted_tailscale_login_failure_receipt(tmp_path):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    journal = ActionAuditJournal(root, state_directory=tmp_path / "state")
+    request = ActionRequest("tailscale.login", root, "tailscale",
+                            execution_owner="tailscale_login")
+    authority = AuthorityDecision(True, "grant:tailscale.login", "matched", request.digest)
+    decision = SentinelDecision("tailscale.login", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    journal.record_decision(request, authority, decision)
+    receipt = ActionReceipt("receipt-login-failure", request.action_id, request.digest,
+                            "ALLOW", "FAILURE", hashlib.sha256(b"failed:login").hexdigest())
+
+    journal.record_receipt(request, receipt)
+    report = journal.verify()
+
+    assert report.status == "PASS"
+    assert report.receipts == 1
+
+
 def test_journal_rejects_decision_results_bound_to_another_request(tmp_path):
     journal, request = _journal(tmp_path)
     other = ActionRequest("workspace.files.read", request.workspace_root,
