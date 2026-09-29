@@ -41,6 +41,28 @@ def test_journal_verifier_accepts_decision_and_matching_receipt(tmp_path):
     assert "inside root" not in repr(report.recent)
 
 
+def test_journal_accepts_redacted_tailscale_failure_receipt(tmp_path):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    journal = ActionAuditJournal(root, state_directory=tmp_path / "state")
+    request = ActionRequest("tailscale.install", root, "tailscale",
+                            execution_owner="tailscale_package_install")
+    authority = AuthorityDecision(True, "grant:tailscale.install", "matched", request.digest)
+    decision = SentinelDecision("tailscale.install", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    journal.record_decision(request, authority, decision)
+    receipt = ActionReceipt("receipt-failure", request.action_id, request.digest,
+                            "ALLOW", "FAILURE", hashlib.sha256(b"failed:transaction").hexdigest())
+
+    journal.record_receipt(request, receipt)
+    report = journal.verify()
+
+    assert report.status == "PASS"
+    assert report.receipts == 1
+    assert report.recent[-1]["outcome"] == "FAILURE"
+    assert "token=" not in journal.path.read_text(encoding="utf-8")
+
+
 def test_journal_rejects_decision_results_bound_to_another_request(tmp_path):
     journal, request = _journal(tmp_path)
     other = ActionRequest("workspace.files.read", request.workspace_root,
