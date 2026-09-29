@@ -26,6 +26,7 @@ from isycode.security import (
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.private_access import OwnedServeRoute
 from isycode.tailscale import ServeRoute, _valid_gateway
+from isycode.workspace_setup import state_root
 
 
 READ_ACTIONS = frozenset({
@@ -145,7 +146,7 @@ OWNER_ACTIONS = {
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
                                       "broker.stop", "broker.remove"}),
     "tailscale_read": frozenset({"tailscale.inspect"}),
-    "tailscale_package_install": frozenset({"tailscale.install"}),
+    "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install"}),
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
 }
@@ -578,7 +579,7 @@ class BrokerManagementSystembility:
                                   "operation is bound to the registered broker and its exact workspace")
 
 
-_TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install", "tailscale.login",
+_TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install.prepare", "tailscale.install", "tailscale.login",
                                 "tailscale.serve.enable", "tailscale.serve.disable"})
 _TAILSCALE_SERVE_ACTIONS = frozenset({"tailscale.serve.enable", "tailscale.serve.disable"})
 _TAILSCALE_SERVE_KEYS = frozenset({"executable", "gateway_url", "gateway_port", "route_id",
@@ -608,7 +609,7 @@ class TailscaleExecutableSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id not in _TAILSCALE_ACTIONS - {"tailscale.install"}:
+        if request.action_id not in _TAILSCALE_ACTIONS - {"tailscale.install", "tailscale.install.prepare"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         executable = request.parameters.get("executable")
         valid = (request.target == "tailscale" and isinstance(self.facts, TailscaleAuthorityFacts)
@@ -631,15 +632,25 @@ class TailscalePackageSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id != "tailscale.install":
+        if request.action_id not in {"tailscale.install.prepare", "tailscale.install"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         facts = self.facts
+        expected_keys = {"executable", "os_id", "os_codename",
+                         "repository_key_url", "repository_list_url", "package",
+                         "package_service_effect"}
+        if request.action_id == "tailscale.install.prepare":
+            expected_keys |= {"private_directory", "key_fingerprint", "source_sha256",
+                              "config_sha256", "update_argv"}
+        else:
+            expected_keys |= {"private_directory", "key_fingerprint", "key_sha256",
+                              "source_sha256", "config_sha256", "indexes_digest",
+                              "package_version", "archive_sha256", "archive_name",
+                              "simulation_digest", "package_actions", "install_argv",
+                              "privilege_argv"}
         valid = (isinstance(facts, TailscaleAuthorityFacts)
                  and request.target == "tailscale"
-                 and set(params) == {"executable", "os_id", "os_codename",
-                                     "repository_key_url", "repository_list_url", "package",
-                                     "package_service_effect"}
+                 and set(params) == expected_keys
                  and params.get("executable") == facts.package_manager
                  and _canonical_executable_identity(facts.package_manager, "apt-get")
                  and facts.os_id in _SUPPORTED_TAILSCALE_APT
@@ -653,6 +664,39 @@ class TailscalePackageSystembility:
             base = f"https://pkgs.tailscale.com/stable/{facts.os_id}/{facts.os_codename}"
             valid = (params.get("repository_key_url") == base + ".noarmor.gpg"
                      and params.get("repository_list_url") == base + ".tailscale-keyring.list")
+        if valid:
+            directory = params.get("private_directory")
+            private_parent = state_root().expanduser().absolute() / "tailscale-apt"
+            valid = (isinstance(directory, str)
+                     and Path(directory).parent == private_parent
+                     and re.fullmatch(r"[0-9a-f]{16}-[0-9a-f]{32}", Path(directory).name) is not None
+                     and params.get("key_fingerprint") ==
+                     "2596A99EAAB33821893C0A79458CA832957F5868")
+        if valid and request.action_id == "tailscale.install":
+            version = params.get("package_version")
+            actions = params.get("package_actions")
+            argv = params.get("install_argv")
+            valid = (isinstance(version, str)
+                     and re.fullmatch(r"[A-Za-z0-9.+:~_-]{1,160}", version) is not None
+                     and actions == (f"Inst tailscale={version}", f"Conf tailscale={version}")
+                     and argv == (facts.package_manager, "install", "--yes", "--no-upgrade",
+                                  "--no-remove", "--no-download", "--no-install-recommends",
+                                  f"tailscale={version}")
+                     and params.get("privilege_argv") ==
+                     ("/usr/bin/pkexec", "/usr/bin/env",
+                      f"APT_CONFIG={params['private_directory']}/apt.conf", *argv)
+                     and all(isinstance(params.get(key), str)
+                             and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
+                             for key in ("key_sha256", "source_sha256", "config_sha256",
+                                         "indexes_digest", "archive_sha256", "simulation_digest"))
+                     and isinstance(params.get("archive_name"), str)
+                     and re.fullmatch(r"tailscale_[A-Za-z0-9.+:~_-]+_[A-Za-z0-9]+\.deb",
+                                      params["archive_name"]) is not None)
+        if valid and request.action_id == "tailscale.install.prepare":
+            valid = (params.get("update_argv") == (facts.package_manager, "update")
+                     and all(isinstance(params.get(key), str)
+                             and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
+                             for key in ("source_sha256", "config_sha256")))
         return SystembilityResult(self.name, bool(valid),
                                   "supported OS and exact official stable package recipe required")
 

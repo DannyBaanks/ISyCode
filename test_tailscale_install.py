@@ -1,5 +1,7 @@
-"""Offline contract tests for the explicitly approved Tailscale package owner."""
+"""Offline Tailscale apt preparation and exact package transaction witnesses."""
 from dataclasses import replace
+import hashlib
+from pathlib import Path
 
 import pytest
 
@@ -7,15 +9,65 @@ from isycode.approvals import ActionApprovalStore
 from isycode.action_audit import ActionAuditJournal
 from isycode.tailscale import TailscaleCommandResult
 from isycode.tailscale_install import (
-    TailscalePackageInstallOwner, UbuntuDebianInstallPlan, _inspect_key,
+    TailscalePackageInstallOwner, UbuntuDebianInstallPlan, _atomic_private_file,
+    _inspect_key, _simulation,
 )
 from isycode.workspace_authority import WorkspaceAuthority
 
 
-KEY_FINGERPRINT = "2596A99EAAB33821893C0A79458CA832957F5868"
+KEY = "2596A99EAAB33821893C0A79458CA832957F5868"
 SOURCE = ("# Tailscale packages for ubuntu noble\n"
           "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] "
           "https://pkgs.tailscale.com/stable/ubuntu noble main\n")
+ARCHIVE = b"fake signed tailscale deb bytes"
+VERSION = "1.2.3"
+SIMULATION = ("Reading package lists...\n"
+              "0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.\n"
+              f"Inst tailscale ({VERSION} pkgs.tailscale.com [amd64])\n"
+              f"Conf tailscale ({VERSION} pkgs.tailscale.com [amd64])\n")
+
+
+class FakeApt:
+    def __init__(self):
+        self.plan = None
+        self.calls = []
+        self.privileged = []
+        self.simulation = SIMULATION
+        self.hooks = False
+
+    def run(self, argv, *, env, timeout, max_output):
+        self.calls.append(tuple(argv))
+        plan = self.plan
+        if argv[0].endswith("apt-config"):
+            dump = (f'Dir::Etc "{plan.private_directory}";\n'
+                    f'Dir::Etc::sourcelist "{plan.private_directory / "source.list"}";\n'
+                    'Dir::Etc::main "/dev/null";\nDir::Etc::parts "-";\n')
+            if self.hooks:
+                dump += 'DPkg::Pre-Install-Pkgs:: "host-hook";\n'
+            return TailscaleCommandResult(0, dump, "")
+        if argv[-1] == "update":
+            lists = plan.private_directory / "lists"
+            prefix = f"pkgs.tailscale.com_stable_ubuntu_dists_noble_"
+            (lists / (prefix + "InRelease")).write_bytes(b"signed release")
+            (lists / (prefix + "main_binary-amd64_Packages.lz4")).write_bytes(b"signed package index")
+            return TailscaleCommandResult(0, "updated", "")
+        if argv[0].endswith("gpgv"):
+            return TailscaleCommandResult(0, "signature valid", "")
+        if "-s" in argv:
+            return TailscaleCommandResult(0, self.simulation, "")
+        if argv[0].endswith("apt-cache"):
+            metadata = (f"Package: tailscale\nVersion: {VERSION}\nArchitecture: amd64\n"
+                        "Filename: pool/tailscale_1.2.3_amd64.deb\n"
+                        f"SHA256: {hashlib.sha256(ARCHIVE).hexdigest()}\n"
+                        f"Size: {len(ARCHIVE)}\n")
+            return TailscaleCommandResult(0, metadata, "")
+        if argv[0].endswith("dpkg-query"):
+            return TailscaleCommandResult(0, VERSION, "")
+        pytest.fail(f"unexpected apt argv: {argv}")
+
+    def privileged_run(self, argv, *, env, timeout, max_output):
+        self.privileged.append(tuple(argv))
+        return TailscaleCommandResult(0, "installed", "")
 
 
 @pytest.fixture
@@ -28,27 +80,44 @@ def setup(tmp_path, monkeypatch):
     apt.chmod(0o700)
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
     approvals = ActionApprovalStore()
+    fake = FakeApt()
     fetched = []
 
     def fetch(url, *, timeout, max_bytes):
         fetched.append(url)
-        return b"key" if url.endswith(".gpg") else SOURCE.encode()
+        if url.endswith(".gpg"):
+            return b"one pinned signing key"
+        if url.endswith(".list"):
+            return SOURCE.encode()
+        if url.endswith(".deb"):
+            return ARCHIVE
+        pytest.fail(f"unapproved network URL: {url}")
 
     owner = TailscalePackageInstallOwner(
         root, authority, approvals, platform="linux",
         os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
         apt_executable=str(apt), fetch=fetch,
-        key_fingerprint=lambda _: KEY_FINGERPRINT,
+        key_fingerprint=lambda _: KEY,
+        run=fake.run, privileged_run=fake.privileged_run,
     )
-    return owner, authority, approvals, fetched
+    fake.plan = owner.plan()
+    return owner, authority, approvals, fake, fetched
 
 
-def approved(setup):
+def prepare_approved(setup):
     owner, authority, approvals, *_ = setup
-    request = owner.plan().request(owner.root)
-    authority.set_grant("tailscale.install", enabled=True,
+    request = owner.plan().prepare_request(owner.root)
+    authority.set_grant("tailscale.install.prepare", enabled=True,
                         executables=[request.parameters["executable"]])
     return request, approvals.issue(request)
+
+
+def prepared(setup):
+    owner, authority, approvals, fake, fetched = setup
+    request, approval = prepare_approved(setup)
+    outcome = owner.prepare(request, approval)
+    assert outcome.decision == "ALLOW", outcome.reason
+    return owner.simulate()
 
 
 @pytest.mark.parametrize("os_id,codename", [
@@ -60,54 +129,145 @@ def test_install_plan_rejects_unsupported_release(os_id, codename):
         UbuntuDebianInstallPlan.for_release(os_id, codename, "/usr/bin/apt-get")
 
 
-def test_plan_preview_binds_official_source_and_exact_package(setup):
-    owner, *_ = setup
-    plan = owner.plan()
-    request = plan.request(owner.root)
-    preview = plan.preview()
-    assert request.parameters["package"] == "tailscale"
-    assert request.parameters["repository_key_url"] == (
-        "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg")
-    assert request.parameters["repository_list_url"] == (
-        "https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list")
-    assert KEY_FINGERPRINT in preview
-    assert SOURCE.splitlines()[1] in preview
-    assert "apt-get update" in preview and "apt-get install tailscale" in preview
-    assert "/var/lib/apt/lists/isycode-tailscale" in preview
+def test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt(setup):
+    owner, authority, approvals, fake, fetched = setup
+    request = owner.plan().prepare_request(owner.root)
+    assert owner.prepare(request, approvals.issue(request)).decision == "DENY"
+    assert not fetched and not fake.calls
+    authority.set_grant("tailscale.install.prepare", enabled=True,
+                        executables=[request.parameters["executable"]])
+    assert owner.prepare(request, None).decision == "DENY"
+    altered = replace(request, parameters={**request.parameters, "package": "curl"})
+    assert owner.prepare(altered, approvals.issue(altered)).decision == "DENY"
+    assert not fetched and not fake.calls
+    approval = approvals.issue(request)
+    assert owner.prepare(request, approval).decision == "ALLOW"
+    assert owner.prepare(request, approval).decision == "DENY"
+    assert owner.plan().private_directory.is_dir()
+    assert str(owner.plan().private_directory).startswith(str(owner.root.parent / "state"))
+    assert all("/etc/apt" not in str(path) for path in owner.plan().private_directory.iterdir())
+    assert not fake.privileged
+    assert any(url.endswith(".deb") for url in fetched)
+    assert (owner.plan().private_directory / "cache" /
+            "tailscale_1.2.3_amd64.deb").read_bytes() == ARCHIVE
+
+
+def test_simulation_binds_single_package_version_hash_actions_and_service_effect(setup):
+    transaction = prepared(setup)
+    request = transaction.request(setup[0].root)
+    preview = transaction.preview()
+    assert request.parameters["package_version"] == VERSION
+    assert request.parameters["package_actions"] == (
+        f"Inst tailscale={VERSION}", f"Conf tailscale={VERSION}")
+    assert request.parameters["archive_sha256"] == hashlib.sha256(ARCHIVE).hexdigest()
     assert request.parameters["package_service_effect"] == "may_start_or_restart_tailscaled"
+    assert request.parameters["simulation_digest"] in preview
+    assert "maintainer scripts and triggers run as root" in preview
     assert "may start or restart tailscaled" in preview
+    assert "--no-upgrade --no-remove --no-download" in preview
+    assert not setup[3].privileged
 
 
-def test_install_requires_exact_grant_and_fresh_approval_before_effect(setup):
-    owner, authority, approvals, fetched = setup
-    request = owner.plan().request(owner.root)
+def test_exact_approved_install_uses_fixed_privilege_argv_and_receipt(setup):
+    transaction = prepared(setup)
+    owner, authority, approvals, fake, _ = setup
+    request = transaction.request(owner.root)
     assert owner.install(request, approvals.issue(request)).decision == "DENY"
+    assert not fake.privileged
     authority.set_grant("tailscale.install", enabled=True,
                         executables=[request.parameters["executable"]])
-    assert owner.install(request, None).decision == "DENY"
-    assert not fetched
-    wrong = replace(request, parameters={**request.parameters, "package": "curl"})
-    assert owner.install(wrong, approvals.issue(wrong)).decision == "DENY"
-    assert not fetched
-
-
-def test_approved_request_cannot_mutate_before_transaction_is_previewed(setup, monkeypatch):
-    owner, _, _, fetched = setup
-    monkeypatch.setattr("isycode.tailscale_install._bounded_run",
-                        lambda *_, **__: pytest.fail("process launched before transaction approval"))
-    request, approval = approved(setup)
+    approval = approvals.issue(request)
+    fetched_before_install = list(setup[4])
     outcome = owner.install(request, approval)
-    assert outcome.decision == "ERROR"
-    assert outcome.receipt is not None
-    assert outcome.receipt.outcome == "FAILURE"
-    assert "transaction" in outcome.reason
-    assert fetched == [
-        "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg",
-        "https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list",
-    ]
+    assert outcome.decision == "ALLOW", outcome.reason
+    assert outcome.receipt.outcome == "SUCCESS"
+    assert len(fake.privileged) == 1
+    assert setup[4] == fetched_before_install
+    argv = fake.privileged[0]
+    assert argv[:2] == ("/usr/bin/pkexec", "/usr/bin/env")
+    assert argv[3:] == transaction.install_argv
+    assert "--no-download" in argv and "--no-remove" in argv
+    assert owner.install(request, approval).decision == "DENY"
     report = ActionAuditJournal.for_read_only_inspection(owner.root).verify()
     assert report.status == "PASS"
-    assert report.recent[-1]["outcome"] == "FAILURE"
+    assert [item["outcome"] for item in report.recent if item.get("outcome")][-1] == "SUCCESS"
+
+
+def test_dependency_transaction_routes_to_manual_without_privilege(setup):
+    owner, _, _, fake, _ = setup
+    prepare_approved_request, approval = prepare_approved(setup)
+    fake.simulation = ("0 upgraded, 2 newly installed, 0 to remove and 0 not upgraded.\n"
+                       "Inst dependency (1.0 repo [amd64])\n"
+                       f"Inst tailscale ({VERSION} repo [amd64])\n"
+                       f"Conf tailscale ({VERSION} repo [amd64])\n")
+    outcome = owner.prepare(prepare_approved_request, approval)
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    with pytest.raises(ValueError):
+        owner.simulate()
+    assert not fake.privileged
+
+
+def test_drift_after_final_approval_records_failure_without_privilege(setup):
+    transaction = prepared(setup)
+    owner, authority, approvals, fake, _ = setup
+    request = transaction.request(owner.root)
+    authority.set_grant("tailscale.install", enabled=True,
+                        executables=[request.parameters["executable"]])
+    fake.simulation = SIMULATION.replace("1 newly installed", "2 newly installed")
+    outcome = owner.install(request, approvals.issue(request))
+    assert outcome.decision == "ERROR"
+    assert outcome.receipt.outcome == "FAILURE"
+    assert not fake.privileged
+    journal = ActionAuditJournal.for_read_only_inspection(owner.root)
+    assert journal.verify().recent[-1]["outcome"] == "FAILURE"
+
+
+def test_prepare_rejects_host_apt_hook_before_update_and_records_failure(setup):
+    owner, _, _, fake, _ = setup
+    request, approval = prepare_approved(setup)
+    fake.hooks = True
+    outcome = owner.prepare(request, approval)
+    assert outcome.decision == "ERROR"
+    assert outcome.receipt.outcome == "FAILURE"
+    assert not any(call[-1] == "update" for call in fake.calls)
+    assert owner.plan().private_directory.exists()  # Partial private state stays visible.
+    assert not fake.privileged
+
+
+def test_mutated_private_source_denies_install_before_privilege(setup):
+    transaction = prepared(setup)
+    owner, authority, approvals, fake, _ = setup
+    request = transaction.request(owner.root)
+    authority.set_grant("tailscale.install", enabled=True,
+                        executables=[request.parameters["executable"]])
+    (transaction.plan.private_directory / "source.list").write_text("forged")
+    outcome = owner.install(request, approvals.issue(request))
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert not fake.privileged
+
+
+def test_mutated_cached_archive_denies_install_before_privilege(setup):
+    transaction = prepared(setup)
+    owner, authority, approvals, fake, fetched = setup
+    request = transaction.request(owner.root)
+    authority.set_grant("tailscale.install", enabled=True,
+                        executables=[request.parameters["executable"]])
+    (transaction.plan.private_directory / "cache" / transaction.archive_name).write_bytes(b"forged")
+    before = list(fetched)
+    outcome = owner.install(request, approvals.issue(request))
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert not fake.privileged
+    assert fetched == before
+
+
+def test_wrong_key_records_redacted_prepare_failure(setup):
+    owner, _, _, fake, _ = setup
+    owner._key_fingerprint = lambda _: "0" * 40
+    request, approval = prepare_approved(setup)
+    outcome = owner.prepare(request, approval)
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert not fake.calls and not fake.privileged
+    assert ActionAuditJournal.for_read_only_inspection(owner.root).verify().status == "PASS"
 
 
 def test_signing_key_inspection_rejects_second_primary_key(monkeypatch):
@@ -121,45 +281,17 @@ def test_signing_key_inspection_rejects_second_primary_key(monkeypatch):
         _inspect_key(b"fake keyring")
 
 
-def test_wrong_signing_key_never_prompts_for_privilege(setup):
-    owner, _, _, _ = setup
-    owner._key_fingerprint = lambda _: "0" * 40
-    request, approval = approved(setup)
-    outcome = owner.install(request, approval)
-    assert outcome.decision == "ERROR"
-    assert "signing key" in outcome.reason
-    assert outcome.receipt is not None and outcome.receipt.outcome == "FAILURE"
+def test_simulation_rejects_summary_embedded_in_other_text():
+    with pytest.raises(ValueError, match="summary"):
+        _simulation("10 upgraded, 1 newly installed, 0 to remove\n" + SIMULATION.split("\n", 2)[-1])
 
 
-def test_changed_repository_source_never_prompts_for_privilege(setup):
-    owner, _, _, _ = setup
-    owner._fetch = lambda url, **_: b"deb https://evil.invalid/ stable main\n"
-    request, approval = approved(setup)
-    assert owner.install(request, approval).decision == "ERROR"
-
-
-def test_network_error_is_redacted_in_durable_failure_receipt(setup):
-    owner, _, _, _ = setup
-    owner._fetch = lambda *_, **__: (_ for _ in ()).throw(
-        TimeoutError("https://private.invalid/?token=hidden"))
-    request, approval = approved(setup)
-    outcome = owner.install(request, approval)
-    assert outcome.decision == "ERROR"
-    assert outcome.receipt is not None
-    assert "hidden" not in outcome.reason + outcome.text
-    journal = ActionAuditJournal.for_read_only_inspection(owner.root)
-    assert "hidden" not in journal.path.read_text(encoding="utf-8")
-
-
-def test_service_effect_change_invalidates_approval_before_privilege(setup):
-    owner, _, approvals, fetched = setup
-    request, approval = approved(setup)
-    understated = replace(request, parameters={**request.parameters,
-                          "package_service_effect": "no_service_start"})
-    omitted = replace(request, parameters={key: value for key, value in
-                      request.parameters.items() if key != "package_service_effect"})
-    assert owner.install(understated, approval).decision == "DENY"
-    assert owner.install(understated, approvals.issue(understated)).decision == "DENY"
-    assert owner.install(omitted, approvals.issue(omitted)).decision == "DENY"
-    assert fetched == []
-    assert owner.install(request, approval).decision == "ERROR"
+def test_atomic_publication_rejects_symlinked_parent(tmp_path):
+    private = tmp_path / "private"
+    private.mkdir(mode=0o700)
+    target = tmp_path / "outside"
+    target.mkdir(mode=0o700)
+    (private / "redirect").symlink_to(target, target_is_directory=True)
+    with pytest.raises((OSError, ValueError)):
+        _atomic_private_file(private / "redirect" / "keyring.gpg", b"secret")
+    assert not (target / "keyring.gpg").exists()

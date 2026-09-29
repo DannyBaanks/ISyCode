@@ -123,6 +123,7 @@ def test_tailscale_contract_actions_have_one_owner_and_named_pending_callsite():
     report = action_coverage.owner_coverage_report()
     expected = {
         "tailscale.inspect": "tailscale_read",
+        "tailscale.install.prepare": "tailscale_package_install",
         "tailscale.install": "tailscale_package_install",
         "tailscale.login": "tailscale_login",
         "tailscale.serve.enable": "tailscale_serve",
@@ -136,7 +137,8 @@ def test_tailscale_contract_actions_have_one_owner_and_named_pending_callsite():
         assert len(callsites) == 1
         assert callsites[0]["owner"] == owner
         assert callsites[0]["callsite"]
-        assert callsites[0]["status"] == "PLANNED"
+        assert callsites[0]["status"] == (
+            "COVERED" if action in {"tailscale.install.prepare", "tailscale.install"} else "PLANNED")
     assert report["authority_frontier_pass"] is True
     assert report["unclassified_actions"] == []
 
