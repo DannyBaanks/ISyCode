@@ -1,5 +1,7 @@
 """Fail-closed authority contracts for the optional private Tailscale flow."""
 from dataclasses import replace
+import hashlib
+import json
 
 import pytest
 
@@ -111,7 +113,30 @@ def request_for(setup, action_id, **changes):
             "funnel": False,
         },
     }
-    all_parameters["tailscale.install.stage"] = dict(all_parameters["tailscale.install"])
+    staged = dict(all_parameters["tailscale.install"])
+    stage_dir = staged["stage_directory"]
+    archive_name = staged["archive_name"]
+    prefix = "pkgs.tailscale.com_stable_ubuntu_dists_noble_"
+    artifacts = (
+        ("keyring.gpg", f"{private_directory}/keyring.gpg", 10, DIGEST),
+        ("source.list", f"{private_directory}/stage-source.list", 10, DIGEST),
+        ("apt.conf", f"{private_directory}/stage-apt.conf", 10, DIGEST),
+        (f"lists/{prefix}InRelease", f"{private_directory}/lists/{prefix}InRelease", 10, DIGEST),
+        (f"lists/{prefix}main_binary-amd64_Packages.lz4",
+         f"{private_directory}/lists/{prefix}main_binary-amd64_Packages.lz4", 10, DIGEST),
+        (f"cache/{archive_name}", f"{private_directory}/cache/{archive_name}", 10, DIGEST),
+    )
+    manifest = [(relative, size, digest) for relative, _, size, digest in artifacts]
+    operations = action_runtime.tailscale_stage_operations(stage_dir, artifacts)
+    staged.update({
+        "stage_artifacts": artifacts,
+        "stage_manifest_digest": hashlib.sha256(json.dumps(
+            (stage_dir, manifest), separators=(",", ":")).encode()).hexdigest(),
+        "stage_operations": operations,
+        "stage_operations_digest": hashlib.sha256(json.dumps(
+            operations, separators=(",", ":")).encode()).hexdigest(),
+    })
+    all_parameters["tailscale.install.stage"] = staged
     parameters = all_parameters[action_id]
     parameters.update(changes)
     return ActionRequest(action_id, root, "tailscale", parameters,
@@ -185,6 +210,10 @@ def test_tailscale_request_parameters_fail_closed(setup, action_id):
                             {"stage_manifest_digest": "0" * 63},
                             {"privilege_argv": ("/usr/bin/pkexec", "/usr/bin/env",
                                                 "APT_CONFIG=/tmp/forged/apt.conf", str(apt))}]
+    if action_id == "tailscale.install.stage":
+        invalid_changes += [{"stage_operations": ()},
+                            {"stage_operations_digest": "0" * 64},
+                            {"stage_artifacts": ()}]
     if action_id in {"tailscale.inspect", "tailscale.serve.enable", "tailscale.serve.disable"}:
         invalid_changes += [{"gateway_url": "http://0.0.0.0:8787"},
                             {"gateway_port": 8788}]
