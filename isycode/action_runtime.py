@@ -584,7 +584,7 @@ _TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install.prepare"
 _TAILSCALE_SERVE_ACTIONS = frozenset({"tailscale.serve.enable", "tailscale.serve.disable"})
 _TAILSCALE_SERVE_KEYS = frozenset({"executable", "gateway_url", "gateway_port", "route_id",
                                    "route_host", "route_path", "route_target", "serve_digest",
-                                   "mode", "funnel"})
+                                   "serve_argv", "serve_delta_digest", "mode", "funnel"})
 _SUPPORTED_TAILSCALE_APT = {
     "ubuntu": frozenset({"focal", "jammy", "noble"}),
     "debian": frozenset({"bullseye", "bookworm", "trixie"}),
@@ -622,6 +622,15 @@ def tailscale_stage_operations(stage_directory: str,
         add("/usr/bin/sha256sum", "--binary", "--", str(target))
     add("/usr/bin/chmod", "0000", "--", str(stage))
     return tuple(commands)
+
+
+def tailscale_serve_delta_digest(action_id: str, serve_digest: str,
+                                 route: ServeRoute,
+                                 argv: tuple[str, ...]) -> str:
+    """Digest the exact pre-state, private route identity, and fixed CLI operation."""
+    payload = (action_id, serve_digest,
+               (route.host, route.path, route.target, route.private), argv)
+    return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
 
 
 def _canonical_executable_identity(value: object, expected_name: str) -> bool:
@@ -830,9 +839,18 @@ class TailscalePrivateServeSystembility:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         facts = self.facts
-        route = facts.proposed_route if isinstance(facts, TailscaleAuthorityFacts) else None
+        if not isinstance(facts, TailscaleAuthorityFacts):
+            return SystembilityResult(self.name, False,
+                                      "private Serve route must be free or match live and owned identity")
+        route = facts.proposed_route
+        if (not isinstance(route, ServeRoute) or not isinstance(facts.cli_executable, str)
+                or not isinstance(facts.gateway_url, str)
+                or not isinstance(facts.serve_digest, str)
+                or facts.live_routes is None or facts.route_id is None):
+            return SystembilityResult(self.name, False,
+                                      "private Serve route must be free or match live and owned identity")
         valid = (request.target == "tailscale" and set(params) == _TAILSCALE_SERVE_KEYS
-                 and isinstance(route, ServeRoute) and route.private is True
+                 and route.private is True
                  and facts.serve_inventory_complete is True
                  and type(facts.live_routes) is tuple
                  and all(isinstance(item, ServeRoute) for item in facts.live_routes)
@@ -840,7 +858,7 @@ class TailscalePrivateServeSystembility:
                  and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", facts.route_id) is not None
                  and isinstance(route.host, str)
                  and re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*\.ts\.net", route.host) is not None
-                 and route.path == "/" and route.target == facts.gateway_url
+                 and route.path == "/isycode" and route.target == facts.gateway_url
                  and isinstance(facts.serve_digest, str)
                  and re.fullmatch(r"[0-9a-f]{64}", facts.serve_digest) is not None
                  and params.get("route_id") == facts.route_id
@@ -849,6 +867,15 @@ class TailscalePrivateServeSystembility:
                  and params.get("route_target") == route.target
                  and params.get("serve_digest") == facts.serve_digest
                  and params.get("mode") == "private" and params.get("funnel") is False)
+        if valid:
+            executable = facts.cli_executable
+            expected_argv = (executable, "serve", "--https=443",
+                             "--set-path=/isycode", "--bg", facts.gateway_url)
+            if request.action_id == "tailscale.serve.disable":
+                expected_argv += ("off",)
+            valid = (params.get("serve_argv") == expected_argv
+                     and params.get("serve_delta_digest") == tailscale_serve_delta_digest(
+                         request.action_id, facts.serve_digest, route, expected_argv))
         if valid:
             matching = tuple(item for item in facts.live_routes
                              if (item.host, item.path) == (route.host, route.path))
@@ -860,7 +887,8 @@ class TailscalePrivateServeSystembility:
                 valid = ((not matching and owned is None)
                          or (len(matching) == 1 and matching[0] == route and owned_matches))
             else:
-                valid = len(matching) == 1 and matching[0] == route and owned_matches
+                valid = owned_matches and (not matching or
+                                           (len(matching) == 1 and matching[0] == route))
         return SystembilityResult(self.name, bool(valid),
                                   "private Serve route must be free or match live and owned identity")
 

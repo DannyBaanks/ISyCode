@@ -834,7 +834,7 @@
       "owners": [
         "tailscale_serve"
       ],
-      "secure_reachability": "NOT_DEMONSTRATED",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary",
         "TailscaleGatewayBoundary",
@@ -852,7 +852,7 @@
       "owners": [
         "tailscale_serve"
       ],
-      "secure_reachability": "NOT_DEMONSTRATED",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary",
         "TailscaleGatewayBoundary",
@@ -910,13 +910,13 @@
       "action": "tailscale.serve.enable",
       "callsite": "TailscaleServeOwner.enable",
       "owner": "tailscale_serve",
-      "status": "PLANNED"
+      "status": "COVERED"
     },
     {
       "action": "tailscale.serve.disable",
       "callsite": "TailscaleServeOwner.disable",
       "owner": "tailscale_serve",
-      "status": "PLANNED"
+      "status": "COVERED"
     },
     {
       "action": "provider.request",
@@ -1176,7 +1176,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1300,
+      "line": 1328,
       "owner": "workspace_read"
     },
     {
@@ -1185,6 +1185,13 @@
       "file": "isycode/broker.py",
       "line": 748,
       "owner": "broker_management"
+    },
+    {
+      "action": null,
+      "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
+      "file": "isycode/tailscale_serve.py",
+      "line": 154,
+      "owner": "tailscale_serve"
     },
     {
       "action": null,
@@ -1209,49 +1216,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1172,
+      "line": 1200,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1300,
+      "line": 1328,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 961,
+      "line": 989,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1025,
+      "line": 1053,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1095,
+      "line": 1123,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1181,
+      "line": 1209,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1242,
+      "line": 1270,
       "owner": "provider_network"
     },
     {
@@ -1330,6 +1337,13 @@
       "file": "isycode/tailscale_login.py",
       "line": 163,
       "owner": "tailscale_login"
+    },
+    {
+      "action": null,
+      "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
+      "file": "isycode/tailscale_serve.py",
+      "line": 154,
+      "owner": "tailscale_serve"
     },
     {
       "action": null,
