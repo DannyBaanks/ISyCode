@@ -146,7 +146,7 @@ OWNER_ACTIONS = {
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
                                       "broker.stop", "broker.remove"}),
     "tailscale_read": frozenset({"tailscale.inspect"}),
-    "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install"}),
+    "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}),
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
 }
@@ -579,7 +579,7 @@ class BrokerManagementSystembility:
                                   "operation is bound to the registered broker and its exact workspace")
 
 
-_TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install.prepare", "tailscale.install", "tailscale.login",
+_TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install.prepare", "tailscale.install.stage", "tailscale.install", "tailscale.login",
                                 "tailscale.serve.enable", "tailscale.serve.disable"})
 _TAILSCALE_SERVE_ACTIONS = frozenset({"tailscale.serve.enable", "tailscale.serve.disable"})
 _TAILSCALE_SERVE_KEYS = frozenset({"executable", "gateway_url", "gateway_port", "route_id",
@@ -609,7 +609,7 @@ class TailscaleExecutableSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id not in _TAILSCALE_ACTIONS - {"tailscale.install", "tailscale.install.prepare"}:
+        if request.action_id not in _TAILSCALE_ACTIONS - {"tailscale.install", "tailscale.install.stage", "tailscale.install.prepare"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         executable = request.parameters.get("executable")
         valid = (request.target == "tailscale" and isinstance(self.facts, TailscaleAuthorityFacts)
@@ -632,7 +632,7 @@ class TailscalePackageSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id not in {"tailscale.install.prepare", "tailscale.install"}:
+        if request.action_id not in {"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         facts = self.facts
@@ -646,7 +646,8 @@ class TailscalePackageSystembility:
             expected_keys |= {"private_directory", "key_fingerprint", "key_sha256",
                               "source_sha256", "config_sha256", "indexes_digest",
                               "package_version", "archive_sha256", "archive_name",
-                              "simulation_digest", "package_actions", "install_argv",
+                              "simulation_digest", "package_actions", "stage_directory",
+                              "stage_manifest_digest", "install_argv",
                               "privilege_argv"}
         valid = (isinstance(facts, TailscaleAuthorityFacts)
                  and request.target == "tailscale"
@@ -672,7 +673,7 @@ class TailscalePackageSystembility:
                      and re.fullmatch(r"[0-9a-f]{16}-[0-9a-f]{32}", Path(directory).name) is not None
                      and params.get("key_fingerprint") ==
                      "2596A99EAAB33821893C0A79458CA832957F5868")
-        if valid and request.action_id == "tailscale.install":
+        if valid and request.action_id in {"tailscale.install.stage", "tailscale.install"}:
             version = params.get("package_version")
             actions = params.get("package_actions")
             argv = params.get("install_argv")
@@ -684,11 +685,15 @@ class TailscalePackageSystembility:
                                   f"tailscale={version}")
                      and params.get("privilege_argv") ==
                      ("/usr/bin/pkexec", "/usr/bin/env",
-                      f"APT_CONFIG={params['private_directory']}/apt.conf", *argv)
+                      f"APT_CONFIG={params['stage_directory']}/apt.conf",
+                      "DEBIAN_FRONTEND=noninteractive", *argv)
+                     and params.get("stage_directory") ==
+                     f"/var/lib/isycode/tailscale/{Path(params['private_directory']).name}"
                      and all(isinstance(params.get(key), str)
                              and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
                              for key in ("key_sha256", "source_sha256", "config_sha256",
-                                         "indexes_digest", "archive_sha256", "simulation_digest"))
+                                         "indexes_digest", "archive_sha256", "simulation_digest",
+                                         "stage_manifest_digest"))
                      and isinstance(params.get("archive_name"), str)
                      and re.fullmatch(r"tailscale_[A-Za-z0-9.+:~_-]+_[A-Za-z0-9]+\.deb",
                                       params["archive_name"]) is not None)

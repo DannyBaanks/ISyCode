@@ -34,13 +34,19 @@ class FakeApt:
         self.privileged = []
         self.simulation = SIMULATION
         self.hooks = False
+        self.stage = {}
+        self.substitute_copy = False
+        self.bad_stat = None
+        self.bad_stat_fields = "1000\t400\tregular file\t1\t0"
+        self.bad_hash = None
 
     def run(self, argv, *, env, timeout, max_output):
         self.calls.append(tuple(argv))
         plan = self.plan
         if argv[0].endswith("apt-config"):
-            dump = (f'Dir::Etc "{plan.private_directory}";\n'
-                    f'Dir::Etc::sourcelist "{plan.private_directory / "source.list"}";\n'
+            directory = Path(env["APT_CONFIG"]).parent
+            dump = (f'Dir::Etc "{directory}";\n'
+                    f'Dir::Etc::sourcelist "{directory / "source.list"}";\n'
                     'Dir::Etc::main "/dev/null";\nDir::Etc::parts "-";\n')
             if self.hooks:
                 dump += 'DPkg::Pre-Install-Pkgs:: "host-hook";\n'
@@ -67,7 +73,57 @@ class FakeApt:
 
     def privileged_run(self, argv, *, env, timeout, max_output):
         self.privileged.append(tuple(argv))
-        return TailscaleCommandResult(0, "installed", "")
+        assert argv[0] == "/usr/bin/pkexec"
+        command = argv[1:]
+        if command[0] == "/usr/bin/stat":
+            path = command[-1]
+            if path == str(self.bad_stat):
+                return TailscaleCommandResult(0, self.bad_stat_fields, "")
+            item = self.stage.get(path)
+            if item is None:
+                return TailscaleCommandResult(1, "", "No such file or directory")
+            kind, mode, data = item
+            if command[1] == "--printf=%F":
+                return TailscaleCommandResult(0, kind, "")
+            return TailscaleCommandResult(0, f"0\t{mode:o}\t{kind}\t1\t{len(data)}", "")
+        if command[0] == "/usr/bin/install":
+            for path in command[5:]:
+                self.stage[path] = ("directory", 0o700, b"")
+            return TailscaleCommandResult(0, "", "")
+        if command[0] == "/usr/bin/dd":
+            options = dict(part.split("=", 1) for part in command[1:] if "=" in part)
+            if self.substitute_copy:
+                source_path = Path(options["if"])
+                oversized = source_path.parent / "substituted-large-source"
+                oversized.write_bytes(b"x" * (int(options["count"]) + 100))
+                source_path.unlink()
+                source_path.symlink_to(oversized)
+                self.substitute_copy = False
+            with open(options["if"], "rb") as source:
+                data = source.read(int(options["count"]))
+            self.stage[options["of"]] = ("regular file", 0o600, data)
+            return TailscaleCommandResult(0, "", "")
+        if command[0] == "/usr/bin/chmod":
+            path = command[-1]
+            if path in self.stage:
+                kind, _, data = self.stage[path]
+                self.stage[path] = (kind, int(command[1], 8), data)
+            return TailscaleCommandResult(0, "", "")
+        if command[0] == "/usr/bin/sha256sum":
+            path = command[-1]
+            digest = hashlib.sha256(self.stage[path][2]).hexdigest()
+            if path == str(self.bad_hash):
+                digest = "0" * 64
+            return TailscaleCommandResult(0, f"{digest} *{path}\n", "")
+        if command[0] == "/usr/bin/env":
+            assert command[1].startswith("APT_CONFIG=/var/lib/isycode/tailscale/")
+            assert command[2] == "DEBIAN_FRONTEND=noninteractive"
+            subcommand = command[3:]
+            if subcommand[0].endswith("apt-get") and "-s" not in subcommand:
+                return TailscaleCommandResult(0, "installed", "")
+            return self.run(subcommand, env={"APT_CONFIG": command[1].split("=", 1)[1]},
+                            timeout=timeout, max_output=max_output)
+        pytest.fail(f"unexpected privileged argv: {argv}")
 
 
 @pytest.fixture
@@ -81,6 +137,8 @@ def setup(tmp_path, monkeypatch):
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
     approvals = ActionApprovalStore()
     fake = FakeApt()
+    fake.stage["/var"] = ("directory", 0o755, b"")
+    fake.stage["/var/lib"] = ("directory", 0o755, b"")
     fetched = []
 
     def fetch(url, *, timeout, max_bytes):
@@ -118,6 +176,25 @@ def prepared(setup):
     outcome = owner.prepare(request, approval)
     assert outcome.decision == "ALLOW", outcome.reason
     return owner.simulate()
+
+
+def staged(setup):
+    transaction = prepared(setup)
+    owner, authority, approvals, *_ = setup
+    request = transaction.stage_request(owner.root)
+    authority.set_grant("tailscale.install.stage", enabled=True,
+                        executables=[request.parameters["executable"]])
+    outcome = owner.stage(request, approvals.issue(request))
+    assert outcome.decision == "ALLOW", outcome.reason
+    return transaction
+
+
+def stage_approved(setup, transaction):
+    owner, authority, approvals, *_ = setup
+    request = transaction.stage_request(owner.root)
+    authority.set_grant("tailscale.install.stage", enabled=True,
+                        executables=[request.parameters["executable"]])
+    return request, approvals.issue(request)
 
 
 @pytest.mark.parametrize("os_id,codename", [
@@ -162,18 +239,92 @@ def test_simulation_binds_single_package_version_hash_actions_and_service_effect
     assert request.parameters["archive_sha256"] == hashlib.sha256(ARCHIVE).hexdigest()
     assert request.parameters["package_service_effect"] == "may_start_or_restart_tailscaled"
     assert request.parameters["simulation_digest"] in preview
+    assert request.parameters["stage_manifest_digest"] in preview
+    assert str(transaction.stage_directory) in transaction.stage_preview()
     assert "maintainer scripts and triggers run as root" in preview
     assert "may start or restart tailscaled" in preview
     assert "--no-upgrade --no-remove --no-download" in preview
     assert not setup[3].privileged
 
 
-def test_exact_approved_install_uses_fixed_privilege_argv_and_receipt(setup):
+def test_install_requires_separate_verified_root_stage(setup):
     transaction = prepared(setup)
     owner, authority, approvals, fake, _ = setup
     request = transaction.request(owner.root)
+    authority.set_grant("tailscale.install", enabled=True,
+                        executables=[request.parameters["executable"]])
     assert owner.install(request, approvals.issue(request)).decision == "DENY"
     assert not fake.privileged
+    stage_request = transaction.stage_request(owner.root)
+    assert owner.stage(stage_request, approvals.issue(stage_request)).decision == "DENY"
+    assert not fake.privileged
+
+
+def test_stage_substituted_source_is_bounded_quarantined_and_never_installed(setup):
+    transaction = prepared(setup)
+    owner, _, _, fake, _ = setup
+    fake.substitute_copy = True
+    request, approval = stage_approved(setup, transaction)
+    outcome = owner.stage(request, approval)
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    copies = [call for call in fake.privileged if call[1] == "/usr/bin/dd"]
+    assert copies and all(any(arg.startswith("count=") for arg in call) for call in copies)
+    first_copy = copies[0]
+    first_target = next(arg.split("=", 1)[1] for arg in first_copy if arg.startswith("of="))
+    first_limit = int(next(arg.split("=", 1)[1] for arg in first_copy if arg.startswith("count=")))
+    assert len(fake.stage[first_target][2]) == first_limit
+    assert fake.stage[str(transaction.stage_directory)][1] == 0
+    assert not any(call[1:] == transaction.privilege_argv[1:] for call in fake.privileged)
+    assert ActionAuditJournal.for_read_only_inspection(owner.root).verify().status == "PASS"
+
+
+@pytest.mark.parametrize("kind", ["directory", "symbolic link"])
+def test_stage_rejects_existing_or_symlink_path_before_copy(setup, kind):
+    transaction = prepared(setup)
+    owner, _, _, fake, _ = setup
+    fake.stage[str(transaction.stage_directory)] = (kind, 0o700, b"")
+    request, approval = stage_approved(setup, transaction)
+    outcome = owner.stage(request, approval)
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert not any(call[1] == "/usr/bin/dd" for call in fake.privileged)
+
+
+def test_stage_rejects_symlinked_root_prefix_before_copy(setup):
+    transaction = prepared(setup)
+    owner, _, _, fake, _ = setup
+    fake.bad_stat = Path("/var/lib/isycode")
+    fake.bad_stat_fields = "0\t700\tsymbolic link\t1\t0"
+    request, approval = stage_approved(setup, transaction)
+    outcome = owner.stage(request, approval)
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert not any(call[1] == "/usr/bin/dd" for call in fake.privileged)
+
+
+@pytest.mark.parametrize("defect", ["owner", "mode", "hash"])
+def test_stage_rejects_wrong_root_metadata_or_hash(setup, defect):
+    transaction = prepared(setup)
+    owner, _, _, fake, _ = setup
+    target = transaction.stage_directory / "keyring.gpg"
+    if defect in {"owner", "mode"}:
+        fake.bad_stat = target
+        fake.bad_stat_fields = ("1000\t400\tregular file\t1\t20" if defect == "owner"
+                                else "0\t600\tregular file\t1\t20")
+    else:
+        fake.bad_hash = target
+    request, approval = stage_approved(setup, transaction)
+    outcome = owner.stage(request, approval)
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert fake.stage[str(transaction.stage_directory)][1] == 0
+    assert not any(call[1:] == transaction.privilege_argv[1:] for call in fake.privileged)
+
+
+def test_exact_approved_install_uses_fixed_privilege_argv_and_receipt(setup):
+    transaction = staged(setup)
+    owner, authority, approvals, fake, _ = setup
+    request = transaction.request(owner.root)
+    before_denial = list(fake.privileged)
+    assert owner.install(request, approvals.issue(request)).decision == "DENY"
+    assert fake.privileged == before_denial
     authority.set_grant("tailscale.install", enabled=True,
                         executables=[request.parameters["executable"]])
     approval = approvals.issue(request)
@@ -181,11 +332,13 @@ def test_exact_approved_install_uses_fixed_privilege_argv_and_receipt(setup):
     outcome = owner.install(request, approval)
     assert outcome.decision == "ALLOW", outcome.reason
     assert outcome.receipt.outcome == "SUCCESS"
-    assert len(fake.privileged) == 1
+    installs = [call for call in fake.privileged if call[1:] == transaction.privilege_argv[1:]]
+    assert len(installs) == 1
     assert setup[4] == fetched_before_install
-    argv = fake.privileged[0]
+    argv = installs[0]
     assert argv[:2] == ("/usr/bin/pkexec", "/usr/bin/env")
-    assert argv[3:] == transaction.install_argv
+    assert argv[4:] == transaction.install_argv
+    assert argv[3] == "DEBIAN_FRONTEND=noninteractive"
     assert "--no-download" in argv and "--no-remove" in argv
     assert owner.install(request, approval).decision == "DENY"
     report = ActionAuditJournal.for_read_only_inspection(owner.root).verify()
@@ -208,7 +361,7 @@ def test_dependency_transaction_routes_to_manual_without_privilege(setup):
 
 
 def test_drift_after_final_approval_records_failure_without_privilege(setup):
-    transaction = prepared(setup)
+    transaction = staged(setup)
     owner, authority, approvals, fake, _ = setup
     request = transaction.request(owner.root)
     authority.set_grant("tailscale.install", enabled=True,
@@ -217,9 +370,23 @@ def test_drift_after_final_approval_records_failure_without_privilege(setup):
     outcome = owner.install(request, approvals.issue(request))
     assert outcome.decision == "ERROR"
     assert outcome.receipt.outcome == "FAILURE"
-    assert not fake.privileged
+    assert not any(call[1:] == transaction.privilege_argv[1:] for call in fake.privileged)
     journal = ActionAuditJournal.for_read_only_inspection(owner.root)
     assert journal.verify().recent[-1]["outcome"] == "FAILURE"
+
+
+def test_root_stage_drift_after_final_approval_stops_before_apt(setup):
+    transaction = staged(setup)
+    owner, authority, approvals, fake, _ = setup
+    request = transaction.request(owner.root)
+    authority.set_grant("tailscale.install", enabled=True,
+                        executables=[request.parameters["executable"]])
+    target = str(transaction.stage_directory / "keyring.gpg")
+    kind, mode, _ = fake.stage[target]
+    fake.stage[target] = (kind, mode, b"changed")
+    outcome = owner.install(request, approvals.issue(request))
+    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
+    assert not any(call[1:] == transaction.privilege_argv[1:] for call in fake.privileged)
 
 
 def test_prepare_rejects_host_apt_hook_before_update_and_records_failure(setup):
@@ -234,20 +401,20 @@ def test_prepare_rejects_host_apt_hook_before_update_and_records_failure(setup):
     assert not fake.privileged
 
 
-def test_mutated_private_source_denies_install_before_privilege(setup):
-    transaction = prepared(setup)
+def test_mutated_private_source_cannot_change_root_stage_install(setup):
+    transaction = staged(setup)
     owner, authority, approvals, fake, _ = setup
     request = transaction.request(owner.root)
     authority.set_grant("tailscale.install", enabled=True,
                         executables=[request.parameters["executable"]])
     (transaction.plan.private_directory / "source.list").write_text("forged")
     outcome = owner.install(request, approvals.issue(request))
-    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
-    assert not fake.privileged
+    assert outcome.decision == "ALLOW" and outcome.receipt.outcome == "SUCCESS"
+    assert any(call[1:] == transaction.privilege_argv[1:] for call in fake.privileged)
 
 
-def test_mutated_cached_archive_denies_install_before_privilege(setup):
-    transaction = prepared(setup)
+def test_mutated_private_archive_cannot_change_root_stage_install(setup):
+    transaction = staged(setup)
     owner, authority, approvals, fake, fetched = setup
     request = transaction.request(owner.root)
     authority.set_grant("tailscale.install", enabled=True,
@@ -255,8 +422,7 @@ def test_mutated_cached_archive_denies_install_before_privilege(setup):
     (transaction.plan.private_directory / "cache" / transaction.archive_name).write_bytes(b"forged")
     before = list(fetched)
     outcome = owner.install(request, approvals.issue(request))
-    assert outcome.decision == "ERROR" and outcome.receipt.outcome == "FAILURE"
-    assert not fake.privileged
+    assert outcome.decision == "ALLOW" and outcome.receipt.outcome == "SUCCESS"
     assert fetched == before
 
 

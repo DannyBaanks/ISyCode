@@ -35,6 +35,15 @@ Entry point: **Settings → Remote access → Private access (Tailscale)**.
    effect. Automated "keep service stopped" is unavailable until a separately
    reviewed, safely scoped suppression owner exists. Other distributions show
    official installation steps until their installer owners are implemented.
+   The supported automated path uses three distinct approved actions: private
+   package preparation, bounded copying into a unique root-owned stage, and
+   installation from that verified stage. The final approval binds the stage
+   identity and manifest digest, exact package version and argv, and the
+   possible daemon restart. Root apt receives
+   `DEBIAN_FRONTEND=noninteractive`. If staging integrity or the exact
+   one-package simulation fails, the wizard offers manual instructions.
+   Package maintainer scripts and host dpkg triggers may still run as part of
+   the official package transaction; simulation does not enumerate them.
 3. **Join the user's tailnet.** If Tailscale is installed but signed out, show
    the exact login action and ask for approval. Start the official CLI login
    flow, present its URL in the TUI, and wait for the user to finish browser

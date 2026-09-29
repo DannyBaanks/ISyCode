@@ -16,6 +16,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 ACTION_OWNER = {
     "tailscale.inspect": "tailscale_read",
     "tailscale.install.prepare": "tailscale_package_install",
+    "tailscale.install.stage": "tailscale_package_install",
     "tailscale.install": "tailscale_package_install",
     "tailscale.login": "tailscale_login",
     "tailscale.serve.enable": "tailscale_serve",
@@ -56,7 +57,7 @@ def request_for(setup, action_id, **changes):
     root, cli, apt, _, _, _, _ = setup
     private_directory = str(root.parent / "state" / "isycode" / "tailscale-apt" /
                             ("a" * 16 + "-" + "b" * 32))
-    parameters = {
+    all_parameters = {
         "tailscale.inspect": {"executable": str(cli), "gateway_url": GATEWAY,
                               "gateway_port": 8787},
         "tailscale.install": {
@@ -73,11 +74,16 @@ def request_for(setup, action_id, **changes):
             "archive_name": "tailscale_1.2.3_amd64.deb",
             "simulation_digest": DIGEST,
             "package_actions": ("Inst tailscale=1.2.3", "Conf tailscale=1.2.3"),
+            "stage_directory": "/var/lib/isycode/tailscale/" +
+                               ("a" * 16 + "-" + "b" * 32),
+            "stage_manifest_digest": DIGEST,
             "install_argv": (str(apt), "install", "--yes", "--no-upgrade",
                              "--no-remove", "--no-download", "--no-install-recommends",
                              "tailscale=1.2.3"),
             "privilege_argv": ("/usr/bin/pkexec", "/usr/bin/env",
-                               f"APT_CONFIG={private_directory}/apt.conf", str(apt),
+                               "APT_CONFIG=/var/lib/isycode/tailscale/" +
+                               ("a" * 16 + "-" + "b" * 32) + "/apt.conf",
+                               "DEBIAN_FRONTEND=noninteractive", str(apt),
                                "install", "--yes", "--no-upgrade", "--no-remove",
                                "--no-download", "--no-install-recommends", "tailscale=1.2.3"),
         },
@@ -104,7 +110,9 @@ def request_for(setup, action_id, **changes):
             "route_target": GATEWAY, "serve_digest": DIGEST, "mode": "private",
             "funnel": False,
         },
-    }[action_id]
+    }
+    all_parameters["tailscale.install.stage"] = dict(all_parameters["tailscale.install"])
+    parameters = all_parameters[action_id]
     parameters.update(changes)
     return ActionRequest(action_id, root, "tailscale", parameters,
                          execution_owner=ACTION_OWNER[action_id])
@@ -122,6 +130,7 @@ def test_tailscale_catalog_effects_and_approval_contract():
             for action in ACTION_OWNER} == {
         ("tailscale.inspect", "read", False),
         ("tailscale.install.prepare", "process", True),
+        ("tailscale.install.stage", "process", True),
         ("tailscale.install", "process", True),
         ("tailscale.login", "process", True),
         ("tailscale.serve.enable", "process", True),
@@ -167,10 +176,15 @@ def test_tailscale_request_parameters_fail_closed(setup, action_id):
     else:
         authority.set_grant(action_id, enabled=True, executables=[cli, apt, wrong])
     invalid_changes = [{"executable": str(wrong)}, {"unexpected": True}]
-    if action_id in {"tailscale.install", "tailscale.install.prepare"}:
+    if action_id in {"tailscale.install", "tailscale.install.stage", "tailscale.install.prepare"}:
         invalid_changes += [{"package": "other"}, {"os_id": "fedora"},
                             {"repository_key_url": "https://evil.example/key"},
                             {"package_service_effect": "no_service_start"}]
+    if action_id in {"tailscale.install", "tailscale.install.stage"}:
+        invalid_changes += [{"stage_directory": "/tmp/forged"},
+                            {"stage_manifest_digest": "0" * 63},
+                            {"privilege_argv": ("/usr/bin/pkexec", "/usr/bin/env",
+                                                "APT_CONFIG=/tmp/forged/apt.conf", str(apt))}]
     if action_id in {"tailscale.inspect", "tailscale.serve.enable", "tailscale.serve.disable"}:
         invalid_changes += [{"gateway_url": "http://0.0.0.0:8787"},
                             {"gateway_port": 8788}]

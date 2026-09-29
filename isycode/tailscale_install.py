@@ -45,6 +45,7 @@ SUPPORTED = {
 MAX_FETCH = 16 * 1024
 MAX_OUTPUT = 64 * 1024
 FETCH_TIMEOUT = 8.0
+STAGE_ROOT = Path("/var/lib/isycode/tailscale")
 
 
 @dataclass(frozen=True)
@@ -133,6 +134,14 @@ class UbuntuDebianInstallPlan:
 
 
 @dataclass(frozen=True)
+class StageArtifact:
+    relative_name: str
+    source: Path
+    size: int
+    sha256: str
+
+
+@dataclass(frozen=True)
 class PreparedTransaction:
     plan: UbuntuDebianInstallPlan
     key_sha256: str
@@ -145,16 +154,26 @@ class PreparedTransaction:
     simulation_digest: str
     package_actions: tuple[str, ...]
     install_argv: tuple[str, ...]
+    stage_directory: Path
+    stage_artifacts: tuple[StageArtifact, ...]
+
+    @property
+    def stage_manifest_digest(self) -> str:
+        entries = [(item.relative_name, item.size, item.sha256)
+                   for item in self.stage_artifacts]
+        return _sha(json.dumps((str(self.stage_directory), entries),
+                               separators=(",", ":")).encode())
 
     @property
     def privilege_argv(self) -> tuple[str, ...]:
         return ("/usr/bin/pkexec", "/usr/bin/env",
-                f"APT_CONFIG={self.plan.private_directory / 'apt.conf'}",
+                f"APT_CONFIG={self.stage_directory / 'apt.conf'}",
+                "DEBIAN_FRONTEND=noninteractive",
                 *self.install_argv)
 
-    def request(self, root: Path) -> ActionRequest:
+    def _parameters(self) -> dict:
         plan = self.plan
-        return ActionRequest("tailscale.install", root, "tailscale", {
+        return {
             "executable": plan.apt_executable, "os_id": plan.os_id,
             "os_codename": plan.codename, "repository_key_url": plan.key_url,
             "repository_list_url": plan.list_url, "package": "tailscale",
@@ -170,9 +189,28 @@ class PreparedTransaction:
             "archive_name": self.archive_name,
             "simulation_digest": self.simulation_digest,
             "package_actions": self.package_actions,
+            "stage_directory": str(self.stage_directory),
+            "stage_manifest_digest": self.stage_manifest_digest,
             "install_argv": self.install_argv,
             "privilege_argv": self.privilege_argv,
-        }, execution_owner="tailscale_package_install")
+        }
+
+    def stage_request(self, root: Path) -> ActionRequest:
+        return ActionRequest("tailscale.install.stage", root, "tailscale",
+                             self._parameters(), execution_owner="tailscale_package_install")
+
+    def request(self, root: Path) -> ActionRequest:
+        return ActionRequest("tailscale.install", root, "tailscale",
+                             self._parameters(), execution_owner="tailscale_package_install")
+
+    def stage_preview(self) -> str:
+        entries = "".join(f"- {item.relative_name}: {item.size} bytes, SHA256 {item.sha256}\n"
+                          for item in self.stage_artifacts)
+        return (f"Root-owned private Tailscale stage: {self.stage_directory}\n"
+                f"Approved artifact manifest: {self.stage_manifest_digest}\n"
+                f"Copy exactly {len(self.stage_artifacts)} bounded files:\n{entries}"
+                "Then verify root "
+                "ownership, restrictive modes, size, and SHA256. No package is installed.\n")
 
     def preview(self) -> str:
         return (f"Official Tailscale source: {self.plan.repository_uri} "
@@ -184,6 +222,8 @@ class PreparedTransaction:
                 f"Verified archive SHA256: {self.archive_sha256}\n"
                 f"Package actions: {', '.join(self.package_actions)}\n"
                 f"Simulation digest: {self.simulation_digest}\n"
+                f"Verified root stage: {self.stage_directory}\n"
+                f"Stage manifest digest: {self.stage_manifest_digest}\n"
                 f"Exact privileged argv: {' '.join(self.privilege_argv)}\n"
                 "The exact signed Tailscale package's maintainer scripts and triggers "
                 "run as root and may start or restart tailscaled.\n")
@@ -312,7 +352,8 @@ def _index_files(plan: UbuntuDebianInstallPlan) -> tuple[tuple[str, str], ...]:
     for item in directory.iterdir():
         if item.name in {"lock", "partial", "auxfiles"}:
             continue
-        if not item.name.startswith(prefix):
+        if (not item.name.startswith(prefix)
+                or re.fullmatch(r"[A-Za-z0-9_.+%-]{1,240}", item.name) is None):
             raise ValueError("unexpected apt index file")
         data = _private_file(item, max_bytes=MAX_INDEXES)
         total += len(data)
@@ -418,7 +459,7 @@ def _bounded_privileged(argv: tuple[str, ...], *, env: Mapping[str, str],
 
 
 class TailscalePackageInstallOwner:
-    """Two approvals: private signed-index preparation, then one exact package install."""
+    """Three approvals: private preparation, root-owned staging, exact install."""
 
     def __init__(self, root: Path, authority: WorkspaceAuthority,
                  approvals: ActionApprovalStore, *, platform: str | None = None,
@@ -441,6 +482,7 @@ class TailscalePackageInstallOwner:
         self._nonce = secrets.token_hex(16)
         self._prepared: UbuntuDebianInstallPlan | None = None
         self._transaction: PreparedTransaction | None = None
+        self._staged: PreparedTransaction | None = None
 
     def plan(self) -> UbuntuDebianInstallPlan:
         if self._platform != "linux":
@@ -489,8 +531,7 @@ class TailscalePackageInstallOwner:
             raise ValueError("bounded package process failed")
         return result.stdout
 
-    def _verify_apt_config(self, plan: UbuntuDebianInstallPlan) -> None:
-        dump = self._checked_run(plan, ("/usr/bin/apt-config", "dump"))
+    def _assert_apt_config(self, plan: UbuntuDebianInstallPlan, dump: str) -> None:
         lower = dump.lower()
         if ("pre-invoke" in lower or "post-invoke" in lower or "pre-install-pkgs" in lower
                 or "hook" in lower or f'Dir::Etc "{plan.private_directory}";' not in dump
@@ -498,6 +539,80 @@ class TailscalePackageInstallOwner:
                 or 'Dir::Etc::main "/dev/null";' not in dump
                 or 'Dir::Etc::parts "-";' not in dump):
             raise ValueError("host apt configuration or hook is loaded")
+
+    def _verify_apt_config(self, plan: UbuntuDebianInstallPlan) -> None:
+        self._assert_apt_config(plan, self._checked_run(plan, ("/usr/bin/apt-config", "dump")))
+
+    def _root_run(self, argv: tuple[str, ...], *, timeout: float = APT_TIMEOUT):
+        return self._privileged_run(("/usr/bin/pkexec", *argv),
+                                    env={"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
+                                    timeout=timeout, max_output=MAX_OUTPUT)
+
+    def _root_checked(self, argv: tuple[str, ...], *, timeout: float = APT_TIMEOUT) -> str:
+        result = self._root_run(argv, timeout=timeout)
+        if result.returncode != 0:
+            raise ValueError("fixed privileged package operation failed")
+        return result.stdout
+
+    def _root_stat(self, path: Path) -> tuple[int, int, str, int, int]:
+        raw = self._root_checked(("/usr/bin/stat", "--printf=%u\t%a\t%F\t%h\t%s",
+                                  "--", str(path)))
+        fields = raw.split("\t")
+        if len(fields) != 5 or not all(value.isdecimal() for value in
+                                       (fields[0], fields[1], fields[3], fields[4])):
+            raise ValueError("privileged stage metadata is malformed")
+        return int(fields[0]), int(fields[1], 8), fields[2], int(fields[3]), int(fields[4])
+
+    def _root_absent(self, path: Path) -> bool:
+        result = self._root_run(("/usr/bin/stat", "--printf=%F", "--", str(path)))
+        if result.returncode == 0:
+            return False
+        if "No such file or directory" not in result.stderr:
+            raise ValueError("root stage path cannot be inspected")
+        return True
+
+    def _require_root_directory(self, path: Path, *, private: bool) -> None:
+        uid, mode, kind, _, _ = self._root_stat(path)
+        if (uid != 0 or kind != "directory" or mode & 0o022
+                or (private and mode != 0o700)):
+            raise ValueError("root stage directory is unsafe")
+
+    def _create_root_directory(self, path: Path, *, must_be_new: bool = False) -> None:
+        absent = self._root_absent(path)
+        if must_be_new and not absent:
+            raise ValueError("root stage already exists")
+        if absent:
+            self._root_checked(("/usr/bin/install", "-d", "-m", "0700", "--", str(path)))
+        self._require_root_directory(path, private=True)
+
+    def _verify_stage_directories(self, transaction: PreparedTransaction) -> None:
+        stage = transaction.stage_directory
+        if stage != STAGE_ROOT / transaction.plan.private_directory.name:
+            raise ValueError("root stage identity differs")
+        for directory in (Path("/var"), Path("/var/lib"), STAGE_ROOT.parent,
+                          STAGE_ROOT, stage, stage / "lists", stage / "cache",
+                          stage / "lists" / "partial", stage / "cache" / "partial"):
+            self._require_root_directory(directory,
+                                         private=directory not in {Path("/var"), Path("/var/lib")})
+
+    def _verify_stage(self, transaction: PreparedTransaction) -> None:
+        self._verify_stage_directories(transaction)
+        stage = transaction.stage_directory
+        for item in transaction.stage_artifacts:
+            path = stage / item.relative_name
+            uid, mode, kind, links, size = self._root_stat(path)
+            if (uid != 0 or mode != 0o400 or kind != "regular file"
+                    or links != 1 or size != item.size):
+                raise ValueError("root stage file metadata differs")
+            output = self._root_checked(("/usr/bin/sha256sum", "--binary", "--", str(path)))
+            if output != f"{item.sha256} *{path}\n":
+                raise ValueError("root stage file digest differs")
+
+    def _stage_apt(self, transaction: PreparedTransaction,
+                   argv: tuple[str, ...], *, timeout: float = APT_TIMEOUT) -> str:
+        return self._root_checked(("/usr/bin/env",
+                                   f"APT_CONFIG={transaction.stage_directory / 'apt.conf'}",
+                                   "DEBIAN_FRONTEND=noninteractive", *argv), timeout=timeout)
 
     def _verify_indexes(self, plan: UbuntuDebianInstallPlan) -> str:
         files = _index_files(plan)
@@ -604,18 +719,102 @@ class TailscalePackageInstallOwner:
                 or _sha(archive) != archive_sha):
             raise ValueError("downloaded package differs from signed index")
         _atomic_private_file(plan.private_directory / "cache" / Path(archive_name).name, archive)
+        stage_directory = STAGE_ROOT / plan.private_directory.name
+        stage_plan = UbuntuDebianInstallPlan.for_release(
+            plan.os_id, plan.codename, plan.apt_executable, stage_directory)
+        _atomic_private_file(plan.private_directory / "stage-source.list",
+                             stage_plan.source_text.encode())
+        _atomic_private_file(plan.private_directory / "stage-apt.conf",
+                             stage_plan.config_text.encode())
+        sources = [
+            ("keyring.gpg", plan.private_directory / "keyring.gpg", MAX_FETCH),
+            ("source.list", plan.private_directory / "stage-source.list", MAX_FETCH),
+            ("apt.conf", plan.private_directory / "stage-apt.conf", MAX_FETCH),
+        ]
+        index_files = _index_files(plan)
+        if _index_digest(index_files) != indexes_digest:
+            raise ValueError("private signed indexes changed")
+        sources.extend((f"lists/{name}", plan.private_directory / "lists" / name,
+                        MAX_INDEXES) for name, _ in index_files)
+        sources.append((f"cache/{Path(archive_name).name}",
+                        plan.private_directory / "cache" / Path(archive_name).name,
+                        MAX_PACKAGE))
+        artifacts = []
+        for relative, source_path, bound in sources:
+            data = _private_file(source_path, max_bytes=bound)
+            artifacts.append(StageArtifact(relative, source_path, len(data), _sha(data)))
+        if (artifacts[0].sha256 != key_sha or artifacts[-1].sha256 != archive_sha
+                or sum(item.size for item in artifacts) > MAX_INDEXES + MAX_PACKAGE + 4 * MAX_FETCH):
+            raise ValueError("stage manifest differs from signed package")
         transaction = PreparedTransaction(plan, key_sha, source_sha, config_sha,
                                           indexes_digest, version, archive_sha,
                                           Path(archive_name).name, _sha(simulated.encode()),
-                                          actions, install_argv)
+                                          actions, install_argv, stage_directory,
+                                          tuple(artifacts))
         self._transaction = transaction
         return transaction
+
+    def stage(self, request: ActionRequest,
+              approval: ActionApproval | None) -> ActionOutcome:
+        try:
+            transaction = self._transaction
+            if (transaction is None or transaction.plan != self.plan()
+                    or request != transaction.stage_request(self.root)):
+                return ActionOutcome("Tailscale staging denied.", "DENY", None,
+                                     "request differs from the prepared artifact manifest")
+            gate = self._gate(transaction.plan)
+            _, decision = gate.authorize(request, approvals=self.approvals, approval=approval)
+            if not decision.allowed:
+                return ActionOutcome("Tailscale staging denied.", "DENY", None,
+                                     "workspace grant, Sentinel, approval, or journal denied")
+        except (OSError, ValueError, TypeError):
+            return ActionOutcome("Tailscale staging denied.", "DENY", None,
+                                 "stage plan or durable journal unavailable")
+        phase = "root stage path check"
+        stage = transaction.stage_directory
+        created = False
+        try:
+            self._require_root_directory(Path("/var"), private=False)
+            self._require_root_directory(Path("/var/lib"), private=False)
+            phase = "root stage directory creation"
+            self._create_root_directory(STAGE_ROOT.parent)
+            self._create_root_directory(STAGE_ROOT)
+            self._create_root_directory(stage, must_be_new=True)
+            created = True
+            for directory in (stage / "lists", stage / "cache",
+                              stage / "lists" / "partial", stage / "cache" / "partial"):
+                self._create_root_directory(directory, must_be_new=True)
+            self._verify_stage_directories(transaction)
+            phase = "bounded artifact copy"
+            for item in transaction.stage_artifacts:
+                if not 0 <= item.size <= MAX_PACKAGE:
+                    raise ValueError("stage artifact exceeds byte limit")
+                target = stage / item.relative_name
+                self._root_checked(("/usr/bin/dd", f"if={item.source}", f"of={target}",
+                                    "iflag=count_bytes", f"count={item.size + 1}",
+                                    "oflag=excl", "conv=fsync", "status=none"))
+                self._root_checked(("/usr/bin/chmod", "0400", "--", str(target)))
+            phase = "root stage integrity verification"
+            self._verify_stage(transaction)
+            self._staged = transaction
+            return self._receipt(gate, request, "SUCCESS", "root-owned package stage verified")
+        except (OSError, ValueError, TypeError, TimeoutError, subprocess.TimeoutExpired):
+            self._staged = None
+            if created:
+                try:
+                    uid, _, kind, _, _ = self._root_stat(stage)
+                    if uid == 0 and kind == "directory":
+                        self._root_run(("/usr/bin/chmod", "0000", "--", str(stage)))
+                except (OSError, ValueError, TypeError, TimeoutError, subprocess.TimeoutExpired):
+                    pass
+            return self._receipt(gate, request, "FAILURE", phase)
 
     def install(self, request: ActionRequest,
                 approval: ActionApproval | None) -> ActionOutcome:
         try:
             transaction = self._transaction
-            if (transaction is None or transaction.plan != self.plan()
+            if (transaction is None or self._staged is not transaction
+                    or transaction.plan != self.plan()
                     or request != transaction.request(self.root)):
                 return ActionOutcome("Tailscale installation denied.", "DENY", None,
                                      "request does not match the simulated transaction")
@@ -630,38 +829,27 @@ class TailscalePackageInstallOwner:
                                  "installation plan or durable journal unavailable")
         phase = "transaction recheck"
         try:
-            self._verify_apt_config(plan)
-            if (_sha(_private_file(plan.private_directory / "keyring.gpg", max_bytes=MAX_FETCH))
-                    != transaction.key_sha256
-                    or _sha(_private_file(plan.private_directory / "source.list", max_bytes=MAX_FETCH))
-                    != transaction.source_sha256
-                    or _sha(_private_file(plan.private_directory / "apt.conf", max_bytes=MAX_FETCH))
-                    != transaction.config_sha256
-                    or self._verify_indexes(plan) != transaction.indexes_digest):
-                raise ValueError("signed private repository changed")
-            simulated = self._checked_run(plan, (plan.apt_executable, "-s", *transaction.install_argv[1:]))
+            self._verify_stage(transaction)
+            stage_plan = UbuntuDebianInstallPlan.for_release(
+                plan.os_id, plan.codename, plan.apt_executable, transaction.stage_directory)
+            self._assert_apt_config(stage_plan,
+                                    self._stage_apt(transaction, ("/usr/bin/apt-config", "dump")))
+            simulated = self._stage_apt(transaction,
+                                        (plan.apt_executable, "-s", *transaction.install_argv[1:]))
             version, actions = _simulation(simulated, transaction.version)
             if (actions != transaction.package_actions
                     or _sha(simulated.encode()) != transaction.simulation_digest):
                 raise ValueError("apt transaction changed")
             phase = "package archive verification"
-            metadata = self._checked_run(plan, ("/usr/bin/apt-cache", "show", "tailscale"))
+            metadata = self._stage_apt(transaction, ("/usr/bin/apt-cache", "show", "tailscale"))
             filename, digest, size = _package_metadata(metadata, version)
             if Path(filename).name != transaction.archive_name or digest != transaction.archive_sha256:
                 raise ValueError("signed archive metadata changed")
-            archive = _private_file(plan.private_directory / "cache" / transaction.archive_name,
-                                    max_bytes=MAX_PACKAGE)
-            if len(archive) != size or _sha(archive) != digest:
-                raise ValueError("prepared package archive changed")
+            if size != next(item.size for item in transaction.stage_artifacts
+                            if item.relative_name == f"cache/{transaction.archive_name}"):
+                raise ValueError("staged package archive size changed")
             phase = "privileged package install"
-            privileged_argv = ("/usr/bin/pkexec", "/usr/bin/env",
-                               f"APT_CONFIG={plan.private_directory / 'apt.conf'}",
-                               *transaction.install_argv)
-            result = self._privileged_run(privileged_argv,
-                                          env={"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
-                                          timeout=INSTALL_TIMEOUT, max_output=MAX_OUTPUT)
-            if result.returncode != 0:
-                raise ValueError("package manager or OS privilege prompt failed")
+            self._root_checked(transaction.privilege_argv[1:], timeout=INSTALL_TIMEOUT)
             phase = "installed package inventory"
             inventory = self._checked_run(plan, ("/usr/bin/dpkg-query", "-W", "-f=${Version}", "tailscale"))
             if inventory.strip() != transaction.version:
