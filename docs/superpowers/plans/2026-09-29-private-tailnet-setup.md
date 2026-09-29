@@ -113,11 +113,11 @@ or restart `tailscaled`.
 - Create `test_tailscale_login.py`
 - Modify `isycode/action_runtime.py` / `isycode/action_coverage.py` only for login Systembility and audited owner callsites
 
-- [ ] Add failing tests for approval-before-launch, fixed executable/argv, pending login, completed login, user cancellation, timeout, malformed login output, credential-like output redaction, and restart without saved auth material.
-- [ ] Define `TailscaleLoginOwner.begin_login(request, approval) -> LoginAttempt` and `poll(attempt_id) -> LoginStatus`; retain only an in-memory attempt ID and sanitized login URL while active.
-- [ ] Show the fixed login operation and official authorization destination; the user completes sign-in in their browser. Do not ask for or persist account passwords, reusable auth keys, OAuth tokens, raw Tailscale status JSON, or the full raw login output.
-- [ ] Require a fresh one-use `tailscale.login` approval for launch. Poll through bounded read-only inventory and store only final non-secret identity status. On cancel or restart, discard the in-memory attempt and never try to roll back the user's tailnet enrollment.
-- [ ] Run `pytest -q test_tailscale_login.py test_tailscale_authority.py`.
+- [x] Add failing tests for approval-before-launch, fixed executable/argv, pending login, completed login, user cancellation, timeout, malformed login output, credential-like output redaction, and restart without saved auth material.
+- [x] Define `TailscaleLoginOwner.begin_login(request, approval) -> ActionOutcome` and `poll(attempt_id) -> LoginStatus`; retain only an in-memory attempt ID and sanitized login URL while active.
+- [x] Provide a fixed-operation preview naming the official authorization destination; the user completes sign-in in their browser. Do not ask for or persist account passwords, reusable auth keys, OAuth tokens, raw Tailscale status JSON, or the full raw login output.
+- [x] Require a fresh one-use `tailscale.login` approval for launch. Poll through bounded read-only inventory and expose only final non-secret identity status. On cancel or restart, discard the in-memory attempt and never try to roll back the user's tailnet enrollment.
+- [x] Run `pytest -q test_tailscale_login.py test_tailscale_authority.py`.
 
 ## Task 6: Implement private Serve preview, enable, verify, and disable
 

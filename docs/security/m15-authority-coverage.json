@@ -818,7 +818,7 @@
       "owners": [
         "tailscale_login"
       ],
-      "secure_reachability": "NOT_DEMONSTRATED",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary"
       ],
@@ -904,7 +904,7 @@
       "action": "tailscale.login",
       "callsite": "TailscaleLoginOwner.begin_login",
       "owner": "tailscale_login",
-      "status": "PLANNED"
+      "status": "COVERED"
     },
     {
       "action": "tailscale.serve.enable",
@@ -1316,6 +1316,20 @@
       "file": "isycode/tailscale_install.py",
       "line": 224,
       "owner": "tailscale_package_install"
+    },
+    {
+      "action": "tailscale.login",
+      "callable": "isycode.tailscale_login.TailscaleLoginOwner.login_request",
+      "file": "isycode/tailscale_login.py",
+      "line": 126,
+      "owner": "tailscale_login"
+    },
+    {
+      "action": "tailscale.login",
+      "callable": "isycode.tailscale_login.TailscaleLoginOwner.begin_login",
+      "file": "isycode/tailscale_login.py",
+      "line": 163,
+      "owner": "tailscale_login"
     },
     {
       "action": null,

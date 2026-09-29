@@ -82,7 +82,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("tailscale.install.prepare", "TailscalePackageInstallOwner.prepare", "tailscale_package_install", "COVERED"),
     ("tailscale.install.stage", "TailscalePackageInstallOwner.stage", "tailscale_package_install", "COVERED"),
     ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "COVERED"),
-    ("tailscale.login", "TailscaleLoginOwner.begin_login", "tailscale_login", "PLANNED"),
+    ("tailscale.login", "TailscaleLoginOwner.begin_login", "tailscale_login", "COVERED"),
     ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "PLANNED"),
     ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "PLANNED"),
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
