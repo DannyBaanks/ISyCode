@@ -15,7 +15,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
-from typing import Callable, Mapping, Sequence
+from typing import Callable, Literal, Mapping, Sequence
 from urllib import request as urlrequest
 
 from isycode.action_runtime import (
@@ -29,6 +29,7 @@ from isycode.workspace_setup import state_root
 
 
 KEY_FINGERPRINT = "2596A99EAAB33821893C0A79458CA832957F5868"
+PACKAGE_SERVICE_EFFECT = "may_start_or_restart_tailscaled"
 KEYRING_PATH = Path("/usr/share/keyrings/tailscale-archive-keyring.gpg")
 SOURCE_PATH = Path("/etc/apt/sources.list.d/tailscale.list")
 APT_LISTS_PATH = Path("/var/lib/apt/lists/isycode-tailscale")
@@ -52,6 +53,7 @@ class UbuntuDebianInstallPlan:
     list_url: str
     signing_key_fingerprint: str
     package: str
+    package_service_effect: Literal["may_start_or_restart_tailscaled"]
     source_text: str
     update_argv: tuple[str, ...]
     install_argv: tuple[str, ...]
@@ -80,13 +82,15 @@ class UbuntuDebianInstallPlan:
         install = (apt_executable, *apt_options, "install", "--yes",
                    "--no-install-recommends", "tailscale")
         return cls(os_id, codename, apt_executable, base, key_url, list_url,
-                   KEY_FINGERPRINT, "tailscale", source, update, install)
+                   KEY_FINGERPRINT, "tailscale", PACKAGE_SERVICE_EFFECT,
+                   source, update, install)
 
     def request(self, root: Path) -> ActionRequest:
         return ActionRequest("tailscale.install", root, "tailscale", {
             "executable": self.apt_executable, "os_id": self.os_id,
             "os_codename": self.codename, "repository_key_url": self.key_url,
             "repository_list_url": self.list_url, "package": self.package,
+            "package_service_effect": self.package_service_effect,
         }, execution_owner="tailscale_package_install")
 
     def preview(self) -> str:
@@ -96,7 +100,8 @@ class UbuntuDebianInstallPlan:
                 f"Keyring: {KEYRING_PATH}\n"
                 f"Repository source: {SOURCE_PATH}\n{self.source_text}"
                 f"Isolated signed package indexes: {APT_LISTS_PATH}\n"
-                f"Package changes: apt-get update; apt-get install {self.package}\n")
+                f"Package changes: apt-get update; apt-get install {self.package}\n"
+                "Package maintainer script may start or restart tailscaled.\n")
 
 
 def _read_os_release() -> Mapping[str, str]:
@@ -177,7 +182,7 @@ class _InstallAttemptJournal:
         self.path = directory / f"attempts-{identity}.jsonl"
 
     def record(self, request: ActionRequest, *, phase: str, status: str) -> None:
-        allowed_phases = {"authorized", "daemon", "key", "source", "keyring", "repository",
+        allowed_phases = {"authorized", "key", "source", "keyring", "repository",
                           "update", "install", "inventory", "complete"}
         if phase not in allowed_phases or status not in {"started", "failed", "success"}:
             raise ValueError("invalid install receipt status")
@@ -208,8 +213,7 @@ class TailscalePackageInstallOwner:
                  key_fingerprint: Callable[[bytes], str] = _inspect_key,
                  privileged_run: Callable = _privileged_run,
                  inventory: Callable = lambda: TailscaleAdapter().inspect(),
-                 installed_file_state: Callable[[Path], str] = _installed_file_state,
-                 service_start_guard: Callable[[], bool] = lambda: False):
+                 installed_file_state: Callable[[Path], str] = _installed_file_state):
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
@@ -221,7 +225,6 @@ class TailscalePackageInstallOwner:
         self._privileged_run = privileged_run
         self._inventory = inventory
         self._installed_file_state = installed_file_state
-        self._service_start_guard = service_start_guard
 
     def plan(self) -> UbuntuDebianInstallPlan:
         if self._platform != "linux":
@@ -257,14 +260,8 @@ class TailscalePackageInstallOwner:
             return ActionOutcome("Tailscale installation denied.", "DENY", None,
                                  "installation plan or durable journal unavailable")
 
-        phase = "daemon"
+        phase = "key"
         try:
-            # The official .deb postinst calls deb-systemd-invoke restart. Until
-            # a separate, reviewed service policy is available, live apt
-            # installation must fail closed instead of starting tailscaled.
-            if self._service_start_guard() is not True:
-                raise ValueError("daemon start cannot be prevented")
-            phase = "key"
             key = self._fetch(plan.key_url, timeout=FETCH_TIMEOUT, max_bytes=MAX_FETCH)
             if (not isinstance(key, bytes) or not 0 < len(key) <= MAX_FETCH
                     or self._key_fingerprint(key) != plan.signing_key_fingerprint):
@@ -314,8 +311,7 @@ class TailscalePackageInstallOwner:
                 return ActionOutcome("Tailscale installation status is not verifiable.",
                                      "NOT_VERIFIABLE", None,
                                      "durable failure receipt unavailable; inspect package state")
-            reason = ("daemon start prevention is unavailable" if phase == "daemon" else
-                      "signing key verification failed" if phase == "key" else
+            reason = ("signing key verification failed" if phase == "key" else
                       "repository verification failed" if phase == "source" else
                       "OS authorization cancelled or package operation failed" if phase in
                       {"keyring", "repository", "update", "install"} else
