@@ -36,12 +36,28 @@ class PrivateAccessStateStore:
     VERSION = 1
     OWNER = "isycode.private-tailnet"
     MAX_BYTES = 32 * 1024
+    MAX_ROUTES = 8
     _ROOT_FIELDS = {"owner", "version", "adapter_version", "routes"}
     _ROUTE_FIELDS = {"route_id", "host", "path", "target", "created_at",
                      "last_verified_status"}
 
     def __init__(self, state_directory: Path | str | None = None):
-        self.state_directory = Path(state_directory or (state_root() / "private-access")).expanduser()
+        requested = Path(state_directory or (state_root() / "private-access")).expanduser()
+        if not requested.is_absolute():
+            requested = Path.cwd() / requested
+        requested = Path(os.path.abspath(requested))
+        cursor = Path(requested.anchor)
+        for part in requested.parts[1:]:
+            cursor = cursor / part
+            try:
+                metadata = cursor.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise ValueError("Private access state path cannot be inspected") from exc
+            if stat.S_ISLNK(metadata.st_mode):
+                raise ValueError("Private access state path cannot traverse symlinks")
+        self.state_directory = requested
         self.state_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         if self.state_directory.is_symlink() or not self.state_directory.is_dir():
             raise ValueError("Private access state directory must be a real directory")
@@ -121,7 +137,7 @@ class PrivateAccessStateStore:
                 or data.get("owner") != self.OWNER or type(data.get("version")) is not int
                 or data.get("version") != self.VERSION or type(data.get("adapter_version")) is not int
                 or data.get("adapter_version") != 1 or not isinstance(data.get("routes"), list)
-                or len(data["routes"]) > 8):
+                or len(data["routes"]) > self.MAX_ROUTES):
             raise ValueError("Private access state owner or version is invalid")
         routes = tuple(self._route_from_json(item) for item in data["routes"])
         if len({r.route_id for r in routes}) != len(routes):
@@ -141,9 +157,15 @@ class PrivateAccessStateStore:
         self._write(routes)
 
     def _write(self, routes: tuple[OwnedServeRoute, ...]) -> None:
+        if len(routes) > self.MAX_ROUTES:
+            raise ValueError("Private access state contains too many routes")
+        for route in routes:
+            self._route_from_json(route.__dict__)
         data = {"owner": self.OWNER, "version": self.VERSION, "adapter_version": 1,
                 "routes": [route.__dict__ for route in routes]}
         payload = json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
+        if len(payload) > self.MAX_BYTES:
+            raise ValueError("Private access state exceeds its size limit")
         temporary = self.state_directory / (".private-access-" + secrets.token_hex(8) + ".tmp")
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
         fd = os.open(temporary, flags, 0o600)
