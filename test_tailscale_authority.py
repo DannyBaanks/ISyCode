@@ -41,7 +41,8 @@ def setup(tmp_path):
     facts = action_runtime.TailscaleAuthorityFacts(
         cli_executable=str(cli), package_manager=str(apt), os_id="ubuntu",
         os_codename="noble", gateway_url=GATEWAY, gateway_port=8787,
-        route_id="isycode-gateway", serve_route=route, owned_route=owned,
+        route_id="isycode-gateway", proposed_route=route, live_routes=(route,),
+        serve_inventory_complete=True, owned_route=owned,
         serve_digest=DIGEST,
     )
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
@@ -160,6 +161,61 @@ def test_tailscale_disable_requires_matching_owned_live_route(setup):
     assert authorize(setup, request, facts=forged,
                      approval=approvals.issue(request)).status == "DENY"
     assert authorize(setup, request, facts=replace(facts, owned_route=None),
+                     approval=approvals.issue(request)).status == "DENY"
+
+
+def test_tailscale_empty_serve_configuration_can_enable(setup):
+    root, cli, _, _, facts, authority, approvals = setup
+    authority.set_grant("tailscale.serve.enable", enabled=True, executables=[cli])
+    request = request_for(setup, "tailscale.serve.enable")
+    empty = replace(facts, live_routes=(), owned_route=None)
+    assert authorize(setup, request, facts=empty,
+                     approval=approvals.issue(request)).status == "ALLOW"
+
+
+def test_tailscale_matching_but_unowned_existing_route_cannot_enable(setup):
+    root, cli, _, _, facts, authority, approvals = setup
+    authority.set_grant("tailscale.serve.enable", enabled=True, executables=[cli])
+    request = request_for(setup, "tailscale.serve.enable")
+    unowned = replace(facts, owned_route=None)
+    assert authorize(setup, request, facts=unowned,
+                     approval=approvals.issue(request)).status == "DENY"
+
+
+@pytest.mark.parametrize("live_routes,owned,complete,expected", [
+    ((), False, True, "ALLOW"),
+    ((ServeRoute("other.tail123.ts.net", "/", GATEWAY, True),), False, True, "ALLOW"),
+    ((ServeRoute(HOST, "/", "http://127.0.0.1:9999", True),), False, True, "DENY"),
+    ((ServeRoute(HOST, "/", GATEWAY, False),), False, True, "DENY"),
+    ((), True, True, "DENY"),  # Stale ownership record must be resolved.
+    (None, False, False, "DENY"),  # Unknown inventory is not a free target.
+    ((), False, False, "DENY"),
+])
+def test_tailscale_enable_requires_verified_free_or_owned_target(
+        setup, live_routes, owned, complete, expected):
+    root, cli, _, _, facts, authority, approvals = setup
+    authority.set_grant("tailscale.serve.enable", enabled=True, executables=[cli])
+    request = request_for(setup, "tailscale.serve.enable")
+    observed = replace(facts, live_routes=live_routes,
+                       owned_route=facts.owned_route if owned else None,
+                       serve_inventory_complete=complete)
+    assert authorize(setup, request, facts=observed,
+                     approval=approvals.issue(request)).status == expected
+
+
+@pytest.mark.parametrize("live_routes,complete", [
+    ((), True),
+    ((ServeRoute(HOST, "/", "http://127.0.0.1:9999", True),), True),
+    ((ServeRoute(HOST, "/", GATEWAY, False),), True),
+    (None, False),
+])
+def test_tailscale_disable_requires_fresh_matching_live_route(
+        setup, live_routes, complete):
+    root, cli, _, _, facts, authority, approvals = setup
+    authority.set_grant("tailscale.serve.disable", enabled=True, executables=[cli])
+    request = request_for(setup, "tailscale.serve.disable")
+    observed = replace(facts, live_routes=live_routes, serve_inventory_complete=complete)
+    assert authorize(setup, request, facts=observed,
                      approval=approvals.issue(request)).status == "DENY"
 
 
