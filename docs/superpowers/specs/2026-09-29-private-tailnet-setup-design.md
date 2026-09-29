@@ -25,12 +25,16 @@ Entry point: **Settings → Remote access → Private access (Tailscale)**.
    login state, local Gateway health, listener address, existing Serve config,
    and whether the proposed route conflicts. Show findings without starting,
    installing, or changing anything.
-2. **Install Tailscale — explicit system change.** For the first supported
-   target (Ubuntu/Debian), show the package/repository source and exact planned
-   package-manager action. Let the user review and approve it, then invoke a
-   narrow package-install owner, never a shell string or downloaded install
-   script. Other distributions show official installation steps until their
-   installer owners are implemented.
+2. **Choose how to install Tailscale.** For the first supported target
+   (Ubuntu/Debian), offer two explicit choices: an automated official
+   package/repository installation, or official manual instructions with no
+   local mutation. The automated preview must state that the package's
+   maintainer script may start or restart `tailscaled`; a fresh approval is
+   bound to that exact effect and package plan. ISyCode does not issue a
+   separate service-manager start and does not log in as an install side
+   effect. Automated "keep service stopped" is unavailable until a separately
+   reviewed, safely scoped suppression owner exists. Other distributions show
+   official installation steps until their installer owners are implemented.
 3. **Join the user's tailnet.** If Tailscale is installed but signed out, show
    the exact login action and ask for approval. Start the official CLI login
    flow, present its URL in the TUI, and wait for the user to finish browser
@@ -87,7 +91,9 @@ unrelated system state.
 ## Security invariants
 
 1. Default state is disabled; no install, login, Serve, Funnel, or MCP
-   mutation occurs during startup or preflight.
+   mutation occurs during startup or preflight. The user chooses automated
+   install or manual instructions inside the TUI; the manual choice has no
+   local side effects.
 2. Every mutation has an exact user-visible plan and final user approval.
 3. No implicit `sudo`, `curl | sh`, arbitrary command, or broad package-manager
    execution path.
@@ -107,9 +113,11 @@ unrelated system state.
 
 ## Errors and recovery
 
-- **Missing package privilege:** report the exact package action and let the
+- **Missing package privilege:** report the exact package action, including
+  that its maintainer script may start or restart `tailscaled`, and let the
   user rerun through the OS authorization prompt; never fall back to an
-  unprivileged shell installer.
+  unprivileged shell installer. Offer manual instructions as the no-mutation
+  alternative.
 - **Tailscale daemon unavailable:** report install/service state and offer a
   bounded start action only if its owner and OS privilege contract are
   implemented.
