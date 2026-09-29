@@ -7,7 +7,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from isycode.tailscale import TailscaleAdapter, TailscaleCommandResult
+from isycode.tailscale import TailscaleAdapter, TailscaleCommandResult, _gateway_health
 
 
 STATUS = {"BackendState": "Running", "Self": {"DNSName": "desk.tailnet.ts.net."}}
@@ -164,6 +164,39 @@ def test_gateway_probe_uses_explicit_configured_port(monkeypatch):
                           gateway_port=8899, probe=lambda target: seen.append(target) or True)
     assert instance.inspect().gateway_healthy
     assert seen == ["http://127.0.0.1:8899/health"]
+
+
+def test_gateway_health_probe_models_https_terminated_proxy(monkeypatch):
+    seen = {}
+
+    class Response:
+        status = 200
+
+        @staticmethod
+        def read(limit):
+            assert limit == 1024
+
+    class Connection:
+        def __init__(self, host, port, timeout):
+            seen["endpoint"] = (host, port, timeout)
+
+        def request(self, method, path, *, headers):
+            seen["request"] = (method, path, headers)
+
+        @staticmethod
+        def getresponse():
+            return Response()
+
+        @staticmethod
+        def close():
+            pass
+
+    monkeypatch.setattr("isycode.tailscale.http.client.HTTPConnection", Connection)
+    assert _gateway_health("http://127.0.0.1:8787")
+    assert seen == {
+        "endpoint": ("127.0.0.1", 8787, 1),
+        "request": ("GET", "/health", {"X-Forwarded-Proto": "https"}),
+    }
 
 
 def test_inspect_runs_read_commands_only(monkeypatch):

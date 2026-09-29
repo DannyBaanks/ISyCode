@@ -116,7 +116,10 @@ def _gateway_health(url: str) -> bool:
         return False
     connection = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=1)
     try:
-        connection.request("GET", "/health")
+        # Tailscale Serve terminates HTTPS before proxying to this loopback
+        # Gateway. Mirror that trusted proxy signal so the Gateway's HTTPS
+        # enforcement does not report a healthy tunnel backend as offline.
+        connection.request("GET", "/health", headers={"X-Forwarded-Proto": "https"})
         response = connection.getresponse()
         response.read(1024)
         return response.status == 200
