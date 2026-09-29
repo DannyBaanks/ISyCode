@@ -167,7 +167,9 @@ class TailscaleAuthorityFacts:
     gateway_url: str | None = None
     gateway_port: int | None = None
     route_id: str | None = None
-    serve_route: ServeRoute | None = None
+    proposed_route: ServeRoute | None = None
+    live_routes: tuple[ServeRoute, ...] | None = None
+    serve_inventory_complete: bool = False
     owned_route: OwnedServeRoute | None = None
     serve_digest: str | None = None
 
@@ -679,7 +681,7 @@ class TailscaleGatewaySystembility:
 
 
 class TailscalePrivateServeSystembility:
-    """Bind one private route to the observed config and recorded ownership."""
+    """Bind a proposed private route to a complete live inventory and ownership."""
 
     name = "TailscalePrivateServeBoundary"
 
@@ -692,9 +694,12 @@ class TailscalePrivateServeSystembility:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         facts = self.facts
-        route = facts.serve_route if isinstance(facts, TailscaleAuthorityFacts) else None
+        route = facts.proposed_route if isinstance(facts, TailscaleAuthorityFacts) else None
         valid = (request.target == "tailscale" and set(params) == _TAILSCALE_SERVE_KEYS
                  and isinstance(route, ServeRoute) and route.private is True
+                 and facts.serve_inventory_complete is True
+                 and type(facts.live_routes) is tuple
+                 and all(isinstance(item, ServeRoute) for item in facts.live_routes)
                  and isinstance(facts.route_id, str)
                  and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", facts.route_id) is not None
                  and isinstance(route.host, str)
@@ -708,13 +713,20 @@ class TailscalePrivateServeSystembility:
                  and params.get("route_target") == route.target
                  and params.get("serve_digest") == facts.serve_digest
                  and params.get("mode") == "private" and params.get("funnel") is False)
-        if valid and request.action_id == "tailscale.serve.disable":
+        if valid:
+            matching = tuple(item for item in facts.live_routes
+                             if (item.host, item.path) == (route.host, route.path))
             owned = facts.owned_route
-            valid = (isinstance(owned, OwnedServeRoute)
-                     and (owned.route_id, owned.host, owned.path, owned.target)
-                     == (facts.route_id, route.host, route.path, route.target))
+            owned_matches = (isinstance(owned, OwnedServeRoute)
+                             and (owned.route_id, owned.host, owned.path, owned.target)
+                             == (facts.route_id, route.host, route.path, route.target))
+            if request.action_id == "tailscale.serve.enable":
+                valid = ((not matching and owned is None)
+                         or (len(matching) == 1 and matching[0] == route and owned_matches))
+            else:
+                valid = len(matching) == 1 and matching[0] == route and owned_matches
         return SystembilityResult(self.name, bool(valid),
-                                  "private Serve route must match live config and owned identity")
+                                  "private Serve route must be free or match live and owned identity")
 
 
 class ProductActionGate:
