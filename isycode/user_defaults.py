@@ -21,6 +21,10 @@ class UserDefaultsStore:
     VERSION = 1
     MAX_BYTES = 64 * 1024
     NEW_WORKSPACE_CHOICES = {"ask", "temporary", "recurring"}
+    # Mode preselected for a workspace opened for the first time. It is a
+    # preference only: the chosen mode is saved in that workspace's Authority
+    # policy, and "ask" shows the mode screen.
+    NEW_WORKSPACE_MODES = {"ask", "classic", "security"}
     ROLE_KINDS = {"agents", "subagents", "motors"}
 
     def __init__(self, directory: Path | None = None) -> None:
@@ -37,7 +41,8 @@ class UserDefaultsStore:
         try:
             metadata = self.path.lstat()
         except FileNotFoundError:
-            return {"version": self.VERSION, "new_workspace": "ask", "default_role": None}
+            return {"version": self.VERSION, "new_workspace": "ask",
+                    "new_workspace_mode": "ask", "default_role": None}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
         if os.name == "posix" and metadata.st_mode & 0o077:
@@ -58,6 +63,9 @@ class UserDefaultsStore:
         if not isinstance(data, dict) or data.get("version") != self.VERSION:
             raise ValueError("ISyCode user settings are malformed")
         choice = data.get("new_workspace", "ask")
+        mode = data.get("new_workspace_mode", "ask")
+        if not isinstance(mode, str) or mode not in self.NEW_WORKSPACE_MODES:
+            raise ValueError("ISyCode new workspace mode default is invalid")
         role = data.get("default_role")
         if not isinstance(choice, str) or choice not in self.NEW_WORKSPACE_CHOICES:
             raise ValueError("ISyCode new workspace default is invalid")
@@ -68,16 +76,21 @@ class UserDefaultsStore:
                 or not isinstance(role.get("name"), str)
                 or not 1 <= len(role["name"]) <= 120):
             raise ValueError("ISyCode default role is invalid")
-        return {"version": self.VERSION, "new_workspace": choice,
+        return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role}
 
     def update(self, *, new_workspace: str | None = None,
+               new_workspace_mode: str | None = None,
                default_role: dict[str, str] | None | object = ...) -> None:
         current = self.load()
         if new_workspace is not None:
             if new_workspace not in self.NEW_WORKSPACE_CHOICES:
                 raise ValueError("ISyCode new workspace default is invalid")
             current["new_workspace"] = new_workspace
+        if new_workspace_mode is not None:
+            if new_workspace_mode not in self.NEW_WORKSPACE_MODES:
+                raise ValueError("ISyCode new workspace mode default is invalid")
+            current["new_workspace_mode"] = new_workspace_mode
         if default_role is not ...:
             if default_role is not None and (
                     not isinstance(default_role, dict)

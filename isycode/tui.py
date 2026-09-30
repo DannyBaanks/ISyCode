@@ -1783,7 +1783,16 @@ class TUIApp(App):
             try:
                 authority = WorkspaceAuthority(self._workspace_root)
                 if authority.mode() is None:
-                    chosen = await self.push_screen_wait(WorkspaceModeScreen(self._workspace_root))
+                    try:
+                        preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
+                    except (OSError, ValueError, json.JSONDecodeError):
+                        preferred = "ask"
+                    if preferred in {"classic", "security"}:
+                        chosen = preferred
+                        self._append(f"  New workspace · using your default {preferred.title()} mode "
+                                     "· change it in Settings → Authority.", MUTED)
+                    else:
+                        chosen = await self.push_screen_wait(WorkspaceModeScreen(self._workspace_root))
                     authority.set_mode(chosen)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  Workspace mode could not be saved · Security rules apply.", YELLOW)
@@ -2592,10 +2601,37 @@ class TUIApp(App):
              "temp and mount points still ask first.")
             if value == "recurring" else "Applies only when this folder has no saved choice yet.")
             for value, label in choices)
+        new_mode = defaults.get("new_workspace_mode", "ask")
+        mode_choices = (
+            ("ask", "Ask me which mode a new folder uses"),
+            ("classic", "Start new folders in Classic · ready to use"),
+            ("security", "Start new folders in Security · everything off until I allow it"),
+        )
+        entries.extend(self._entry(
+            ("● " if new_mode == value else "○ ") + label, "user_default_mode", value,
+            "Applies only to folders opened for the first time; each workspace keeps its own "
+            "mode and you can switch it in Settings → Authority.")
+            for value, label in mode_choices)
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "user_defaults":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("user_defaults", "Settings · My defaults", entries)
+
+    async def _set_global_mode_default(self, value: str) -> None:
+        if value == "classic" and not await self.push_screen_wait(TailscaleConfirmScreen(
+                "Start new folders in Classic?",
+                "Every folder you open for the first time will read files, propose edits you approve, "
+                "chat with your provider and save conversations and keys without asking for each "
+                "permission. IsySentinel and the action journal still check and record everything. "
+                "Folders you already use keep their mode.", "Use Classic for new folders")):
+            self._open_user_defaults_menu()
+            return
+        try:
+            UserDefaultsStore().update(new_workspace_mode=value)
+            self._set_activity("Default mode saved for new workspaces", GREEN)
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save the default mode; existing settings remain", RED)
+        self._open_user_defaults_menu()
 
     async def _set_global_workspace_default(self, value: str) -> None:
         if value == "recurring":
@@ -3892,6 +3928,10 @@ class TUIApp(App):
         kind, value = entry["kind"], entry["value"]
         if kind == "user_defaults":
             self._open_user_defaults_menu()
+            return
+        if kind == "user_default_mode":
+            self.run_worker(self._set_global_mode_default(value), exclusive=True,
+                            group="user-defaults")
             return
         if kind == "user_default_workspace":
             self.run_worker(self._set_global_workspace_default(value), exclusive=True,

@@ -63,7 +63,7 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 
 ## Modos: Classic y Security
 
-Cada workspace elige su modo la primera vez que lo abres; puedes cambiarlo en Settings → Authority.
+Cada workspace elige su modo la primera vez que lo abres; puedes cambiarlo en Settings → Authority. En Settings → My defaults puedes fijar el modo con el que empiezan las carpetas nuevas (preguntar, Classic o Security); es solo una preferencia y no cambia el modo de los workspaces que ya usas.
 
 | | Classic | Security |
 |---|---|---|
