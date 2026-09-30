@@ -89,6 +89,19 @@ RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "
 WRITE_PROTECTED_NAMES = frozenset({".isyroot"})
 MAX_OUTPUT_CHARS = 24_000
 MAX_SCAN_ENTRIES = 6_000
+# Sandboxed workspace commands (isycode.command_runner). The request binds the
+# exact argv, resolved program, working folder, limits and the set of masked
+# sensitive paths; nothing is expanded by a shell.
+COMMAND_PARAMETER_KEYS = frozenset({
+    "argv", "program", "cwd", "timeout_s", "network", "executable", "workspace_root",
+    "masked_sha256", "masked_count", "max_output_bytes",
+})
+COMMAND_MAX_ARGS = 64
+COMMAND_MAX_ARG_CHARS = 4096
+COMMAND_MAX_ARGV_CHARS = 16_384
+COMMAND_MAX_TIMEOUT_S = 600
+COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
+COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
 
 # Actions with no Secure execution owner are explicit denials in the owner
 # binding check. A catalog addition is not enabled by adding a workspace grant.
@@ -158,6 +171,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "tailscale_serve": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary",
                                    "TailscalePrivateServeBoundary"}),
     "mobile_host": frozenset({"MobileHostBoundary"}),
+    "workspace_command": frozenset({"CommandProcessBoundary"}),
 }
 
 
@@ -185,6 +199,7 @@ OWNER_ACTIONS = {
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
+    "workspace_command": frozenset({"workspace.command.run"}),
 }
 
 
@@ -350,6 +365,77 @@ class WorkspaceWriteSystembility:
             except OSError:
                 return SystembilityResult(self.name, False, "target metadata is unavailable")
         return SystembilityResult(self.name, True, "one reviewed text write inside the workspace")
+
+
+def command_argv_valid(argv: object) -> bool:
+    """A bounded, NUL-free argv tuple; no shell ever interprets it."""
+    return (isinstance(argv, tuple) and 1 <= len(argv) <= COMMAND_MAX_ARGS
+            and all(isinstance(item, str) and "\x00" not in item
+                    and len(item) <= COMMAND_MAX_ARG_CHARS for item in argv)
+            and bool(argv[0]) and sum(len(item) for item in argv) <= COMMAND_MAX_ARGV_CHARS)
+
+
+def command_relative_path_valid(value: object, *, allow_root: bool = False) -> bool:
+    """A workspace-relative POSIX path with no traversal or sensitive part."""
+    if not isinstance(value, str) or not value or len(value) > 1024 or "\x00" in value:
+        return False
+    if value == ".":
+        return allow_root
+    if value.startswith("/") or "\\" in value:
+        return False
+    parts = value.split("/")
+    return all(part not in {"", ".", ".."}
+               and not WorkspaceReadSystembility.is_sensitive_name(part) for part in parts)
+
+
+def sandbox_program_valid(program: object, argv0: str) -> bool:
+    """A system program from a fixed bin folder, or a workspace file, named like argv[0]."""
+    if not isinstance(program, str) or Path(program).name != Path(argv0).name:
+        return False
+    if program.startswith("/workspace/"):
+        return command_relative_path_valid(program[len("/workspace/"):])
+    parent, _, name = program.rpartition("/")
+    return parent in COMMAND_SYSTEM_BIN_DIRS and command_relative_path_valid(name)
+
+
+class CommandProcessSystembility:
+    """Allow one reviewed argv inside the bubblewrap workspace sandbox."""
+
+    name = "CommandProcessBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "workspace.command.run":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        if set(params) != COMMAND_PARAMETER_KEYS:
+            return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
+        argv = params.get("argv")
+        if not command_argv_valid(argv):
+            return SystembilityResult(self.name, False, "command arguments are invalid")
+        if not sandbox_program_valid(params.get("program"), argv[0]) or request.target != params["program"]:
+            return SystembilityResult(self.name, False, "program must be a system or workspace executable")
+        timeout = params.get("timeout_s")
+        count = params.get("masked_count")
+        if (not command_relative_path_valid(params.get("cwd"), allow_root=True)
+                or type(timeout) is not int or not 1 <= timeout <= COMMAND_MAX_TIMEOUT_S
+                or params.get("network") != "denied"
+                or params.get("max_output_bytes") != COMMAND_MAX_OUTPUT_BYTES
+                or type(count) is not int or count < 0
+                or not isinstance(params.get("masked_sha256"), str)
+                or re.fullmatch(r"[0-9a-f]{64}", params["masked_sha256"]) is None
+                or params.get("workspace_root") != str(request.workspace_root)):
+            return SystembilityResult(self.name, False, "command limits or sandbox facts are invalid")
+        try:
+            sandbox = str(Path(shutil.which("bwrap") or "").resolve(strict=True))
+        except (OSError, RuntimeError):
+            return SystembilityResult(self.name, False, "the command sandbox is unavailable")
+        if params.get("executable") != sandbox:
+            return SystembilityResult(self.name, False, "command must run through the bubblewrap sandbox")
+        return SystembilityResult(
+            self.name, True,
+            "one reviewed argv in a sandbox: only the workspace is writable, sensitive paths are "
+            "masked and socket syscalls are denied")
 
 
 class ProviderNetworkSystembility:
@@ -1179,7 +1265,7 @@ class ProductActionGate:
             TailscalePackageSystembility(tailscale_facts),
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
-            MobileHostSystembility(),
+            MobileHostSystembility(), CommandProcessSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,

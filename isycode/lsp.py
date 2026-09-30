@@ -22,11 +22,11 @@ MAX_SYMBOLS = 500
 # Load libseccomp through its seccomp(2) API in a tiny trusted bootstrap after
 # Bubblewrap has finished constructing namespaces/mounts and before exec'ing
 # the language server. The filter is inherited across exec and child processes.
-_SECCOMP_BOOTSTRAP = r'''import ctypes, os, resource, sys
+_SECCOMP_BOOTSTRAP_TEMPLATE = r'''import ctypes, os, resource, sys
 # Apply process-count limits only after Bubblewrap has created its namespaces.
 # Applying RLIMIT_NPROC to the launcher can make namespace setup fail with
 # EAGAIN when the host user already owns more than this many processes.
-resource.setrlimit(resource.RLIMIT_NPROC, (32, 32))
+resource.setrlimit(resource.RLIMIT_NPROC, (@NPROC@, @NPROC@))
 lib = ctypes.CDLL("libseccomp.so.2")
 lib.seccomp_init.argtypes = [ctypes.c_uint32]
 lib.seccomp_init.restype = ctypes.c_void_p
@@ -55,6 +55,16 @@ finally:
     lib.seccomp_release(ctx)
 os.execv(sys.argv[1], sys.argv[1:])
 '''
+
+
+def network_deny_bootstrap(max_processes: int = 32) -> str:
+    """Python bootstrap that caps processes, denies sockets, then execs argv[1:]."""
+    if type(max_processes) is not int or not 1 <= max_processes <= 4096:
+        raise ValueError("process limit is invalid")
+    return _SECCOMP_BOOTSTRAP_TEMPLATE.replace("@NPROC@", str(max_processes))
+
+
+_SECCOMP_BOOTSTRAP = network_deny_bootstrap(32)
 
 
 def discover_servers() -> list[dict[str, Any]]:
@@ -327,4 +337,4 @@ async def pyright_workspace_symbols(root: Path, query: str,
         raise
 
 
-__all__ = ["discover_servers", "pyright_workspace_symbols"]
+__all__ = ["discover_servers", "network_deny_bootstrap", "pyright_workspace_symbols"]

@@ -15,6 +15,7 @@ import os
 import asyncio
 import hashlib
 import json
+import shlex
 import shutil
 import tempfile
 import uuid
@@ -52,6 +53,9 @@ from isycode.action_runtime import (
     LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
 from isycode.actions import ACTION_BY_ID
+from isycode.command_runner import (
+    COMMAND_TOOL, COMMAND_TOOL_NAME, CommandPreview, CommandRunOwner, sandbox_executable,
+)
 from isycode.workspace_write import (
     EDIT_TOOL, EDIT_TOOL_NAME, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
 )
@@ -549,6 +553,51 @@ class WriteApprovalScreen(ModalScreen[bool]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "write-approval-apply")
+
+    def action_reject(self) -> None:
+        self.dismiss(False)
+
+
+class CommandApprovalScreen(ModalScreen[bool]):
+    """Show the exact argv of one sandboxed command; Reject is the default."""
+
+    CSS = """
+    CommandApprovalScreen { align: center middle; background: #000000 65%; }
+    #command-approval-card { width: 100; max-width: 96%; height: auto; max-height: 90%; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #command-approval-title { height: 2; color: #bb8cff; text-style: bold; }
+    #command-approval-argv { height: auto; max-height: 12; border: round #3a3b40; padding: 0 1; margin-bottom: 1; }
+    #command-approval-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #command-approval-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "reject", "Reject")]
+
+    def __init__(self, preview: CommandPreview) -> None:
+        super().__init__()
+        self.preview = preview
+
+    def compose(self) -> ComposeResult:
+        preview = self.preview
+        hidden = len(preview.masks)
+        with Vertical(id="command-approval-card"):
+            yield Static(f"Run a command · {preview.cwd if preview.cwd != '.' else 'workspace root'}",
+                         id="command-approval-title")
+            with VerticalScroll(id="command-approval-argv"):
+                yield Static(Text(shlex.join(preview.argv)))
+            yield Static(
+                f"Program: {preview.program}\n"
+                f"Stops after {preview.timeout_s} s · network blocked · "
+                f"{hidden} sensitive path{'s' if hidden != 1 else ''} hidden\n"
+                "It may change files in this workspace; those changes cannot be undone with /undo. "
+                "Nothing runs unless you approve it.")
+            with Horizontal(id="command-approval-actions"):
+                yield Button("Reject", id="command-approval-reject")
+                yield Button("Run command", id="command-approval-run", variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#command-approval-reject", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "command-approval-run")
 
     def action_reject(self) -> None:
         self.dismiss(False)
@@ -3165,6 +3214,20 @@ class TUIApp(App):
                              str(self._workspace_root) in write_grant.get("path_prefixes", [])),
                 "The assistant can propose changes to text files here. You see the exact diff and "
                 "approve each one. It cannot delete or move files, touch sensitive files, or run commands."))
+            command_sandbox = sandbox_executable()
+            if command_sandbox:
+                command_grant = grants.get("workspace.command.run", {})
+                entries.append(self._capability_entry(
+                    "Run commands in a sandbox · asks before every command", "workspace_command",
+                    displayed_on("workspace.command.run", command_grant,
+                                 command_sandbox in command_grant.get("executables", [])),
+                    "The assistant can propose programs like tests or a build. You approve each exact "
+                    "command. It runs without network, with sensitive files hidden, and can only "
+                    "change files inside this workspace."))
+            else:
+                entries.append(self._entry(
+                    "Run commands · sandbox not available on this computer", "info", "",
+                    "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off."))
             selected_name = selected_provider_name()
             selected_preset = PRESETS.get(selected_name, {})
             selected_url_text = (os.environ.get("ISYCODE_BASE_URL")
@@ -3462,6 +3525,31 @@ class TUIApp(App):
                              else "  File edits turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
                 self._append(f"  Edit permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
+    async def _change_command_grant(self, enabled: bool) -> None:
+        sandbox = sandbox_executable()
+        if enabled and sandbox is None:
+            self._append("  The command sandbox is not available here; commands stay off.", YELLOW)
+            self._open_authority_menu()
+            return
+        accepted = await self._await_screen(TailscaleConfirmScreen(
+            "Allow sandboxed commands in this workspace?" if enabled else "Turn off commands?",
+            (f"The assistant may propose programs to run inside {self._workspace_root}. Each exact "
+             "command is shown and runs only if you approve it, through bubblewrap with the network "
+             "blocked, sensitive files hidden and only this workspace writable. Classic mode never "
+             "turns this on for you." if enabled else
+             "No command can run in this workspace. Nothing already changed is undone."),
+            "Allow commands" if enabled else "Turn off commands"))
+        if accepted:
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                authority.set_grant("workspace.command.run", enabled=enabled,
+                                    executables=[sandbox] if enabled else [])
+                self._append("  Sandboxed commands allowed; each one still asks first." if enabled
+                             else "  Commands turned off for this workspace.", GREEN)
+            except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+                self._append(f"  Command permission could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()
 
     async def _change_mobile_host_grant(self, enabled: bool) -> None:
@@ -3996,6 +4084,8 @@ class TUIApp(App):
                 operation = self._change_mobile_host_grant(turn_on)
             elif value == "workspace_write":
                 operation = self._change_workspace_write_grant(turn_on)
+            elif value == "workspace_command":
+                operation = self._change_command_grant(turn_on)
             elif value == "sessions":
                 operation = self._change_session_grant(turn_on)
             elif value.startswith("network:"):
@@ -4907,6 +4997,17 @@ class TUIApp(App):
         async def _undo_cmd(app: "TUIApp", arg: str) -> None:
             await app._undo_last_change()
 
+        async def _run_cmd(app: "TUIApp", arg: str) -> None:
+            try:
+                argv = shlex.split(arg)
+            except ValueError as exc:
+                app._append(f"  /run · {exc}", YELLOW)
+                return
+            if not argv:
+                app._append("  Usage: /run <program> [arguments] · no shell, pipes or redirects", MUTED)
+                return
+            await app._run_workspace_command({"argv": argv})
+
         async def _help_cmd(app: "TUIApp", arg: str) -> None:
             for line in app._plugins.help_text():
                 app._append(line, MUTED)
@@ -5163,6 +5264,7 @@ class TUIApp(App):
                 PluginCommand("providers", "list model providers and credential state", _providers_cmd),
                 PluginCommand("provider", "select a provider or list its account models", _provider_cmd),
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
+                PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("help", "list commands", _help_cmd),
                 PluginCommand("session", "show current workspace, provider, and chat role", _session_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
@@ -5382,7 +5484,7 @@ class TUIApp(App):
         tool_call_id = call.get("id") if isinstance(call, dict) else ""
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
-        if name not in TOOL_ACTIONS and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
+        if name not in TOOL_ACTIONS and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME}:
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
             return tool_call_id, json.dumps(outcome)
@@ -5400,6 +5502,8 @@ class TUIApp(App):
             return tool_call_id, json.dumps(outcome)
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             return tool_call_id, await self._dispatch_write_tool(arguments, edit=name == EDIT_TOOL_NAME)
+        if name == COMMAND_TOOL_NAME:
+            return tool_call_id, await self._run_workspace_command(arguments)
         action_id = TOOL_ACTIONS[name]
         target = arguments.get("path", ".")
         self._append(f"  Tool requested · {action_id} · {target}", CYAN)
@@ -5449,6 +5553,57 @@ class TUIApp(App):
             return False
         return displayed_on("workspace.files.write", grant,
                             str(self._workspace_root) in grant.get("path_prefixes", []))
+
+    def _command_tool_enabled(self) -> bool:
+        """Commands need the read tools plus a grant for the current sandbox executable."""
+        sandbox = sandbox_executable()
+        if sandbox is None or not self._workspace_chat_tools_enabled():
+            return False
+        try:
+            grant = WorkspaceAuthority(self._workspace_root).effective_policy().get(
+                "grants", {}).get("workspace.command.run", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        return displayed_on("workspace.command.run", grant, sandbox in grant.get("executables", []))
+
+    async def _run_workspace_command(self, arguments: dict) -> str:
+        """Show one exact command, run it in the sandbox only if approved, return its result."""
+        if not self._command_tool_enabled():
+            self._append("  Command denied · workspace.command.run · commands are off here", YELLOW)
+            return json.dumps({"error": "sandboxed commands are not enabled for this workspace"})
+        owner = CommandRunOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                self._action_approvals)
+        try:
+            preview = await asyncio.to_thread(
+                owner.prepare, arguments.get("argv"), arguments.get("cwd", "."),
+                arguments.get("timeout_s", 120))
+        except (OSError, ValueError) as exc:
+            reason = str(exc)[:200] or type(exc).__name__
+            self._append(f"  Command denied · {reason}", YELLOW)
+            return json.dumps({"error": "command cannot run", "reason": reason})
+        shown = shlex.join(preview.argv)
+        self._append(f"  Command requested · {shown[:160]} · review it", CYAN)
+        if not await self._await_screen(CommandApprovalScreen(preview)):
+            self._append("  Command rejected · nothing ran", MUTED)
+            return json.dumps({"status": "rejected_by_user", "argv": list(preview.argv)})
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        self._append(f"  Running · {shown[:160]}", MUTED)
+        outcome = await owner.run(preview, approval)
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            self._append(f"  Command {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            return json.dumps({"error": "command did not run", "decision": outcome.decision,
+                               "reason": outcome.reason[:300]})
+        result = json.loads(outcome.text)
+        lines = result["output"].splitlines()
+        for line in lines[-40:]:
+            self._append("  │ " + line[:300], MUTED)
+        if len(lines) > 40:
+            self._append(f"  │ … {len(lines) - 40} earlier lines not shown", MUTED)
+        status = ("stopped after the time limit" if result["timed_out"]
+                  else f"exit code {result['exit_code']}")
+        self._append(f"  Command finished · {status} · receipt {outcome.receipt.receipt_id}",
+                     GREEN if result["exit_code"] == 0 and not result["timed_out"] else YELLOW)
+        return outcome.text
 
     async def _dispatch_write_tool(self, arguments: dict, *, edit: bool = False) -> str:
         """Preview a proposed change, show its diff, and apply only if the user approves."""
@@ -5505,8 +5660,11 @@ class TUIApp(App):
         provider_supports_tools = bool(PRESETS.get(provider_name, {}).get("supports_tools", False))
         tools_active = workspace_tools_granted and provider_supports_tools
         write_active = tools_active and self._workspace_write_tool_enabled()
+        command_active = tools_active and self._command_tool_enabled()
         chat_tools = (CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active
                       else CHAT_WORKSPACE_TOOLS if tools_active else None)
+        if command_active:
+            chat_tools = chat_tools + [COMMAND_TOOL]
         if not workspace_tools_granted:
             tool_availability = (
                 "Settings → Authority & Security is where the user can explicitly grant bounded read-only access. "
@@ -5527,6 +5685,10 @@ class TUIApp(App):
                "the user asked for a change, read the file first, and never claim a file changed "
                "unless the tool result says it was written. "
                if write_active else "They cannot write files. ")
+            + ("workspace_run runs one program with its arguments (no shell) in a sandbox with no "
+               "network; the user approves each exact command. Use it to run tests, builds or "
+               "linters when useful, and report the real exit code. "
+               if command_active else "")
             if tools_active else
             "No action tools are enabled for this workspace. Never emit JSON, XML, or code "
             "pretending to call a tool. " + tool_availability

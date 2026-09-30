@@ -25,6 +25,7 @@ DEDICATED_CONTROLS = {
     "workspace.context.inject": "Read and search workspace files",
     "workspace.files.write": "Edit workspace files",
     "workspace.files.restore": "Edit workspace files",
+    "workspace.command.run": "Run commands in a sandbox",
     "session.create": "Save conversations in this workspace",
     "session.resume": "Save conversations in this workspace",
     "provider.request": "Connect to the selected AI model",

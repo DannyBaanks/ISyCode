@@ -99,6 +99,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("mcp.invoke", "GatewayMCPInvocationOwner.invoke", "gateway_mcp", "COVERED"),
     ("gateway.semantic.read", "GatewaySemanticOwner.invoke", "gateway_semantic", "COVERED"),
     ("lsp.start", "LPSSymbolOwner.search", "lsp_symbols", "COVERED"),
+    ("workspace.command.run", "CommandRunOwner.run", "workspace_command", "COVERED"),
     ("broker.build", "BrokerProvisionOwner.provision", "broker_provision", "COVERED"),
     ("broker.start", "BrokerProvisionOwner.provision", "broker_provision", "COVERED_VARIANT"),
     ("broker.start", "BrokerManagementOwner.perform", "broker_management", "COVERED_VARIANT"),
