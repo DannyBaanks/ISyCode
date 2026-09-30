@@ -462,6 +462,47 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class WorkspaceModeScreen(ModalScreen[str]):
+    """Choose how a new workspace starts: Classic (ready to use) or Security."""
+
+    CSS = """
+    WorkspaceModeScreen { align: center middle; background: #000000 65%; }
+    #workspace-mode-card { width: 84; max-width: 94%; height: auto; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #workspace-mode-title { height: 2; color: #bb8cff; text-style: bold; }
+    #workspace-mode-copy { height: auto; margin-bottom: 1; }
+    #workspace-mode-options { height: 4; }
+    """
+    BINDINGS = [Binding("escape", "security", "Security")]
+
+    def __init__(self, root: Path) -> None:
+        super().__init__()
+        self.root = root
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="workspace-mode-card"):
+            yield Static("How should ISyCode work in this folder?", id="workspace-mode-title")
+            yield Static(
+                f"{self.root}\n\nClassic: ready to use. ISyCode reads your files and proposes edits "
+                "you approve one diff at a time; chats and saved keys just work.\n"
+                "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
+                "Both check every action with IsySentinel and record it in the action journal. "
+                "Shell, deleting files and sensitive files stay off in both. You can switch later "
+                "in Settings → Authority.", id="workspace-mode-copy")
+            yield OptionList(
+                Option("Classic · ready to use", id="classic"),
+                Option("Security · everything off until I allow it", id="security"),
+                id="workspace-mode-options")
+
+    def on_mount(self) -> None:
+        self.query_one("#workspace-mode-options", OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        self.dismiss("classic" if event.option.id == "classic" else "security")
+
+    def action_security(self) -> None:
+        self.dismiss("security")
+
+
 class WriteApprovalScreen(ModalScreen[bool]):
     """Show the exact diff of one proposed file change; Reject is the default."""
 
@@ -1739,6 +1780,14 @@ class TUIApp(App):
                         setup_store.sessions_root(self._workspace_root))
                 except (WorkspaceAuthorityError, OSError, ValueError):
                     self._chat_session_owner = None
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                if authority.mode() is None:
+                    chosen = await self.push_screen_wait(WorkspaceModeScreen(self._workspace_root))
+                    authority.set_mode(chosen)
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                self._append("  Workspace mode could not be saved · Security rules apply.", YELLOW)
+            self._update_workspace_identity_ui()
             self._register_saved_key_reader()
             await self._initialize_workspace()
             self._refresh_lsp_status()
@@ -1756,6 +1805,34 @@ class TUIApp(App):
                     "Settings → Authority (recurring workspaces only).", MUTED)
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+
+    def _workspace_mode(self) -> str:
+        try:
+            return WorkspaceAuthority(self._workspace_root).mode() or "security"
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return "security"
+
+    async def _change_workspace_mode(self, mode: str) -> None:
+        classic = mode == "classic"
+        if not await self.push_screen_wait(TailscaleConfirmScreen(
+                "Switch this workspace to Classic?" if classic else "Switch this workspace to Security?",
+                ("Reading and searching files, edit proposals (each still shows its diff and asks "
+                 "you), chat with your chosen provider, saved conversations and saved keys work "
+                 "without setting permissions one by one. Integrations like Gateway, MCP, LSP, "
+                 "Tailscale and Mobile Host still need explicit permission. Shell, delete and "
+                 "sensitive files stay off." if classic else
+                 "Everything starts off; you allow each capability in Settings → Authority. "
+                 "Permissions you granted explicitly stay as they are."),
+                "Use Classic" if classic else "Use Security")):
+            self._open_authority_menu()
+            return
+        try:
+            WorkspaceAuthority(self._workspace_root).set_mode(mode)
+            self._append(f"  This workspace now uses {'Classic' if classic else 'Security'} mode.", GREEN)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Mode could not be changed ({type(exc).__name__}).", RED)
+        self._update_workspace_identity_ui()
+        self._open_authority_menu()
 
     def _register_saved_key_reader(self) -> None:
         """Security mode: every saved-key read is its own owned, journaled decision."""
@@ -1775,7 +1852,8 @@ class TUIApp(App):
     def _root_source_label(self) -> str:
         source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
         broad = " · broad shared root" if self._shared_root_warning() else ""
-        return f"Root source · {source}{broad}"
+        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
+        return f"Root source · {source}{broad} · {mode} mode"
 
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
@@ -1903,7 +1981,7 @@ class TUIApp(App):
         self._workspace = self._workspace_root
         self._file_path = str(self._workspace_root)
         try:
-            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
             enabled = all(
                 displayed_on(action, grants.get(action, {}),
                              str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", []))
@@ -2979,7 +3057,7 @@ class TUIApp(App):
                 "Credential vault unavailable", "info", "",
                 "Check the user-private state directory and permissions."))
         try:
-            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
             grants = {}
         use_grant = grants.get("credentials.use", {})
@@ -3007,8 +3085,17 @@ class TUIApp(App):
             self._entry(
                 "Some actions ask again before they run, even when turned on.", "info")]
         try:
-            policy = WorkspaceAuthority(self._workspace_root).policy()
+            authority = WorkspaceAuthority(self._workspace_root)
+            policy = authority.effective_policy()
             grants = policy.get("grants", {})
+            classic = authority.mode() == "classic"
+            entries.append(self._entry(
+                ("Mode · Classic · ready to use; switch to Security…" if classic
+                 else "Mode · Security · nothing runs until you allow it; switch to Classic…"),
+                "workspace_mode", "security" if classic else "classic",
+                "Classic turns on reading files, edit proposals you approve, chat, saved "
+                "conversations and saved keys. Security starts with everything off. Both check every "
+                "action with IsySentinel and record it in the action journal."))
             readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search",
                             "workspace.context.inject"}
             read_enabled = all(displayed_on(
@@ -3832,9 +3919,17 @@ class TUIApp(App):
                 self._set_activity("Could not clear the default role", RED)
             self._open_user_defaults_menu()
             return
+        if kind == "workspace_mode":
+            self.run_worker(self._change_workspace_mode(value), exclusive=True, group="authority-grant")
+            return
         if kind == "authority_toggle":
             enabled = bool(entry.get("enabled"))
             turn_on = not enabled
+            if (value in {"workspace_read", "provider", "workspace_write", "sessions"}
+                    and self._workspace_mode() == "classic"):
+                self._append("  Included in Classic mode · switch this workspace to Security to "
+                             "control it on its own.", MUTED)
+                return
             if value == "workspace_read":
                 operation = self._change_workspace_read_grant(turn_on)
             elif value == "provider":
@@ -4457,7 +4552,7 @@ class TUIApp(App):
 
     async def _ensure_credential_grant(self, owner: CredentialOwner, service: str) -> bool:
         """Per-service grant for saving and removing keys; asked once, then remembered."""
-        grants = owner.authority.policy().get("grants", {})
+        grants = owner.authority.effective_policy().get("grants", {})
         actions = ("credentials.add", "credentials.use", "credentials.revoke")
         if all(displayed_on(action, grants.get(action, {}),
                             service in grants.get(action, {}).get("targets", []))
@@ -5098,7 +5193,7 @@ class TUIApp(App):
         if self._chat_session_owner is None:
             return False
         try:
-            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
             return False
         return all(displayed_on(action, grants.get(action, {}))
@@ -5191,7 +5286,7 @@ class TUIApp(App):
     def _workspace_chat_tools_enabled(self) -> bool:
         """Require explicit root-scoped grants for every read-only chat tool."""
         try:
-            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
             return False
         root = str(self._workspace_root)
@@ -5263,7 +5358,7 @@ class TUIApp(App):
         if not self._workspace_chat_tools_enabled():
             return False
         try:
-            grant = WorkspaceAuthority(self._workspace_root).policy().get(
+            grant = WorkspaceAuthority(self._workspace_root).effective_policy().get(
                 "grants", {}).get("workspace.files.write", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
             return False

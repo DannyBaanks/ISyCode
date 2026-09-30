@@ -61,6 +61,22 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 - **OpenISy L0/L1:** sus contratos se documentan como integración futura; el ciclo de staging, activación, worker aislado, receipts y rollback no está integrado en ISyCode.
 - **Auditoría duradera y release:** hay journal hash-chain con verificador read-only e inspector; el journal rota en segmentos de 4 MB encadenados (un segmento alterado, faltante o reordenado se detecta), así que ya no bloquea el workspace al llenarse; la cadena puede verificarse, pero payloads de request/result no se conservan para recomputar sus digests. Faltan diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners.
 
+## Modos: Classic y Security
+
+Cada workspace elige su modo la primera vez que lo abres; puedes cambiarlo en Settings → Authority.
+
+| | Classic | Security |
+|---|---|---|
+| Leer y buscar archivos del workspace | incluido | lo activas tú |
+| Proponer ediciones | incluido; cada cambio muestra el diff y pide *Apply* | lo activas tú; igual con diff y *Apply* |
+| Chat con el provider elegido | incluido (solo hosts de providers conocidos o el endpoint configurado) | lo activas tú |
+| Guardar y reanudar conversaciones (workspaces recurrentes) | incluido | lo activas tú |
+| Guardar, usar y quitar API keys | incluido; guardar y quitar piden confirmación | lo activas tú por servicio |
+| Gateway, MCP, LSP, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
+| Shell, borrar o mover archivos, archivos sensibles, `.isyroot` | no disponible | no disponible |
+
+Classic es un preset de permisos implícitos de Workspace Authority, no un bypass: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal de acciones en ambos modos. Los workspaces que ya existían antes de los modos siguen en Security.
+
 ## Seguridad y límites
 
 ISyCode separa tres conceptos:
