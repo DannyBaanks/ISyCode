@@ -126,3 +126,11 @@ def test_linux_operator_guidance_is_text_only_and_shown_on_failures():
         literals = {node.value for node in ast.walk(tree)
                     if isinstance(node, ast.Constant) and isinstance(node.value, str)}
         assert "sudo" not in literals and "/usr/bin/sudo" not in literals, module
+
+
+def test_mobile_host_status_reports_a_saved_private_route():
+    methods = _app_methods()
+    segment = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"),
+                                     methods["_render_mobile_host_status"])
+    assert "Tailscale Serve is not modified" not in segment
+    assert "route_url(" in segment

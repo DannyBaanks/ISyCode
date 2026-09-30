@@ -3500,9 +3500,17 @@ class TUIApp(App):
         entries: list[dict[str, str]] = []
         if status.alive:
             pin = self._mobile_host.pairing_code_for_local_settings()
+            try:
+                routed = next((route for route in PrivateAccessStateStore().load().owned_routes
+                               if route.route_id == MOBILE_HOST_ROUTE_ID), None)
+            except (OSError, ValueError):
+                routed = None
             entries.append(self._entry(
                 f"Host alive · http://{status.address}:{status.port}", "info", "",
-                "Bound to loopback. Tailscale Serve is not modified."))
+                "Bound to loopback. " + (
+                    f"Your saved private route {route_url(routed)} makes it reachable from "
+                    "your tailnet while it runs." if routed is not None else
+                    "No saved private Tailscale route points here.")))
             if pin:
                 entries.append(self._entry(f"Pairing PIN · {pin} · expires in 5 minutes",
                                            "info", "", "One device exchange; token expires in one hour."))
