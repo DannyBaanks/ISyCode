@@ -94,6 +94,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
     ("workspace.files.read", "LocalWorkspaceReadOwner.execute", "workspace_read", "COVERED"),
     ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
+    ("workspace.files.write", "WorkspaceWriteOwner.apply", "workspace_write", "COVERED"),
     ("mcp.invoke", "GatewayMCPInvocationOwner.invoke", "gateway_mcp", "COVERED"),
     ("gateway.semantic.read", "GatewaySemanticOwner.invoke", "gateway_semantic", "COVERED"),
     ("lsp.start", "LPSSymbolOwner.search", "lsp_symbols", "COVERED"),

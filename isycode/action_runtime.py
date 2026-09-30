@@ -60,13 +60,15 @@ TOOL_ACTIONS = {
     "workspace_search": "workspace.files.search",
 }
 MAX_FILE_BYTES = 128 * 1024
+MAX_WRITE_BYTES = 128 * 1024
+WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256"})
 MAX_OUTPUT_CHARS = 24_000
 MAX_SCAN_ENTRIES = 6_000
 
 # Actions with no Secure execution owner are explicit denials in the owner
 # binding check. A catalog addition is not enabled by adding a workspace grant.
 EXPLICIT_DENY_ACTIONS = frozenset({
-    "workspace.files.write", "workspace.files.move", "workspace.files.delete",
+    "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
     "credentials.add", "credentials.use", "credentials.revoke", "lsp.stop",
     "mobile.host.stop",
@@ -111,6 +113,7 @@ OWNER_ACTION_VARIANTS = (
 
 OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_read": frozenset({"WorkspaceReadBoundary"}),
+    "workspace_write": frozenset({"WorkspaceWriteBoundary"}),
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
@@ -136,6 +139,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
 # nested inside four separately bound owners and are reported as such.
 OWNER_ACTIONS = {
     "workspace_read": READ_ACTIONS,
+    "workspace_write": frozenset({"workspace.files.write"}),
     "provider_network": frozenset({"provider.request"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
@@ -246,6 +250,53 @@ class WorkspaceReadSystembility:
                 or lower == ".env" or lower.startswith(".env.")
                 or lower in {"id_rsa", "id_ed25519", "credentials", "secrets.json"}
                 or lower.endswith((".pem", ".key", ".p12", ".pfx")))
+
+
+class WorkspaceWriteSystembility:
+    """Allow one bounded, non-sensitive text replacement bound to its exact diff."""
+
+    name = "WorkspaceWriteBoundary"
+
+    def __init__(self, root: Path):
+        self.root = root.resolve(strict=True)
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "workspace.files.write":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        if request.workspace_root != self.root:
+            return SystembilityResult(self.name, False, "request workspace does not match owner")
+        params = request.parameters
+        if set(params) != WRITE_PARAMETER_KEYS:
+            return SystembilityResult(self.name, False, "write request shape is not the reviewed diff")
+        before, after, diff = (params.get("before_sha256"), params.get("after_sha256"),
+                               params.get("diff_sha256"))
+        size = params.get("size")
+        if (not all(isinstance(value, str) for value in (before, after, diff))
+                or (before != "absent" and re.fullmatch(r"[0-9a-f]{64}", before) is None)
+                or re.fullmatch(r"[0-9a-f]{64}", after) is None
+                or re.fullmatch(r"[0-9a-f]{64}", diff) is None
+                or type(size) is not int or not 0 <= size <= MAX_WRITE_BYTES):
+            return SystembilityResult(self.name, False, "write digests or size are invalid")
+        lexical = Path(os.path.abspath(request.target or ""))
+        if self.root not in lexical.parents:
+            return SystembilityResult(self.name, False, "write target must be a file inside the workspace")
+        relative = lexical.relative_to(self.root)
+        if params.get("path") != relative.as_posix():
+            return SystembilityResult(self.name, False, "write path does not match its target")
+        if any(WorkspaceReadSystembility.is_sensitive_name(part) for part in relative.parts):
+            return SystembilityResult(self.name, False, "sensitive paths cannot be written")
+        current = self.root
+        for part in relative.parts:
+            current = current / part
+            try:
+                if stat.S_ISLNK(current.lstat().st_mode):
+                    return SystembilityResult(self.name, False, "symlink traversal is denied")
+            except FileNotFoundError:
+                break
+            except OSError:
+                return SystembilityResult(self.name, False, "target metadata is unavailable")
+        return SystembilityResult(self.name, True, "one reviewed text write inside the workspace")
 
 
 class ProviderNetworkSystembility:
@@ -997,7 +1048,8 @@ class ProductActionGate:
             self.audit = None
         self.sentinel = IsySentinel([
             ExecutionOwnerBindingSystembility(),
-            WorkspaceReadSystembility(canonical), ProviderNetworkSystembility(),
+            WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
+            ProviderNetworkSystembility(),
             RemoteReadSystembility(), SessionDeleteSystembility(), MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),

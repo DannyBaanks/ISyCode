@@ -152,7 +152,7 @@ def test_every_catalog_action_has_an_explicit_authority_classification():
     registered = {action for actions in OWNER_ACTIONS.values() for action in actions}
     assert set(EXPLICIT_DENY_ACTIONS).isdisjoint(registered)
     assert set(ACTION_BY_ID) - registered == set(EXPLICIT_DENY_ACTIONS) | {"role.select"}
-    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 32
+    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 31
 
 
 def test_unclassified_effectful_catalog_addition_fails_the_frontier(monkeypatch):
@@ -173,7 +173,7 @@ def test_explicitly_denied_effect_cannot_be_registered_to_an_owner(tmp_path):
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
     gate = ProductActionGate(root, authority, owner_id="provider_network")
     request = ActionRequest(
-        "workspace.files.write", root, str(root / "new.txt"), {},
+        "workspace.files.delete", root, str(root / "new.txt"), {},
         execution_owner="provider_network")
     authority_result = AuthorityDecision(True, "grant:test", "fixture", request.digest)
 
@@ -182,6 +182,13 @@ def test_explicitly_denied_effect_cannot_be_registered_to_an_owner(tmp_path):
     check = next(item for item in decision.checks if item.name == "ExecutionOwnerBinding")
     assert check.passed is False
     assert check.reason == "action is explicitly denied in Secure"
+
+    # Writes have their own owner; any other owner is still refused.
+    write = ActionRequest("workspace.files.write", root, str(root / "new.txt"), {},
+                          execution_owner="provider_network")
+    write_decision = gate.sentinel.evaluate(
+        write, AuthorityDecision(True, "grant:test", "fixture", write.digest))
+    assert not write_decision.allowed
 
 
 def test_broker_start_owner_variants_are_disjoint_and_cross_owner_denies(tmp_path):
