@@ -30,7 +30,9 @@ from isycode.config import (
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.search import TextMatch, find_text_matches
-from isycode.workspace_setup import WorkspaceSetupStore
+from isycode.workspace_setup import (
+    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice,
+)
 from isycode.user_defaults import UserDefaultsStore
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
@@ -371,10 +373,15 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
         self.launch_dir = launch_dir
 
     def compose(self) -> ComposeResult:
+        broad = broad_workspace_reason(self.launch_dir)
+        warning = ("" if broad is None else
+                   f"Caution: {broad}. A marker here would make every folder below it without "
+                   "its own .isyroot share this workspace's grants and sessions. Your "
+                   "'recurring' default is not applied here.\n\n")
         with Vertical(id="workspace-setup-card"):
             yield Static("Set up this workspace?", id="workspace-setup-title")
             yield Static(
-                f"Launch directory:\n{self.launch_dir}\n\n"
+                f"Launch directory:\n{self.launch_dir}\n\n{warning}"
                 "If this is a recurring project, Yes creates an empty .isyroot here and saves chat "
                 "sessions in your private ISyCode state directory. .isyroot identifies the workspace; "
                 "it does not grant filesystem access. Not now keeps this run temporary, and its chat "
@@ -425,7 +432,9 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
             yield Static(
                 "When ISyCode first opens a folder without a saved choice, it will create an empty "
                 ".isyroot marker there. This remembers the workspace identity only; it does not "
-                "grant file access or copy permissions from another workspace.",
+                "grant file access or copy permissions from another workspace. Broad folders such as "
+                "your home directory, its parents, the temporary directory, or a mount point still ask "
+                "first, so unrelated projects never share one workspace by accident.",
                 id="global-recurring-copy")
             with Horizontal(id="global-recurring-actions"):
                 yield Button("Cancel", id="global-recurring-cancel")
@@ -1635,11 +1644,8 @@ class TUIApp(App):
                         preference = UserDefaultsStore().load().get("new_workspace", "ask")
                     except (OSError, ValueError, json.JSONDecodeError):
                         preference = "ask"
-                    if preference == "recurring":
-                        choice = True
-                    elif preference == "temporary":
-                        choice = False
-                    else:
+                    choice = new_workspace_choice(self._launch_dir, None, preference)
+                    if choice is None:
                         choice = await self.push_screen_wait(WorkspaceSetupScreen(self._launch_dir))
                     setup_store.choose_recurrent(self._launch_dir, choice)
                 elif choice:
@@ -2410,7 +2416,8 @@ class TUIApp(App):
             ("● " if new_workspace == value else "○ ") + label,
             "user_default_workspace", value,
             ("A recurring workspace gets an empty .isyroot marker when first opened. "
-             "This identifies the workspace; it does not grant file access.")
+             "This identifies the workspace; it does not grant file access. Home, its parents, "
+             "temp and mount points still ask first.")
             if value == "recurring" else "Applies only when this folder has no saved choice yet.")
             for value, label in choices)
         entries.append(self._entry("Back to Settings", "settings_back", ""))
