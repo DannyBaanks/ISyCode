@@ -62,6 +62,9 @@ TOOL_ACTIONS = {
 MAX_FILE_BYTES = 128 * 1024
 MAX_WRITE_BYTES = 128 * 1024
 WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256"})
+# Workspace identity: a non-empty marker stops being a boundary, so the chat
+# must never rewrite it.
+WRITE_PROTECTED_NAMES = frozenset({".isyroot"})
 MAX_OUTPUT_CHARS = 24_000
 MAX_SCAN_ENTRIES = 6_000
 
@@ -286,6 +289,8 @@ class WorkspaceWriteSystembility:
             return SystembilityResult(self.name, False, "write path does not match its target")
         if any(WorkspaceReadSystembility.is_sensitive_name(part) for part in relative.parts):
             return SystembilityResult(self.name, False, "sensitive paths cannot be written")
+        if relative.name.casefold() in WRITE_PROTECTED_NAMES:
+            return SystembilityResult(self.name, False, "workspace identity markers cannot be written")
         current = self.root
         for part in relative.parts:
             current = current / part

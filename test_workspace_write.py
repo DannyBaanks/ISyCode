@@ -85,7 +85,7 @@ def test_file_changed_after_review_is_never_overwritten(writer):
 
 @pytest.mark.parametrize("path", [
     "../outside.txt", "/etc/passwd", ".env", "src/.env.local", ".git/config",
-    "keys/server.pem", ".", "",
+    "keys/server.pem", ".", "", ".isyroot", "src/.ISYROOT",
 ])
 def test_unsafe_or_sensitive_paths_are_refused_at_preview(writer, path):
     owner, _, _, _ = writer
@@ -118,6 +118,17 @@ def test_limits_and_text_only(writer):
         owner.preview("missing/dir/file.txt", "x\n")
     with pytest.raises(ValueError, match="already has"):
         owner.preview("src/app.py", "print('hi')\n")
+
+
+def test_sentinel_refuses_a_forged_write_to_the_workspace_marker(writer):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    forged = ActionRequest("workspace.files.write", root, str(root / ".isyroot"), {
+        "path": ".isyroot", "before_sha256": "absent", "after_sha256": "a" * 64,
+        "size": 1, "diff_sha256": "b" * 64}, execution_owner="workspace_write")
+    gate = ProductActionGate(root, authority, owner_id="workspace_write")
+    assert not gate.authorize(forged, approvals=approvals,
+                              approval=approvals.issue(forged))[1].allowed
 
 
 @pytest.mark.parametrize("change", [

@@ -48,6 +48,9 @@ from isycode.action_runtime import (
     LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
 from isycode.actions import ACTION_BY_ID
+from isycode.workspace_write import (
+    WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
+)
 from isycode.authority_view import (
     MOBILE_HOST_ADDRESS, MOBILE_PAIR_ACTIONS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
     mobile_host_saved, other_saved_grants,
@@ -89,6 +92,7 @@ from textual.events import Enter, Leave
 from rich.console import Console
 from rich.text import Text
 from rich.markdown import Markdown as RichMarkdown
+from rich.syntax import Syntax
 
 
 def _authority_capability_label(label: str, enabled: bool) -> Text:
@@ -451,6 +455,51 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
         self.dismiss(event.button.id == "global-recurring-confirm")
 
     def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
+class WriteApprovalScreen(ModalScreen[bool]):
+    """Show the exact diff of one proposed file change; Reject is the default."""
+
+    CSS = """
+    WriteApprovalScreen { align: center middle; background: #000000 65%; }
+    #write-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #write-approval-title { height: 2; color: #bb8cff; text-style: bold; }
+    #write-approval-summary { height: auto; margin-bottom: 1; }
+    #write-approval-diff { height: 1fr; border: round #3a3b40; }
+    #write-approval-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #write-approval-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "reject", "Reject")]
+
+    def __init__(self, preview: WritePreview) -> None:
+        super().__init__()
+        self.preview = preview
+
+    def compose(self) -> ComposeResult:
+        lines = self.preview.diff.splitlines()
+        added = sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
+        removed = sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
+        kind = "Create new file" if self.preview.created else "Change file"
+        with Vertical(id="write-approval-card"):
+            yield Static(f"{kind} · {self.preview.path}", id="write-approval-title")
+            yield Static(
+                f"+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
+                "unless you apply it. If the file changes before it is applied, the change is refused.",
+                id="write-approval-summary")
+            with VerticalScroll(id="write-approval-diff"):
+                yield Static(Syntax(self.preview.diff, "diff", theme="monokai", word_wrap=True))
+            with Horizontal(id="write-approval-actions"):
+                yield Button("Reject", id="write-approval-reject")
+                yield Button("Apply change", id="write-approval-apply", variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#write-approval-reject", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "write-approval-apply")
+
+    def action_reject(self) -> None:
         self.dismiss(False)
 
 
@@ -2920,6 +2969,13 @@ class TUIApp(App):
             entries.append(self._capability_entry(
                 "Read and search workspace files", "workspace_read", read_enabled,
                 "Lets ISyCode list, read, and find files here. It cannot change or delete them."))
+            write_grant = grants.get("workspace.files.write", {})
+            entries.append(self._capability_entry(
+                "Edit workspace files · asks before every change", "workspace_write",
+                displayed_on("workspace.files.write", write_grant,
+                             str(self._workspace_root) in write_grant.get("path_prefixes", [])),
+                "The assistant can propose changes to text files here. You see the exact diff and "
+                "approve each one. It cannot delete or move files, touch sensitive files, or run commands."))
             selected_name = selected_provider_name()
             selected_preset = PRESETS.get(selected_name, {})
             selected_url_text = (os.environ.get("ISYCODE_BASE_URL")
@@ -3017,7 +3073,8 @@ class TUIApp(App):
             "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, "
             "and sensitive actions still ask you first."))
         entries.append(self._entry(
-            "Changing these options never turns on file editing, deletion, or command running.", "info"))
+            "Deleting or moving files and running commands stay off. File edits ask before every change.",
+            "info"))
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
@@ -3171,6 +3228,31 @@ class TUIApp(App):
         for action in MOBILE_PAIR_ACTIONS:
             authority.set_grant(action, enabled=True, targets=[MOBILE_PAIR_TARGET])
         return True
+
+    async def _change_workspace_write_grant(self, enabled: bool) -> None:
+        if enabled and not self._workspace_chat_tools_enabled():
+            self._append("  Turn on reading workspace files first; editing builds on it.", YELLOW)
+            self._open_authority_menu()
+            return
+        accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+            "Allow file edits in this workspace?" if enabled else "Turn off file edits?",
+            (f"The assistant may propose new content for text files inside {self._workspace_root}. "
+             "Every change shows its exact diff and is written only if you apply it; a file that "
+             "changed after review is never overwritten. Deleting, moving, sensitive files and "
+             "commands stay off." if enabled else
+             "The assistant can no longer propose file changes in this workspace. Files already "
+             "changed stay as they are."),
+            "Allow edits" if enabled else "Turn off edits"))
+        if accepted:
+            try:
+                WorkspaceAuthority(self._workspace_root).set_grant(
+                    "workspace.files.write", enabled=enabled,
+                    path_prefixes=[self._workspace_root] if enabled else [])
+                self._append("  File edits allowed; each change still asks first." if enabled
+                             else "  File edits turned off for this workspace.", GREEN)
+            except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+                self._append(f"  Edit permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
 
     async def _change_mobile_host_grant(self, enabled: bool) -> None:
         try:
@@ -3690,6 +3772,8 @@ class TUIApp(App):
                     server["sandbox_executable"], turn_on)
             elif value == "mobile_host":
                 operation = self._change_mobile_host_grant(turn_on)
+            elif value == "workspace_write":
+                operation = self._change_workspace_write_grant(turn_on)
             elif value.startswith("network:"):
                 operation = self._change_network_action_grant(value[len("network:"):], turn_on)
             else:
@@ -4839,7 +4923,7 @@ class TUIApp(App):
         tool_call_id = call.get("id") if isinstance(call, dict) else ""
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
-        if name not in TOOL_ACTIONS:
+        if name not in TOOL_ACTIONS and name != WRITE_TOOL_NAME:
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
             return tool_call_id, json.dumps(outcome)
@@ -4855,6 +4939,8 @@ class TUIApp(App):
             outcome = {"error": "tool arguments must be a JSON object"}
             self._append(f"  Tool denied · {name} · invalid arguments", YELLOW)
             return tool_call_id, json.dumps(outcome)
+        if name == WRITE_TOOL_NAME:
+            return tool_call_id, await self._dispatch_write_tool(arguments)
         action_id = TOOL_ACTIONS[name]
         target = arguments.get("path", ".")
         self._append(f"  Tool requested · {action_id} · {target}", CYAN)
@@ -4874,6 +4960,51 @@ class TUIApp(App):
             "request/result digest matched", GREEN)
         return tool_call_id, result.text
 
+    def _workspace_write_tool_enabled(self) -> bool:
+        """The write tool needs read tools plus a root-scoped write grant."""
+        if not self._workspace_chat_tools_enabled():
+            return False
+        try:
+            grant = WorkspaceAuthority(self._workspace_root).policy().get(
+                "grants", {}).get("workspace.files.write", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        return displayed_on("workspace.files.write", grant,
+                            str(self._workspace_root) in grant.get("path_prefixes", []))
+
+    async def _dispatch_write_tool(self, arguments: dict) -> str:
+        """Preview a proposed write, show its diff, and apply only if the user approves."""
+        path, content = arguments.get("path"), arguments.get("content")
+        if not self._workspace_write_tool_enabled():
+            self._append("  Tool denied · workspace.files.write · file editing is off", YELLOW)
+            return json.dumps({"error": "file editing is not enabled for this workspace"})
+        if not isinstance(path, str) or not isinstance(content, str):
+            self._append("  Tool denied · workspace.files.write · invalid arguments", YELLOW)
+            return json.dumps({"error": "path and content must be strings"})
+        owner = WorkspaceWriteOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+        try:
+            preview = await asyncio.to_thread(owner.preview, path, content)
+        except (OSError, ValueError) as exc:
+            reason = str(exc)[:200] or type(exc).__name__
+            self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
+            return json.dumps({"error": "change cannot be previewed", "reason": reason})
+        self._append(f"  Tool requested · workspace.files.write · {preview.path} · review the diff", CYAN)
+        if not await self.push_screen_wait(WriteApprovalScreen(preview)):
+            self._append(f"  Change rejected · {preview.path} · nothing was written", MUTED)
+            return json.dumps({"status": "rejected_by_user", "path": preview.path})
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        if outcome.decision == "ALLOW" and outcome.receipt is not None:
+            self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
+                         f"receipt {outcome.receipt.receipt_id}", GREEN)
+            return json.dumps({"status": "written", "path": preview.path,
+                               "receipt": outcome.receipt.receipt_id})
+        self._append(f"  Tool {outcome.decision} · workspace.files.write · "
+                     f"{outcome.reason[:180]}", YELLOW)
+        return json.dumps({"error": "change was not written", "decision": outcome.decision,
+                           "reason": outcome.reason[:300]})
+
     async def _run_chat(self, text: str) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
         self._history.append({"role": "user", "content": text})
@@ -4882,6 +5013,9 @@ class TUIApp(App):
         provider_name = selected_provider_name()
         provider_supports_tools = bool(PRESETS.get(provider_name, {}).get("supports_tools", False))
         tools_active = workspace_tools_granted and provider_supports_tools
+        write_active = tools_active and self._workspace_write_tool_enabled()
+        chat_tools = (CHAT_WORKSPACE_TOOLS + [WRITE_TOOL] if write_active
+                      else CHAT_WORKSPACE_TOOLS if tools_active else None)
         if not workspace_tools_granted:
             tool_availability = (
                 "Settings → Authority & Security is where the user can explicitly grant bounded read-only access. "
@@ -4895,7 +5029,12 @@ class TUIApp(App):
         tools_instruction = (
             "Read-only list/read/file-name-search tools are available for this workspace. "
             "Call them only for repository inspection; they are checked by Workspace Authority "
-            "and IsySentinel, and they cannot write, access sensitive paths, or run commands. "
+            "and IsySentinel, and they cannot access sensitive paths or run commands. "
+            + ("The workspace_write tool proposes the complete new content of one text file; "
+               "the user reviews the exact diff and must approve each change. Use it only when "
+               "the user asked for a change, read the file first, and never claim a file changed "
+               "unless the tool result says it was written. "
+               if write_active else "They cannot write files. ")
             if tools_active else
             "No action tools are enabled for this workspace. Never emit JSON, XML, or code "
             "pretending to call a tool. " + tool_availability
@@ -4984,7 +5123,7 @@ class TUIApp(App):
                 "max_tokens": 2048, "token_limit_field": provider.token_limit_field,
                 "reasoning_effort": provider.reasoning_effort,
                 "temperature_supported": provider.temperature_supported,
-                "tools": CHAT_WORKSPACE_TOOLS if tools_active else None,
+                "tools": chat_tools,
             }
 
             async def send_provider_request():
@@ -4995,7 +5134,7 @@ class TUIApp(App):
                     reasoning_effort=provider.reasoning_effort,
                     temperature_supported=provider.temperature_supported,
                     on_chunk=on_chunk,
-                    tools=CHAT_WORKSPACE_TOOLS if tools_active else None)
+                    tools=chat_tools)
 
             try:
                 for tool_round in range(5):

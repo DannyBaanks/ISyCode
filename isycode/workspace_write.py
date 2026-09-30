@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from isycode.action_runtime import (
-    MAX_WRITE_BYTES, ActionOutcome, ActionReceipt, ProductActionGate,
+    MAX_WRITE_BYTES, WRITE_PROTECTED_NAMES, ActionOutcome, ActionReceipt, ProductActionGate,
     WorkspaceReadSystembility,
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
@@ -75,6 +75,8 @@ class WorkspaceWriteOwner:
         relative = lexical.relative_to(self.root)
         if any(WorkspaceReadSystembility.is_sensitive_name(part) for part in relative.parts):
             raise ValueError("sensitive paths cannot be written")
+        if relative.name.casefold() in WRITE_PROTECTED_NAMES:
+            raise ValueError("workspace identity markers cannot be written")
         return lexical
 
     def preview(self, path: str, content: str) -> WritePreview:
