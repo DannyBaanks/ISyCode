@@ -15,6 +15,10 @@ dependencies = [
   "keyring>=25.7,<26",
 ]
 
+[project.optional-dependencies]
+# Native Claude provider (Anthropic Messages API).
+anthropic = ["anthropic>=1.10,<2"]
+
 [project.scripts]
 isycode = "isycode.launcher:main"
 

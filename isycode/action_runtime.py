@@ -27,6 +27,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 from isycode.private_access import OwnedServeRoute
 from isycode.tailscale import ServeRoute, _valid_gateway
 from isycode.workspace_setup import state_root
+from isycode.winfs import VerifiedFS, use_verified_fs
 
 
 READ_ACTIONS = frozenset({
@@ -89,6 +90,34 @@ RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "
 WRITE_PROTECTED_NAMES = frozenset({".isyroot"})
 MAX_OUTPUT_CHARS = 24_000
 MAX_SCAN_ENTRIES = 6_000
+# Sandboxed workspace commands (isycode.command_runner). The request binds the
+# exact argv, resolved program, working folder, limits and the set of masked
+# sensitive paths; nothing is expanded by a shell.
+COMMAND_PARAMETER_KEYS = frozenset({
+    "argv", "program", "cwd", "timeout_s", "network", "executable", "workspace_root",
+    "masked_sha256", "masked_count", "max_output_bytes",
+})
+COMMAND_MAX_ARGS = 64
+COMMAND_MAX_ARG_CHARS = 4096
+COMMAND_MAX_ARGV_CHARS = 16_384
+COMMAND_MAX_TIMEOUT_S = 600
+COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
+COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
+GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
+GIT_PARAMETER_KEYS = {
+    "git.status": frozenset({"git", "workspace_root"}),
+    "git.diff": frozenset({"git", "workspace_root", "staged", "path"}),
+    "git.commit": frozenset({"git", "workspace_root", "message", "paths", "diff_sha256"}),
+}
+MCP_SERVER_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
+MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+MCP_ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,63}$")
+MCP_START_KEYS = frozenset({"server", "argv", "executable", "cwd", "env_keys", "config_sha256"})
+MCP_INVOKE_KEYS = frozenset({"server", "tool", "config_sha256", "arguments_sha256"})
+LSP_DIAGNOSTIC_KEYS = frozenset({"operation", "server_id", "path", "text_sha256", "workspace_root",
+                                 "executable", "server_executable", "node_executable"})
+GIT_MAX_COMMIT_PATHS = 200
+GIT_MAX_MESSAGE_CHARS = 4000
 
 # Actions with no Secure execution owner are explicit denials in the owner
 # binding check. A catalog addition is not enabled by adding a workspace grant.
@@ -158,6 +187,9 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "tailscale_serve": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary",
                                    "TailscalePrivateServeBoundary"}),
     "mobile_host": frozenset({"MobileHostBoundary"}),
+    "workspace_command": frozenset({"CommandProcessBoundary"}),
+    "workspace_git": frozenset({"GitBoundary"}),
+    "mcp_local": frozenset({"LocalMCPBoundary"}),
 }
 
 
@@ -175,7 +207,7 @@ OWNER_ACTIONS = {
     "credential_use": frozenset({"credentials.use"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
-    "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
+    "lsp_symbols": frozenset({"workspace.files.read", "lsp.start", "lsp.diagnostics"}),
     "broker_preview": frozenset({"workspace.files.read", "broker.preview"}),
     "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
@@ -185,6 +217,9 @@ OWNER_ACTIONS = {
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
+    "workspace_command": frozenset({"workspace.command.run"}),
+    "workspace_git": GIT_ACTIONS,
+    "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
 }
 
 
@@ -350,6 +385,153 @@ class WorkspaceWriteSystembility:
             except OSError:
                 return SystembilityResult(self.name, False, "target metadata is unavailable")
         return SystembilityResult(self.name, True, "one reviewed text write inside the workspace")
+
+
+def command_argv_valid(argv: object) -> bool:
+    """A bounded, NUL-free argv tuple; no shell ever interprets it."""
+    return (isinstance(argv, tuple) and 1 <= len(argv) <= COMMAND_MAX_ARGS
+            and all(isinstance(item, str) and "\x00" not in item
+                    and len(item) <= COMMAND_MAX_ARG_CHARS for item in argv)
+            and bool(argv[0]) and sum(len(item) for item in argv) <= COMMAND_MAX_ARGV_CHARS)
+
+
+def command_relative_path_valid(value: object, *, allow_root: bool = False) -> bool:
+    """A workspace-relative POSIX path with no traversal or sensitive part."""
+    if not isinstance(value, str) or not value or len(value) > 1024 or "\x00" in value:
+        return False
+    if value == ".":
+        return allow_root
+    if value.startswith("/") or "\\" in value:
+        return False
+    parts = value.split("/")
+    return all(part not in {"", ".", ".."}
+               and not WorkspaceReadSystembility.is_sensitive_name(part) for part in parts)
+
+
+def sandbox_program_valid(program: object, argv0: str) -> bool:
+    """A system program from a fixed bin folder, or a workspace file, named like argv[0]."""
+    if not isinstance(program, str) or Path(program).name != Path(argv0).name:
+        return False
+    if program.startswith("/workspace/"):
+        return command_relative_path_valid(program[len("/workspace/"):])
+    parent, _, name = program.rpartition("/")
+    return parent in COMMAND_SYSTEM_BIN_DIRS and command_relative_path_valid(name)
+
+
+class CommandProcessSystembility:
+    """Allow one reviewed argv inside the bubblewrap workspace sandbox."""
+
+    name = "CommandProcessBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "workspace.command.run":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        if set(params) != COMMAND_PARAMETER_KEYS:
+            return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
+        argv = params.get("argv")
+        if not command_argv_valid(argv):
+            return SystembilityResult(self.name, False, "command arguments are invalid")
+        if not sandbox_program_valid(params.get("program"), argv[0]) or request.target != params["program"]:
+            return SystembilityResult(self.name, False, "program must be a system or workspace executable")
+        timeout = params.get("timeout_s")
+        count = params.get("masked_count")
+        if (not command_relative_path_valid(params.get("cwd"), allow_root=True)
+                or type(timeout) is not int or not 1 <= timeout <= COMMAND_MAX_TIMEOUT_S
+                or params.get("network") != "denied"
+                or params.get("max_output_bytes") != COMMAND_MAX_OUTPUT_BYTES
+                or type(count) is not int or count < 0
+                or not isinstance(params.get("masked_sha256"), str)
+                or re.fullmatch(r"[0-9a-f]{64}", params["masked_sha256"]) is None
+                or params.get("workspace_root") != str(request.workspace_root)):
+            return SystembilityResult(self.name, False, "command limits or sandbox facts are invalid")
+        try:
+            sandbox = str(Path(shutil.which("bwrap") or "").resolve(strict=True))
+        except (OSError, RuntimeError):
+            return SystembilityResult(self.name, False, "the command sandbox is unavailable")
+        if params.get("executable") != sandbox:
+            return SystembilityResult(self.name, False, "command must run through the bubblewrap sandbox")
+        return SystembilityResult(
+            self.name, True,
+            "one reviewed argv in a sandbox: only the workspace is writable, sensitive paths are "
+            "masked and socket syscalls are denied")
+
+
+class GitSystembility:
+    """Allow git status/diff/commit only for the workspace repository and a system git."""
+
+    name = "GitBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in GIT_ACTIONS:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        if set(params) != GIT_PARAMETER_KEYS[request.action_id]:
+            return SystembilityResult(self.name, False, "git request shape is not the reviewed one")
+        if (request.target != str(request.workspace_root)
+                or params.get("workspace_root") != str(request.workspace_root)):
+            return SystembilityResult(self.name, False, "git request must target the workspace repository")
+        if not sandbox_program_valid(params.get("git"), "git"):
+            return SystembilityResult(self.name, False, "git must be the system git executable")
+        if request.action_id == "git.diff":
+            if (type(params.get("staged")) is not bool
+                    or not command_relative_path_valid(params.get("path"), allow_root=True)):
+                return SystembilityResult(self.name, False, "git diff scope is invalid")
+        elif request.action_id == "git.commit":
+            message = params.get("message")
+            paths = params.get("paths")
+            if (not isinstance(message, str) or not message.strip() or "\x00" in message
+                    or len(message) > GIT_MAX_MESSAGE_CHARS):
+                return SystembilityResult(self.name, False, "commit message is invalid")
+            if (not isinstance(paths, tuple) or not 1 <= len(paths) <= GIT_MAX_COMMIT_PATHS
+                    or len(set(paths)) != len(paths)
+                    or not all(command_relative_path_valid(path) for path in paths)):
+                return SystembilityResult(self.name, False, "commit paths must be non-sensitive workspace files")
+            digest = params.get("diff_sha256")
+            if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                return SystembilityResult(self.name, False, "commit must be bound to its reviewed diff")
+        return SystembilityResult(
+            self.name, True,
+            "workspace repository only; repository-defined programs and hooks are refused")
+
+
+class LocalMCPSystembility:
+    """Bind a local MCP start to its reviewed command and a call to its reviewed arguments."""
+
+    name = "LocalMCPBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"mcp.local.start", "mcp.local.invoke"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+
+        def digest(value: object) -> bool:
+            return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+        server = params.get("server")
+        if (not isinstance(server, str) or not MCP_SERVER_NAME_RE.match(server)
+                or request.target != server or not digest(params.get("config_sha256"))):
+            return SystembilityResult(self.name, False, "MCP server identity is invalid")
+        if request.action_id == "mcp.local.start":
+            env_keys = params.get("env_keys")
+            executable = params.get("executable")
+            if (set(params) != MCP_START_KEYS or not command_argv_valid(params.get("argv"))
+                    or not isinstance(executable, str) or not executable.startswith("/")
+                    or params.get("cwd") != str(request.workspace_root)
+                    or not isinstance(env_keys, tuple)
+                    or not all(isinstance(key, str) and MCP_ENV_NAME_RE.match(key)
+                               for key in env_keys)):
+                return SystembilityResult(self.name, False, "MCP start request is not the reviewed one")
+            return SystembilityResult(self.name, True,
+                                      "reviewed command from the user's MCP config, in the workspace")
+        tool = params.get("tool")
+        if (set(params) != MCP_INVOKE_KEYS or not isinstance(tool, str)
+                or not MCP_TOOL_NAME_RE.match(tool) or not digest(params.get("arguments_sha256"))):
+            return SystembilityResult(self.name, False, "MCP call request is not the reviewed one")
+        return SystembilityResult(self.name, True, "one reviewed tool call to a running local server")
 
 
 class ProviderNetworkSystembility:
@@ -594,7 +776,7 @@ class LSPStartSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id != "lsp.start":
+        if request.action_id not in {"lsp.start", "lsp.diagnostics"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         try:
             from isycode.lsp import discover_servers
@@ -606,6 +788,23 @@ class LSPStartSystembility:
             return SystembilityResult(self.name, False, "sandboxed LSP adapter is unavailable")
         if server is None or server.get("state") != "sandbox_ready":
             return SystembilityResult(self.name, False, "selected LSP adapter is not sandbox-ready")
+        if request.action_id == "lsp.diagnostics":
+            params = request.parameters
+            digest = params.get("text_sha256")
+            if (set(params) != LSP_DIAGNOSTIC_KEYS or request.target != server["id"]
+                    or params.get("operation") != "textDocument/publishDiagnostics"
+                    or params.get("executable") != sandbox
+                    or params.get("server_executable") != server["server_executable"]
+                    or params.get("node_executable") != server["node_executable"]
+                    or params.get("workspace_root") != str(request.workspace_root)
+                    or not command_relative_path_valid(params.get("path"))
+                    or not str(params.get("path")).endswith(".py")
+                    or not isinstance(digest, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                return SystembilityResult(self.name, False, "LSP diagnostics request does not match the sandbox owner")
+            return SystembilityResult(
+                self.name, True,
+                "one Python file checked by a read-only, network-denied language server")
         if (request.target != server["id"]
                 or request.parameters.get("operation") != "workspace/symbol"
                 or request.parameters.get("executable") != sandbox
@@ -1179,7 +1378,8 @@ class ProductActionGate:
             TailscalePackageSystembility(tailscale_facts),
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
-            MobileHostSystembility(),
+            MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
+            LocalMCPSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
@@ -1476,6 +1676,58 @@ class LPSSymbolOwner:
         return ActionOutcome(result_text[:MAX_OUTPUT_CHARS], "ALLOW", receipt,
                              "LSP handshake and workspace/symbol response verified")
 
+    async def diagnostics(self, server_id: str, path: str, text: str,
+                                      catalog: list[dict[str, Any]]) -> ActionOutcome:
+        """Check one Python file after an edit; read-only, so no per-run approval."""
+        from isycode.lsp import discover_servers, pyright_diagnostics
+
+        server = next((item for item in catalog if item.get("id") == server_id), None)
+        current = next((item for item in discover_servers() if item.get("id") == server_id), None)
+        if (server is None or current is None or server.get("state") != "sandbox_ready"
+                or any(server.get(key) != current.get(key) for key in (
+                    "server_executable", "node_executable", "sandbox_executable"))):
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None,
+                                 "adapter catalog changed or is not sandbox-ready")
+        if not isinstance(path, str) or not isinstance(text, str):
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None, "invalid diagnostics request")
+        # The server reads the whole root; the file itself must be readable too.
+        for target in (str(self.root), str(self.root / path)):
+            read_request = ActionRequest("workspace.files.read", self.root, target, {"path": target},
+                                         execution_owner="lsp_symbols")
+            _, read_decision = self.gate.authorize(read_request)
+            if not read_decision.allowed:
+                reason = "; ".join(check.reason for check in read_decision.checks if not check.passed)
+                return ActionOutcome("LSP diagnostics denied.", "DENY", None,
+                                     "workspace.files.read grant required: " + reason)
+        try:
+            request = ActionRequest(
+                "lsp.diagnostics", self.root, server_id,
+                {"operation": "textDocument/publishDiagnostics", "server_id": server_id,
+                 "path": path, "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                 "workspace_root": str(self.root), "executable": server["sandbox_executable"],
+                 "server_executable": server["server_executable"],
+                 "node_executable": server["node_executable"]},
+                execution_owner="lsp_symbols")
+        except (TypeError, ValueError):
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None, "invalid diagnostics request")
+        _, decision = self.gate.authorize(request)
+        if not decision.allowed:
+            reason = "; ".join(check.reason for check in decision.checks if not check.passed)
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None, reason)
+        try:
+            result = await pyright_diagnostics(self.root, path, text, server)
+            result_text = json.dumps(result, ensure_ascii=False, sort_keys=True)
+        except (OSError, ValueError, RuntimeError, asyncio.TimeoutError) as exc:
+            return ActionOutcome("LSP diagnostics failed.", "ERROR", None,
+                                 f"sandboxed diagnostics failed ({type(exc).__name__})")
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "lsp.diagnostics", request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(result_text.encode("utf-8")).hexdigest())
+        if not receipt.verify(request, result_text) or not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("LSP receipt could not be persisted.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
+        return ActionOutcome(result_text, "ALLOW", receipt, "diagnostics received from the sandboxed server")
+
 
 class ProviderNetworkOwner:
     """Authorize one provider request and durably receipt its bounded response.
@@ -1612,21 +1864,27 @@ class LocalWorkspaceReadOwner:
             raise ValueError("path is outside the workspace root")
         return lexical
 
-    def _list(self, target: str) -> str:
-        directory = Path(target)
+    def _entries(self, directory: Path) -> list[Any]:
+        """Directory entries without following links (descriptor walk, or verified paths)."""
+        if use_verified_fs():
+            return VerifiedFS(self.root).list_dir(directory)
         descriptor = self._open_directory(directory)
-        entries = []
         try:
             with os.scandir(descriptor) as iterator:
-                for item in iterator:
-                    if WorkspaceReadSystembility.is_sensitive_name(item.name) or item.is_symlink():
-                        continue
-                    kind = "directory" if item.is_dir(follow_symlinks=False) else "file"
-                    entries.append({"name": item.name, "kind": kind})
-                    if len(entries) >= 1000:
-                        break
+                return list(iterator)
         finally:
             os.close(descriptor)
+
+    def _list(self, target: str) -> str:
+        directory = Path(target)
+        entries = []
+        for item in self._entries(directory):
+            if WorkspaceReadSystembility.is_sensitive_name(item.name) or item.is_symlink():
+                continue
+            kind = "directory" if item.is_dir(follow_symlinks=False) else "file"
+            entries.append({"name": item.name, "kind": kind})
+            if len(entries) >= 1000:
+                break
         entries.sort(key=lambda value: (value["kind"] != "directory", value["name"].casefold()))
         return json.dumps({"path": str(directory.relative_to(self.root) or "."),
                            "entries": entries}, ensure_ascii=False)
@@ -1659,22 +1917,17 @@ class LocalWorkspaceReadOwner:
         folded = query.casefold()
         while pending:
             directory = pending.pop()
-            descriptor = None
             try:
-                descriptor = self._open_directory(directory)
-                with os.scandir(descriptor) as iterator:
-                    children = []
-                    for child in iterator:
-                        children.append(child)
-                        entries_seen += 1
-                        if entries_seen >= MAX_SCAN_ENTRIES:
-                            truncated = True
-                            break
+                listed = self._entries(directory)
             except OSError:
                 continue
-            finally:
-                if descriptor is not None:
-                    os.close(descriptor)
+            children = []
+            for child in listed:
+                children.append(child)
+                entries_seen += 1
+                if entries_seen >= MAX_SCAN_ENTRIES:
+                    truncated = True
+                    break
             visited += 1
             if visited > 300 or truncated:
                 truncated = True
@@ -1744,16 +1997,10 @@ class LocalWorkspaceReadOwner:
                     break
                 continue
             directory = pending.pop()
-            directory_fd: int | None = None
             try:
-                directory_fd = self._open_directory(directory)
-                with os.scandir(directory_fd) as iterator:
-                    children = sorted(iterator, key=lambda item: item.name)
+                children = sorted(self._entries(directory), key=lambda item: item.name)
             except OSError:
                 continue
-            finally:
-                if directory_fd is not None:
-                    os.close(directory_fd)
             for child in reversed(children):
                 if (WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink()
                         or child.name in GREP_SKIP_DIRECTORIES):
@@ -1766,8 +2013,8 @@ class LocalWorkspaceReadOwner:
                            "truncated": truncated}, ensure_ascii=False)
 
     def _open_directory(self, directory: Path) -> int:
-        if os.name == "nt":
-            raise OSError("descriptor-safe local reads are not available on this platform")
+        if use_verified_fs():
+            raise OSError("descriptor walks are not available on this platform")
         relative = directory.relative_to(self.root)
         flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
         descriptor = os.open(self.root, flags)
@@ -1782,8 +2029,8 @@ class LocalWorkspaceReadOwner:
             raise
 
     def _open_file(self, path: Path) -> int:
-        if os.name == "nt":
-            raise OSError("descriptor-safe local reads are not available on this platform")
+        if use_verified_fs():
+            return VerifiedFS(self.root).open_read(path)
         parent_fd = self._open_directory(path.parent)
         try:
             return os.open(path.name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),

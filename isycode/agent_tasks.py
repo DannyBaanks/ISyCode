@@ -1,0 +1,71 @@
+"""A visible task list the agent keeps for multi-step work.
+
+The list lives only in the TUI's memory and on screen. Updating it performs
+no effect and grants nothing, so it is not a Workspace Authority action; it
+only lets the user see what the agent plans to do next.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from rich.text import Text
+
+TASK_TOOL_NAME = "update_tasks"
+TASK_STATUSES = ("pending", "in_progress", "completed")
+MAX_TASKS = 30
+MAX_TITLE_CHARS = 200
+
+TASK_TOOL = {"type": "function", "function": {
+    "name": TASK_TOOL_NAME,
+    "description": (
+        "Show the user your plan for multi-step work as a task list, replacing the previous "
+        "list. Use it for work with three or more steps: add the steps, keep exactly one "
+        "in_progress while you work on it, and mark each completed as soon as it is done. It "
+        "performs no action by itself."),
+    "parameters": {"type": "object", "properties": {
+        "tasks": {"type": "array", "maxItems": MAX_TASKS, "items": {
+            "type": "object", "properties": {
+                "title": {"type": "string", "description": "Short imperative step."},
+                "status": {"type": "string", "enum": list(TASK_STATUSES)},
+            }, "required": ["title", "status"], "additionalProperties": False}},
+    }, "required": ["tasks"], "additionalProperties": False},
+}}
+
+
+def validate_tasks(arguments: Any) -> list[dict[str, str]]:
+    """Return a clean task list or raise ValueError."""
+    tasks = arguments.get("tasks") if isinstance(arguments, dict) else None
+    if not isinstance(tasks, list) or len(tasks) > MAX_TASKS:
+        raise ValueError(f"tasks must be a list of at most {MAX_TASKS} items")
+    clean = []
+    for item in tasks:
+        if not isinstance(item, dict):
+            raise ValueError("each task needs a title and a status")
+        title, status = item.get("title"), item.get("status")
+        if not isinstance(title, str) or not title.strip() or status not in TASK_STATUSES:
+            raise ValueError("each task needs a non-empty title and a known status")
+        # One line each, without control characters that could redraw the screen.
+        title = "".join(ch for ch in " ".join(title.split()) if ch.isprintable())[:MAX_TITLE_CHARS]
+        clean.append({"title": title, "status": status})
+    return clean
+
+
+def render_tasks(tasks: list[dict[str, str]]) -> Text:
+    done = sum(1 for task in tasks if task["status"] == "completed")
+    text = Text(f"Tasks · {done}/{len(tasks)} done\n", style="bold #bb8cff")
+    for task in tasks:
+        if task["status"] == "completed":
+            text.append("  ✔ ", style="#4ade80")
+            text.append(task["title"] + "\n", style="strike #6c757d")
+        elif task["status"] == "in_progress":
+            text.append("  ▶ ", style="#fbbf24")
+            text.append(task["title"] + "\n", style="bold")
+        else:
+            text.append("  ○ ", style="#6c757d")
+            text.append(task["title"] + "\n")
+    text.rstrip()
+    return text
+
+
+__all__ = ["MAX_TASKS", "TASK_STATUSES", "TASK_TOOL", "TASK_TOOL_NAME", "render_tasks",
+           "validate_tasks"]

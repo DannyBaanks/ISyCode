@@ -1,118 +1,46 @@
 # ISyCode
 
-**Un agente de terminal local-first para trabajar desde una TUI enfocada en el workspace.** ISyCode reúne chat, sesiones, archivos, providers y herramientas en una interfaz de teclado, y mantiene separadas la identidad del proyecto y la autoridad para leerlo.
+**Un agente de programación para la terminal, local-first, donde cada acción pasa por permisos explícitos.** ISyCode reúne chat, archivos, git, comandos, MCP y providers en una TUI de teclado. Separa la identidad del proyecto (`.isyroot`) de la autoridad para tocarlo, y todo lo que el agente hace queda decidido por IsySentinel y registrado en un journal.
 
-> Estado: producto en desarrollo. Algunas rutas ya tienen evidencia de ejecución real; otras son parciales o todavía no están conectadas. Esta página distingue ambas cosas.
+> **Estado:** en desarrollo. Esta página separa lo que ya se ejecutó de verdad de lo que está implementado y probado solo con dobles de prueba. Mira [Qué está probado](#qué-está-probado).
+
+## Índice
+
+- [La TUI](#la-tui)
+- [Instalar y arrancar](#instalar-y-arrancar)
+- [Modos: Classic y Security](#modos-classic-y-security)
+- [Qué puede hacer el agente](#qué-puede-hacer-el-agente)
+- [Comandos `/`](#comandos-)
+- [Providers](#providers)
+- [Configuración personal](#configuración-personal)
+- [Seguridad y límites](#seguridad-y-límites)
+- [Qué está probado](#qué-está-probado)
+- [Integraciones](#integraciones)
+- [Atajos](#atajos)
+- [Roadmap y documentación](#roadmap-y-documentación)
 
 ## La TUI
 
-Las capturas muestran la TUI real de Textual con un workspace temporal de demostración. El texto del chat es estático: no se llamó a un provider, Gateway, herramienta MCP ni comando de shell. El árbol de archivos queda bloqueado porque la captura no tiene un grant de lectura.
+Las capturas muestran la TUI real de Textual con un workspace temporal de demostración. El texto del chat es estático: no se llamó a ningún provider, Gateway, MCP ni comando. El árbol de archivos aparece bloqueado porque la captura no tiene permiso de lectura.
 
-| Overview | Archivos | Navegación semántica |
-| --- | --- | --- |
-| ![TUI: overview](docs/screenshots/01-overview.png) | ![TUI: archivos y límite de autoridad](docs/screenshots/02-files.png) | ![TUI: menú de ramas](docs/screenshots/03-command-palette.png) |
-
-## Qué ofrece
-
-- **Chat en terminal:** conversación con streaming y cancelación con `Esc`; el alcance actual de APIs cloud con clave es OpenAI, NVIDIA NIM, Nebius, Groq y OpenRouter. Ollama y llama.cpp permanecen como endpoints locales opcionales, fuera de la validación de APIs cloud.
-- **Workspace con límite explícito:** encuentra el `.isyroot` más cercano o usa el directorio de inicio como fallback. Guarda `launch_dir` y `workspace_root` por separado.
-- **Explorador integrado:** árbol, búsqueda acotada, selección y preview gated. Copiar ruta está deshabilitado hasta que `clipboard.copy` tenga owner; los pickers nativos de Context, README y broker también quedan bloqueados en Secure mientras `desktop.file_picker` no tenga owner. La identidad `.isyroot` no es un permiso: la lectura exige grants aplicables y el host de archivos disponible.
-- **Sesiones:** en workspaces recurrentes puedes activar **Save conversations** en Settings → Authority. Cada mensaje se guarda mediante el owner `chat_sessions` (Workspace Authority, IsySentinel y receipt) en tu carpeta privada de estado, fuera del proyecto, con API keys, tokens Bearer y similares redactados antes de escribir. **Sessions** lista las conversaciones y permite reanudarlas o empezar una nueva. Sin ese permiso, o en ejecuciones temporales, la conversación vive solo en memoria. Borrar conversaciones guardadas todavía no está disponible.
-- **Integraciones visibles:** estados de MCP, Skills, LSP, Gateway, Mobile Host y Bridge; los elementos descubiertos se distinguen de los que se pueden invocar.
-- **Roles:** agentes conversacionales de ISyCode y los ocho motores operativos de ISyCo aparecen en catálogos separados. Se transfiere el flujo, propósito y guardrails del motor; elegir un rol no ejecuta sus comandos ni le concede permisos.
-- **CLI por intención:** `isycode cli` abre ramas semánticas para explorar las acciones disponibles sin ejecutar shell arbitrario. En la instalación integrada de ISyCo, `isyco cli` deriva al mismo navegador.
-- **Búsqueda y ayuda:** `Ctrl+F` busca en la consola actual; `/` y `Ctrl+P` abren el navegador de Skills, Models, MCP, LSP, Files, Roles, Providers, Sessions, Workspace y Commands.
-- **Providers y claves:** selector de provider/modelo. Si el provider elegido no tiene llave, ISyCode abre un campo enmascarado para pegarla; también desde Settings → API keys. La llave se guarda en el keyring del sistema operativo para tu usuario (todos los workspaces), nunca en el proyecto, el journal ni el historial. Guardar y quitar llaves pasa por el owner `credentials`: el primer uso pide permiso por servicio y cada guardado o borrado pide confirmación. Sin un keyring seguro (común en Linux sin escritorio) no se guarda nada y ISyCode indica qué variable de entorno usar. Una clave no concede permiso de red.
-
-## Estado comprobable
-
-### Demostrado en ejecución
-
-- **TUI real:** arranque, paneles Overview/Files, árbol bloqueado sin grant y paleta semántica. Las capturas de arriba son del renderer de la aplicación.
-- **Pyright LSP:** handshake `initialize` y búsqueda `workspace/symbol` reales en un workspace temporal; pruebas negativas bloquearon sockets y escritura. Es una integración acotada a búsqueda de símbolos, no un LSP completo.
-- **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode. El contenedor usa red interna sin puerto publicado, montaje read-only, capabilities eliminadas, `no-new-privileges`, límites de recursos y sin credenciales. `definition` respondió con Jedi; `symbols/search` reportó honestamente fallback. Una ruta no permitida devolvió 404.
-- **Cancelación de chat/review y streaming:** el transporte cancela la tarea activa y conserva las respuestas parciales como parciales, fuera del historial utilizable.
-
-Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueban acceso autorizado al workspace de cada usuario ni una operación en el Gateway de producción.
-
-### Implementado con configuración y grants
-
-- Provider chat/model requests pasan por los controles locales de red; requieren credencial y host autorizado.
-- `.isyroot`, directorio de lanzamiento, conversación en memoria, paleta, selector de providers/roles, búsqueda de consola y Settings.
-- Files/context se leen mediante owners nativos de ISyCode, grants explícitos de Workspace Authority e ISySentinel; `.isyroot` limita el árbol pero nunca concede acceso.
-- Once operaciones semánticas read-only del Gateway con payloads tipados, revisión explícita y gates locales/remotos independientes.
-- Gateway MCP: listar herramientas y flujo manual para revisar payload y aprobar una llamada individual.
-- **Acceso privado opcional por Tailscale:** Settings descubre el cliente local bajo un owner read-only. El wizard ofrece la guía oficial o una instalación automatizada de paquetes Ubuntu/Debian en tres pasos aprobados, login de navegador sin guardar credenciales y una ruta Tailscale Serve privada `/isycode` hacia Mobile Host en loopback `:8765`. Grants por workspace y ejecutable, IsySentinel, aprobación fresca y receipts siguen siendo obligatorios; no se usa `serve reset` ni Funnel. La ruta no se habilita automáticamente. Ver [evidencia y límites de Tailscale](docs/superpowers/specs/2026-09-29-private-tailnet-setup-design.md) y el [contrato Mobile Host](docs/mobile-host-v1.md).
-- Lectura de archivos y consultas de símbolos Pyright pasan por owners y permisos específicos cuando se configuran. En Secure están bloqueados la inyección por picker de `AGENTS.md`/`AGENT.md`, el selector de README, la selección de carpeta para broker y copiar ruta porque sus acciones de picker/clipboard aún no tienen owners. Las utilidades nativas se conservan como código, pero no se invocan desde la TUI.
-- Mobile Host tiene owner para iniciar loopback con Authority/Sentinel y pairing con PIN de un solo uso, grants por `.isyroot` y receipt antes de devolver la credencial. La ruta Tailscale muestra y verifica el target Mobile Host; el listener y la ruta live permanecen apagados hasta las aprobaciones de la TUI.
-
-“Implementado” significa que hay un flujo en el código; cada integración puede seguir necesitando instalación, credencial, grants y configuración externa. Mira las columnas de evidencia de la [matriz de features](docs/product/tui-feature-matrix.md).
-
-### Parcial o pendiente
-
-- **ISySentinel / M15:** `security.py` agrega decisiones puras; Workspace Authority conserva grants por root. Los owners locales enlazan material de request, Authority/Sentinel y receipts en el journal privado. Esta rama incorpora owners de Mobile Host para start y pairing; el snapshot M15 está actualizado y la suite completa pasa localmente (324 pruebas). En el Gateway separado siguen pendientes el checker estructural, HTTPS/proxy de despliegue y una operación remota con ambos gates. Ver [auditoría Gateway](docs/security/m15-gateway-audit-2026-09-28.md). Las acciones sin owner permanecen DENY.
-- **Herramientas del modelo:** con un provider que soporta tool calls y los grants del workspace, el chat usa un bucle nativo (hasta 5 rondas, 3 llamadas por respuesta) con `workspace_list`, `workspace_read` y `workspace_search`, todas por Workspace Authority e IsySentinel con receipt. Si activas **Edit workspace files** en Settings → Authority, el modelo también puede proponer el contenido completo de un archivo de texto con `workspace_write`: ISyCode muestra el diff exacto y solo escribe si lo apruebas. La escritura es atómica, no sigue symlinks, rechaza rutas sensibles y archivos de más de 128 KiB, y no sobrescribe si el archivo cambió después de la revisión. Solo funciona en POSIX (Linux y macOS). Una respuesta de texto como `{"tool":"bash",...}` sigue siendo texto: no hay shell, ni borrar, ni mover archivos.
-- **Gateway en vivo:** el cliente/owner semántico está conectado en ISyCode, pero falta demostrar una operación contra el Gateway real con grant local, scope remoto e IDs de workspace coincidentes.
-- **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. El bucle de tools del modelo solo expone las herramientas locales del workspace.
-- **LSP:** Pyright ofrece `workspace/symbol`; Rust Analyzer se detecta como no soportado. No hay todavía diagnósticos, autocompletado ni navegación completa.
-- **Mobile Host:** aún faltan sesiones remotas, streaming, cancelación, approvals, adapters operativos y administración completa de credenciales.
-- **Providers:** OAuth todavía no está implementado. Los métodos OAuth leídos de un catálogo externo son metadatos.
-- **Tailscale real:** el flujo de owners/UI y la preservación de configuración pasan pruebas offline y un smoke visual temporal. El target de `/isycode` ahora es Mobile Host `127.0.0.1:8765`, pero no se inició el listener ni se cambió Serve; la conectividad de tailnet permanece **NOT_DEMONSTRATED**. El installer queda limitado a Ubuntu/Debian compatible; las demás plataformas muestran pasos manuales.
-- **OpenISy L0/L1:** sus contratos se documentan como integración futura; el ciclo de staging, activación, worker aislado, receipts y rollback no está integrado en ISyCode.
-- **Auditoría duradera y release:** hay journal hash-chain con verificador read-only e inspector; el journal rota en segmentos de 4 MB encadenados (un segmento alterado, faltante o reordenado se detecta), así que ya no bloquea el workspace al llenarse; la cadena puede verificarse, pero payloads de request/result no se conservan para recomputar sus digests. Faltan diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners.
-
-## Modos: Classic y Security
-
-Cada workspace elige su modo la primera vez que lo abres; puedes cambiarlo en Settings → Authority. En Settings → My defaults puedes fijar el modo con el que empiezan las carpetas nuevas (preguntar, Classic o Security); es solo una preferencia y no cambia el modo de los workspaces que ya usas.
-
-| | Classic | Security |
-|---|---|---|
-| Leer y buscar archivos del workspace | incluido | lo activas tú |
-| Proponer ediciones | incluido; cada cambio muestra el diff y pide *Apply* | lo activas tú; igual con diff y *Apply* |
-| Chat con el provider elegido | incluido (solo hosts de providers conocidos o el endpoint configurado) | lo activas tú |
-| Guardar y reanudar conversaciones (workspaces recurrentes) | incluido | lo activas tú |
-| Guardar, usar y quitar API keys | incluido; guardar y quitar piden confirmación | lo activas tú por servicio |
-| Gateway, MCP, LSP, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
-| Shell, borrar o mover archivos, archivos sensibles, `.isyroot` | no disponible | no disponible |
-
-Classic es un preset de permisos implícitos de Workspace Authority, no un bypass: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal de acciones en ambos modos. Los workspaces que ya existían antes de los modos siguen en Security.
-
-## Seguridad y límites
-
-ISyCode separa tres conceptos:
-
-1. **`launch_dir`:** la carpeta desde la que se invocó el programa.
-2. **`workspace_root`:** el límite lógico detectado por `.isyroot`, o `launch_dir` si no hay marker.
-3. **Autoridad:** los permisos efectivos concedidos para acciones concretas. El marker nunca concede acceso.
-
-Las acciones habilitadas pasan por Workspace Authority, IsySentinel, approval cuando corresponde y un execution owner compatible. Las capacidades sin owner permanecen bloqueadas. El Gateway mantiene además autenticación y scopes remotos independientes. Las decisiones y receipts conectados quedan en el journal privado; approvals de un solo uso se mantienen en memoria durante el proceso.
-
-El diseño y límites están en [fronteras de seguridad](docs/design/isysentinel-security-boundaries.md), [contrato Mobile Host](docs/mobile-host-v1.md) y [decisión de runtime](docs/decisions/0001-runtime-boundary.md).
+| Overview | Archivos |
+| --- | --- |
+| ![TUI: overview](docs/screenshots/01-overview.png) | ![TUI: archivos y límite de autoridad](docs/screenshots/02-files.png) |
 
 ## Instalar y arrancar
 
-Instalar desde fuente requiere Python 3.10 o posterior. Los paquetes precompilados incluyen el runtime. El TUI usa Textual y Rich; Pyright LSP y el broker Docker son integraciones opcionales.
-
-Al publicar un tag `vX.Y.Z`, CI ejecuta la suite hermética en Linux y, si pasa y coincide con la versión de `pyproject.toml`, construye los paquetes nativos. Cada binario ejecuta un smoke check en su runner Windows, Linux o macOS antes de adjuntarse a un GitHub Release en borrador con `SHA256SUMS`. Las pruebas que requieren un Gateway activo o el checkout hermano de ISyCo se marcan como integración y no se ejecutan en los runners limpios.
-
-- Windows x64: ejecutable de consola `.exe`.
-- Linux x64: AppImage y `.deb`, construidos sobre Ubuntu 22.04 (glibc 2.35 o posterior).
-- macOS ARM64: instalador `.pkg` y archivo `.tar.gz` con el ejecutable. Ambos quedan sin firma ni notarización de Apple; el `.pkg` puede mostrar avisos del sistema. Intel Mac no está incluido todavía.
-
-El Release queda en borrador para revisión y publicación manual. La TUI se abre desde una terminal; estos paquetes instalan el comando `isycode`, no una aplicación gráfica.
-
-Para instalar, Linux puede ejecutar el AppImage después de `chmod +x` o instalar el `.deb` con `sudo apt install ./archivo.deb`. En Windows, abre `isycode-*.exe` desde PowerShell o Terminal. En macOS, usa el `.pkg` o extrae el `.tar.gz` y coloca el ejecutable en una carpeta de tu `PATH`; los paquetes de macOS no están firmados ni notarizados y pueden mostrar avisos de Gatekeeper.
+Desde el código fuente (Python 3.10 o posterior):
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git
 cd ISyCode
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
+python -m pip install -e .            # añade '.[anthropic]' para usar Claude de forma nativa
 isycode
 ```
 
-Para iniciar desde cualquier proyecto con el launcher de este checkout:
+Para lanzarlo desde cualquier proyecto con este checkout:
 
 ```bash
 ./scripts/install-path
@@ -120,80 +48,248 @@ cd /ruta/a/tu/proyecto
 isycode
 ```
 
-`isycode cli` abre el navegador semántico. El wrapper `isyco cli` existe en la instalación integrada con el CLI de ISyCo; el paquete standalone instala `isycode` y no reemplaza ese comando del sistema.
+Otras formas de ejecutarlo:
 
-En el primer arranque, se puede marcar el directorio como workspace recurrente. Aceptar crea un `.isyroot` vacío; rechazar mantiene la ejecución temporal. Las conversaciones recurrentes se guardan en `~/.local/state/isycode/isyrcodesessions/` o bajo `$XDG_STATE_HOME`.
+| Comando | Qué hace |
+| --- | --- |
+| `isycode` | Abre la TUI en la carpeta actual |
+| `isycode -p "pregunta"` | Responde una vez y sale ([modo no interactivo](#modo-no-interactivo)) |
+| `isycode cli` | Navegador de acciones por intención; no ejecuta shell |
+| `isycode --help` / `--version` | Ayuda y versión |
+
+La primera vez que abres una carpeta, ISyCode pregunta si será un workspace **recurrente** (crea un `.isyroot` vacío y puede guardar conversaciones) o **temporal**, y qué **modo** usará. Las conversaciones recurrentes se guardan en `~/.local/state/isycode/` (o bajo `$XDG_STATE_HOME`), nunca dentro del proyecto.
+
+### Paquetes precompilados
+
+Al publicar un tag `vX.Y.Z`, CI ejecuta la suite hermética en Linux y, si pasa y coincide con la versión de `pyproject.toml`, construye paquetes nativos. Cada binario pasa un smoke check en su runner antes de adjuntarse a un GitHub Release en borrador con `SHA256SUMS`.
+
+- **Windows x64:** ejecutable de consola `.exe` (ábrelo desde PowerShell o Terminal).
+- **Linux x64:** AppImage (`chmod +x`) y `.deb` (`sudo apt install ./archivo.deb`), construidos sobre Ubuntu 22.04 (glibc 2.35 o posterior).
+- **macOS ARM64:** `.pkg` y `.tar.gz`, sin firma ni notarización de Apple (Gatekeeper puede avisar). Intel Mac aún no está incluido.
+
+Los paquetes instalan el comando `isycode`; no son una aplicación gráfica.
 
 ### Pruebas
 
 ```bash
-python -m pytest -q
+python -m pytest -q -m "not integration"
 ```
 
-Las pruebas contra un ISyCo Gateway vivo son opt-in porque hablan con un servicio real, y `test_gateway_write_file` escribe y borra un archivo en él. Con el Gateway corriendo:
+Las pruebas contra un ISyCo Gateway vivo son opt-in porque hablan con un servicio real (`test_gateway_write_file` escribe y borra un archivo en él):
 
 ```bash
 ISYCODE_LIVE_GATEWAY=1 python -m pytest -q test_gateway.py
 ```
 
+## Modos: Classic y Security
+
+Cada workspace tiene su modo. Lo eliges la primera vez que abres la carpeta (`Esc` = Security) y puedes cambiarlo en **Settings → Authority**. En **Settings → My defaults** puedes fijar el modo inicial de las carpetas nuevas; es solo una preferencia.
+
+| | Classic | Security |
+| --- | --- | --- |
+| Leer y buscar archivos del workspace | incluido | lo activas tú |
+| Proponer ediciones (diff + *Apply* en cada cambio) | incluido | lo activas tú |
+| Chat con el provider elegido (solo hosts conocidos o el endpoint configurado) | incluido | lo activas tú |
+| Guardar y reanudar conversaciones | incluido | lo activas tú |
+| Guardar, usar y quitar API keys (guardar y quitar piden confirmación) | incluido | lo activas tú por servicio |
+| Ver `git status` y diffs | incluido | lo activas tú |
+| Commits, comandos en sandbox, MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
+| Gateway, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
+| Shell libre, borrar o mover archivos, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
+
+Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal en ambos modos. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
+
+## Qué puede hacer el agente
+
+Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo pide herramientas, ISyCode las ejecuta a través de su execution owner y le devuelve el resultado. Cada herramienta aparece solo si su permiso está activo, y ninguna saltea IsySentinel ni el journal.
+
+| Capacidad | Herramienta / comando | Permiso en Settings → Authority | ¿Pide aprobación cada vez? |
+| --- | --- | --- | --- |
+| Listar, leer y buscar por nombre | `workspace_list`, `workspace_read`, `workspace_search` | Read and search workspace files | no |
+| Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
+| Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto |
+| Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto |
+| Deshacer el último cambio de ISyCode | `/undo` | Edit workspace files | sí, con el diff inverso |
+| Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto |
+| Ver rama, cambios y diffs | `git_status`, `git_diff`, `/git`, `/diff` | See git status and diffs | no |
+| Crear un commit | `git_commit`, `/commit` | Create git commits | sí, con archivos, mensaje y diff |
+| Herramientas de servidores MCP locales | `mcp__<servidor>__<herramienta>`, `/mcp` | se concede al arrancar el servidor | sí: al arrancar y en cada llamada |
+| Revisar errores tras editar un `.py` | automático tras aplicar un cambio | Check Python files after edits | no (solo lectura) |
+| Mostrar su plan de trabajo | `update_tasks` (panel **Tasks**) | ninguno: no es una acción | no |
+
+### Bucle y contexto
+
+- **25 pasos por prompt** y hasta 8 llamadas por respuesta; pasos y longitud de respuesta se cambian en **Settings → My defaults**. Al llegar al límite, di "continue".
+- **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
+- Cuando la conversación ya no cabe, ISyCode **resume los mensajes antiguos** con el mismo provider (una petición autorizada y con receipt, como cualquier otra) y recorta resultados de herramientas antiguos dentro de un turno largo. `/compact` lo hace a mano. La conversación guardada conserva siempre el transcript completo.
+- `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
+
+### Ediciones
+
+`workspace_edit` reemplaza un fragmento exacto de un archivo; `workspace_write` propone el contenido completo y puede crear hasta 8 carpetas nuevas, que aparecen en la aprobación. La escritura es atómica, no sigue symlinks, rechaza rutas sensibles y archivos de más de 128 KiB, y **no sobrescribe si el archivo cambió después de la revisión**. Cada cambio guarda un checkpoint fuera del proyecto para `/undo`.
+
+En Linux y macOS se usan descriptores que nunca siguen enlaces. En Windows se usan rutas verificadas: se rechazan symlinks y junctions en toda la ruta y se comprueba con la ruta final del handle que lo abierto está dentro del workspace. En escrituras queda una ventana mínima entre la última comprobación y el `rename`, documentada en [`isycode/winfs.py`](isycode/winfs.py).
+
+### Comandos en sandbox
+
+Necesita **bubblewrap, libseccomp y python3 en Linux**; sin ellos, la opción aparece como no disponible.
+
+- Sin shell: se ejecuta exactamente el programa y los argumentos aprobados (sin pipes, redirecciones ni variables).
+- **Red bloqueada** por seccomp, solo el workspace es escribible, `.isyroot` es de solo lectura y las rutas sensibles (`.git`, `.env`, claves…) quedan ocultas.
+- Límite de tiempo (120 s por defecto, 600 s como máximo) y 64 KiB de salida.
+- Si aparece un archivo sensible nuevo o cambia el programa después de revisarlo, no se ejecuta.
+- Los cambios hechos por un comando no se deshacen con `/undo`.
+
+### Git
+
+Status, diffs y commits pasan por su propio owner. Los hooks nunca corren, no se hace push, se ignora la configuración del sistema y los archivos sensibles quedan fuera de status y diffs. Un repositorio cuyo `.git/config` define programas que git ejecutaría (fsmonitor, filtros, pager, textconv, credential helpers, includes…) se rechaza. Solo se admite una carpeta `.git` en la raíz del workspace.
+
+### MCP local
+
+Los servidores stdio se declaran **solo** en tu `~/.config/isycode/mcp.json`, nunca desde el repositorio, porque arrancar uno ejecuta un programa con tus permisos:
+
+```json
+{"servers": {"docs": {"command": ["npx", "-y", "some-mcp-server"], "env": {"API_TOKEN": "…"}}}}
+```
+
+`/mcp` los lista; `/mcp start docs` pide permiso para ese ejecutable y aprobación del comando exacto. Mientras corre, sus herramientas aparecen para el modelo y **cada llamada** muestra los argumentos exactos y pide aprobación. Los servidores corren con tu usuario (red incluida), en la carpeta del workspace y con un entorno mínimo, y se detienen al salir. Sus descripciones y respuestas se tratan como datos no confiables.
+
+### Modo no interactivo
+
+```bash
+isycode -p "¿Dónde se valida el token?"
+echo "Resume qué hace este proyecto" | isycode -p - --json
+```
+
+Responde una vez y sale. Usa los mismos owners, IsySentinel y journal que la TUI. Como nadie puede aprobar nada, **solo ofrece las herramientas sin aprobación** que el workspace ya tenga permitidas (lectura, búsqueda, `git_status`, `git_diff`). Códigos de salida: `0` bien, `1` error, `2` uso incorrecto, `3` petición denegada.
+
+## Comandos `/`
+
+`/` o `Ctrl+P` abren la navegación; `/help` lista todo.
+
+| Comando | Qué hace |
+| --- | --- |
+| `/undo` | Deshace el último cambio de ISyCode, mostrando antes el diff |
+| `/run <programa> [args]` | Ejecuta un comando en el sandbox (pide aprobación) |
+| `/git`, `/diff [ruta] [--staged]` | Rama y cambios; diff |
+| `/commit <mensaje>` | Commit de los archivos cambiados tras revisar el diff |
+| `/mcp`, `/mcp start <nombre>`, `/mcp stop <nombre>` | Servidores MCP locales |
+| `/compact` | Resume los mensajes antiguos para liberar contexto |
+| `/providers`, `/provider` | Providers y modelos |
+| `/session` | Workspace, provider y rol actuales |
+| `/readme`, `/plan`, `/review` | Vista previa de README, plan vía IsyMotron (opcional), revisión externa |
+
+**Comandos propios:** un archivo `~/.config/isycode/commands/<nombre>.md` (tuyo) o `.isycode-commands/<nombre>.md` (del workspace, leído con el permiso de lectura) crea `/<nombre>`. `$ARGUMENTS` se sustituye por lo que escribas después. Un comando es solo un prompt: no concede permisos.
+
 ## Providers
 
-Selecciona un provider desde **Providers** o configura `ISYCODE_PROVIDER` y `ISYCODE_MODEL`. Variables de credencial aceptadas:
+Selecciónalo desde **Providers** o con `ISYCODE_PROVIDER` / `ISYCODE_MODEL`. Si el provider elegido no tiene clave, ISyCode abre un campo enmascarado para pegarla (también en **Settings → API keys**). La clave se guarda en el keyring del sistema, nunca en el proyecto, el journal ni el historial; sin keyring seguro no se guarda nada y ISyCode indica la variable de entorno. Una clave no concede permiso de red: el host del provider se autoriza aparte (Classic lo incluye).
 
-| Provider | Variable |
+| Provider | Variable | Nota |
+| --- | --- | --- |
+| Anthropic (Claude) | `ANTHROPIC_API_KEY` | Nativo con el SDK oficial: `pip install 'isycode[anthropic]'` |
+| OpenAI | `OPENAI_API_KEY` | |
+| NVIDIA NIM | `NVIDIA_NIM_API_KEY` | Probado con una clave real |
+| Nebius | `NEBIUS_API_KEY` | Probado por el equipo |
+| Groq | `GROQ_API_KEY` | |
+| OpenRouter | `OPENROUTER_API_KEY` | |
+| Ollama, llama.cpp | opcional | Endpoints locales |
+
+**Claude nativo:** el provider `anthropic` usa la API Messages con el modelo `claude-opus-5-5` por defecto, thinking adaptativo (su resumen aparece en el bloque de razonamiento) y effort `medium`. Los bloques de thinking se devuelven intactos dentro de un turno de herramientas; si ISyCode recorta contexto, la API descarta los bloques afectados en vez de fallar (`prefix_mismatch_behavior: drop_block`). Si Claude rechaza una petición, el servidor puede reintentarla en otro modelo (`fallbacks: "default"`). Una negativa o una llamada a herramienta cortada por longitud nunca se ejecuta.
+
+Los demás providers comparten el transporte compatible con OpenAI. Que exista el preset no implica que se haya validado una clave real de cada servicio. OAuth no está disponible todavía.
+
+## Configuración personal
+
+| Dónde | Qué |
 | --- | --- |
-| OpenAI | `OPENAI_API_KEY` |
-| NVIDIA NIM | `NVIDIA_NIM_API_KEY` |
-| Nebius | `NEBIUS_API_KEY` |
-| Groq | `GROQ_API_KEY` |
-| OpenRouter | `OPENROUTER_API_KEY` |
+| Settings → My defaults | Modo y tipo de las carpetas nuevas, rol por defecto, pasos del agente (10/25/50/100), longitud de respuesta |
+| Settings → Authority | Permisos y modo de este workspace |
+| Settings → API keys | Guardar o quitar claves |
+| `~/.config/isycode/commands/*.md` | Tus comandos `/` |
+| `~/.config/isycode/mcp.json` | Tus servidores MCP locales |
 
-Las APIs cloud cubiertas actualmente son OpenAI, NVIDIA NIM, Nebius, Groq y OpenRouter; la compatibilidad del preset no implica que se haya validado una clave real de cada servicio. La captura de uso compartida por el usuario demuestra una respuesta real de NVIDIA NIM tras autorizar el host; Nebius ya había sido probado por el equipo. OpenAI, Groq y OpenRouter todavía no tienen evidencia de prueba real registrada. Ollama y llama.cpp siguen disponibles como endpoints locales opcionales, no como parte de la matriz de validación cloud. Cualquier otro proveedor/API queda abierto para propuesta por PR o issue. También se pueden guardar claves nombradas en el vault del sistema. Sin una clave, ISyCode arranca en estado no configurado. Antes de hacer una solicitud se debe autorizar el host del provider en **Settings → Authority & Security**. OAuth no está disponible todavía.
+## Seguridad y límites
+
+ISyCode separa tres conceptos:
+
+1. **`launch_dir`:** la carpeta desde la que se invocó el programa.
+2. **`workspace_root`:** el límite lógico que marca `.isyroot`, o `launch_dir` si no hay marker.
+3. **Autoridad:** los permisos efectivos para acciones concretas. El marker **nunca** concede acceso.
+
+Cada acción sigue el mismo camino: **intención → execution owner → Workspace Authority → IsySentinel → efecto → receipt**. IsySentinel es deny-by-default: agrega comprobaciones puras (Systembilities) y no ejecuta nada. Las acciones sin owner quedan denegadas. Las aprobaciones son de un solo uso y están ligadas al digest exacto de la petición. Decisiones y receipts van a un journal privado, encadenado por hash y rotado en segmentos de 4 MB (un segmento alterado, faltante o reordenado se detecta). El Gateway mantiene además su propia autenticación y sus scopes.
+
+El inventario de owners y acciones se regenera en [`docs/security/m15-authority-coverage.json`](docs/security/m15-authority-coverage.json). Diseño y límites: [fronteras de seguridad](docs/design/isysentinel-security-boundaries.md), [contrato Mobile Host](docs/mobile-host-v1.md) y [decisión de runtime](docs/decisions/0001-runtime-boundary.md).
+
+## Qué está probado
+
+**Ejecutado de verdad:**
+
+- **TUI:** arranque, paneles Overview/Files, árbol bloqueado sin permiso y paleta (las capturas de arriba).
+- **Pyright LSP:** `initialize` y `workspace/symbol` reales en un workspace temporal; las pruebas negativas bloquearon sockets y escritura.
+- **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode, en red interna, montaje read-only y sin credenciales.
+- **Chat con NVIDIA NIM** tras autorizar el host; cancelación de chat y streaming.
+
+**Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
+
+- Comandos en sandbox: bubblewrap simulado; el bloqueo de sockets por seccomp sí es real.
+- Diagnósticos tras editar: servidor LSP simulado, no Pyright.
+- Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
+- MCP local: servidor MCP simulado.
+- Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
+
+**Parcial o pendiente:**
+
+- **Gateway en vivo:** el cliente semántico y Gateway MCP están conectados, pero falta demostrar una operación contra el Gateway real con permiso local, scope remoto e IDs de workspace coincidentes. Estado en la [auditoría Gateway](docs/security/m15-gateway-audit-2026-09-28.md).
+- **LSP:** solo Pyright (`workspace/symbol` y diagnósticos); sin autocompletado ni navegación completa.
+- **Mobile Host:** faltan sesiones remotas, streaming, cancelación y approvals remotos.
+- **Tailscale:** flujo de owners y UI probado offline; la conectividad real de tailnet sigue **NOT_DEMONSTRATED**.
+- **Pickers nativos y portapapeles** (`desktop.file_picker`, `clipboard.copy`): bloqueados hasta que tengan owner.
+- **No disponible todavía:** borrar o mover archivos como herramienta, borrar conversaciones guardadas, OAuth, OpenISy L0/L1.
+
+La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia por superficie.
 
 ## Integraciones
 
-- **ISyCo Gateway:** define `GATEWAY_URL` y una clave con scope `isyco.semantic`. Para rutas no locales usa HTTPS. La configuración también requiere un ID opaco coincidente entre Gateway e ISyCode; ese ID es un binding operativo, no prueba identidad física del filesystem.
-- **Catálogo externo OpenISy:** define `OPENISY_API_URL`; puede leer estados/metadatos de MCP, Skills y providers, sujeto a autorización de host. Descubrir no activa ni invoca.
-- **IsyMotron:** conserva un planner/runtime opcional para proponer planes. En el perfil Secure, las peticiones al provider requieren el grant de host de ISyCode y la ejecución heredada de planes está deshabilitada; sus grants nunca autorizan acciones del producto.
-- **Mobile Host:** por defecto escucha en `127.0.0.1:8765`. El bind remoto exige certificado y llave TLS; pairing y health no significan que haya runtime remoto operativo.
+- **ISyCo Gateway:** define `GATEWAY_URL` y una clave con scope `isyco.semantic` (HTTPS fuera de loopback). También requiere un ID opaco coincidente entre Gateway e ISyCode; ese ID es un binding operativo, no prueba identidad del filesystem. Hay once operaciones semánticas read-only con payload tipado y revisión explícita, y un flujo manual para invocar una herramienta Gateway MCP con aprobación individual.
+- **Acceso privado por Tailscale (opcional):** Settings descubre el cliente local. El wizard ofrece la guía oficial o una instalación automatizada en Ubuntu/Debian en tres pasos aprobados, login de navegador sin guardar credenciales y una ruta Tailscale Serve privada `/isycode` hacia Mobile Host en `127.0.0.1:8765`. Nunca usa Funnel ni `serve reset`. Ver [diseño y evidencia](docs/superpowers/specs/2026-09-29-private-tailnet-setup-design.md).
+- **Mobile Host:** escucha en `127.0.0.1:8765`; arranque y pairing con PIN de un solo uso pasan por su owner. Un bind remoto exige certificado y llave TLS.
+- **Catálogo externo OpenISy:** con `OPENISY_API_URL` lee estados y metadatos de MCP, Skills y providers; descubrir no activa ni invoca.
+- **IsyMotron:** planner/runtime opcional para `/plan`. No es la autoridad de seguridad de ISyCode; sus grants nunca autorizan acciones del producto.
+- **Roles:** agentes de ISyCode y los ocho motores de ISyCo en catálogos separados. Elegir un rol no ejecuta comandos ni concede permisos.
 
-## Atajos principales
+## Atajos
 
 | Atajo | Acción |
 | --- | --- |
 | `Enter` / `Shift+Enter` | Enviar / nueva línea |
-| `Esc` | Cancelar stream activo; si no hay operación, volver/cerrar menú |
-| `/` o `Ctrl+P` | Abrir navegación semántica |
-| `Ctrl+F` | Buscar en la consola actual |
-| `Ctrl+B` | Mostrar u ocultar panel lateral |
-| `F6` / `Shift+F6` | Abrir Files / Overview |
-| `F7` / `Shift+F7` | Ajustar ancho del panel lateral |
+| `Esc` | Detener el turno del agente; si no hay operación, volver o cerrar menú |
+| `/` o `Ctrl+P` | Navegación semántica |
+| `Ctrl+F` | Buscar en la consola |
+| `Ctrl+B` | Mostrar u ocultar el panel lateral |
+| `F6` / `Shift+F6` | Files / Overview |
+| `F7` / `Shift+F7` | Ancho del panel lateral |
 | `Ctrl+L` | Volver al composer conservando el borrador |
 
-El engranaje **Settings** incluye el mapa completo de atajos.
+El engranaje **Settings** incluye el mapa completo.
 
-## Roadmap
+## Roadmap y documentación
 
-El orden de trabajo y los criterios de salida están en [`ROADMAP.md`](ROADMAP.md). Las brechas por superficie, evidencia y estado demostrado están en [`docs/product/tui-feature-matrix.md`](docs/product/tui-feature-matrix.md).
-
-La estrategia tiene dos etapas: primero publicar **ISyCode Secure**, con el conjunto actual de acciones tipadas y permisos mínimos; después ampliar hacia **ISyCode Full** agregando capacidades y grants explícitos. Full no desactiva Sentinel ni convierte grants en ejecución arbitraria: cada capacidad nueva requiere su propio owner, límites y registro de resultado.
+La estrategia tiene dos etapas: primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
 
 Prioridades abiertas:
 
-1. Cerrar los pendientes remotos de M15: corregir el checker estructural del Gateway, verificar HTTPS/proxy de despliegue y demostrar una operación semántica con grant y scope; estado en [auditoría Gateway](docs/security/m15-gateway-audit-2026-09-28.md).
-2. Cerrar M16: sesiones recuperables, configuración/diagnósticos, cobertura UX y matriz con testigos reproducibles.
-3. Completar la operación real del Gateway semántico como parte del witness M15, con identidad, scopes y grants correctos.
-4. Completar Mobile Host con adapters, sesiones/stream, cancelación y approvals.
-5. Añadir las acciones de archivos y capacidades runtime únicamente detrás de owners tipados y permisos verificables.
-6. Evaluar L0/L1 después de cerrar la base de seguridad; no se incluye como capacidad activa de esta versión.
+1. Cerrar los pendientes remotos de M15: checker estructural del Gateway, HTTPS/proxy de despliegue y una operación semántica real con permiso y scope.
+2. Cerrar M16: sesiones recuperables, diagnósticos, cobertura UX y matriz con testigos reproducibles.
+3. Validar en entornos reales lo que hoy solo tiene dobles de prueba (sandbox de comandos, Pyright, Claude, MCP, Windows).
+4. Completar Mobile Host con adapters, sesiones y approvals.
+5. Evaluar L0/L1 cuando la base de seguridad esté cerrada.
 
-El release no se declara “daily-driver-ready” mientras M15 siga abierto.
-
-## Documentación
+El release no se declara "daily-driver-ready" mientras M15 siga abierto.
 
 - [Guía rápida en español](GUIA.md)
 - [Roadmap por milestones](ROADMAP.md)
 - [Matriz de features y evidencia](docs/product/tui-feature-matrix.md)
 - [Comparativa con otras CLIs](docs/product/cli-competitive-audit.md)
-- [Fronteras de ISySentinel](docs/design/isysentinel-security-boundaries.md)
+- [Fronteras de IsySentinel](docs/design/isysentinel-security-boundaries.md)
 - [Contrato Mobile Host v1](docs/mobile-host-v1.md)

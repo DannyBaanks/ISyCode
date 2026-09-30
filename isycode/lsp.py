@@ -22,11 +22,11 @@ MAX_SYMBOLS = 500
 # Load libseccomp through its seccomp(2) API in a tiny trusted bootstrap after
 # Bubblewrap has finished constructing namespaces/mounts and before exec'ing
 # the language server. The filter is inherited across exec and child processes.
-_SECCOMP_BOOTSTRAP = r'''import ctypes, os, resource, sys
+_SECCOMP_BOOTSTRAP_TEMPLATE = r'''import ctypes, os, resource, sys
 # Apply process-count limits only after Bubblewrap has created its namespaces.
 # Applying RLIMIT_NPROC to the launcher can make namespace setup fail with
 # EAGAIN when the host user already owns more than this many processes.
-resource.setrlimit(resource.RLIMIT_NPROC, (32, 32))
+resource.setrlimit(resource.RLIMIT_NPROC, (@NPROC@, @NPROC@))
 lib = ctypes.CDLL("libseccomp.so.2")
 lib.seccomp_init.argtypes = [ctypes.c_uint32]
 lib.seccomp_init.restype = ctypes.c_void_p
@@ -55,6 +55,16 @@ finally:
     lib.seccomp_release(ctx)
 os.execv(sys.argv[1], sys.argv[1:])
 '''
+
+
+def network_deny_bootstrap(max_processes: int = 32) -> str:
+    """Python bootstrap that caps processes, denies sockets, then execs argv[1:]."""
+    if type(max_processes) is not int or not 1 <= max_processes <= 4096:
+        raise ValueError("process limit is invalid")
+    return _SECCOMP_BOOTSTRAP_TEMPLATE.replace("@NPROC@", str(max_processes))
+
+
+_SECCOMP_BOOTSTRAP = network_deny_bootstrap(32)
 
 
 def discover_servers() -> list[dict[str, Any]]:
@@ -327,4 +337,108 @@ async def pyright_workspace_symbols(root: Path, query: str,
         raise
 
 
-__all__ = ["discover_servers", "pyright_workspace_symbols"]
+MAX_DIAGNOSTICS = 100
+SEVERITIES = {1: "error", 2: "warning", 3: "information", 4: "hint"}
+
+
+async def _diagnostics_session(reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+                               root_name: str, relative_path: str, text: str,
+                               timeout_s: float) -> list[dict[str, Any]]:
+    """initialize → didOpen → first publishDiagnostics for that file → shutdown."""
+    uri = "file:///workspace/" + relative_path
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout_s
+
+    def remaining() -> float:
+        left = deadline - loop.time()
+        if left <= 0:
+            raise asyncio.TimeoutError("LSP diagnostics exceeded their deadline")
+        return left
+
+    writer.write(_frame({
+        "jsonrpc": "2.0", "id": 1, "method": "initialize",
+        "params": {"processId": None, "rootUri": "file:///workspace",
+                   "workspaceFolders": [{"uri": "file:///workspace", "name": root_name}],
+                   "capabilities": {"textDocument": {"publishDiagnostics": {}}},
+                   "trace": "off", "clientInfo": {"name": "isycode", "version": "0.1.0"}}}))
+    await writer.drain()
+    await _response(reader, writer, 1, remaining())
+    writer.write(_frame({"jsonrpc": "2.0", "method": "initialized", "params": {}}))
+    writer.write(_frame({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+        "textDocument": {"uri": uri, "languageId": "python", "version": 1, "text": text}}}))
+    await writer.drain()
+
+    async def wait_for_diagnostics() -> list[Any]:
+        while True:
+            message = await _read_message(reader)
+            params = message.get("params")
+            if (message.get("method") == "textDocument/publishDiagnostics"
+                    and isinstance(params, dict) and params.get("uri") == uri):
+                diagnostics = params.get("diagnostics")
+                return diagnostics if isinstance(diagnostics, list) else []
+            response = _server_request_response(message)
+            if response is not None:
+                writer.write(_frame(response))
+                await writer.drain()
+
+    raw = await asyncio.wait_for(wait_for_diagnostics(), timeout=remaining())
+    clean = []
+    for item in raw[:MAX_DIAGNOSTICS]:
+        if not isinstance(item, dict):
+            continue
+        start = (item.get("range") or {}).get("start") or {}
+        clean.append({
+            "line": int(start.get("line", 0)) + 1 if isinstance(start.get("line"), int) else 0,
+            "column": int(start.get("character", 0)) + 1 if isinstance(start.get("character"), int) else 0,
+            "severity": SEVERITIES.get(item.get("severity"), "error"),
+            "message": str(item.get("message", ""))[:500],
+            "rule": str(item.get("code", ""))[:80],
+        })
+    try:
+        writer.write(_frame({"jsonrpc": "2.0", "id": 2, "method": "shutdown", "params": None}))
+        await writer.drain()
+        await _response(reader, writer, 2, min(2.0, max(0.1, deadline - loop.time())), type(None))
+        writer.write(_frame({"jsonrpc": "2.0", "method": "exit", "params": None}))
+        await writer.drain()
+    except (asyncio.TimeoutError, RuntimeError, OSError):
+        pass
+    return clean
+
+
+async def pyright_diagnostics(root: Path, relative_path: str, text: str,
+                              server: dict[str, Any], timeout_s: float = 25.0) -> dict[str, Any]:
+    """Pyright diagnostics for one file, in the same read-only, network-denied sandbox."""
+    root = root.resolve(strict=True)
+    command = _sandbox_command(root, server)
+    proc = await asyncio.create_subprocess_exec(
+        *command, cwd="/", stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        limit=MAX_FRAME_BYTES + 8192)
+    try:
+        if resource is None:
+            raise RuntimeError("OS process limits are unavailable")
+        resource.prlimit(proc.pid, resource.RLIMIT_CPU, (30, 30))
+        resource.prlimit(proc.pid, resource.RLIMIT_AS, (2 * 1024**3, 2 * 1024**3))
+        resource.prlimit(proc.pid, resource.RLIMIT_NOFILE, (128, 128))
+        resource.prlimit(proc.pid, resource.RLIMIT_FSIZE, (4 * 1024**2, 4 * 1024**2))
+    except (AttributeError, OSError, ValueError) as exc:
+        proc.kill()
+        await proc.wait()
+        raise RuntimeError("LSP process resource limits could not be applied") from exc
+    try:
+        diagnostics = await _diagnostics_session(proc.stdout, proc.stdin, root.name,
+                                                 relative_path, text, timeout_s)
+    finally:
+        if proc.returncode is None:
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+    return {"server": "pyright", "path": relative_path, "diagnostics": diagnostics,
+            "sandbox": {"read_only_workspace": True,
+                        "network": "socket syscalls denied by seccomp; host namespace shared"}}
+
+
+__all__ = ["discover_servers", "network_deny_bootstrap", "pyright_diagnostics",
+           "pyright_workspace_symbols"]

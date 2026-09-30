@@ -10,6 +10,9 @@ Usage:
   isycode                 Start the chat TUI in the current directory
   isycode tui              Start the chat TUI
   isycode cli              Browse actions by semantic category
+  isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
+                           add --json for machine-readable output. Only read-only
+                           tools that were granted run; nothing asks for approval.
   isycode --help           Show this help
   isycode --version        Show the installed version
 
@@ -29,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
 
         cli_main(["cli"])
         return 0
+    if arguments and arguments[0] in {"-p", "--print"} or arguments[:2] in (
+            ["--json", "-p"], ["--json", "--print"]):
+        from isycode.headless import main as headless_main
+
+        return headless_main(arguments)
     if arguments in (["--help"], ["-h"], ["help"]):
         print(USAGE, end="")
         return 0
