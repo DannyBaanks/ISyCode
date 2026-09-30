@@ -412,7 +412,7 @@ Reglas de frontera:
 
 ### M13 — Mobile Host: sustrato de ISyCode Móvil
 
-**Estado:** primera etapa implementada en ISyCode. La TUI inicia un host versionado y muestra liveness y clientes autenticados en Settings. `docs/mobile-host-v1.md` define el contrato que consume Móvil. Pairing usa PIN local de seis dígitos, un solo uso y cinco minutos; el host devuelve una credencial aleatoria por una hora y almacena únicamente su hash. El keystore queda en XDG state con permisos restrictivos. El default es loopback; cualquier bind no local exige TLS. El inventario detecta comandos instalados pero mantiene todos los adapters no seleccionables. No se modificó el Bridge ni el checkout móvil.
+**Estado (actualización 2026-09-29):** etapa local implementada en ISyCode y conectada a owners de Workspace Authority/ISySentinel. La TUI no inicia el host automáticamente: Settings pide grant y aprobación explícitos antes de escuchar en `127.0.0.1:8765`; al cerrar la TUI, el listener se limpia como ciclo de vida, mientras la acción seleccionable `mobile.host.stop` sigue DENY. Pairing exige grant `mobile.pair`, PIN local de seis dígitos de un solo uso y receipt durable antes de devolver una credencial aleatoria de una hora; el keystore conserva su hash. Settings muestra liveness y clientes autenticados. Private access propone `/isycode` hacia Mobile Host y el health probe verifica el path montado `/isycode/v1/health`; requiere aprobación separada y mantiene Funnel apagado. **NOT_DEMONSTRATED:** todavía no se cambió Serve en vivo ni se emparejó desde un segundo dispositivo del tailnet. El inventario detecta comandos instalados pero mantiene todos los adapters no seleccionables.
 
 **Entregado en esta etapa:**
 
@@ -420,6 +420,8 @@ Reglas de frontera:
 - [x] `GET /v1/health`, `GET /v1/status` protegido por scope, `POST /v1/pair/exchange`, `GET /v1/runtimes`, `POST /v1/runtimes/select` (respuesta explícita `409` mientras falten adapters) y `POST /v1/clients/heartbeat`.
 - [x] Rate limits por peer y global para intentos fallidos; credenciales bearer revocables/expirables por el almacén interno, con scopes y allowlist de runtime.
 - [x] Settings diferencia host vivo de clientes conectados y permite generar un PIN nuevo localmente.
+- [x] Iniciar Mobile Host desde Settings con grant por workspace, aprobación de un uso y límite loopback; pairing queda gated y produce receipt antes de responder.
+- [x] Integrar preview y health probe de Tailscale Serve con la ruta Mobile Host `/isycode` y puerto loopback `8765`; la operación live sigue dependiendo de aprobación del usuario y witness externo.
 - [x] Contrato y límites de esta versión documentados en `docs/mobile-host-v1.md`, README y GUIA.
 
 **Pendiente antes de llamar usable a ISyCode Móvil:**
@@ -430,14 +432,14 @@ Reglas de frontera:
 - [ ] Definir y servir `POST/GET /v1/sessions`, reanudación segura, ownership por credencial y aislamiento por workspace.
 - [ ] Definir WebSocket de eventos con secuencia/replay/backpressure, estados de error y reconexión.
 - [ ] Implementar cancelación y approvals con expiración, binding a sesión/turno/capability, auditoría y validación del host.
-- [ ] Diseñar acceso remoto TLS/Tailscale y lifecycle del host independiente de una terminal interactiva; no exponer bind público como workaround.
+- [ ] Demostrar Serve y pairing desde un segundo dispositivo autorizado del tailnet; mantenerlo no demostrado hasta verificar la ruta externa real y su flujo de intercambio.
 - [ ] Cerrar threat model, límites de requests, revocación, recuperación/crash y pruebas de integración host-cliente antes de marcar la feature completa.
 
 **Gate de seguridad:** el cliente nunca elige un runtime solo porque aparece en el catálogo; toda operación de sesión valida credencial, workspace, runtime, acción y grant/approval de Workspace Authority + ISySentinel antes de dispatch. Health permanece mínimo y no revela nombres de dispositivos ni pairing.
 
 ### M15 — ISySentinel y fronteras de seguridad
 
-**Estado (actualización 2026-09-28):** ISySentinel y Workspace Authority están separados; grants por `.isyroot` requieren owner registrado y approvals request-bound, atómicas y de un solo uso. El inventario clasifica 54 acciones; las capacidades sin owner quedan en DENY; `broker.start` tiene variantes disjuntas y el auditor AST no encuentra bypasses directos en la TUI. La cobertura Secure local está cerrada. En el Gateway separado se corrigió el scanner AST para seguir imports del servidor FastAPI, se alineó la claim, `/health` informa `read_only: false` y las mutaciones de Drive/Gmail/GitHub usan scopes granulares que no se heredan de las scopes legacy de lectura. La configuración rechaza aliases y el compose de producción fija un worker y exige HTTPS por el proxy confiable. Suite Gateway: 89 tests pasaron; el reporte estático OpenAPI marcó 6 PASS, 10 DEGRADED documentados, 16 NOT_DEMONSTRATED y cero drift/backend ausente. **El deployment no está demostrado ni actualizado:** el contenedor local aún devuelve el health anterior y el origen público observado muestra la página por defecto de ngrok; no hay tunnel activo. Tampoco se configuraron workspace IDs, grants/approval ni una key semántica para una llamada real. M15 sigue abierto por actualizar/restaurar el origen, verificar HTTPS/proxy en vivo y completar un roundtrip remoto con ambos gates. Ver [contrato de fronteras](docs/design/isysentinel-security-boundaries.md) y [auditoría M15 Gateway](docs/security/m15-gateway-audit-2026-09-28.md).
+**Estado (actualización 2026-09-29):** ISySentinel y Workspace Authority están separados; grants por `.isyroot` requieren owner registrado y approvals request-bound, atómicas y de un solo uso. El snapshot clasifica 61 acciones: 26 con owner válido, una lectura compartida, una variante, 32 DENY explícitas y una no-authority; no hay acciones sin clasificar ni owners ambiguos. Mobile Host agrega owners para el arranque loopback y el pairing; su apagado al cerrar TUI está anotado como cleanup, no como permiso `mobile.host.stop`. El auditor AST no encuentra bypasses directos en la TUI. La cobertura Secure local está cerrada. En el Gateway separado se corrigió el scanner AST para seguir imports del servidor FastAPI, se alineó la claim, `/health` informa `read_only: false` y las mutaciones de Drive/Gmail/GitHub usan scopes granulares que no se heredan de las scopes legacy de lectura. La configuración rechaza aliases y el compose de producción fija un worker y exige HTTPS por el proxy confiable. Suite Gateway: 89 tests pasaron; el reporte estático OpenAPI marcó 6 PASS, 10 DEGRADED documentados, 16 NOT_DEMONSTRATED y cero drift/backend ausente. **El deployment no está demostrado ni actualizado:** el contenedor local aún devuelve el health anterior y el origen público observado muestra la página por defecto de ngrok; no hay tunnel activo. Tampoco se configuraron workspace IDs, grants/approval ni una key semántica para una llamada real. M15 sigue abierto por actualizar/restaurar el origen, verificar HTTPS/proxy en vivo y completar un roundtrip remoto con ambos gates. Ver [contrato de fronteras](docs/design/isysentinel-security-boundaries.md) y [auditoría M15 Gateway](docs/security/m15-gateway-audit-2026-09-28.md).
 
 **Objetivo:** hacer de ISySentinel la decisión de seguridad de ISyCode, con autoridad explícita por `.isyroot`, Systembilities de solo lectura y ejecución posterior por adapters. Mantener Gateway HTTP Sentinel como gate remoto independiente.
 
@@ -534,6 +536,16 @@ Reglas de frontera:
 **Gate de Secure:** no declarar la versión segura lista mientras M15 esté pendiente, existan pantallas sin config coherente, una integración parezca runnable sin adapter, o una acción pueda saltarse owner, Authority, Sentinel, aprobación requerida o receipt. Las acciones no implementadas se mantienen DENY aunque exista una grant.
 
 **Fase posterior — Full:** tras cerrar y publicar el perfil Secure, ampliar permisos de manera explícita y por adapter: shell/comandos tipados, escrituras y más integraciones. Cada capability nueva requiere owner concreto, scope/grant visible, clasificación de riesgo, approval apropiada, límites de ejecución y receipt. No habrá un interruptor global que evite Sentinel; Full significa mayor cobertura de acciones concedibles, no menor seguridad.
+
+### Integración opcional: acceso privado por Tailscale
+
+- [x] Inventario local read-only mediante `TailscaleReadOwner`; grant por workspace y ejecutable.
+- [x] Instalación automatizada solo en Ubuntu/Debian soportado: preparación de fuente/paquete firmado, staging root-owned y apt exacto, cada fase con confirmación propia. Se ofrece guía manual para el resto.
+- [x] Login explícito en navegador oficial: no se reciben ni guardan contraseñas, auth keys u OAuth tokens.
+- [x] Serve privado al Mobile Host loopback (`127.0.0.1:8765`) en `/isycode`; health probe al path montado `/isycode/v1/health`; nunca Funnel ni `serve reset`. Configuración Web, TCP y Services ajena a ISyCode se compara antes/después. El cambio en el tailnet real y la sincronización con otro dispositivo siguen NOT_DEMONSTRATED.
+- [x] Cada efecto usa Workspace Authority, IsySentinel, approval de un uso y receipt persistente; revocar el grant no borra una ruta automáticamente.
+- [x] Witnesses offline de habilitar, verificar y deshabilitar conservan otras rutas; smoke temporal de Settings mostró la opción de instalación sin crear `.isyroot`.
+- [ ] Verificar login/instalación en un equipo opt-in y acceso desde otro dispositivo del tailnet; confirmar rechazo desde fuera del tailnet y scopes independientes del Gateway. Estado actual: **NOT_DEMONSTRATED**; no se ejecutaron cambios reales en el equipo.
 
 ## 5. Orden y puertas de dependencia
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 import hashlib
 import json
+import pytest
 
 from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.action_runtime import ActionReceipt
@@ -39,6 +40,69 @@ def test_journal_verifier_accepts_decision_and_matching_receipt(tmp_path):
         {"name": "WorkspaceReadBoundary", "passed": True},
     ]
     assert "inside root" not in repr(report.recent)
+
+
+def test_journal_accepts_redacted_tailscale_failure_receipt(tmp_path):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    journal = ActionAuditJournal(root, state_directory=tmp_path / "state")
+    request = ActionRequest("tailscale.install", root, "tailscale",
+                            execution_owner="tailscale_package_install")
+    authority = AuthorityDecision(True, "grant:tailscale.install", "matched", request.digest)
+    decision = SentinelDecision("tailscale.install", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    journal.record_decision(request, authority, decision)
+    receipt = ActionReceipt("receipt-failure", request.action_id, request.digest,
+                            "ALLOW", "FAILURE", hashlib.sha256(b"failed:transaction").hexdigest())
+
+    journal.record_receipt(request, receipt)
+    report = journal.verify()
+
+    assert report.status == "PASS"
+    assert report.receipts == 1
+    assert report.recent[-1]["outcome"] == "FAILURE"
+    assert "token=" not in journal.path.read_text(encoding="utf-8")
+
+
+def test_journal_accepts_redacted_tailscale_login_failure_receipt(tmp_path):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    journal = ActionAuditJournal(root, state_directory=tmp_path / "state")
+    request = ActionRequest("tailscale.login", root, "tailscale",
+                            execution_owner="tailscale_login")
+    authority = AuthorityDecision(True, "grant:tailscale.login", "matched", request.digest)
+    decision = SentinelDecision("tailscale.login", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    journal.record_decision(request, authority, decision)
+    receipt = ActionReceipt("receipt-login-failure", request.action_id, request.digest,
+                            "ALLOW", "FAILURE", hashlib.sha256(b"failed:login").hexdigest())
+
+    journal.record_receipt(request, receipt)
+    report = journal.verify()
+
+    assert report.status == "PASS"
+    assert report.receipts == 1
+
+
+@pytest.mark.parametrize("action", [
+    "tailscale.serve.enable", "tailscale.serve.disable",
+])
+def test_journal_accepts_redacted_tailscale_serve_failure_receipts(tmp_path, action):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    journal = ActionAuditJournal(root, state_directory=tmp_path / action.replace(".", "-"))
+    request = ActionRequest(action, root, "tailscale", execution_owner="tailscale_serve")
+    authority = AuthorityDecision(True, f"grant:{action}", "matched", request.digest)
+    decision = SentinelDecision(action, request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    journal.record_decision(request, authority, decision)
+    receipt = ActionReceipt("receipt-" + action.replace(".", "-"), action,
+                            request.digest, "ALLOW", "FAILURE",
+                            hashlib.sha256(b"failed:serve").hexdigest())
+
+    journal.record_receipt(request, receipt)
+
+    assert journal.verify().status == "PASS"
 
 
 def test_journal_rejects_decision_results_bound_to_another_request(tmp_path):

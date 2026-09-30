@@ -72,19 +72,80 @@ def test_secure_tui_session_delete_does_not_mint_its_own_authority_or_approval()
 
 def test_authority_settings_does_not_claim_unwired_session_owner_is_connected():
     source = SOURCE.read_text(encoding="utf-8")
+    module = ast.parse(source)
+    app = next(node for node in module.body
+               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+    method = next(node for node in app.body
+                  if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
+    menu_source = ast.get_source_segment(source, method)
 
-    assert "Session delete owner · not connected to session UI" in source
-    assert 'row["classification"] in {' in source
-    assert '"OWNER_VALID", "OWNER_SHARED_READ", "OWNER_VARIANTS"' in source
+    assert "session.delete" not in menu_source
+    assert "Delete conversations" not in menu_source
 
 
 def test_authority_settings_never_presents_an_explicit_deny_as_granted():
-    from isycode.tui import _authority_action_state
+    from isycode.action_runtime import EXPLICIT_DENY_ACTIONS
+    from isycode.actions import ACTION_CATALOG
+    from isycode.authority_view import OWNED_ACTIONS, displayed_on, grant_state
 
-    assert _authority_action_state("mobile.host.start", False) == "DENY · no Secure owner"
-    assert _authority_action_state("mobile.host.start", True) == (
-        "DENY · no Secure owner · saved grant ignored")
-    assert _authority_action_state("provider.request", True) == "grant on"
+    saved = {"enabled": True, "path_prefixes": ["/w"], "network_hosts": ["h"],
+             "executables": ["/bin/x"], "targets": ["t"]}
+    for action in ACTION_CATALOG:
+        if action.id in EXPLICIT_DENY_ACTIONS or action.id not in OWNED_ACTIONS:
+            assert grant_state(action.id, saved) == "blocked", action.id
+            assert displayed_on(action.id, saved) is False, action.id
+        else:
+            assert grant_state(action.id, saved) == "on", action.id
+            assert displayed_on(action.id, saved, scoped=False) is False, action.id
+    assert grant_state("mobile.host.start", saved) == "on"
+    assert grant_state("session.create", saved) == "blocked"
+
+
+def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
+    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    app = next(node for node in module.body
+               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+    methods = {node.name: node for node in app.body
+               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    source = SOURCE.read_text(encoding="utf-8")
+    for name in ("_open_authority_menu", "_append_network_grant_entry",
+                 "_open_tailscale_permissions", "_initialize_workspace",
+                 "_workspace_chat_tools_enabled"):
+        segment = ast.get_source_segment(source, methods[name])
+        # Raw `enabled` flags must never decide an ON label on their own.
+        assert '.get("enabled")' not in segment, name
+        assert 'get("enabled", False)' not in segment, name
+    calls = _method_calls(methods["_open_authority_menu"])
+    assert {"displayed_on", "mobile_host_enabled", "other_saved_grants"} <= calls
+
+
+def test_authority_capability_indicator_uses_clear_green_and_red_states():
+    from isycode.tui import _authority_capability_label
+
+    enabled = _authority_capability_label("Read workspace files", True)
+    disabled = _authority_capability_label("Read workspace files", False)
+
+    assert enabled.plain == "Read workspace files  ● ON"
+    assert disabled.plain == "Read workspace files  ● OFF"
+    assert any("00ff00" in str(style).casefold() for _, _, style in enabled.spans)
+    assert any("ff0000" in str(style).casefold() for _, _, style in disabled.spans)
+
+
+def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels():
+    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    app = next(node for node in module.body
+               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+    method = next(node for node in app.body
+                  if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
+    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), method)
+
+    assert "Read and search workspace files" in source
+    assert "Connect to the selected AI model" in source
+    assert "ACTION_CATALOG" not in source
+    assert "Owner coverage ·" not in source
+    assert '"Grant ' not in source
+    assert '"Revoke ' not in source
+    assert '"Action: ' not in source
 
 
 def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():

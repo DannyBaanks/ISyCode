@@ -18,6 +18,72 @@ def state_root() -> Path:
     return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "isycode"
 
 
+def broad_workspace_reason(directory: Path) -> str | None:
+    """Explain why a marker here would become the root of unrelated projects.
+
+    Workspace discovery walks up to the nearest `.isyroot`, so a marker in the
+    home directory, one of its ancestors, the temporary directory, or a mount
+    point makes that broad directory the shared root (grants, sessions and
+    receipts) of every descendant folder without its own marker.
+    """
+    try:
+        path = directory.expanduser().resolve(strict=True)
+    except (OSError, RuntimeError):
+        return "the directory cannot be resolved"
+    if path == Path(path.anchor):
+        return "it is the filesystem root"
+    try:
+        home = Path.home().resolve(strict=True)
+    except (OSError, RuntimeError, KeyError):
+        home = None
+    if home is not None and (path == home or path in home.parents):
+        return "it is your home directory or contains it"
+    try:
+        if path == Path(tempfile.gettempdir()).resolve(strict=True):
+            return "it is the shared temporary directory"
+    except (OSError, RuntimeError):
+        pass
+    if os.path.ismount(path):
+        return "it is a mount point"
+    return None
+
+
+def shared_root_warning(workspace_root: Path, root_source: str,
+                        launch_dir: Path) -> str | None:
+    """Warn when an existing marker makes a broad directory the active root.
+
+    Markers created before the broad-directory guard, or by hand, still make
+    every descendant without its own `.isyroot` share one identity. The marker
+    is honoured (it is an explicit identity), but the sharing must be visible.
+    """
+    if root_source != "isyroot":
+        return None
+    reason = broad_workspace_reason(workspace_root)
+    if reason is None:
+        return None
+    shared = "" if launch_dir == workspace_root else f" for {launch_dir}"
+    return (f"Workspace root {workspace_root}{shared}: {reason}. Folders below it without "
+            "their own .isyroot share its grants and sessions. Create an empty .isyroot in "
+            "the project folder to give it its own workspace.")
+
+
+def new_workspace_choice(launch_dir: Path, saved_choice: bool | None,
+                         global_default: str) -> bool | None:
+    """Decide recurrence for a folder with no `.isyroot`; None means ask.
+
+    A saved per-folder choice wins. The user-wide default only preselects a
+    choice for ordinary project folders: it never creates a marker by itself
+    in a broad directory, where the user must see the path and decide.
+    """
+    if saved_choice is not None:
+        return saved_choice
+    if global_default == "temporary":
+        return False
+    if global_default == "recurring" and broad_workspace_reason(launch_dir) is None:
+        return True
+    return None
+
+
 class WorkspaceSetupStore:
     """Store onboarding decisions outside workspaces; marker creation is opt-in."""
 

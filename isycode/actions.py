@@ -46,7 +46,8 @@ _ENTRIES = [
     ("broker.remove", "Semantic broker", "Remove a broker container/image", "destructive", True),
     ("mobile.host.start", "Mobile Host", "Start the local Mobile Host", "network", True),
     ("mobile.host.stop", "Mobile Host", "Stop the local Mobile Host", "process", False),
-    ("mobile.pair", "Mobile Host", "Pair a mobile device", "credential", True),
+    # A valid single-use PIN is the human-presence proof for this exchange.
+    ("mobile.pair", "Mobile Host", "Pair a mobile device", "credential", False),
     ("mobile.session.read", "Mobile Host", "Read a remote session", "read", False),
     ("mobile.session.create", "Mobile Host", "Create a remote session", "external", True),
     ("mobile.session.cancel", "Mobile Host", "Cancel a remote turn", "external", True),
@@ -68,6 +69,13 @@ _ENTRIES = [
     ("session.delete", "Sessions", "Delete a persistent conversation", "destructive", True),
     ("clipboard.copy", "Desktop", "Copy a path or text to clipboard", "external", True),
     ("desktop.file_picker", "Desktop", "Open the native file picker", "process", True),
+    ("tailscale.inspect", "Private access", "Inspect local Tailscale status", "read", False),
+    ("tailscale.install.prepare", "Private access", "Prepare an isolated signed Tailscale package", "process", True),
+    ("tailscale.install.stage", "Private access", "Stage verified Tailscale package as root", "process", True),
+    ("tailscale.install", "Private access", "Install the official Tailscale package", "process", True),
+    ("tailscale.login", "Private access", "Start Tailscale browser login", "process", True),
+    ("tailscale.serve.enable", "Private access", "Enable private Gateway Serve route", "process", True),
+    ("tailscale.serve.disable", "Private access", "Disable owned private Gateway Serve route", "process", True),
     ("role.select", "Roles", "Select conversational guidance", "read", False),
 ]
 

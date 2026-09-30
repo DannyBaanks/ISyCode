@@ -30,7 +30,9 @@ from isycode.config import (
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.search import TextMatch, find_text_matches
-from isycode.workspace_setup import WorkspaceSetupStore
+from isycode.workspace_setup import (
+    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
+)
 from isycode.user_defaults import UserDefaultsStore
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
@@ -38,16 +40,19 @@ from isycode.catalog import (
     SEMANTIC_BRANCHES,
 )
 from isycode.credentials import CredentialVault, CredentialVaultError
-from isycode.actions import ACTION_CATALOG
 from isycode.approvals import ActionApprovalStore
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS, GatewayMCPInvocationOwner, GatewaySemanticOwner,
-    LocalWorkspaceReadOwner, ProviderNetworkOwner, EXPLICIT_DENY_ACTIONS,
+    LocalWorkspaceReadOwner, ProviderNetworkOwner,
     LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
+from isycode.actions import ACTION_BY_ID
+from isycode.authority_view import (
+    MOBILE_HOST_ADDRESS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
+    mobile_host_saved, other_saved_grants,
+)
 from isycode.action_audit import ActionAuditJournal
-from isycode.action_coverage import owner_coverage_report
 from isycode.broker import (
     BrokerManagementOwner, BrokerPreviewOwner, BrokerProvisionOwner, BrokerRegistry,
     load_reviewed_recipe, provision_requests,
@@ -86,10 +91,12 @@ from rich.text import Text
 from rich.markdown import Markdown as RichMarkdown
 
 
-def _authority_action_state(action_id: str, enabled: bool) -> str:
-    if action_id in EXPLICIT_DENY_ACTIONS:
-        return "DENY · no Secure owner" + (" · saved grant ignored" if enabled else "")
-    return "grant on" if enabled else "deny"
+def _authority_capability_label(label: str, enabled: bool) -> Text:
+    """Render an understandable permission state without exposing policy internals."""
+    rendered = Text(label + "  ")
+    rendered.append("● ON" if enabled else "● OFF",
+                    style="bold #00ff00" if enabled else "bold #ff0000")
+    return rendered
 
 try:
     from agents.planner import PlanRejected  # type: ignore[reportMissingImports]
@@ -113,7 +120,13 @@ from isycode.lsp import discover_servers
 from isycode.workspace import IsyMotronWorkspace, WorkspaceUnavailable
 from isycode.openisy_client import OpenIsyClient
 from isycode.runtime import AuthorityContextChanged, IsyMotronRuntime
-from isycode.mobile_host import MobileHost
+from isycode.mobile_host import MobileHost, MobileHostOwner
+from isycode.tailscale import DEFAULT_GATEWAY_PORT, TailscaleAdapter, TailscaleSnapshot
+from isycode.tailscale_read import TailscaleReadOwner
+from isycode.tailscale_login import TailscaleLoginOwner
+from isycode.tailscale_install import TailscalePackageInstallOwner
+from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner, route_url
+from isycode.private_access import PrivateAccessStateStore
 import time as _time
 
 
@@ -309,6 +322,42 @@ ReviewConsentScreen { align: center middle; background: #000000 65%; }
         self.dismiss(False)
 
 
+class TailscaleConfirmScreen(ModalScreen[bool]):
+    """Show one exact private-access operation before approval is issued."""
+
+    CSS = """
+    TailscaleConfirmScreen { align: center middle; background: #000000 65%; }
+    #tailscale-confirm-card { width: 92%; max-width: 104; height: 80%; max-height: 32; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #tailscale-confirm-title { height: 2; color: #bb8cff; text-style: bold; }
+    #tailscale-confirm-copy { height: 1fr; border: round #48494e; padding: 1; overflow-y: auto; }
+    #tailscale-confirm-actions { height: 3; align-horizontal: right; }
+    #tailscale-confirm-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel"),
+                Binding("ctrl+c", "cancel", "Cancel", show=False)]
+
+    def __init__(self, title: str, details: str, confirm_label: str):
+        super().__init__()
+        self.title_text = title
+        self.details = details
+        self.confirm_label = confirm_label
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="tailscale-confirm-card"):
+            yield Static(self.title_text, id="tailscale-confirm-title")
+            with VerticalScroll(id="tailscale-confirm-copy"):
+                yield Static(Text(self.details))
+            with Horizontal(id="tailscale-confirm-actions"):
+                yield Button("Cancel", id="tailscale-cancel")
+                yield Button(self.confirm_label, id="tailscale-confirm", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "tailscale-confirm")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class WorkspaceSetupScreen(ModalScreen[bool]):
     """Ask once before marking this launch directory as a recurring workspace."""
 
@@ -329,10 +378,15 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
         self.launch_dir = launch_dir
 
     def compose(self) -> ComposeResult:
+        broad = broad_workspace_reason(self.launch_dir)
+        warning = ("" if broad is None else
+                   f"Caution: {broad}. A marker here would make every folder below it without "
+                   "its own .isyroot share this workspace's grants and sessions. Your "
+                   "'recurring' default is not applied here.\n\n")
         with Vertical(id="workspace-setup-card"):
             yield Static("Set up this workspace?", id="workspace-setup-title")
             yield Static(
-                f"Launch directory:\n{self.launch_dir}\n\n"
+                f"Launch directory:\n{self.launch_dir}\n\n{warning}"
                 "If this is a recurring project, Yes creates an empty .isyroot here and saves chat "
                 "sessions in your private ISyCode state directory. .isyroot identifies the workspace; "
                 "it does not grant filesystem access. Not now keeps this run temporary, and its chat "
@@ -383,7 +437,9 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
             yield Static(
                 "When ISyCode first opens a folder without a saved choice, it will create an empty "
                 ".isyroot marker there. This remembers the workspace identity only; it does not "
-                "grant file access or copy permissions from another workspace.",
+                "grant file access or copy permissions from another workspace. Broad folders such as "
+                "your home directory, its parents, the temporary directory, or a mount point still ask "
+                "first, so unrelated projects never share one workspace by accident.",
                 id="global-recurring-copy")
             with Horizontal(id="global-recurring-actions"):
                 yield Button("Cancel", id="global-recurring-cancel")
@@ -416,21 +472,18 @@ class GrantWorkspaceReadScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-read-card"):
-            yield Static("Revoke read-only workspace tools?" if self.revoke
-                         else "Grant read-only workspace tools?", id="workspace-read-title")
-            copy = (f"Workspace root: {self.root}\n\nThis disables workspace.files.list, "
-                    "workspace.files.read, workspace.files.search, and workspace.context.inject for this root. The transcript "
-                    "and saved policy remain; future tool calls will be denied."
+            yield Static("Turn off file reading?" if self.revoke
+                         else "Allow ISyCode to read workspace files?", id="workspace-read-title")
+            copy = ("ISyCode will stop listing, reading, and searching files in this workspace. "
+                    "Your files and conversations stay where they are."
                     if self.revoke else
-                    f"Workspace root: {self.root}\n\nThis stores explicit per-workspace grants for listing folders, "
-                    "reading bounded UTF-8 files, searching file names, and injecting a selected AGENTS.md/AGENT.md. "
-                    "Context files must be inside this workspace. Sensitive paths, symlinks, "
-                    "binary files, writes, shell commands, network calls, and paths outside this root "
-                    "stay denied. The grant does not enable arbitrary tools.")
+                    "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md "
+                    "to understand your project. It cannot edit or delete files, run commands, or access "
+                    "folders outside this workspace. You will still be asked before sensitive actions.")
             yield Static(copy, id="workspace-read-copy")
             with Horizontal(id="workspace-read-actions"):
                 yield Button("Cancel", id="workspace-read-cancel")
-                yield Button("Revoke access" if self.revoke else "Grant read-only access",
+                yield Button("Turn off" if self.revoke else "Turn on",
                              id="workspace-read-grant", variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -460,28 +513,21 @@ class GrantProviderNetworkScreen(ModalScreen[bool]):
         self.revoke = revoke
 
     def compose(self) -> ComposeResult:
-        yield_label = "Revoke" if self.revoke else "Grant"
-        copy = (f"Service: {self.label}\nHost: {self.host}\n\n"
-                "This only allows the named network action to contact this host for this workspace. "
-                "It does not add a credential, grant filesystem access, or authorize tools. "
-                "The service receives the request data required for that action."
-                if not self.revoke else
-                f"Revoke network access to {self.host} for this workspace? Future requests for this action "
-                "will be denied until you grant it again.")
-        if self.label == "Gateway MCP catalog" and not self.revoke:
-            copy += ("\n\nDiscovery starts the configured Gateway MCP adapter locally. The adapter receives "
-                     "the Gateway URL and saved Gateway API key, but this step sends only initialize/tools/list; "
-                     "it does not invoke any listed tool.")
-        if self.label == "Gateway semantic search" and not self.revoke:
-            copy += ("\n\nEach search separately shows its exact query and requests a one-use approval. "
-                     "Only the query is sent. The Gateway's configured workspace is remote and its root "
-                     "cannot currently be matched to the local .isyroot.")
+        copy = (f"Turn off {self.label}? Future requests will be blocked until you turn it on again."
+                if self.revoke else
+                f"Allow {self.label}? ISyCode will only send the information needed for this feature. "
+                "Your saved key and access to workspace files are controlled separately.")
+        if self.label == "Find Gateway tools" and not self.revoke:
+            copy += " Finding tools does not run them."
+        if self.label == "Search and understand code with Gateway" and not self.revoke:
+            copy += " You review each search and approve it before it runs."
         with Vertical(id="provider-network-card"):
-            yield Static(f"{yield_label} network access?", id="provider-network-title")
+            yield Static("Turn off this option?" if self.revoke else "Turn on this option?",
+                         id="provider-network-title")
             yield Static(copy, id="provider-network-copy")
             with Horizontal(id="provider-network-actions"):
                 yield Button("Cancel", id="provider-network-cancel")
-                yield Button(f"{yield_label} host", id="provider-network-confirm",
+                yield Button("Turn off" if self.revoke else "Turn on", id="provider-network-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -510,21 +556,17 @@ class GrantMCPInvocationScreen(ModalScreen[bool]):
         self.revoke = revoke
 
     def compose(self) -> ComposeResult:
-        action = "Revoke" if self.revoke else "Grant"
-        copy = (
-            f"Gateway host: {self.host}\n\nThis {action.casefold()}s ISyCode permission to invoke tools from the configured "
-            "ISyCo Gateway MCP server for this workspace. Every call still shows its exact JSON "
-            "arguments and requires a fresh one-use approval. The Gateway independently checks "
-            "the API key, scope, operation allowlist, expiry, and rate limit. Each call starts the "
-            "configured MCP adapter locally and gives it the saved Gateway API key."
-            if not self.revoke else
-            "Future Gateway MCP tool calls will be denied. Existing Gateway keys and other grants are unchanged.")
+        copy = ("ISyCode will stop running tools from your Gateway. Other settings and saved keys stay unchanged."
+                if self.revoke else
+                "ISyCode can run a tool you choose from your Gateway. You will see what it wants to do "
+                "and approve every run before it starts.")
         with Vertical(id="mcp-grant-card"):
-            yield Static(f"{action} Gateway MCP invocation?", id="mcp-grant-title")
+            yield Static("Turn off Gateway tools?" if self.revoke else "Allow Gateway tools?",
+                         id="mcp-grant-title")
             yield Static(copy, id="mcp-grant-copy")
             with Horizontal(id="mcp-grant-actions"):
                 yield Button("Cancel", id="mcp-grant-cancel")
-                yield Button(f"{action} invocation", id="mcp-grant-confirm",
+                yield Button("Turn off" if self.revoke else "Turn on", id="mcp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -769,23 +811,18 @@ class GrantLSPProcessScreen(ModalScreen[bool]):
         self.revoke = revoke
 
     def compose(self) -> ComposeResult:
-        action = "Revoke" if self.revoke else "Grant"
-        copy = (
-            f"Workspace: {self.root}\nExecutable: {self.sandbox_executable}\n\n"
-            "This allows ISyCode's fixed Pyright LSP owner to run Bubblewrap for read-only "
-            "workspace symbol search. A separate workspace.files.read grant is also required "
-            "because the language server can inspect the selected workspace root. The sandbox "
-            "exposes only this workspace and read-only OS/"
-            "runtime files, disables networking, and uses bounded time/output. It does not grant "
-            "arbitrary process execution."
-            if not self.revoke else
-            "Pyright workspace symbol search will be denied until this exact sandbox executable is granted again.")
+        copy = ("ISyCode will stop using local code help. Other workspace options stay unchanged."
+                if self.revoke else
+                "ISyCode can use its protected local helper to find code symbols in this workspace. "
+                "The helper cannot access the internet or run general commands. Reading files still "
+                "follows the separate file access option.")
         with Vertical(id="lsp-grant-card"):
-            yield Static(f"{action} sandboxed LSP process?", id="lsp-grant-title")
+            yield Static("Turn off local code help?" if self.revoke else "Allow local code help?",
+                         id="lsp-grant-title")
             yield Static(copy, id="lsp-grant-copy")
             with Horizontal(id="lsp-grant-actions"):
                 yield Button("Cancel", id="lsp-grant-cancel")
-                yield Button(f"{action} sandbox", id="lsp-grant-confirm",
+                yield Button("Turn off" if self.revoke else "Turn on", id="lsp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -1492,6 +1529,11 @@ class TUIApp(App):
         self._pending_review: tuple[str, str] | None = None
         self._review_request_task: asyncio.Task | None = None
         self._mobile_host = MobileHost()
+        self._mobile_host_owner: MobileHostOwner | None = None
+        self._tailscale_adapter = TailscaleAdapter(gateway_port=DEFAULT_GATEWAY_PORT)
+        self._tailscale_snapshot: TailscaleSnapshot | None = None
+        self._tailscale_login_owner: TailscaleLoginOwner | None = None
+        self._tailscale_login_attempt: str | None = None
         # Saved Bridge opt-in is intentionally ignored until an execution owner is wired.
         self._bridge_enabled = False
         self._agent_context: dict[str, str] | None = None
@@ -1569,8 +1611,7 @@ class TUIApp(App):
                           f"launch {self._launch_dir}")
         self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
         self.query_one("#workspace-launch-label", Static).update(f"Launch directory · {self._launch_dir}")
-        self.query_one("#workspace-source-label", Static).update(
-            f"Root source · {'.isyroot' if self._workspace_identity.workspace_root_source == 'isyroot' else 'fallback'}")
+        self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self.query_one("#workspace-authority-label", Static).update(
             "Filesystem authority · loading ISyCode grants…")
         commands = self._plugins.command_items()
@@ -1589,6 +1630,8 @@ class TUIApp(App):
     async def on_unmount(self, event) -> None:
         """Release local temporary state; unowned optional services never start in Secure."""
         del event
+        if self._mobile_host_owner is not None:
+            await self._mobile_host_owner.shutdown()
         if self._temporary_chat_root is not None:
             shutil.rmtree(self._temporary_chat_root, ignore_errors=True)
 
@@ -1605,11 +1648,8 @@ class TUIApp(App):
                         preference = UserDefaultsStore().load().get("new_workspace", "ask")
                     except (OSError, ValueError, json.JSONDecodeError):
                         preference = "ask"
-                    if preference == "recurring":
-                        choice = True
-                    elif preference == "temporary":
-                        choice = False
-                    else:
+                    choice = new_workspace_choice(self._launch_dir, None, preference)
+                    if choice is None:
                         choice = await self.push_screen_wait(WorkspaceSetupScreen(self._launch_dir))
                     setup_store.choose_recurrent(self._launch_dir, choice)
                 elif choice:
@@ -1620,6 +1660,9 @@ class TUIApp(App):
                     self._workspace_identity = discover_workspace_identity(self._launch_dir)
                     self._workspace_root = self._workspace_identity.workspace_root
                     self._update_workspace_identity_ui()
+            warning = self._shared_root_warning()
+            if warning:
+                self._append(f"  {warning}", YELLOW)
             if self._initial_view == "files":
                 self.query_one("#workspace-tree", Tree).focus()
             else:
@@ -1643,6 +1686,16 @@ class TUIApp(App):
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
 
+    def _shared_root_warning(self) -> str | None:
+        return shared_root_warning(self._workspace_root,
+                                   self._workspace_identity.workspace_root_source,
+                                   self._launch_dir)
+
+    def _root_source_label(self) -> str:
+        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
+        broad = " · broad shared root" if self._shared_root_warning() else ""
+        return f"Root source · {source}{broad}"
+
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
             return
@@ -1650,13 +1703,47 @@ class TUIApp(App):
                           f"launch {self._launch_dir}")
         self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
         self.query_one("#workspace-launch-label", Static).update(f"Launch directory · {self._launch_dir}")
-        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
-        self.query_one("#workspace-source-label", Static).update(f"Root source · {source}")
+        self.query_one("#workspace-source-label", Static).update(self._root_source_label())
 
     async def _start_mobile_host(self) -> None:
-        self._set_activity(
-            "Mobile Host is blocked in Secure · no Authority/Sentinel execution owner is connected",
-            YELLOW)
+        authority = WorkspaceAuthority(self._workspace_root)
+        owner = MobileHostOwner(self._workspace_root, authority, self._action_approvals,
+                                host=self._mobile_host)
+        self._mobile_host_owner = owner
+        try:
+            grants = authority.policy().get("grants", {})
+            if not mobile_host_enabled(grants):
+                if not await self._grant_mobile_host(authority):
+                    self._append("  Mobile Host grant cancelled; no listener started.", MUTED)
+                    return
+            request = owner.start_request()
+            try:
+                routed = next((route for route in PrivateAccessStateStore().load().owned_routes
+                               if route.route_id == MOBILE_HOST_ROUTE_ID), None)
+            except (OSError, ValueError):
+                routed = None
+            exposure = ("It does not change Tailscale Serve. Your saved private route "
+                        f"{route_url(routed)} already points here, so devices in your tailnet can "
+                        "reach this host through it while it runs." if routed is not None else
+                        "It does not change Tailscale Serve or expose a remote route.")
+            if not await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Start Mobile Host", "Start the ISyCode Mobile Host on loopback only: "
+                    "http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. "
+                    + exposure, "Start host")):
+                self._append("  Mobile Host start cancelled; no listener started.", MUTED)
+                return
+            approval = self._action_approvals.issue(request, ttl_seconds=30)
+            allowed, reason = await owner.authorize_and_launch(approval)
+            if not allowed:
+                self._append(f"  Mobile Host start denied · {reason[:180]}", YELLOW)
+            else:
+                code = self._mobile_host.pairing_code_for_local_settings() or "unavailable"
+                self._append("  Mobile Host started at http://127.0.0.1:8765 · "
+                             f"pairing PIN {code} (expires in 5 minutes).", GREEN)
+            self._refresh_mobile_host_status()
+            self._render_mobile_host_status()
+        except (OSError, RuntimeError, TypeError, ValueError, WorkspaceAuthorityError) as exc:
+            self._append(f"  Mobile Host could not start ({type(exc).__name__}).", RED)
 
     def _refresh_mobile_host_status(self) -> None:
         status = self._mobile_host.status()
@@ -1737,8 +1824,8 @@ class TUIApp(App):
         try:
             grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
             enabled = all(
-                grants.get(action, {}).get("enabled")
-                and str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", [])
+                displayed_on(action, grants.get(action, {}),
+                             str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", []))
                 for action in ("workspace.files.list", "workspace.files.read", "workspace.files.search")
             )
         except (WorkspaceAuthorityError, OSError, ValueError):
@@ -2218,6 +2305,12 @@ class TUIApp(App):
     def _entry(label: str, kind: str, value: str = "", detail: str = "") -> dict[str, str]:
         return {"label": label, "kind": kind, "value": value, "detail": detail}
 
+    @staticmethod
+    def _capability_entry(label: str, value: str, enabled: bool,
+                          detail: str = "") -> dict[str, str | bool]:
+        return {"label": label, "kind": "authority_toggle", "value": value,
+                "detail": detail, "enabled": enabled}
+
     def _open_palette(self) -> None:
         entries = [self._entry(f"{name}  ·  {description}", "branch", name)
                    for name, description in SEMANTIC_BRANCHES]
@@ -2290,6 +2383,7 @@ class TUIApp(App):
             self._entry("Bridge coordination · blocked in Secure",
                         "bridge_settings", ""),
             self._entry("Named API keys", "named_credentials", ""),
+            self._entry("Private access · Tailscale", "private_access", ""),
             self._entry("Authority & Security", "authority_open", ""),
             self._entry("Action journal · verify / inspect", "security_journal", ""),
             self._entry("Inject AGENTS.md context", "context_inject", ""),
@@ -2335,7 +2429,8 @@ class TUIApp(App):
             ("● " if new_workspace == value else "○ ") + label,
             "user_default_workspace", value,
             ("A recurring workspace gets an empty .isyroot marker when first opened. "
-             "This identifies the workspace; it does not grant file access.")
+             "This identifies the workspace; it does not grant file access. Home, its parents, "
+             "temp and mount points still ask first.")
             if value == "recurring" else "Applies only when this folder has no saved choice yet.")
             for value, label in choices)
         entries.append(self._entry("Back to Settings", "settings_back", ""))
@@ -2373,6 +2468,358 @@ class TUIApp(App):
         return {"name": name, "kind": kind,
                 "description": str(selected.get("description", "")),
                 "engine": str(selected.get("engine", "ISyCode selected provider and model"))}
+
+    def _open_private_access_menu(self) -> None:
+        if self._menu_mode != "private_access":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("private_access", "Settings · Private access", [
+            self._entry("Checking local Tailscale status…", "info"),
+            self._entry("Permissions and authority…", "tailscale_permissions", ""),
+            self._entry("Refresh status", "tailscale_refresh", ""),
+            self._entry("Manual setup steps", "tailscale_manual", ""),
+            self._entry("Back to Settings", "settings_back", ""),
+        ])
+        self.run_worker(self._refresh_private_access(), exclusive=True,
+                        group="tailscale-status")
+
+    async def _refresh_private_access(self) -> None:
+        owner = TailscaleReadOwner(
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            self._action_approvals, adapter=self._tailscale_adapter)
+        try:
+            snapshot, outcome = await asyncio.to_thread(owner.inspect)
+        except (OSError, RuntimeError, TypeError, ValueError, WorkspaceAuthorityError):
+            snapshot = TailscaleSnapshot("unavailable")
+            outcome = None
+        self._tailscale_snapshot = snapshot
+        status = snapshot.state.replace("_", " ").title()
+        if outcome is not None and outcome.decision == "DENY":
+            status = "Detected · read-only status grant required"
+        if snapshot.serve_state == "conflict":
+            status = "Serve conflict · no change allowed"
+        elif snapshot.serve_state == "unavailable" and snapshot.state == "signed_in":
+            status = "Verification unavailable · no change allowed"
+        try:
+            owned_route = next((route for route in PrivateAccessStateStore().load().owned_routes
+                                if route.route_id == MOBILE_HOST_ROUTE_ID), None)
+        except (OSError, ValueError):
+            owned_route = None
+        if owned_route is not None:
+            live_route = next((route for route in snapshot.routes
+                               if (route.host, route.path, route.target) ==
+                               (owned_route.host, owned_route.path, owned_route.target)), None)
+            if live_route is not None:
+                status = "Private route recorded · Mobile Host health rechecked before changes"
+        else:
+            live_route = None
+        entries = [self._entry(f"Tailscale · {status}", "info", "",
+                               f"Installed CLI: {snapshot.executable or 'not detected'}\n"
+                               f"Tailnet identity: {snapshot.dns_name or 'not verified'}\n"
+                               f"Serve inventory: {snapshot.serve_state}\n"
+                               f"Gateway: {snapshot.gateway_url or 'not configured'} · "
+                               f"{'healthy' if snapshot.gateway_healthy else 'not verified'}\n"
+                               "Tailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.")]
+        if live_route is not None:
+            entries.append(self._entry(
+                f"Route stays on after ISyCode exits · {route_url(live_route)}", "info", "",
+                "Tailscale Serve keeps this private route until you disable it here; ISyCode does not "
+                "remove it on exit because removal is itself an approved change. While Mobile Host "
+                f"is stopped, whatever listens on {live_route.target} is reachable from your tailnet "
+                "at this path. Disable the route when you are not using it."))
+        if snapshot.state == "not_authorized":
+            entries.append(self._entry("Grant read-only Tailscale inventory", "tailscale_permissions", ""))
+        elif snapshot.state == "missing_cli":
+            try:
+                TailscalePackageInstallOwner(
+                    self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                    self._action_approvals).plan()
+                entries.append(self._entry(
+                    "Install Tailscale · supported Ubuntu/Debian · three approvals",
+                    "tailscale_install", ""))
+            except (OSError, RuntimeError, TypeError, ValueError):
+                entries.append(self._entry(
+                    "Automated installation unavailable on this system", "info", "",
+                    "Use the official manual instructions; ISyCode will not run an unverified installer."))
+            entries.append(self._entry("Manual installation steps", "tailscale_manual", ""))
+        elif snapshot.state == "unsupported_os":
+            entries.append(self._entry(
+                "Automated installation unavailable on this system", "info", "",
+                "ISyCode automates only the reviewed Ubuntu/Debian package transaction."))
+            entries.append(self._entry("Manual installation steps", "tailscale_manual", ""))
+        elif snapshot.state == "signed_out":
+            entries.append(self._entry("Log in to this tailnet…", "tailscale_login", ""))
+            if self._tailscale_login_owner and self._tailscale_login_attempt:
+                entries.extend([
+                    self._entry("Check browser login status", "tailscale_login_check", ""),
+                    self._entry("Cancel local login process", "tailscale_login_cancel", ""),
+                ])
+        elif snapshot.state == "signed_in":
+            try:
+                owned = any(route.route_id == MOBILE_HOST_ROUTE_ID
+                            for route in PrivateAccessStateStore().load().owned_routes)
+            except (OSError, ValueError):
+                owned = False
+            if owned:
+                entries.append(self._entry("Disable ISyCode Mobile Host route…",
+                                           "tailscale_serve_disable", ""))
+            elif snapshot.serve_state in {"empty", "existing"}:
+                entries.append(self._entry("Enable private Mobile Host route…",
+                                           "tailscale_serve_enable", ""))
+            else:
+                entries.append(self._entry("Serve inventory is unavailable or conflicting",
+                                           "info", "",
+                                           "ISyCode will not change unknown or conflicting Serve configuration."))
+        entries.extend([
+            self._entry("Permissions and authority…", "tailscale_permissions", ""),
+            self._entry("Refresh status", "tailscale_refresh", ""),
+            self._entry("Manual setup steps", "tailscale_manual", ""),
+            self._entry("Back to Settings", "settings_back", ""),
+        ])
+        self._render_menu("private_access", "Settings · Private access", entries)
+
+    def _open_tailscale_permissions(self) -> None:
+        if self._menu_mode != "tailscale_permissions" and self._menu_mode:
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        try:
+            cli = self._tailscale_adapter.resolve_executable()
+        except (OSError, RuntimeError, ValueError):
+            cli = None
+        apt = shutil.which("apt-get")
+        apt_executable = str(Path(apt).resolve(strict=True)) if apt else None
+        scopes = []
+        if cli:
+            scopes.extend(("tailscale.inspect", "tailscale.login",
+                           "tailscale.serve.enable", "tailscale.serve.disable"))
+        if apt:
+            scopes.extend(("tailscale.install.prepare", "tailscale.install.stage",
+                           "tailscale.install"))
+        entries = []
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            for action in scopes:
+                executable = cli if action in {
+                    "tailscale.inspect", "tailscale.login", "tailscale.serve.enable",
+                    "tailscale.serve.disable"} else apt_executable
+                if executable is None:
+                    continue
+                grant = grants.get(action, {})
+                enabled = displayed_on(action, grant,
+                                       executable in grant.get("executables", []))
+                payload = json.dumps({"action": action, "executable": executable,
+                                      "enabled": enabled})
+                entries.append(self._entry(
+                    f"{'Revoke' if enabled else 'Grant'} {action} · {executable}",
+                    "tailscale_grant", payload,
+                    "This permission is scoped to this workspace and exact executable. "
+                    "Mutations still need a fresh approval."))
+        except (OSError, ValueError, WorkspaceAuthorityError):
+            entries.append(self._entry("Authority policy unavailable · all actions deny", "info"))
+        if not entries:
+            entries.append(self._entry("No supported Tailscale CLI or apt-get was found.", "info"))
+        entries.append(self._entry("Back", "private_access_back", ""))
+        self._render_menu("tailscale_permissions", "Private access · Authority grants", entries)
+
+    async def _change_tailscale_grant(self, payload: str) -> None:
+        try:
+            data = json.loads(payload)
+            action = data["action"]
+            executable = data["executable"]
+            enabled = not data["enabled"]
+            accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                "Workspace Authority · Tailscale",
+                f"{'Grant' if enabled else 'Revoke'} `{action}` for this workspace?\n\n"
+                f"Exact executable: {executable}\n\n"
+                "A grant permits only this owner and executable to request the action. "
+                "It does not log in, install packages, expose the Gateway, or bypass "
+                "IsySentinel. Every mutation still needs its own one-use approval.",
+                "Save grant" if enabled else "Revoke grant"))
+            if not accepted:
+                self._append("  Tailscale authority change cancelled; no grant changed.", MUTED)
+                return
+            WorkspaceAuthority(self._workspace_root).set_grant(
+                action, enabled=enabled, executables=[executable])
+            self._append(f"  Workspace grant {'saved' if enabled else 'revoked'} · {action}.", GREEN)
+            self._open_tailscale_permissions()
+        except (KeyError, json.JSONDecodeError, OSError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Tailscale grant was not changed ({type(exc).__name__}).", RED)
+
+    async def _run_tailscale_install(self) -> None:
+        try:
+            owner = TailscalePackageInstallOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                self._action_approvals)
+            plan = owner.plan()
+            for action_id, request, details, operation in (
+                ("tailscale.install.prepare", plan.prepare_request(self._workspace_root),
+                 plan.prepare_preview(), owner.prepare),
+            ):
+                if not self._tailscale_grant_exists(action_id, plan.apt_executable):
+                    self._append("  Installation blocked · explicitly grant this exact action in "
+                                 "Settings → Private access → Permissions.", YELLOW)
+                    self._open_tailscale_permissions()
+                    return
+                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Prepare official Tailscale package", details,
+                    "Download and verify"))
+                if not accepted:
+                    self._append("  Package preparation cancelled; no package transaction ran.", MUTED)
+                    return
+                approval = self._action_approvals.issue(request, ttl_seconds=30)
+                outcome = await asyncio.to_thread(operation, request, approval)
+                if outcome.decision != "ALLOW":
+                    self._append(f"  Package preparation {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                    return
+            transaction = await asyncio.to_thread(owner.simulate)
+            for action_id, request, details, operation in (
+                ("tailscale.install.stage", transaction.stage_request(self._workspace_root),
+                 transaction.stage_preview(), owner.stage),
+                ("tailscale.install", transaction.request(self._workspace_root),
+                 transaction.preview(), owner.install),
+            ):
+                if not self._tailscale_grant_exists(action_id, transaction.plan.apt_executable):
+                    self._append("  Installation blocked · explicitly grant this exact action in "
+                                 "Settings → Private access → Permissions.", YELLOW)
+                    self._open_tailscale_permissions()
+                    return
+                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Stage verified package as root" if action_id.endswith("stage")
+                    else "Install exact Tailscale package", details,
+                    "Approve this step"))
+                if not accepted:
+                    self._append("  Installation cancelled before this step; no later step ran.", MUTED)
+                    return
+                approval = self._action_approvals.issue(request, ttl_seconds=30)
+                outcome = await asyncio.to_thread(operation, request, approval)
+                if outcome.decision != "ALLOW":
+                    self._append(f"  Tailscale install {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                    return
+                self._append(f"  Tailscale step complete · {action_id} · receipt verified.", GREEN)
+            await self._refresh_private_access()
+        except (OSError, RuntimeError, TypeError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Automated Tailscale install unavailable ({type(exc).__name__}). "
+                         "Use the official manual instructions.", YELLOW)
+
+    def _tailscale_grant_exists(self, action_id: str, executable: str) -> bool:
+        try:
+            grant = WorkspaceAuthority(self._workspace_root).policy()["grants"].get(action_id, {})
+            return (grant.get("enabled") is True
+                    and str(Path(executable).resolve(strict=True)) in grant.get("executables", []))
+        except (OSError, RuntimeError, ValueError, WorkspaceAuthorityError):
+            return False
+
+    async def _run_tailscale_login(self) -> None:
+        owner = TailscaleLoginOwner(
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            self._action_approvals, adapter=self._tailscale_adapter)
+        try:
+            executable = self._tailscale_adapter.resolve_executable()
+            if not executable or not self._tailscale_grant_exists("tailscale.inspect", executable):
+                self._append("  Login status check blocked · grant read-only inventory first.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            request = owner.login_request()
+            if not self._tailscale_grant_exists("tailscale.login", request.parameters["executable"]):
+                self._append("  Login blocked · grant this exact Tailscale executable in "
+                             "Settings → Private access → Permissions.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            details = owner.preview(request)
+            if not await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Sign in to Tailscale", details, "Start browser login")):
+                self._append("  Tailscale login cancelled; no process started.", MUTED)
+                return
+            approval = self._action_approvals.issue(request, ttl_seconds=30)
+            outcome = await asyncio.to_thread(owner.begin_login, request, approval)
+            if outcome.decision != "ALLOW":
+                self._append(f"  Tailscale login {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                return
+            self._tailscale_login_owner = owner
+            self._tailscale_login_attempt = outcome.text.split(": ", 1)[-1]
+            status = await asyncio.to_thread(owner.poll, self._tailscale_login_attempt)
+            if status.login_url:
+                self._append(f"  Open this official login link in your browser: {status.login_url}", CYAN)
+            self._append(f"  Tailscale login · {status.state} · {status.reason}", YELLOW)
+            self._open_private_access_menu()
+        except (OSError, RuntimeError, TypeError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            self._append(f"  Tailscale login could not start ({type(exc).__name__}).", RED)
+
+    async def _check_tailscale_login(self, cancel: bool = False) -> None:
+        owner = self._tailscale_login_owner
+        attempt = self._tailscale_login_attempt
+        if owner is None or attempt is None:
+            self._append("  No active Tailscale login attempt in this process.", MUTED)
+            return
+        status = await asyncio.to_thread(owner.cancel if cancel else owner.poll, attempt)
+        if status.login_url:
+            self._append(f"  Official Tailscale login link: {status.login_url}", CYAN)
+        self._append(f"  Tailscale login · {status.state} · {status.reason}",
+                     GREEN if status.state == "signed_in" else YELLOW)
+        if status.state != "pending":
+            self._tailscale_login_owner = None
+            self._tailscale_login_attempt = None
+        self._open_private_access_menu()
+
+    async def _run_tailscale_serve(self, enabling: bool) -> None:
+        mobile_serve_adapter = TailscaleAdapter(
+            gateway_url="http://127.0.0.1:8765", gateway_port=8765,
+            gateway_health_path="/isycode/v1/health")
+        owner = TailscaleServeOwner(
+            self._workspace_root, WorkspaceAuthority(self._workspace_root),
+            self._action_approvals, adapter=mobile_serve_adapter,
+            gateway_port=8765, route_id=MOBILE_HOST_ROUTE_ID,
+            service_label="Mobile Host")
+        action_id = "tailscale.serve.enable" if enabling else "tailscale.serve.disable"
+        try:
+            executable = self._tailscale_adapter.resolve_executable()
+            if not executable or not self._tailscale_grant_exists("tailscale.inspect", executable):
+                self._append("  Serve inventory blocked · grant read-only Tailscale status first.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            preview = owner.preview_enable() if enabling else owner.preview_disable()
+            executable = preview.request.parameters["executable"]
+            if not self._tailscale_grant_exists(action_id, executable):
+                self._append("  Serve change blocked · grant this exact Tailscale executable in "
+                             "Settings → Private access → Permissions.", YELLOW)
+                self._open_tailscale_permissions()
+                return
+            label = "Enable private route" if enabling else "Disable owned private route"
+            if not await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Private Tailscale Serve", preview.description, label)):
+                self._append("  Tailscale Serve change cancelled; no command ran.", MUTED)
+                return
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=30)
+            operation = owner.enable if enabling else owner.disable
+            outcome = await asyncio.to_thread(operation, preview, approval)
+            self._append(f"  Tailscale Serve · {outcome.decision} · {outcome.text}",
+                         GREEN if outcome.decision == "ALLOW" else YELLOW)
+            if outcome.receipt:
+                self._append(f"  Receipt · {outcome.receipt.receipt_id}", MUTED)
+            self._open_private_access_menu()
+        except (OSError, RuntimeError, TypeError, ValueError,
+                WorkspaceAuthorityError) as exc:
+            # Only surface the owner’s fixed validation messages; operating-system
+            # and subprocess exceptions can contain local paths or command details.
+            reason = str(exc)[:180] if isinstance(exc, ValueError) else type(exc).__name__
+            self._append(f"  Private Serve blocked · {reason}. No route change was approved.",
+                         YELLOW)
+
+    async def _show_tailscale_manual_steps(self) -> None:
+        details = (
+            "1. Install Tailscale using the official Linux guide: "
+            "https://tailscale.com/docs/install/linux\n"
+            "2. Return here and grant read-only local Tailscale inventory.\n"
+            "3. Sign in from the Tailscale browser login flow.\n"
+            "4. Grant `tailscale.serve.enable`, then review the exact `/isycode` route before enabling it.\n\n"
+            "ISyCode's automated installer supports only the verified Ubuntu/Debian package recipe. "
+            "Manual installation does not grant permissions, sign in, change Serve, or install a daemon "
+            "through this TUI. Tailscale Serve is private to the tailnet; Gateway keys/scopes and "
+            "workspace filesystem grants remain separate.")
+        await self.push_screen_wait(TailscaleConfirmScreen(
+            "Manual private-access setup", details, "Done"))
+        self._open_private_access_menu()
 
     def _open_bridge_settings(self) -> None:
         entries = [self._entry(
@@ -2451,28 +2898,22 @@ class TUIApp(App):
         self._render_menu("named_credentials", "Settings · API keys", entries)
 
     def _open_authority_menu(self) -> None:
-        gateway_id = gateway_workspace_id(self._workspace_root)
-        entries = [self._entry(
-            f"Workspace · {self._workspace_root}", "info", "",
-            f"Root source: {self._workspace_identity.workspace_root_source}. "
-            ".isyroot is a boundary, not a grant."),
+        entries: list[dict] = [self._entry(
+            "Choose what ISyCode can do in this workspace. Everything else stays off.", "info"),
             self._entry(
-                f"Gateway workspace binding · {gateway_id}", "info", "",
-                "Matching label only; it does not grant filesystem or network access. "
-                "ISyCode still requires Workspace Authority, IsySentinel, and one-use approval.")]
+                "Some actions ask again before they run, even when turned on.", "info")]
         try:
             policy = WorkspaceAuthority(self._workspace_root).policy()
             grants = policy.get("grants", {})
-            state = "persistent grants configured" if grants else "no explicit grants · deny by default"
-            entries.append(self._entry(f"Workspace Authority · {state}", "info"))
-            readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search"}
-            read_enabled = all(bool(grants.get(action, {}).get("enabled"))
-                               and str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", [])
-                               for action in readonly_ids)
-            entries.append(self._entry(
-                "Revoke read-only chat tools for this workspace…" if read_enabled
-                else "Grant read-only chat tools for this workspace…",
-                "authority_revoke_read" if read_enabled else "authority_grant_read"))
+            readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search",
+                            "workspace.context.inject"}
+            read_enabled = all(displayed_on(
+                action, grants.get(action, {}),
+                str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", []))
+                for action in readonly_ids)
+            entries.append(self._capability_entry(
+                "Read and search workspace files", "workspace_read", read_enabled,
+                "Lets ISyCode list, read, and find files here. It cannot change or delete them."))
             selected_name = selected_provider_name()
             selected_preset = PRESETS.get(selected_name, {})
             selected_url_text = (os.environ.get("ISYCODE_BASE_URL")
@@ -2486,122 +2927,99 @@ class TUIApp(App):
             except ValueError:
                 provider_host = "invalid endpoint"
             network_grant = grants.get("provider.request", {})
-            provider_network_enabled = (
-                network_grant.get("enabled", False)
-                and provider_host in network_grant.get("network_hosts", []))
-            entries.append(self._entry(
-                (f"Revoke provider network · {selected_preset.get('label', selected_name)} · {provider_host}…"
-                 if provider_network_enabled else
-                 f"Grant provider network · {selected_preset.get('label', selected_name)} · {provider_host}…"),
-                "authority_provider_revoke" if provider_network_enabled
-                else "authority_provider_grant"))
+            provider_network_enabled = displayed_on(
+                "provider.request", network_grant,
+                provider_host in network_grant.get("network_hosts", []))
+            if provider_host and provider_host != "invalid endpoint":
+                entries.append(self._capability_entry(
+                    "Connect to the selected AI model", "provider", provider_network_enabled,
+                    "Sends your messages to the model you chose. A saved API key is kept separately."))
+            else:
+                entries.append(self._entry("Model connection · not ready yet", "info", "",
+                                           "Choose a model provider in Settings first."))
             gateway_url = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787")
             self._append_network_grant_entry(
-                entries, grants, "gateway.files.read", "Gateway health", gateway_url)
+                entries, grants, "gateway.files.read", "Check ISyCo Gateway", gateway_url,
+                "Checks whether your local ISyCo Gateway is available." )
             self._append_network_grant_entry(
-                entries, grants, "mcp.discover", "Gateway MCP catalog", gateway_url)
+                entries, grants, "mcp.discover", "Find Gateway tools", gateway_url,
+                "Shows which extra tools the Gateway offers. Finding a tool does not run it.")
             self._append_network_grant_entry(
-                entries, grants, "gateway.semantic.read", "Gateway semantic operations", gateway_url)
+                entries, grants, "gateway.semantic.read", "Search and understand code with Gateway",
+                gateway_url,
+                "Sends a search you review first. Each search asks for approval before it runs.")
             try:
                 invoke_target = GatewayMCPInvocationOwner.target_for(gateway_url)
                 mcp_grant = grants.get("mcp.invoke", {})
-                invoke_enabled = (bool(mcp_grant.get("enabled"))
-                                  and invoke_target in mcp_grant.get("targets", []))
-                entries.append(self._entry(
-                    (f"Revoke Gateway MCP invocation · {invoke_target.split('@', 1)[-1]}…"
-                     if invoke_enabled else
-                     f"Grant Gateway MCP invocation · {invoke_target.split('@', 1)[-1]}…"),
-                    "mcp_invoke_revoke" if invoke_enabled else "mcp_invoke_grant"))
+                invoke_enabled = displayed_on("mcp.invoke", mcp_grant,
+                                              invoke_target in mcp_grant.get("targets", []))
+                entries.append(self._capability_entry(
+                    "Run a Gateway tool", "gateway_invoke", invoke_enabled,
+                    "You will review the tool and its details, then approve each run separately."))
             except ValueError:
-                entries.append(self._entry("Gateway MCP invocation · invalid endpoint", "info"))
+                entries.append(self._entry("Gateway tools · not ready yet", "info", "",
+                                           "Finish setting up the local Gateway connection first."))
             lsp_server = next((item for item in self._lsp_inventory
                                if item.get("id") == "pyright"), None)
             if lsp_server and lsp_server.get("state") == "sandbox_ready":
                 lsp_grant = grants.get("lsp.start", {})
                 sandbox_executable = lsp_server["sandbox_executable"]
-                lsp_enabled = (bool(lsp_grant.get("enabled"))
-                               and sandbox_executable in lsp_grant.get("executables", []))
-                entries.append(self._entry(
-                    f"{'Revoke' if lsp_enabled else 'Grant'} sandboxed Pyright · {sandbox_executable}",
-                    "lsp_start_revoke" if lsp_enabled else "lsp_start_grant",
-                    sandbox_executable))
+                lsp_enabled = displayed_on("lsp.start", lsp_grant,
+                                           sandbox_executable in lsp_grant.get("executables", []))
+                entries.append(self._capability_entry(
+                    "Local code help", "lsp", lsp_enabled,
+                    "Uses the protected language helper to find code symbols on this computer."))
             elif lsp_server:
                 entries.append(self._entry(
-                    "Pyright LSP · detected, sandbox runtime unavailable", "info", "",
-                    "No language server can start until the Bubblewrap/Node sandbox is available."))
+                    "Local code help · not ready yet", "info", "",
+                    "ISyCode will show this as an option when its protected helper is ready."))
             external_catalog_url = os.environ.get("OPENISY_API_URL", "").strip()
             if external_catalog_url:
                 self._append_network_grant_entry(
-                    entries, grants, "catalog.external.read", "External runtime catalog",
-                    external_catalog_url)
+                    entries, grants, "catalog.external.read", "Browse optional integrations",
+                    external_catalog_url,
+                    "Reads the optional integrations list. It does not enable their tools.")
             else:
                 entries.append(self._entry(
-                    "External runtime catalog · not configured", "info", "",
-                    "The runtime catalog is optional integration data; roles and product identity remain ISyCode-owned."))
-            for action in ACTION_CATALOG:
-                grant = grants.get(action.id, {})
-                enabled = bool(grant.get("enabled"))
-                scope = []
-                if grant.get("path_prefixes"):
-                    scope.append(f"paths={len(grant['path_prefixes'])}")
-                if grant.get("network_hosts"):
-                    scope.append(f"hosts={len(grant['network_hosts'])}")
-                if grant.get("executables"):
-                    scope.append(f"executables={len(grant['executables'])}")
-                if grant.get("targets"):
-                    scope.append(f"targets={len(grant['targets'])}")
-                state = _authority_action_state(action.id, enabled)
-                label = f"{action.group} · {action.label} · {state}"
-                detail = f"Action: {action.id}\nEffect: {action.effect}\nScope: {', '.join(scope) or 'none'}"
-                if action.id in EXPLICIT_DENY_ACTIONS:
-                    detail += "\nSecure decision: DENY; a saved Workspace Authority grant cannot add an execution owner."
-                if action.approval_required:
-                    detail += "\nAlso requires fresh request-bound approval."
-                entries.append(self._entry(label, "info", "", detail))
+                    "Optional integrations · not set up", "info", "",
+                    "You can connect these later from Settings."))
+            mobile_on = mobile_host_enabled(grants)
+            partial = not mobile_on and mobile_host_saved(grants)
+            entries.append(self._capability_entry(
+                "Mobile Host on this computer" + (" · partial saved grant" if partial else ""),
+                "mobile_host", mobile_on,
+                f"Lets ISyCode start the loopback Mobile Host at {MOBILE_HOST_ADDRESS} and accept "
+                "one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; "
+                "they cannot read files, run tools, or open sessions. Starting still asks first."))
+            saved = other_saved_grants(grants)
+            if saved:
+                entries.append(self._entry("— Other saved permissions —", "info", "",
+                                           "Every other permission saved for this workspace."))
+            for row in saved:
+                if row.state == "on":
+                    state = "ON · asks before each use" if row.approval_required else "ON"
+                else:
+                    state = "blocked · no Secure owner · saved grant ignored"
+                entries.append(self._entry(
+                    f"{row.label} · {state}", "authority_saved_grant", row.action_id,
+                    f"Scope: {row.scope}. Select to remove this saved permission."))
         except (WorkspaceAuthorityError, OSError, ValueError):
             entries.append(self._entry(
-                "Workspace Authority policy unavailable · actions must deny", "info"))
-        coverage = owner_coverage_report()
-        ownerless = len(coverage["unowned_effectful_actions"])
-        ambiguous = len(coverage["ambiguous_actions"])
-        covered = sum(1 for row in coverage["actions"]
-                      if row["classification"] in {
-                          "OWNER_VALID", "OWNER_SHARED_READ", "OWNER_VARIANTS"})
+                "Protection settings are unavailable · everything stays off", "info"))
         entries.append(self._entry(
-            f"Owner coverage · {covered} actions bound · {ownerless} effect actions unowned · {ambiguous} ambiguous",
-            "info", "", "Generated from the explicit action/owner registry. This is not a source-code oracle; "
-            "the callsite inventory and known gaps are listed in docs/product/tui-feature-matrix.md."))
+            "Protection is always on", "info", "",
+            "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, "
+            "and sensitive actions still ask you first."))
         entries.append(self._entry(
-            "Workspace read owner · connected", "info", "",
-            "Filesystem list/read/name-search/context requests bind a named owner, explicit grant, boundary checks, "
-            "Sentinel decision, result receipt metadata, and durable journal record. Journal does not retain targets or content."))
-        entries.append(self._entry(
-            "Session delete owner · not connected to session UI", "info", "",
-            "The owner primitive requires a named-session confirmation, a one-use digest-bound approval, and an explicit grant. "
-            "Secure keeps persistent sessions and deletion unavailable until the UI provides that approval flow."))
-        entries.append(self._entry(
-            "Secure status · fail-closed · M15 still open", "info", "",
-            f"The static TUI surface audit found {len(coverage['secure_tui_direct_api_bypasses'])} direct API bypasses. "
-            "Unsupported actions remain explicit DENY; saved grants cannot enable them without a registered owner. "
-            "M15 still needs receipt witnesses for every connected owner and Gateway HTTP perimeter work."))
-        entries.append(self._entry(
-            "Gateway semantic owner · typed read-only operations connected", "info", "",
-            "Uses the native HTTP API, a host grant, exact query review, one-use approval, local receipt, "
-                "and the Gateway's independent isyco.semantic scope. Requests require a matching operator-configured workspace ID; that label is not a filesystem grant."))
-        entries.append(self._entry(
-            "Gateway MCP manual-call owner · connected", "info", "",
-            "A discovered tool can be called only after a server-scoped grant, review of the exact JSON arguments, "
-            "a one-use approval, a local receipt, and the Gateway's independent HTTP authorization."))
-        entries.append(self._entry(
-            "Credential keys, provider selection, Bridge leases, MCP discovery, and roles are not filesystem grants.",
-            "info"))
+            "Changing these options never turns on file editing, deletion, or command running.", "info"))
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("authority_settings", "Settings · Authority & Security", entries)
 
-    def _append_network_grant_entry(self, entries: list[dict[str, str]], grants: dict,
-                                    action_id: str, label: str, url: str) -> None:
+    def _append_network_grant_entry(self, entries: list[dict], grants: dict,
+                                    action_id: str, label: str, url: str,
+                                    detail: str = "") -> None:
         parsed = urlparse(url)
         host = (parsed.hostname or "").casefold().rstrip(".")
         try:
@@ -2610,14 +3028,12 @@ class TUIApp(App):
         except ValueError:
             host = "invalid endpoint"
         if not host or host == "invalid endpoint":
-            entries.append(self._entry(f"{label} · invalid endpoint", "info"))
+            entries.append(self._entry(f"{label} · not ready yet", "info"))
             return
         grant = grants.get(action_id, {})
-        enabled = bool(grant.get("enabled")) and host in grant.get("network_hosts", [])
+        enabled = displayed_on(action_id, grant, host in grant.get("network_hosts", []))
         payload = json.dumps({"action_id": action_id, "label": label, "url": url})
-        entries.append(self._entry(
-            f"{'Revoke' if enabled else 'Grant'} {label} · {host}…",
-            "network_action_revoke" if enabled else "network_action_grant", payload))
+        entries.append(self._capability_entry(label, f"network:{payload}", enabled, detail))
 
     async def _grant_workspace_read(self) -> None:
         await self._change_workspace_read_grant(True)
@@ -2697,6 +3113,66 @@ class TUIApp(App):
                     f"  {'Granted' if enabled else 'Revoked'} {label} access for {host}.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  Network grant could not be saved; access remains denied.", RED)
+        self._open_authority_menu()
+
+    async def _grant_mobile_host(self, authority: WorkspaceAuthority) -> bool:
+        """Ask once, then save exactly the two scoped Mobile Host grants."""
+        accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+            "Grant Mobile Host for this workspace",
+            f"Allow `mobile.host.start` only at {MOBILE_HOST_ADDRESS} and `mobile.pair` only for the "
+            "one-use Mobile Host pairing challenge. The listener binds loopback only; if a private "
+            "Tailscale route to it is enabled, tailnet devices can reach it through that route. "
+            "Pair-issued tokens can read the runtime inventory, request runtime selection, and send "
+            "heartbeats; they cannot read files, execute runtimes, or access sessions.",
+            "Grant these two actions"))
+        if not accepted:
+            return False
+        authority.set_grant("mobile.host.start", enabled=True,
+                            network_hosts=[MOBILE_HOST_ADDRESS])
+        authority.set_grant("mobile.pair", enabled=True, targets=[MOBILE_PAIR_TARGET])
+        return True
+
+    async def _change_mobile_host_grant(self, enabled: bool) -> None:
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            if enabled:
+                if await self._grant_mobile_host(authority):
+                    self._append("  Mobile Host granted for this workspace. Starting it still asks first.", GREEN)
+                else:
+                    self._append("  Mobile Host grant cancelled; nothing changed.", MUTED)
+            elif await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Revoke Mobile Host for this workspace",
+                    "Remove the saved `mobile.host.start` and `mobile.pair` grants. New starts and "
+                    "new pairing are denied. A host already running keeps serving devices paired "
+                    "earlier until ISyCode exits; their tokens still expire within an hour.",
+                    "Revoke both grants")):
+                authority.set_grant("mobile.host.start", enabled=False, network_hosts=[])
+                authority.set_grant("mobile.pair", enabled=False, targets=[])
+                self._append("  Mobile Host grants revoked for this workspace.", GREEN)
+            else:
+                self._append("  Mobile Host grants unchanged.", MUTED)
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            self._append("  Mobile Host grants could not be changed; starts and pairing stay denied "
+                         "unless a valid saved grant remains.", RED)
+        self._open_authority_menu()
+
+    async def _remove_saved_grant(self, action_id: str) -> None:
+        if action_id not in ACTION_BY_ID:
+            self._append("  Unknown permission; nothing changed.", YELLOW)
+            return
+        action = ACTION_BY_ID[action_id]
+        if await self.push_screen_wait(TailscaleConfirmScreen(
+                "Remove saved permission",
+                f"Remove the saved permission for {action.group} · {action.label} "
+                f"(`{action_id}`) in this workspace, including its saved scope?",
+                "Remove permission")):
+            try:
+                WorkspaceAuthority(self._workspace_root).set_grant(
+                    action_id, enabled=False, path_prefixes=[], network_hosts=[],
+                    executables=[], targets=[])
+                self._append(f"  Saved permission removed · {action_id}.", GREEN)
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                self._append("  Saved permission could not be removed.", RED)
         self._open_authority_menu()
 
     async def _change_mcp_invocation_grant(self, enabled: bool) -> None:
@@ -3016,15 +3492,18 @@ class TUIApp(App):
     def _render_mobile_host_status(self) -> None:
         status = self._mobile_host.status()
         entries: list[dict[str, str]] = []
-        entries.append(self._entry(
-            "Blocked in Secure · no registered execution owner",
-            "info", "", "The host does not start, pair devices, or issue credentials from the TUI. "
-            "A mobile credential authenticates a caller; it does not grant workspace or runtime authority."))
         if status.alive:
+            pin = self._mobile_host.pairing_code_for_local_settings()
             entries.append(self._entry(
-                "Unexpected active listener · stop ISyCode and investigate",
-                "info", "", "Secure TUI has no authorized Mobile Host start path."))
+                f"Host alive · http://{status.address}:{status.port}", "info", "",
+                "Bound to loopback. Tailscale Serve is not modified."))
+            if pin:
+                entries.append(self._entry(f"Pairing PIN · {pin} · expires in 5 minutes",
+                                           "info", "", "One device exchange; token expires in one hour."))
+            entries.append(self._entry("Refresh host status", "mobile_host_status_refresh", ""))
         else:
+            entries.append(self._entry("Start Mobile Host · local approval required",
+                                       "mobile_host_start", ""))
             entries.append(self._entry("Listener stopped · no pairing credentials issued", "info"))
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         self._render_menu("mobile_host_status", "Settings · Mobile host", entries)
@@ -3093,7 +3572,11 @@ class TUIApp(App):
         options = self.query_one("#action-list", OptionList)
         options.clear_options()
         for entry in self._menu_filtered:
-            options.add_option(Text(entry["label"]))
+            if "enabled" in entry:
+                label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
+            else:
+                label = Text(entry["label"])
+            options.add_option(label)
         options.highlighted = 0 if self._menu_filtered else None
 
     def _close_menu(self) -> None:
@@ -3103,7 +3586,7 @@ class TUIApp(App):
         self._menu_mode = ""
         self.query_one("#prompt-input", PromptArea).focus()
 
-    def _select_menu_entry(self, entry: dict[str, str]) -> None:
+    def _select_menu_entry(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
         if kind == "user_defaults":
             self._open_user_defaults_menu()
@@ -3134,8 +3617,88 @@ class TUIApp(App):
                 self._set_activity("Could not clear the default role", RED)
             self._open_user_defaults_menu()
             return
+        if kind == "authority_toggle":
+            enabled = bool(entry.get("enabled"))
+            turn_on = not enabled
+            if value == "workspace_read":
+                operation = self._change_workspace_read_grant(turn_on)
+            elif value == "provider":
+                operation = self._change_provider_network_grant(turn_on)
+            elif value == "gateway_invoke":
+                operation = self._change_mcp_invocation_grant(turn_on)
+            elif value == "lsp":
+                server = next((item for item in self._lsp_inventory
+                               if item.get("id") == "pyright"
+                               and item.get("state") == "sandbox_ready"), None)
+                if server is None:
+                    self._append("  Local code help is not ready yet; nothing changed.", YELLOW)
+                    return
+                operation = self._change_lsp_process_grant(
+                    server["sandbox_executable"], turn_on)
+            elif value == "mobile_host":
+                operation = self._change_mobile_host_grant(turn_on)
+            elif value.startswith("network:"):
+                operation = self._change_network_action_grant(value[len("network:"):], turn_on)
+            else:
+                self._append("  This option is unavailable; nothing changed.", YELLOW)
+                return
+            self.run_worker(operation, exclusive=True, group="authority-grant")
+            return
+        if kind == "authority_saved_grant":
+            self.run_worker(self._remove_saved_grant(value), exclusive=True,
+                            group="authority-grant")
+            return
         if kind == "bridge_settings":
             self._open_bridge_settings()
+            return
+        if kind == "private_access":
+            self._open_private_access_menu()
+            return
+        if kind == "tailscale_permissions":
+            self._open_tailscale_permissions()
+            return
+        if kind == "tailscale_grant":
+            self.run_worker(self._change_tailscale_grant(value), exclusive=True,
+                            group="tailscale-authority")
+            return
+        if kind == "tailscale_refresh":
+            self.run_worker(self._refresh_private_access(), exclusive=True,
+                            group="tailscale-status")
+            return
+        if kind == "tailscale_install":
+            self.run_worker(self._run_tailscale_install(), exclusive=True,
+                            group="tailscale-install")
+            return
+        if kind == "tailscale_manual":
+            self.run_worker(self._show_tailscale_manual_steps(), exclusive=True,
+                            group="tailscale-manual")
+            return
+        if kind == "tailscale_login":
+            self.run_worker(self._run_tailscale_login(), exclusive=True,
+                            group="tailscale-login")
+            return
+        if kind == "tailscale_login_check":
+            self.run_worker(self._check_tailscale_login(), exclusive=True,
+                            group="tailscale-login")
+            return
+        if kind == "tailscale_login_cancel":
+            self.run_worker(self._check_tailscale_login(cancel=True), exclusive=True,
+                            group="tailscale-login")
+            return
+        if kind == "tailscale_serve_enable":
+            self.run_worker(self._run_tailscale_serve(True), exclusive=True,
+                            group="tailscale-serve")
+            return
+        if kind == "tailscale_serve_disable":
+            self.run_worker(self._run_tailscale_serve(False), exclusive=True,
+                            group="tailscale-serve")
+            return
+        if kind == "private_access_back":
+            if self._menu_stack:
+                mode, title, entries = self._menu_stack.pop()
+                self._render_menu(mode, title, entries)
+            else:
+                self._open_private_access_menu()
             return
         if kind == "bridge_toggle":
             self._set_activity("Bridge is blocked in Secure · no execution owner is connected", YELLOW)
@@ -3359,6 +3922,9 @@ class TUIApp(App):
             return
         if kind == "mobile_host_status_refresh":
             self._render_mobile_host_status()
+            return
+        if kind == "mobile_host_start":
+            self.run_worker(self._start_mobile_host(), exclusive=True, group="mobile-host")
             return
         if kind == "settings_back":
             if self._menu_stack:
@@ -4192,8 +4758,8 @@ class TUIApp(App):
             return False
         root = str(self._workspace_root)
         return all(
-            bool(grants.get(action_id, {}).get("enabled"))
-            and root in grants.get(action_id, {}).get("path_prefixes", [])
+            displayed_on(action_id, grants.get(action_id, {}),
+                         root in grants.get(action_id, {}).get("path_prefixes", []))
             for action_id in (
                 "workspace.files.list", "workspace.files.read", "workspace.files.search",
             )

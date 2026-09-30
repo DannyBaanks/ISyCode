@@ -13,10 +13,11 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     report = action_coverage.owner_coverage_report()
 
     assert report["secure_closed"] is True
-    assert "mobile.host.start" in report["unowned_effectful_actions"]
+    assert "mobile.host.start" not in report["unowned_effectful_actions"]
     assert "credentials.add" in report["unowned_effectful_actions"]
     callsites = {item["callsite"]: item for item in report["callsites"]}
-    assert callsites["MobileHost.start"]["status"] == "UNWIRED"
+    assert callsites["MobileHostOwner.authorize_and_launch"]["status"] == "COVERED"
+    assert callsites["MobileHostOwner.shutdown"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["BridgeClient.agents"]["status"] == "UNWIRED"
     assert callsites["BridgeClient._run"]["status"] == "UNWIRED"
     assert callsites["file_picker.choose_context_file"]["status"] == "BLOCKED_BY_DESIGN"
@@ -119,6 +120,30 @@ def test_declared_effect_callsites_reference_catalog_actions():
     assert {item[0] for item in action_coverage.KNOWN_EFFECT_CALLSITES} <= set(ACTION_BY_ID)
 
 
+def test_tailscale_contract_actions_have_one_owner_and_named_pending_callsite():
+    report = action_coverage.owner_coverage_report()
+    expected = {
+        "tailscale.inspect": "tailscale_read",
+        "tailscale.install.prepare": "tailscale_package_install",
+        "tailscale.install.stage": "tailscale_package_install",
+        "tailscale.install": "tailscale_package_install",
+        "tailscale.login": "tailscale_login",
+        "tailscale.serve.enable": "tailscale_serve",
+        "tailscale.serve.disable": "tailscale_serve",
+    }
+    rows = {row["action"]: row for row in report["actions"]}
+    for action, owner in expected.items():
+        assert rows[action]["classification"] == "OWNER_VALID"
+        assert rows[action]["owners"] == [owner]
+        callsites = [item for item in report["callsites"] if item["action"] == action]
+        assert len(callsites) == 1
+        assert callsites[0]["owner"] == owner
+        assert callsites[0]["callsite"]
+        assert callsites[0]["status"] == "COVERED"
+    assert report["authority_frontier_pass"] is True
+    assert report["unclassified_actions"] == []
+
+
 def test_every_catalog_action_has_an_explicit_authority_classification():
     report = action_coverage.owner_coverage_report()
 
@@ -127,7 +152,7 @@ def test_every_catalog_action_has_an_explicit_authority_classification():
     registered = {action for actions in OWNER_ACTIONS.values() for action in actions}
     assert set(EXPLICIT_DENY_ACTIONS).isdisjoint(registered)
     assert set(ACTION_BY_ID) - registered == set(EXPLICIT_DENY_ACTIONS) | {"role.select"}
-    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 34
+    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 32
 
 
 def test_unclassified_effectful_catalog_addition_fails_the_frontier(monkeypatch):

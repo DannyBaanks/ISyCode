@@ -8,6 +8,7 @@ import asyncio
 import secrets
 import shutil
 import stat
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,9 @@ from isycode.security import (
     SystembilityResult,
 )
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.private_access import OwnedServeRoute
+from isycode.tailscale import ServeRoute, _valid_gateway
+from isycode.workspace_setup import state_root
 
 
 READ_ACTIONS = frozenset({
@@ -65,7 +69,7 @@ EXPLICIT_DENY_ACTIONS = frozenset({
     "workspace.files.write", "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
     "credentials.add", "credentials.use", "credentials.revoke", "lsp.stop",
-    "mobile.host.start", "mobile.host.stop", "mobile.pair",
+    "mobile.host.stop",
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
     "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
@@ -118,6 +122,12 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
         "WorkspaceReadBoundary", "BrokerProvisionBoundary", "BrokerRegistryBoundary",
     }),
     "broker_management": frozenset({"BrokerRegistryBoundary"}),
+    "tailscale_read": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary"}),
+    "tailscale_package_install": frozenset({"TailscalePackageBoundary"}),
+    "tailscale_login": frozenset({"TailscaleExecutableBoundary"}),
+    "tailscale_serve": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary",
+                                   "TailscalePrivateServeBoundary"}),
+    "mobile_host": frozenset({"MobileHostBoundary"}),
 }
 
 
@@ -136,7 +146,35 @@ OWNER_ACTIONS = {
     "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
                                       "broker.stop", "broker.remove"}),
+    "tailscale_read": frozenset({"tailscale.inspect"}),
+    "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}),
+    "tailscale_login": frozenset({"tailscale.login"}),
+    "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
+    "mobile_host": frozenset({"mobile.host.start", "mobile.pair"}),
 }
+
+
+@dataclass(frozen=True)
+class TailscaleAuthorityFacts:
+    """Trusted, immutable adapter observations supplied by the concrete owner.
+
+    Request parameters alone cannot establish executable, route, or ownership
+    identity. The owner must obtain these facts from its read adapter and state
+    store immediately before authorization; an absent fact denies.
+    """
+
+    cli_executable: str | None = None
+    package_manager: str | None = None
+    os_id: str | None = None
+    os_codename: str | None = None
+    gateway_url: str | None = None
+    gateway_port: int | None = None
+    route_id: str | None = None
+    proposed_route: ServeRoute | None = None
+    live_routes: tuple[ServeRoute, ...] | None = None
+    serve_inventory_complete: bool = False
+    owned_route: OwnedServeRoute | None = None
+    serve_digest: str | None = None
 
 
 @dataclass(frozen=True)
@@ -247,6 +285,9 @@ class RemoteReadSystembility:
         spec = ACTION_BY_ID.get(request.action_id)
         if spec is None or not spec.effect.startswith("network") or request.action_id == "provider.request":
             return SystembilityResult(self.name, True, "not applicable to this action")
+        if request.action_id == "mobile.host.start":
+            return SystembilityResult(self.name, True,
+                                      "local listener is checked by the Mobile Host boundary")
         if request.action_id not in {"gateway.files.read", "gateway.semantic.read",
                                      "mcp.discover", "catalog.external.read"}:
             if request.action_id == "mcp.invoke":
@@ -543,10 +584,370 @@ class BrokerManagementSystembility:
                                   "operation is bound to the registered broker and its exact workspace")
 
 
+_TAILSCALE_ACTIONS = frozenset({"tailscale.inspect", "tailscale.install.prepare", "tailscale.install.stage", "tailscale.install", "tailscale.login",
+                                "tailscale.serve.enable", "tailscale.serve.disable"})
+_TAILSCALE_SERVE_ACTIONS = frozenset({"tailscale.serve.enable", "tailscale.serve.disable"})
+_TAILSCALE_SERVE_KEYS = frozenset({"executable", "gateway_url", "gateway_port", "route_id",
+                                   "route_host", "route_path", "route_target", "serve_digest",
+                                   "serve_argv", "serve_delta_digest", "mode", "funnel"})
+_SUPPORTED_TAILSCALE_APT = {
+    "ubuntu": frozenset({"focal", "jammy", "noble"}),
+    "debian": frozenset({"bullseye", "bookworm", "trixie"}),
+}
+
+
+def tailscale_stage_operations(stage_directory: str,
+                               artifacts: tuple[tuple[str, str, int, str], ...]
+                               ) -> tuple[tuple[str, ...], ...]:
+    """All fixed privileged argv allowed by one stage approval."""
+    stage = Path(stage_directory)
+    commands: list[tuple[str, ...]] = []
+
+    def add(*argv: str) -> None:
+        command = ("/usr/bin/pkexec", *argv)
+        if command not in commands:
+            commands.append(command)
+
+    metadata = "--printf=%u\t%a\t%F\t%h\t%s"
+    for directory in (Path("/var"), Path("/var/lib")):
+        add("/usr/bin/stat", metadata, "--", str(directory))
+    for directory in (stage.parent.parent, stage.parent, stage,
+                      stage / "lists", stage / "cache",
+                      stage / "lists" / "partial", stage / "cache" / "partial"):
+        add("/usr/bin/stat", "--printf=%F", "--", str(directory))
+        add("/usr/bin/install", "-d", "-m", "0700", "--", str(directory))
+        add("/usr/bin/stat", metadata, "--", str(directory))
+    for relative, source, size, _ in artifacts:
+        target = stage / relative
+        add("/usr/bin/dd", f"if={source}", f"of={target}",
+            "iflag=count_bytes", f"count={size + 1}",
+            "oflag=excl", "conv=fsync", "status=none")
+        add("/usr/bin/chmod", "0400", "--", str(target))
+        add("/usr/bin/stat", metadata, "--", str(target))
+        add("/usr/bin/sha256sum", "--binary", "--", str(target))
+    add("/usr/bin/chmod", "0000", "--", str(stage))
+    return tuple(commands)
+
+
+def tailscale_serve_delta_digest(action_id: str, serve_digest: str,
+                                 route: ServeRoute,
+                                 argv: tuple[str, ...]) -> str:
+    """Digest the exact pre-state, private route identity, and fixed CLI operation."""
+    payload = (action_id, serve_digest,
+               (route.host, route.path, route.target, route.private), argv)
+    return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
+
+
+def _canonical_executable_identity(value: object, expected_name: str) -> bool:
+    """Check the canonical path shape; the adapter resolves it before supplying facts."""
+    if not isinstance(value, str) or not value or len(value) > 4096:
+        return False
+    return (os.path.isabs(value) and os.path.normpath(value) == value
+            and Path(value).name == expected_name)
+
+
+class TailscaleExecutableSystembility:
+    """Bind the CLI to the canonical executable observed by the read adapter."""
+
+    name = "TailscaleExecutableBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in _TAILSCALE_ACTIONS - {"tailscale.install", "tailscale.install.stage", "tailscale.install.prepare"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        executable = request.parameters.get("executable")
+        valid = (request.target == "tailscale" and isinstance(self.facts, TailscaleAuthorityFacts)
+                 and executable == self.facts.cli_executable
+                 and _canonical_executable_identity(executable, "tailscale"))
+        if request.action_id == "tailscale.login":
+            valid = (valid and set(request.parameters) == {"executable", "operation"}
+                     and request.parameters.get("operation") == "login")
+        return SystembilityResult(self.name, bool(valid),
+                                  "canonical observed Tailscale executable required")
+
+
+class TailscalePackageSystembility:
+    """Restrict installation to one observed Ubuntu/Debian stable apt recipe."""
+
+    name = "TailscalePackageBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        facts = self.facts
+        if (not isinstance(facts, TailscaleAuthorityFacts)
+                or not isinstance(facts.package_manager, str)
+                or not isinstance(facts.os_id, str)
+                or not isinstance(facts.os_codename, str)):
+            return SystembilityResult(self.name, False,
+                                      "supported OS and exact official stable package recipe required")
+        expected_keys = {"executable", "os_id", "os_codename",
+                         "repository_key_url", "repository_list_url", "package",
+                         "package_service_effect"}
+        if request.action_id == "tailscale.install.prepare":
+            expected_keys |= {"private_directory", "key_fingerprint", "source_sha256",
+                              "config_sha256", "update_argv"}
+        else:
+            expected_keys |= {"private_directory", "key_fingerprint", "key_sha256",
+                              "source_sha256", "config_sha256", "indexes_digest",
+                              "package_version", "archive_sha256", "archive_name",
+                              "simulation_digest", "package_actions", "stage_directory",
+                              "stage_manifest_digest", "install_argv",
+                              "privilege_argv"}
+            if request.action_id == "tailscale.install.stage":
+                expected_keys |= {"stage_artifacts", "stage_operations",
+                                  "stage_operations_digest"}
+        valid = (request.target == "tailscale"
+                 and set(params) == expected_keys
+                 and params.get("executable") == facts.package_manager
+                 and _canonical_executable_identity(facts.package_manager, "apt-get")
+                 and facts.os_id in _SUPPORTED_TAILSCALE_APT
+                 and facts.os_codename in _SUPPORTED_TAILSCALE_APT.get(facts.os_id, ())
+                 and params.get("os_id") == facts.os_id
+                 and params.get("os_codename") == facts.os_codename
+                 and params.get("package") == "tailscale"
+                 and params.get("package_service_effect") ==
+                     "may_start_or_restart_tailscaled")
+        if valid:
+            base = f"https://pkgs.tailscale.com/stable/{facts.os_id}/{facts.os_codename}"
+            valid = (params.get("repository_key_url") == base + ".noarmor.gpg"
+                     and params.get("repository_list_url") == base + ".tailscale-keyring.list")
+        if valid:
+            directory = params.get("private_directory")
+            private_parent = state_root().expanduser().absolute() / "tailscale-apt"
+            valid = (isinstance(directory, str)
+                     and Path(directory).parent == private_parent
+                     and re.fullmatch(r"[0-9a-f]{16}-[0-9a-f]{32}", Path(directory).name) is not None
+                     and params.get("key_fingerprint") ==
+                     "2596A99EAAB33821893C0A79458CA832957F5868")
+        if valid and request.action_id in {"tailscale.install.stage", "tailscale.install"}:
+            version = params.get("package_version")
+            actions = params.get("package_actions")
+            argv = params.get("install_argv")
+            expected_argv = (facts.package_manager, "install", "--yes", "--no-upgrade",
+                             "--no-remove", "--no-download", "--no-install-recommends",
+                             f"tailscale={version}")
+            valid = (isinstance(version, str)
+                     and re.fullmatch(r"[A-Za-z0-9.+:~_-]{1,160}", version) is not None
+                     and actions == (f"Inst tailscale={version}", f"Conf tailscale={version}")
+                     and argv == expected_argv
+                     and params.get("privilege_argv") ==
+                     ("/usr/bin/pkexec", "/usr/bin/env",
+                      f"APT_CONFIG={params['stage_directory']}/apt.conf",
+                      "DEBIAN_FRONTEND=noninteractive", *expected_argv)
+                     and params.get("stage_directory") ==
+                     f"/var/lib/isycode/tailscale/{Path(params['private_directory']).name}"
+                     and all(isinstance(params.get(key), str)
+                             and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
+                             for key in ("key_sha256", "source_sha256", "config_sha256",
+                                         "indexes_digest", "archive_sha256", "simulation_digest",
+                                         "stage_manifest_digest"))
+                     and isinstance(params.get("archive_name"), str)
+                     and re.fullmatch(r"tailscale_[A-Za-z0-9.+:~_-]+_[A-Za-z0-9]+\.deb",
+                                      params["archive_name"]) is not None)
+        if valid and request.action_id == "tailscale.install.prepare":
+            valid = (params.get("update_argv") == (facts.package_manager, "update")
+                     and all(isinstance(params.get(key), str)
+                             and re.fullmatch(r"[0-9a-f]{64}", params[key]) is not None
+                             for key in ("source_sha256", "config_sha256")))
+        if valid and request.action_id == "tailscale.install.stage":
+            raw_artifacts = params.get("stage_artifacts")
+            private = Path(params["private_directory"])
+            prefix = f"pkgs.tailscale.com_stable_{facts.os_id}_dists_{facts.os_codename}_"
+            valid = isinstance(raw_artifacts, tuple) and 5 <= len(raw_artifacts) <= 16
+            artifacts = raw_artifacts if isinstance(raw_artifacts, tuple) else ()
+            typed_artifacts: list[tuple[str, str, int, str]] = []
+            if valid:
+                names = []
+                total = 0
+                for item in artifacts:
+                    if (not isinstance(item, tuple) or len(item) != 4
+                            or not isinstance(item[0], str) or not isinstance(item[1], str)
+                            or type(item[2]) is not int or not isinstance(item[3], str)):
+                        valid = False
+                        break
+                    relative, source, size, digest = item
+                    expected_source = {
+                        "keyring.gpg": private / "keyring.gpg",
+                        "source.list": private / "stage-source.list",
+                        "apt.conf": private / "stage-apt.conf",
+                    }.get(relative)
+                    if relative.startswith("lists/"):
+                        name = relative.removeprefix("lists/")
+                        if (name.startswith(prefix)
+                                and re.fullmatch(r"[A-Za-z0-9_.+%-]{1,240}", name)):
+                            expected_source = private / "lists" / name
+                    if relative == f"cache/{params['archive_name']}":
+                        expected_source = private / "cache" / params["archive_name"]
+                    if (expected_source is None or source != str(expected_source)
+                            or relative in names or not 0 < size <= 80 * 1024 * 1024
+                            or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                        valid = False
+                        break
+                    names.append(relative)
+                    total += size
+                    typed_artifacts.append((relative, source, size, digest))
+                valid = (valid and names[:3] == ["keyring.gpg", "source.list", "apt.conf"]
+                         and names[-1] == f"cache/{params['archive_name']}"
+                         and sum(name.startswith("lists/") for name in names) >= 2
+                         and total <= 32 * 1024 * 1024 + 80 * 1024 * 1024 + 4 * 16 * 1024)
+            if valid:
+                manifest = [(relative, size, digest)
+                            for relative, _, size, digest in typed_artifacts]
+                expected_digest = hashlib.sha256(json.dumps(
+                    (params["stage_directory"], manifest), separators=(",", ":")).encode()).hexdigest()
+                operations = tailscale_stage_operations(params["stage_directory"],
+                                                        tuple(typed_artifacts))
+                operations_digest = hashlib.sha256(json.dumps(
+                    operations, separators=(",", ":")).encode()).hexdigest()
+                valid = (params["stage_manifest_digest"] == expected_digest
+                         and params.get("stage_operations") == operations
+                         and params.get("stage_operations_digest") == operations_digest)
+        return SystembilityResult(self.name, bool(valid),
+                                  "supported OS and exact official stable package recipe required")
+
+
+class TailscaleGatewaySystembility:
+    """Keep the configured Gateway on its exact loopback endpoint and port."""
+
+    name = "TailscaleGatewayBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in _TAILSCALE_SERVE_ACTIONS | {"tailscale.inspect"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        facts = self.facts
+        if (not isinstance(facts, TailscaleAuthorityFacts)
+                or not isinstance(facts.gateway_url, str)
+                or type(facts.gateway_port) is not int):
+            return SystembilityResult(self.name, False,
+                                      "exact configured loopback Gateway endpoint required")
+        valid = (request.target == "tailscale"
+                 and _valid_gateway(facts.gateway_url or "", facts.gateway_port)
+                 and params.get("gateway_url") == facts.gateway_url
+                 and type(params.get("gateway_port")) is int
+                 and params.get("gateway_port") == facts.gateway_port)
+        if request.action_id == "tailscale.inspect":
+            valid = valid and set(params) == {"executable", "gateway_url", "gateway_port"}
+        return SystembilityResult(self.name, bool(valid),
+                                  "exact configured loopback Gateway endpoint required")
+
+
+class TailscalePrivateServeSystembility:
+    """Bind a proposed private route to a complete live inventory and ownership."""
+
+    name = "TailscalePrivateServeBoundary"
+
+    def __init__(self, facts: TailscaleAuthorityFacts | None):
+        self.facts = facts
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in _TAILSCALE_SERVE_ACTIONS:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        facts = self.facts
+        if not isinstance(facts, TailscaleAuthorityFacts):
+            return SystembilityResult(self.name, False,
+                                      "private Serve route must be free or match live and owned identity")
+        route = facts.proposed_route
+        if (not isinstance(route, ServeRoute) or not isinstance(facts.cli_executable, str)
+                or not isinstance(facts.gateway_url, str)
+                or not isinstance(facts.serve_digest, str)
+                or facts.live_routes is None or facts.route_id is None):
+            return SystembilityResult(self.name, False,
+                                      "private Serve route must be free or match live and owned identity")
+        valid = (request.target == "tailscale" and set(params) == _TAILSCALE_SERVE_KEYS
+                 and route.private is True
+                 and facts.serve_inventory_complete is True
+                 and type(facts.live_routes) is tuple
+                 and all(isinstance(item, ServeRoute) for item in facts.live_routes)
+                 and isinstance(facts.route_id, str)
+                 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", facts.route_id) is not None
+                 and isinstance(route.host, str)
+                 and re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*\.ts\.net:443", route.host) is not None
+                 and route.path == "/isycode" and route.target == facts.gateway_url
+                 and isinstance(facts.serve_digest, str)
+                 and re.fullmatch(r"[0-9a-f]{64}", facts.serve_digest) is not None
+                 and params.get("route_id") == facts.route_id
+                 and params.get("route_host") == route.host
+                 and params.get("route_path") == route.path
+                 and params.get("route_target") == route.target
+                 and params.get("serve_digest") == facts.serve_digest
+                 and params.get("mode") == "private" and params.get("funnel") is False)
+        if valid:
+            executable = facts.cli_executable
+            expected_argv = (executable, "serve", "--https=443",
+                             "--set-path=/isycode", "--bg", facts.gateway_url)
+            if request.action_id == "tailscale.serve.disable":
+                expected_argv += ("off",)
+            valid = (params.get("serve_argv") == expected_argv
+                     and params.get("serve_delta_digest") == tailscale_serve_delta_digest(
+                         request.action_id, facts.serve_digest, route, expected_argv))
+        if valid:
+            matching = tuple(item for item in facts.live_routes
+                             if (item.host, item.path) == (route.host, route.path))
+            owned = facts.owned_route
+            owned_matches = (isinstance(owned, OwnedServeRoute)
+                             and (owned.route_id, owned.host, owned.path, owned.target)
+                             == (facts.route_id, route.host, route.path, route.target))
+            if request.action_id == "tailscale.serve.enable":
+                valid = ((not matching and owned is None)
+                         or (len(matching) == 1 and matching[0] == route and owned_matches))
+            else:
+                valid = owned_matches and (not matching or
+                                           (len(matching) == 1 and matching[0] == route))
+        return SystembilityResult(self.name, bool(valid),
+                                  "private Serve route must be free or match live and owned identity")
+
+
+class MobileHostSystembility:
+    """Keep mobile pairing bound to the loopback host and its one-use PIN."""
+
+    name = "MobileHostBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        del authority
+        if request.action_id not in {"mobile.host.start", "mobile.pair"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        if request.action_id == "mobile.host.start":
+            valid = (request.target == "127.0.0.1:8765"
+                     and params == {"bind": "127.0.0.1", "port": 8765,
+                                    "transport": "loopback"})
+            return SystembilityResult(self.name, valid,
+                                      "Mobile Host is restricted to loopback on port 8765")
+        if request.action_id == "mobile.pair":
+            challenge_id = params.get("challenge_id")
+            valid = (request.target == "mobile-host"
+                     and set(params) == {"challenge_id", "device_name"}
+                     and isinstance(challenge_id, str)
+                     and re.fullmatch(r"[0-9a-f]{64}", challenge_id) is not None
+                     and isinstance(params.get("device_name"), str)
+                     and 1 <= len(params["device_name"]) <= 96)
+            return SystembilityResult(self.name, valid,
+                                      "Pairing requires a verified one-use PIN and bounded device label")
+        return SystembilityResult(self.name, False, "Mobile Host owner does not implement this action")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
-    def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str):
+    def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str,
+                 tailscale_facts: TailscaleAuthorityFacts | None = None):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
         owner_id = self.owner_id
@@ -589,6 +990,11 @@ class ProductActionGate:
             RemoteReadSystembility(), SessionDeleteSystembility(), MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),
+            TailscaleExecutableSystembility(tailscale_facts),
+            TailscalePackageSystembility(tailscale_facts),
+            TailscaleGatewaySystembility(tailscale_facts),
+            TailscalePrivateServeSystembility(tailscale_facts),
+            MobileHostSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,

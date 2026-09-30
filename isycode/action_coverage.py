@@ -54,6 +54,14 @@ DYNAMIC_ACTION_RESOLVERS = {
         "owner": "remote_catalog",
         "actions": ("catalog.external.read", "gateway.files.read", "mcp.discover"),
     },
+    "isycode.tailscale_serve.TailscaleServeOwner._prepare": {
+        "owner": "tailscale_serve",
+        "actions": ("tailscale.serve.enable", "tailscale.serve.disable"),
+    },
+    "isycode.tailscale_read.TailscaleReadOwner.inspect": {
+        "owner": "tailscale_read",
+        "actions": ("tailscale.inspect",),
+    },
 }
 
 _SECURE_DIRECT_API_METHODS = {
@@ -76,6 +84,13 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
 KNOWN_EFFECT_CALLSITES = (
+    ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "COVERED"),
+    ("tailscale.install.prepare", "TailscalePackageInstallOwner.prepare", "tailscale_package_install", "COVERED"),
+    ("tailscale.install.stage", "TailscalePackageInstallOwner.stage", "tailscale_package_install", "COVERED"),
+    ("tailscale.install", "TailscalePackageInstallOwner.install", "tailscale_package_install", "COVERED"),
+    ("tailscale.login", "TailscaleLoginOwner.begin_login", "tailscale_login", "COVERED"),
+    ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "COVERED"),
+    ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "COVERED"),
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
     ("workspace.files.read", "LocalWorkspaceReadOwner.execute", "workspace_read", "COVERED"),
     ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
@@ -86,9 +101,11 @@ KNOWN_EFFECT_CALLSITES = (
     ("broker.start", "BrokerProvisionOwner.provision", "broker_provision", "COVERED_VARIANT"),
     ("broker.start", "BrokerManagementOwner.perform", "broker_management", "COVERED_VARIANT"),
     ("session.delete", "SessionDeleteOwner.delete", "session_delete", "COVERED"),
-    ("mobile.host.start", "MobileHost.start", "", "UNWIRED"),
-    ("mobile.host.stop", "MobileHost.stop", "", "UNWIRED"),
-    ("mobile.pair", "MobileHost._pair", "", "UNWIRED"),
+    ("mobile.host.start", "MobileHostOwner.authorize_and_launch", "mobile_host", "COVERED"),
+    # TUI shutdown is lifecycle cleanup, not a user-authorized stop action.
+    # The catalog action remains explicitly denied in Secure.
+    ("mobile.host.stop", "MobileHostOwner.shutdown", "", "BLOCKED_BY_DESIGN"),
+    ("mobile.pair", "MobileHostOwner.authorize_pair", "mobile_host", "COVERED"),
     ("credentials.add", "ApiKeyStore.issue", "", "UNWIRED"),
     ("credentials.revoke", "ApiKeyStore.revoke", "", "UNWIRED"),
     ("bridge.connect", "BridgeClient.hello", "", "BLOCKED_BY_DESIGN"),
@@ -200,7 +217,8 @@ def owner_coverage_report() -> dict[str, Any]:
                  for action, callsite, owner, status in KNOWN_EFFECT_CALLSITES]
     direct_api_bypasses = secure_tui_direct_api_bypasses()
     stale_callsites = sorted(item["callsite"] for item in callsites
-                             if not _callsite_exists(item["callsite"]))
+                             if item["status"] != "PLANNED"
+                             and not _callsite_exists(item["callsite"]))
     request_constructors = discover_action_request_constructors()
     dynamic_constructors = [item for item in request_constructors
                             if item["action"] is None or item["owner"] is None]
@@ -243,7 +261,8 @@ def owner_coverage_report() -> dict[str, Any]:
         "ambiguous_actions": conflicts,
         "unowned_effectful_actions": unowned_effectful,
         "effectful_callsites_without_mediation": [
-            item for item in callsites if item["status"] in {"UNWIRED", "BYPASS_RISK", "NOT_DEMONSTRATED"}
+            item for item in callsites if item["status"] in {"UNWIRED", "BYPASS_RISK",
+                                                         "NOT_DEMONSTRATED", "PLANNED"}
         ],
         "secure_tui_direct_api_bypasses": direct_api_bypasses,
         "secure_tui_closed": (
