@@ -52,7 +52,7 @@ def test_command_tool_is_offered_only_with_an_effective_sandbox_grant():
     assert "sandbox_executable()" in methods["_command_tool_enabled"]
     run_chat = methods["_run_chat"]
     assert "command_active = tools_active and self._command_tool_enabled()" in run_chat
-    assert "if command_active:\n            chat_tools = chat_tools + [COMMAND_TOOL]" in run_chat
+    assert "if command_active:\n                chat_tools = chat_tools + [COMMAND_TOOL]" in run_chat
 
 
 def test_every_command_goes_through_the_approval_screen_and_the_owner():

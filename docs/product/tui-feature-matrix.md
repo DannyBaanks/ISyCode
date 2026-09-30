@@ -1,5 +1,7 @@
 # ISyCode TUI feature matrix — initial M16 inventory
 
+**Current daily-use increment (2026-09-30):** the rows below preserve the initial M16 audit and its historical gaps. For current behavior and executed evidence, see [daily-use readiness](../daily-use-readiness.md). Chat now has typed read/edit/command/Git tools behind existing owners; sessions have create/resume/state/lifecycle owners and explicit scoped delete approval. Recovery, multiline input, resize and shortcut tests run the full Textual app. Live provider, Gateway and long-running usability evidence remain pending.
+
 Inventory update: 2026-09-28. This is a source audit plus focused headless TUI
 smoke witness, not a claim that every surface was run interactively. “Evidence”
 names current code or tests; security uses the M15

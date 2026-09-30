@@ -8,7 +8,7 @@ import stat
 import tempfile
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,7 @@ class ChatSession:
     messages: list[dict[str, str]]
     created_at: float
     updated_at: float
+    state: dict[str, Any] = field(default_factory=dict)
 
 
 class ChatSessionStore:
@@ -72,6 +73,7 @@ class ChatSessionStore:
         return session
 
     def save(self, session: ChatSession) -> Path:
+        state = self.validate_state(session.state)
         if len(session.messages) > self.MAX_MESSAGES:
             raise ChatSessionError("chat session exceeds the message limit")
         for message in session.messages:
@@ -82,12 +84,13 @@ class ChatSessionStore:
         session.updated_at = time.time()
         target = self._path(session.session_id)
         payload = json.dumps({
-            "version": 1,
+            "version": 2,
             "session_id": session.session_id,
             "title": session.title,
             "messages": session.messages,
             "created_at": session.created_at,
             "updated_at": session.updated_at,
+            "state": state,
         }, ensure_ascii=False, allow_nan=False)
         if len(payload.encode("utf-8")) > self.MAX_BYTES:
             raise ChatSessionError("chat session exceeds the 4 MB storage limit")
@@ -110,7 +113,7 @@ class ChatSessionStore:
             raise ChatSessionError("chat message is malformed")
         session = self.load(session_id)
         session.messages.append({"role": role, "content": content})
-        if session.title == "New session" and role == "user":
+        if session.title in {"New session", "Draft conversation"} and role == "user":
             session.title = self._auto_title(content)
         self.save(session)
         return session
@@ -129,7 +132,7 @@ class ChatSessionStore:
                 payload = json.load(stream)
             except (json.JSONDecodeError, UnicodeDecodeError) as exc:
                 raise ChatSessionError("chat session is not valid UTF-8 JSON") from exc
-        if (not isinstance(payload, dict) or payload.get("version") != 1
+        if (not isinstance(payload, dict) or type(payload.get("version")) is not int or payload.get("version") not in {1, 2}
                 or payload.get("session_id") != session_id
                 or not isinstance(payload.get("title"), str)
                 or not isinstance(payload.get("messages"), list)
@@ -142,7 +145,8 @@ class ChatSessionStore:
                or not isinstance(message.get("content"), str) for message in messages):
             raise ChatSessionError("chat session contains malformed messages")
         return ChatSession(session_id, payload["title"], messages,
-                           float(payload["created_at"]), float(payload["updated_at"]))
+                           float(payload["created_at"]), float(payload["updated_at"]),
+                           self.validate_state(payload.get("state", {})))
 
     def list_sessions(self) -> list[ChatSession]:
         sessions = []
@@ -183,6 +187,7 @@ class ChatSessionStore:
             messages = list(parent.messages[:through_message + 1])
         child = self.create(f"Fork: {parent.title}")
         child.messages = messages
+        child.state = self.validate_state(parent.state)
         self.save(child)
         return child
 
@@ -207,31 +212,41 @@ class ChatSessionStore:
 
     def export_json(self, session_id: str, *, sanitize: bool = True) -> str:
         session = self.load(session_id)
+        return self.serialize(session, sanitize=sanitize)
+
+    @classmethod
+    def serialize(cls, session: ChatSession, *, sanitize: bool = True) -> str:
         messages = [dict(item) for item in session.messages]
         title = session.title
         if sanitize:
-            title = self._sanitize_text(title)
+            title = cls._sanitize_text(title)
             messages = [{"role": item["role"],
-                         "content": self._sanitize_text(item["content"])}
+                         "content": cls._sanitize_text(item["content"])}
                         for item in messages]
         payload = {
-            "version": 1,
+            "version": 2,
             "session_id": session.session_id,
             "title": title,
             "messages": messages,
             "created_at": session.created_at,
             "updated_at": session.updated_at,
+            "state": cls.validate_state(session.state),
         }
         return json.dumps(payload, ensure_ascii=False, allow_nan=False)
 
-    def import_json(self, serialized: str) -> ChatSession:
+    def import_json(self, serialized: str, *, session_id: str | None = None) -> ChatSession:
+        imported = self.parse_import(serialized, session_id=session_id)
+        self.save(imported)
+        return imported
+
+    def parse_import(self, serialized: str, *, session_id: str | None = None) -> ChatSession:
         if not isinstance(serialized, str) or len(serialized.encode("utf-8")) > self.MAX_BYTES:
             raise ChatSessionError("session import exceeds the storage limit")
         try:
             payload = json.loads(serialized)
         except (json.JSONDecodeError, UnicodeError) as exc:
             raise ChatSessionError("session import is not valid JSON") from exc
-        if (not isinstance(payload, dict) or payload.get("version") != 1
+        if (not isinstance(payload, dict) or type(payload.get("version")) is not int or payload.get("version") not in {1, 2}
                 or not isinstance(payload.get("title"), str)
                 or not isinstance(payload.get("messages"), list)):
             raise ChatSessionError("session import has an unsupported structure")
@@ -242,8 +257,43 @@ class ChatSessionStore:
             raise ChatSessionError("session import contains malformed messages")
         if len(messages) > self.MAX_MESSAGES:
             raise ChatSessionError("session import exceeds the message limit")
-        clean_title = " ".join(payload["title"].split())[:80] or "Imported session"
-        imported = self.create(clean_title)
-        imported.messages = [dict(message) for message in messages]
-        self.save(imported)
+        state = self.validate_state(payload.get("state", {}))
+        clean_title = self._sanitize_text(" ".join(payload["title"].split())[:80]) or "Imported session"
+        now = time.time()
+        imported = ChatSession(session_id or uuid.uuid4().hex, clean_title, [], now, now)
+        imported.messages = [{"role": message["role"], "content": self._sanitize_text(message["content"])}
+                             for message in messages]
+        imported.state = state
         return imported
+
+    @classmethod
+    def validate_state(cls, state: Any) -> dict[str, Any]:
+        """Portable preferences only: never import secrets, grants or instructions."""
+        from isycode.providers import PRESETS
+        if not isinstance(state, dict) or set(state) - {"provider", "model", "role", "context_path", "draft"}:
+            raise ChatSessionError("session state has unsupported fields")
+        provider = state.get("provider")
+        if provider is not None and (not isinstance(provider, str) or provider not in PRESETS):
+            raise ChatSessionError("session provider is invalid")
+        model = state.get("model")
+        if model is not None and (not isinstance(model, str) or not 1 <= len(model) <= 256
+                                  or not re.fullmatch(r"[A-Za-z0-9._:/-]+", model)
+                                  or cls._sanitize_text(model) != model):
+            raise ChatSessionError("session model is invalid")
+        role = state.get("role")
+        if role is not None and (not isinstance(role, dict) or set(role) != {"kind", "name"}
+                                 or not isinstance(role.get("kind"), str)
+                                 or role.get("kind") not in {"agents", "subagents", "motors"}
+                                 or not isinstance(role.get("name"), str)
+                                 or not 1 <= len(role["name"]) <= 120
+                                 or not role["name"].isprintable()
+                                 or cls._sanitize_text(role["name"]) != role["name"]):
+            raise ChatSessionError("session role is invalid")
+        if state.get("context_path") is not None and state.get("context_path") != "AGENTS.md":
+            raise ChatSessionError("session context must reference workspace AGENTS.md")
+        clean = json.loads(json.dumps(state))
+        if "draft" in clean:
+            if not isinstance(clean["draft"], str) or len(clean["draft"]) > 16_000:
+                raise ChatSessionError("session draft exceeds its limit")
+            clean["draft"] = cls._sanitize_text(clean["draft"])
+        return clean
