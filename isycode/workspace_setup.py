@@ -48,6 +48,25 @@ def broad_workspace_reason(directory: Path) -> str | None:
     return None
 
 
+def shared_root_warning(workspace_root: Path, root_source: str,
+                        launch_dir: Path) -> str | None:
+    """Warn when an existing marker makes a broad directory the active root.
+
+    Markers created before the broad-directory guard, or by hand, still make
+    every descendant without its own `.isyroot` share one identity. The marker
+    is honoured (it is an explicit identity), but the sharing must be visible.
+    """
+    if root_source != "isyroot":
+        return None
+    reason = broad_workspace_reason(workspace_root)
+    if reason is None:
+        return None
+    shared = "" if launch_dir == workspace_root else f" for {launch_dir}"
+    return (f"Workspace root {workspace_root}{shared}: {reason}. Folders below it without "
+            "their own .isyroot share its grants and sessions. Create an empty .isyroot in "
+            "the project folder to give it its own workspace.")
+
+
 def new_workspace_choice(launch_dir: Path, saved_choice: bool | None,
                          global_default: str) -> bool | None:
     """Decide recurrence for a folder with no `.isyroot`; None means ask.

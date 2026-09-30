@@ -108,7 +108,9 @@ def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
     methods = {node.name: node for node in app.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
     source = SOURCE.read_text(encoding="utf-8")
-    for name in ("_open_authority_menu", "_append_network_grant_entry"):
+    for name in ("_open_authority_menu", "_append_network_grant_entry",
+                 "_open_tailscale_permissions", "_initialize_workspace",
+                 "_workspace_chat_tools_enabled"):
         segment = ast.get_source_segment(source, methods[name])
         # Raw `enabled` flags must never decide an ON label on their own.
         assert '.get("enabled")' not in segment, name

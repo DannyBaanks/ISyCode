@@ -7,7 +7,7 @@ import pytest
 
 from isycode.config import discover_workspace_identity
 from isycode.workspace_setup import (
-    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice,
+    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
 )
 from isycode.chat_sessions import ChatSessionStore
 
@@ -195,3 +195,21 @@ def test_tui_startup_routes_the_global_default_through_the_broad_directory_guard
     segment = ast.get_source_segment(source, startup)
     assert "new_workspace_choice(" in segment
     assert '== "recurring"' not in segment
+
+
+def test_existing_broad_marker_is_honoured_but_visibly_shared(fake_home: Path):
+    """A pre-existing ~/.isyroot (older default or by hand) must not share silently."""
+    (fake_home / ".isyroot").write_bytes(b"")
+    app = fake_home / "projects" / "app"
+    identity = discover_workspace_identity(app)
+    assert identity.workspace_root == fake_home.resolve()
+    warning = shared_root_warning(identity.workspace_root, identity.workspace_root_source, app)
+    assert warning is not None and str(app) in warning and ".isyroot" in warning
+
+    (app / ".isyroot").write_bytes(b"")
+    own = discover_workspace_identity(app)
+    assert shared_root_warning(own.workspace_root, own.workspace_root_source, app) is None
+
+
+def test_fallback_roots_never_warn(fake_home: Path):
+    assert shared_root_warning(fake_home, "fallback", fake_home) is None

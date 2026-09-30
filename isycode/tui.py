@@ -31,7 +31,7 @@ from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
-    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice,
+    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
 )
 from isycode.user_defaults import UserDefaultsStore
 from isycode.shortcuts import APP_SHORTCUTS
@@ -1611,8 +1611,7 @@ class TUIApp(App):
                           f"launch {self._launch_dir}")
         self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
         self.query_one("#workspace-launch-label", Static).update(f"Launch directory · {self._launch_dir}")
-        self.query_one("#workspace-source-label", Static).update(
-            f"Root source · {'.isyroot' if self._workspace_identity.workspace_root_source == 'isyroot' else 'fallback'}")
+        self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self.query_one("#workspace-authority-label", Static).update(
             "Filesystem authority · loading ISyCode grants…")
         commands = self._plugins.command_items()
@@ -1661,6 +1660,9 @@ class TUIApp(App):
                     self._workspace_identity = discover_workspace_identity(self._launch_dir)
                     self._workspace_root = self._workspace_identity.workspace_root
                     self._update_workspace_identity_ui()
+            warning = self._shared_root_warning()
+            if warning:
+                self._append(f"  {warning}", YELLOW)
             if self._initial_view == "files":
                 self.query_one("#workspace-tree", Tree).focus()
             else:
@@ -1684,6 +1686,16 @@ class TUIApp(App):
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
 
+    def _shared_root_warning(self) -> str | None:
+        return shared_root_warning(self._workspace_root,
+                                   self._workspace_identity.workspace_root_source,
+                                   self._launch_dir)
+
+    def _root_source_label(self) -> str:
+        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
+        broad = " · broad shared root" if self._shared_root_warning() else ""
+        return f"Root source · {source}{broad}"
+
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
             return
@@ -1691,8 +1703,7 @@ class TUIApp(App):
                           f"launch {self._launch_dir}")
         self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
         self.query_one("#workspace-launch-label", Static).update(f"Launch directory · {self._launch_dir}")
-        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
-        self.query_one("#workspace-source-label", Static).update(f"Root source · {source}")
+        self.query_one("#workspace-source-label", Static).update(self._root_source_label())
 
     async def _start_mobile_host(self) -> None:
         authority = WorkspaceAuthority(self._workspace_root)
@@ -1813,8 +1824,8 @@ class TUIApp(App):
         try:
             grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
             enabled = all(
-                grants.get(action, {}).get("enabled")
-                and str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", [])
+                displayed_on(action, grants.get(action, {}),
+                             str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", []))
                 for action in ("workspace.files.list", "workspace.files.read", "workspace.files.search")
             )
         except (WorkspaceAuthorityError, OSError, ValueError):
@@ -2592,8 +2603,8 @@ class TUIApp(App):
                 if executable is None:
                     continue
                 grant = grants.get(action, {})
-                enabled = (grant.get("enabled") is True
-                           and executable in grant.get("executables", []))
+                enabled = displayed_on(action, grant,
+                                       executable in grant.get("executables", []))
                 payload = json.dumps({"action": action, "executable": executable,
                                       "enabled": enabled})
                 entries.append(self._entry(
@@ -4747,8 +4758,8 @@ class TUIApp(App):
             return False
         root = str(self._workspace_root)
         return all(
-            bool(grants.get(action_id, {}).get("enabled"))
-            and root in grants.get(action_id, {}).get("path_prefixes", [])
+            displayed_on(action_id, grants.get(action_id, {}),
+                         root in grants.get(action_id, {}).get("path_prefixes", []))
             for action_id in (
                 "workspace.files.list", "workspace.files.read", "workspace.files.search",
             )
