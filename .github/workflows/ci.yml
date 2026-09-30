@@ -37,7 +37,7 @@ jobs:
           python -m pip install -e . pytest
 
       - name: Run test suite
-        run: python -m pytest -q
+        run: python -m pytest -q -m "not integration"
 
   package:
     name: Package (${{ matrix.target }})

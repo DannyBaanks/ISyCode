@@ -6,12 +6,15 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 ISYCODE_ROOT = Path(__file__).parent
 sys.path.insert(0, str(ISYCODE_ROOT))
 
 from isycode.gateway_client import GatewayClient, GatewayError, mutation_fails_closed
 
 
+@pytest.mark.integration
 def test_gateway_read_file():
     client = GatewayClient()
     result = client.read("AGENTS.md")
@@ -19,6 +22,7 @@ def test_gateway_read_file():
     assert len(result["content"]) > 0
 
 
+@pytest.mark.integration
 def test_gateway_list_files():
     client = GatewayClient()
     result = client.list_files("git")
@@ -26,12 +30,14 @@ def test_gateway_list_files():
     assert result["count"] > 0
 
 
+@pytest.mark.integration
 def test_gateway_search():
     client = GatewayClient()
     result = client.search("ISyCode", path="git")
     assert "results" in result or "items" in result or "matches" in result
 
 
+@pytest.mark.integration
 def test_gateway_write_file():
     client = GatewayClient()
     test_path = "git/isycode-m2-test.txt"
@@ -67,6 +73,7 @@ def test_degraded_mode_no_bash_fallback():
         assert "failed closed" in e.message
 
 
+@pytest.mark.integration
 def test_gateway_available_check():
     client = GatewayClient()
     assert client.is_available() is True

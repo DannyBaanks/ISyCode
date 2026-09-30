@@ -18,10 +18,14 @@ import tempfile
 import shutil
 from pathlib import Path
 
+import pytest
+
 ISYCODE_ROOT = Path(__file__).parent
 sys.path.insert(0, str(ISYCODE_ROOT))
 
 from isycode.bridge import BridgeClient, BridgeError
+
+pytestmark = pytest.mark.integration
 
 
 def test_two_agents_collaborate_without_collision():
