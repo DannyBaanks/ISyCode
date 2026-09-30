@@ -20,3 +20,8 @@ isycode = "isycode.launcher:main"
 
 [tool.setuptools.packages.find]
 include = ["isycode*"]
+
+[tool.pytest.ini_options]
+markers = [
+  "integration: requires an external ISyCo checkout or running Gateway service",
+]

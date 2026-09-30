@@ -22,6 +22,7 @@ live_gateway = pytest.mark.skipif(
            "(test_gateway_write_file writes and deletes a test file)")
 
 
+@pytest.mark.integration
 @live_gateway
 def test_gateway_read_file():
     client = GatewayClient()
@@ -30,6 +31,7 @@ def test_gateway_read_file():
     assert len(result["content"]) > 0
 
 
+@pytest.mark.integration
 @live_gateway
 def test_gateway_list_files():
     client = GatewayClient()
@@ -38,6 +40,7 @@ def test_gateway_list_files():
     assert result["count"] > 0
 
 
+@pytest.mark.integration
 @live_gateway
 def test_gateway_search():
     client = GatewayClient()
@@ -45,6 +48,7 @@ def test_gateway_search():
     assert "results" in result or "items" in result or "matches" in result
 
 
+@pytest.mark.integration
 @live_gateway
 def test_gateway_write_file():
     client = GatewayClient()
@@ -81,6 +85,7 @@ def test_degraded_mode_no_bash_fallback():
         assert "failed closed" in e.message
 
 
+@pytest.mark.integration
 @live_gateway
 def test_gateway_available_check():
     client = GatewayClient()
