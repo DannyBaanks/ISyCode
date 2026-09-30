@@ -57,6 +57,7 @@ from isycode.agent_loop import (
     AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, MAX_SUMMARY_CHARS, SUMMARY_MAX_TOKENS, AgentLimits,
     compact_turn, split_history, summary_messages, summary_system_message,
 )
+from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.git_owner import (
     GIT_COMMIT_TOOL, GIT_TOOL_NAMES, GIT_TOOLS, CommitPreview, GitOwner, git_executable,
 )
@@ -1634,6 +1635,10 @@ class TUIApp(App):
     .external-review { border: round #68696f; background: #303136; padding: 1; margin: 1 0; }
     #main { height: 1fr; }
     #activity-status { height: 1; padding: 0 2; color: #6c757d; background: $surface; }
+    #agent-tasks {
+        height: auto; max-height: 12; padding: 0 2; background: #242529;
+        border-top: solid #48494e; display: none;
+    }
     #prompt-input {
         dock: bottom; height: 5; background: #242529; color: #e0e0e0;
         border: round #48494e; margin: 0 1;
@@ -1696,6 +1701,7 @@ class TUIApp(App):
         # Model-written notes replacing history that no longer fits the budget.
         self._conversation_summary = ""
         self._chat_turn_task: asyncio.Task | None = None
+        self._agent_tasks: list[dict[str, str]] = []
         self._action_approvals = ActionApprovalStore()
         self._console_search_hits: list[tuple[Static, TextMatch]] = []
         self._console_search_index = -1
@@ -1770,6 +1776,7 @@ class TUIApp(App):
         yield SidePanel(id="side-panel")
         with Vertical(id="main"):
             yield ChatArea(id="chat")
+            yield Static("", id="agent-tasks")
             yield Static("Ready · / opens navigation", id="activity-status")
         yield PromptArea(placeholder="Message…",
                          id="prompt-input")
@@ -5559,6 +5566,7 @@ class TUIApp(App):
             return
         self._history = []
         self._conversation_summary = ""
+        self._show_agent_tasks([])
         self._active_chat_session_id = None
         self._session_save_warned = False
         self.query_one(ChatArea).remove_children()
@@ -5647,7 +5655,8 @@ class TUIApp(App):
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
         if (name not in TOOL_ACTIONS and name not in GIT_TOOL_NAMES
-                and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME}):
+                and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
+                                 TASK_TOOL_NAME}):
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
             return tool_call_id, json.dumps(outcome)
@@ -5669,6 +5678,13 @@ class TUIApp(App):
             return tool_call_id, await self._run_workspace_command(arguments)
         if name in GIT_TOOL_NAMES:
             return tool_call_id, await self._git_tool(name, arguments)
+        if name == TASK_TOOL_NAME:
+            try:
+                tasks = validate_tasks(arguments)
+            except ValueError as exc:
+                return tool_call_id, json.dumps({"error": str(exc)})
+            self._show_agent_tasks(tasks)
+            return tool_call_id, json.dumps({"status": "shown", "tasks": len(tasks)})
         action_id = TOOL_ACTIONS[name]
         target = arguments.get("path", ".")
         self._append(f"  Tool requested · {action_id} · {target}", CYAN)
@@ -5718,6 +5734,15 @@ class TUIApp(App):
             return False
         return displayed_on("workspace.files.write", grant,
                             str(self._workspace_root) in grant.get("path_prefixes", []))
+
+    def _show_agent_tasks(self, tasks: list[dict[str, str]]) -> None:
+        """Replace the on-screen task list; an empty or all-done list collapses after a turn."""
+        self._agent_tasks = tasks
+        if not self.is_mounted:
+            return
+        panel = self.query_one("#agent-tasks", Static)
+        panel.display = bool(tasks)
+        panel.update(render_tasks(tasks) if tasks else "")
 
     def _git_enabled(self, commit: bool = False) -> bool:
         if git_executable() is None or not self._workspace_chat_tools_enabled():
@@ -5950,6 +5975,8 @@ class TUIApp(App):
             chat_tools = chat_tools + GIT_TOOLS
         if git_commit_active:
             chat_tools = chat_tools + [GIT_COMMIT_TOOL]
+        if tools_active:
+            chat_tools = chat_tools + [TASK_TOOL]
         if not workspace_tools_granted:
             tool_availability = (
                 "Settings → Authority & Security is where the user can explicitly grant bounded read-only access. "
@@ -5974,6 +6001,7 @@ class TUIApp(App):
                "network; the user approves each exact command. Use it to run tests, builds or "
                "linters when useful, and report the real exit code. "
                if command_active else "")
+            + "For work with three or more steps, keep update_tasks current so the user sees the plan. "
             + ("git_status and git_diff show the repository state. " if git_read_active else "")
             + ("git_commit proposes a commit the user reviews and approves; never claim a "
                "commit exists unless the tool result shows its id. " if git_commit_active else "")
