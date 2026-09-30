@@ -113,6 +113,8 @@ MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 MCP_ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,63}$")
 MCP_START_KEYS = frozenset({"server", "argv", "executable", "cwd", "env_keys", "config_sha256"})
 MCP_INVOKE_KEYS = frozenset({"server", "tool", "config_sha256", "arguments_sha256"})
+LSP_DIAGNOSTIC_KEYS = frozenset({"operation", "server_id", "path", "text_sha256", "workspace_root",
+                                 "executable", "server_executable", "node_executable"})
 GIT_MAX_COMMIT_PATHS = 200
 GIT_MAX_MESSAGE_CHARS = 4000
 
@@ -204,7 +206,7 @@ OWNER_ACTIONS = {
     "credential_use": frozenset({"credentials.use"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
-    "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
+    "lsp_symbols": frozenset({"workspace.files.read", "lsp.start", "lsp.diagnostics"}),
     "broker_preview": frozenset({"workspace.files.read", "broker.preview"}),
     "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
@@ -773,7 +775,7 @@ class LSPStartSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id != "lsp.start":
+        if request.action_id not in {"lsp.start", "lsp.diagnostics"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         try:
             from isycode.lsp import discover_servers
@@ -785,6 +787,23 @@ class LSPStartSystembility:
             return SystembilityResult(self.name, False, "sandboxed LSP adapter is unavailable")
         if server is None or server.get("state") != "sandbox_ready":
             return SystembilityResult(self.name, False, "selected LSP adapter is not sandbox-ready")
+        if request.action_id == "lsp.diagnostics":
+            params = request.parameters
+            digest = params.get("text_sha256")
+            if (set(params) != LSP_DIAGNOSTIC_KEYS or request.target != server["id"]
+                    or params.get("operation") != "textDocument/publishDiagnostics"
+                    or params.get("executable") != sandbox
+                    or params.get("server_executable") != server["server_executable"]
+                    or params.get("node_executable") != server["node_executable"]
+                    or params.get("workspace_root") != str(request.workspace_root)
+                    or not command_relative_path_valid(params.get("path"))
+                    or not str(params.get("path")).endswith(".py")
+                    or not isinstance(digest, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                return SystembilityResult(self.name, False, "LSP diagnostics request does not match the sandbox owner")
+            return SystembilityResult(
+                self.name, True,
+                "one Python file checked by a read-only, network-denied language server")
         if (request.target != server["id"]
                 or request.parameters.get("operation") != "workspace/symbol"
                 or request.parameters.get("executable") != sandbox
@@ -1655,6 +1674,58 @@ class LPSSymbolOwner:
                                  "durable action journal is unavailable")
         return ActionOutcome(result_text[:MAX_OUTPUT_CHARS], "ALLOW", receipt,
                              "LSP handshake and workspace/symbol response verified")
+
+    async def diagnostics(self, server_id: str, path: str, text: str,
+                                      catalog: list[dict[str, Any]]) -> ActionOutcome:
+        """Check one Python file after an edit; read-only, so no per-run approval."""
+        from isycode.lsp import discover_servers, pyright_diagnostics
+
+        server = next((item for item in catalog if item.get("id") == server_id), None)
+        current = next((item for item in discover_servers() if item.get("id") == server_id), None)
+        if (server is None or current is None or server.get("state") != "sandbox_ready"
+                or any(server.get(key) != current.get(key) for key in (
+                    "server_executable", "node_executable", "sandbox_executable"))):
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None,
+                                 "adapter catalog changed or is not sandbox-ready")
+        if not isinstance(path, str) or not isinstance(text, str):
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None, "invalid diagnostics request")
+        # The server reads the whole root; the file itself must be readable too.
+        for target in (str(self.root), str(self.root / path)):
+            read_request = ActionRequest("workspace.files.read", self.root, target, {"path": target},
+                                         execution_owner="lsp_symbols")
+            _, read_decision = self.gate.authorize(read_request)
+            if not read_decision.allowed:
+                reason = "; ".join(check.reason for check in read_decision.checks if not check.passed)
+                return ActionOutcome("LSP diagnostics denied.", "DENY", None,
+                                     "workspace.files.read grant required: " + reason)
+        try:
+            request = ActionRequest(
+                "lsp.diagnostics", self.root, server_id,
+                {"operation": "textDocument/publishDiagnostics", "server_id": server_id,
+                 "path": path, "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                 "workspace_root": str(self.root), "executable": server["sandbox_executable"],
+                 "server_executable": server["server_executable"],
+                 "node_executable": server["node_executable"]},
+                execution_owner="lsp_symbols")
+        except (TypeError, ValueError):
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None, "invalid diagnostics request")
+        _, decision = self.gate.authorize(request)
+        if not decision.allowed:
+            reason = "; ".join(check.reason for check in decision.checks if not check.passed)
+            return ActionOutcome("LSP diagnostics denied.", "DENY", None, reason)
+        try:
+            result = await pyright_diagnostics(self.root, path, text, server)
+            result_text = json.dumps(result, ensure_ascii=False, sort_keys=True)
+        except (OSError, ValueError, RuntimeError, asyncio.TimeoutError) as exc:
+            return ActionOutcome("LSP diagnostics failed.", "ERROR", None,
+                                 f"sandboxed diagnostics failed ({type(exc).__name__})")
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "lsp.diagnostics", request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(result_text.encode("utf-8")).hexdigest())
+        if not receipt.verify(request, result_text) or not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("LSP receipt could not be persisted.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
+        return ActionOutcome(result_text, "ALLOW", receipt, "diagnostics received from the sandboxed server")
 
 
 class ProviderNetworkOwner:

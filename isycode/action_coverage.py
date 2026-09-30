@@ -103,6 +103,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("mcp.invoke", "GatewayMCPInvocationOwner.invoke", "gateway_mcp", "COVERED"),
     ("gateway.semantic.read", "GatewaySemanticOwner.invoke", "gateway_semantic", "COVERED"),
     ("lsp.start", "LPSSymbolOwner.search", "lsp_symbols", "COVERED"),
+    ("lsp.diagnostics", "LPSSymbolOwner.diagnostics", "lsp_symbols", "COVERED"),
     ("workspace.command.run", "CommandRunOwner.run", "workspace_command", "COVERED"),
     ("git.status", "GitOwner.status", "workspace_git", "COVERED"),
     ("git.diff", "GitOwner.diff", "workspace_git", "COVERED"),

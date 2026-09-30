@@ -3438,6 +3438,13 @@ class TUIApp(App):
                 entries.append(self._capability_entry(
                     "Local code help", "lsp", lsp_enabled,
                     "Uses the protected language helper to find code symbols on this computer."))
+                diagnostics_grant = grants.get("lsp.diagnostics", {})
+                entries.append(self._capability_entry(
+                    "Check Python files after edits", "lsp_diagnostics",
+                    displayed_on("lsp.diagnostics", diagnostics_grant,
+                                 sandbox_executable in diagnostics_grant.get("executables", [])),
+                    "After you apply a change to a .py file, the protected Pyright helper reports "
+                    "errors and warnings to you and to the assistant. It cannot change files."))
             elif lsp_server:
                 entries.append(self._entry(
                     "Local code help · not ready yet", "info", "",
@@ -3681,6 +3688,61 @@ class TUIApp(App):
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
                 self._append(f"  Edit permission could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()
+
+    async def _change_lsp_diagnostics_grant(self, enabled: bool) -> None:
+        server = next((item for item in self._lsp_inventory
+                       if item.get("id") == "pyright" and item.get("state") == "sandbox_ready"), None)
+        if server is None:
+            self._append("  Local code help is not ready yet; nothing changed.", YELLOW)
+            self._open_authority_menu()
+            return
+        if not await self._await_screen(TailscaleConfirmScreen(
+                "Check Python files after edits?" if enabled else "Stop checking Python files?",
+                ("After each change you apply to a .py file, Pyright runs in its read-only, "
+                 "network-blocked sandbox and reports problems. It needs read access to the "
+                 "workspace and never changes files." if enabled else
+                 "Edits are no longer checked by Pyright in this workspace."),
+                "Allow checks" if enabled else "Turn off checks")):
+            self._open_authority_menu()
+            return
+        try:
+            WorkspaceAuthority(self._workspace_root).set_grant(
+                "lsp.diagnostics", enabled=enabled,
+                executables=[server["sandbox_executable"]] if enabled else [])
+            self._append("  Python checks after edits "
+                         f"{'allowed' if enabled else 'turned off'}.", GREEN)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Check permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
+    async def _post_edit_diagnostics(self, path: str, text: str) -> list[dict] | None:
+        """Pyright problems for a just-applied .py change, or None when checks are off."""
+        server = next((item for item in self._lsp_inventory
+                       if item.get("id") == "pyright" and item.get("state") == "sandbox_ready"), None)
+        if server is None or not path.endswith(".py"):
+            return None
+        try:
+            grant = WorkspaceAuthority(self._workspace_root).effective_policy().get(
+                "grants", {}).get("lsp.diagnostics", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return None
+        if not displayed_on("lsp.diagnostics", grant,
+                            server["sandbox_executable"] in grant.get("executables", [])):
+            return None
+        owner = LPSSymbolOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                               self._action_approvals)
+        outcome = await owner.diagnostics("pyright", path, text, self._lsp_inventory)
+        if outcome.decision != "ALLOW":
+            self._append(f"  Pyright check skipped · {outcome.reason[:160]}", MUTED)
+            return None
+        problems = [item for item in json.loads(outcome.text)["diagnostics"]
+                    if item["severity"] in {"error", "warning"}]
+        if not problems:
+            self._append(f"  Pyright · {path} · no errors or warnings", GREEN)
+        for item in problems[:15]:
+            self._append(f"  Pyright {item['severity']} · {path}:{item['line']}:{item['column']} · "
+                         f"{item['message'][:200]}", YELLOW if item["severity"] == "warning" else RED)
+        return problems
 
     async def _change_git_grant(self, commit: bool, enabled: bool) -> None:
         actions = ("git.commit",) if commit else ("git.status", "git.diff")
@@ -4263,6 +4325,8 @@ class TUIApp(App):
                     return
                 operation = self._change_lsp_process_grant(
                     server["sandbox_executable"], turn_on)
+            elif value == "lsp_diagnostics":
+                operation = self._change_lsp_diagnostics_grant(turn_on)
             elif value == "mobile_host":
                 operation = self._change_mobile_host_grant(turn_on)
             elif value == "workspace_write":
@@ -6054,8 +6118,12 @@ class TUIApp(App):
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
                          f"receipt {outcome.receipt.receipt_id}", GREEN)
-            return json.dumps({"status": "written", "path": preview.path,
-                               "receipt": outcome.receipt.receipt_id})
+            result = {"status": "written", "path": preview.path,
+                      "receipt": outcome.receipt.receipt_id}
+            problems = await self._post_edit_diagnostics(preview.path, preview.content)
+            if problems is not None:
+                result["diagnostics"] = problems[:50]
+            return json.dumps(result)
         self._append(f"  Tool {outcome.decision} · workspace.files.write · "
                      f"{outcome.reason[:180]}", YELLOW)
         return json.dumps({"error": "change was not written", "decision": outcome.decision,

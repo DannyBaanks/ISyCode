@@ -39,6 +39,7 @@ DEDICATED_CONTROLS = {
     "gateway.semantic.read": "Search and understand code with Gateway",
     "mcp.invoke": "Run a Gateway tool",
     "lsp.start": "Local code help",
+    "lsp.diagnostics": "Check Python files after edits",
     "catalog.external.read": "Browse optional integrations",
     "mobile.host.start": "Mobile Host on this computer",
     "mobile.pair": "Mobile Host on this computer",
