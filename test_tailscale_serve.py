@@ -14,7 +14,9 @@ from isycode.workspace_authority import WorkspaceAuthority
 
 
 GATEWAY = "http://127.0.0.1:8787"
-HOST = "danny.tail123.ts.net"
+DNS = "danny.tail123.ts.net"
+# Serve routes are keyed by Tailscale HostPort ("$DNS:$PORT").
+HOST = f"{DNS}:443"
 PATH = "/isycode"
 DIGEST = "a" * 64
 OWNED_ID = "isycode-gateway"
@@ -81,7 +83,7 @@ def setup(tmp_path, monkeypatch):
     cli.write_text("fake CLI", encoding="utf-8")
     cli.chmod(0o700)
     snapshot = TailscaleSnapshot(
-        "signed_in", "empty", str(cli.resolve()), "1.80.0", HOST, (), DIGEST,
+        "signed_in", "empty", str(cli.resolve()), "1.80.0", DNS, (), DIGEST,
         GATEWAY, True, serve_node_config=json.dumps(
             {"TCP": {}, "Web": {}, "AllowFunnel": {}}, sort_keys=True),
         serve_services_config=json.dumps({"version": "0.0.1", "services": {}},

@@ -36,6 +36,22 @@ MAX_OUTPUT = 64 * 1024
 HOST_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.ts\.net")
 
 
+def serve_host_port(dns_name: str, port: int = HTTPS_PORT) -> str:
+    """Return the key Tailscale uses for Serve `Web` and `AllowFunnel` entries.
+
+    `tailscale serve status --json` keys both maps by ipn.HostPort
+    ("$DNS:$PORT"), which the read adapter preserves as `ServeRoute.host`.
+    Owned-route identity must use the same key or the owner cannot see its
+    own route, nor an unowned route it must refuse to replace.
+    """
+    return f"{dns_name.rstrip('.')}:{port}"
+
+
+def route_url(route: ServeRoute) -> str:
+    """Browser URL for a HostPort-keyed route; 443 is implicit for https."""
+    return f"https://{route.host.removesuffix(f':{HTTPS_PORT}')}{route.path}"
+
+
 @dataclass(frozen=True)
 class ServePreview:
     action_id: str
@@ -84,7 +100,8 @@ class TailscaleServeOwner:
         host = snapshot.dns_name
         if not isinstance(host, str) or HOST_RE.fullmatch(host.rstrip(".")) is None:
             raise ValueError("a verified Tailscale DNS name is required for private Serve")
-        host = host.rstrip(".")
+        # Owned identity uses the same HostPort key as the live inventory.
+        host = serve_host_port(host)
         state = self.state_store.load()
         saved = tuple(route for route in state.owned_routes if route.route_id == self.route_id)
         if len(saved) > 1:
@@ -122,7 +139,7 @@ class TailscaleServeOwner:
             operation = (executable, "serve", f"--https={HTTPS_PORT}",
                          f"--set-path={ROUTE_PATH}", "--bg", gateway_url)
             description = (
-                f"Add only https://{route.host}{route.path} -> {route.target} ({self.service_label}) via private Tailscale Serve.\n"
+                f"Add only {route_url(route)} -> {route.target} ({self.service_label}) via private Tailscale Serve.\n"
                 f"Exact command: {' '.join(operation)}\n"
                 "The local service stays bound to loopback. Funnel/public access is disabled. "
                 "Other Serve routes must remain unchanged.\n")
@@ -148,7 +165,7 @@ class TailscaleServeOwner:
             operation = (executable, "serve", f"--https={HTTPS_PORT}",
                          f"--set-path={ROUTE_PATH}", "--bg", gateway_url, "off")
             description = (
-                f"Remove only the owned private mapping https://{route.host}{route.path} "
+                f"Remove only the owned private mapping {route_url(route)} "
                 f"-> {route.target}.\nExact command: {' '.join(operation)}\n"
                 "Other Serve routes remain in place. No global reset is used.\n")
 
@@ -236,6 +253,18 @@ class TailscaleServeOwner:
             node.pop("AllowFunnel", None)
         if not web:
             node.pop("Web", None)
+        # `serve --https=443` creates the HTTPS listener with the first web
+        # handler on :443 and removes it with the last one. Project it out only
+        # in exactly that shape, so any other listener change stays visible.
+        tcp = node.get("TCP", {})
+        if not isinstance(tcp, dict):
+            raise ValueError("Serve TCP listeners cannot be safely projected")
+        suffix = f":{HTTPS_PORT}"
+        if (tcp.get(str(HTTPS_PORT)) == {"HTTPS": True}
+                and not any(key.endswith(suffix) for key in web)):
+            tcp.pop(str(HTTPS_PORT))
+        if not tcp:
+            node.pop("TCP", None)
         if node.get("Foreground") is False:
             node.pop("Foreground", None)
         return (json.dumps(node, sort_keys=True, separators=(",", ":")),
@@ -374,7 +403,7 @@ class TailscaleServeOwner:
         if receipt is None:
             return ActionOutcome("Tailscale Serve result is not verifiable.",
                                  "NOT_VERIFIABLE", None, "durable receipt unavailable")
-        message = (f"Private {self.service_label} route enabled: https://{preview.route.host}{preview.route.path}"
+        message = (f"Private {self.service_label} route enabled: {route_url(preview.route)}"
                    if enabling else f"ISyCode-owned private {self.service_label} route disabled.")
         return ActionOutcome(message, "ALLOW", receipt, event)
 
@@ -387,4 +416,4 @@ class TailscaleServeOwner:
         return self._perform(preview, approval, enabling=False)
 
 
-__all__ = ["ServePreview", "TailscaleServeOwner"]
+__all__ = ["ServePreview", "TailscaleServeOwner", "route_url", "serve_host_port"]

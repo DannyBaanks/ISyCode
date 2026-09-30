@@ -110,8 +110,9 @@ class PrivateAccessStateStore:
             raise ValueError("Private access route values must be strings")
         route = OwnedServeRoute(**value)
         if (not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}", route.route_id)
-                or not isinstance(route.host, str) or len(route.host) > 253
-                or not re.fullmatch(r"[a-zA-Z0-9.-]+", route.host)
+                or not isinstance(route.host, str) or len(route.host) > 259
+                # Serve identity is Tailscale's HostPort key ("$DNS:$PORT").
+                or not re.fullmatch(r"[a-zA-Z0-9.-]+(?::[1-9][0-9]{0,4})?", route.host)
                 or not isinstance(route.path, str) or not route.path.startswith("/")
                 or len(route.path) > 1024 or "?" in route.path or "#" in route.path
                 or not isinstance(route.created_at, str)

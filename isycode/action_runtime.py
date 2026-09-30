@@ -877,7 +877,7 @@ class TailscalePrivateServeSystembility:
                  and isinstance(facts.route_id, str)
                  and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", facts.route_id) is not None
                  and isinstance(route.host, str)
-                 and re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*\.ts\.net", route.host) is not None
+                 and re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*\.ts\.net:443", route.host) is not None
                  and route.path == "/isycode" and route.target == facts.gateway_url
                  and isinstance(facts.serve_digest, str)
                  and re.fullmatch(r"[0-9a-f]{64}", facts.serve_digest) is not None

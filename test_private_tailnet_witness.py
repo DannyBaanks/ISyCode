@@ -7,7 +7,7 @@ from isycode.tailscale import ServeRoute, TailscaleSnapshot
 from isycode.tailscale_read import TailscaleReadOwner
 from isycode.tailscale_serve import TailscaleServeOwner
 from isycode.workspace_authority import WorkspaceAuthority
-from test_tailscale_serve import FakeAdapter, FakeRunner, GATEWAY, HOST, PATH, snapshot_with_routes
+from test_tailscale_serve import FakeAdapter, FakeRunner, DNS, GATEWAY, HOST, PATH, snapshot_with_routes
 
 
 def test_private_access_preflight_enable_verify_disable_keeps_other_route(tmp_path, monkeypatch):
@@ -17,10 +17,10 @@ def test_private_access_preflight_enable_verify_disable_keeps_other_route(tmp_pa
     cli = tmp_path / "tailscale"
     cli.write_text("fake CLI", encoding="utf-8")
     cli.chmod(0o700)
-    other = ServeRoute("docs.tail123.ts.net", "/docs", "http://127.0.0.1:9000", True)
+    other = ServeRoute("docs.tail123.ts.net:443", "/docs", "http://127.0.0.1:9000", True)
     snapshot = TailscaleSnapshot(
-        "signed_in", "existing", str(cli.resolve()), "1.80.0", HOST, (other,), "a" * 64,
-        GATEWAY, True, serve_node_config='{"TCP":{},"Web":{"docs.tail123.ts.net":'
+        "signed_in", "existing", str(cli.resolve()), "1.80.0", DNS, (other,), "a" * 64,
+        GATEWAY, True, serve_node_config='{"TCP":{},"Web":{"docs.tail123.ts.net:443":'
         '{"Handlers":{"/docs":{"Proxy":"http://127.0.0.1:9000"}}}},"AllowFunnel":{}}',
         serve_services_config='{"version":"0.0.1","services":{}}')
     adapter = FakeAdapter(snapshot)
@@ -66,7 +66,7 @@ def test_cancelled_private_route_preview_has_no_command_or_saved_state(tmp_path,
     cli.write_text("fake CLI", encoding="utf-8")
     cli.chmod(0o700)
     adapter = FakeAdapter(TailscaleSnapshot(
-        "signed_in", "empty", str(cli.resolve()), "1.80.0", HOST, (), "a" * 64,
+        "signed_in", "empty", str(cli.resolve()), "1.80.0", DNS, (), "a" * 64,
         GATEWAY, True, serve_node_config='{"TCP":{},"Web":{},"AllowFunnel":{}}',
         serve_services_config='{"version":"0.0.1","services":{}}'))
     runner = FakeRunner(adapter)

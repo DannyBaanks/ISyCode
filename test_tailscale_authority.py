@@ -25,7 +25,7 @@ ACTION_OWNER = {
     "tailscale.serve.disable": "tailscale_serve",
 }
 GATEWAY = "http://127.0.0.1:8787"
-HOST = "device.tail123.ts.net"
+HOST = "device.tail123.ts.net:443"
 DIGEST = "a" * 64
 
 
@@ -227,7 +227,7 @@ def test_tailscale_request_parameters_fail_closed(setup, action_id):
                             {"gateway_port": 8788}]
     if action_id.startswith("tailscale.serve."):
         invalid_changes += [{"mode": "public"}, {"funnel": True},
-                            {"route_id": "forged"}, {"route_host": "other.tail123.ts.net"},
+                            {"route_id": "forged"}, {"route_host": "other.tail123.ts.net:443"},
                             {"route_target": "http://127.0.0.1:9999"},
                             {"serve_digest": "b" * 64}]
     for change in invalid_changes:
@@ -240,7 +240,7 @@ def test_tailscale_disable_requires_matching_owned_live_route(setup):
     root, cli, _, _, facts, authority, approvals = setup
     authority.set_grant("tailscale.serve.disable", enabled=True, executables=[cli])
     request = request_for(setup, "tailscale.serve.disable")
-    forged = replace(facts, owned_route=replace(facts.owned_route, host="other.tail123.ts.net"))
+    forged = replace(facts, owned_route=replace(facts.owned_route, host="other.tail123.ts.net:443"))
     assert authorize(setup, request, facts=forged,
                      approval=approvals.issue(request)).status == "DENY"
     assert authorize(setup, request, facts=replace(facts, owned_route=None),
@@ -267,7 +267,7 @@ def test_tailscale_matching_but_unowned_existing_route_cannot_enable(setup):
 
 @pytest.mark.parametrize("live_routes,owned,complete,expected", [
     ((), False, True, "ALLOW"),
-    ((ServeRoute("other.tail123.ts.net", "/isycode", GATEWAY, True),), False, True, "ALLOW"),
+    ((ServeRoute("other.tail123.ts.net:443", "/isycode", GATEWAY, True),), False, True, "ALLOW"),
     ((ServeRoute(HOST, "/isycode", "http://127.0.0.1:9999", True),), False, True, "DENY"),
     ((ServeRoute(HOST, "/isycode", GATEWAY, False),), False, True, "DENY"),
     ((), True, True, "DENY"),  # Stale ownership record must be resolved.
