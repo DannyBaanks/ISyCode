@@ -69,6 +69,7 @@ from offline owner tests; the second-device tailnet witness remains pending.
 - Modify `isycode/actions.py`
 - Modify `isycode/action_runtime.py`
 - Modify `isycode/action_coverage.py`
+- Modify `docs/security/m15-authority-coverage.json`
 - Modify `test_action_coverage.py`
 - Create `test_tailscale_authority.py`
 
@@ -76,6 +77,7 @@ from offline owner tests; the second-device tailnet witness remains pending.
 - [ ] Add closed owner entries `tailscale_read`, `tailscale_package_install`, `tailscale_login`, and `tailscale_serve`; register their exact actions and required Systembilities. Do not reuse `provider_network`, `broker_management`, or Mobile Host owners.
 - [ ] Add Systembilities that validate canonical executable identity, supported OS and official package recipe, Gateway loopback target and port, private-only Serve mode, and exact owned-route identity. Keep checks pure; they inspect requests and supplied immutable adapter facts without performing effects.
 - [ ] Add each owner/action/callsite to `KNOWN_EFFECT_CALLSITES`; update action-frontier expectations so no new action is silently unclassified and no formerly explicit-denied action changes classification accidentally.
+- [ ] Regenerate `docs/security/m15-authority-coverage.json` from `authority_coverage_snapshot()` and keep `test_checked_in_snapshot_matches_live_catalog_and_owners` passing; this also repairs the pre-existing baseline drift found before implementation.
 - [ ] Verify cross-owner requests, missing grants, wrong executable, public/Funnel parameters, altered port, forged route ownership, expired/replayed approval, and approval for a different request all deny in `test_tailscale_actions_require_exact_grant_owner_and_fresh_approval`.
 - [ ] Run `pytest -q test_tailscale_authority.py test_action_coverage.py test_security_contract.py`.
 
