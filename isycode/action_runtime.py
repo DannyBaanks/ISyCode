@@ -150,7 +150,7 @@ OWNER_ACTIONS = {
     "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}),
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
-    "mobile_host": frozenset({"mobile.host.start", "mobile.pair"}),
+    "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
 }
 
 
@@ -921,7 +921,7 @@ class MobileHostSystembility:
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
         del authority
-        if request.action_id not in {"mobile.host.start", "mobile.pair"}:
+        if request.action_id not in {"mobile.host.start", "mobile.pair", "mobile.pair.issue"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         if request.action_id == "mobile.host.start":
@@ -940,6 +940,17 @@ class MobileHostSystembility:
                      and 1 <= len(params["device_name"]) <= 96)
             return SystembilityResult(self.name, valid,
                                       "Pairing requires a verified one-use PIN and bounded device label")
+        if request.action_id == "mobile.pair.issue":
+            replaced = params.get("replaces_challenge")
+            valid = (request.target == "mobile-host"
+                     and set(params) == {"host", "replaces_challenge"}
+                     and params.get("host") == "127.0.0.1:8765"
+                     and isinstance(replaced, str)
+                     and (replaced == "none"
+                          or re.fullmatch(r"[0-9a-f]{64}", replaced) is not None))
+            return SystembilityResult(self.name, valid,
+                                      "A new PIN is issued only for the loopback host and bound "
+                                      "to the challenge it replaces")
         return SystembilityResult(self.name, False, "Mobile Host owner does not implement this action")
 
 

@@ -48,6 +48,8 @@ _ENTRIES = [
     ("mobile.host.stop", "Mobile Host", "Stop the local Mobile Host", "process", False),
     # A valid single-use PIN is the human-presence proof for this exchange.
     ("mobile.pair", "Mobile Host", "Pair a mobile device", "credential", False),
+    # Replacing the PIN is local and human-approved; it clears failed attempts.
+    ("mobile.pair.issue", "Mobile Host", "Issue a new one-use pairing PIN", "credential", True),
     ("mobile.session.read", "Mobile Host", "Read a remote session", "read", False),
     ("mobile.session.create", "Mobile Host", "Create a remote session", "external", True),
     ("mobile.session.cancel", "Mobile Host", "Cancel a remote turn", "external", True),

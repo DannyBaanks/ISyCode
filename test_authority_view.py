@@ -34,14 +34,16 @@ def test_disabled_grants_are_not_listed():
     assert other_saved_grants({"session.delete": {"enabled": False}}) == []
 
 
-def test_mobile_host_toggle_requires_both_scoped_grants_and_reports_partials():
+def test_mobile_host_toggle_requires_every_scoped_grant_and_reports_partials():
     start = {"enabled": True, "network_hosts": ["127.0.0.1:8765"]}
     pair = {"enabled": True, "targets": ["mobile-host"]}
-    assert mobile_host_enabled({"mobile.host.start": start, "mobile.pair": pair})
+    full = {"mobile.host.start": start, "mobile.pair": pair, "mobile.pair.issue": pair}
+    assert mobile_host_enabled(full)
+    assert not mobile_host_enabled({"mobile.host.start": start, "mobile.pair": pair})
     assert not mobile_host_enabled({"mobile.host.start": start})
     assert mobile_host_saved({"mobile.host.start": start})
     wrong_scope = {"enabled": True, "network_hosts": ["0.0.0.0:8765"]}
-    assert not mobile_host_enabled({"mobile.host.start": wrong_scope, "mobile.pair": pair})
+    assert not mobile_host_enabled({**full, "mobile.host.start": wrong_scope})
     assert not mobile_host_saved({})
 
 
@@ -57,13 +59,15 @@ def test_revoking_mobile_host_grants_makes_the_runtime_deny_start(tmp_path: Path
     gate = ProductActionGate(root, authority, owner_id="mobile_host")
 
     authority.set_grant("mobile.host.start", enabled=True, network_hosts=["127.0.0.1:8765"])
-    authority.set_grant("mobile.pair", enabled=True, targets=["mobile-host"])
+    for action in ("mobile.pair", "mobile.pair.issue"):
+        authority.set_grant(action, enabled=True, targets=["mobile-host"])
     assert gate.authorize(request, approvals=approvals,
                           approval=approvals.issue(request))[1].allowed
 
     # Same writes as TUIApp._change_mobile_host_grant(False).
     authority.set_grant("mobile.host.start", enabled=False, network_hosts=[])
-    authority.set_grant("mobile.pair", enabled=False, targets=[])
+    for action in ("mobile.pair", "mobile.pair.issue"):
+        authority.set_grant(action, enabled=False, targets=[])
     grants = authority.policy()["grants"]
     assert not mobile_host_enabled(grants) and not mobile_host_saved(grants)
     assert not gate.authorize(request, approvals=approvals,

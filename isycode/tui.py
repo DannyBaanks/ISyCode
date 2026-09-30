@@ -49,7 +49,7 @@ from isycode.action_runtime import (
 )
 from isycode.actions import ACTION_BY_ID
 from isycode.authority_view import (
-    MOBILE_HOST_ADDRESS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
+    MOBILE_HOST_ADDRESS, MOBILE_PAIR_ACTIONS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
     mobile_host_saved, other_saved_grants,
 )
 from isycode.action_audit import ActionAuditJournal
@@ -3121,21 +3121,55 @@ class TUIApp(App):
                 self._append("  Network grant could not be saved; access remains denied.", RED)
         self._open_authority_menu()
 
+    async def _issue_pairing_pin(self) -> None:
+        """Replace the pairing PIN only through the Mobile Host owner's gate."""
+        owner = self._mobile_host_owner
+        if owner is None or not self._mobile_host.status().alive:
+            self._append("  Start Mobile Host first; no PIN was issued.", YELLOW)
+            return
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            if (not mobile_host_enabled(authority.policy().get("grants", {}))
+                    and not await self._grant_mobile_host(authority)):
+                self._append("  Mobile Host grant cancelled; no PIN was issued.", MUTED)
+                return
+            request = owner.pin_request()
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  New PIN unavailable ({type(exc).__name__}); nothing changed.", RED)
+            return
+        if not await self.push_screen_wait(TailscaleConfirmScreen(
+                "Issue a new pairing PIN",
+                "Replace the current Mobile Host PIN, if any, and clear failed pairing attempts. "
+                "The new PIN works once, for 5 minutes, from any device that can reach this host, "
+                "including your tailnet through a saved private route.",
+                "Issue PIN")):
+            self._append("  New PIN cancelled; the current PIN is unchanged.", MUTED)
+            return
+        approval = self._action_approvals.issue(request, ttl_seconds=30)
+        issued, reason, pin = await asyncio.to_thread(owner.issue_pairing_pin, request, approval)
+        if issued and pin:
+            self._append(f"  New pairing PIN {pin} (expires in 5 minutes, one device).", GREEN)
+        else:
+            self._append(f"  New PIN denied · {reason[:180]}", YELLOW)
+        self._render_mobile_host_status()
+
     async def _grant_mobile_host(self, authority: WorkspaceAuthority) -> bool:
-        """Ask once, then save exactly the two scoped Mobile Host grants."""
+        """Ask once, then save exactly the scoped Mobile Host grants."""
         accepted = await self.push_screen_wait(TailscaleConfirmScreen(
             "Grant Mobile Host for this workspace",
-            f"Allow `mobile.host.start` only at {MOBILE_HOST_ADDRESS} and `mobile.pair` only for the "
-            "one-use Mobile Host pairing challenge. The listener binds loopback only; if a private "
+            f"Allow `mobile.host.start` only at {MOBILE_HOST_ADDRESS}, `mobile.pair` only for the "
+            "one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN "
+            "(each new PIN still asks first). The listener binds loopback only; if a private "
             "Tailscale route to it is enabled, tailnet devices can reach it through that route. "
             "Pair-issued tokens can read the runtime inventory, request runtime selection, and send "
             "heartbeats; they cannot read files, execute runtimes, or access sessions.",
-            "Grant these two actions"))
+            "Grant these actions"))
         if not accepted:
             return False
         authority.set_grant("mobile.host.start", enabled=True,
                             network_hosts=[MOBILE_HOST_ADDRESS])
-        authority.set_grant("mobile.pair", enabled=True, targets=[MOBILE_PAIR_TARGET])
+        for action in MOBILE_PAIR_ACTIONS:
+            authority.set_grant(action, enabled=True, targets=[MOBILE_PAIR_TARGET])
         return True
 
     async def _change_mobile_host_grant(self, enabled: bool) -> None:
@@ -3148,12 +3182,14 @@ class TUIApp(App):
                     self._append("  Mobile Host grant cancelled; nothing changed.", MUTED)
             elif await self.push_screen_wait(TailscaleConfirmScreen(
                     "Revoke Mobile Host for this workspace",
-                    "Remove the saved `mobile.host.start` and `mobile.pair` grants. New starts and "
-                    "new pairing are denied. A host already running keeps serving devices paired "
-                    "earlier until ISyCode exits; their tokens still expire within an hour.",
-                    "Revoke both grants")):
+                    "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` "
+                    "grants. New starts, new PINs and new pairing are denied. A host already "
+                    "running keeps serving devices paired earlier until ISyCode exits; their "
+                    "tokens still expire within an hour.",
+                    "Revoke Mobile Host grants")):
                 authority.set_grant("mobile.host.start", enabled=False, network_hosts=[])
-                authority.set_grant("mobile.pair", enabled=False, targets=[])
+                for action in MOBILE_PAIR_ACTIONS:
+                    authority.set_grant(action, enabled=False, targets=[])
                 self._append("  Mobile Host grants revoked for this workspace.", GREEN)
             else:
                 self._append("  Mobile Host grants unchanged.", MUTED)
@@ -3514,6 +3550,9 @@ class TUIApp(App):
             if pin:
                 entries.append(self._entry(f"Pairing PIN · {pin} · expires in 5 minutes",
                                            "info", "", "One device exchange; token expires in one hour."))
+            entries.append(self._entry(
+                "New pairing PIN · asks first", "mobile_host_new_pin", "",
+                "Replaces the current PIN and clears failed attempts. Needs the Mobile Host grant."))
             entries.append(self._entry("Refresh host status", "mobile_host_status_refresh", ""))
         else:
             entries.append(self._entry("Start Mobile Host · local approval required",
@@ -3939,6 +3978,9 @@ class TUIApp(App):
             return
         if kind == "mobile_host_start":
             self.run_worker(self._start_mobile_host(), exclusive=True, group="mobile-host")
+            return
+        if kind == "mobile_host_new_pin":
+            self.run_worker(self._issue_pairing_pin(), exclusive=True, group="mobile-host")
             return
         if kind == "settings_back":
             if self._menu_stack:

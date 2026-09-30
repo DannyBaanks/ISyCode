@@ -106,6 +106,7 @@ KNOWN_EFFECT_CALLSITES = (
     # The catalog action remains explicitly denied in Secure.
     ("mobile.host.stop", "MobileHostOwner.shutdown", "", "BLOCKED_BY_DESIGN"),
     ("mobile.pair", "MobileHostOwner.authorize_pair", "mobile_host", "COVERED"),
+    ("mobile.pair.issue", "MobileHostOwner.issue_pairing_pin", "mobile_host", "COVERED"),
     ("credentials.add", "ApiKeyStore.issue", "", "UNWIRED"),
     ("credentials.revoke", "ApiKeyStore.revoke", "", "UNWIRED"),
     ("bridge.connect", "BridgeClient.hello", "", "BLOCKED_BY_DESIGN"),
