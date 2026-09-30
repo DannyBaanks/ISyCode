@@ -75,7 +75,17 @@ El diseño y límites están en [fronteras de seguridad](docs/design/isysentinel
 
 ## Instalar y arrancar
 
-Requiere Python 3.10 o posterior. El TUI usa Textual y Rich; Pyright LSP y el broker Docker son integraciones opcionales.
+Instalar desde fuente requiere Python 3.10 o posterior. Los paquetes precompilados incluyen el runtime. El TUI usa Textual y Rich; Pyright LSP y el broker Docker son integraciones opcionales.
+
+Al publicar un tag `vX.Y.Z`, CI primero ejecuta la suite en Linux, Windows y macOS. Si pasa y coincide con la versión de `pyproject.toml`, deja un GitHub Release en borrador con estos artefactos y `SHA256SUMS`:
+
+- Windows x64: ejecutable de consola `.exe`.
+- Linux x64: AppImage y `.deb`, construidos sobre Ubuntu 22.04 (glibc 2.35 o posterior).
+- macOS ARM64: instalador `.pkg` y archivo `.tar.gz` con el ejecutable. Ambos quedan sin firma ni notarización de Apple; el `.pkg` puede mostrar avisos del sistema. Intel Mac no está incluido todavía.
+
+El Release queda en borrador para revisión y publicación manual. La TUI se abre desde una terminal; estos paquetes instalan el comando `isycode`, no una aplicación gráfica.
+
+Para instalar, Linux puede ejecutar el AppImage después de `chmod +x` o instalar el `.deb` con `sudo apt install ./archivo.deb`. En Windows, abre `isycode-*.exe` desde PowerShell o Terminal. En macOS, usa el `.pkg` o extrae el `.tar.gz` y coloca el ejecutable en una carpeta de tu `PATH`; los paquetes de macOS no están firmados ni notarizados y pueden mostrar avisos de Gatekeeper.
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git
