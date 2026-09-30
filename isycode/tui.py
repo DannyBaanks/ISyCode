@@ -57,6 +57,10 @@ from isycode.agent_loop import (
     AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, MAX_SUMMARY_CHARS, SUMMARY_MAX_TOKENS, AgentLimits,
     compact_turn, split_history, summary_messages, summary_system_message,
 )
+from isycode.prompt_expansion import (
+    MAX_MENTIONS, WORKSPACE_COMMANDS_DIR, attach_files, find_mentions, load_user_commands,
+    parse_command, read_result_text, render_command,
+)
 from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.git_owner import (
     GIT_COMMIT_TOOL, GIT_TOOL_NAMES, GIT_TOOLS, CommitPreview, GitOwner, git_executable,
@@ -5174,6 +5178,13 @@ class TUIApp(App):
         async def _help_cmd(app: "TUIApp", arg: str) -> None:
             for line in app._plugins.help_text():
                 app._append(line, MUTED)
+            custom = load_user_commands()
+            if custom:
+                app._append("  Your commands (~/.config/isycode/commands):", MUTED)
+                for command in custom.values():
+                    app._append(f"    /{command.name} — {command.description}", MUTED)
+            app._append(f"  Workspace commands live in {WORKSPACE_COMMANDS_DIR}/<name>.md; "
+                        "@path attaches a workspace file to your message.", MUTED)
 
         async def _readme_cmd(app: "TUIApp", arg: str) -> None:
             del arg
@@ -5482,6 +5493,8 @@ class TUIApp(App):
         if cmd is not None:
             label = "Planning · IsyMotron" if cmd.name == "plan" else f"Running /{cmd.name}"
             self._start_operation(cmd.handler(self, arg), label)
+        elif text.startswith("/"):
+            self._start_operation(self._run_custom_command(text), "Chat · working")
         else:
             self._start_operation(self._run_chat(text), "Chat · working")
 
@@ -5954,9 +5967,51 @@ class TUIApp(App):
         owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
         await self._summarize_older(provider, owner, older, recent)
 
+    async def _run_custom_command(self, text: str) -> None:
+        """Expand /name from the user's or the workspace's prompt files, else chat as typed."""
+        parts = text[1:].split(None, 1)
+        name = parts[0].lower() if parts else ""
+        arguments = parts[1] if len(parts) > 1 else ""
+        command = load_user_commands().get(name)
+        if command is None and parse_command(name, "x", "workspace") is not None:
+            owner = LocalWorkspaceReadOwner(self._workspace_root,
+                                            WorkspaceAuthority(self._workspace_root))
+            path = f"{WORKSPACE_COMMANDS_DIR}/{name}.md"
+            if (self._workspace_root / path).is_file():
+                outcome = await asyncio.to_thread(owner.execute, "workspace.files.read",
+                                                  {"path": path})
+                if outcome.decision == "ALLOW":
+                    command = parse_command(name, read_result_text(outcome.text), "workspace")
+                else:
+                    self._append(f"  /{name} found in {WORKSPACE_COMMANDS_DIR} but it could not be "
+                                 f"read · {outcome.reason[:160]}", YELLOW)
+        if command is None:
+            await self._run_chat(text)
+            return
+        self._append(f"  /{name} · {command.source} prompt · {command.description}", MUTED)
+        await self._run_chat(render_command(command, arguments))
+
+    async def _expand_mentions(self, text: str) -> str:
+        """Attach @mentioned workspace files, each read through the workspace read owner."""
+        mentions = [path for path in find_mentions(text)
+                    if (self._workspace_root / path).is_file()]
+        if not mentions:
+            return text
+        owner = LocalWorkspaceReadOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+        files = []
+        for path in mentions[:MAX_MENTIONS]:
+            outcome = await asyncio.to_thread(owner.execute, "workspace.files.read", {"path": path})
+            if outcome.decision == "ALLOW" and outcome.receipt is not None:
+                files.append((path, read_result_text(outcome.text)))
+                self._append(f"  Attached @{path} · receipt {outcome.receipt.receipt_id}", MUTED)
+            else:
+                self._append(f"  @{path} not attached · {outcome.reason[:160]}", YELLOW)
+        return attach_files(text, files)
+
     async def _run_chat(self, text: str) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
         self._chat_turn_task = asyncio.current_task()
+        text = await self._expand_mentions(text)
         self._history.append({"role": "user", "content": text})
         self._persist_chat_message("user", text)
         workspace_tools_granted = self._workspace_chat_tools_enabled()
