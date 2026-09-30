@@ -5,7 +5,12 @@ import time
 
 import pytest
 
-from isycode.mobile_host import ApiKeyStore, PAIR_SCOPES
+import asyncio
+import urllib.request
+
+from isycode.approvals import ActionApprovalStore
+from isycode.mobile_host import ApiKeyStore, MobileHostOwner, MobileHostStatus, PAIR_SCOPES
+from isycode.workspace_authority import WorkspaceAuthority
 
 
 def test_secure_mobile_credentials_cannot_be_issued_with_unimplemented_scopes(tmp_path):
@@ -69,3 +74,127 @@ def test_secure_mobile_key_expiry_is_enforced_at_authentication(tmp_path, monkey
     now = expires_at + 1
 
     assert store.authenticate(raw_key) is None
+
+
+def test_mobile_host_owner_requires_scoped_grant_and_single_use_approval(tmp_path):
+    class FakeHost:
+        bind = "127.0.0.1"
+        port = 8765
+        _pair_authorizer = None
+
+        async def start(self):
+            return MobileHostStatus("ready", self.bind, self.port, False, None, ())
+
+        async def stop(self):
+            return None
+
+    authority = WorkspaceAuthority(tmp_path)
+    approvals = ActionApprovalStore()
+    owner = MobileHostOwner(tmp_path, authority, approvals, host=FakeHost())
+    request = owner.start_request()
+    confirmation = approvals.issue(request, ttl_seconds=30)
+
+    allowed, _ = asyncio.run(owner.authorize_and_launch(confirmation))
+    assert allowed is False
+
+    authority.set_grant("mobile.host.start", enabled=True,
+                        network_hosts=["127.0.0.1:8765"])
+    authority.set_grant("mobile.pair", enabled=True, targets=["mobile-host"])
+    confirmation = approvals.issue(request, ttl_seconds=30)
+    allowed, _ = asyncio.run(owner.authorize_and_launch(confirmation))
+
+    assert allowed is True
+    assert owner.authorize_pair("a" * 64, "Test phone") is True
+    assert owner.authorize_pair("not-a-digest", "Test phone") is False
+
+
+def test_mobile_host_owner_rejects_non_loopback_configuration(tmp_path):
+    class FakeHost:
+        bind = "0.0.0.0"
+        port = 8765
+        _pair_authorizer = None
+
+        async def start(self):
+            raise AssertionError("unsafe configuration must fail before start")
+
+    authority = WorkspaceAuthority(tmp_path)
+    owner = MobileHostOwner(tmp_path, authority, ActionApprovalStore(), host=FakeHost())
+    request = owner.start_request()
+    authority.set_grant("mobile.host.start", enabled=True,
+                        network_hosts=["127.0.0.1:8765"])
+    approval = ActionApprovalStore().issue(request, ttl_seconds=30)
+
+    allowed, reason = asyncio.run(owner.authorize_and_launch(approval))
+
+    assert allowed is False
+    assert "loopback" in reason
+
+
+def test_mobile_host_start_receipt_failure_stops_listener(tmp_path, monkeypatch):
+    class FakeHost:
+        bind = "127.0.0.1"
+        port = 8765
+        stopped = False
+
+        async def start(self):
+            return MobileHostStatus("ready", self.bind, self.port, False, None, ())
+
+        async def stop(self):
+            self.stopped = True
+
+    authority = WorkspaceAuthority(tmp_path)
+    authority.set_grant("mobile.host.start", enabled=True,
+                        network_hosts=["127.0.0.1:8765"])
+    approvals = ActionApprovalStore()
+    host = FakeHost()
+    owner = MobileHostOwner(tmp_path, authority, approvals, host=host)
+    monkeypatch.setattr(owner.gate, "persist_receipt", lambda *_: False)
+    approval = approvals.issue(owner.start_request(), ttl_seconds=30)
+
+    allowed, reason = asyncio.run(owner.authorize_and_launch(approval))
+
+    assert allowed is False
+    assert "receipt" in reason
+    assert host.stopped is True
+
+
+def test_mobile_host_prefixed_health_and_pair_exchange_are_loopback_only(
+        tmp_path, monkeypatch):
+    import json
+    from isycode.mobile_host import MobileHost
+
+    monkeypatch.setenv("ISYCODE_MOBILE_HOST_BIND", "127.0.0.1")
+    monkeypatch.setenv("ISYCODE_MOBILE_HOST_PORT", "0")
+    authorizations = []
+    host = MobileHost(key_store=ApiKeyStore(tmp_path / "host.sqlite3"),
+                      pair_authorizer=lambda digest, name: authorizations.append(
+                          (digest, name)) or True)
+    host._pair_recorder = lambda *args: True
+
+    async def scenario():
+        status = await host.start()
+        try:
+            url = f"http://127.0.0.1:{status.port}/isycode/v1/health"
+            response = await asyncio.to_thread(urllib.request.urlopen, url)
+            assert response.status == 200
+            assert json.loads(response.read()) == {
+                "service": "isycode-mobile-host", "version": 1, "state": "ready"}
+
+            code = host.pairing_code_for_local_settings()
+            body = json.dumps({"code": code, "device_name": "Disposable phone"}).encode()
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{status.port}/isycode/v1/pair/exchange", data=body,
+                headers={"Content-Type": "application/json"})
+            paired = await asyncio.to_thread(urllib.request.urlopen, request)
+            result = json.loads(paired.read())
+            assert paired.status == 201
+            assert set(result["scopes"]) == set(PAIR_SCOPES)
+            assert len(authorizations) == 1
+            assert len(authorizations[0][0]) == 64
+            assert authorizations[0][0] != hashlib.sha256(code.encode()).hexdigest()
+            assert authorizations[0][1] == "Disposable phone"
+            assert host.pairing_code_for_local_settings() is None
+        finally:
+            await host.stop()
+
+    asyncio.run(scenario())

@@ -46,7 +46,8 @@ _ENTRIES = [
     ("broker.remove", "Semantic broker", "Remove a broker container/image", "destructive", True),
     ("mobile.host.start", "Mobile Host", "Start the local Mobile Host", "network", True),
     ("mobile.host.stop", "Mobile Host", "Stop the local Mobile Host", "process", False),
-    ("mobile.pair", "Mobile Host", "Pair a mobile device", "credential", True),
+    # A valid single-use PIN is the human-presence proof for this exchange.
+    ("mobile.pair", "Mobile Host", "Pair a mobile device", "credential", False),
     ("mobile.session.read", "Mobile Host", "Read a remote session", "read", False),
     ("mobile.session.create", "Mobile Host", "Create a remote session", "external", True),
     ("mobile.session.cancel", "Mobile Host", "Cancel a remote turn", "external", True),

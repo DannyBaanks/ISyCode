@@ -101,9 +101,11 @@ KNOWN_EFFECT_CALLSITES = (
     ("broker.start", "BrokerProvisionOwner.provision", "broker_provision", "COVERED_VARIANT"),
     ("broker.start", "BrokerManagementOwner.perform", "broker_management", "COVERED_VARIANT"),
     ("session.delete", "SessionDeleteOwner.delete", "session_delete", "COVERED"),
-    ("mobile.host.start", "MobileHost.start", "", "UNWIRED"),
-    ("mobile.host.stop", "MobileHost.stop", "", "UNWIRED"),
-    ("mobile.pair", "MobileHost._pair", "", "UNWIRED"),
+    ("mobile.host.start", "MobileHostOwner.authorize_and_launch", "mobile_host", "COVERED"),
+    # TUI shutdown is lifecycle cleanup, not a user-authorized stop action.
+    # The catalog action remains explicitly denied in Secure.
+    ("mobile.host.stop", "MobileHostOwner.shutdown", "", "BLOCKED_BY_DESIGN"),
+    ("mobile.pair", "MobileHostOwner.authorize_pair", "mobile_host", "COVERED"),
     ("credentials.add", "ApiKeyStore.issue", "", "UNWIRED"),
     ("credentials.revoke", "ApiKeyStore.revoke", "", "UNWIRED"),
     ("bridge.connect", "BridgeClient.hello", "", "BLOCKED_BY_DESIGN"),

@@ -49,6 +49,13 @@ def replies(status=STATUS, serve=EMPTY_SERVE, node=EMPTY_NODE, version="1.84.0")
             ("serve", "status", "--json"): (0, json.dumps(node), "")}
 
 
+def test_health_probe_allows_only_registered_local_health_paths():
+    for path in ("/health", "/v1/health", "/isycode/v1/health"):
+        TailscaleAdapter(gateway_health_path=path)
+    with pytest.raises(ValueError, match="health path"):
+        TailscaleAdapter(gateway_health_path="/untrusted")
+
+
 def test_missing_cli_is_structured_and_runs_nothing(monkeypatch):
     monkeypatch.setattr("isycode.tailscale.shutil.which", lambda name: None)
     snap = TailscaleAdapter(runner=lambda *a, **k: pytest.fail("runner called"),

@@ -43,6 +43,35 @@ def test_package_login_and_serve_changes_need_ui_confirmation_and_registered_own
         assert "to_thread" in calls
 
 
+def test_tailscale_serve_targets_mobile_host_and_mounted_health_path():
+    method = _app_methods()["_run_tailscale_serve"]
+    adapter = next(node for node in ast.walk(method)
+                   if isinstance(node, ast.Call)
+                   and isinstance(node.func, ast.Name)
+                   and node.func.id == "TailscaleAdapter")
+    kwargs = {item.arg: item.value for item in adapter.keywords}
+    assert ast.literal_eval(kwargs["gateway_url"]) == "http://127.0.0.1:8765"
+    assert ast.literal_eval(kwargs["gateway_port"]) == 8765
+    assert ast.literal_eval(kwargs["gateway_health_path"]) == "/isycode/v1/health"
+
+    owner = next(node for node in ast.walk(method)
+                 if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Name)
+                 and node.func.id == "TailscaleServeOwner")
+    owner_kwargs = {item.arg: item.value for item in owner.keywords}
+    assert isinstance(owner_kwargs["route_id"], ast.Name)
+    assert owner_kwargs["route_id"].id == "MOBILE_HOST_ROUTE_ID"
+    assert ast.literal_eval(owner_kwargs["service_label"]) == "Mobile Host"
+
+
+def test_serve_failure_reports_owner_validation_reason_without_command_output():
+    method = _app_methods()["_run_tailscale_serve"]
+    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), method)
+    assert "isinstance(exc, ValueError)" in source
+    assert "str(exc)[:180]" in source
+    assert "No route change was approved" in source
+
+
 def test_tui_does_not_run_tailscale_or_package_commands_directly():
     source = SOURCE.read_text(encoding="utf-8")
     methods = _app_methods()

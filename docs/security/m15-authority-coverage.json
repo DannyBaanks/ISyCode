@@ -455,13 +455,17 @@
     {
       "action": "mobile.host.start",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "network",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "mobile_host"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "MobileHostBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -478,14 +482,18 @@
     },
     {
       "action": "mobile.pair",
-      "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "credential",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "mobile_host"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "MobileHostBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -980,21 +988,21 @@
     },
     {
       "action": "mobile.host.start",
-      "callsite": "MobileHost.start",
-      "owner": null,
-      "status": "UNWIRED"
+      "callsite": "MobileHostOwner.authorize_and_launch",
+      "owner": "mobile_host",
+      "status": "COVERED"
     },
     {
       "action": "mobile.host.stop",
-      "callsite": "MobileHost.stop",
+      "callsite": "MobileHostOwner.shutdown",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "mobile.pair",
-      "callsite": "MobileHost._pair",
-      "owner": null,
-      "status": "UNWIRED"
+      "callsite": "MobileHostOwner.authorize_pair",
+      "owner": "mobile_host",
+      "status": "COVERED"
     },
     {
       "action": "credentials.add",
@@ -1176,7 +1184,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1343,
+      "line": 1379,
       "owner": "workspace_read"
     },
     {
@@ -1190,21 +1198,21 @@
       "action": null,
       "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "file": "isycode/tailscale_serve.py",
-      "line": 154,
+      "line": 164,
       "owner": "tailscale_serve"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 4640,
+      "line": 4659,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4228,
+      "line": 4247,
       "owner": "remote_catalog"
     }
   ],
@@ -1216,49 +1224,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1215,
+      "line": 1251,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1343,
+      "line": 1379,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 1004,
+      "line": 1040,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1068,
+      "line": 1104,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1138,
+      "line": 1174,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1224,
+      "line": 1260,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1285,
+      "line": 1321,
       "owner": "provider_network"
     },
     {
@@ -1302,6 +1310,27 @@
       "file": "isycode/broker.py",
       "line": 748,
       "owner": "broker_management"
+    },
+    {
+      "action": "mobile.host.start",
+      "callable": "isycode.mobile_host.MobileHostOwner.start_request",
+      "file": "isycode/mobile_host.py",
+      "line": 471,
+      "owner": "mobile_host"
+    },
+    {
+      "action": "mobile.pair",
+      "callable": "isycode.mobile_host.MobileHostOwner.authorize_pair",
+      "file": "isycode/mobile_host.py",
+      "line": 507,
+      "owner": "mobile_host"
+    },
+    {
+      "action": "mobile.pair",
+      "callable": "isycode.mobile_host.MobileHostOwner.record_pair",
+      "file": "isycode/mobile_host.py",
+      "line": 515,
+      "owner": "mobile_host"
     },
     {
       "action": "tailscale.install.prepare",
@@ -1349,42 +1378,42 @@
       "action": null,
       "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "file": "isycode/tailscale_serve.py",
-      "line": 154,
+      "line": 164,
       "owner": "tailscale_serve"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 4640,
+      "line": 4659,
       "owner": "workspace_read"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "file": "isycode/tui.py",
-      "line": 3137,
+      "line": 3121,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "file": "isycode/tui.py",
-      "line": 3189,
+      "line": 3173,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "file": "isycode/tui.py",
-      "line": 3349,
+      "line": 3333,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4228,
+      "line": 4247,
       "owner": "remote_catalog"
     }
   ],
@@ -1395,9 +1424,9 @@
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "effectful": 48,
-    "explicit_deny": 34,
+    "explicit_deny": 32,
     "owner_shared_read": 1,
-    "owner_valid": 24,
+    "owner_valid": 26,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

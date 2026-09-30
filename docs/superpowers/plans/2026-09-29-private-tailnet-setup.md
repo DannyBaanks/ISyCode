@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an optional Settings wizard that lets a user inspect, install, log in to Tailscale, and expose only the local ISyCo Gateway through private tailnet Serve, with each system mutation explicitly previewed and approved.
+**Goal:** Add an optional Settings wizard that lets a user inspect, install, log in to Tailscale, and expose the local ISyCode Mobile Host through private tailnet Serve, with each system mutation explicitly previewed and approved.
 
 **Architecture:** Keep Tailscale as an optional local integration. A read adapter reports bounded structured state. Separate execution owners perform a fixed package install, login, and exact private Serve mapping operations. Every action is registered in `ACTION_CATALOG`, Workspace Authority, IsySentinel, owner coverage, and the durable receipt journal. The TUI sequences the owners and issues a one-use approval only after showing the exact operation. A private state record tracks only the mapping ISyCode created; live Tailscale state remains the source of truth.
 
@@ -10,11 +10,17 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-29-private-tailnet-setup-design.md`
 
+**Scope update (2026-09-29):** the original plan targeted the Gateway. Danny
+later asked to use ISyCode as the Mobile Host substrate, so the TUI now targets
+the explicitly started Mobile Host on `127.0.0.1:8765`. The generic Serve
+owner still supports separate route identities. Do not infer remote reachability
+from offline owner tests; the second-device tailnet witness remains pending.
+
 ## Global Constraints
 
 - Preserve all existing dirty/uncommitted work. Do not reset, stash, or reformat unrelated files.
 - `.isyroot` remains an identity boundary, never a filesystem or network grant. Do not add Tailscale state, tokens, or receipts to the workspace or Bridge.
-- The Gateway remains bound to `127.0.0.1`; only private Tailscale Serve may proxy to its existing loopback port. Funnel, public tunnels, public listeners, and automatic Mobile Host startup are out of scope.
+- Mobile Host remains bound to `127.0.0.1:8765`; only private Tailscale Serve may proxy to it. Funnel, public tunnels, public listeners, and automatic host startup are out of scope.
 - No `shell=True`, shell command strings, `curl | sh`, reusable auth keys, password prompts, OAuth-token persistence, or arbitrary package names. Only fixed, typed arguments reach subprocesses.
 - A discovered executable or installed dependency is not permission. Every protected read or mutation must pass its exact registered owner, explicit workspace action grant, all applicable Systembilities, and a request-bound one-use approval for actions marked approval-required.
 - Never overwrite or reset an existing Serve configuration. Enable/disable only an ISyCode-owned mapping whose identity can be proven; otherwise show a conflict and fail closed.
@@ -27,7 +33,7 @@
 1. **No mutation on startup, preflight, or cancel.** Covered by `test_inspect_runs_read_commands_only` in Task 1 and `test_tui_remote_access_does_not_execute_on_open_or_cancel` in Task 7.
 2. **No arbitrary command or unverified package source.** Covered by `test_package_owner_accepts_only_official_ubuntu_debian_recipe` and `test_runner_never_uses_shell_or_dynamic_arguments` in Task 4.
 3. **No implicit authority or stale approval.** Covered by `test_tailscale_actions_require_exact_grant_owner_and_fresh_approval` in Task 3 and `test_approval_is_bound_to_exact_serve_delta` in Task 6.
-4. **Never expose Gateway publicly or disturb another Serve service.** Covered by `test_serve_preview_is_private_loopback_only` and `test_enable_disable_preserve_unowned_routes` in Task 6.
+4. **Never expose Mobile Host publicly or disturb another Serve service.** Covered by `test_serve_preview_is_private_loopback_only` and `test_enable_disable_preserve_unowned_routes` in Task 6.
 5. **Persist no login secrets and redact process output.** Covered by `test_login_url_and_cli_output_are_redacted_from_state_and_receipts` in Task 5 and `test_tailscale_state_is_private_and_contains_no_auth_material` in Task 2.
 
 ---
@@ -42,7 +48,7 @@
 - [ ] Define immutable records `TailscaleSnapshot`, `ServeRoute`, and `TailscaleCommandResult`; define `TailscaleAdapter(runner=..., platform=..., gateway_probe=...)` with the read-only method `inspect() -> TailscaleSnapshot`. Keep preview generation in the Serve owner added in Task 6.
 - [ ] Restrict discovery to fixed executable candidates resolved with `shutil.which`, then canonicalize and record the resolved executable identity. Invoke only fixed read commands (`tailscale status --json`, `tailscale serve get-config --all`, and `tailscale serve status --json` when supported) using argv arrays, a minimal environment, and bounded timeout/output. Reconcile both Serve views; do not infer route ownership from `serve status --json` alone because that output does not provide the complete configuration needed to preserve unrelated routes.
 - [ ] Parse JSON defensively with size/type limits. Represent unsupported CLI versions and non-JSON output as explicit unavailable/conflict states; never guess that Serve is disabled when it cannot be inspected.
-- [ ] Probe only the configured local Gateway health endpoint on loopback. Reject any non-loopback Gateway bind or any port other than the configured Gateway port.
+- [ ] Probe only the configured local Mobile Host health endpoint on loopback. Reject any non-loopback bind or any port other than the fixed Mobile Host port.
 - [ ] Run `pytest -q test_tailscale.py`; all cases pass without a real Tailscale daemon or network.
 
 ## Task 2: Add private, non-secret ownership state for the ISyCode Serve route

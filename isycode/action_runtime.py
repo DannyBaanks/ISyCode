@@ -69,7 +69,7 @@ EXPLICIT_DENY_ACTIONS = frozenset({
     "workspace.files.write", "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
     "credentials.add", "credentials.use", "credentials.revoke", "lsp.stop",
-    "mobile.host.start", "mobile.host.stop", "mobile.pair",
+    "mobile.host.stop",
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
     "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
@@ -127,6 +127,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "tailscale_login": frozenset({"TailscaleExecutableBoundary"}),
     "tailscale_serve": frozenset({"TailscaleExecutableBoundary", "TailscaleGatewayBoundary",
                                    "TailscalePrivateServeBoundary"}),
+    "mobile_host": frozenset({"MobileHostBoundary"}),
 }
 
 
@@ -149,6 +150,7 @@ OWNER_ACTIONS = {
     "tailscale_package_install": frozenset({"tailscale.install.prepare", "tailscale.install.stage", "tailscale.install"}),
     "tailscale_login": frozenset({"tailscale.login"}),
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
+    "mobile_host": frozenset({"mobile.host.start", "mobile.pair"}),
 }
 
 
@@ -283,6 +285,9 @@ class RemoteReadSystembility:
         spec = ACTION_BY_ID.get(request.action_id)
         if spec is None or not spec.effect.startswith("network") or request.action_id == "provider.request":
             return SystembilityResult(self.name, True, "not applicable to this action")
+        if request.action_id == "mobile.host.start":
+            return SystembilityResult(self.name, True,
+                                      "local listener is checked by the Mobile Host boundary")
         if request.action_id not in {"gateway.files.read", "gateway.semantic.read",
                                      "mcp.discover", "catalog.external.read"}:
             if request.action_id == "mcp.invoke":
@@ -908,6 +913,36 @@ class TailscalePrivateServeSystembility:
                                   "private Serve route must be free or match live and owned identity")
 
 
+class MobileHostSystembility:
+    """Keep mobile pairing bound to the loopback host and its one-use PIN."""
+
+    name = "MobileHostBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        del authority
+        if request.action_id not in {"mobile.host.start", "mobile.pair"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        if request.action_id == "mobile.host.start":
+            valid = (request.target == "127.0.0.1:8765"
+                     and params == {"bind": "127.0.0.1", "port": 8765,
+                                    "transport": "loopback"})
+            return SystembilityResult(self.name, valid,
+                                      "Mobile Host is restricted to loopback on port 8765")
+        if request.action_id == "mobile.pair":
+            challenge_id = params.get("challenge_id")
+            valid = (request.target == "mobile-host"
+                     and set(params) == {"challenge_id", "device_name"}
+                     and isinstance(challenge_id, str)
+                     and re.fullmatch(r"[0-9a-f]{64}", challenge_id) is not None
+                     and isinstance(params.get("device_name"), str)
+                     and 1 <= len(params["device_name"]) <= 96)
+            return SystembilityResult(self.name, valid,
+                                      "Pairing requires a verified one-use PIN and bounded device label")
+        return SystembilityResult(self.name, False, "Mobile Host owner does not implement this action")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
@@ -959,6 +994,7 @@ class ProductActionGate:
             TailscalePackageSystembility(tailscale_facts),
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
+            MobileHostSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
