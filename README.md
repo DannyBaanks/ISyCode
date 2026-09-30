@@ -98,6 +98,18 @@ isycode
 
 En el primer arranque, se puede marcar el directorio como workspace recurrente. Aceptar crea un `.isyroot` vacío; rechazar mantiene la ejecución temporal. Las conversaciones recurrentes se guardan en `~/.local/state/isycode/isyrcodesessions/` o bajo `$XDG_STATE_HOME`.
 
+### Pruebas
+
+```bash
+python -m pytest -q
+```
+
+Las pruebas contra un ISyCo Gateway vivo son opt-in porque hablan con un servicio real, y `test_gateway_write_file` escribe y borra un archivo en él. Con el Gateway corriendo:
+
+```bash
+ISYCODE_LIVE_GATEWAY=1 python -m pytest -q test_gateway.py
+```
+
 ## Providers
 
 Selecciona un provider desde **Providers** o configura `ISYCODE_PROVIDER` y `ISYCODE_MODEL`. Variables de credencial aceptadas:
