@@ -114,8 +114,9 @@ def test_limits_and_text_only(writer):
     (root / "src" / "blob.bin").write_bytes(b"\xff\xfe\x00binary")
     with pytest.raises(ValueError, match="UTF-8"):
         owner.preview("src/blob.bin", "text\n")
-    with pytest.raises(FileNotFoundError):
-        owner.preview("missing/dir/file.txt", "x\n")
+    new_folder_preview = owner.preview("missing/dir/file.txt", "x\n")
+    assert new_folder_preview.request.parameters["new_folders"] == ("missing", "missing/dir")
+    assert not (root / "missing").exists()
     with pytest.raises(ValueError, match="already has"):
         owner.preview("src/app.py", "print('hi')\n")
 
@@ -156,3 +157,93 @@ def test_write_grant_outside_the_granted_prefix_is_denied(writer):
     preview = owner.preview("docs/readme.md", "# hi\n")
     assert owner.apply(preview, approvals.issue(preview.request)).decision == "DENY"
     assert not (root / "docs" / "readme.md").exists()
+
+
+# ── fragment edits, new folders and undo ──
+
+def test_fragment_edit_replaces_exactly_one_occurrence(writer):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    (root / "src" / "app.py").write_text("a = 1\nb = 2\na = 1\n")
+    with pytest.raises(ValueError, match="appears 2 times"):
+        owner.preview_edit("src/app.py", "a = 1", "a = 3")
+    with pytest.raises(ValueError, match="not found"):
+        owner.preview_edit("src/app.py", "zzz", "y")
+    with pytest.raises(ValueError, match="does not exist"):
+        owner.preview_edit("src/none.py", "a", "b")
+    preview = owner.preview_edit("src/app.py", "b = 2", "b = 20")
+    assert "-b = 2" in preview.diff and "+b = 20" in preview.diff
+    assert owner.apply(preview, approvals.issue(preview.request)).decision == "ALLOW"
+    assert (root / "src" / "app.py").read_text() == "a = 1\nb = 20\na = 1\n"
+    everywhere = owner.preview_edit("src/app.py", "a = 1", "a = 9", replace_all=True)
+    assert owner.apply(everywhere, approvals.issue(everywhere.request)).decision == "ALLOW"
+    assert (root / "src" / "app.py").read_text() == "a = 9\nb = 20\na = 9\n"
+
+
+def test_approved_write_creates_only_its_own_new_folders(writer):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    preview = owner.preview("pkg/sub/mod.py", "x = 1\n")
+    assert owner.apply(preview, approvals.issue(preview.request)).decision == "ALLOW"
+    assert (root / "pkg" / "sub" / "mod.py").read_text() == "x = 1\n"
+
+
+@pytest.mark.parametrize("folders", [("elsewhere",), (".git",), ("pkg", "pkg/sub", "x/y")])
+def test_sentinel_refuses_folders_that_are_not_the_file_parents(writer, folders):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    preview = owner.preview("pkg/sub/mod.py", "x = 1\n")
+    forged = ActionRequest("workspace.files.write", root, preview.request.target,
+                           {**preview.request.parameters, "new_folders": list(folders)},
+                           execution_owner="workspace_write")
+    gate = ProductActionGate(root, authority, owner_id="workspace_write")
+    assert not gate.authorize(forged, approvals=approvals,
+                              approval=approvals.issue(forged))[1].allowed
+
+
+def test_undo_restores_the_previous_content_with_its_own_approval(writer):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    authority.set_grant("workspace.files.restore", enabled=True, path_prefixes=[root])
+    change = owner.preview("src/app.py", "x = 2\n")
+    assert owner.apply(change, approvals.issue(change.request)).decision == "ALLOW"
+    undo = owner.preview_undo()
+    assert undo.is_undo and "-x = 2" in undo.diff and "+print('hi')" in undo.diff
+    assert owner.apply(undo, None).decision == "DENY"
+    assert owner.apply(undo, approvals.issue(undo.request)).decision == "ALLOW"
+    assert (root / "src" / "app.py").read_text() == "print('hi')\n"
+    with pytest.raises(ValueError, match="no ISyCode change"):
+        owner.preview_undo()
+
+
+def test_undo_of_a_created_file_removes_it_only_if_unchanged(writer):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    authority.set_grant("workspace.files.restore", enabled=True, path_prefixes=[root])
+    create = owner.preview("src/new.py", "y = 1\n")
+    assert owner.apply(create, approvals.issue(create.request)).decision == "ALLOW"
+    undo = owner.preview_undo()
+    assert undo.removes and undo.diff.endswith("+++ /dev/null\n@@ -1 +0,0 @@\n-y = 1\n")
+    assert owner.apply(undo, approvals.issue(undo.request)).decision == "ALLOW"
+    assert not (root / "src" / "new.py").exists()
+
+
+def test_undo_refuses_when_the_file_was_edited_afterwards(writer):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    authority.set_grant("workspace.files.restore", enabled=True, path_prefixes=[root])
+    change = owner.preview("src/app.py", "x = 2\n")
+    assert owner.apply(change, approvals.issue(change.request)).decision == "ALLOW"
+    (root / "src" / "app.py").write_text("my own edit\n")
+    with pytest.raises(ValueError, match="changed after"):
+        owner.preview_undo()
+    assert (root / "src" / "app.py").read_text() == "my own edit\n"
+
+
+def test_checkpoints_live_outside_the_workspace(writer, tmp_path):
+    owner, authority, approvals, root = writer
+    grant(authority, root)
+    change = owner.preview("src/app.py", "x = 2\n")
+    owner.apply(change, approvals.issue(change.request))
+    assert owner.checkpoints.directory.resolve().is_relative_to((tmp_path / "state").resolve())
+    assert not list(root.rglob("ckpt_*"))

@@ -24,7 +24,7 @@ def _segment(name):
 def test_write_tool_is_offered_only_when_the_write_grant_is_on():
     run_chat = _segment("_run_chat")
     assert "write_active = tools_active and self._workspace_write_tool_enabled()" in run_chat
-    assert "CHAT_WORKSPACE_TOOLS + [WRITE_TOOL] if write_active" in run_chat
+    assert "CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active" in run_chat
     assert "tools=chat_tools" in run_chat
 
 

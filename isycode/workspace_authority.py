@@ -31,7 +31,7 @@ MODES = frozenset({"security", "classic"})
 # still needs an explicit grant, and explicitly denied actions stay denied.
 CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.files.list", "workspace.files.read", "workspace.files.search",
-    "workspace.context.inject", "workspace.files.write",
+    "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
 })
 CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})

@@ -38,7 +38,7 @@ def test_package_login_and_serve_changes_need_ui_confirmation_and_registered_own
     ):
         calls = _calls(methods[name])
         assert owner in calls
-        assert "push_screen_wait" in calls
+        assert "_await_screen" in calls
         assert "issue" in calls
         assert "to_thread" in calls
 
@@ -88,7 +88,7 @@ def test_authority_grant_is_separately_confirmed_and_narrowly_scoped():
     methods = _app_methods()
     calls = _calls(methods["_change_tailscale_grant"])
     source_text = SOURCE.read_text(encoding="utf-8")
-    assert "push_screen_wait" in calls
+    assert "_await_screen" in calls
     assert "set_grant" in calls
     assert "executables" in source_text
     assert "one-use approval" in source_text
@@ -97,7 +97,7 @@ def test_authority_grant_is_separately_confirmed_and_narrowly_scoped():
 def test_manual_path_is_documented_without_starting_tailscale():
     methods = _app_methods()
     calls = _calls(methods["_show_tailscale_manual_steps"])
-    assert "push_screen_wait" in calls
+    assert "_await_screen" in calls
     assert "tailscale.com/docs/install/linux" in SOURCE.read_text(encoding="utf-8")
     assert "tailscale" not in calls
 
