@@ -121,7 +121,9 @@ from isycode.workspace import IsyMotronWorkspace, WorkspaceUnavailable
 from isycode.openisy_client import OpenIsyClient
 from isycode.runtime import AuthorityContextChanged, IsyMotronRuntime
 from isycode.mobile_host import MobileHost, MobileHostOwner
-from isycode.tailscale import DEFAULT_GATEWAY_PORT, TailscaleAdapter, TailscaleSnapshot
+from isycode.tailscale import (
+    DEFAULT_GATEWAY_PORT, LINUX_OPERATOR_HINT, TailscaleAdapter, TailscaleSnapshot,
+)
 from isycode.tailscale_read import TailscaleReadOwner
 from isycode.tailscale_login import TailscaleLoginOwner
 from isycode.tailscale_install import TailscalePackageInstallOwner
@@ -2757,6 +2759,8 @@ class TUIApp(App):
             self._append(f"  Official Tailscale login link: {status.login_url}", CYAN)
         self._append(f"  Tailscale login · {status.state} · {status.reason}",
                      GREEN if status.state == "signed_in" else YELLOW)
+        if status.state == "failed" and sys.platform == "linux":
+            self._append(f"  {LINUX_OPERATOR_HINT}", MUTED)
         if status.state != "pending":
             self._tailscale_login_owner = None
             self._tailscale_login_attempt = None
@@ -2795,6 +2799,8 @@ class TUIApp(App):
             outcome = await asyncio.to_thread(operation, preview, approval)
             self._append(f"  Tailscale Serve · {outcome.decision} · {outcome.text}",
                          GREEN if outcome.decision == "ALLOW" else YELLOW)
+            if outcome.decision in {"ERROR", "NOT_VERIFIABLE"} and sys.platform == "linux":
+                self._append(f"  {LINUX_OPERATOR_HINT}", MUTED)
             if outcome.receipt:
                 self._append(f"  Receipt · {outcome.receipt.receipt_id}", MUTED)
             self._open_private_access_menu()
