@@ -73,7 +73,7 @@ MAX_SCAN_ENTRIES = 6_000
 EXPLICIT_DENY_ACTIONS = frozenset({
     "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
-    "credentials.add", "credentials.use", "credentials.revoke", "lsp.stop",
+    "credentials.use", "lsp.stop",
     "mobile.host.stop",
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
@@ -120,6 +120,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
     "chat_sessions": frozenset({"SessionStoreBoundary"}),
+    "credentials": frozenset({"CredentialBoundary"}),
     "gateway_mcp": frozenset({"MCPInvocationBoundary"}),
     "gateway_semantic": frozenset({"GatewaySemanticBoundary"}),
     "lsp_symbols": frozenset({"WorkspaceReadBoundary", "LSPProcessBoundary"}),
@@ -147,6 +148,7 @@ OWNER_ACTIONS = {
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
     "chat_sessions": frozenset({"session.create", "session.resume"}),
+    "credentials": frozenset({"credentials.add", "credentials.revoke"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
     "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
@@ -366,6 +368,37 @@ class RemoteReadSystembility:
         if host != request.target.casefold().rstrip("."):
             return SystembilityResult(self.name, False, "remote endpoint does not match the granted host")
         return SystembilityResult(self.name, True, "remote read is secure and host-bound")
+
+
+class CredentialBoundarySystembility:
+    """Save or revoke one key for one known service; the secret is never in the request."""
+
+    name = "CredentialBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"credentials.add", "credentials.revoke"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        from isycode.providers import PRESETS  # local import: providers loads lazily
+
+        params = request.parameters
+        service = params.get("service")
+        known = isinstance(service, str) and (service in PRESETS or service == "isyco-gateway")
+        if request.action_id == "credentials.add":
+            labels_ok = all(
+                isinstance(params.get(key), str) and 1 <= len(params[key]) <= 96
+                and params[key] == " ".join(params[key].split())
+                and all(char.isprintable() for char in params[key])
+                for key in ("name", "purpose"))
+            valid = (set(params) == {"service", "name", "purpose"} and known
+                     and request.target == service and labels_ok)
+        else:
+            key_id = params.get("key_id")
+            valid = (set(params) == {"key_id", "service"} and known
+                     and request.target == service and isinstance(key_id, str)
+                     and re.fullmatch(r"cred_[a-f0-9]{16}", key_id) is not None)
+        return SystembilityResult(self.name, valid,
+                                  "one key for one known service; no secret in the request")
 
 
 class SessionStoreSystembility:
@@ -1089,6 +1122,7 @@ class ProductActionGate:
             WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
             ProviderNetworkSystembility(),
             RemoteReadSystembility(), SessionStoreSystembility(), SessionDeleteSystembility(),
+            CredentialBoundarySystembility(),
             MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),

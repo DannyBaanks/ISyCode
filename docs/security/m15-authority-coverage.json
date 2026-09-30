@@ -214,13 +214,17 @@
     {
       "action": "credentials.add",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "credential",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "credentials"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "CredentialBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -238,13 +242,17 @@
     {
       "action": "credentials.revoke",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "destructive",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "credentials"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "CredentialBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -1118,15 +1126,15 @@
     },
     {
       "action": "credentials.add",
-      "callsite": "TUIApp._save_provider_key",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "callsite": "CredentialOwner.add",
+      "owner": "credentials",
+      "status": "COVERED"
     },
     {
-      "action": "credentials.add",
-      "callsite": "TUIApp._open_credentials_menu",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "action": "credentials.revoke",
+      "callsite": "CredentialOwner.revoke",
+      "owner": "credentials",
+      "status": "COVERED"
     },
     {
       "action": "session.create",
@@ -1218,7 +1226,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1481,
+      "line": 1515,
       "owner": "workspace_read"
     },
     {
@@ -1239,14 +1247,14 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 5049,
+      "line": 5166,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4559,
+      "line": 4676,
       "owner": "remote_catalog"
     }
   ],
@@ -1258,49 +1266,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1353,
+      "line": 1387,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1481,
+      "line": 1515,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 1142,
+      "line": 1176,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1206,
+      "line": 1240,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1276,
+      "line": 1310,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1362,
+      "line": 1396,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1423,
+      "line": 1457,
       "owner": "provider_network"
     },
     {
@@ -1344,6 +1352,20 @@
       "file": "isycode/broker.py",
       "line": 748,
       "owner": "broker_management"
+    },
+    {
+      "action": "credentials.add",
+      "callable": "isycode.credential_owner.CredentialOwner.add_request",
+      "file": "isycode/credential_owner.py",
+      "line": 52,
+      "owner": "credentials"
+    },
+    {
+      "action": "credentials.revoke",
+      "callable": "isycode.credential_owner.CredentialOwner.revoke_request",
+      "file": "isycode/credential_owner.py",
+      "line": 91,
+      "owner": "credentials"
     },
     {
       "action": "mobile.host.start",
@@ -1447,35 +1469,35 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 5049,
+      "line": 5166,
       "owner": "workspace_read"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "file": "isycode/tui.py",
-      "line": 3401,
+      "line": 3409,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "file": "isycode/tui.py",
-      "line": 3453,
+      "line": 3461,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "file": "isycode/tui.py",
-      "line": 3613,
+      "line": 3621,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4559,
+      "line": 4676,
       "owner": "remote_catalog"
     },
     {
@@ -1493,9 +1515,9 @@
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "effectful": 49,
-    "explicit_deny": 29,
+    "explicit_deny": 27,
     "owner_shared_read": 1,
-    "owner_valid": 30,
+    "owner_valid": 32,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

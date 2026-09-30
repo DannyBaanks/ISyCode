@@ -30,6 +30,7 @@ from isycode.config import (
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.session_owner import ChatSessionOwner
+from isycode.credential_owner import GATEWAY_SERVICE, CredentialOwner
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
@@ -2947,9 +2948,15 @@ class TUIApp(App):
         self.query_one("#bridge-status", Static).update(text)
 
     def _open_credentials_menu(self) -> None:
-        entries = [self._entry(
-            "Adding credentials is blocked in Secure",
-            "info", "", "credentials.add has no registered execution owner yet; no key was read or stored.")]
+        selected = selected_provider_name()
+        entries = []
+        if selected in PRESETS:
+            entries.append(self._entry(
+                f"Add a key for {self._credential_label(selected)} · asks first",
+                "credential_add", selected,
+                "Saved in your OS keyring for your user; never in the project or logs."))
+        entries.append(self._entry("Add an ISyCo Gateway key · asks first", "credential_add",
+                                   GATEWAY_SERVICE))
         try:
             credentials = CredentialVault().list_metadata()
         except Exception:
@@ -2958,13 +2965,14 @@ class TUIApp(App):
                 "Credential vault unavailable", "info", "",
                 "Check the user-private state directory and permissions."))
         for item in credentials:
-            state = "revoked" if item["revoked"] else "saved · value hidden"
-            entries.append(self._entry(
-                f"{item['name']}  ·  {item['service']}  ·  {state}",
-                "credential_info", item["id"],
-                f"Purpose: {item['purpose']}"))
-        entries.append(self._entry(
-            "Replace/remove require the Authority action gate, not connected yet.", "info"))
+            if item["revoked"]:
+                entries.append(self._entry(
+                    f"{item['name']}  ·  {item['service']}  ·  removed",
+                    "credential_info", item["id"], f"Purpose: {item['purpose']}"))
+            else:
+                entries.append(self._entry(
+                    f"{item['name']}  ·  {item['service']}  ·  saved · value hidden · select to remove",
+                    "credential_revoke", item["id"], f"Purpose: {item['purpose']}"))
         self._render_menu("named_credentials", "Settings · API keys", entries)
 
     def _open_authority_menu(self) -> None:
@@ -4095,6 +4103,13 @@ class TUIApp(App):
         if kind == "context_menu":
             self._open_context_menu()
             return
+        if kind == "credential_add":
+            self._open_key_entry(value)
+            return
+        if kind == "credential_revoke":
+            self._close_menu()
+            self.run_worker(self._revoke_key_flow(value), exclusive=True, group="credentials")
+            return
         if kind == "credential_info":
             item = next((record for record in CredentialVault().list_metadata()
                          if record["id"] == value), None)
@@ -4371,17 +4386,119 @@ class TUIApp(App):
             self._append(f"  Selected for this session · {provider.label} · {provider.model}", GREEN)
             self._close_menu()
             return
-        self._append(
-            f"  {provider.label} has no configured credential. Secure credential entry is blocked "
-            "until credentials.add has an Authority/Sentinel owner.", YELLOW)
-        self._close_menu()
+        self._append(f"  {provider.label} needs an API key · paste it below to save it.", YELLOW)
+        self._open_key_entry(name)
+
+    @staticmethod
+    def _credential_label(service: str) -> str:
+        if service == GATEWAY_SERVICE:
+            return "ISyCo Gateway"
+        return str(PRESETS.get(service, {}).get("label", service))
+
+    def _open_key_entry(self, service: str) -> None:
+        """Show the masked key field; nothing is read or stored until Save."""
+        self._provider_key_target = service
+        self.query_one("#action-menu", Vertical).display = True
+        self.query_one("#action-list", OptionList).display = False
+        self.query_one("#action-search", Input).display = False
+        self.query_one("#key-entry-label", Static).update(
+            f"API key for {self._credential_label(service)} · saved in your OS keyring for your "
+            "user, never in this project or its logs. Saving asks you to confirm.")
+        self.query_one("#key-entry", Vertical).display = True
+        key_input = self.query_one("#provider-key-input", Input)
+        key_input.value = ""
+        key_input.focus()
 
     def _save_provider_key(self) -> None:
-        # Keep this defensive entry point inert even if an obsolete menu event arrives.
-        self.query_one("#provider-key-input", Input).value = ""
-        self._provider_key_target = ""
-        self._append("  Credential was not saved · credentials.add has no execution owner in Secure.", YELLOW)
+        key_input = self.query_one("#provider-key-input", Input)
+        secret, key_input.value = key_input.value, ""
+        service, self._provider_key_target = self._provider_key_target, ""
         self._close_menu()
+        if not service or not secret.strip():
+            self._append("  No API key was entered; nothing was saved.", MUTED)
+            return
+        self.run_worker(self._save_key_flow(service, secret), exclusive=True, group="credentials")
+
+    async def _ensure_credential_grant(self, owner: CredentialOwner, service: str) -> bool:
+        """Per-service grant for saving and removing keys; asked once, then remembered."""
+        grants = owner.authority.policy().get("grants", {})
+        actions = ("credentials.add", "credentials.revoke")
+        if all(displayed_on(action, grants.get(action, {}),
+                            service in grants.get(action, {}).get("targets", []))
+               for action in actions):
+            return True
+        label = self._credential_label(service)
+        if not await self.push_screen_wait(TailscaleConfirmScreen(
+                f"Allow managing {label} API keys?",
+                f"ISyCode may save and remove {label} API keys in your operating-system keyring. "
+                "Keys are stored for your user (every workspace), never in the project, the "
+                "action journal or chat history. Each save and each removal still asks you first.",
+                "Allow")):
+            return False
+        for action in actions:
+            targets = set(grants.get(action, {}).get("targets", [])) | {service}
+            owner.authority.set_grant(action, enabled=True, targets=sorted(targets))
+        return True
+
+    async def _save_key_flow(self, service: str, secret: str) -> None:
+        label = self._credential_label(service)
+        try:
+            owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError):
+            env = PRESETS.get(service, {}).get("key_env", "the provider's API key variable")
+            self._append(f"  No secure OS keyring is available here; nothing was saved. "
+                         f"Set {env} in your environment instead.", YELLOW)
+            return
+        try:
+            if not await self._ensure_credential_grant(owner, service):
+                self._append("  API key not saved; permission was not granted.", MUTED)
+                return
+            request = owner.add_request(
+                service, f"{label} key",
+                "ISyCo Gateway access" if service == GATEWAY_SERVICE else "ISyCode chat")
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  API key not saved ({type(exc).__name__}).", RED)
+            return
+        if not await self.push_screen_wait(TailscaleConfirmScreen(
+                f"Save the {label} API key?",
+                f"The key you pasted will be saved in your OS keyring for {label}. The newest saved "
+                "key for a service is the one ISyCode uses.", "Save key")):
+            self._append("  API key not saved; the pasted value was discarded.", MUTED)
+            return
+        approval = self._action_approvals.issue(request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.add, request, secret, approval)
+        if outcome.decision != "ALLOW":
+            self._append(f"  API key not saved · {outcome.reason[:180]}", YELLOW)
+            return
+        self._append(f"  {label} API key saved · receipt {outcome.receipt.receipt_id}", GREEN)
+        if service in PRESETS:
+            self._select_provider(service)
+
+    async def _revoke_key_flow(self, key_id: str) -> None:
+        try:
+            owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+            request = owner.revoke_request(key_id)
+            service = request.parameters["service"]
+            if not await self._ensure_credential_grant(owner, service):
+                self._append("  API key not removed; permission was not granted.", MUTED)
+                return
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  API key cannot be removed ({type(exc).__name__}).", YELLOW)
+            return
+        label = self._credential_label(service)
+        if not await self.push_screen_wait(TailscaleConfirmScreen(
+                f"Remove this {label} API key?",
+                "The key is deleted from your OS keyring. ISyCode then uses an older saved key "
+                "or an environment variable for this service, if any.", "Remove key")):
+            self._append("  API key kept.", MUTED)
+            return
+        approval = self._action_approvals.issue(request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.revoke, request, approval)
+        self._append(f"  {label} API key removed." if outcome.decision == "ALLOW"
+                     else f"  API key not removed · {outcome.reason[:180]}",
+                     GREEN if outcome.decision == "ALLOW" else YELLOW)
 
     # ── helpers ──────────────────────────────────────────────────
 

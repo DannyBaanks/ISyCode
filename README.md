@@ -22,7 +22,7 @@ Las capturas muestran la TUI real de Textual con un workspace temporal de demost
 - **Roles:** agentes conversacionales de ISyCode y los ocho motores operativos de ISyCo aparecen en catálogos separados. Se transfiere el flujo, propósito y guardrails del motor; elegir un rol no ejecuta sus comandos ni le concede permisos.
 - **CLI por intención:** `isycode cli` abre ramas semánticas para explorar las acciones disponibles sin ejecutar shell arbitrario. En la instalación integrada de ISyCo, `isyco cli` deriva al mismo navegador.
 - **Búsqueda y ayuda:** `Ctrl+F` busca en la consola actual; `/` y `Ctrl+P` abren el navegador de Skills, Models, MCP, LSP, Files, Roles, Providers, Sessions, Workspace y Commands.
-- **Providers y claves:** selector de provider/modelo; ISyCode puede usar credenciales ya presentes en el vault o el entorno. Añadir claves desde la TUI está bloqueado en Secure mientras `credentials.add` no tenga owner. Una clave no concede permiso de red.
+- **Providers y claves:** selector de provider/modelo. Si el provider elegido no tiene llave, ISyCode abre un campo enmascarado para pegarla; también desde Settings → API keys. La llave se guarda en el keyring del sistema operativo para tu usuario (todos los workspaces), nunca en el proyecto, el journal ni el historial. Guardar y quitar llaves pasa por el owner `credentials`: el primer uso pide permiso por servicio y cada guardado o borrado pide confirmación. Sin un keyring seguro (común en Linux sin escritorio) no se guarda nada y ISyCode indica qué variable de entorno usar. Una clave no concede permiso de red.
 
 ## Estado comprobable
 
