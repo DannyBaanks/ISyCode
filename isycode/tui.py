@@ -53,6 +53,10 @@ from isycode.action_runtime import (
     LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
 from isycode.actions import ACTION_BY_ID
+from isycode.agent_loop import (
+    AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, MAX_SUMMARY_CHARS, SUMMARY_MAX_TOKENS, AgentLimits,
+    compact_turn, split_history, summary_messages, summary_system_message,
+)
 from isycode.command_runner import (
     COMMAND_TOOL, COMMAND_TOOL_NAME, CommandPreview, CommandRunOwner, sandbox_executable,
 )
@@ -1641,6 +1645,9 @@ class TUIApp(App):
         self._initial_prompt = initial_prompt
         self._openisy_refresh_generation = 0
         self._history: list[dict] = []
+        # Model-written notes replacing history that no longer fits the budget.
+        self._conversation_summary = ""
+        self._chat_turn_task: asyncio.Task | None = None
         self._action_approvals = ActionApprovalStore()
         self._console_search_hits: list[tuple[Static, TextMatch]] = []
         self._console_search_index = -1
@@ -2453,6 +2460,11 @@ class TUIApp(App):
             self._review_request_task.cancel()
             self._set_activity("Stopping external review…", YELLOW)
             return
+        if self._chat_turn_task and not self._chat_turn_task.done():
+            # Stops the whole agent turn: a pending model request, a tool, or a running command.
+            self._chat_turn_task.cancel()
+            self._set_activity("Stopping response…", YELLOW)
+            return
         if self._chat_request_task and not self._chat_request_task.done():
             self._chat_request_task.cancel()
             self._set_activity("Stopping response…", YELLOW)
@@ -2667,10 +2679,40 @@ class TUIApp(App):
             "Applies only to folders opened for the first time; each workspace keeps its own "
             "mode and you can switch it in Settings → Authority.")
             for value, label in mode_choices)
+        limits = AgentLimits.from_defaults(defaults)
+        entries.append(self._entry(
+            f"Agent steps per prompt · {limits.max_steps} · Enter to change", "user_default_steps", "",
+            "How many model/tool rounds one prompt may take before ISyCode stops and asks you to "
+            "continue. Every tool call is still checked and approved as usual."))
+        entries.append(self._entry(
+            f"Answer length · {limits.answer_tokens:,} tokens · Enter to change",
+            "user_default_tokens", "",
+            "Maximum tokens the model may write per response. Longer answers can cost more."))
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "user_defaults":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("user_defaults", "Settings · My defaults", entries)
+
+    def _agent_limits(self) -> AgentLimits:
+        try:
+            return AgentLimits.from_defaults(UserDefaultsStore().load())
+        except (OSError, ValueError, json.JSONDecodeError):
+            return AgentLimits()
+
+    def _cycle_agent_limit(self, steps: bool) -> None:
+        current = self._agent_limits()
+        choices = AGENT_STEP_CHOICES if steps else ANSWER_TOKEN_CHOICES
+        value = current.max_steps if steps else current.answer_tokens
+        following = choices[(choices.index(value) + 1) % len(choices)]
+        try:
+            if steps:
+                UserDefaultsStore().update(agent_steps=following)
+            else:
+                UserDefaultsStore().update(answer_tokens=following)
+            self._set_activity("Agent limits saved for every workspace", GREEN)
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save the agent limit; existing settings remain", RED)
+        self._open_user_defaults_menu()
 
     async def _set_global_mode_default(self, value: str) -> None:
         if value == "classic" and not await self._await_screen(TailscaleConfirmScreen(
@@ -4024,6 +4066,9 @@ class TUIApp(App):
         if kind == "user_defaults":
             self._open_user_defaults_menu()
             return
+        if kind in {"user_default_steps", "user_default_tokens"}:
+            self._cycle_agent_limit(kind == "user_default_steps")
+            return
         if kind == "user_default_mode":
             self.run_worker(self._set_global_mode_default(value), exclusive=True,
                             group="user-defaults")
@@ -4997,6 +5042,9 @@ class TUIApp(App):
         async def _undo_cmd(app: "TUIApp", arg: str) -> None:
             await app._undo_last_change()
 
+        async def _compact_cmd(app: "TUIApp", arg: str) -> None:
+            await app._compact_conversation()
+
         async def _run_cmd(app: "TUIApp", arg: str) -> None:
             try:
                 argv = shlex.split(arg)
@@ -5265,6 +5313,7 @@ class TUIApp(App):
                 PluginCommand("provider", "select a provider or list its account models", _provider_cmd),
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
+                PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
                 PluginCommand("help", "list commands", _help_cmd),
                 PluginCommand("session", "show current workspace, provider, and chat role", _session_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
@@ -5398,6 +5447,7 @@ class TUIApp(App):
             self._append("  Still working · finish or cancel the current reply first.", YELLOW)
             return
         self._history = []
+        self._conversation_summary = ""
         self._active_chat_session_id = None
         self._session_save_warned = False
         self.query_one(ChatArea).remove_children()
@@ -5416,6 +5466,7 @@ class TUIApp(App):
             self._append(f"  Conversation not resumed · {outcome.reason[:180]}", YELLOW)
             return
         self._history = [dict(message) for message in session.messages]
+        self._conversation_summary = ""
         self._active_chat_session_id = session.session_id
         self._session_save_warned = False
         chat = self.query_one(ChatArea)
@@ -5651,8 +5702,68 @@ class TUIApp(App):
         return json.dumps({"error": "change was not written", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
 
+    async def _summarize_older(self, provider, owner, older: list[dict],
+                               recent: list[dict]) -> bool:
+        """Replace ``older`` history with model-written notes sent through the provider owner."""
+        self._append(f"  Compacting · summarizing {len(older)} earlier messages to free up context",
+                     MUTED)
+        summary_request = summary_messages(older, self._conversation_summary)
+
+        async def send():
+            return await async_stream_complete(
+                provider.base_url, provider.api_key, provider.model, summary_request,
+                max_tokens=SUMMARY_MAX_TOKENS, token_limit_field=provider.token_limit_field,
+                reasoning_effort=provider.reasoning_effort,
+                temperature_supported=provider.temperature_supported)
+
+        try:
+            response, outcome = await owner.execute(provider, {
+                "operation": "chat.summary", "messages": summary_request,
+                "max_tokens": SUMMARY_MAX_TOKENS,
+                "token_limit_field": provider.token_limit_field,
+                "reasoning_effort": provider.reasoning_effort,
+                "temperature_supported": provider.temperature_supported, "tools": None,
+            }, send)
+        except (ProviderError, StreamError, OSError) as exc:
+            response, outcome = None, None
+            reason = type(exc).__name__
+        else:
+            reason = outcome.reason if outcome is not None else ""
+        summary = (response.get("text") or "").strip() if isinstance(response, dict) else ""
+        if outcome is None or outcome.decision != "ALLOW" or not summary:
+            # Keep working: the older messages are simply not sent this turn.
+            self._append(f"  Compaction skipped · {reason[:160] or 'no summary returned'}; "
+                         "earlier messages are left out of this request", YELLOW)
+            return False
+        self._conversation_summary = summary[:MAX_SUMMARY_CHARS]
+        self._history[:len(older)] = []
+        self._append("  Compacted · earlier messages summarized; the saved conversation keeps "
+                     "the full transcript", MUTED)
+        return True
+
+    async def _compact_conversation(self) -> None:
+        """/compact: summarize everything except the latest exchange now."""
+        if self._loop_task and self._loop_task is not asyncio.current_task() \
+                and not self._loop_task.done():
+            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+            return
+        older, recent = split_history(self._history, budget=0)
+        if not older:
+            self._append("  Nothing to compact yet.", MUTED)
+            return
+        provider_name = selected_provider_name()
+        try:
+            provider = Provider(name=provider_name, model=provider_default_model(provider_name),
+                                api_key=load_provider_key(provider_name) or None)
+        except ProviderError as exc:
+            self._append(f"  {self._provider_failure(exc, 'Compaction')}", RED)
+            return
+        owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+        await self._summarize_older(provider, owner, older, recent)
+
     async def _run_chat(self, text: str) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
+        self._chat_turn_task = asyncio.current_task()
         self._history.append({"role": "user", "content": text})
         self._persist_chat_message("user", text)
         workspace_tools_granted = self._workspace_chat_tools_enabled()
@@ -5693,7 +5804,9 @@ class TUIApp(App):
             "No action tools are enabled for this workspace. Never emit JSON, XML, or code "
             "pretending to call a tool. " + tool_availability
         )
-        messages = list(self._history[-20:])
+        limits = self._agent_limits()
+        older, recent = split_history(self._history)
+        messages = [dict(message) for message in recent]
         messages.insert(0, {
             "role": "system",
             "content": (
@@ -5704,8 +5817,10 @@ class TUIApp(App):
                 "Do not attribute this project or its roles to another repository. "
                 + tools_instruction
                 + "Never claim to inspect or change files or invoke integrations without doing so. "
-                "ISyCode does not expose bash, shell, or arbitrary process execution in chat. "
-                "ISySentinel and Workspace Authority govern product actions; IsyMotron is an optional adapter."
+                + ("There is no shell: commands run only through workspace_run with user approval. "
+                   if command_active else
+                   "ISyCode does not expose bash, shell, or arbitrary process execution in chat. ")
+                +                 "ISySentinel and Workspace Authority govern product actions; IsyMotron is an optional adapter."
             ),
         })
         if self._active_role:
@@ -5772,9 +5887,15 @@ class TUIApp(App):
 
             owner = ProviderNetworkOwner(
                 self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            if older:
+                await self._summarize_older(provider, owner, older, recent)
+            if self._conversation_summary:
+                leading = next((index for index, message in enumerate(messages)
+                                if message.get("role") != "system"), len(messages))
+                messages.insert(leading, summary_system_message(self._conversation_summary))
             request_material = {
                 "operation": "chat.completions", "messages": messages,
-                "max_tokens": 2048, "token_limit_field": provider.token_limit_field,
+                "max_tokens": limits.answer_tokens, "token_limit_field": provider.token_limit_field,
                 "reasoning_effort": provider.reasoning_effort,
                 "temperature_supported": provider.temperature_supported,
                 "tools": chat_tools,
@@ -5783,7 +5904,7 @@ class TUIApp(App):
             async def send_provider_request():
                 return await async_stream_complete(
                     provider.base_url, provider.api_key, provider.model,
-                    messages, max_tokens=2048,
+                    messages, max_tokens=limits.answer_tokens,
                     token_limit_field=provider.token_limit_field,
                     reasoning_effort=provider.reasoning_effort,
                     temperature_supported=provider.temperature_supported,
@@ -5791,7 +5912,12 @@ class TUIApp(App):
                     tools=chat_tools)
 
             try:
-                for tool_round in range(5):
+                for tool_round in range(limits.max_steps):
+                    messages[:], elided = compact_turn(messages)
+                    if elided:
+                        self._append(f"  Context trimmed · {elided} older tool result"
+                                     f"{'s' if elided != 1 else ''} replaced to stay within budget",
+                                     MUTED)
                     request_material["messages"] = messages
                     self._chat_request_task = asyncio.create_task(owner.execute(
                         provider, request_material, send_provider_request))
@@ -5811,9 +5937,9 @@ class TUIApp(App):
                         "tool_calls": calls,
                     })
                     for index, call in enumerate(calls):
-                        if index >= 3:
+                        if index >= limits.max_tool_calls:
                             call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]
-                            tool_result = json.dumps({"error": "maximum of three tools per response reached"})
+                            tool_result = json.dumps({"error": f"maximum of {limits.max_tool_calls} tools per response reached"})
                             self._append("  Tool denied · per-response call limit reached", YELLOW)
                         elif not tools_active:
                             call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]
@@ -5824,8 +5950,10 @@ class TUIApp(App):
                         messages.append({
                             "role": "tool", "tool_call_id": call_id, "content": tool_result,
                         })
-                    if tool_round == 4:
-                        self._append("  Tool loop limit reached · send a new prompt to continue.", YELLOW)
+                    if tool_round == limits.max_steps - 1:
+                        self._append(
+                            f"  Step limit reached ({limits.max_steps}) · say \"continue\" to keep going, "
+                            "or raise it in Settings → My defaults.", YELLOW)
             except asyncio.CancelledError:
                 if content_buf:
                     _content_line()
@@ -5856,7 +5984,14 @@ class TUIApp(App):
 
             full = "".join(content_buf).strip()
             attempted_tool = detect_unexecuted_tool_request(full)
-            if attempted_tool:
+            if attempted_tool and command_active:
+                full = (
+                    f"ISyCode no ejecutó esta solicitud de `{attempted_tool}` escrita como texto. "
+                    "Los comandos solo corren con la herramienta workspace_run y tu aprobación; "
+                    "no se ejecutó nada.")
+                content_buf[:] = [full]
+                _content_line()
+            elif attempted_tool:
                 full = (
                     f"ISyCode no ejecutó esta solicitud de `{attempted_tool}`: el chat no tiene "
                     "un execution owner de comandos conectado. No se ejecutó ningún comando. "
@@ -5886,6 +6021,7 @@ class TUIApp(App):
                 f"  Chat failed ({type(e).__name__}). The request was not completed.", RED)
         finally:
             self._chat_request_task = None
+            self._chat_turn_task = None
             block.collapse_to(_time.time() - t0)
 
     # ── /plan (IsyMotron plugin) ─────────────────────────────────

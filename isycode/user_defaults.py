@@ -8,6 +8,9 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from isycode.agent_loop import (
+    AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, DEFAULT_AGENT_STEPS, DEFAULT_ANSWER_TOKENS,
+)
 from isycode.workspace_setup import state_root
 
 
@@ -42,7 +45,8 @@ class UserDefaultsStore:
             metadata = self.path.lstat()
         except FileNotFoundError:
             return {"version": self.VERSION, "new_workspace": "ask",
-                    "new_workspace_mode": "ask", "default_role": None}
+                    "new_workspace_mode": "ask", "default_role": None,
+                    "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
         if os.name == "posix" and metadata.st_mode & 0o077:
@@ -76,13 +80,28 @@ class UserDefaultsStore:
                 or not isinstance(role.get("name"), str)
                 or not 1 <= len(role["name"]) <= 120):
             raise ValueError("ISyCode default role is invalid")
+        steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
+        tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
+        if type(steps) is not int or steps not in AGENT_STEP_CHOICES:
+            raise ValueError("ISyCode agent step limit is invalid")
+        if type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES:
+            raise ValueError("ISyCode answer length is invalid")
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
-                "default_role": role}
+                "default_role": role, "agent_steps": steps, "answer_tokens": tokens}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
-               default_role: dict[str, str] | None | object = ...) -> None:
+               default_role: dict[str, str] | None | object = ...,
+               agent_steps: int | None = None, answer_tokens: int | None = None) -> None:
         current = self.load()
+        if agent_steps is not None:
+            if type(agent_steps) is not int or agent_steps not in AGENT_STEP_CHOICES:
+                raise ValueError("ISyCode agent step limit is invalid")
+            current["agent_steps"] = agent_steps
+        if answer_tokens is not None:
+            if type(answer_tokens) is not int or answer_tokens not in ANSWER_TOKEN_CHOICES:
+                raise ValueError("ISyCode answer length is invalid")
+            current["answer_tokens"] = answer_tokens
         if new_workspace is not None:
             if new_workspace not in self.NEW_WORKSPACE_CHOICES:
                 raise ValueError("ISyCode new workspace default is invalid")
