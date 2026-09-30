@@ -107,6 +107,8 @@ KNOWN_EFFECT_CALLSITES = (
     ("git.status", "GitOwner.status", "workspace_git", "COVERED"),
     ("git.diff", "GitOwner.diff", "workspace_git", "COVERED"),
     ("git.commit", "GitOwner.commit", "workspace_git", "COVERED"),
+    ("mcp.local.start", "LocalMCPOwner.start", "mcp_local", "COVERED"),
+    ("mcp.local.invoke", "LocalMCPOwner.call", "mcp_local", "COVERED"),
     ("broker.build", "BrokerProvisionOwner.provision", "broker_provision", "COVERED"),
     ("broker.start", "BrokerProvisionOwner.provision", "broker_provision", "COVERED_VARIANT"),
     ("broker.start", "BrokerManagementOwner.perform", "broker_management", "COVERED_VARIANT"),

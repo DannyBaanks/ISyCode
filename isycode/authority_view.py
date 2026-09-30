@@ -29,6 +29,8 @@ DEDICATED_CONTROLS = {
     "git.status": "See git status and diffs",
     "git.diff": "See git status and diffs",
     "git.commit": "Create git commits",
+    "mcp.local.start": "Local MCP servers",
+    "mcp.local.invoke": "Local MCP servers",
     "session.create": "Save conversations in this workspace",
     "session.resume": "Save conversations in this workspace",
     "provider.request": "Connect to the selected AI model",

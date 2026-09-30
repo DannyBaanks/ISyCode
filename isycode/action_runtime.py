@@ -108,6 +108,11 @@ GIT_PARAMETER_KEYS = {
     "git.diff": frozenset({"git", "workspace_root", "staged", "path"}),
     "git.commit": frozenset({"git", "workspace_root", "message", "paths", "diff_sha256"}),
 }
+MCP_SERVER_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
+MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+MCP_ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,63}$")
+MCP_START_KEYS = frozenset({"server", "argv", "executable", "cwd", "env_keys", "config_sha256"})
+MCP_INVOKE_KEYS = frozenset({"server", "tool", "config_sha256", "arguments_sha256"})
 GIT_MAX_COMMIT_PATHS = 200
 GIT_MAX_MESSAGE_CHARS = 4000
 
@@ -181,6 +186,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "mobile_host": frozenset({"MobileHostBoundary"}),
     "workspace_command": frozenset({"CommandProcessBoundary"}),
     "workspace_git": frozenset({"GitBoundary"}),
+    "mcp_local": frozenset({"LocalMCPBoundary"}),
 }
 
 
@@ -210,6 +216,7 @@ OWNER_ACTIONS = {
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
     "workspace_command": frozenset({"workspace.command.run"}),
     "workspace_git": GIT_ACTIONS,
+    "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
 }
 
 
@@ -485,6 +492,43 @@ class GitSystembility:
         return SystembilityResult(
             self.name, True,
             "workspace repository only; repository-defined programs and hooks are refused")
+
+
+class LocalMCPSystembility:
+    """Bind a local MCP start to its reviewed command and a call to its reviewed arguments."""
+
+    name = "LocalMCPBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"mcp.local.start", "mcp.local.invoke"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+
+        def digest(value: object) -> bool:
+            return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+        server = params.get("server")
+        if (not isinstance(server, str) or not MCP_SERVER_NAME_RE.match(server)
+                or request.target != server or not digest(params.get("config_sha256"))):
+            return SystembilityResult(self.name, False, "MCP server identity is invalid")
+        if request.action_id == "mcp.local.start":
+            env_keys = params.get("env_keys")
+            executable = params.get("executable")
+            if (set(params) != MCP_START_KEYS or not command_argv_valid(params.get("argv"))
+                    or not isinstance(executable, str) or not executable.startswith("/")
+                    or params.get("cwd") != str(request.workspace_root)
+                    or not isinstance(env_keys, tuple)
+                    or not all(isinstance(key, str) and MCP_ENV_NAME_RE.match(key)
+                               for key in env_keys)):
+                return SystembilityResult(self.name, False, "MCP start request is not the reviewed one")
+            return SystembilityResult(self.name, True,
+                                      "reviewed command from the user's MCP config, in the workspace")
+        tool = params.get("tool")
+        if (set(params) != MCP_INVOKE_KEYS or not isinstance(tool, str)
+                or not MCP_TOOL_NAME_RE.match(tool) or not digest(params.get("arguments_sha256"))):
+            return SystembilityResult(self.name, False, "MCP call request is not the reviewed one")
+        return SystembilityResult(self.name, True, "one reviewed tool call to a running local server")
 
 
 class ProviderNetworkSystembility:
@@ -1315,6 +1359,7 @@ class ProductActionGate:
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
+            LocalMCPSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,

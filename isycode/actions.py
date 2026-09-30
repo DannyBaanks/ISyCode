@@ -39,6 +39,8 @@ _ENTRIES = [
     ("credentials.revoke", "Credentials", "Revoke a saved API key", "destructive", True),
     ("mcp.discover", "MCP", "Discover MCP servers and tools", "network-read", False),
     ("mcp.invoke", "MCP", "Invoke an MCP tool", "external", True),
+    ("mcp.local.start", "MCP", "Start a local MCP server from your config", "process", True),
+    ("mcp.local.invoke", "MCP", "Call a tool of a local MCP server", "external", True),
     ("lsp.discover", "LSP", "Discover installed language servers", "read", False),
     ("lsp.start", "LSP", "Start a language server", "process", True),
     ("lsp.stop", "LSP", "Stop a language server", "process", False),
