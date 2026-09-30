@@ -77,7 +77,7 @@ El diseño y límites están en [fronteras de seguridad](docs/design/isysentinel
 
 Instalar desde fuente requiere Python 3.10 o posterior. Los paquetes precompilados incluyen el runtime. El TUI usa Textual y Rich; Pyright LSP y el broker Docker son integraciones opcionales.
 
-Al publicar un tag `vX.Y.Z`, CI primero ejecuta la suite en Linux, Windows y macOS. Si pasa y coincide con la versión de `pyproject.toml`, deja un GitHub Release en borrador con estos artefactos y `SHA256SUMS`:
+Al publicar un tag `vX.Y.Z`, CI ejecuta la suite hermética en Linux y, si pasa y coincide con la versión de `pyproject.toml`, construye los paquetes nativos. Cada binario ejecuta un smoke check en su runner Windows, Linux o macOS antes de adjuntarse a un GitHub Release en borrador con `SHA256SUMS`. Las pruebas que requieren un Gateway activo o el checkout hermano de ISyCo se marcan como integración y no se ejecutan en los runners limpios.
 
 - Windows x64: ejecutable de consola `.exe`.
 - Linux x64: AppImage y `.deb`, construidos sobre Ubuntu 22.04 (glibc 2.35 o posterior).
