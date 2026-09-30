@@ -10,6 +10,7 @@ Usage:
   isycode                 Start the chat TUI in the current directory
   isycode tui              Start the chat TUI
   isycode cli              Browse actions by semantic category
+  isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
   isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
                            add --json for machine-readable output. Only read-only
                            tools that were granted run; nothing asks for approval.
@@ -31,6 +32,14 @@ def main(argv: list[str] | None = None) -> int:
         from isycode.cli import main as cli_main
 
         cli_main(["cli"])
+        return 0
+    if arguments in (["doctor"], ["doctor", "--json"]):
+        from pathlib import Path
+        from isycode.diagnostics import collect_diagnostics, format_diagnostics
+        from isycode.config import discover_workspace_identity
+
+        root = discover_workspace_identity(Path.cwd()).workspace_root
+        print(format_diagnostics(collect_diagnostics(root)))
         return 0
     if arguments and arguments[0] in {"-p", "--print"} or arguments[:2] in (
             ["--json", "-p"], ["--json", "--print"]):

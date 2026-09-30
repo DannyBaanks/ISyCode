@@ -20,10 +20,10 @@ APP_SHORTCUTS: tuple[Shortcut, ...] = (
     Shortcut("ctrl+b", "toggle_sidebar", "Toggle sidebar", "Show or hide the workspace rail"),
     Shortcut("ctrl+l", "focus_input", "Focus composer", "Move focus to the chat composer"),
     Shortcut("escape", "escape_to_chat", "Back", "Close the current popup and return to chat"),
-    Shortcut("f6", "focus_files", "Files", "Open and focus the Files rail"),
-    Shortcut("shift+f6", "focus_overview", "Overview", "Open and focus the Overview rail"),
-    Shortcut("f7", "widen_sidebar", "Widen rail", "Increase the workspace rail width"),
-    Shortcut("shift+f7", "narrow_sidebar", "Narrow rail", "Decrease the workspace rail width"),
+    Shortcut("f6", "focus_files", "Files", "Open and focus the Files rail", True),
+    Shortcut("shift+f6", "focus_overview", "Overview", "Open and focus the Overview rail", True),
+    Shortcut("f7", "widen_sidebar", "Widen rail", "Increase the workspace rail width", True),
+    Shortcut("shift+f7", "narrow_sidebar", "Narrow rail", "Decrease the workspace rail width", True),
     Shortcut("ctrl+c", "quit", "Quit", "Quit ISyCode"),
 )
 

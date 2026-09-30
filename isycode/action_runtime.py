@@ -646,13 +646,28 @@ class SessionStoreSystembility:
         valid_id = isinstance(session_id, str) and re.fullmatch(r"[0-9a-f]{32}", session_id) is not None
         if request.action_id == "session.create":
             size = params.get("size")
-            valid = (set(params) == {"operation", "session_id", "role", "content_sha256", "size"}
+            fields = set(params) - {"state_sha256"}
+            state_digest = params.get("state_sha256", "0" * 64)
+            valid = (fields == {"operation", "session_id", "role", "content_sha256", "size"}
                      and params.get("operation") in {"create", "append"}
                      and valid_id and request.target == session_id
                      and params.get("role") in {"user", "assistant"}
                      and isinstance(params.get("content_sha256"), str)
                      and re.fullmatch(r"[0-9a-f]{64}", params["content_sha256"]) is not None
                      and type(size) is int and 0 <= size <= 1_000_000)
+            valid = valid and isinstance(state_digest, str) and re.fullmatch(r"[0-9a-f]{64}", state_digest) is not None
+            if params.get("operation") in {"rename", "fork", "import", "state"}:
+                source = params.get("source_id")
+                valid = (set(params) == {"operation", "session_id", "content_sha256", "size", "source_id"}
+                         and valid_id and request.target == session_id
+                         and isinstance(params.get("content_sha256"), str)
+                         and re.fullmatch(r"[0-9a-f]{64}", params["content_sha256"]) is not None
+                         and type(size) is int and 0 <= size <= 1_000_000
+                         and isinstance(source, str)
+                         and (source in {"", session_id} if params["operation"] == "state"
+                              else source == "" if params["operation"] == "import"
+                              else re.fullmatch(r"[0-9a-f]{32}", source) is not None)
+                         and (source == session_id if params["operation"] == "rename" else True))
             return SystembilityResult(self.name, valid,
                                       "one bounded message bound to one local transcript")
         if params.get("operation") == "list":

@@ -19,8 +19,31 @@ from typing import Iterator, Callable
 
 
 class StreamError(Exception):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
+        self.transport = status is None
 
+
+
+async def _upgrade_client_tls(writer: asyncio.StreamWriter, context: ssl.SSLContext,
+                              host: str) -> None:
+    """Upgrade a CONNECT stream on supported Python 3.10+ runtimes."""
+    if callable(getattr(writer, "start_tls", None)):
+        await writer.start_tls(context, server_hostname=host)
+        return
+    # Python 3.10 exposes loop.start_tls but has no StreamWriter upgrade API.
+    # Keep this compatibility bridge here; never replace certificate validation.
+    await writer.drain()
+    protocol = writer._protocol
+    transport = await asyncio.get_running_loop().start_tls(
+        writer.transport, protocol, context, server_side=False, server_hostname=host)
+    if transport is None:
+        raise StreamError("provider TLS upgrade failed")
+    writer._transport = transport
+    protocol._stream_writer = writer
+    protocol._transport = transport
+    protocol._over_ssl = True
 
 def detect_unexecuted_tool_request(text: str) -> str | None:
     """Recognize a provider's plain-text imitation of a shell tool call.
@@ -160,9 +183,9 @@ async def async_stream_complete(
         raise StreamError("provider URL must not contain embedded credentials")
     if any(char in api_key for char in "\r\n"):
         raise StreamError("provider credential contains invalid HTTP header characters")
-    if urllib.request.getproxies().get(parsed.scheme):
-        raise StreamError(
-            "Cancellable async transport does not support the configured proxy; no request was sent")
+    proxy_url = urllib.request.getproxies().get(parsed.scheme)
+    if proxy_url and urllib.request.proxy_bypass(parsed.netloc):
+        proxy_url = None
 
     body = {"model": model, "messages": messages, "stream": True}
     if tools:
@@ -195,8 +218,52 @@ async def async_stream_complete(
         return await asyncio.wait_for(awaitable, timeout=remaining)
 
     tls = ssl.create_default_context() if parsed.scheme == "https" else None
-    reader, writer = await bounded(asyncio.open_connection(
-        host, port, ssl=tls, server_hostname=host if tls else None))
+    if proxy_url:
+        proxy = urlparse(proxy_url)
+        if proxy.scheme != "http" or not proxy.hostname or proxy.username or proxy.password:
+            raise StreamError("streaming requires an HTTP proxy without embedded credentials")
+        reader, writer = await bounded(asyncio.open_connection(proxy.hostname, proxy.port or 80))
+        if tls:
+            # CONNECT carries no provider credential; TLS verification remains enabled.
+            tunnel_target = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+            try:
+                writer.write((f"CONNECT {tunnel_target} HTTP/1.1\r\n"
+                              f"Host: {tunnel_target}\r\n\r\n").encode("ascii"))
+                await bounded(writer.drain())
+                status_line = await bounded(reader.readline())
+                parts = status_line.decode("latin-1").split()
+                if len(parts) < 2 or not parts[0].startswith("HTTP/") or not parts[1].isdigit():
+                    raise StreamError("proxy returned an invalid HTTP status")
+                status = int(parts[1])
+                if status != 200:
+                    raise StreamError(f"proxy refused provider tunnel (HTTP {status}); no provider request was sent")
+                header_bytes = 0
+                while True:
+                    line = await bounded(reader.readline())
+                    header_bytes += len(line)
+                    if not line or header_bytes > 64 * 1024:
+                        raise StreamError("proxy returned incomplete or oversized headers")
+                    if line == b"\r\n":
+                        break
+                # Stop plaintext reads before TLS takes over. A CONNECT peer may
+                # have appended unauthenticated bytes to its headers; those must
+                # never enter the authenticated SSE parser after the upgrade.
+                writer.transport.pause_reading()
+                if reader._buffer:
+                    raise StreamError("proxy sent unexpected plaintext after CONNECT headers")
+                await bounded(_upgrade_client_tls(writer, tls, host))
+            except BaseException:
+                writer.close()
+                try:
+                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+                except (asyncio.TimeoutError, OSError):
+                    pass
+                raise
+        else:
+            request_path = f"http://{host_header}{request_path}"
+    else:
+        reader, writer = await bounded(asyncio.open_connection(
+            host, port, ssl=tls, server_hostname=host if tls else None))
     content: list[str] = []
     reasoning: list[str] = []
     usage: dict = {}
@@ -302,7 +369,7 @@ async def async_stream_complete(
                 key, value = header_line.decode("latin-1").split(":", 1)
                 headers[key.strip().casefold()] = value.strip()
         if status != 200:
-            raise StreamError(f"provider returned HTTP {status}")
+            raise StreamError(f"provider returned HTTP {status}", status=status)
 
         async def read_chunked() -> None:
             while True:

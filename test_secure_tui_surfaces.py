@@ -68,7 +68,7 @@ def test_secure_tui_persists_chat_sessions_only_through_the_owner():
     assert "owner.resume" in ast.get_source_segment(source, methods["_resume_chat_session"])
 
 
-def test_secure_tui_session_delete_does_not_mint_its_own_authority_or_approval():
+def test_secure_tui_session_delete_requires_confirmation_and_separate_authority():
     module = ast.parse(SOURCE.read_text(encoding="utf-8"))
     app = next(node for node in module.body
                if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
@@ -77,11 +77,12 @@ def test_secure_tui_session_delete_does_not_mint_its_own_authority_or_approval()
 
     delete_calls = _method_calls(methods["_delete_chat_session"])
     assert "set_grant" not in delete_calls
-    assert "issue" not in delete_calls
-    assert "delete" not in delete_calls
+    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), methods["_delete_chat_session"])
+    assert source.index("await self._await_screen") < source.index("self._action_approvals.issue")
+    assert "SessionDeleteOwner" in source
 
 
-def test_authority_settings_does_not_claim_unwired_session_owner_is_connected():
+def test_authority_settings_gates_session_deletion_with_its_own_permission():
     source = SOURCE.read_text(encoding="utf-8")
     module = ast.parse(source)
     app = next(node for node in module.body
@@ -90,8 +91,8 @@ def test_authority_settings_does_not_claim_unwired_session_owner_is_connected():
                   if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
     menu_source = ast.get_source_segment(source, method)
 
-    assert "session.delete" not in menu_source
-    assert "Delete conversations" not in menu_source
+    assert 'displayed_on("session.delete"' in menu_source
+    assert "Delete current conversation" in menu_source
 
 
 def test_authority_settings_never_presents_an_explicit_deny_as_granted():
