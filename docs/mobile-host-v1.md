@@ -27,7 +27,13 @@ Configuration:
 Pairing PINs contain six digits and expire after five minutes. A successful
 exchange consumes the PIN and returns a random bearer credential once. The
 credential expires after one hour. Invalid exchanges are limited to five per
-peer per minute and twenty globally during the PIN lifetime. Credential
+peer per minute and twenty globally during the PIN lifetime. Behind a Tailscale
+Serve route every peer arrives from loopback, so the global limit is the
+effective one. Settings → Mobile host offers "New pairing PIN", owned as
+`mobile.pair.issue`: it needs the target-scoped grant, IsySentinel and a fresh
+one-use approval bound to the challenge it replaces, then invalidates the old
+PIN and clears failed attempts. The PIN is shown locally only; the receipt
+records that a PIN was issued and when it expires, never its value. Credential
 metadata and SHA-256 token digests live under
 `$XDG_STATE_HOME/isycode/mobile-host/keystore.sqlite3` (or
 `~/.local/state/isycode/mobile-host/keystore.sqlite3`) with restrictive POSIX

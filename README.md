@@ -51,9 +51,9 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 ### Parcial o pendiente
 
 - **ISySentinel / M15:** `security.py` agrega decisiones puras; Workspace Authority conserva grants por root. Los owners locales enlazan material de request, Authority/Sentinel y receipts en el journal privado. Esta rama incorpora owners de Mobile Host para start y pairing; el snapshot M15 está actualizado y la suite completa pasa localmente (324 pruebas). En el Gateway separado siguen pendientes el checker estructural, HTTPS/proxy de despliegue y una operación remota con ambos gates. Ver [auditoría Gateway](docs/security/m15-gateway-audit-2026-09-28.md). Las acciones sin owner permanecen DENY.
-- **Ejecución de herramientas del modelo:** una respuesta de texto como `{"tool":"bash",...}` es texto y no se ejecuta. No hay ejecución arbitraria de shell ni escritura general del workspace desde el chat.
+- **Herramientas del modelo:** con un provider que soporta tool calls y los grants del workspace, el chat usa un bucle nativo (hasta 5 rondas, 3 llamadas por respuesta) con `workspace_list`, `workspace_read` y `workspace_search`, todas por Workspace Authority e IsySentinel con receipt. Si activas **Edit workspace files** en Settings → Authority, el modelo también puede proponer el contenido completo de un archivo de texto con `workspace_write`: ISyCode muestra el diff exacto y solo escribe si lo apruebas. La escritura es atómica, no sigue symlinks, rechaza rutas sensibles y archivos de más de 128 KiB, y no sobrescribe si el archivo cambió después de la revisión. Solo funciona en POSIX (Linux y macOS). Una respuesta de texto como `{"tool":"bash",...}` sigue siendo texto: no hay shell, ni borrar, ni mover archivos.
 - **Gateway en vivo:** el cliente/owner semántico está conectado en ISyCode, pero falta demostrar una operación contra el Gateway real con grant local, scope remoto e IDs de workspace coincidentes.
-- **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. No hay bucle de tools del modelo.
+- **MCP general:** solo Gateway MCP tiene el flujo manual de invocación. Los otros catálogos son descubrimiento; no activan Skills ni llaman herramientas por sí solos. El bucle de tools del modelo solo expone las herramientas locales del workspace.
 - **LSP:** Pyright ofrece `workspace/symbol`; Rust Analyzer se detecta como no soportado. No hay todavía diagnósticos, autocompletado ni navegación completa.
 - **Mobile Host:** aún faltan sesiones remotas, streaming, cancelación, approvals, adapters operativos y administración completa de credenciales.
 - **Providers:** OAuth todavía no está implementado. Los métodos OAuth leídos de un catálogo externo son metadatos.
@@ -97,6 +97,18 @@ isycode
 `isycode cli` abre el navegador semántico. El wrapper `isyco cli` existe en la instalación integrada con el CLI de ISyCo; el paquete standalone instala `isycode` y no reemplaza ese comando del sistema.
 
 En el primer arranque, se puede marcar el directorio como workspace recurrente. Aceptar crea un `.isyroot` vacío; rechazar mantiene la ejecución temporal. Las conversaciones recurrentes se guardan en `~/.local/state/isycode/isyrcodesessions/` o bajo `$XDG_STATE_HOME`.
+
+### Pruebas
+
+```bash
+python -m pytest -q
+```
+
+Las pruebas contra un ISyCo Gateway vivo son opt-in porque hablan con un servicio real, y `test_gateway_write_file` escribe y borra un archivo en él. Con el Gateway corriendo:
+
+```bash
+ISYCODE_LIVE_GATEWAY=1 python -m pytest -q test_gateway.py
+```
 
 ## Providers
 

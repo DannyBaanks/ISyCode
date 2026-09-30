@@ -23,6 +23,7 @@ DEDICATED_CONTROLS = {
     "workspace.files.read": "Read and search workspace files",
     "workspace.files.search": "Read and search workspace files",
     "workspace.context.inject": "Read and search workspace files",
+    "workspace.files.write": "Edit workspace files",
     "provider.request": "Connect to the selected AI model",
     "gateway.files.read": "Check ISyCo Gateway",
     "mcp.discover": "Find Gateway tools",
@@ -32,10 +33,13 @@ DEDICATED_CONTROLS = {
     "catalog.external.read": "Browse optional integrations",
     "mobile.host.start": "Mobile Host on this computer",
     "mobile.pair": "Mobile Host on this computer",
+    "mobile.pair.issue": "Mobile Host on this computer",
 }
 
 MOBILE_HOST_ADDRESS = "127.0.0.1:8765"
 MOBILE_PAIR_TARGET = "mobile-host"
+# Target-scoped Mobile Host grants saved together with mobile.host.start.
+MOBILE_PAIR_ACTIONS = ("mobile.pair", "mobile.pair.issue")
 
 
 def grant_state(action_id: str, grant: Mapping[str, Any] | None) -> str:
@@ -56,17 +60,17 @@ def displayed_on(action_id: str, grant: Mapping[str, Any] | None, scoped: bool =
 
 def mobile_host_enabled(grants: Mapping[str, Any]) -> bool:
     start = grants.get("mobile.host.start", {})
-    pair = grants.get("mobile.pair", {})
     return (displayed_on("mobile.host.start", start,
                          MOBILE_HOST_ADDRESS in start.get("network_hosts", []))
-            and displayed_on("mobile.pair", pair,
-                             MOBILE_PAIR_TARGET in pair.get("targets", [])))
+            and all(displayed_on(action, grants.get(action, {}),
+                                 MOBILE_PAIR_TARGET in grants.get(action, {}).get("targets", []))
+                    for action in MOBILE_PAIR_ACTIONS))
 
 
 def mobile_host_saved(grants: Mapping[str, Any]) -> bool:
     """Any saved Mobile Host grant, even partial, must stay visible and revocable."""
     return any(bool(grants.get(action, {}).get("enabled"))
-               for action in ("mobile.host.start", "mobile.pair"))
+               for action in ("mobile.host.start", *MOBILE_PAIR_ACTIONS))
 
 
 @dataclass(frozen=True)
@@ -103,7 +107,8 @@ def other_saved_grants(grants: Mapping[str, Any]) -> list[SavedGrantRow]:
 
 
 __all__ = [
-    "DEDICATED_CONTROLS", "MOBILE_HOST_ADDRESS", "MOBILE_PAIR_TARGET", "OWNED_ACTIONS",
+    "DEDICATED_CONTROLS", "MOBILE_HOST_ADDRESS", "MOBILE_PAIR_ACTIONS", "MOBILE_PAIR_TARGET",
+    "OWNED_ACTIONS",
     "SavedGrantRow", "displayed_on", "grant_state", "mobile_host_enabled",
     "mobile_host_saved", "other_saved_grants",
 ]

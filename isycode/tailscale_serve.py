@@ -24,6 +24,7 @@ from isycode.tailscale import (
     DEFAULT_GATEWAY_PORT, TailscaleAdapter, TailscaleCommandResult,
     TailscaleSnapshot, ServeRoute, _bounded_run,
 )
+from isycode.tailscale_read import TailscaleReadOwner
 from isycode.workspace_authority import WorkspaceAuthority
 
 
@@ -76,6 +77,8 @@ class TailscaleServeOwner:
         self.authority = authority
         self.approvals = approvals
         self.adapter = adapter or TailscaleAdapter(gateway_port=gateway_port)
+        self._inventory = TailscaleReadOwner(self.root, authority, approvals,
+                                             adapter=self.adapter, gateway_port=gateway_port)
         self.state_store = state_store or PrivateAccessStateStore()
         self.runner = runner
         self.gateway_port = gateway_port
@@ -85,7 +88,7 @@ class TailscaleServeOwner:
     def _prepare(self, action_id: str) -> tuple[ServePreview, TailscaleAuthorityFacts]:
         if action_id not in {"tailscale.serve.enable", "tailscale.serve.disable"}:
             raise ValueError("unsupported Tailscale Serve action")
-        snapshot = self.adapter.inspect()
+        snapshot = self._inventory.authorized_snapshot()
         if not isinstance(snapshot, TailscaleSnapshot) or snapshot.state != "signed_in":
             raise ValueError("Tailscale must be signed in before configuring private Serve")
         if snapshot.serve_state not in {"empty", "existing"} or not isinstance(snapshot.serve_digest, str):

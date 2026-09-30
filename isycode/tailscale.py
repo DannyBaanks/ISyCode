@@ -26,6 +26,13 @@ MAX_OUTPUT = 65536
 COMMAND_TIMEOUT = 5.0
 MAX_ROUTES = 64
 DEFAULT_GATEWAY_PORT = 8787
+# Guidance only: raw CLI stderr is never shown or journaled, and ISyCode never
+# runs sudo. On Linux, tailscaled refuses login/serve from non-root users that
+# are not the configured operator.
+LINUX_OPERATOR_HINT = (
+    "On Linux, `tailscale login` and `tailscale serve` need root or the configured "
+    "operator. If this failed with access denied, run `sudo tailscale set "
+    "--operator=$USER` once in your own terminal, then retry. ISyCode never runs sudo.")
 READ_COMMANDS = (("version",), ("status", "--json"),
                  ("serve", "get-config", "--all"),
                  ("serve", "status", "--json"))

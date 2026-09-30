@@ -41,7 +41,13 @@ class CredentialVault:
                 raise CredentialVaultError("No secure OS keyring backend is available")
         except CredentialVaultError:
             raise
-        except Exception as exc:
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as exc:
+            # Native keyring backends can fail below Python: a broken
+            # cryptography/pyo3 binding raises PanicException, which derives
+            # from BaseException. Treat any backend load failure as "no secure
+            # keyring" so callers fail closed instead of crashing the TUI.
             raise CredentialVaultError("Could not open the operating system keyring") from exc
         with self._connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS credentials (

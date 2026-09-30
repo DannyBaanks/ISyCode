@@ -79,7 +79,7 @@ def real_adapter(tmp_path, monkeypatch):
         store = PrivateAccessStateStore(tmp_path / "private-access")
         owner = TailscaleServeOwner(root, authority, approvals, adapter=adapter,
                                     state_store=store, runner=emulator)
-        for action in ("tailscale.serve.enable", "tailscale.serve.disable"):
+        for action in ("tailscale.inspect", "tailscale.serve.enable", "tailscale.serve.disable"):
             authority.set_grant(action, enabled=True, executables=[cli])
         return owner, emulator, approvals, store
 

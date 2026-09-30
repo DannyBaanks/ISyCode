@@ -254,6 +254,17 @@ class MobileHost:
             clients=clients, error=self._error,
         )
 
+    def pairing_challenge_id(self) -> str | None:
+        """Identity of the current pairing challenge; never the PIN itself."""
+        return self._pair_challenge_id
+
+    def expire_pairing_code(self) -> None:
+        """Invalidate the current PIN without issuing a replacement."""
+        self._pair_code = None
+        self._pair_digest = None
+        self._pair_challenge_id = None
+        self._pair_expires_at = None
+
     def pairing_code_for_local_settings(self) -> str | None:
         if not self._pair_digest or not self._pair_expires_at or self._pair_expires_at <= time.time():
             return None
@@ -502,6 +513,42 @@ class MobileHostOwner:
     async def shutdown(self) -> None:
         """Release the loopback listener when the owning TUI exits."""
         await self.host.stop()
+
+    def pin_request(self) -> ActionRequest:
+        """Exact request for replacing the PIN, bound to the challenge it replaces."""
+        return ActionRequest("mobile.pair.issue", self.root, "mobile-host", {
+            "host": "127.0.0.1:8765",
+            "replaces_challenge": self.host.pairing_challenge_id() or "none",
+        }, execution_owner="mobile_host")
+
+    def issue_pairing_pin(self, request: ActionRequest,
+                          approval: ActionApproval | None) -> tuple[bool, str, str | None]:
+        """Replace the one-use PIN after Authority, IsySentinel and a fresh approval.
+
+        Returns (issued, reason, pin). The PIN is returned only for local display;
+        it never enters the request, the decision journal, or the receipt.
+        """
+        if not self.host.status().alive:
+            return False, "Mobile Host is not running", None
+        if request != self.pin_request():
+            return False, "pairing state changed; request a new PIN again", None
+        authority, decision = self.gate.authorize(
+            request, approvals=self.approvals, approval=approval)
+        if not authority.allowed or not decision.allowed:
+            reason = authority.reason if not authority.allowed else next(
+                (check.reason for check in decision.checks if not check.passed),
+                "IsySentinel denied the new PIN")
+            return False, reason, None
+        code, expires_at = self.host.rotate_pairing_code()
+        result = json.dumps({"state": "pin_issued", "expires_at": round(expires_at, 3)},
+                            sort_keys=True)
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), request.action_id, request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(result.encode("utf-8")).hexdigest())
+        if not self.gate.persist_receipt(request, receipt):
+            self.host.expire_pairing_code()
+            return False, "PIN receipt could not be persisted; no PIN is active", None
+        return True, "New one-use pairing PIN issued", code
 
     def authorize_pair(self, challenge_id: str, device_name: str) -> bool:
         request = ActionRequest("mobile.pair", self.root, "mobile-host", {

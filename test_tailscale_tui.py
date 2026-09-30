@@ -113,3 +113,24 @@ def test_serve_route_lifetime_policy_is_explicit_and_never_unapproved():
     assert "Route stays on after ISyCode exits" in refresh
     start = ast.get_source_segment(source, methods["_start_mobile_host"])
     assert "already points here" in start
+
+
+def test_linux_operator_guidance_is_text_only_and_shown_on_failures():
+    methods = _app_methods()
+    source = SOURCE.read_text(encoding="utf-8")
+    for name in ("_run_tailscale_serve", "_check_tailscale_login"):
+        assert "LINUX_OPERATOR_HINT" in ast.get_source_segment(source, methods[name]), name
+    package = Path(__file__).parent / "isycode"
+    for module in ("tailscale.py", "tailscale_login.py", "tailscale_serve.py", "tailscale_read.py"):
+        tree = ast.parse((package / module).read_text(encoding="utf-8"))
+        literals = {node.value for node in ast.walk(tree)
+                    if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+        assert "sudo" not in literals and "/usr/bin/sudo" not in literals, module
+
+
+def test_mobile_host_status_reports_a_saved_private_route():
+    methods = _app_methods()
+    segment = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"),
+                                     methods["_render_mobile_host_status"])
+    assert "Tailscale Serve is not modified" not in segment
+    assert "route_url(" in segment

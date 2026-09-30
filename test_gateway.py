@@ -9,9 +9,21 @@ from pathlib import Path
 ISYCODE_ROOT = Path(__file__).parent
 sys.path.insert(0, str(ISYCODE_ROOT))
 
+import pytest
+
 from isycode.gateway_client import GatewayClient, GatewayError, mutation_fails_closed
 
+# Live integration tests talk to a real Gateway (one writes and deletes a file
+# on it), so they only run when explicitly requested. Degraded-mode tests below
+# are offline and always run.
+live_gateway = pytest.mark.skipif(
+    os.environ.get("ISYCODE_LIVE_GATEWAY") != "1",
+    reason="needs a running ISyCo Gateway; set ISYCODE_LIVE_GATEWAY=1 "
+           "(test_gateway_write_file writes and deletes a test file)")
 
+
+@pytest.mark.integration
+@live_gateway
 def test_gateway_read_file():
     client = GatewayClient()
     result = client.read("AGENTS.md")
@@ -19,6 +31,8 @@ def test_gateway_read_file():
     assert len(result["content"]) > 0
 
 
+@pytest.mark.integration
+@live_gateway
 def test_gateway_list_files():
     client = GatewayClient()
     result = client.list_files("git")
@@ -26,12 +40,16 @@ def test_gateway_list_files():
     assert result["count"] > 0
 
 
+@pytest.mark.integration
+@live_gateway
 def test_gateway_search():
     client = GatewayClient()
     result = client.search("ISyCode", path="git")
     assert "results" in result or "items" in result or "matches" in result
 
 
+@pytest.mark.integration
+@live_gateway
 def test_gateway_write_file():
     client = GatewayClient()
     test_path = "git/isycode-m2-test.txt"
@@ -67,6 +85,8 @@ def test_degraded_mode_no_bash_fallback():
         assert "failed closed" in e.message
 
 
+@pytest.mark.integration
+@live_gateway
 def test_gateway_available_check():
     client = GatewayClient()
     assert client.is_available() is True
@@ -79,5 +99,4 @@ def test_gateway_unavailable_detection():
 
 
 if __name__ == "__main__":
-    import pytest
     sys.exit(pytest.main([__file__, "-v"]))

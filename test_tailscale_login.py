@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from isycode.approvals import ActionApprovalStore
+from isycode.security import ActionRequest
 from isycode.tailscale import TailscaleSnapshot
 from isycode.tailscale_login import TailscaleLoginOwner
 from isycode.workspace_authority import WorkspaceAuthority
@@ -49,6 +50,9 @@ class FakeAdapter:
     def inspect(self):
         return self.snapshot
 
+    def resolve_executable(self):
+        return self.snapshot.executable
+
 
 @dataclass
 class LoginFixture:
@@ -72,6 +76,8 @@ def login_fixture(tmp_path, monkeypatch):
     executable.chmod(0o700)
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
     authority.set_grant("tailscale.login", enabled=True, executables=[executable])
+    # The preview reads the CLI only through the gated read-only inventory owner.
+    authority.set_grant("tailscale.inspect", enabled=True, executables=[executable])
     approvals = ActionApprovalStore()
     adapter = FakeAdapter(str(executable.resolve()))
     launched = []
@@ -212,3 +218,18 @@ def test_official_login_url_can_be_recognized_across_pipe_reads(login_fixture):
     fixture.process.stdout.data.extend(b"123456789\n")
     assert fixture.owner.poll(attempt_id).login_url == (
         "https://login.tailscale.com/a/AbCdEf0123456789")
+
+
+def test_login_preview_reads_no_inventory_without_the_read_only_grant(login_fixture):
+    fixture = login_fixture
+    fixture.authority.set_grant("tailscale.inspect", enabled=False, executables=[])
+    calls = []
+    fixture.adapter.inspect = lambda: calls.append("inspect") or fixture.adapter.snapshot
+
+    with pytest.raises(ValueError, match="not authorized"):
+        fixture.owner.login_request()
+    request = ActionRequest("tailscale.login", fixture.root, "tailscale",
+                            {"executable": str(fixture.executable.resolve()), "operation": "login"},
+                            execution_owner="tailscale_login")
+    assert fixture.owner.begin_login(request, fixture.approvals.issue(request)).decision == "DENY"
+    assert calls == [] and fixture.launched == []
