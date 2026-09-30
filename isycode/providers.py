@@ -35,6 +35,10 @@ PRESETS: dict[str, dict[str, Any]] = {
     "openrouter": {"base_url": "https://openrouter.ai/api/v1",
                    "key_env": "OPENROUTER_API_KEY", "label": "OpenRouter",
                    "default_model": "openai/gpt-oss-120b"},
+    # Native Messages API (optional `anthropic` SDK), not an OpenAI-compatible endpoint.
+    "anthropic": {"base_url": "https://api.anthropic.com", "key_env": "ANTHROPIC_API_KEY",
+                  "label": "Anthropic (Claude)", "default_model": "claude-opus-5-5",
+                  "supports_tools": True, "api": "anthropic", "reasoning_effort": "medium"},
     "ollama": {"base_url": "http://127.0.0.1:11434/v1", "key_env": "OLLAMA_API_KEY",
                "label": "Ollama (local)", "key_required": False,
                "default_model": "llama3.1:8b"},
@@ -225,6 +229,10 @@ class Provider:
     def models(self) -> list[str]:
         if not self.configured():
             raise ProviderError(f"no credential configured for {self.name}")
+        if PRESETS[self.name].get("api") == "anthropic":
+            from isycode.anthropic_provider import list_models
+
+            return list_models(self.api_key, self.base_url)
         request = urllib.request.Request(
             self.base_url + "/models", headers=self._headers(), method="GET")
         try:

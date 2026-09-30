@@ -15,6 +15,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import secrets
 import shutil
 import signal
@@ -102,7 +103,8 @@ def resolve_executable(argv0: str) -> str:
 
 
 def function_name(server: str, tool: str) -> str:
-    return f"mcp__{server}__{tool}"[:64]
+    """Provider-safe function name: only letters, digits, "_" and "-", at most 64 chars."""
+    return re.sub(r"[^A-Za-z0-9_-]", "_", f"mcp__{server}__{tool}")[:64]
 
 
 @dataclass

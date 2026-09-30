@@ -53,6 +53,7 @@ from isycode.action_runtime import (
     LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
 from isycode.actions import ACTION_BY_ID
+from isycode.chat_transport import assistant_turn, provider_complete
 from isycode.agent_loop import (
     AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, MAX_SUMMARY_CHARS, SUMMARY_MAX_TOKENS, AgentLimits,
     compact_turn, split_history, summary_messages, summary_system_message,
@@ -6068,11 +6069,8 @@ class TUIApp(App):
         summary_request = summary_messages(older, self._conversation_summary)
 
         async def send():
-            return await async_stream_complete(
-                provider.base_url, provider.api_key, provider.model, summary_request,
-                max_tokens=SUMMARY_MAX_TOKENS, token_limit_field=provider.token_limit_field,
-                reasoning_effort=provider.reasoning_effort,
-                temperature_supported=provider.temperature_supported)
+            return await provider_complete(provider, summary_request,
+                                           max_tokens=SUMMARY_MAX_TOKENS)
 
         try:
             response, outcome = await owner.execute(provider, {
@@ -6320,14 +6318,9 @@ class TUIApp(App):
             }
 
             async def send_provider_request():
-                return await async_stream_complete(
-                    provider.base_url, provider.api_key, provider.model,
-                    messages, max_tokens=limits.answer_tokens,
-                    token_limit_field=provider.token_limit_field,
-                    reasoning_effort=provider.reasoning_effort,
-                    temperature_supported=provider.temperature_supported,
-                    on_chunk=on_chunk,
-                    tools=chat_tools)
+                return await provider_complete(provider, messages,
+                                               max_tokens=limits.answer_tokens,
+                                               on_chunk=on_chunk, tools=chat_tools)
 
             try:
                 for tool_round in range(limits.max_steps):
@@ -6349,11 +6342,7 @@ class TUIApp(App):
                     calls = response.get("tool_calls", [])
                     if not calls:
                         break
-                    messages.append({
-                        "role": "assistant",
-                        "content": response.get("text") or None,
-                        "tool_calls": calls,
-                    })
+                    messages.append(assistant_turn(response))
                     for index, call in enumerate(calls):
                         if index >= limits.max_tool_calls:
                             call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]

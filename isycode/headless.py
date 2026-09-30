@@ -23,7 +23,8 @@ from isycode.authority_view import displayed_on
 from isycode.config import discover_workspace_identity, provider_default_model
 from isycode.git_owner import GIT_TOOLS, GitOwner, git_executable
 from isycode.providers import Provider, ProviderError, load_provider_key, selected_provider_name
-from isycode.streaming import StreamError, async_stream_complete
+from isycode.chat_transport import assistant_turn, provider_complete
+from isycode.streaming import StreamError
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
 EXIT_OK = 0
@@ -140,12 +141,9 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                 out.flush()
 
     async def default_transport(request_messages, request_tools, callback):
-        return await async_stream_complete(
-            provider.base_url, provider.api_key, provider.model, request_messages,
-            max_tokens=limits.answer_tokens, token_limit_field=provider.token_limit_field,
-            reasoning_effort=provider.reasoning_effort,
-            temperature_supported=provider.temperature_supported,
-            on_chunk=callback, tools=request_tools)
+        return await provider_complete(provider, request_messages,
+                                       max_tokens=limits.answer_tokens,
+                                       on_chunk=callback, tools=request_tools)
 
     send = transport or default_transport
     receipts: list[str] = []
@@ -172,8 +170,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
             calls = response.get("tool_calls") or []
             if not calls:
                 break
-            messages.append({"role": "assistant", "content": response.get("text") or None,
-                             "tool_calls": calls})
+            messages.append(assistant_turn(response))
             for index, call in enumerate(calls):
                 if index >= limits.max_tool_calls:
                     call_id = call.get("id") or "call_headless"
