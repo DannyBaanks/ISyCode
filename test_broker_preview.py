@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from isycode.approvals import ActionApprovalStore
 from isycode.broker import (
     BrokerManagementOwner, BrokerPreviewOwner, BrokerProvisionOwner, BrokerRegistry,
@@ -10,6 +12,7 @@ from isycode.broker import (
 from isycode.workspace_authority import WorkspaceAuthority
 
 
+@pytest.mark.integration
 def test_recipe_is_fixed_to_configured_isyco_checkout(monkeypatch):
     checkout = Path.home() / "Development" / "ISyCo"
     monkeypatch.setenv("ISYCO_ROOT", str(checkout))
@@ -24,6 +27,7 @@ def test_recipe_is_fixed_to_configured_isyco_checkout(monkeypatch):
     }
 
 
+@pytest.mark.integration
 def test_preview_requires_read_authority_and_never_executes_docker(tmp_path, monkeypatch):
     checkout = Path.home() / "Development" / "ISyCo"
     monkeypatch.setenv("ISYCO_ROOT", str(checkout))
@@ -62,6 +66,7 @@ def test_preview_denies_selected_path_outside_isyroot(tmp_path, monkeypatch):
     assert "Broker preview denied" in outcome.text
 
 
+@pytest.mark.integration
 def test_provision_owner_requires_grants_and_uses_bound_approvals(
         tmp_path, monkeypatch):
     import isycode.broker as broker_module

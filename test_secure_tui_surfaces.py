@@ -155,10 +155,13 @@ def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():
     assert '"Request: {digest[:12]}… · Authority: {authority}\\n"' in source
 
 
-def test_semantic_navigation_keeps_lsp_and_files_branches_reachable():
+def test_semantic_navigation_keeps_lsp_and_files_branches_reachable(monkeypatch):
     from isycode.tui import TUIApp
 
     app = TUIApp()
+    monkeypatch.setattr(app, "_lsp_inventory", [
+        {"id": "pyright", "state": "sandbox_ready", "label": "Pyright"},
+    ])
     lsp_entries = app._branch_entries("lsp")
     file_entries = app._branch_entries("files")
 
