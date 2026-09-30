@@ -1413,7 +1413,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1815,
+      "line": 1816,
       "owner": "workspace_read"
     },
     {
@@ -1460,63 +1460,63 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1635,
+      "line": 1636,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1815,
+      "line": 1816,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 1424,
+      "line": 1425,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1488,
+      "line": 1489,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1558,
+      "line": 1559,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1644,
+      "line": 1645,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 1694,
+      "line": 1695,
       "owner": "lsp_symbols"
     },
     {
       "action": "lsp.diagnostics",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 1702,
+      "line": 1703,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1757,
+      "line": 1758,
       "owner": "provider_network"
     },
     {
@@ -1747,14 +1747,14 @@
       "action": "workspace.files.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 245,
+      "line": 240,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.restore",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
       "file": "isycode/workspace_write.py",
-      "line": 291,
+      "line": 286,
       "owner": "workspace_write"
     }
   ],

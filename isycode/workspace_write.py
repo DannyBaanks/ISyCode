@@ -35,6 +35,7 @@ from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_setup import state_root
+from isycode.winfs import VerifiedFS, is_link, use_verified_fs
 
 MAX_NEW_FOLDERS = 8
 MAX_CHECKPOINTS = 50
@@ -203,7 +204,7 @@ class WorkspaceWriteOwner:
             except FileNotFoundError:
                 missing.append(current.relative_to(self.root).as_posix())
                 continue
-            if stat.S_ISLNK(mode):
+            if stat.S_ISLNK(mode) or is_link(current):
                 raise OSError("symlinked folders cannot be written through")
             if not stat.S_ISDIR(mode):
                 raise ValueError("a parent of this path is not a folder")
@@ -212,13 +213,7 @@ class WorkspaceWriteOwner:
         return tuple(missing)
 
     def _current(self, target: Path, missing: tuple[str, ...]) -> bytes | None:
-        if missing:
-            return None
-        parent_fd = self._open_directory(target.parent)
-        try:
-            return self._read_at(parent_fd, target.name)
-        finally:
-            os.close(parent_fd)
+        return None if missing else self._read_back(target)
 
     @staticmethod
     def _diff(before: bytes | None, after: bytes | None, relative: str) -> str:
@@ -407,8 +402,8 @@ class WorkspaceWriteOwner:
 
     def _open_directory(self, directory: Path, create: tuple[str, ...] = ()) -> int:
         """Walk from the root with O_NOFOLLOW; create only the approved missing folders."""
-        if os.name == "nt" or os.open not in os.supports_dir_fd:
-            raise OSError("descriptor-safe workspace writes are not available on this platform")
+        if use_verified_fs():
+            raise OSError("descriptor walks are not available on this platform")
         relative = directory.relative_to(self.root)
         flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
         descriptor = os.open(self.root, flags)
@@ -429,6 +424,24 @@ class WorkspaceWriteOwner:
         except Exception:
             os.close(descriptor)
             raise
+
+    @staticmethod
+    def _checked_text(data: bytes | None) -> bytes | None:
+        if data is None:
+            return None
+        if len(data) > MAX_WRITE_BYTES:
+            raise ValueError("existing file exceeds the 128 KiB write limit")
+        try:
+            data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("existing file is not UTF-8 text") from exc
+        return data
+
+    def _verified_read(self, target: Path) -> bytes | None:
+        try:
+            return self._checked_text(VerifiedFS(self.root).read_file(target, MAX_WRITE_BYTES))
+        except FileNotFoundError:
+            return None
 
     @staticmethod
     def _read_at(parent_fd: int, name: str) -> bytes | None:
@@ -455,6 +468,8 @@ class WorkspaceWriteOwner:
         return data
 
     def _read_back(self, target: Path) -> bytes | None:
+        if use_verified_fs():
+            return self._verified_read(target)
         try:
             parent_fd = self._open_directory(target.parent)
         except FileNotFoundError:
@@ -467,6 +482,14 @@ class WorkspaceWriteOwner:
     def _replace(self, target: Path, data: bytes, expected_before: str,
                  new_folders: tuple[str, ...]) -> bytes | None:
         """Atomically replace target; returns the content that was replaced."""
+        if use_verified_fs():
+            filesystem = VerifiedFS(self.root)
+            filesystem.ensure_folders(target.parent, new_folders)
+            current = self._verified_read(target)
+            if ("absent" if current is None else _sha(current)) != expected_before:
+                raise ValueError("the file changed during approval; nothing was written")
+            filesystem.replace(target, data, current, lambda: self._verified_read(target))
+            return current
         parent_fd = self._open_directory(target.parent, create=new_folders)
         temporary = f".{target.name}.isycode-{secrets.token_hex(6)}.tmp"
         created = False
@@ -504,6 +527,12 @@ class WorkspaceWriteOwner:
 
     def _remove(self, target: Path, expected_current: str) -> None:
         """Remove a file ISyCode created, only if it is still exactly that content."""
+        if use_verified_fs():
+            current = self._verified_read(target)
+            if current is None or _sha(current) != expected_current:
+                raise ValueError("the file changed; nothing was removed")
+            VerifiedFS(self.root).remove(target)
+            return
         parent_fd = self._open_directory(target.parent)
         try:
             current = self._read_at(parent_fd, target.name)

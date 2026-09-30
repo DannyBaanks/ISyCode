@@ -27,6 +27,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 from isycode.private_access import OwnedServeRoute
 from isycode.tailscale import ServeRoute, _valid_gateway
 from isycode.workspace_setup import state_root
+from isycode.winfs import VerifiedFS, use_verified_fs
 
 
 READ_ACTIONS = frozenset({
@@ -1863,21 +1864,27 @@ class LocalWorkspaceReadOwner:
             raise ValueError("path is outside the workspace root")
         return lexical
 
-    def _list(self, target: str) -> str:
-        directory = Path(target)
+    def _entries(self, directory: Path) -> list[Any]:
+        """Directory entries without following links (descriptor walk, or verified paths)."""
+        if use_verified_fs():
+            return VerifiedFS(self.root).list_dir(directory)
         descriptor = self._open_directory(directory)
-        entries = []
         try:
             with os.scandir(descriptor) as iterator:
-                for item in iterator:
-                    if WorkspaceReadSystembility.is_sensitive_name(item.name) or item.is_symlink():
-                        continue
-                    kind = "directory" if item.is_dir(follow_symlinks=False) else "file"
-                    entries.append({"name": item.name, "kind": kind})
-                    if len(entries) >= 1000:
-                        break
+                return list(iterator)
         finally:
             os.close(descriptor)
+
+    def _list(self, target: str) -> str:
+        directory = Path(target)
+        entries = []
+        for item in self._entries(directory):
+            if WorkspaceReadSystembility.is_sensitive_name(item.name) or item.is_symlink():
+                continue
+            kind = "directory" if item.is_dir(follow_symlinks=False) else "file"
+            entries.append({"name": item.name, "kind": kind})
+            if len(entries) >= 1000:
+                break
         entries.sort(key=lambda value: (value["kind"] != "directory", value["name"].casefold()))
         return json.dumps({"path": str(directory.relative_to(self.root) or "."),
                            "entries": entries}, ensure_ascii=False)
@@ -1910,22 +1917,17 @@ class LocalWorkspaceReadOwner:
         folded = query.casefold()
         while pending:
             directory = pending.pop()
-            descriptor = None
             try:
-                descriptor = self._open_directory(directory)
-                with os.scandir(descriptor) as iterator:
-                    children = []
-                    for child in iterator:
-                        children.append(child)
-                        entries_seen += 1
-                        if entries_seen >= MAX_SCAN_ENTRIES:
-                            truncated = True
-                            break
+                listed = self._entries(directory)
             except OSError:
                 continue
-            finally:
-                if descriptor is not None:
-                    os.close(descriptor)
+            children = []
+            for child in listed:
+                children.append(child)
+                entries_seen += 1
+                if entries_seen >= MAX_SCAN_ENTRIES:
+                    truncated = True
+                    break
             visited += 1
             if visited > 300 or truncated:
                 truncated = True
@@ -1995,16 +1997,10 @@ class LocalWorkspaceReadOwner:
                     break
                 continue
             directory = pending.pop()
-            directory_fd: int | None = None
             try:
-                directory_fd = self._open_directory(directory)
-                with os.scandir(directory_fd) as iterator:
-                    children = sorted(iterator, key=lambda item: item.name)
+                children = sorted(self._entries(directory), key=lambda item: item.name)
             except OSError:
                 continue
-            finally:
-                if directory_fd is not None:
-                    os.close(directory_fd)
             for child in reversed(children):
                 if (WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink()
                         or child.name in GREP_SKIP_DIRECTORIES):
@@ -2017,8 +2013,8 @@ class LocalWorkspaceReadOwner:
                            "truncated": truncated}, ensure_ascii=False)
 
     def _open_directory(self, directory: Path) -> int:
-        if os.name == "nt":
-            raise OSError("descriptor-safe local reads are not available on this platform")
+        if use_verified_fs():
+            raise OSError("descriptor walks are not available on this platform")
         relative = directory.relative_to(self.root)
         flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
         descriptor = os.open(self.root, flags)
@@ -2033,8 +2029,8 @@ class LocalWorkspaceReadOwner:
             raise
 
     def _open_file(self, path: Path) -> int:
-        if os.name == "nt":
-            raise OSError("descriptor-safe local reads are not available on this platform")
+        if use_verified_fs():
+            return VerifiedFS(self.root).open_read(path)
         parent_fd = self._open_directory(path.parent)
         try:
             return os.open(path.name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
