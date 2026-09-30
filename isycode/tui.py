@@ -30,7 +30,7 @@ from isycode.config import (
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.session_owner import ChatSessionOwner
-from isycode.credential_owner import GATEWAY_SERVICE, CredentialOwner
+from isycode.credential_owner import GATEWAY_SERVICE, CredentialOwner, CredentialUseOwner
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
@@ -41,7 +41,9 @@ from isycode.catalog import (
     ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_KERNEL,
     SEMANTIC_BRANCHES,
 )
-from isycode.credentials import CredentialVault, CredentialVaultError
+from isycode.credentials import (
+    CredentialVault, CredentialVaultError, saved_secret_exists, set_saved_secret_reader,
+)
 from isycode.approvals import ActionApprovalStore
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.action_runtime import (
@@ -1685,6 +1687,7 @@ class TUIApp(App):
     async def on_unmount(self, event) -> None:
         """Release local temporary state; unowned optional services never start in Secure."""
         del event
+        set_saved_secret_reader(None)
         if self._mobile_host_owner is not None:
             await self._mobile_host_owner.shutdown()
         if self._temporary_chat_root is not None:
@@ -1736,6 +1739,7 @@ class TUIApp(App):
                         setup_store.sessions_root(self._workspace_root))
                 except (WorkspaceAuthorityError, OSError, ValueError):
                     self._chat_session_owner = None
+            self._register_saved_key_reader()
             await self._initialize_workspace()
             self._refresh_lsp_status()
             self.run_worker(self._refresh_openisy(), exclusive=False)
@@ -1752,6 +1756,16 @@ class TUIApp(App):
                     "Settings → Authority (recurring workspaces only).", MUTED)
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+
+    def _register_saved_key_reader(self) -> None:
+        """Security mode: every saved-key read is its own owned, journaled decision."""
+        try:
+            owner = CredentialUseOwner(self._workspace_root,
+                                       WorkspaceAuthority(self._workspace_root))
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError):
+            set_saved_secret_reader(None)
+            return
+        set_saved_secret_reader(lambda service, consumer: owner.secret_for(service, consumer)[1])
 
     def _shared_root_warning(self) -> str | None:
         return shared_root_warning(self._workspace_root,
@@ -2964,6 +2978,18 @@ class TUIApp(App):
             entries.append(self._entry(
                 "Credential vault unavailable", "info", "",
                 "Check the user-private state directory and permissions."))
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            grants = {}
+        use_grant = grants.get("credentials.use", {})
+        for service in sorted({item["service"] for item in credentials if not item["revoked"]}):
+            if not displayed_on("credentials.use", use_grant,
+                                service in use_grant.get("targets", [])):
+                entries.append(self._entry(
+                    f"Allow using the saved {self._credential_label(service)} key here · asks first",
+                    "credential_use_grant", service,
+                    "Each use is decided and recorded in this workspace's action journal."))
         for item in credentials:
             if item["revoked"]:
                 entries.append(self._entry(
@@ -4106,6 +4132,10 @@ class TUIApp(App):
         if kind == "credential_add":
             self._open_key_entry(value)
             return
+        if kind == "credential_use_grant":
+            self._close_menu()
+            self.run_worker(self._grant_key_use(value), exclusive=True, group="credentials")
+            return
         if kind == "credential_revoke":
             self._close_menu()
             self.run_worker(self._revoke_key_flow(value), exclusive=True, group="credentials")
@@ -4386,6 +4416,12 @@ class TUIApp(App):
             self._append(f"  Selected for this session · {provider.label} · {provider.model}", GREEN)
             self._close_menu()
             return
+        if saved_secret_exists(name):
+            self._append(
+                f"  A saved {provider.label} key exists, but this workspace does not allow using it · "
+                "Settings → API keys.", YELLOW)
+            self._close_menu()
+            return
         self._append(f"  {provider.label} needs an API key · paste it below to save it.", YELLOW)
         self._open_key_entry(name)
 
@@ -4422,7 +4458,7 @@ class TUIApp(App):
     async def _ensure_credential_grant(self, owner: CredentialOwner, service: str) -> bool:
         """Per-service grant for saving and removing keys; asked once, then remembered."""
         grants = owner.authority.policy().get("grants", {})
-        actions = ("credentials.add", "credentials.revoke")
+        actions = ("credentials.add", "credentials.use", "credentials.revoke")
         if all(displayed_on(action, grants.get(action, {}),
                             service in grants.get(action, {}).get("targets", []))
                for action in actions):
@@ -4430,9 +4466,10 @@ class TUIApp(App):
         label = self._credential_label(service)
         if not await self.push_screen_wait(TailscaleConfirmScreen(
                 f"Allow managing {label} API keys?",
-                f"ISyCode may save and remove {label} API keys in your operating-system keyring. "
-                "Keys are stored for your user (every workspace), never in the project, the "
-                "action journal or chat history. Each save and each removal still asks you first.",
+                f"ISyCode may save, use and remove {label} API keys in your operating-system "
+                "keyring. Keys are stored for your user (every workspace), never in the project, "
+                "the action journal or chat history. Each use is recorded in this workspace's "
+                "journal; each save and each removal still asks you first.",
                 "Allow")):
             return False
         for action in actions:
@@ -4474,6 +4511,19 @@ class TUIApp(App):
         self._append(f"  {label} API key saved · receipt {outcome.receipt.receipt_id}", GREEN)
         if service in PRESETS:
             self._select_provider(service)
+
+    async def _grant_key_use(self, service: str) -> None:
+        try:
+            owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+            granted = await self._ensure_credential_grant(owner, service)
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Permission not changed ({type(exc).__name__}).", YELLOW)
+            return
+        label = self._credential_label(service)
+        self._append(f"  The saved {label} key can be used in this workspace." if granted
+                     else "  Permission not granted; the saved key stays unused here.",
+                     GREEN if granted else MUTED)
 
     async def _revoke_key_flow(self, key_id: str) -> None:
         try:
@@ -4650,10 +4700,7 @@ class TUIApp(App):
             snapshot = CatalogSnapshot(True, tools, "ready")
             has_key = bool(os.environ.get("GATEWAY_API_KEY"))
             if not has_key:
-                try:
-                    has_key = bool(CredentialVault().latest_secret_for_service("isyco-gateway"))
-                except (CredentialVaultError, OSError, ValueError):
-                    has_key = False
+                has_key = saved_secret_exists("isyco-gateway")
             auth_state = "API key supplied" if has_key else "API key needed for calls"
             message = (f"Ready · {len(tools)} tools · {auth_state} · manual calls require "
                        "per-host grant + one-use approval")

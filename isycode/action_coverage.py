@@ -122,6 +122,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("bridge.send", "BridgeClient.send", "", "BLOCKED_BY_DESIGN"),
     ("credentials.add", "CredentialOwner.add", "credentials", "COVERED"),
     ("credentials.revoke", "CredentialOwner.revoke", "credentials", "COVERED"),
+    ("credentials.use", "CredentialUseOwner.secret_for", "credential_use", "COVERED"),
     ("session.create", "ChatSessionOwner.record", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.list_conversations", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.resume", "chat_sessions", "COVERED"),

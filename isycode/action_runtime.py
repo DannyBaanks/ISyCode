@@ -73,7 +73,7 @@ MAX_SCAN_ENTRIES = 6_000
 EXPLICIT_DENY_ACTIONS = frozenset({
     "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
-    "credentials.use", "lsp.stop",
+    "lsp.stop",
     "mobile.host.stop",
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
@@ -121,6 +121,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "session_delete": frozenset({"SessionDeleteBoundary"}),
     "chat_sessions": frozenset({"SessionStoreBoundary"}),
     "credentials": frozenset({"CredentialBoundary"}),
+    "credential_use": frozenset({"CredentialBoundary"}),
     "gateway_mcp": frozenset({"MCPInvocationBoundary"}),
     "gateway_semantic": frozenset({"GatewaySemanticBoundary"}),
     "lsp_symbols": frozenset({"WorkspaceReadBoundary", "LSPProcessBoundary"}),
@@ -149,6 +150,7 @@ OWNER_ACTIONS = {
     "session_delete": frozenset({"session.delete"}),
     "chat_sessions": frozenset({"session.create", "session.resume"}),
     "credentials": frozenset({"credentials.add", "credentials.revoke"}),
+    "credential_use": frozenset({"credentials.use"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
     "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
@@ -377,7 +379,7 @@ class CredentialBoundarySystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id not in {"credentials.add", "credentials.revoke"}:
+        if request.action_id not in {"credentials.add", "credentials.revoke", "credentials.use"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         from isycode.providers import PRESETS  # local import: providers loads lazily
 
@@ -392,6 +394,10 @@ class CredentialBoundarySystembility:
                 for key in ("name", "purpose"))
             valid = (set(params) == {"service", "name", "purpose"} and known
                      and request.target == service and labels_ok)
+        elif request.action_id == "credentials.use":
+            valid = (set(params) == {"service", "consumer"} and known
+                     and request.target == service
+                     and params.get("consumer") in {"provider.request", "gateway", "mcp", "semantic"})
         else:
             key_id = params.get("key_id")
             valid = (set(params) == {"key_id", "service"} and known

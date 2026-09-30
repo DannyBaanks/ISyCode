@@ -129,3 +129,93 @@ def test_sentinel_rejects_forged_credential_requests(keys, action, target, param
     gate = ProductActionGate(root, authority, owner_id="credentials")
     assert not gate.authorize(request, approvals=approvals,
                               approval=approvals.issue(request))[1].allowed
+
+
+# ── credentials.use: one owned, journaled decision per saved-key read ──
+
+class ReadableVault(MemoryVault):
+    def latest_secret_for_service(self, service):
+        active = [item for item in self.records if item["service"] == service and not item["revoked"]]
+        return self.values.get(active[-1]["id"]) if active else None
+
+
+@pytest.fixture
+def use(tmp_path: Path, monkeypatch):
+    from isycode.credential_owner import CredentialUseOwner
+
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    root = tmp_path / "workspace"
+    root.mkdir()
+    authority = WorkspaceAuthority(root, state_directory=tmp_path / "state" / "authority")
+    vault = ReadableVault()
+    vault.add("OpenAI key", "openai", "ISyCode chat", SECRET)
+    return CredentialUseOwner(root, authority, vault=vault), authority, root.resolve(), tmp_path
+
+
+def test_saved_key_is_not_read_without_the_use_grant(use):
+    owner, _, _, _ = use
+    outcome, secret = owner.secret_for("openai", "provider.request")
+    assert outcome.decision == "DENY" and secret is None
+
+
+def test_each_read_is_its_own_journaled_decision_and_never_stores_the_value(use):
+    from isycode.action_audit import ActionAuditJournal
+
+    owner, authority, root, tmp_path = use
+    authority.set_grant("credentials.use", enabled=True, targets=["openai"])
+    for _ in range(3):
+        outcome, secret = owner.secret_for("openai", "provider.request")
+        assert outcome.decision == "ALLOW" and secret == SECRET and outcome.receipt
+    report = ActionAuditJournal(root).verify()
+    assert report.status == "PASS" and report.decisions == 3 and report.receipts == 3
+    stored = b"".join(path.read_bytes() for path in (tmp_path / "state").rglob("*") if path.is_file())
+    assert SECRET.encode() not in stored
+
+
+def test_use_grant_is_per_service_and_consumer_is_bounded(use):
+    owner, authority, _, _ = use
+    authority.set_grant("credentials.use", enabled=True, targets=["groq"])
+    assert owner.secret_for("openai", "provider.request")[1] is None
+    authority.set_grant("credentials.use", enabled=True, targets=["openai"])
+    assert owner.secret_for("openai", "shell")[1] is None
+
+
+def test_without_a_registered_reader_no_saved_key_is_read(monkeypatch):
+    import isycode.credentials as credentials
+    from isycode.providers import load_provider_key
+
+    def vault_must_not_open(*args, **kwargs):
+        raise AssertionError("the vault was opened without a registered reader")
+
+    credentials.set_saved_secret_reader(None)
+    monkeypatch.setattr(credentials, "CredentialVault", vault_must_not_open)
+    monkeypatch.setattr("isycode.providers.load_api_key", lambda name: "")
+    assert credentials.read_saved_secret("openai", "provider.request") is None
+    assert load_provider_key("openai") == ""
+
+
+def test_registered_reader_failures_read_as_no_key():
+    import isycode.credentials as credentials
+
+    def broken(service, consumer):
+        raise RuntimeError("keyring exploded")
+
+    credentials.set_saved_secret_reader(broken)
+    try:
+        assert credentials.read_saved_secret("openai", "provider.request") is None
+    finally:
+        credentials.set_saved_secret_reader(None)
+
+
+def test_only_the_use_owner_reads_saved_secret_values():
+    import ast
+
+    package = Path(__file__).parent / "isycode"
+    allowed = {"credentials.py", "credential_owner.py"}
+    for module in package.glob("*.py"):
+        if module.name in allowed:
+            continue
+        tree = ast.parse(module.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr in {"latest_secret_for_service", "get_secret"}:
+                raise AssertionError(f"{module.name} reads a saved secret directly")

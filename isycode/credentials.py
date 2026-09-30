@@ -7,7 +7,7 @@ import secrets
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 def _vault_path() -> Path:
@@ -169,3 +169,39 @@ class CredentialVault:
 
 class CredentialVaultError(RuntimeError):
     """The native credential store is unavailable or rejected an operation."""
+
+
+# ── single choke point for reading saved keys ─────────────────────────
+#
+# Every consumer (providers, Gateway, MCP, semantic client) reads a saved key
+# only through read_saved_secret(). The running product registers a reader:
+# the Security mode reader decides each read with Workspace Authority and
+# IsySentinel and journals a receipt. With no registered reader, saved keys
+# are not read at all (environment variables still work).
+
+_saved_secret_reader: Callable[[str, str], str | None] | None = None
+
+
+def set_saved_secret_reader(reader: Callable[[str, str], str | None] | None) -> None:
+    global _saved_secret_reader
+    _saved_secret_reader = reader
+
+
+def read_saved_secret(service: str, consumer: str) -> str | None:
+    reader = _saved_secret_reader
+    if reader is None:
+        return None
+    try:
+        value = reader(service, consumer)
+    except Exception:
+        return None
+    return value if isinstance(value, str) and value else None
+
+
+def saved_secret_exists(service: str) -> bool:
+    """Whether an active saved key exists, from metadata only; never reads the secret."""
+    try:
+        return any(item["service"] == service and not item["revoked"]
+                   for item in CredentialVault().list_metadata())
+    except (CredentialVaultError, OSError, ValueError, sqlite3.Error):
+        return False

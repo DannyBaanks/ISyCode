@@ -22,6 +22,8 @@ from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 
 GATEWAY_SERVICE = "isyco-gateway"
+# Who may consume a saved key; recorded in each use decision and receipt.
+KEY_CONSUMERS = frozenset({"provider.request", "gateway", "mcp", "semantic"})
 KEY_ID = re.compile(r"cred_[a-f0-9]{16}")
 
 
@@ -135,4 +137,50 @@ class CredentialOwner:
         return receipt if self.gate.persist_receipt(request, receipt) else None
 
 
-__all__ = ["CredentialOwner", "GATEWAY_SERVICE", "credential_services"]
+class CredentialUseOwner:
+    """Read one saved key for one consumer after Authority and IsySentinel allow it.
+
+    Every read is its own decision with a receipt that records the service, the
+    consumer and whether a key was present; the value never enters the journal.
+    """
+
+    def __init__(self, root: Path, authority: WorkspaceAuthority, *,
+                 vault: CredentialVault | None = None):
+        self.root = root.resolve(strict=True)
+        self.authority = authority
+        self.gate = ProductActionGate(self.root, authority, owner_id="credential_use")
+        self.vault = vault if vault is not None else CredentialVault()
+
+    def use_request(self, service: str, consumer: str) -> ActionRequest:
+        return ActionRequest("credentials.use", self.root, service, {
+            "service": service, "consumer": consumer,
+        }, execution_owner="credential_use")
+
+    def secret_for(self, service: str, consumer: str) -> tuple[ActionOutcome, str | None]:
+        try:
+            request = self.use_request(service, consumer)
+            authority, decision = self.gate.authorize(request)
+        except Exception:
+            return ActionOutcome("Saved key not used.", "DENY", None,
+                                 "authorization evaluation failed"), None
+        if not authority.allowed or not decision.allowed:
+            reason = authority.reason if not authority.allowed else "; ".join(
+                check.reason for check in decision.checks if not check.passed)
+            return ActionOutcome("Saved key not used.", "DENY", None, reason[:240]), None
+        try:
+            secret = self.vault.latest_secret_for_service(service)
+        except (CredentialVaultError, OSError, ValueError) as exc:
+            return ActionOutcome("Saved key not used.", "ERROR", None,
+                                 f"the OS keyring could not be read ({type(exc).__name__})"), None
+        state = "present" if secret else "absent"
+        receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), request.action_id,
+                                request.digest, "ALLOW", "SUCCESS",
+                                hashlib.sha256(f"use:{service}:{consumer}:{state}".encode()).hexdigest())
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Saved key not used.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable"), None
+        return ActionOutcome(f"Saved key {state}.", "ALLOW", receipt, state), secret or None
+
+
+__all__ = ["CredentialOwner", "CredentialUseOwner", "GATEWAY_SERVICE", "KEY_CONSUMERS",
+           "credential_services"]

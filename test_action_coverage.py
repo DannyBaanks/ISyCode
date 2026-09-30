@@ -153,7 +153,7 @@ def test_every_catalog_action_has_an_explicit_authority_classification():
     registered = {action for actions in OWNER_ACTIONS.values() for action in actions}
     assert set(EXPLICIT_DENY_ACTIONS).isdisjoint(registered)
     assert set(ACTION_BY_ID) - registered == set(EXPLICIT_DENY_ACTIONS) | {"role.select"}
-    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 27
+    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 26
 
 
 def test_unclassified_effectful_catalog_addition_fails_the_frontier(monkeypatch):
