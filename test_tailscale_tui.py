@@ -100,3 +100,16 @@ def test_manual_path_is_documented_without_starting_tailscale():
     assert "push_screen_wait" in calls
     assert "tailscale.com/docs/install/linux" in SOURCE.read_text(encoding="utf-8")
     assert "tailscale" not in calls
+
+
+
+def test_serve_route_lifetime_policy_is_explicit_and_never_unapproved():
+    """Exit never disables Serve without approval; Settings says the route persists."""
+    methods = _app_methods()
+    source = SOURCE.read_text(encoding="utf-8")
+    assert not set(_calls(methods["on_unmount"])) & {
+        "disable", "preview_disable", "_run_tailscale_serve"}
+    refresh = ast.get_source_segment(source, methods["_refresh_private_access"])
+    assert "Route stays on after ISyCode exits" in refresh
+    start = ast.get_source_segment(source, methods["_start_mobile_host"])
+    assert "already points here" in start

@@ -125,7 +125,7 @@ from isycode.tailscale import DEFAULT_GATEWAY_PORT, TailscaleAdapter, TailscaleS
 from isycode.tailscale_read import TailscaleReadOwner
 from isycode.tailscale_login import TailscaleLoginOwner
 from isycode.tailscale_install import TailscalePackageInstallOwner
-from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner
+from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner, route_url
 from isycode.private_access import PrivateAccessStateStore
 import time as _time
 
@@ -1706,10 +1706,19 @@ class TUIApp(App):
                     self._append("  Mobile Host grant cancelled; no listener started.", MUTED)
                     return
             request = owner.start_request()
+            try:
+                routed = next((route for route in PrivateAccessStateStore().load().owned_routes
+                               if route.route_id == MOBILE_HOST_ROUTE_ID), None)
+            except (OSError, ValueError):
+                routed = None
+            exposure = ("It does not change Tailscale Serve. Your saved private route "
+                        f"{route_url(routed)} already points here, so devices in your tailnet can "
+                        "reach this host through it while it runs." if routed is not None else
+                        "It does not change Tailscale Serve or expose a remote route.")
             if not await self.push_screen_wait(TailscaleConfirmScreen(
                     "Start Mobile Host", "Start the ISyCode Mobile Host on loopback only: "
                     "http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. "
-                    "It does not change Tailscale Serve or expose a remote route.", "Start host")):
+                    + exposure, "Start host")):
                 self._append("  Mobile Host start cancelled; no listener started.", MUTED)
                 return
             approval = self._action_approvals.issue(request, ttl_seconds=30)
@@ -2490,6 +2499,8 @@ class TUIApp(App):
                                (owned_route.host, owned_route.path, owned_route.target)), None)
             if live_route is not None:
                 status = "Private route recorded · Mobile Host health rechecked before changes"
+        else:
+            live_route = None
         entries = [self._entry(f"Tailscale · {status}", "info", "",
                                f"Installed CLI: {snapshot.executable or 'not detected'}\n"
                                f"Tailnet identity: {snapshot.dns_name or 'not verified'}\n"
@@ -2497,6 +2508,13 @@ class TUIApp(App):
                                f"Gateway: {snapshot.gateway_url or 'not configured'} · "
                                f"{'healthy' if snapshot.gateway_healthy else 'not verified'}\n"
                                "Tailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.")]
+        if live_route is not None:
+            entries.append(self._entry(
+                f"Route stays on after ISyCode exits · {route_url(live_route)}", "info", "",
+                "Tailscale Serve keeps this private route until you disable it here; ISyCode does not "
+                "remove it on exit because removal is itself an approved change. While Mobile Host "
+                f"is stopped, whatever listens on {live_route.target} is reachable from your tailnet "
+                "at this path. Disable the route when you are not using it."))
         if snapshot.state == "not_authorized":
             entries.append(self._entry("Grant read-only Tailscale inventory", "tailscale_permissions", ""))
         elif snapshot.state == "missing_cli":

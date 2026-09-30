@@ -126,6 +126,23 @@ unrelated system state.
    containing credentials are never written to logs or receipts.
 9. `.isyroot` remains an empty identity/boundary marker; it does not grant
    filesystem or network access.
+10. Serve route identity is Tailscale's `ipn.HostPort` key (`$DNS:443`), the
+    same key `tailscale serve status --json` uses for `Web` and
+    `AllowFunnel`. Owned-route records, the Sentinel check, and the
+    before/after preservation comparison all use that key. The `:443` HTTPS
+    listener that Serve creates with the first web handler (and removes with
+    the last) is the only listener change projected out of that comparison.
+11. **Serve lifetime policy.** An enabled route is a node-level, persistent
+    effect (`--bg`). ISyCode does not remove it when the TUI exits, because
+    removal is itself a mutation that requires Workspace Authority,
+    IsySentinel and a fresh human approval, and none is available at exit.
+    Instead, Settings shows "Route stays on after ISyCode exits" whenever the
+    owned route is live, explains that whatever listens on the loopback target
+    is tailnet-reachable at that path while Mobile Host is stopped, and offers
+    the approved disable action. The Mobile Host start dialog states when a
+    saved route already points at it. Grants are per `.isyroot`, but the route
+    and its ownership record are node-wide; any workspace holding
+    `tailscale.serve.disable` can remove it.
 
 ## Errors and recovery
 

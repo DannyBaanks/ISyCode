@@ -43,7 +43,10 @@ local Tailscale CLI help does not specify whether `--set-path` preserves or
 strips the mount prefix when proxying. That behavior remains to be verified
 from another tailnet device. ISyCode's TUI shows the exact route and requires a
 fresh approval before changing it. It does not enable Funnel or replace
-unrelated Serve routes. JSON errors use standard HTTP status codes and a short
+unrelated Serve routes. An enabled route persists after the TUI exits (Serve
+runs with `--bg`) and is removed only through the approved disable action;
+Settings warns about this while the route is live. See security invariant 11
+in the private tailnet design. JSON errors use standard HTTP status codes and a short
 text reason.
 
 | Route | Auth | Current behavior |
