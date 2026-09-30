@@ -14,7 +14,8 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
 
     assert report["secure_closed"] is True
     assert "mobile.host.start" not in report["unowned_effectful_actions"]
-    assert "credentials.add" in report["unowned_effectful_actions"]
+    assert "oauth.authorize" in report["unowned_effectful_actions"]
+    assert "credentials.add" not in report["unowned_effectful_actions"]
     callsites = {item["callsite"]: item for item in report["callsites"]}
     assert callsites["MobileHostOwner.authorize_and_launch"]["status"] == "COVERED"
     assert callsites["MobileHostOwner.shutdown"]["status"] == "BLOCKED_BY_DESIGN"
@@ -23,7 +24,7 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     assert callsites["file_picker.choose_context_file"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["file_picker.choose_workspace_file"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["file_picker.choose_workspace_directory"]["status"] == "BLOCKED_BY_DESIGN"
-    assert callsites["TUIApp._save_provider_key"]["status"] == "BLOCKED_BY_DESIGN"
+    assert callsites["CredentialOwner.add"]["status"] == "COVERED"
     assert set(report["unowned_effectful_actions"]) <= EXPLICIT_DENY_ACTIONS
 
 
@@ -152,7 +153,7 @@ def test_every_catalog_action_has_an_explicit_authority_classification():
     registered = {action for actions in OWNER_ACTIONS.values() for action in actions}
     assert set(EXPLICIT_DENY_ACTIONS).isdisjoint(registered)
     assert set(ACTION_BY_ID) - registered == set(EXPLICIT_DENY_ACTIONS) | {"role.select"}
-    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 31
+    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 26
 
 
 def test_unclassified_effectful_catalog_addition_fails_the_frontier(monkeypatch):
@@ -285,3 +286,22 @@ def test_checked_in_snapshot_matches_live_catalog_and_owners():
     checked_in = json.loads(snapshot_path.read_text(encoding="utf-8"))
 
     assert checked_in == action_coverage.authority_coverage_snapshot()
+
+
+def test_bypass_scanner_converges_when_one_name_aliases_several_receivers():
+    import time
+
+    from isycode.action_coverage import secure_tui_direct_api_bypasses
+
+    methods = "".join(
+        f"    def method_{index}(self):\n"
+        "        owner = self._chat_session_owner\n"
+        "        owner = self._mobile_host_owner\n"
+        "        owner.record('user', 'x')\n"
+        for index in range(300))
+    source = "class TUIApp:\n" + methods + "    def leak(self):\n        owner.save()\n"
+    started = time.monotonic()
+    issues = secure_tui_direct_api_bypasses(source)
+    assert time.monotonic() - started < 10
+    assert any(item["callsite"].endswith("owner.save") for item in issues)
+    assert not any(item["callsite"].endswith("owner.record") for item in issues)

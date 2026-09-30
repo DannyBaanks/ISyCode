@@ -43,12 +43,9 @@ class GatewayClient:
         self._validate_base_url(self.base_url)
         self.api_key = api_key or os.environ.get("GATEWAY_API_KEY", "")
         if not self.api_key:
-            try:
-                from isycode.credentials import CredentialVault, CredentialVaultError
+            from isycode.credentials import read_saved_secret
 
-                self.api_key = CredentialVault().latest_secret_for_service("isyco-gateway") or ""
-            except (CredentialVaultError, OSError, ValueError):
-                self.api_key = ""
+            self.api_key = read_saved_secret("isyco-gateway", "gateway") or ""
         self.timeout_s = timeout_s
         self._available: bool | None = None
 

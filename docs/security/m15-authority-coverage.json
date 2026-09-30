@@ -88,6 +88,22 @@
       "variants": []
     },
     {
+      "action": "workspace.files.restore",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
+      "owners": [
+        "workspace_write"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "WorkspaceWriteBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
       "action": "workspace.files.move",
       "approval_required": true,
       "authority": "explicit deny at owner binding",
@@ -214,37 +230,49 @@
     {
       "action": "credentials.add",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "credential",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "credentials"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "CredentialBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
       "action": "credentials.use",
       "approval_required": false,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "credential",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "credential_use"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "CredentialBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
       "action": "credentials.revoke",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "destructive",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "credentials"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "CredentialBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -711,25 +739,33 @@
     {
       "action": "session.create",
       "approval_required": false,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "write",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "chat_sessions"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "SessionStoreBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
       "action": "session.resume",
       "approval_required": false,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "read",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "chat_sessions"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "SessionStoreBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -971,6 +1007,12 @@
       "status": "COVERED"
     },
     {
+      "action": "workspace.files.restore",
+      "callsite": "WorkspaceWriteOwner._apply_undo",
+      "owner": "workspace_write",
+      "status": "COVERED"
+    },
+    {
       "action": "mcp.invoke",
       "callsite": "GatewayMCPInvocationOwner.invoke",
       "owner": "gateway_mcp",
@@ -1110,43 +1152,43 @@
     },
     {
       "action": "credentials.add",
-      "callsite": "TUIApp._save_provider_key",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "callsite": "CredentialOwner.add",
+      "owner": "credentials",
+      "status": "COVERED"
     },
     {
-      "action": "credentials.add",
-      "callsite": "TUIApp._open_credentials_menu",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "action": "credentials.revoke",
+      "callsite": "CredentialOwner.revoke",
+      "owner": "credentials",
+      "status": "COVERED"
+    },
+    {
+      "action": "credentials.use",
+      "callsite": "CredentialUseOwner.secret_for",
+      "owner": "credential_use",
+      "status": "COVERED"
     },
     {
       "action": "session.create",
-      "callsite": "TUIApp._persist_chat_message",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "callsite": "ChatSessionOwner.record",
+      "owner": "chat_sessions",
+      "status": "COVERED"
     },
     {
       "action": "session.resume",
-      "callsite": "TUIApp._show_chat_sessions",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "callsite": "ChatSessionOwner.list_conversations",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "session.resume",
+      "callsite": "ChatSessionOwner.resume",
+      "owner": "chat_sessions",
+      "status": "COVERED"
     },
     {
       "action": "session.create",
       "callsite": "ChatSessionStore.create",
-      "owner": null,
-      "status": "UNWIRED"
-    },
-    {
-      "action": "session.create",
-      "callsite": "ChatSessionStore.append",
-      "owner": null,
-      "status": "UNWIRED"
-    },
-    {
-      "action": "session.resume",
-      "callsite": "ChatSessionStore.load",
       "owner": null,
       "status": "UNWIRED"
     },
@@ -1216,7 +1258,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1447,
+      "line": 1564,
       "owner": "workspace_read"
     },
     {
@@ -1237,14 +1279,14 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 4915,
+      "line": 5374,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4503,
+      "line": 4865,
       "owner": "remote_catalog"
     }
   ],
@@ -1256,49 +1298,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1319,
+      "line": 1436,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1447,
+      "line": 1564,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 1108,
+      "line": 1225,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1172,
+      "line": 1289,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1242,
+      "line": 1359,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1328,
+      "line": 1445,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1389,
+      "line": 1506,
       "owner": "provider_network"
     },
     {
@@ -1344,6 +1386,27 @@
       "owner": "broker_management"
     },
     {
+      "action": "credentials.add",
+      "callable": "isycode.credential_owner.CredentialOwner.add_request",
+      "file": "isycode/credential_owner.py",
+      "line": 54,
+      "owner": "credentials"
+    },
+    {
+      "action": "credentials.revoke",
+      "callable": "isycode.credential_owner.CredentialOwner.revoke_request",
+      "file": "isycode/credential_owner.py",
+      "line": 93,
+      "owner": "credentials"
+    },
+    {
+      "action": "credentials.use",
+      "callable": "isycode.credential_owner.CredentialUseOwner.use_request",
+      "file": "isycode/credential_owner.py",
+      "line": 155,
+      "owner": "credential_use"
+    },
+    {
       "action": "mobile.host.start",
       "callable": "isycode.mobile_host.MobileHostOwner.start_request",
       "file": "isycode/mobile_host.py",
@@ -1370,6 +1433,27 @@
       "file": "isycode/mobile_host.py",
       "line": 562,
       "owner": "mobile_host"
+    },
+    {
+      "action": "session.resume",
+      "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
+      "file": "isycode/session_owner.py",
+      "line": 98,
+      "owner": "chat_sessions"
+    },
+    {
+      "action": "session.create",
+      "callable": "isycode.session_owner.ChatSessionOwner.record",
+      "file": "isycode/session_owner.py",
+      "line": 69,
+      "owner": "chat_sessions"
+    },
+    {
+      "action": "session.resume",
+      "callable": "isycode.session_owner.ChatSessionOwner.resume",
+      "file": "isycode/session_owner.py",
+      "line": 112,
+      "owner": "chat_sessions"
     },
     {
       "action": "tailscale.install.prepare",
@@ -1424,55 +1508,62 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 4915,
+      "line": 5374,
       "owner": "workspace_read"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "file": "isycode/tui.py",
-      "line": 3355,
+      "line": 3565,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "file": "isycode/tui.py",
-      "line": 3407,
+      "line": 3617,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "file": "isycode/tui.py",
-      "line": 3567,
+      "line": 3777,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4503,
+      "line": 4865,
       "owner": "remote_catalog"
     },
     {
       "action": "workspace.files.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 103,
+      "line": 245,
+      "owner": "workspace_write"
+    },
+    {
+      "action": "workspace.files.restore",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
+      "file": "isycode/workspace_write.py",
+      "line": 291,
       "owner": "workspace_write"
     }
   ],
   "secure_tui_direct_api_bypasses": [],
   "stale_callsites": [],
   "summary": {
-    "actions": 62,
+    "actions": 63,
     "ambiguous": 0,
     "authority_frontier_pass": true,
-    "effectful": 49,
-    "explicit_deny": 31,
+    "effectful": 50,
+    "explicit_deny": 26,
     "owner_shared_read": 1,
-    "owner_valid": 28,
+    "owner_valid": 34,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

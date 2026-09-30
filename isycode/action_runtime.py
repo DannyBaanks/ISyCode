@@ -47,6 +47,16 @@ CHAT_WORKSPACE_TOOLS = [
         }, "required": ["path"], "additionalProperties": False},
     }},
     {"type": "function", "function": {
+        "name": "workspace_grep",
+        "description": ("Find lines containing a literal text in authorized UTF-8 files (not a "
+                        "regex); returns path, line number and the line. Skips sensitive, binary, "
+                        "oversized and dependency folders."),
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "Literal text to find; case-insensitive."},
+            "path": {"type": "string", "description": "Workspace-relative folder or file; defaults to the workspace root."},
+        }, "required": ["query"], "additionalProperties": False},
+    }},
+    {"type": "function", "function": {
         "name": "workspace_search", "description": "Search file and folder names, never file contents.",
         "parameters": {"type": "object", "properties": {
             "query": {"type": "string", "description": "Text to find in names."},
@@ -58,10 +68,22 @@ TOOL_ACTIONS = {
     "workspace_list": "workspace.files.list",
     "workspace_read": "workspace.files.read",
     "workspace_search": "workspace.files.search",
+    # Content search reveals exactly what reading does, so it is a read.
+    "workspace_grep": "workspace.files.read",
 }
+GREP_SKIP_DIRECTORIES = frozenset({
+    "node_modules", "__pycache__", ".venv", "venv", ".tox", ".mypy_cache",
+    ".pytest_cache", ".ruff_cache", "dist", "build", "target", ".next",
+})
+GREP_MAX_FILES = 3000
+GREP_MAX_BYTES = 24 * 1024 * 1024
+GREP_MAX_MATCHES = 200
 MAX_FILE_BYTES = 128 * 1024
 MAX_WRITE_BYTES = 128 * 1024
-WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256"})
+WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256",
+                                  "new_folders"})
+RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "restore_sha256",
+                                    "diff_sha256"})
 # Workspace identity: a non-empty marker stops being a boundary, so the chat
 # must never rewrite it.
 WRITE_PROTECTED_NAMES = frozenset({".isyroot"})
@@ -73,14 +95,13 @@ MAX_SCAN_ENTRIES = 6_000
 EXPLICIT_DENY_ACTIONS = frozenset({
     "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
-    "credentials.add", "credentials.use", "credentials.revoke", "lsp.stop",
+    "lsp.stop",
     "mobile.host.stop",
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
     "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
-    "l1.disable", "l1.rollback", "session.create", "clipboard.copy",
+    "l1.disable", "l1.rollback", "clipboard.copy",
     "desktop.file_picker", "bridge.peek", "lsp.discover", "mobile.session.read",
-    "session.resume",
 })
 
 
@@ -120,6 +141,9 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
+    "chat_sessions": frozenset({"SessionStoreBoundary"}),
+    "credentials": frozenset({"CredentialBoundary"}),
+    "credential_use": frozenset({"CredentialBoundary"}),
     "gateway_mcp": frozenset({"MCPInvocationBoundary"}),
     "gateway_semantic": frozenset({"GatewaySemanticBoundary"}),
     "lsp_symbols": frozenset({"WorkspaceReadBoundary", "LSPProcessBoundary"}),
@@ -142,10 +166,13 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
 # nested inside four separately bound owners and are reported as such.
 OWNER_ACTIONS = {
     "workspace_read": READ_ACTIONS,
-    "workspace_write": frozenset({"workspace.files.write"}),
+    "workspace_write": frozenset({"workspace.files.write", "workspace.files.restore"}),
     "provider_network": frozenset({"provider.request"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
+    "chat_sessions": frozenset({"session.create", "session.resume"}),
+    "credentials": frozenset({"credentials.add", "credentials.revoke"}),
+    "credential_use": frozenset({"credentials.use"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
     "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
@@ -265,22 +292,43 @@ class WorkspaceWriteSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id != "workspace.files.write":
+        if request.action_id not in {"workspace.files.write", "workspace.files.restore"}:
             return SystembilityResult(self.name, True, "not applicable to this action")
         if request.workspace_root != self.root:
             return SystembilityResult(self.name, False, "request workspace does not match owner")
         params = request.parameters
-        if set(params) != WRITE_PARAMETER_KEYS:
-            return SystembilityResult(self.name, False, "write request shape is not the reviewed diff")
-        before, after, diff = (params.get("before_sha256"), params.get("after_sha256"),
-                               params.get("diff_sha256"))
-        size = params.get("size")
-        if (not all(isinstance(value, str) for value in (before, after, diff))
-                or (before != "absent" and re.fullmatch(r"[0-9a-f]{64}", before) is None)
-                or re.fullmatch(r"[0-9a-f]{64}", after) is None
-                or re.fullmatch(r"[0-9a-f]{64}", diff) is None
-                or type(size) is not int or not 0 <= size <= MAX_WRITE_BYTES):
-            return SystembilityResult(self.name, False, "write digests or size are invalid")
+
+        def digest(value: object, *, absent: bool = False) -> bool:
+            return isinstance(value, str) and (
+                (absent and value == "absent") or re.fullmatch(r"[0-9a-f]{64}", value) is not None)
+
+        if request.action_id == "workspace.files.restore":
+            if (set(params) != RESTORE_PARAMETER_KEYS
+                    or not isinstance(params.get("checkpoint_id"), str)
+                    or re.fullmatch(r"ckpt_[0-9]{13}_[0-9a-f]{8}", params["checkpoint_id"]) is None
+                    or not digest(params.get("current_sha256"))
+                    or not digest(params.get("restore_sha256"), absent=True)
+                    or not digest(params.get("diff_sha256"))):
+                return SystembilityResult(self.name, False, "undo request shape is not the reviewed diff")
+        else:
+            size = params.get("size")
+            folders = params.get("new_folders")
+            if set(params) != WRITE_PARAMETER_KEYS:
+                return SystembilityResult(self.name, False, "write request shape is not the reviewed diff")
+            if (not digest(params.get("before_sha256"), absent=True)
+                    or not digest(params.get("after_sha256"))
+                    or not digest(params.get("diff_sha256"))
+                    or type(size) is not int or not 0 <= size <= MAX_WRITE_BYTES):
+                return SystembilityResult(self.name, False, "write digests or size are invalid")
+            path_value = params.get("path")
+            ancestors = ({parent.as_posix() for parent in Path(path_value).parents}
+                         if isinstance(path_value, str) else set())
+            if (not isinstance(folders, tuple) or len(folders) > 8
+                    or any(not isinstance(item, str) or item not in ancestors or item == "."
+                           or any(WorkspaceReadSystembility.is_sensitive_name(part)
+                                  for part in Path(item).parts)
+                           for item in folders)):
+                return SystembilityResult(self.name, False, "new folders must be the file's own parents")
         lexical = Path(os.path.abspath(request.target or ""))
         if self.root not in lexical.parents:
             return SystembilityResult(self.name, False, "write target must be a file inside the workspace")
@@ -365,6 +413,73 @@ class RemoteReadSystembility:
         if host != request.target.casefold().rstrip("."):
             return SystembilityResult(self.name, False, "remote endpoint does not match the granted host")
         return SystembilityResult(self.name, True, "remote read is secure and host-bound")
+
+
+class CredentialBoundarySystembility:
+    """Save or revoke one key for one known service; the secret is never in the request."""
+
+    name = "CredentialBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"credentials.add", "credentials.revoke", "credentials.use"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        from isycode.providers import PRESETS  # local import: providers loads lazily
+
+        params = request.parameters
+        service = params.get("service")
+        known = isinstance(service, str) and (service in PRESETS or service == "isyco-gateway")
+        if request.action_id == "credentials.add":
+            labels_ok = all(
+                isinstance(params.get(key), str) and 1 <= len(params[key]) <= 96
+                and params[key] == " ".join(params[key].split())
+                and all(char.isprintable() for char in params[key])
+                for key in ("name", "purpose"))
+            valid = (set(params) == {"service", "name", "purpose"} and known
+                     and request.target == service and labels_ok)
+        elif request.action_id == "credentials.use":
+            valid = (set(params) == {"service", "consumer"} and known
+                     and request.target == service
+                     and params.get("consumer") in {"provider.request", "gateway", "mcp", "semantic"})
+        else:
+            key_id = params.get("key_id")
+            valid = (set(params) == {"key_id", "service"} and known
+                     and request.target == service and isinstance(key_id, str)
+                     and re.fullmatch(r"cred_[a-f0-9]{16}", key_id) is not None)
+        return SystembilityResult(self.name, valid,
+                                  "one key for one known service; no secret in the request")
+
+
+class SessionStoreSystembility:
+    """Bind transcript writes and reads to one session id and message digest."""
+
+    name = "SessionStoreBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"session.create", "session.resume"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        session_id = params.get("session_id")
+        valid_id = isinstance(session_id, str) and re.fullmatch(r"[0-9a-f]{32}", session_id) is not None
+        if request.action_id == "session.create":
+            size = params.get("size")
+            valid = (set(params) == {"operation", "session_id", "role", "content_sha256", "size"}
+                     and params.get("operation") in {"create", "append"}
+                     and valid_id and request.target == session_id
+                     and params.get("role") in {"user", "assistant"}
+                     and isinstance(params.get("content_sha256"), str)
+                     and re.fullmatch(r"[0-9a-f]{64}", params["content_sha256"]) is not None
+                     and type(size) is int and 0 <= size <= 1_000_000)
+            return SystembilityResult(self.name, valid,
+                                      "one bounded message bound to one local transcript")
+        if params.get("operation") == "list":
+            valid = params == {"operation": "list"} and request.target == "sessions"
+        else:
+            valid = (set(params) == {"operation", "session_id"}
+                     and params.get("operation") == "load"
+                     and valid_id and request.target == session_id)
+        return SystembilityResult(self.name, valid, "list or load one local transcript")
 
 
 class SessionDeleteSystembility:
@@ -1055,7 +1170,9 @@ class ProductActionGate:
             ExecutionOwnerBindingSystembility(),
             WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
             ProviderNetworkSystembility(),
-            RemoteReadSystembility(), SessionDeleteSystembility(), MCPInvocationSystembility(),
+            RemoteReadSystembility(), SessionStoreSystembility(), SessionDeleteSystembility(),
+            CredentialBoundarySystembility(),
+            MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),
             TailscaleExecutableSystembility(tailscale_facts),
@@ -1458,6 +1575,11 @@ class LocalWorkspaceReadOwner:
         try:
             if action_id == "workspace.files.list":
                 result = self._list(target)
+            elif action_id == "workspace.files.read" and "query" in arguments:
+                query = arguments.get("query", "")
+                if not isinstance(query, str) or not query.strip() or len(query) > 256:
+                    raise ValueError("search text must contain 1–256 characters")
+                result = self._grep(query, Path(target))
             elif action_id in {"workspace.files.read", "workspace.context.inject"}:
                 result = self._read(target)
             else:
@@ -1576,6 +1698,72 @@ class LocalWorkspaceReadOwner:
         return json.dumps({"query": query, "matches": hits,
                            "directories_scanned": visited, "truncated": truncated},
                           ensure_ascii=False)
+
+    def _grep(self, query: str, start: Path) -> str:
+        """Literal, case-insensitive line search through descriptor-safe reads."""
+        folded = query.casefold()
+        matches: list[dict[str, Any]] = []
+        files = scanned_bytes = 0
+        truncated = False
+        pending = [start]
+        if start != self.root and not start.is_dir():
+            pending, candidates = [], [start]
+        else:
+            candidates = []
+        while pending or candidates:
+            if candidates:
+                path = candidates.pop()
+                if files >= GREP_MAX_FILES or scanned_bytes >= GREP_MAX_BYTES:
+                    truncated = True
+                    break
+                try:
+                    descriptor = self._open_file(path)
+                except OSError:
+                    continue
+                with os.fdopen(descriptor, "rb") as stream:
+                    info = os.fstat(stream.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_FILE_BYTES:
+                        continue
+                    data = stream.read(MAX_FILE_BYTES + 1)
+                files += 1
+                scanned_bytes += len(data)
+                if len(data) > MAX_FILE_BYTES or b"\0" in data[:8192]:
+                    continue
+                try:
+                    text = data.decode("utf-8")
+                except UnicodeDecodeError:
+                    continue
+                for number, line in enumerate(text.splitlines(), 1):
+                    if folded in line.casefold():
+                        matches.append({"path": str(path.relative_to(self.root)),
+                                        "line": number, "text": line.strip()[:300]})
+                        if len(matches) >= GREP_MAX_MATCHES:
+                            truncated = True
+                            break
+                if truncated:
+                    break
+                continue
+            directory = pending.pop()
+            directory_fd: int | None = None
+            try:
+                directory_fd = self._open_directory(directory)
+                with os.scandir(directory_fd) as iterator:
+                    children = sorted(iterator, key=lambda item: item.name)
+            except OSError:
+                continue
+            finally:
+                if directory_fd is not None:
+                    os.close(directory_fd)
+            for child in reversed(children):
+                if (WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink()
+                        or child.name in GREP_SKIP_DIRECTORIES):
+                    continue
+                if child.is_dir(follow_symlinks=False):
+                    pending.append(directory / child.name)
+                elif child.is_file(follow_symlinks=False):
+                    candidates.append(directory / child.name)
+        return json.dumps({"query": query, "matches": matches, "files_scanned": files,
+                           "truncated": truncated}, ensure_ascii=False)
 
     def _open_directory(self, directory: Path) -> int:
         if os.name == "nt":

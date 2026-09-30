@@ -139,19 +139,13 @@ def selected_model_name() -> str:
 
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
-    try:
-        from isycode.credentials import CredentialVault, CredentialVaultError
-        try:
-            value = CredentialVault().latest_secret_for_service(name)
-            if value:
-                return value
-        except CredentialVaultError:
-            # Headless machines may not expose a desktop keyring. Existing env
-            # and legacy provider stores remain supported without logging keys.
-            pass
-    except Exception:
-        pass
-    return load_api_key(name)
+    from isycode.credentials import read_saved_secret
+
+    # Saved keys are read only through the registered reader (Security mode:
+    # one Authority/Sentinel decision and receipt per read). Environment and
+    # legacy provider stores remain supported without logging keys.
+    value = read_saved_secret(name, "provider.request")
+    return value or load_api_key(name)
 
 
 def provider_credential_state(name: str) -> str:
@@ -170,12 +164,15 @@ def provider_credential_state(name: str) -> str:
         return "environment"
     vault_error = False
     try:
-        from isycode.credentials import CredentialVault, CredentialVaultError
+        from isycode.credentials import CredentialVault, CredentialVaultError, saved_secret_exists
         try:
-            if CredentialVault().latest_secret_for_service(provider):
-                return "saved"
+            CredentialVault()
         except CredentialVaultError:
             vault_error = True
+        else:
+            # Presence comes from metadata; showing "saved" never reads the secret.
+            if saved_secret_exists(provider):
+                return "saved"
     except Exception:
         vault_error = True
     # Preserve explicit env/legacy-store migrations while keeping the new

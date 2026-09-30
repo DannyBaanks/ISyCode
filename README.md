@@ -17,12 +17,12 @@ Las capturas muestran la TUI real de Textual con un workspace temporal de demost
 - **Chat en terminal:** conversación con streaming y cancelación con `Esc`; el alcance actual de APIs cloud con clave es OpenAI, NVIDIA NIM, Nebius, Groq y OpenRouter. Ollama y llama.cpp permanecen como endpoints locales opcionales, fuera de la validación de APIs cloud.
 - **Workspace con límite explícito:** encuentra el `.isyroot` más cercano o usa el directorio de inicio como fallback. Guarda `launch_dir` y `workspace_root` por separado.
 - **Explorador integrado:** árbol, búsqueda acotada, selección y preview gated. Copiar ruta está deshabilitado hasta que `clipboard.copy` tenga owner; los pickers nativos de Context, README y broker también quedan bloqueados en Secure mientras `desktop.file_picker` no tenga owner. La identidad `.isyroot` no es un permiso: la lectura exige grants aplicables y el host de archivos disponible.
-- **Sesiones:** Secure conserva la conversación activa solo en memoria. Crear/reanudar/guardar sesiones persistentes está bloqueado hasta que `session.create/read/append` tenga owner y scope verificados.
+- **Sesiones:** en workspaces recurrentes puedes activar **Save conversations** en Settings → Authority. Cada mensaje se guarda mediante el owner `chat_sessions` (Workspace Authority, IsySentinel y receipt) en tu carpeta privada de estado, fuera del proyecto, con API keys, tokens Bearer y similares redactados antes de escribir. **Sessions** lista las conversaciones y permite reanudarlas o empezar una nueva. Sin ese permiso, o en ejecuciones temporales, la conversación vive solo en memoria. Borrar conversaciones guardadas todavía no está disponible.
 - **Integraciones visibles:** estados de MCP, Skills, LSP, Gateway, Mobile Host y Bridge; los elementos descubiertos se distinguen de los que se pueden invocar.
 - **Roles:** agentes conversacionales de ISyCode y los ocho motores operativos de ISyCo aparecen en catálogos separados. Se transfiere el flujo, propósito y guardrails del motor; elegir un rol no ejecuta sus comandos ni le concede permisos.
 - **CLI por intención:** `isycode cli` abre ramas semánticas para explorar las acciones disponibles sin ejecutar shell arbitrario. En la instalación integrada de ISyCo, `isyco cli` deriva al mismo navegador.
 - **Búsqueda y ayuda:** `Ctrl+F` busca en la consola actual; `/` y `Ctrl+P` abren el navegador de Skills, Models, MCP, LSP, Files, Roles, Providers, Sessions, Workspace y Commands.
-- **Providers y claves:** selector de provider/modelo; ISyCode puede usar credenciales ya presentes en el vault o el entorno. Añadir claves desde la TUI está bloqueado en Secure mientras `credentials.add` no tenga owner. Una clave no concede permiso de red.
+- **Providers y claves:** selector de provider/modelo. Si el provider elegido no tiene llave, ISyCode abre un campo enmascarado para pegarla; también desde Settings → API keys. La llave se guarda en el keyring del sistema operativo para tu usuario (todos los workspaces), nunca en el proyecto, el journal ni el historial. Guardar y quitar llaves pasa por el owner `credentials`: el primer uso pide permiso por servicio y cada guardado o borrado pide confirmación. Sin un keyring seguro (común en Linux sin escritorio) no se guarda nada y ISyCode indica qué variable de entorno usar. Una clave no concede permiso de red.
 
 ## Estado comprobable
 
@@ -59,7 +59,23 @@ Los testigos de Pyright y Docker se ejecutaron sobre datos temporales. No prueba
 - **Providers:** OAuth todavía no está implementado. Los métodos OAuth leídos de un catálogo externo son metadatos.
 - **Tailscale real:** el flujo de owners/UI y la preservación de configuración pasan pruebas offline y un smoke visual temporal. El target de `/isycode` ahora es Mobile Host `127.0.0.1:8765`, pero no se inició el listener ni se cambió Serve; la conectividad de tailnet permanece **NOT_DEMONSTRATED**. El installer queda limitado a Ubuntu/Debian compatible; las demás plataformas muestran pasos manuales.
 - **OpenISy L0/L1:** sus contratos se documentan como integración futura; el ciclo de staging, activación, worker aislado, receipts y rollback no está integrado en ISyCode.
-- **Auditoría duradera y release:** hay journal hash-chain con verificador read-only e inspector; la cadena puede verificarse, pero payloads de request/result no se conservan para recomputar sus digests. Faltan diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners.
+- **Auditoría duradera y release:** hay journal hash-chain con verificador read-only e inspector; el journal rota en segmentos de 4 MB encadenados (un segmento alterado, faltante o reordenado se detecta), así que ya no bloquea el workspace al llenarse; la cadena puede verificarse, pero payloads de request/result no se conservan para recomputar sus digests. Faltan diagnósticos unificados, settings completos, accesibilidad/rendimiento y reconciliación final de owners.
+
+## Modos: Classic y Security
+
+Cada workspace elige su modo la primera vez que lo abres; puedes cambiarlo en Settings → Authority. En Settings → My defaults puedes fijar el modo con el que empiezan las carpetas nuevas (preguntar, Classic o Security); es solo una preferencia y no cambia el modo de los workspaces que ya usas.
+
+| | Classic | Security |
+|---|---|---|
+| Leer y buscar archivos del workspace | incluido | lo activas tú |
+| Proponer ediciones | incluido; cada cambio muestra el diff y pide *Apply* | lo activas tú; igual con diff y *Apply* |
+| Chat con el provider elegido | incluido (solo hosts de providers conocidos o el endpoint configurado) | lo activas tú |
+| Guardar y reanudar conversaciones (workspaces recurrentes) | incluido | lo activas tú |
+| Guardar, usar y quitar API keys | incluido; guardar y quitar piden confirmación | lo activas tú por servicio |
+| Gateway, MCP, LSP, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
+| Shell, borrar o mover archivos, archivos sensibles, `.isyroot` | no disponible | no disponible |
+
+Classic es un preset de permisos implícitos de Workspace Authority, no un bypass: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal de acciones en ambos modos. Los workspaces que ya existían antes de los modos siguen en Security.
 
 ## Seguridad y límites
 
@@ -75,7 +91,17 @@ El diseño y límites están en [fronteras de seguridad](docs/design/isysentinel
 
 ## Instalar y arrancar
 
-Requiere Python 3.10 o posterior. El TUI usa Textual y Rich; Pyright LSP y el broker Docker son integraciones opcionales.
+Instalar desde fuente requiere Python 3.10 o posterior. Los paquetes precompilados incluyen el runtime. El TUI usa Textual y Rich; Pyright LSP y el broker Docker son integraciones opcionales.
+
+Al publicar un tag `vX.Y.Z`, CI ejecuta la suite hermética en Linux y, si pasa y coincide con la versión de `pyproject.toml`, construye los paquetes nativos. Cada binario ejecuta un smoke check en su runner Windows, Linux o macOS antes de adjuntarse a un GitHub Release en borrador con `SHA256SUMS`. Las pruebas que requieren un Gateway activo o el checkout hermano de ISyCo se marcan como integración y no se ejecutan en los runners limpios.
+
+- Windows x64: ejecutable de consola `.exe`.
+- Linux x64: AppImage y `.deb`, construidos sobre Ubuntu 22.04 (glibc 2.35 o posterior).
+- macOS ARM64: instalador `.pkg` y archivo `.tar.gz` con el ejecutable. Ambos quedan sin firma ni notarización de Apple; el `.pkg` puede mostrar avisos del sistema. Intel Mac no está incluido todavía.
+
+El Release queda en borrador para revisión y publicación manual. La TUI se abre desde una terminal; estos paquetes instalan el comando `isycode`, no una aplicación gráfica.
+
+Para instalar, Linux puede ejecutar el AppImage después de `chmod +x` o instalar el `.deb` con `sudo apt install ./archivo.deb`. En Windows, abre `isycode-*.exe` desde PowerShell o Terminal. En macOS, usa el `.pkg` o extrae el `.tar.gz` y coloca el ejecutable en una carpeta de tu `PATH`; los paquetes de macOS no están firmados ni notarizados y pueden mostrar avisos de Gatekeeper.
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git

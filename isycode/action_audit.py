@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import stat
 import time
 from dataclasses import dataclass
@@ -41,6 +42,11 @@ class ActionAuditJournal:
 
     MAX_BYTES = 16 * 1024 * 1024
     MAX_RECORD_BYTES = 16 * 1024
+    # The active file is sealed into a numbered segment at this size; the next
+    # file starts with a "segment" record that anchors the sealed file's last
+    # digest, byte digest and record count, so the hash chain spans segments.
+    SEGMENT_BYTES = 4 * 1024 * 1024
+    MAX_SEGMENTS = 100_000
 
     def __init__(self, workspace_root: Path, *, state_directory: Path | None = None):
         root = Path(workspace_root).expanduser().resolve(strict=True)
@@ -53,6 +59,7 @@ class ActionAuditJournal:
         if os.name == "posix":
             directory.chmod(0o700)
         self.path = directory / f"actions-{root_id}.jsonl"
+        self.root_id = root_id
 
     @classmethod
     def for_read_only_inspection(cls, workspace_root: Path,
@@ -63,7 +70,69 @@ class ActionAuditJournal:
         directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
         instance = cls.__new__(cls)
         instance.path = directory / f"actions-{root_id}.jsonl"
+        instance.root_id = root_id
         return instance
+
+    # ── segments ───────────────────────────────────────────────
+
+    def _segment_path(self, index: int) -> Path:
+        return self.path.with_name(f"{self.path.stem}.{index:06d}.jsonl")
+
+    def _sealed_segments(self) -> list[Path]:
+        """Sealed segments in order; gaps or unexpected names are corruption."""
+        pattern = re.compile(rf"^{re.escape(self.path.stem)}\.(\d{{6}})\.jsonl$")
+        try:
+            names = os.listdir(self.path.parent)
+        except FileNotFoundError:
+            return []
+        indexes = sorted(int(match.group(1)) for name in names
+                         if (match := pattern.fullmatch(name)))
+        if indexes != list(range(1, len(indexes) + 1)) or len(indexes) > self.MAX_SEGMENTS:
+            raise ValueError("sealed journal segments are missing or out of order")
+        return [self._segment_path(index) for index in indexes]
+
+    def _read_private_file(self, path: Path) -> bytes:
+        """Read one journal file without following links, bounded and stable."""
+        info = path.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                or info.st_size > self.MAX_BYTES
+                or (os.name == "posix" and
+                    (info.st_uid != os.getuid() or info.st_mode & 0o077))):
+            raise ValueError("journal file is unsafe or exceeds its size limit")
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            opened = os.fstat(fd)
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_ino != info.st_ino
+                    or opened.st_dev != info.st_dev or opened.st_size > self.MAX_BYTES):
+                raise ValueError("journal changed during verification")
+            chunks: list[bytes] = []
+            while True:
+                chunk = os.read(fd, 64 * 1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            after = os.fstat(fd)
+            if (after.st_size != opened.st_size or after.st_mtime_ns != opened.st_mtime_ns
+                    or after.st_ctime_ns != opened.st_ctime_ns):
+                raise ValueError("journal changed during verification")
+        finally:
+            os.close(fd)
+        raw = b"".join(chunks)
+        if len(raw) > self.MAX_BYTES or (raw and not raw.endswith(b"\n")):
+            raise ValueError("journal is truncated or exceeds its size limit")
+        return raw
+
+    @staticmethod
+    def _chain_tail(raw: bytes) -> tuple[str, int]:
+        """Last digest and record count of a complete, already-sealed segment."""
+        lines = raw.decode("utf-8").splitlines()
+        if not lines:
+            raise ValueError("sealed journal segment is empty")
+        last = json.loads(lines[-1])
+        digest = last.get("digest") if isinstance(last, dict) else None
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise ValueError("sealed journal segment has no valid tail digest")
+        return digest, len(lines)
 
     def record_decision(self, request: ActionRequest, authority: AuthorityDecision,
                         decision: SentinelDecision) -> None:
@@ -143,44 +212,28 @@ class ActionAuditJournal:
             return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
                                      "journal directory is unsafe")
         try:
-            info = self.path.lstat()
-        except FileNotFoundError:
+            sealed = self._sealed_segments()
+            files = sealed + ([self.path] if self.path.exists() or self.path.is_symlink() else [])
+        except (OSError, ValueError):
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal segments are missing or out of order")
+        if not files:
             return ActionAuditReport("NOT_VERIFIABLE", 0, 0, 0, 0, (),
                                      "no durable journal exists for this workspace")
-        except OSError:
-            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
-                                     "journal metadata is unavailable")
-        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
-                or info.st_size > self.MAX_BYTES
-                or (os.name == "posix" and
-                    (info.st_uid != os.getuid() or info.st_mode & 0o077))):
+        try:
+            raws = [self._read_private_file(path) for path in files]
+        except (OSError, ValueError):
             return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
                                      "journal file is unsafe or exceeds its size limit")
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
         try:
-            fd = os.open(self.path, flags)
-            try:
-                opened = os.fstat(fd)
-                if (not stat.S_ISREG(opened.st_mode) or opened.st_ino != info.st_ino
-                        or opened.st_dev != info.st_dev or opened.st_size > self.MAX_BYTES):
-                    raise ValueError("journal changed during verification")
-                chunks: list[bytes] = []
-                while True:
-                    chunk = os.read(fd, 64 * 1024)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
-                after = os.fstat(fd)
-                if (after.st_size != opened.st_size
-                        or after.st_mtime_ns != opened.st_mtime_ns
-                        or after.st_ctime_ns != opened.st_ctime_ns):
-                    raise ValueError("journal changed during verification")
-            finally:
-                os.close(fd)
-            raw = b"".join(chunks)
-            if len(raw) > self.MAX_BYTES or (raw and not raw.endswith(b"\n")):
-                raise ValueError("journal is truncated or exceeds its size limit")
-            lines = raw.decode("utf-8").splitlines()
+            lines: list[str] = []
+            boundaries: dict[int, tuple[int, bytes, int]] = {}
+            for index, raw in enumerate(raws):
+                if index:
+                    # The first line of each later file must anchor the file before it.
+                    boundaries[len(lines) + 1] = (index, raws[index - 1],
+                                                  len(raws[index - 1].decode("utf-8").splitlines()))
+                lines.extend(raw.decode("utf-8").splitlines())
             previous = "0" * 64
             decisions_by_digest: dict[str, list[tuple[str, str, bool]]] = {}
             receipt_ids: set[str] = set()
@@ -204,6 +257,16 @@ class ActionAuditJournal:
                 if not hmac.compare_digest(digest, expected):
                     raise ValueError(f"record {line_number} digest mismatch")
                 kind = body.get("kind")
+                boundary = boundaries.get(line_number)
+                if kind == "segment" or boundary is not None:
+                    if (kind != "segment" or boundary is None
+                            or body.get("sealed_index") != boundary[0]
+                            or body.get("sealed_sha256") != hashlib.sha256(boundary[1]).hexdigest()
+                            or body.get("sealed_records") != boundary[2]
+                            or body.get("workspace") != getattr(self, "root_id", body.get("workspace"))):
+                        raise ValueError(f"record {line_number} is not a valid segment anchor")
+                    previous = digest
+                    continue
                 action = body.get("action")
                 owner = body.get("owner")
                 request_digest = body.get("request_digest")
@@ -283,6 +346,14 @@ class ActionAuditJournal:
                                      f"journal verification failed ({type(exc).__name__})")
 
     def _append(self, body: dict[str, Any]) -> None:
+        # A concurrent writer may seal the active file between our open and our
+        # lock; _append_once then reports "rotated" and we reopen the new file.
+        for _ in range(4):
+            if self._append_once(dict(body)):
+                return
+        raise ActionAuditError("private action journal kept rotating; action denied")
+
+    def _append_once(self, body: dict[str, Any]) -> bool:
         try:
             import fcntl
         except ImportError:  # pragma: no cover - non-POSIX fallback uses exclusive file access
@@ -302,6 +373,13 @@ class ActionAuditJournal:
                 os.fchmod(fd, 0o600)
             if fcntl is not None:
                 fcntl.flock(fd, fcntl.LOCK_EX)
+            try:
+                current = self.path.lstat()
+            except FileNotFoundError:
+                return False
+            if (current.st_ino, current.st_dev) != (info.st_ino, info.st_dev):
+                return False
+            info = os.fstat(fd)
             os.lseek(fd, 0, os.SEEK_SET)
             chunks: list[bytes] = []
             remaining = self.MAX_BYTES + 1
@@ -315,11 +393,33 @@ class ActionAuditJournal:
             if len(raw) > self.MAX_BYTES:
                 raise ActionAuditError("private action journal is full")
             previous = "0" * 64
+            pending: list[dict[str, Any]] = []
+            if not raw:
+                try:
+                    sealed = self._sealed_segments()
+                    if sealed:
+                        sealed_raw = self._read_private_file(sealed[-1])
+                        tail, count = self._chain_tail(sealed_raw)
+                        pending.append({
+                            "kind": "segment", "time": time.time(), "workspace": self.root_id,
+                            "sealed_index": len(sealed),
+                            "sealed_sha256": hashlib.sha256(sealed_raw).hexdigest(),
+                            "sealed_records": count,
+                        })
+                        previous = tail
+                except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                    raise ActionAuditError("sealed journal segments cannot be anchored") from exc
             if raw:
                 try:
                     lines = raw.decode("utf-8").splitlines()
                     if not lines or raw and not raw.endswith(b"\n"):
                         raise ValueError("incomplete journal line")
+                    first = json.loads(lines[0])
+                    if isinstance(first, dict) and first.get("kind") == "segment":
+                        anchor = first.get("previous")
+                        if not isinstance(anchor, str) or re.fullmatch(r"[0-9a-f]{64}", anchor) is None:
+                            raise ValueError("invalid segment anchor")
+                        previous = anchor
                     for line in lines:
                         record = json.loads(line)
                         if not isinstance(record, dict):
@@ -337,13 +437,28 @@ class ActionAuditJournal:
                 except (UnicodeError, json.JSONDecodeError, AttributeError, KeyError,
                         TypeError, ValueError) as exc:
                     raise ActionAuditError("private action journal integrity check failed") from exc
-            body["previous"] = previous
-            body.setdefault("version", 1)
-            canonical = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-            body["digest"] = hashlib.sha256((previous + canonical).encode("utf-8")).hexdigest()
-            encoded = (json.dumps(body, ensure_ascii=False, sort_keys=True,
-                                  separators=(",", ":")) + "\n").encode("utf-8")
-            if len(encoded) > self.MAX_RECORD_BYTES or info.st_size + len(encoded) > self.MAX_BYTES:
+            encoded = b""
+            for record in pending + [body]:
+                record["previous"] = previous
+                record.setdefault("version", 1)
+                canonical = json.dumps(record, ensure_ascii=False, sort_keys=True,
+                                       separators=(",", ":"))
+                record["digest"] = hashlib.sha256((previous + canonical).encode("utf-8")).hexdigest()
+                line = (json.dumps(record, ensure_ascii=False, sort_keys=True,
+                                   separators=(",", ":")) + "\n").encode("utf-8")
+                if len(line) > self.MAX_RECORD_BYTES:
+                    raise ActionAuditError("private action journal record exceeds its limit")
+                encoded += line
+                previous = record["digest"]
+            if raw and info.st_size + len(encoded) > self.SEGMENT_BYTES:
+                sealed_count = len(self._sealed_segments())
+                target = self._segment_path(sealed_count + 1)
+                if target.exists() or target.is_symlink():
+                    raise ActionAuditError("private action journal segment already exists")
+                os.fsync(fd)
+                os.rename(self.path, target)
+                return False
+            if info.st_size + len(encoded) > self.MAX_BYTES:
                 raise ActionAuditError("private action journal has reached its size limit")
             os.lseek(fd, 0, os.SEEK_END)
             view = memoryview(encoded)
@@ -353,9 +468,10 @@ class ActionAuditJournal:
                     raise OSError("short journal write")
                 view = view[written:]
             os.fsync(fd)
+            return True
         except ActionAuditError:
             raise
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             raise ActionAuditError("private action journal could not be committed") from exc
         finally:
             if fcntl is not None:

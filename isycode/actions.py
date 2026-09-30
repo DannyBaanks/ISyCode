@@ -20,6 +20,7 @@ _ENTRIES = [
     ("workspace.files.search", "Files", "Search file names", "read", False),
     ("workspace.context.inject", "Files", "Inject AGENTS.md context", "read", False),
     ("workspace.files.write", "Files", "Create or edit files", "write", True),
+    ("workspace.files.restore", "Files", "Undo an ISyCode file change", "write", True),
     ("workspace.files.move", "Files", "Move or rename files", "write", True),
     ("workspace.files.delete", "Files", "Delete files", "destructive", True),
     ("workspace.files.read_sensitive", "Files", "Read sensitive files", "sensitive", True),

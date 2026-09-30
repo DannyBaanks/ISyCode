@@ -23,6 +23,46 @@ class WorkspaceAuthorityError(RuntimeError):
     """Workspace grant state is invalid or unsafe to access."""
 
 
+MODES = frozenset({"security", "classic"})
+
+# Classic mode is a per-workspace preset of implicit grants, not a bypass:
+# IsySentinel, execution owners, per-action approvals (diff Apply, key save
+# and removal) and the action journal are unchanged. Anything not listed here
+# still needs an explicit grant, and explicitly denied actions stay denied.
+CLASSIC_PATH_ACTIONS = frozenset({
+    "workspace.files.list", "workspace.files.read", "workspace.files.search",
+    "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
+})
+CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume"})
+CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
+CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_PLAIN_ACTIONS | CLASSIC_SERVICE_ACTIONS
+                   | {"provider.request"})
+
+
+def _known_provider_hosts() -> list[str]:
+    """Hosts of the provider presets and any configured endpoint override."""
+    from isycode.providers import PRESETS  # local import: providers loads lazily
+
+    urls = [str(preset.get("base_url", "")) for preset in PRESETS.values()]
+    urls += [os.environ.get("ISYCODE_BASE_URL", ""), os.environ.get("ISYMOTRON_BASE_URL", "")]
+    hosts = set()
+    for url in urls:
+        try:
+            parsed = urlsplit(url.strip())
+            if parsed.hostname:
+                hosts.add(parsed.hostname.casefold().rstrip(".")
+                          + (f":{parsed.port}" if parsed.port else ""))
+        except ValueError:
+            continue
+    return sorted(hosts)
+
+
+def _known_services() -> list[str]:
+    from isycode.providers import PRESETS
+
+    return sorted(set(PRESETS) | {"isyco-gateway"})
+
+
 class WorkspaceAuthority:
     VERSION = 1
     MAX_POLICY_BYTES = 256 * 1024
@@ -86,7 +126,8 @@ class WorkspaceAuthority:
             raise WorkspaceAuthorityError("Workspace grant policy is unreadable or malformed.") from exc
         if (not isinstance(data, dict) or data.get("version") != self.VERSION
                 or data.get("workspace_root") != str(self.root)
-                or not isinstance(data.get("grants"), dict)):
+                or not isinstance(data.get("grants"), dict)
+                or data.get("mode", "security") not in MODES):
             raise WorkspaceAuthorityError("Workspace grant policy does not match this root.")
         for action, grant in data["grants"].items():
             if action not in ACTION_BY_ID or not isinstance(grant, dict):
@@ -98,6 +139,42 @@ class WorkspaceAuthority:
                 if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
                     raise WorkspaceAuthorityError("Workspace grant scopes are malformed.")
         return data
+
+    def mode(self) -> str | None:
+        """Saved mode; None for a workspace that has never been configured."""
+        if not self.policy_path.exists():
+            return None
+        return self.policy().get("mode", "security")
+
+    def set_mode(self, mode: str) -> None:
+        if mode not in MODES:
+            raise ValueError("Unknown workspace mode.")
+        existing = self.policy()
+        existing["mode"] = mode
+        self._atomic_write(existing)
+
+    def effective_policy(self) -> dict[str, Any]:
+        """Explicit grants plus the Classic preset; what evaluate() decides on."""
+        policy = self.policy()
+        if policy.get("mode") != "classic":
+            return policy
+        grants = {action: dict(grant) for action, grant in policy["grants"].items()}
+
+        def merge(action: str, key: str | None = None, values: list[str] | None = None) -> None:
+            current = grants.setdefault(action, {})
+            current["enabled"] = True
+            if key is not None:
+                current[key] = sorted(set(current.get(key, [])) | set(values or []))
+
+        for action in CLASSIC_PATH_ACTIONS:
+            merge(action, "path_prefixes", [str(self.root)])
+        for action in CLASSIC_PLAIN_ACTIONS:
+            merge(action)
+        services = _known_services()
+        for action in CLASSIC_SERVICE_ACTIONS:
+            merge(action, "targets", services)
+        merge("provider.request", "network_hosts", _known_provider_hosts())
+        return {**policy, "grants": grants}
 
     @staticmethod
     def _policy_file_safe(info: os.stat_result) -> bool:
@@ -149,7 +226,7 @@ class WorkspaceAuthority:
         if spec is None:
             return AuthorityDecision(False, "", "unknown action is denied", digest)
         try:
-            policy = self.policy()
+            policy = self.effective_policy()
         except WorkspaceAuthorityError:
             return AuthorityDecision(False, "", "workspace grant policy unavailable or invalid", digest)
         grant = policy["grants"].get(request.action_id, {})
@@ -253,4 +330,4 @@ class WorkspaceAuthority:
                 temporary.unlink()
 
 
-__all__ = ["WorkspaceAuthority", "WorkspaceAuthorityError"]
+__all__ = ["CLASSIC_ACTIONS", "MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]

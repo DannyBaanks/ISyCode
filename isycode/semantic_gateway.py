@@ -101,12 +101,9 @@ class SemanticGatewayClient:
         configured = os.environ.get("GATEWAY_API_KEY", "")
         if configured:
             return configured
-        try:
-            from isycode.credentials import CredentialVault, CredentialVaultError
+        from isycode.credentials import read_saved_secret
 
-            return CredentialVault().latest_secret_for_service("isyco-gateway") or ""
-        except (CredentialVaultError, OSError, ValueError):
-            return ""
+        return read_saved_secret("isyco-gateway", "semantic") or ""
 
     @property
     def configured(self) -> bool:

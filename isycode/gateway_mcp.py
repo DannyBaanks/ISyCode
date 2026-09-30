@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from isycode.config import PROJECT_ROOT
-from isycode.credentials import CredentialVault, CredentialVaultError
+from isycode.credentials import read_saved_secret
 from isycode.gateway_client import GatewayClient
 
 
@@ -73,10 +73,7 @@ async def discover_gateway_tools(timeout_s: float = 90.0) -> list[dict[str, Any]
     environment["GATEWAY_BASE_URL"] = gateway_url
     gateway_key = os.environ.get("GATEWAY_API_KEY", "")
     if not gateway_key:
-        try:
-            gateway_key = CredentialVault().latest_secret_for_service("isyco-gateway") or ""
-        except (CredentialVaultError, OSError, ValueError):
-            gateway_key = ""
+        gateway_key = read_saved_secret("isyco-gateway", "mcp") or ""
     if gateway_key:
         environment["GATEWAY_API_KEY"] = gateway_key
 
@@ -162,10 +159,7 @@ async def invoke_gateway_tool(name: str, arguments: dict[str, Any], *,
     environment["GATEWAY_BASE_URL"] = gateway_url
     gateway_key = os.environ.get("GATEWAY_API_KEY", "")
     if not gateway_key:
-        try:
-            gateway_key = CredentialVault().latest_secret_for_service("isyco-gateway") or ""
-        except (CredentialVaultError, OSError, ValueError):
-            gateway_key = ""
+        gateway_key = read_saved_secret("isyco-gateway", "mcp") or ""
     if gateway_key:
         environment["GATEWAY_API_KEY"] = gateway_key
 

@@ -29,6 +29,8 @@ from isycode.config import (
 )
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
+from isycode.session_owner import ChatSessionOwner
+from isycode.credential_owner import GATEWAY_SERVICE, CredentialOwner, CredentialUseOwner
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
@@ -39,7 +41,9 @@ from isycode.catalog import (
     ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_KERNEL,
     SEMANTIC_BRANCHES,
 )
-from isycode.credentials import CredentialVault, CredentialVaultError
+from isycode.credentials import (
+    CredentialVault, CredentialVaultError, saved_secret_exists, set_saved_secret_reader,
+)
 from isycode.approvals import ActionApprovalStore
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.action_runtime import (
@@ -49,7 +53,7 @@ from isycode.action_runtime import (
 )
 from isycode.actions import ACTION_BY_ID
 from isycode.workspace_write import (
-    WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
+    EDIT_TOOL, EDIT_TOOL_NAME, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
 )
 from isycode.authority_view import (
     MOBILE_HOST_ADDRESS, MOBILE_PAIR_ACTIONS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
@@ -458,6 +462,47 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class WorkspaceModeScreen(ModalScreen[str]):
+    """Choose how a new workspace starts: Classic (ready to use) or Security."""
+
+    CSS = """
+    WorkspaceModeScreen { align: center middle; background: #000000 65%; }
+    #workspace-mode-card { width: 84; max-width: 94%; height: auto; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #workspace-mode-title { height: 2; color: #bb8cff; text-style: bold; }
+    #workspace-mode-copy { height: auto; margin-bottom: 1; }
+    #workspace-mode-options { height: 4; }
+    """
+    BINDINGS = [Binding("escape", "security", "Security")]
+
+    def __init__(self, root: Path) -> None:
+        super().__init__()
+        self.root = root
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="workspace-mode-card"):
+            yield Static("How should ISyCode work in this folder?", id="workspace-mode-title")
+            yield Static(
+                f"{self.root}\n\nClassic: ready to use. ISyCode reads your files and proposes edits "
+                "you approve one diff at a time; chats and saved keys just work.\n"
+                "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
+                "Both check every action with IsySentinel and record it in the action journal. "
+                "Shell, deleting files and sensitive files stay off in both. You can switch later "
+                "in Settings → Authority.", id="workspace-mode-copy")
+            yield OptionList(
+                Option("Classic · ready to use", id="classic"),
+                Option("Security · everything off until I allow it", id="security"),
+                id="workspace-mode-options")
+
+    def on_mount(self) -> None:
+        self.query_one("#workspace-mode-options", OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        self.dismiss("classic" if event.option.id == "classic" else "security")
+
+    def action_security(self) -> None:
+        self.dismiss("security")
+
+
 class WriteApprovalScreen(ModalScreen[bool]):
     """Show the exact diff of one proposed file change; Reject is the default."""
 
@@ -480,12 +525,18 @@ class WriteApprovalScreen(ModalScreen[bool]):
         lines = self.preview.diff.splitlines()
         added = sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
         removed = sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
-        kind = "Create new file" if self.preview.created else "Change file"
+        if self.preview.is_undo:
+            kind = "Undo · remove file" if self.preview.removes else "Undo · restore file"
+        else:
+            kind = "Create new file" if self.preview.created else "Change file"
         with Vertical(id="write-approval-card"):
             yield Static(f"{kind} · {self.preview.path}", id="write-approval-title")
             yield Static(
-                f"+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
-                "unless you apply it. If the file changes before it is applied, the change is refused.",
+                (f"+{added} / -{removed} lines. This puts the file back as it was before ISyCode's "
+                 "last change; nothing changes unless you apply it."
+                 if self.preview.is_undo else
+                 f"+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
+                 "unless you apply it. If the file changes before it is applied, the change is refused."),
                 id="write-approval-summary")
             with VerticalScroll(id="write-approval-diff"):
                 yield Static(Syntax(self.preview.diff, "diff", theme="monokai", word_wrap=True))
@@ -1563,6 +1614,8 @@ class TUIApp(App):
         self._workspace_setup: WorkspaceSetupStore | None = None
         self._chat_sessions: ChatSessionStore | None = None
         self._active_chat_session_id: str | None = None
+        self._chat_session_owner: ChatSessionOwner | None = None
+        self._session_save_warned = False
         self._temporary_chat_root: Path | None = None
         self._workspace_generation = 0
         self._file_path = ""
@@ -1681,6 +1734,7 @@ class TUIApp(App):
     async def on_unmount(self, event) -> None:
         """Release local temporary state; unowned optional services never start in Secure."""
         del event
+        set_saved_secret_reader(None)
         if self._mobile_host_owner is not None:
             await self._mobile_host_owner.shutdown()
         if self._temporary_chat_root is not None:
@@ -1701,7 +1755,7 @@ class TUIApp(App):
                         preference = "ask"
                     choice = new_workspace_choice(self._launch_dir, None, preference)
                     if choice is None:
-                        choice = await self.push_screen_wait(WorkspaceSetupScreen(self._launch_dir))
+                        choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
                     setup_store.choose_recurrent(self._launch_dir, choice)
                 elif choice:
                     # Re-create a marker if the user removed it after opting in.
@@ -1719,11 +1773,37 @@ class TUIApp(App):
             else:
                 self.query_one("#prompt-input", PromptArea).focus()
 
-            # Persistent transcript writes are disabled until session.create/append
-            # have a request-bound owner. A recurrence choice is workspace identity,
-            # not permission to persist prompts or responses.
+            # Transcripts are saved only through the chat_sessions owner, only for
+            # recurring workspaces, and only while the explicit session grants are
+            # on. A recurrence choice alone is identity, not permission to persist.
             self._chat_sessions = None
             self._active_chat_session_id = None
+            self._chat_session_owner = None
+            if recurring:
+                try:
+                    self._chat_session_owner = ChatSessionOwner(
+                        self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                        setup_store.sessions_root(self._workspace_root))
+                except (WorkspaceAuthorityError, OSError, ValueError):
+                    self._chat_session_owner = None
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                if authority.mode() is None:
+                    try:
+                        preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
+                    except (OSError, ValueError, json.JSONDecodeError):
+                        preferred = "ask"
+                    if preferred in {"classic", "security"}:
+                        chosen = preferred
+                        self._append(f"  New workspace · using your default {preferred.title()} mode "
+                                     "· change it in Settings → Authority.", MUTED)
+                    else:
+                        chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
+                    authority.set_mode(chosen)
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                self._append("  Workspace mode could not be saved · Security rules apply.", YELLOW)
+            self._update_workspace_identity_ui()
+            self._register_saved_key_reader()
             await self._initialize_workspace()
             self._refresh_lsp_status()
             self.run_worker(self._refresh_openisy(), exclusive=False)
@@ -1731,11 +1811,53 @@ class TUIApp(App):
             self.run_worker(self._check_model(), exclusive=False)
             if not recurring:
                 self._append("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
-            self._append(
-                "  Session persistence is blocked in Secure · current conversation stays in memory only.",
-                YELLOW)
+            if self._sessions_enabled():
+                self._append("  Conversations are saved for this workspace · Sessions lists them.",
+                             MUTED)
+            else:
+                self._append(
+                    "  This conversation stays in memory · turn on “Save conversations” in "
+                    "Settings → Authority (recurring workspaces only).", MUTED)
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+
+    def _workspace_mode(self) -> str:
+        try:
+            return WorkspaceAuthority(self._workspace_root).mode() or "security"
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return "security"
+
+    async def _change_workspace_mode(self, mode: str) -> None:
+        classic = mode == "classic"
+        if not await self._await_screen(TailscaleConfirmScreen(
+                "Switch this workspace to Classic?" if classic else "Switch this workspace to Security?",
+                ("Reading and searching files, edit proposals (each still shows its diff and asks "
+                 "you), chat with your chosen provider, saved conversations and saved keys work "
+                 "without setting permissions one by one. Integrations like Gateway, MCP, LSP, "
+                 "Tailscale and Mobile Host still need explicit permission. Shell, delete and "
+                 "sensitive files stay off." if classic else
+                 "Everything starts off; you allow each capability in Settings → Authority. "
+                 "Permissions you granted explicitly stay as they are."),
+                "Use Classic" if classic else "Use Security")):
+            self._open_authority_menu()
+            return
+        try:
+            WorkspaceAuthority(self._workspace_root).set_mode(mode)
+            self._append(f"  This workspace now uses {'Classic' if classic else 'Security'} mode.", GREEN)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Mode could not be changed ({type(exc).__name__}).", RED)
+        self._update_workspace_identity_ui()
+        self._open_authority_menu()
+
+    def _register_saved_key_reader(self) -> None:
+        """Security mode: every saved-key read is its own owned, journaled decision."""
+        try:
+            owner = CredentialUseOwner(self._workspace_root,
+                                       WorkspaceAuthority(self._workspace_root))
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError):
+            set_saved_secret_reader(None)
+            return
+        set_saved_secret_reader(lambda service, consumer: owner.secret_for(service, consumer)[1])
 
     def _shared_root_warning(self) -> str | None:
         return shared_root_warning(self._workspace_root,
@@ -1745,7 +1867,8 @@ class TUIApp(App):
     def _root_source_label(self) -> str:
         source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
         broad = " · broad shared root" if self._shared_root_warning() else ""
-        return f"Root source · {source}{broad}"
+        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
+        return f"Root source · {source}{broad} · {mode} mode"
 
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
@@ -1777,7 +1900,7 @@ class TUIApp(App):
                         f"{route_url(routed)} already points here, so devices in your tailnet can "
                         "reach this host through it while it runs." if routed is not None else
                         "It does not change Tailscale Serve or expose a remote route.")
-            if not await self.push_screen_wait(TailscaleConfirmScreen(
+            if not await self._await_screen(TailscaleConfirmScreen(
                     "Start Mobile Host", "Start the ISyCode Mobile Host on loopback only: "
                     "http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. "
                     + exposure, "Start host")):
@@ -1873,7 +1996,7 @@ class TUIApp(App):
         self._workspace = self._workspace_root
         self._file_path = str(self._workspace_root)
         try:
-            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
             enabled = all(
                 displayed_on(action, grants.get(action, {}),
                              str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", []))
@@ -2484,14 +2607,41 @@ class TUIApp(App):
              "temp and mount points still ask first.")
             if value == "recurring" else "Applies only when this folder has no saved choice yet.")
             for value, label in choices)
+        new_mode = defaults.get("new_workspace_mode", "ask")
+        mode_choices = (
+            ("ask", "Ask me which mode a new folder uses"),
+            ("classic", "Start new folders in Classic · ready to use"),
+            ("security", "Start new folders in Security · everything off until I allow it"),
+        )
+        entries.extend(self._entry(
+            ("● " if new_mode == value else "○ ") + label, "user_default_mode", value,
+            "Applies only to folders opened for the first time; each workspace keeps its own "
+            "mode and you can switch it in Settings → Authority.")
+            for value, label in mode_choices)
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "user_defaults":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("user_defaults", "Settings · My defaults", entries)
 
+    async def _set_global_mode_default(self, value: str) -> None:
+        if value == "classic" and not await self._await_screen(TailscaleConfirmScreen(
+                "Start new folders in Classic?",
+                "Every folder you open for the first time will read files, propose edits you approve, "
+                "chat with your provider and save conversations and keys without asking for each "
+                "permission. IsySentinel and the action journal still check and record everything. "
+                "Folders you already use keep their mode.", "Use Classic for new folders")):
+            self._open_user_defaults_menu()
+            return
+        try:
+            UserDefaultsStore().update(new_workspace_mode=value)
+            self._set_activity("Default mode saved for new workspaces", GREEN)
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save the default mode; existing settings remain", RED)
+        self._open_user_defaults_menu()
+
     async def _set_global_workspace_default(self, value: str) -> None:
         if value == "recurring":
-            accepted = await self.push_screen_wait(GlobalRecurringDefaultScreen())
+            accepted = await self._await_screen(GlobalRecurringDefaultScreen())
             if not accepted:
                 self._open_user_defaults_menu()
                 return
@@ -2676,7 +2826,7 @@ class TUIApp(App):
             action = data["action"]
             executable = data["executable"]
             enabled = not data["enabled"]
-            accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+            accepted = await self._await_screen(TailscaleConfirmScreen(
                 "Workspace Authority · Tailscale",
                 f"{'Grant' if enabled else 'Revoke'} `{action}` for this workspace?\n\n"
                 f"Exact executable: {executable}\n\n"
@@ -2710,7 +2860,7 @@ class TUIApp(App):
                                  "Settings → Private access → Permissions.", YELLOW)
                     self._open_tailscale_permissions()
                     return
-                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                accepted = await self._await_screen(TailscaleConfirmScreen(
                     "Prepare official Tailscale package", details,
                     "Download and verify"))
                 if not accepted:
@@ -2733,7 +2883,7 @@ class TUIApp(App):
                                  "Settings → Private access → Permissions.", YELLOW)
                     self._open_tailscale_permissions()
                     return
-                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+                accepted = await self._await_screen(TailscaleConfirmScreen(
                     "Stage verified package as root" if action_id.endswith("stage")
                     else "Install exact Tailscale package", details,
                     "Approve this step"))
@@ -2777,7 +2927,7 @@ class TUIApp(App):
                 self._open_tailscale_permissions()
                 return
             details = owner.preview(request)
-            if not await self.push_screen_wait(TailscaleConfirmScreen(
+            if not await self._await_screen(TailscaleConfirmScreen(
                     "Sign in to Tailscale", details, "Start browser login")):
                 self._append("  Tailscale login cancelled; no process started.", MUTED)
                 return
@@ -2839,7 +2989,7 @@ class TUIApp(App):
                 self._open_tailscale_permissions()
                 return
             label = "Enable private route" if enabling else "Disable owned private route"
-            if not await self.push_screen_wait(TailscaleConfirmScreen(
+            if not await self._await_screen(TailscaleConfirmScreen(
                     "Private Tailscale Serve", preview.description, label)):
                 self._append("  Tailscale Serve change cancelled; no command ran.", MUTED)
                 return
@@ -2872,7 +3022,7 @@ class TUIApp(App):
             "Manual installation does not grant permissions, sign in, change Serve, or install a daemon "
             "through this TUI. Tailscale Serve is private to the tailnet; Gateway keys/scopes and "
             "workspace filesystem grants remain separate.")
-        await self.push_screen_wait(TailscaleConfirmScreen(
+        await self._await_screen(TailscaleConfirmScreen(
             "Manual private-access setup", details, "Done"))
         self._open_private_access_menu()
 
@@ -2932,9 +3082,15 @@ class TUIApp(App):
         self.query_one("#bridge-status", Static).update(text)
 
     def _open_credentials_menu(self) -> None:
-        entries = [self._entry(
-            "Adding credentials is blocked in Secure",
-            "info", "", "credentials.add has no registered execution owner yet; no key was read or stored.")]
+        selected = selected_provider_name()
+        entries = []
+        if selected in PRESETS:
+            entries.append(self._entry(
+                f"Add a key for {self._credential_label(selected)} · asks first",
+                "credential_add", selected,
+                "Saved in your OS keyring for your user; never in the project or logs."))
+        entries.append(self._entry("Add an ISyCo Gateway key · asks first", "credential_add",
+                                   GATEWAY_SERVICE))
         try:
             credentials = CredentialVault().list_metadata()
         except Exception:
@@ -2942,14 +3098,27 @@ class TUIApp(App):
             entries.append(self._entry(
                 "Credential vault unavailable", "info", "",
                 "Check the user-private state directory and permissions."))
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            grants = {}
+        use_grant = grants.get("credentials.use", {})
+        for service in sorted({item["service"] for item in credentials if not item["revoked"]}):
+            if not displayed_on("credentials.use", use_grant,
+                                service in use_grant.get("targets", [])):
+                entries.append(self._entry(
+                    f"Allow using the saved {self._credential_label(service)} key here · asks first",
+                    "credential_use_grant", service,
+                    "Each use is decided and recorded in this workspace's action journal."))
         for item in credentials:
-            state = "revoked" if item["revoked"] else "saved · value hidden"
-            entries.append(self._entry(
-                f"{item['name']}  ·  {item['service']}  ·  {state}",
-                "credential_info", item["id"],
-                f"Purpose: {item['purpose']}"))
-        entries.append(self._entry(
-            "Replace/remove require the Authority action gate, not connected yet.", "info"))
+            if item["revoked"]:
+                entries.append(self._entry(
+                    f"{item['name']}  ·  {item['service']}  ·  removed",
+                    "credential_info", item["id"], f"Purpose: {item['purpose']}"))
+            else:
+                entries.append(self._entry(
+                    f"{item['name']}  ·  {item['service']}  ·  saved · value hidden · select to remove",
+                    "credential_revoke", item["id"], f"Purpose: {item['purpose']}"))
         self._render_menu("named_credentials", "Settings · API keys", entries)
 
     def _open_authority_menu(self) -> None:
@@ -2958,8 +3127,17 @@ class TUIApp(App):
             self._entry(
                 "Some actions ask again before they run, even when turned on.", "info")]
         try:
-            policy = WorkspaceAuthority(self._workspace_root).policy()
+            authority = WorkspaceAuthority(self._workspace_root)
+            policy = authority.effective_policy()
             grants = policy.get("grants", {})
+            classic = authority.mode() == "classic"
+            entries.append(self._entry(
+                ("Mode · Classic · ready to use; switch to Security…" if classic
+                 else "Mode · Security · nothing runs until you allow it; switch to Classic…"),
+                "workspace_mode", "security" if classic else "classic",
+                "Classic turns on reading files, edit proposals you approve, chat, saved "
+                "conversations and saved keys. Security starts with everything off. Both check every "
+                "action with IsySentinel and record it in the action journal."))
             readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search",
                             "workspace.context.inject"}
             read_enabled = all(displayed_on(
@@ -2969,6 +3147,17 @@ class TUIApp(App):
             entries.append(self._capability_entry(
                 "Read and search workspace files", "workspace_read", read_enabled,
                 "Lets ISyCode list, read, and find files here. It cannot change or delete them."))
+            if self._chat_session_owner is not None:
+                entries.append(self._capability_entry(
+                    "Save conversations in this workspace", "sessions",
+                    all(displayed_on(action, grants.get(action, {}))
+                        for action in ("session.create", "session.resume")),
+                    "Keeps this workspace's chats in your private ISyCode state folder, outside the "
+                    "project, so you can resume them. Common secrets are redacted before saving."))
+            else:
+                entries.append(self._entry(
+                    "Save conversations · recurring workspaces only", "info", "",
+                    "Temporary runs never keep chat history."))
             write_grant = grants.get("workspace.files.write", {})
             entries.append(self._capability_entry(
                 "Edit workspace files · asks before every change", "workspace_write",
@@ -3123,7 +3312,7 @@ class TUIApp(App):
             self._append("  Provider endpoint is invalid; no network grant was changed.", RED)
             self._open_authority_menu()
             return
-        accepted = await self.push_screen_wait(GrantProviderNetworkScreen(
+        accepted = await self._await_screen(GrantProviderNetworkScreen(
             preset["label"], host, revoke=not enabled))
         if accepted:
             try:
@@ -3160,7 +3349,7 @@ class TUIApp(App):
             self._append("  Invalid network grant request; no permission changed.", RED)
             self._open_authority_menu()
             return
-        accepted = await self.push_screen_wait(GrantProviderNetworkScreen(
+        accepted = await self._await_screen(GrantProviderNetworkScreen(
             label, host, revoke=not enabled))
         if accepted:
             try:
@@ -3194,7 +3383,7 @@ class TUIApp(App):
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append(f"  New PIN unavailable ({type(exc).__name__}); nothing changed.", RED)
             return
-        if not await self.push_screen_wait(TailscaleConfirmScreen(
+        if not await self._await_screen(TailscaleConfirmScreen(
                 "Issue a new pairing PIN",
                 "Replace the current Mobile Host PIN, if any, and clear failed pairing attempts. "
                 "The new PIN works once, for 5 minutes, from any device that can reach this host, "
@@ -3212,7 +3401,7 @@ class TUIApp(App):
 
     async def _grant_mobile_host(self, authority: WorkspaceAuthority) -> bool:
         """Ask once, then save exactly the scoped Mobile Host grants."""
-        accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+        accepted = await self._await_screen(TailscaleConfirmScreen(
             "Grant Mobile Host for this workspace",
             f"Allow `mobile.host.start` only at {MOBILE_HOST_ADDRESS}, `mobile.pair` only for the "
             "one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN "
@@ -3229,12 +3418,32 @@ class TUIApp(App):
             authority.set_grant(action, enabled=True, targets=[MOBILE_PAIR_TARGET])
         return True
 
+    async def _change_session_grant(self, enabled: bool) -> None:
+        accepted = await self._await_screen(TailscaleConfirmScreen(
+            "Save conversations in this workspace?" if enabled else "Stop saving conversations?",
+            ("New messages in this workspace are saved to your private ISyCode state folder, "
+             "outside the project, and can be resumed from Sessions. API keys, bearer tokens and "
+             "similar secrets are redacted before saving." if enabled else
+             "New messages stay in memory only. Conversations already saved are kept; deleting "
+             "them is not available yet."),
+            "Save conversations" if enabled else "Stop saving"))
+        if accepted:
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                for action in ("session.create", "session.resume"):
+                    authority.set_grant(action, enabled=enabled)
+                self._append("  Conversations will be saved for this workspace." if enabled
+                             else "  Conversations are no longer saved for this workspace.", GREEN)
+            except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+                self._append(f"  Session permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
     async def _change_workspace_write_grant(self, enabled: bool) -> None:
         if enabled and not self._workspace_chat_tools_enabled():
             self._append("  Turn on reading workspace files first; editing builds on it.", YELLOW)
             self._open_authority_menu()
             return
-        accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+        accepted = await self._await_screen(TailscaleConfirmScreen(
             "Allow file edits in this workspace?" if enabled else "Turn off file edits?",
             (f"The assistant may propose new content for text files inside {self._workspace_root}. "
              "Every change shows its exact diff and is written only if you apply it; a file that "
@@ -3245,9 +3454,10 @@ class TUIApp(App):
             "Allow edits" if enabled else "Turn off edits"))
         if accepted:
             try:
-                WorkspaceAuthority(self._workspace_root).set_grant(
-                    "workspace.files.write", enabled=enabled,
-                    path_prefixes=[self._workspace_root] if enabled else [])
+                authority = WorkspaceAuthority(self._workspace_root)
+                for action in ("workspace.files.write", "workspace.files.restore"):
+                    authority.set_grant(action, enabled=enabled,
+                                        path_prefixes=[self._workspace_root] if enabled else [])
                 self._append("  File edits allowed; each change still asks first." if enabled
                              else "  File edits turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
@@ -3262,7 +3472,7 @@ class TUIApp(App):
                     self._append("  Mobile Host granted for this workspace. Starting it still asks first.", GREEN)
                 else:
                     self._append("  Mobile Host grant cancelled; nothing changed.", MUTED)
-            elif await self.push_screen_wait(TailscaleConfirmScreen(
+            elif await self._await_screen(TailscaleConfirmScreen(
                     "Revoke Mobile Host for this workspace",
                     "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` "
                     "grants. New starts, new PINs and new pairing are denied. A host already "
@@ -3285,7 +3495,7 @@ class TUIApp(App):
             self._append("  Unknown permission; nothing changed.", YELLOW)
             return
         action = ACTION_BY_ID[action_id]
-        if await self.push_screen_wait(TailscaleConfirmScreen(
+        if await self._await_screen(TailscaleConfirmScreen(
                 "Remove saved permission",
                 f"Remove the saved permission for {action.group} · {action.label} "
                 f"(`{action_id}`) in this workspace, including its saved scope?",
@@ -3308,7 +3518,7 @@ class TUIApp(App):
             self._append("  Gateway URL is invalid; no MCP grant was changed.", RED)
             self._open_authority_menu()
             return
-        accepted = await self.push_screen_wait(GrantMCPInvocationScreen(
+        accepted = await self._await_screen(GrantMCPInvocationScreen(
             target.split("@", 1)[-1], revoke=not enabled))
         if accepted:
             try:
@@ -3333,7 +3543,7 @@ class TUIApp(App):
         if self._gateway_mcp_snapshot.state != "ready" or tool is None:
             self._append("  MCP catalog changed or is unavailable; refresh it before calling a tool.", YELLOW)
             return
-        arguments = await self.push_screen_wait(MCPArgumentsScreen(tool))
+        arguments = await self._await_screen(MCPArgumentsScreen(tool))
         if arguments is None:
             return
         endpoint = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787").rstrip("/")
@@ -3345,7 +3555,7 @@ class TUIApp(App):
         except ValueError:
             self._append("  Gateway URL is invalid; no MCP request was sent.", RED)
             return
-        accepted = await self.push_screen_wait(
+        accepted = await self._await_screen(
             MCPInvocationConfirmScreen(
                 name, str(tool.get("description", "")), arguments, endpoint))
         if not accepted:
@@ -3393,11 +3603,11 @@ class TUIApp(App):
         except ValueError:
             self._append("  Gateway URL is invalid; no semantic request was sent.", RED)
             return
-        selected = await self.push_screen_wait(GatewaySemanticQueryScreen(endpoint, workspace_id))
+        selected = await self._await_screen(GatewaySemanticQueryScreen(endpoint, workspace_id))
         if not selected:
             return
         operation, payload = selected
-        accepted = await self.push_screen_wait(
+        accepted = await self._await_screen(
             GatewaySemanticConfirmScreen(endpoint, operation, payload, workspace_id))
         if not accepted:
             self._append("  Semantic search cancelled; no Gateway request was sent.", MUTED)
@@ -3452,11 +3662,11 @@ class TUIApp(App):
                 WorkspaceAuthorityError) as exc:
             self._append(f"  Managed broker unavailable ({type(exc).__name__}); no Docker action ran.", YELLOW)
             return
-        operation = await self.push_screen_wait(BrokerManagementScreen(project, item))
+        operation = await self._await_screen(BrokerManagementScreen(project, item))
         if operation is None:
             return
         if operation in {"logs", "start", "stop", "remove"}:
-            accepted = await self.push_screen_wait(
+            accepted = await self._await_screen(
                 BrokerOperationConfirmScreen(operation, project, item["container"]))
             if not accepted:
                 self._append(f"  Broker {operation} cancelled; no Docker action ran.", MUTED)
@@ -3507,7 +3717,7 @@ class TUIApp(App):
             self._append("  LSP sandbox changed or is unavailable; no process grant was changed.", RED)
             self._open_authority_menu()
             return
-        accepted = await self.push_screen_wait(GrantLSPProcessScreen(
+        accepted = await self._await_screen(GrantLSPProcessScreen(
             self._workspace_root, executable, revoke=not enabled))
         if accepted:
             try:
@@ -3544,7 +3754,7 @@ class TUIApp(App):
             self._append("  Workspace Authority is unavailable; LSP process is denied.", RED)
             return
         if not has_grant:
-            accepted = await self.push_screen_wait(GrantLSPProcessScreen(
+            accepted = await self._await_screen(GrantLSPProcessScreen(
                 self._workspace_root, sandbox_executable))
             if not accepted:
                 self._append("  LSP process grant declined; no language server was started.", MUTED)
@@ -3556,10 +3766,10 @@ class TUIApp(App):
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  LSP process grant could not be saved; the server remains denied.", RED)
                 return
-        query = await self.push_screen_wait(LSPQueryScreen(self._workspace_root))
+        query = await self._await_screen(LSPQueryScreen(self._workspace_root))
         if query is None:
             return
-        accepted = await self.push_screen_wait(LSPConfirmScreen(self._workspace_root, query))
+        accepted = await self._await_screen(LSPConfirmScreen(self._workspace_root, query))
         if not accepted:
             self._append("  LSP request cancelled; no language server was started.", MUTED)
             return
@@ -3594,7 +3804,7 @@ class TUIApp(App):
         self._set_activity("Pyright LSP request completed · sandbox closed", GREEN)
 
     async def _change_workspace_read_grant(self, enabled: bool) -> None:
-        accepted = await self.push_screen_wait(
+        accepted = await self._await_screen(
             GrantWorkspaceReadScreen(self._workspace_root, revoke=not enabled))
         if accepted:
             try:
@@ -3726,6 +3936,10 @@ class TUIApp(App):
         if kind == "user_defaults":
             self._open_user_defaults_menu()
             return
+        if kind == "user_default_mode":
+            self.run_worker(self._set_global_mode_default(value), exclusive=True,
+                            group="user-defaults")
+            return
         if kind == "user_default_workspace":
             self.run_worker(self._set_global_workspace_default(value), exclusive=True,
                             group="user-defaults")
@@ -3752,9 +3966,17 @@ class TUIApp(App):
                 self._set_activity("Could not clear the default role", RED)
             self._open_user_defaults_menu()
             return
+        if kind == "workspace_mode":
+            self.run_worker(self._change_workspace_mode(value), exclusive=True, group="authority-grant")
+            return
         if kind == "authority_toggle":
             enabled = bool(entry.get("enabled"))
             turn_on = not enabled
+            if (value in {"workspace_read", "provider", "workspace_write", "sessions"}
+                    and self._workspace_mode() == "classic"):
+                self._append("  Included in Classic mode · switch this workspace to Security to "
+                             "control it on its own.", MUTED)
+                return
             if value == "workspace_read":
                 operation = self._change_workspace_read_grant(turn_on)
             elif value == "provider":
@@ -3774,6 +3996,8 @@ class TUIApp(App):
                 operation = self._change_mobile_host_grant(turn_on)
             elif value == "workspace_write":
                 operation = self._change_workspace_write_grant(turn_on)
+            elif value == "sessions":
+                operation = self._change_session_grant(turn_on)
             elif value.startswith("network:"):
                 operation = self._change_network_action_grant(value[len("network:"):], turn_on)
             else:
@@ -4047,6 +4271,17 @@ class TUIApp(App):
         if kind == "context_menu":
             self._open_context_menu()
             return
+        if kind == "credential_add":
+            self._open_key_entry(value)
+            return
+        if kind == "credential_use_grant":
+            self._close_menu()
+            self.run_worker(self._grant_key_use(value), exclusive=True, group="credentials")
+            return
+        if kind == "credential_revoke":
+            self._close_menu()
+            self.run_worker(self._revoke_key_flow(value), exclusive=True, group="credentials")
+            return
         if kind == "credential_info":
             item = next((record for record in CredentialVault().list_metadata()
                          if record["id"] == value), None)
@@ -4062,6 +4297,14 @@ class TUIApp(App):
             return
         if kind == "mobile_host_start":
             self.run_worker(self._start_mobile_host(), exclusive=True, group="mobile-host")
+            return
+        if kind == "chat_session_new":
+            self._close_menu()
+            self._start_new_conversation()
+            return
+        if kind == "chat_session_resume":
+            self._close_menu()
+            self.run_worker(self._resume_chat_session(value), exclusive=True, group="chat-session")
             return
         if kind == "mobile_host_new_pin":
             self.run_worker(self._issue_pairing_pin(), exclusive=True, group="mobile-host")
@@ -4315,17 +4558,139 @@ class TUIApp(App):
             self._append(f"  Selected for this session · {provider.label} · {provider.model}", GREEN)
             self._close_menu()
             return
-        self._append(
-            f"  {provider.label} has no configured credential. Secure credential entry is blocked "
-            "until credentials.add has an Authority/Sentinel owner.", YELLOW)
-        self._close_menu()
+        if saved_secret_exists(name):
+            self._append(
+                f"  A saved {provider.label} key exists, but this workspace does not allow using it · "
+                "Settings → API keys.", YELLOW)
+            self._close_menu()
+            return
+        self._append(f"  {provider.label} needs an API key · paste it below to save it.", YELLOW)
+        self._open_key_entry(name)
+
+    @staticmethod
+    def _credential_label(service: str) -> str:
+        if service == GATEWAY_SERVICE:
+            return "ISyCo Gateway"
+        return str(PRESETS.get(service, {}).get("label", service))
+
+    def _open_key_entry(self, service: str) -> None:
+        """Show the masked key field; nothing is read or stored until Save."""
+        self._provider_key_target = service
+        self.query_one("#action-menu", Vertical).display = True
+        self.query_one("#action-list", OptionList).display = False
+        self.query_one("#action-search", Input).display = False
+        self.query_one("#key-entry-label", Static).update(
+            f"API key for {self._credential_label(service)} · saved in your OS keyring for your "
+            "user, never in this project or its logs. Saving asks you to confirm.")
+        self.query_one("#key-entry", Vertical).display = True
+        key_input = self.query_one("#provider-key-input", Input)
+        key_input.value = ""
+        key_input.focus()
 
     def _save_provider_key(self) -> None:
-        # Keep this defensive entry point inert even if an obsolete menu event arrives.
-        self.query_one("#provider-key-input", Input).value = ""
-        self._provider_key_target = ""
-        self._append("  Credential was not saved · credentials.add has no execution owner in Secure.", YELLOW)
+        key_input = self.query_one("#provider-key-input", Input)
+        secret, key_input.value = key_input.value, ""
+        service, self._provider_key_target = self._provider_key_target, ""
         self._close_menu()
+        if not service or not secret.strip():
+            self._append("  No API key was entered; nothing was saved.", MUTED)
+            return
+        self.run_worker(self._save_key_flow(service, secret), exclusive=True, group="credentials")
+
+    async def _ensure_credential_grant(self, owner: CredentialOwner, service: str) -> bool:
+        """Per-service grant for saving and removing keys; asked once, then remembered."""
+        grants = owner.authority.effective_policy().get("grants", {})
+        actions = ("credentials.add", "credentials.use", "credentials.revoke")
+        if all(displayed_on(action, grants.get(action, {}),
+                            service in grants.get(action, {}).get("targets", []))
+               for action in actions):
+            return True
+        label = self._credential_label(service)
+        if not await self._await_screen(TailscaleConfirmScreen(
+                f"Allow managing {label} API keys?",
+                f"ISyCode may save, use and remove {label} API keys in your operating-system "
+                "keyring. Keys are stored for your user (every workspace), never in the project, "
+                "the action journal or chat history. Each use is recorded in this workspace's "
+                "journal; each save and each removal still asks you first.",
+                "Allow")):
+            return False
+        for action in actions:
+            targets = set(grants.get(action, {}).get("targets", [])) | {service}
+            owner.authority.set_grant(action, enabled=True, targets=sorted(targets))
+        return True
+
+    async def _save_key_flow(self, service: str, secret: str) -> None:
+        label = self._credential_label(service)
+        try:
+            owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError):
+            env = PRESETS.get(service, {}).get("key_env", "the provider's API key variable")
+            self._append(f"  No secure OS keyring is available here; nothing was saved. "
+                         f"Set {env} in your environment instead.", YELLOW)
+            return
+        try:
+            if not await self._ensure_credential_grant(owner, service):
+                self._append("  API key not saved; permission was not granted.", MUTED)
+                return
+            request = owner.add_request(
+                service, f"{label} key",
+                "ISyCo Gateway access" if service == GATEWAY_SERVICE else "ISyCode chat")
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  API key not saved ({type(exc).__name__}).", RED)
+            return
+        if not await self._await_screen(TailscaleConfirmScreen(
+                f"Save the {label} API key?",
+                f"The key you pasted will be saved in your OS keyring for {label}. The newest saved "
+                "key for a service is the one ISyCode uses.", "Save key")):
+            self._append("  API key not saved; the pasted value was discarded.", MUTED)
+            return
+        approval = self._action_approvals.issue(request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.add, request, secret, approval)
+        if outcome.decision != "ALLOW":
+            self._append(f"  API key not saved · {outcome.reason[:180]}", YELLOW)
+            return
+        self._append(f"  {label} API key saved · receipt {outcome.receipt.receipt_id}", GREEN)
+        if service in PRESETS:
+            self._select_provider(service)
+
+    async def _grant_key_use(self, service: str) -> None:
+        try:
+            owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+            granted = await self._ensure_credential_grant(owner, service)
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Permission not changed ({type(exc).__name__}).", YELLOW)
+            return
+        label = self._credential_label(service)
+        self._append(f"  The saved {label} key can be used in this workspace." if granted
+                     else "  Permission not granted; the saved key stays unused here.",
+                     GREEN if granted else MUTED)
+
+    async def _revoke_key_flow(self, key_id: str) -> None:
+        try:
+            owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+            request = owner.revoke_request(key_id)
+            service = request.parameters["service"]
+            if not await self._ensure_credential_grant(owner, service):
+                self._append("  API key not removed; permission was not granted.", MUTED)
+                return
+        except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  API key cannot be removed ({type(exc).__name__}).", YELLOW)
+            return
+        label = self._credential_label(service)
+        if not await self._await_screen(TailscaleConfirmScreen(
+                f"Remove this {label} API key?",
+                "The key is deleted from your OS keyring. ISyCode then uses an older saved key "
+                "or an environment variable for this service, if any.", "Remove key")):
+            self._append("  API key kept.", MUTED)
+            return
+        approval = self._action_approvals.issue(request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.revoke, request, approval)
+        self._append(f"  {label} API key removed." if outcome.decision == "ALLOW"
+                     else f"  API key not removed · {outcome.reason[:180]}",
+                     GREEN if outcome.decision == "ALLOW" else YELLOW)
 
     # ── helpers ──────────────────────────────────────────────────
 
@@ -4477,10 +4842,7 @@ class TUIApp(App):
             snapshot = CatalogSnapshot(True, tools, "ready")
             has_key = bool(os.environ.get("GATEWAY_API_KEY"))
             if not has_key:
-                try:
-                    has_key = bool(CredentialVault().latest_secret_for_service("isyco-gateway"))
-                except (CredentialVaultError, OSError, ValueError):
-                    has_key = False
+                has_key = saved_secret_exists("isyco-gateway")
             auth_state = "API key supplied" if has_key else "API key needed for calls"
             message = (f"Ready · {len(tools)} tools · {auth_state} · manual calls require "
                        "per-host grant + one-use approval")
@@ -4542,6 +4904,9 @@ class TUIApp(App):
                 return
             await app._run_plan(arg.strip())
 
+        async def _undo_cmd(app: "TUIApp", arg: str) -> None:
+            await app._undo_last_change()
+
         async def _help_cmd(app: "TUIApp", arg: str) -> None:
             for line in app._plugins.help_text():
                 app._append(line, MUTED)
@@ -4592,7 +4957,7 @@ class TUIApp(App):
                     "  Roundtrip is not available with the configured HTTP(S) proxy. "
                     "No review text was sent; the proxy will not be bypassed.", YELLOW)
                 return
-            approved = await app.push_screen_wait(ReviewConsentScreen(artifact))
+            approved = await app._await_screen(ReviewConsentScreen(artifact))
             if not approved:
                 app._append("  External review cancelled; no text was sent.", MUTED)
                 return
@@ -4797,6 +5162,7 @@ class TUIApp(App):
                 PluginCommand("readme", "choose and preview a workspace README.md", _readme_cmd),
                 PluginCommand("providers", "list model providers and credential state", _providers_cmd),
                 PluginCommand("provider", "select a provider or list its account models", _provider_cmd),
+                PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("help", "list commands", _help_cmd),
                 PluginCommand("session", "show current workspace, provider, and chat role", _session_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
@@ -4869,14 +5235,99 @@ class TUIApp(App):
         else:
             self._set_activity("Ready · / opens navigation", MUTED)
 
+    async def _await_screen(self, screen):
+        """Show a modal screen and wait for its result from a worker or a plain task.
+
+        App.push_screen_wait only works inside a Textual worker; chat turns and
+        slash commands run as asyncio tasks, so wait on the dismiss callback.
+        """
+        future = asyncio.get_running_loop().create_future()
+
+        def finished(result) -> None:
+            if not future.done():
+                future.set_result(result)
+
+        self.push_screen(screen, finished)
+        return await future
+
     def _set_activity(self, message: str, color: str = MUTED) -> None:
         if self.is_mounted:
             self.query_one("#activity-status", Static).update(Text(message, style=color))
 
+    def _sessions_enabled(self) -> bool:
+        """Saving needs a recurring workspace owner plus both session grants."""
+        if self._chat_session_owner is None:
+            return False
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        return all(displayed_on(action, grants.get(action, {}))
+                   for action in ("session.create", "session.resume"))
+
     async def _show_chat_sessions(self) -> None:
-        self._append(
-            "  Persistent sessions are blocked in Secure until create/read/append have a registered owner.",
-            YELLOW)
+        owner = self._chat_session_owner
+        if owner is None:
+            self._append("  Only recurring workspaces keep conversations; this run stays in memory.",
+                         MUTED)
+            return
+        if not self._sessions_enabled():
+            self._append("  Saving conversations is off · turn it on in Settings → Authority.", MUTED)
+            return
+        outcome, sessions = await asyncio.to_thread(owner.list_conversations)
+        if outcome.decision != "ALLOW":
+            self._append(f"  Conversations unavailable · {outcome.reason[:180]}", YELLOW)
+            return
+        entries = [self._entry("Start a new conversation", "chat_session_new", "")]
+        for session in sessions[:50]:
+            when = _time.strftime("%Y-%m-%d %H:%M", _time.localtime(session.updated_at))
+            current = " · current" if session.session_id == self._active_chat_session_id else ""
+            entries.append(self._entry(
+                f"{session.title} · {len(session.messages)} messages · {when}{current}",
+                "chat_session_resume", session.session_id))
+        if not sessions:
+            entries.append(self._entry("No saved conversations yet", "info"))
+        entries.append(self._entry("Back", "settings_back", ""))
+        self._menu_stack = []
+        self._render_menu("chat_sessions", "Conversations", entries)
+
+    def _start_new_conversation(self) -> None:
+        if self._loop_task and not self._loop_task.done():
+            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+            return
+        self._history = []
+        self._active_chat_session_id = None
+        self._session_save_warned = False
+        self.query_one(ChatArea).remove_children()
+        self._append("  New conversation.", MUTED)
+
+    async def _resume_chat_session(self, session_id: str) -> None:
+        owner = self._chat_session_owner
+        if owner is None or not self._sessions_enabled():
+            self._append("  Saving conversations is off; nothing was resumed.", MUTED)
+            return
+        if self._loop_task and not self._loop_task.done():
+            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+            return
+        outcome, session = await asyncio.to_thread(owner.resume, session_id)
+        if outcome.decision != "ALLOW" or session is None:
+            self._append(f"  Conversation not resumed · {outcome.reason[:180]}", YELLOW)
+            return
+        self._history = [dict(message) for message in session.messages]
+        self._active_chat_session_id = session.session_id
+        self._session_save_warned = False
+        chat = self.query_one(ChatArea)
+        chat.remove_children()
+        shown = session.messages[-200:]
+        if len(session.messages) > len(shown):
+            self._append(f"  … {len(session.messages) - len(shown)} earlier messages not shown", MUTED)
+        for message in shown:
+            if message["role"] == "user":
+                self._append(f"\n> {message['content']}", CYAN)
+            else:
+                chat.mount(Static(RichMarkdown(message["content"], code_theme="monokai")))
+        chat.scroll_end(animate=False)
+        self._append(f"  Resumed · {session.title} · {len(session.messages)} messages", GREEN)
 
     async def _delete_chat_session(self, session_id: str) -> None:
         del session_id
@@ -4885,15 +5336,23 @@ class TUIApp(App):
             YELLOW)
 
     def _persist_chat_message(self, role: str, content: str) -> None:
-        # Never persist prompts/transcripts until session owners are connected.
-        del role, content
+        """Save one message through the owner when this workspace saves conversations."""
+        owner = self._chat_session_owner
+        if owner is None or not self._sessions_enabled():
+            return
+        outcome, session_id = owner.record(self._active_chat_session_id, role, content)
+        if session_id is not None:
+            self._active_chat_session_id = session_id
+        if outcome.decision != "ALLOW" and not self._session_save_warned:
+            self._session_save_warned = True
+            self._append(f"  Conversation not saved · {outcome.reason[:160]}", YELLOW)
 
     # ── chat (default path) ──────────────────────────────────────
 
     def _workspace_chat_tools_enabled(self) -> bool:
         """Require explicit root-scoped grants for every read-only chat tool."""
         try:
-            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
             return False
         root = str(self._workspace_root)
@@ -4923,7 +5382,7 @@ class TUIApp(App):
         tool_call_id = call.get("id") if isinstance(call, dict) else ""
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
-        if name not in TOOL_ACTIONS and name != WRITE_TOOL_NAME:
+        if name not in TOOL_ACTIONS and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
             return tool_call_id, json.dumps(outcome)
@@ -4939,8 +5398,8 @@ class TUIApp(App):
             outcome = {"error": "tool arguments must be a JSON object"}
             self._append(f"  Tool denied · {name} · invalid arguments", YELLOW)
             return tool_call_id, json.dumps(outcome)
-        if name == WRITE_TOOL_NAME:
-            return tool_call_id, await self._dispatch_write_tool(arguments)
+        if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
+            return tool_call_id, await self._dispatch_write_tool(arguments, edit=name == EDIT_TOOL_NAME)
         action_id = TOOL_ACTIONS[name]
         target = arguments.get("path", ".")
         self._append(f"  Tool requested · {action_id} · {target}", CYAN)
@@ -4960,37 +5419,69 @@ class TUIApp(App):
             "request/result digest matched", GREEN)
         return tool_call_id, result.text
 
+    async def _undo_last_change(self) -> None:
+        """User-only: show the undo diff for the most recent ISyCode change and apply on approval."""
+        owner = WorkspaceWriteOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+        try:
+            preview = await asyncio.to_thread(owner.preview_undo)
+        except (OSError, ValueError) as exc:
+            self._append(f"  Nothing undone · {str(exc)[:200]}", YELLOW)
+            return
+        if not await self._await_screen(WriteApprovalScreen(preview)):
+            self._append(f"  Undo cancelled · {preview.path} unchanged", MUTED)
+            return
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        if outcome.decision == "ALLOW":
+            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+        else:
+            self._append(f"  Undo {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+
     def _workspace_write_tool_enabled(self) -> bool:
         """The write tool needs read tools plus a root-scoped write grant."""
         if not self._workspace_chat_tools_enabled():
             return False
         try:
-            grant = WorkspaceAuthority(self._workspace_root).policy().get(
+            grant = WorkspaceAuthority(self._workspace_root).effective_policy().get(
                 "grants", {}).get("workspace.files.write", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
             return False
         return displayed_on("workspace.files.write", grant,
                             str(self._workspace_root) in grant.get("path_prefixes", []))
 
-    async def _dispatch_write_tool(self, arguments: dict) -> str:
-        """Preview a proposed write, show its diff, and apply only if the user approves."""
-        path, content = arguments.get("path"), arguments.get("content")
+    async def _dispatch_write_tool(self, arguments: dict, *, edit: bool = False) -> str:
+        """Preview a proposed change, show its diff, and apply only if the user approves."""
+        path = arguments.get("path")
         if not self._workspace_write_tool_enabled():
             self._append("  Tool denied · workspace.files.write · file editing is off", YELLOW)
             return json.dumps({"error": "file editing is not enabled for this workspace"})
-        if not isinstance(path, str) or not isinstance(content, str):
-            self._append("  Tool denied · workspace.files.write · invalid arguments", YELLOW)
-            return json.dumps({"error": "path and content must be strings"})
+        if edit:
+            old_text, new_text = arguments.get("old_text"), arguments.get("new_text")
+            replace_all = arguments.get("replace_all", False)
+            if (not isinstance(path, str) or not isinstance(old_text, str)
+                    or not isinstance(new_text, str) or not isinstance(replace_all, bool)):
+                self._append("  Tool denied · workspace_edit · invalid arguments", YELLOW)
+                return json.dumps({"error": "path, old_text and new_text must be strings"})
+        else:
+            content = arguments.get("content")
+            if not isinstance(path, str) or not isinstance(content, str):
+                self._append("  Tool denied · workspace.files.write · invalid arguments", YELLOW)
+                return json.dumps({"error": "path and content must be strings"})
         owner = WorkspaceWriteOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
                                     self._action_approvals)
         try:
-            preview = await asyncio.to_thread(owner.preview, path, content)
+            if edit:
+                preview = await asyncio.to_thread(owner.preview_edit, path, old_text, new_text,
+                                                  replace_all)
+            else:
+                preview = await asyncio.to_thread(owner.preview, path, content)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
             self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         self._append(f"  Tool requested · workspace.files.write · {preview.path} · review the diff", CYAN)
-        if not await self.push_screen_wait(WriteApprovalScreen(preview)):
+        if not await self._await_screen(WriteApprovalScreen(preview)):
             self._append(f"  Change rejected · {preview.path} · nothing was written", MUTED)
             return json.dumps({"status": "rejected_by_user", "path": preview.path})
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
@@ -5014,7 +5505,7 @@ class TUIApp(App):
         provider_supports_tools = bool(PRESETS.get(provider_name, {}).get("supports_tools", False))
         tools_active = workspace_tools_granted and provider_supports_tools
         write_active = tools_active and self._workspace_write_tool_enabled()
-        chat_tools = (CHAT_WORKSPACE_TOOLS + [WRITE_TOOL] if write_active
+        chat_tools = (CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active
                       else CHAT_WORKSPACE_TOOLS if tools_active else None)
         if not workspace_tools_granted:
             tool_availability = (
@@ -5027,11 +5518,12 @@ class TUIApp(App):
         else:
             tool_availability = ""
         tools_instruction = (
-            "Read-only list/read/file-name-search tools are available for this workspace. "
+            "Read-only list, read, file-name search and content search (workspace_grep) tools are available for this workspace. "
             "Call them only for repository inspection; they are checked by Workspace Authority "
             "and IsySentinel, and they cannot access sensitive paths or run commands. "
-            + ("The workspace_write tool proposes the complete new content of one text file; "
-               "the user reviews the exact diff and must approve each change. Use it only when "
+            + ("workspace_edit replaces an exact fragment of an existing file and workspace_write "
+               "proposes the complete content of a new or rewritten file; the user reviews the "
+               "exact diff and must approve each change. Prefer workspace_edit. Use them only when "
                "the user asked for a change, read the file first, and never claim a file changed "
                "unless the tool result says it was written. "
                if write_active else "They cannot write files. ")

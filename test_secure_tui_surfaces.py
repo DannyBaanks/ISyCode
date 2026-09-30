@@ -45,16 +45,27 @@ def test_secure_tui_adapter_controls_have_no_unmediated_effect_calls():
     assert "_add_named_credential" not in _method_calls(methods["_select_menu_entry"])
 
 
-def test_secure_tui_does_not_persist_chat_sessions_without_an_owner():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+def test_secure_tui_persists_chat_sessions_only_through_the_owner():
+    source = SOURCE.read_text(encoding="utf-8")
+    module = ast.parse(source)
     app = next(node for node in module.body
                if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
     methods = {node.name: node for node in app.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
 
-    assert "ChatSessionStore" not in _method_calls(methods["_startup_workspace"])
-    assert not (_method_calls(methods["_persist_chat_message"]) & {"create", "append", "save"})
-    assert not (_method_calls(methods["_show_chat_sessions"]) & {"push_screen_wait", "create", "load"})
+    store_methods = {"create", "append", "save", "load", "list_sessions", "import_json"}
+    for name in ("_startup_workspace", "_persist_chat_message", "_show_chat_sessions",
+                 "_resume_chat_session"):
+        assert "ChatSessionStore" not in _method_calls(methods[name]), name
+        for node in ast.walk(methods[name]):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in store_methods):
+                receiver = ast.get_source_segment(source, node.func.value) or ""
+                assert "session" not in receiver.casefold(), (name, receiver)
+    persist = ast.get_source_segment(source, methods["_persist_chat_message"])
+    assert persist.index("_sessions_enabled()") < persist.index("owner.record(")
+    assert "owner.list_conversations" in ast.get_source_segment(source, methods["_show_chat_sessions"])
+    assert "owner.resume" in ast.get_source_segment(source, methods["_resume_chat_session"])
 
 
 def test_secure_tui_session_delete_does_not_mint_its_own_authority_or_approval():
@@ -98,7 +109,8 @@ def test_authority_settings_never_presents_an_explicit_deny_as_granted():
             assert grant_state(action.id, saved) == "on", action.id
             assert displayed_on(action.id, saved, scoped=False) is False, action.id
     assert grant_state("mobile.host.start", saved) == "on"
-    assert grant_state("session.create", saved) == "blocked"
+    assert grant_state("session.create", saved) == "on"
+    assert grant_state("bridge.connect", saved) == "blocked"
 
 
 def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
@@ -155,10 +167,13 @@ def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():
     assert '"Request: {digest[:12]}… · Authority: {authority}\\n"' in source
 
 
-def test_semantic_navigation_keeps_lsp_and_files_branches_reachable():
+def test_semantic_navigation_keeps_lsp_and_files_branches_reachable(monkeypatch):
     from isycode.tui import TUIApp
 
     app = TUIApp()
+    monkeypatch.setattr(app, "_lsp_inventory", [
+        {"id": "pyright", "state": "sandbox_ready", "label": "Pyright"},
+    ])
     lsp_entries = app._branch_entries("lsp")
     file_entries = app._branch_entries("files")
 
