@@ -78,9 +78,8 @@ EXPLICIT_DENY_ACTIONS = frozenset({
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
     "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
-    "l1.disable", "l1.rollback", "session.create", "clipboard.copy",
+    "l1.disable", "l1.rollback", "clipboard.copy",
     "desktop.file_picker", "bridge.peek", "lsp.discover", "mobile.session.read",
-    "session.resume",
 })
 
 
@@ -120,6 +119,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
+    "chat_sessions": frozenset({"SessionStoreBoundary"}),
     "gateway_mcp": frozenset({"MCPInvocationBoundary"}),
     "gateway_semantic": frozenset({"GatewaySemanticBoundary"}),
     "lsp_symbols": frozenset({"WorkspaceReadBoundary", "LSPProcessBoundary"}),
@@ -146,6 +146,7 @@ OWNER_ACTIONS = {
     "provider_network": frozenset({"provider.request"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
+    "chat_sessions": frozenset({"session.create", "session.resume"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
     "lsp_symbols": frozenset({"workspace.files.read", "lsp.start"}),
@@ -365,6 +366,38 @@ class RemoteReadSystembility:
         if host != request.target.casefold().rstrip("."):
             return SystembilityResult(self.name, False, "remote endpoint does not match the granted host")
         return SystembilityResult(self.name, True, "remote read is secure and host-bound")
+
+
+class SessionStoreSystembility:
+    """Bind transcript writes and reads to one session id and message digest."""
+
+    name = "SessionStoreBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in {"session.create", "session.resume"}:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        session_id = params.get("session_id")
+        valid_id = isinstance(session_id, str) and re.fullmatch(r"[0-9a-f]{32}", session_id) is not None
+        if request.action_id == "session.create":
+            size = params.get("size")
+            valid = (set(params) == {"operation", "session_id", "role", "content_sha256", "size"}
+                     and params.get("operation") in {"create", "append"}
+                     and valid_id and request.target == session_id
+                     and params.get("role") in {"user", "assistant"}
+                     and isinstance(params.get("content_sha256"), str)
+                     and re.fullmatch(r"[0-9a-f]{64}", params["content_sha256"]) is not None
+                     and type(size) is int and 0 <= size <= 1_000_000)
+            return SystembilityResult(self.name, valid,
+                                      "one bounded message bound to one local transcript")
+        if params.get("operation") == "list":
+            valid = params == {"operation": "list"} and request.target == "sessions"
+        else:
+            valid = (set(params) == {"operation", "session_id"}
+                     and params.get("operation") == "load"
+                     and valid_id and request.target == session_id)
+        return SystembilityResult(self.name, valid, "list or load one local transcript")
 
 
 class SessionDeleteSystembility:
@@ -1055,7 +1088,8 @@ class ProductActionGate:
             ExecutionOwnerBindingSystembility(),
             WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
             ProviderNetworkSystembility(),
-            RemoteReadSystembility(), SessionDeleteSystembility(), MCPInvocationSystembility(),
+            RemoteReadSystembility(), SessionStoreSystembility(), SessionDeleteSystembility(),
+            MCPInvocationSystembility(),
             GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),
             TailscaleExecutableSystembility(tailscale_facts),

@@ -29,6 +29,7 @@ from isycode.config import (
 )
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
+from isycode.session_owner import ChatSessionOwner
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
@@ -1563,6 +1564,8 @@ class TUIApp(App):
         self._workspace_setup: WorkspaceSetupStore | None = None
         self._chat_sessions: ChatSessionStore | None = None
         self._active_chat_session_id: str | None = None
+        self._chat_session_owner: ChatSessionOwner | None = None
+        self._session_save_warned = False
         self._temporary_chat_root: Path | None = None
         self._workspace_generation = 0
         self._file_path = ""
@@ -1719,11 +1722,19 @@ class TUIApp(App):
             else:
                 self.query_one("#prompt-input", PromptArea).focus()
 
-            # Persistent transcript writes are disabled until session.create/append
-            # have a request-bound owner. A recurrence choice is workspace identity,
-            # not permission to persist prompts or responses.
+            # Transcripts are saved only through the chat_sessions owner, only for
+            # recurring workspaces, and only while the explicit session grants are
+            # on. A recurrence choice alone is identity, not permission to persist.
             self._chat_sessions = None
             self._active_chat_session_id = None
+            self._chat_session_owner = None
+            if recurring:
+                try:
+                    self._chat_session_owner = ChatSessionOwner(
+                        self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                        setup_store.sessions_root(self._workspace_root))
+                except (WorkspaceAuthorityError, OSError, ValueError):
+                    self._chat_session_owner = None
             await self._initialize_workspace()
             self._refresh_lsp_status()
             self.run_worker(self._refresh_openisy(), exclusive=False)
@@ -1731,9 +1742,13 @@ class TUIApp(App):
             self.run_worker(self._check_model(), exclusive=False)
             if not recurring:
                 self._append("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
-            self._append(
-                "  Session persistence is blocked in Secure · current conversation stays in memory only.",
-                YELLOW)
+            if self._sessions_enabled():
+                self._append("  Conversations are saved for this workspace · Sessions lists them.",
+                             MUTED)
+            else:
+                self._append(
+                    "  This conversation stays in memory · turn on “Save conversations” in "
+                    "Settings → Authority (recurring workspaces only).", MUTED)
         except Exception as exc:
             self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
 
@@ -2969,6 +2984,17 @@ class TUIApp(App):
             entries.append(self._capability_entry(
                 "Read and search workspace files", "workspace_read", read_enabled,
                 "Lets ISyCode list, read, and find files here. It cannot change or delete them."))
+            if self._chat_session_owner is not None:
+                entries.append(self._capability_entry(
+                    "Save conversations in this workspace", "sessions",
+                    all(displayed_on(action, grants.get(action, {}))
+                        for action in ("session.create", "session.resume")),
+                    "Keeps this workspace's chats in your private ISyCode state folder, outside the "
+                    "project, so you can resume them. Common secrets are redacted before saving."))
+            else:
+                entries.append(self._entry(
+                    "Save conversations · recurring workspaces only", "info", "",
+                    "Temporary runs never keep chat history."))
             write_grant = grants.get("workspace.files.write", {})
             entries.append(self._capability_entry(
                 "Edit workspace files · asks before every change", "workspace_write",
@@ -3228,6 +3254,26 @@ class TUIApp(App):
         for action in MOBILE_PAIR_ACTIONS:
             authority.set_grant(action, enabled=True, targets=[MOBILE_PAIR_TARGET])
         return True
+
+    async def _change_session_grant(self, enabled: bool) -> None:
+        accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+            "Save conversations in this workspace?" if enabled else "Stop saving conversations?",
+            ("New messages in this workspace are saved to your private ISyCode state folder, "
+             "outside the project, and can be resumed from Sessions. API keys, bearer tokens and "
+             "similar secrets are redacted before saving." if enabled else
+             "New messages stay in memory only. Conversations already saved are kept; deleting "
+             "them is not available yet."),
+            "Save conversations" if enabled else "Stop saving"))
+        if accepted:
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                for action in ("session.create", "session.resume"):
+                    authority.set_grant(action, enabled=enabled)
+                self._append("  Conversations will be saved for this workspace." if enabled
+                             else "  Conversations are no longer saved for this workspace.", GREEN)
+            except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+                self._append(f"  Session permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
 
     async def _change_workspace_write_grant(self, enabled: bool) -> None:
         if enabled and not self._workspace_chat_tools_enabled():
@@ -3774,6 +3820,8 @@ class TUIApp(App):
                 operation = self._change_mobile_host_grant(turn_on)
             elif value == "workspace_write":
                 operation = self._change_workspace_write_grant(turn_on)
+            elif value == "sessions":
+                operation = self._change_session_grant(turn_on)
             elif value.startswith("network:"):
                 operation = self._change_network_action_grant(value[len("network:"):], turn_on)
             else:
@@ -4062,6 +4110,14 @@ class TUIApp(App):
             return
         if kind == "mobile_host_start":
             self.run_worker(self._start_mobile_host(), exclusive=True, group="mobile-host")
+            return
+        if kind == "chat_session_new":
+            self._close_menu()
+            self._start_new_conversation()
+            return
+        if kind == "chat_session_resume":
+            self._close_menu()
+            self.run_worker(self._resume_chat_session(value), exclusive=True, group="chat-session")
             return
         if kind == "mobile_host_new_pin":
             self.run_worker(self._issue_pairing_pin(), exclusive=True, group="mobile-host")
@@ -4873,10 +4929,80 @@ class TUIApp(App):
         if self.is_mounted:
             self.query_one("#activity-status", Static).update(Text(message, style=color))
 
+    def _sessions_enabled(self) -> bool:
+        """Saving needs a recurring workspace owner plus both session grants."""
+        if self._chat_session_owner is None:
+            return False
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).policy().get("grants", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        return all(displayed_on(action, grants.get(action, {}))
+                   for action in ("session.create", "session.resume"))
+
     async def _show_chat_sessions(self) -> None:
-        self._append(
-            "  Persistent sessions are blocked in Secure until create/read/append have a registered owner.",
-            YELLOW)
+        owner = self._chat_session_owner
+        if owner is None:
+            self._append("  Only recurring workspaces keep conversations; this run stays in memory.",
+                         MUTED)
+            return
+        if not self._sessions_enabled():
+            self._append("  Saving conversations is off · turn it on in Settings → Authority.", MUTED)
+            return
+        outcome, sessions = await asyncio.to_thread(owner.list_conversations)
+        if outcome.decision != "ALLOW":
+            self._append(f"  Conversations unavailable · {outcome.reason[:180]}", YELLOW)
+            return
+        entries = [self._entry("Start a new conversation", "chat_session_new", "")]
+        for session in sessions[:50]:
+            when = _time.strftime("%Y-%m-%d %H:%M", _time.localtime(session.updated_at))
+            current = " · current" if session.session_id == self._active_chat_session_id else ""
+            entries.append(self._entry(
+                f"{session.title} · {len(session.messages)} messages · {when}{current}",
+                "chat_session_resume", session.session_id))
+        if not sessions:
+            entries.append(self._entry("No saved conversations yet", "info"))
+        entries.append(self._entry("Back", "settings_back", ""))
+        self._menu_stack = []
+        self._render_menu("chat_sessions", "Conversations", entries)
+
+    def _start_new_conversation(self) -> None:
+        if self._loop_task and not self._loop_task.done():
+            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+            return
+        self._history = []
+        self._active_chat_session_id = None
+        self._session_save_warned = False
+        self.query_one(ChatArea).remove_children()
+        self._append("  New conversation.", MUTED)
+
+    async def _resume_chat_session(self, session_id: str) -> None:
+        owner = self._chat_session_owner
+        if owner is None or not self._sessions_enabled():
+            self._append("  Saving conversations is off; nothing was resumed.", MUTED)
+            return
+        if self._loop_task and not self._loop_task.done():
+            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+            return
+        outcome, session = await asyncio.to_thread(owner.resume, session_id)
+        if outcome.decision != "ALLOW" or session is None:
+            self._append(f"  Conversation not resumed · {outcome.reason[:180]}", YELLOW)
+            return
+        self._history = [dict(message) for message in session.messages]
+        self._active_chat_session_id = session.session_id
+        self._session_save_warned = False
+        chat = self.query_one(ChatArea)
+        chat.remove_children()
+        shown = session.messages[-200:]
+        if len(session.messages) > len(shown):
+            self._append(f"  … {len(session.messages) - len(shown)} earlier messages not shown", MUTED)
+        for message in shown:
+            if message["role"] == "user":
+                self._append(f"\n> {message['content']}", CYAN)
+            else:
+                chat.mount(Static(RichMarkdown(message["content"], code_theme="monokai")))
+        chat.scroll_end(animate=False)
+        self._append(f"  Resumed · {session.title} · {len(session.messages)} messages", GREEN)
 
     async def _delete_chat_session(self, session_id: str) -> None:
         del session_id
@@ -4885,8 +5011,16 @@ class TUIApp(App):
             YELLOW)
 
     def _persist_chat_message(self, role: str, content: str) -> None:
-        # Never persist prompts/transcripts until session owners are connected.
-        del role, content
+        """Save one message through the owner when this workspace saves conversations."""
+        owner = self._chat_session_owner
+        if owner is None or not self._sessions_enabled():
+            return
+        outcome, session_id = owner.record(self._active_chat_session_id, role, content)
+        if session_id is not None:
+            self._active_chat_session_id = session_id
+        if outcome.decision != "ALLOW" and not self._session_save_warned:
+            self._session_save_warned = True
+            self._append(f"  Conversation not saved · {outcome.reason[:160]}", YELLOW)
 
     # ── chat (default path) ──────────────────────────────────────
 

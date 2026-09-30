@@ -122,11 +122,10 @@ KNOWN_EFFECT_CALLSITES = (
     ("bridge.send", "BridgeClient.send", "", "BLOCKED_BY_DESIGN"),
     ("credentials.add", "TUIApp._save_provider_key", "", "BLOCKED_BY_DESIGN"),
     ("credentials.add", "TUIApp._open_credentials_menu", "", "BLOCKED_BY_DESIGN"),
-    ("session.create", "TUIApp._persist_chat_message", "", "BLOCKED_BY_DESIGN"),
-    ("session.resume", "TUIApp._show_chat_sessions", "", "BLOCKED_BY_DESIGN"),
+    ("session.create", "ChatSessionOwner.record", "chat_sessions", "COVERED"),
+    ("session.resume", "ChatSessionOwner.list_conversations", "chat_sessions", "COVERED"),
+    ("session.resume", "ChatSessionOwner.resume", "chat_sessions", "COVERED"),
     ("session.create", "ChatSessionStore.create", "", "UNWIRED"),
-    ("session.create", "ChatSessionStore.append", "", "UNWIRED"),
-    ("session.resume", "ChatSessionStore.load", "", "UNWIRED"),
     ("session.create", "ChatSessionStore.rename", "", "UNWIRED"),
     ("session.create", "ChatSessionStore.fork", "", "UNWIRED"),
     ("desktop.file_picker", "TUIApp._inject_agent_context", "", "BLOCKED_BY_DESIGN"),
@@ -338,7 +337,11 @@ def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, 
     issues = []
     for scope, node in reachable_nodes:
         scope_nodes = list(ast.walk(node))
-        aliases: dict[str, str] = {}
+        # A local name can alias different receivers in different methods of the
+        # same scope. Accumulate every sensitive source per name: the set only
+        # grows, so the fixed point is reached in a bounded number of passes, and
+        # a call through the name counts if any aliased receiver is sensitive.
+        aliases: dict[str, set[str]] = {}
         for _ in range(len(scope_nodes)):
             changed = False
             for statement in scope_nodes:
@@ -346,15 +349,18 @@ def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, 
                     continue
                 value = statement.value
                 source_name = _ast_name(value) if value is not None else ""
-                source_name = aliases.get(source_name, source_name)
-                if not source_name or not _looks_like_sensitive_receiver(source_name):
+                sources = aliases.get(source_name, {source_name}) if source_name else set()
+                sensitive = {item for item in sources if _looks_like_sensitive_receiver(item)}
+                if not sensitive:
                     continue
                 targets = (statement.targets if isinstance(statement, ast.Assign)
                            else [statement.target])
                 for target in targets:
-                    if isinstance(target, ast.Name) and aliases.get(target.id) != source_name:
-                        aliases[target.id] = source_name
-                        changed = True
+                    if isinstance(target, ast.Name):
+                        known = aliases.setdefault(target.id, set())
+                        if not sensitive <= known:
+                            known |= sensitive
+                            changed = True
             if not changed:
                 break
         for call in scope_nodes:
@@ -364,13 +370,14 @@ def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, 
             parts = target.split(".")
             method = parts[-1] if parts else ""
             receiver = ".".join(parts[:-1])
-            alias_receiver = aliases.get(receiver, receiver)
+            alias_receivers = aliases.get(receiver, {receiver})
             direct = method in _SECURE_DIRECT_FUNCTIONS
             direct |= any(method in methods and class_name.casefold() in target.casefold()
                           for class_name, methods in _SECURE_DIRECT_API_METHODS.items())
             direct |= any(
                 method in methods and _receiver_matches_api(alias_receiver, class_name)
-                for class_name, methods in _SECURE_DIRECT_API_METHODS.items())
+                for class_name, methods in _SECURE_DIRECT_API_METHODS.items()
+                for alias_receiver in alias_receivers)
             direct |= method in {"create_subprocess_exec", "Popen", "run", "call", "check_call", "check_output"} \
                 and any(token in receiver.casefold() for token in ("asyncio", "subprocess"))
             if direct:

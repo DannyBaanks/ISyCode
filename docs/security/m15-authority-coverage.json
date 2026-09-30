@@ -711,25 +711,33 @@
     {
       "action": "session.create",
       "approval_required": false,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "write",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "chat_sessions"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "SessionStoreBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
       "action": "session.resume",
       "approval_required": false,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "read",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "chat_sessions"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "SessionStoreBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -1122,31 +1130,25 @@
     },
     {
       "action": "session.create",
-      "callsite": "TUIApp._persist_chat_message",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "callsite": "ChatSessionOwner.record",
+      "owner": "chat_sessions",
+      "status": "COVERED"
     },
     {
       "action": "session.resume",
-      "callsite": "TUIApp._show_chat_sessions",
-      "owner": null,
-      "status": "BLOCKED_BY_DESIGN"
+      "callsite": "ChatSessionOwner.list_conversations",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "session.resume",
+      "callsite": "ChatSessionOwner.resume",
+      "owner": "chat_sessions",
+      "status": "COVERED"
     },
     {
       "action": "session.create",
       "callsite": "ChatSessionStore.create",
-      "owner": null,
-      "status": "UNWIRED"
-    },
-    {
-      "action": "session.create",
-      "callsite": "ChatSessionStore.append",
-      "owner": null,
-      "status": "UNWIRED"
-    },
-    {
-      "action": "session.resume",
-      "callsite": "ChatSessionStore.load",
       "owner": null,
       "status": "UNWIRED"
     },
@@ -1216,7 +1218,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1447,
+      "line": 1481,
       "owner": "workspace_read"
     },
     {
@@ -1237,14 +1239,14 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 4915,
+      "line": 5049,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4503,
+      "line": 4559,
       "owner": "remote_catalog"
     }
   ],
@@ -1256,49 +1258,49 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1319,
+      "line": 1353,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1447,
+      "line": 1481,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 1108,
+      "line": 1142,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1172,
+      "line": 1206,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1242,
+      "line": 1276,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1328,
+      "line": 1362,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1389,
+      "line": 1423,
       "owner": "provider_network"
     },
     {
@@ -1372,6 +1374,27 @@
       "owner": "mobile_host"
     },
     {
+      "action": "session.resume",
+      "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
+      "file": "isycode/session_owner.py",
+      "line": 98,
+      "owner": "chat_sessions"
+    },
+    {
+      "action": "session.create",
+      "callable": "isycode.session_owner.ChatSessionOwner.record",
+      "file": "isycode/session_owner.py",
+      "line": 69,
+      "owner": "chat_sessions"
+    },
+    {
+      "action": "session.resume",
+      "callable": "isycode.session_owner.ChatSessionOwner.resume",
+      "file": "isycode/session_owner.py",
+      "line": 112,
+      "owner": "chat_sessions"
+    },
+    {
       "action": "tailscale.install.prepare",
       "callable": "isycode.tailscale_install.UbuntuDebianInstallPlan.prepare_request",
       "file": "isycode/tailscale_install.py",
@@ -1424,35 +1447,35 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 4915,
+      "line": 5049,
       "owner": "workspace_read"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "file": "isycode/tui.py",
-      "line": 3355,
+      "line": 3401,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "file": "isycode/tui.py",
-      "line": 3407,
+      "line": 3453,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "file": "isycode/tui.py",
-      "line": 3567,
+      "line": 3613,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 4503,
+      "line": 4559,
       "owner": "remote_catalog"
     },
     {
@@ -1470,9 +1493,9 @@
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "effectful": 49,
-    "explicit_deny": 31,
+    "explicit_deny": 29,
     "owner_shared_read": 1,
-    "owner_valid": 28,
+    "owner_valid": 30,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

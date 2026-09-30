@@ -24,6 +24,8 @@ DEDICATED_CONTROLS = {
     "workspace.files.search": "Read and search workspace files",
     "workspace.context.inject": "Read and search workspace files",
     "workspace.files.write": "Edit workspace files",
+    "session.create": "Save conversations in this workspace",
+    "session.resume": "Save conversations in this workspace",
     "provider.request": "Connect to the selected AI model",
     "gateway.files.read": "Check ISyCo Gateway",
     "mcp.discover": "Find Gateway tools",

@@ -24,7 +24,7 @@ def test_every_saved_grant_has_a_visible_control_or_row():
 
 def test_other_saved_rows_mark_ownerless_grants_as_blocked():
     rows = {row.action_id: row for row in other_saved_grants(_all_saved())}
-    assert rows["session.create"].state == "blocked"
+    assert rows["l1.create"].state == "blocked"
     assert rows["bridge.connect"].state == "blocked"
     assert rows["tailscale.serve.enable"].state == "on"
     assert rows["tailscale.serve.enable"].approval_required is True
