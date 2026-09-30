@@ -34,7 +34,6 @@ jobs:
 
   package:
     name: Package (${{ matrix.target }})
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: test
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -63,9 +62,15 @@ jobs:
 
       - name: Verify tag matches package version
         id: metadata
+        shell: bash
         run: |
-          python -c "import os, sys; from importlib.metadata import version; expected=version('isycode'); tag=os.environ['GITHUB_REF_NAME']; actual=tag.removeprefix('v'); print(f'Release tag {tag}; package version {expected}'); sys.exit(0 if actual == expected else 1)"
-          python -c "import os; from importlib.metadata import version; open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write(f'version={version(\"isycode\")}\\n')"
+          PACKAGE_VERSION="$(python -c "from importlib.metadata import version; print(version('isycode'))")"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            echo "Release tag $GITHUB_REF_NAME; package version $PACKAGE_VERSION"
+            [[ "$TAG_VERSION" == "$PACKAGE_VERSION" ]]
+          fi
+          echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build standalone executable
         shell: bash
