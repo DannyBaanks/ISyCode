@@ -53,6 +53,9 @@ class FakeAdapter:
         self.snapshots.append(self.snapshot)
         return self.snapshot
 
+    def resolve_executable(self):
+        return self.snapshot.executable
+
 
 class FakeRunner:
     def __init__(self, adapter):
@@ -91,6 +94,8 @@ def setup(tmp_path, monkeypatch):
     adapter = FakeAdapter(snapshot)
     runner = FakeRunner(adapter)
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+    # Previews read the local CLI only through the gated read-only inventory owner.
+    authority.set_grant("tailscale.inspect", enabled=True, executables=[cli])
     approvals = ActionApprovalStore()
     store = PrivateAccessStateStore(tmp_path / "private-access")
     owner = TailscaleServeOwner(root, authority, approvals,
@@ -352,3 +357,14 @@ def test_only_fixed_private_commands_are_issued(setup):
     setup[-1].enable(preview, approval)
     argv = setup[3].calls[0][0]
     assert "reset" not in argv and "funnel" not in argv and "--bg" in argv
+
+
+def test_preview_reads_no_inventory_without_the_read_only_grant(setup):
+    _, cli, adapter, runner, authority, _, _, owner = setup
+    authority.set_grant("tailscale.inspect", enabled=False, executables=[])
+    authority.set_grant("tailscale.serve.enable", enabled=True, executables=[cli])
+
+    with pytest.raises(ValueError, match="not authorized"):
+        owner.preview_enable()
+    assert adapter.snapshots == []
+    assert runner.calls == []

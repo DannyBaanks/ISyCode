@@ -71,6 +71,7 @@ def test_cancelled_private_route_preview_has_no_command_or_saved_state(tmp_path,
         serve_services_config='{"version":"0.0.1","services":{}}'))
     runner = FakeRunner(adapter)
     root_auth = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+    root_auth.set_grant("tailscale.inspect", enabled=True, executables=[cli])
     root_auth.set_grant("tailscale.serve.enable", enabled=True, executables=[cli])
     store = PrivateAccessStateStore(tmp_path / "private")
     owner = TailscaleServeOwner(root, root_auth, ActionApprovalStore(), adapter=adapter,

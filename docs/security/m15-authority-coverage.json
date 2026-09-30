@@ -1198,7 +1198,7 @@
       "action": null,
       "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "file": "isycode/tailscale_serve.py",
-      "line": 181,
+      "line": 184,
       "owner": "tailscale_serve"
     },
     {
@@ -1357,14 +1357,14 @@
       "action": "tailscale.login",
       "callable": "isycode.tailscale_login.TailscaleLoginOwner.login_request",
       "file": "isycode/tailscale_login.py",
-      "line": 126,
+      "line": 128,
       "owner": "tailscale_login"
     },
     {
       "action": "tailscale.login",
       "callable": "isycode.tailscale_login.TailscaleLoginOwner.begin_login",
       "file": "isycode/tailscale_login.py",
-      "line": 163,
+      "line": 165,
       "owner": "tailscale_login"
     },
     {
@@ -1378,7 +1378,7 @@
       "action": null,
       "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "file": "isycode/tailscale_serve.py",
-      "line": 181,
+      "line": 184,
       "owner": "tailscale_serve"
     },
     {

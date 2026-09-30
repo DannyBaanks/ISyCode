@@ -69,5 +69,17 @@ class TailscaleReadOwner:
         return snapshot, ActionOutcome("Local Tailscale inventory inspected.",
                                        "ALLOW", receipt, "read-only bounded inventory")
 
+    def authorized_snapshot(self) -> TailscaleSnapshot:
+        """Inventory for another owner's preview, only after Authority and Sentinel allow it.
+
+        Serve and login previews read the local CLI before their own mutation
+        is authorized; that read is a `tailscale.inspect` effect and must be
+        decided and journaled like any other.
+        """
+        snapshot, outcome = self.inspect()
+        if outcome.decision != "ALLOW":
+            raise ValueError("read-only Tailscale inventory is not authorized")
+        return snapshot
+
 
 __all__ = ["TailscaleReadOwner"]

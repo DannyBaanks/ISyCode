@@ -17,6 +17,7 @@ from isycode.action_runtime import (
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
 from isycode.tailscale import TailscaleAdapter, TailscaleSnapshot
+from isycode.tailscale_read import TailscaleReadOwner
 from isycode.workspace_authority import WorkspaceAuthority
 
 
@@ -102,6 +103,7 @@ class TailscaleLoginOwner:
         self.authority = authority
         self.approvals = approvals
         self.adapter = adapter or TailscaleAdapter()
+        self._inventory = TailscaleReadOwner(self.root, authority, approvals, adapter=self.adapter)
         self._popen = popen
         self._clock = clock
         self._attempts: dict[str, _Attempt] = {}
@@ -119,7 +121,7 @@ class TailscaleLoginOwner:
 
     def login_request(self) -> ActionRequest:
         """Build the exact request that Settings can preview before confirmation."""
-        snapshot = _snapshot(self.adapter)
+        snapshot = self._inventory.authorized_snapshot()
         if snapshot.state != "signed_out":
             raise ValueError("Tailscale must be installed, running, and signed out")
         executable = self._executable(snapshot)
@@ -158,7 +160,7 @@ class TailscaleLoginOwner:
     def begin_login(self, request: ActionRequest,
                     approval: ActionApproval | None) -> ActionOutcome:
         try:
-            snapshot = _snapshot(self.adapter)
+            snapshot = self._inventory.authorized_snapshot()
             executable = self._executable(snapshot)
             expected = ActionRequest("tailscale.login", self.root, "tailscale",
                                      {"executable": executable, "operation": "login"},
