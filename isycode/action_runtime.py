@@ -47,6 +47,16 @@ CHAT_WORKSPACE_TOOLS = [
         }, "required": ["path"], "additionalProperties": False},
     }},
     {"type": "function", "function": {
+        "name": "workspace_grep",
+        "description": ("Find lines containing a literal text in authorized UTF-8 files (not a "
+                        "regex); returns path, line number and the line. Skips sensitive, binary, "
+                        "oversized and dependency folders."),
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "Literal text to find; case-insensitive."},
+            "path": {"type": "string", "description": "Workspace-relative folder or file; defaults to the workspace root."},
+        }, "required": ["query"], "additionalProperties": False},
+    }},
+    {"type": "function", "function": {
         "name": "workspace_search", "description": "Search file and folder names, never file contents.",
         "parameters": {"type": "object", "properties": {
             "query": {"type": "string", "description": "Text to find in names."},
@@ -58,7 +68,16 @@ TOOL_ACTIONS = {
     "workspace_list": "workspace.files.list",
     "workspace_read": "workspace.files.read",
     "workspace_search": "workspace.files.search",
+    # Content search reveals exactly what reading does, so it is a read.
+    "workspace_grep": "workspace.files.read",
 }
+GREP_SKIP_DIRECTORIES = frozenset({
+    "node_modules", "__pycache__", ".venv", "venv", ".tox", ".mypy_cache",
+    ".pytest_cache", ".ruff_cache", "dist", "build", "target", ".next",
+})
+GREP_MAX_FILES = 3000
+GREP_MAX_BYTES = 24 * 1024 * 1024
+GREP_MAX_MATCHES = 200
 MAX_FILE_BYTES = 128 * 1024
 MAX_WRITE_BYTES = 128 * 1024
 WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256"})
@@ -1532,6 +1551,11 @@ class LocalWorkspaceReadOwner:
         try:
             if action_id == "workspace.files.list":
                 result = self._list(target)
+            elif action_id == "workspace.files.read" and "query" in arguments:
+                query = arguments.get("query", "")
+                if not isinstance(query, str) or not query.strip() or len(query) > 256:
+                    raise ValueError("search text must contain 1–256 characters")
+                result = self._grep(query, Path(target))
             elif action_id in {"workspace.files.read", "workspace.context.inject"}:
                 result = self._read(target)
             else:
@@ -1650,6 +1674,72 @@ class LocalWorkspaceReadOwner:
         return json.dumps({"query": query, "matches": hits,
                            "directories_scanned": visited, "truncated": truncated},
                           ensure_ascii=False)
+
+    def _grep(self, query: str, start: Path) -> str:
+        """Literal, case-insensitive line search through descriptor-safe reads."""
+        folded = query.casefold()
+        matches: list[dict[str, Any]] = []
+        files = scanned_bytes = 0
+        truncated = False
+        pending = [start]
+        if start != self.root and not start.is_dir():
+            pending, candidates = [], [start]
+        else:
+            candidates = []
+        while pending or candidates:
+            if candidates:
+                path = candidates.pop()
+                if files >= GREP_MAX_FILES or scanned_bytes >= GREP_MAX_BYTES:
+                    truncated = True
+                    break
+                try:
+                    descriptor = self._open_file(path)
+                except OSError:
+                    continue
+                with os.fdopen(descriptor, "rb") as stream:
+                    info = os.fstat(stream.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_FILE_BYTES:
+                        continue
+                    data = stream.read(MAX_FILE_BYTES + 1)
+                files += 1
+                scanned_bytes += len(data)
+                if len(data) > MAX_FILE_BYTES or b"\0" in data[:8192]:
+                    continue
+                try:
+                    text = data.decode("utf-8")
+                except UnicodeDecodeError:
+                    continue
+                for number, line in enumerate(text.splitlines(), 1):
+                    if folded in line.casefold():
+                        matches.append({"path": str(path.relative_to(self.root)),
+                                        "line": number, "text": line.strip()[:300]})
+                        if len(matches) >= GREP_MAX_MATCHES:
+                            truncated = True
+                            break
+                if truncated:
+                    break
+                continue
+            directory = pending.pop()
+            directory_fd: int | None = None
+            try:
+                directory_fd = self._open_directory(directory)
+                with os.scandir(directory_fd) as iterator:
+                    children = sorted(iterator, key=lambda item: item.name)
+            except OSError:
+                continue
+            finally:
+                if directory_fd is not None:
+                    os.close(directory_fd)
+            for child in reversed(children):
+                if (WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink()
+                        or child.name in GREP_SKIP_DIRECTORIES):
+                    continue
+                if child.is_dir(follow_symlinks=False):
+                    pending.append(directory / child.name)
+                elif child.is_file(follow_symlinks=False):
+                    candidates.append(directory / child.name)
+        return json.dumps({"query": query, "matches": matches, "files_scanned": files,
+                           "truncated": truncated}, ensure_ascii=False)
 
     def _open_directory(self, directory: Path) -> int:
         if os.name == "nt":

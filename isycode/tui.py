@@ -5460,7 +5460,7 @@ class TUIApp(App):
         else:
             tool_availability = ""
         tools_instruction = (
-            "Read-only list/read/file-name-search tools are available for this workspace. "
+            "Read-only list, read, file-name search and content search (workspace_grep) tools are available for this workspace. "
             "Call them only for repository inspection; they are checked by Workspace Authority "
             "and IsySentinel, and they cannot access sensitive paths or run commands. "
             + ("The workspace_write tool proposes the complete new content of one text file; "
