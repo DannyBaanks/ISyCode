@@ -20,17 +20,18 @@ import tempfile
 import uuid
 import urllib.request
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 from urllib.parse import urlparse
 
 from isycode.config import (
-    ConfigurationError, discover_workspace_identity,
-    find_isymotron_root, provider_default_model,
+    ConfigurationError, discover_workspace_identity, gateway_workspace_id,
+    find_isymotron_root, isymotron_provider_available, provider_default_model,
 )
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import WorkspaceSetupStore
+from isycode.user_defaults import UserDefaultsStore
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
     ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_KERNEL,
@@ -42,8 +43,8 @@ from isycode.approvals import ActionApprovalStore
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS, GatewayMCPInvocationOwner, GatewaySemanticOwner,
-    LocalWorkspaceReadOwner,
-    LPSSymbolOwner, ProductActionGate, SessionDeleteOwner, TOOL_ACTIONS,
+    LocalWorkspaceReadOwner, ProviderNetworkOwner, EXPLICIT_DENY_ACTIONS,
+    LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
 from isycode.action_audit import ActionAuditJournal
 from isycode.action_coverage import owner_coverage_report
@@ -58,7 +59,6 @@ from isycode.contracts import (
     OpenIsyClientFactory,
     RuntimeFactory,
     WorkspaceFactory,
-    WorkspaceProvider,
 )
 
 try:
@@ -85,8 +85,14 @@ from rich.console import Console
 from rich.text import Text
 from rich.markdown import Markdown as RichMarkdown
 
+
+def _authority_action_state(action_id: str, enabled: bool) -> str:
+    if action_id in EXPLICIT_DENY_ACTIONS:
+        return "DENY · no Secure owner" + (" · saved grant ignored" if enabled else "")
+    return "grant on" if enabled else "deny"
+
 try:
-    from agents.planner import PlanRejected
+    from agents.planner import PlanRejected  # type: ignore[reportMissingImports]
 except ModuleNotFoundError:
     class PlanRejected(RuntimeError):
         """A planner rejection raised only when an optional runtime is present."""
@@ -358,6 +364,38 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class GlobalRecurringDefaultScreen(ModalScreen[bool]):
+    """Confirm a user-wide preference that creates .isyroot in future folders."""
+
+    CSS = """
+    GlobalRecurringDefaultScreen { align: center middle; background: #000000 65%; }
+    #global-recurring-card { width: 76; max-width: 90%; height: auto; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #global-recurring-title { height: 2; color: #bb8cff; text-style: bold; }
+    #global-recurring-copy { height: auto; margin-bottom: 1; }
+    #global-recurring-actions { height: 3; align-horizontal: right; }
+    #global-recurring-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="global-recurring-card"):
+            yield Static("Use recurring mode for new folders?", id="global-recurring-title")
+            yield Static(
+                "When ISyCode first opens a folder without a saved choice, it will create an empty "
+                ".isyroot marker there. This remembers the workspace identity only; it does not "
+                "grant file access or copy permissions from another workspace.",
+                id="global-recurring-copy")
+            with Horizontal(id="global-recurring-actions"):
+                yield Button("Cancel", id="global-recurring-cancel")
+                yield Button("Use for new folders", id="global-recurring-confirm", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "global-recurring-confirm")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class GrantWorkspaceReadScreen(ModalScreen[bool]):
     """Explicitly grant only bounded, read-only workspace tools."""
 
@@ -576,7 +614,7 @@ class MCPInvocationConfirmScreen(ModalScreen[bool]):
 
     def __init__(self, name: str, description: str, arguments: dict, endpoint: str) -> None:
         super().__init__()
-        self.name = name
+        self.tool_name = name
         self.description = description
         self.arguments = arguments
         self.endpoint = endpoint
@@ -584,7 +622,7 @@ class MCPInvocationConfirmScreen(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         payload = json.dumps(self.arguments, ensure_ascii=False, indent=2)
         with Vertical(id="mcp-confirm-card"):
-            yield Static(f"Confirm Gateway MCP call · {self.name}", id="mcp-confirm-title")
+            yield Static(f"Confirm Gateway MCP call · {self.tool_name}", id="mcp-confirm-title")
             yield Static(
                 f"{self.description[:800]}\nEndpoint: {self.endpoint}\nThis sends the exact arguments below to the Gateway MCP. "
                 "A one-use approval is required; the remote Gateway validates its own key and operation policy.",
@@ -815,13 +853,13 @@ class LSPConfirmScreen(ModalScreen[bool]):
     def __init__(self, root: Path, query: str) -> None:
         super().__init__()
         self.root = root
-        self.query = query
+        self.query_text = query
 
     def compose(self) -> ComposeResult:
         with Vertical(id="lsp-confirm-card"):
             yield Static("Confirm local LSP search", id="lsp-confirm-title")
             yield Static(
-                f"Server: Pyright · operation: workspace/symbol\nQuery: {self.query}\nWorkspace root: {self.root}\n\n"
+                f"Server: Pyright · operation: workspace/symbol\nQuery: {self.query_text}\nWorkspace root: {self.root}\n\n"
                 "ISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. "
                 "The workspace is read-only; socket and io_uring syscalls are denied by seccomp, "
                 "and output/time limits apply. No Gateway or provider receives this query.",
@@ -1433,7 +1471,7 @@ class TUIApp(App):
         self._workspace_identity = discover_workspace_identity(Path.cwd())
         self._launch_dir = self._workspace_identity.launch_dir
         self._workspace_root = self._workspace_identity.workspace_root
-        self._workspace: WorkspaceProvider | None = None
+        self._workspace: Path | None = None
         self._workspace_setup: WorkspaceSetupStore | None = None
         self._chat_sessions: ChatSessionStore | None = None
         self._active_chat_session_id: str | None = None
@@ -1449,7 +1487,7 @@ class TUIApp(App):
         self._menu_mode = ""
         self._menu_title = ""
         self._provider_key_target = ""
-        self._active_role: dict[str, str] | None = None
+        self._active_role: dict[str, str] | None = self._load_global_default_role()
         self._review_used = False
         self._pending_review: tuple[str, str] | None = None
         self._review_request_task: asyncio.Task | None = None
@@ -1508,6 +1546,7 @@ class TUIApp(App):
 
     def on_mount(self) -> None:
         prompt = self.query_one("#prompt-input", PromptArea)
+        self.query_one("#role-button", Button).label = self._role_button_label()
         if self._initial_prompt:
             prompt.load_text(self._initial_prompt)
         prompt.focus()
@@ -1562,7 +1601,16 @@ class TUIApp(App):
             if not recurring:
                 choice = setup_store.recurrent_choice(self._launch_dir)
                 if choice is None:
-                    choice = await self.push_screen_wait(WorkspaceSetupScreen(self._launch_dir))
+                    try:
+                        preference = UserDefaultsStore().load().get("new_workspace", "ask")
+                    except (OSError, ValueError, json.JSONDecodeError):
+                        preference = "ask"
+                    if preference == "recurring":
+                        choice = True
+                    elif preference == "temporary":
+                        choice = False
+                    else:
+                        choice = await self.push_screen_wait(WorkspaceSetupScreen(self._launch_dir))
                     setup_store.choose_recurrent(self._launch_dir, choice)
                 elif choice:
                     # Re-create a marker if the user removed it after opting in.
@@ -2237,6 +2285,7 @@ class TUIApp(App):
 
     def _open_settings_menu(self) -> None:
         entries = [
+            self._entry("My defaults · all workspaces", "user_defaults", ""),
             self._entry("Mobile host status", "mobile_host_status", ""),
             self._entry("Bridge coordination · blocked in Secure",
                         "bridge_settings", ""),
@@ -2251,6 +2300,79 @@ class TUIApp(App):
         ]
         self._menu_stack = []
         self._render_menu("settings", "Settings", entries)
+
+    def _open_user_defaults_menu(self) -> None:
+        try:
+            defaults = UserDefaultsStore().load()
+        except (OSError, ValueError, json.JSONDecodeError):
+            defaults = {"new_workspace": "ask", "default_role": None}
+        provider_name = selected_provider_name()
+        provider = PRESETS.get(provider_name, {})
+        model_name = selected_model_name() or provider.get("default_model", "provider default")
+        entries = [
+            self._entry("These personal defaults follow you between workspaces.", "info"),
+            self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
+            self._entry(f"Default model · {provider.get('label', provider_name)} · {model_name}",
+                        "info", "", "Change it from Providers; model selection is already saved globally."),
+        ]
+        role = defaults.get("default_role")
+        entries.append(self._entry(
+            f"Default role · {role['name']}" if role else "Default role · none",
+            "info", "", "Role guidance is global preference only; it never grants permissions."))
+        if self._active_role:
+            entries.append(self._entry(
+                f"Use current role ({self._active_role['name']}) as my default",
+                "user_default_role_save", ""))
+        if role:
+            entries.append(self._entry("Clear my default role", "user_default_role_clear", ""))
+        new_workspace = defaults.get("new_workspace", "ask")
+        choices = (
+            ("ask", "Ask me when I open a new folder"),
+            ("temporary", "Always use temporary mode for new folders"),
+            ("recurring", "Make new folders recurring by default"),
+        )
+        entries.extend(self._entry(
+            ("● " if new_workspace == value else "○ ") + label,
+            "user_default_workspace", value,
+            ("A recurring workspace gets an empty .isyroot marker when first opened. "
+             "This identifies the workspace; it does not grant file access.")
+            if value == "recurring" else "Applies only when this folder has no saved choice yet.")
+            for value, label in choices)
+        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        if self._menu_mode != "user_defaults":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("user_defaults", "Settings · My defaults", entries)
+
+    async def _set_global_workspace_default(self, value: str) -> None:
+        if value == "recurring":
+            accepted = await self.push_screen_wait(GlobalRecurringDefaultScreen())
+            if not accepted:
+                self._open_user_defaults_menu()
+                return
+        try:
+            UserDefaultsStore().update(new_workspace=value)
+            self._set_activity("Default saved for new workspaces", GREEN)
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save your global default; existing settings remain", RED)
+        self._open_user_defaults_menu()
+
+    def _load_global_default_role(self) -> dict[str, str] | None:
+        try:
+            role = UserDefaultsStore().load().get("default_role")
+        except (OSError, ValueError, json.JSONDecodeError):
+            return None
+        if not isinstance(role, dict):
+            return None
+        kind, name = role.get("kind"), role.get("name")
+        catalogs = {"agents": ISYCODE_AGENTS, "subagents": ISYCODE_SUBAGENTS,
+                    "motors": ISYCO_MOTORS}
+        selected = next((item for item in catalogs.get(kind, ())
+                         if item.get("name") == name), None)
+        if selected is None:
+            return None
+        return {"name": name, "kind": kind,
+                "description": str(selected.get("description", "")),
+                "engine": str(selected.get("engine", "ISyCode selected provider and model"))}
 
     def _open_bridge_settings(self) -> None:
         entries = [self._entry(
@@ -2329,10 +2451,15 @@ class TUIApp(App):
         self._render_menu("named_credentials", "Settings · API keys", entries)
 
     def _open_authority_menu(self) -> None:
+        gateway_id = gateway_workspace_id(self._workspace_root)
         entries = [self._entry(
             f"Workspace · {self._workspace_root}", "info", "",
             f"Root source: {self._workspace_identity.workspace_root_source}. "
-            ".isyroot is a boundary, not a grant.")]
+            ".isyroot is a boundary, not a grant."),
+            self._entry(
+                f"Gateway workspace binding · {gateway_id}", "info", "",
+                "Matching label only; it does not grant filesystem or network access. "
+                "ISyCode still requires Workspace Authority, IsySentinel, and one-use approval.")]
         try:
             policy = WorkspaceAuthority(self._workspace_root).policy()
             grants = policy.get("grants", {})
@@ -2423,8 +2550,11 @@ class TUIApp(App):
                     scope.append(f"executables={len(grant['executables'])}")
                 if grant.get("targets"):
                     scope.append(f"targets={len(grant['targets'])}")
-                label = f"{action.group} · {action.label} · {'grant on' if enabled else 'deny'}"
+                state = _authority_action_state(action.id, enabled)
+                label = f"{action.group} · {action.label} · {state}"
                 detail = f"Action: {action.id}\nEffect: {action.effect}\nScope: {', '.join(scope) or 'none'}"
+                if action.id in EXPLICIT_DENY_ACTIONS:
+                    detail += "\nSecure decision: DENY; a saved Workspace Authority grant cannot add an execution owner."
                 if action.approval_required:
                     detail += "\nAlso requires fresh request-bound approval."
                 entries.append(self._entry(label, "info", "", detail))
@@ -2434,7 +2564,9 @@ class TUIApp(App):
         coverage = owner_coverage_report()
         ownerless = len(coverage["unowned_effectful_actions"])
         ambiguous = len(coverage["ambiguous_actions"])
-        covered = sum(1 for row in coverage["actions"] if row["status"] == "COVERED")
+        covered = sum(1 for row in coverage["actions"]
+                      if row["classification"] in {
+                          "OWNER_VALID", "OWNER_SHARED_READ", "OWNER_VARIANTS"})
         entries.append(self._entry(
             f"Owner coverage · {covered} actions bound · {ownerless} effect actions unowned · {ambiguous} ambiguous",
             "info", "", "Generated from the explicit action/owner registry. This is not a source-code oracle; "
@@ -2444,14 +2576,14 @@ class TUIApp(App):
             "Filesystem list/read/name-search/context requests bind a named owner, explicit grant, boundary checks, "
             "Sentinel decision, result receipt metadata, and durable journal record. Journal does not retain targets or content."))
         entries.append(self._entry(
-            "Session delete owner · connected", "info", "",
-            "Deletion requires a named-session confirmation, a one-use digest-bound approval and a temporary session-id grant. "
-            "The temporary grant is removed after the operation."))
+            "Session delete owner · not connected to session UI", "info", "",
+            "The owner primitive requires a named-session confirmation, a one-use digest-bound approval, and an explicit grant. "
+            "Secure keeps persistent sessions and deletion unavailable until the UI provides that approval flow."))
         entries.append(self._entry(
-            "Secure remains open · unowned surfaces are blocked or not wired", "info", "",
-            "Mobile Host and Bridge do not start from Secure. Credential entry is blocked. Remaining gaps include "
-            "Mobile Host class routes, Bridge adapter methods, L1, workspace mutation, native file picker, persistent "
-            "session create/append, and several cataloged broker lifecycle actions. No fallback owner is used."))
+            "Secure status · fail-closed · M15 still open", "info", "",
+            f"The static TUI surface audit found {len(coverage['secure_tui_direct_api_bypasses'])} direct API bypasses. "
+            "Unsupported actions remain explicit DENY; saved grants cannot enable them without a registered owner. "
+            "M15 still needs receipt witnesses for every connected owner and Gateway HTTP perimeter work."))
         entries.append(self._entry(
             "Gateway semantic owner · typed read-only operations connected", "info", "",
             "Uses the native HTTP API, a host grant, exact query review, one-use approval, local receipt, "
@@ -2651,11 +2783,10 @@ class TUIApp(App):
 
     async def _open_gateway_semantic_search(self) -> None:
         endpoint = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787").rstrip("/")
-        workspace_id = os.environ.get("ISYCODE_GATEWAY_WORKSPACE_ID", "").strip()
-        if not workspace_id:
-            self._append(
-                "  Native semantic Gateway is not bound: set ISYCODE_GATEWAY_WORKSPACE_ID "
-                "to the operator-configured Gateway workspace ID.", YELLOW)
+        try:
+            workspace_id = gateway_workspace_id(self._workspace_root)
+        except (OSError, RuntimeError, ValueError):
+            self._append("  Workspace root could not be resolved; no Gateway request was sent.", RED)
             return
         try:
             GatewayClient._validate_base_url(endpoint)
@@ -2924,11 +3055,15 @@ class TUIApp(App):
                 authority = "ALLOW" if item["authority"] else "DENY"
                 result_state = ("receipt metadata recorded" if receipt
                                 else "execution/result not demonstrated")
+                checks = ", ".join(
+                    f"{check['name']} {'PASS' if check['passed'] else 'FAIL'}"
+                    for check in item.get("checks", [])) or "not recorded"
                 entries.append(self._entry(
                     f"{item['sentinel']} · {item['action']} · {item['owner'] or 'owner unknown'} · {result_state}",
                     "info", "", f"Time: {_time.strftime('%Y-%m-%d %H:%M:%S', _time.localtime(item['time']))}\n"
                     f"Request: {digest[:12]}… · Authority: {authority}\n"
-                    f"Failed checks: {', '.join(item['failed_checks']) or 'none recorded'}\n"
+                    f"Systembilities: {checks}\n"
+                    f"Failed checks: {', '.join(item['failed_checks']) or 'none'}\n"
                     "Receipt binds a request digest and result digest, but the request/result payload is not retained. "
                     "Target and successful Systembility details are not persisted; no secret or prompt is shown."))
             if not report.recent:
@@ -2970,6 +3105,35 @@ class TUIApp(App):
 
     def _select_menu_entry(self, entry: dict[str, str]) -> None:
         kind, value = entry["kind"], entry["value"]
+        if kind == "user_defaults":
+            self._open_user_defaults_menu()
+            return
+        if kind == "user_default_workspace":
+            self.run_worker(self._set_global_workspace_default(value), exclusive=True,
+                            group="user-defaults")
+            return
+        if kind == "user_default_role_save":
+            if not self._active_role:
+                self._append("  Choose a role first; no default was changed.", MUTED)
+                return
+            role_kind = ("motors" if self._active_role["kind"] == "ISyCo motor"
+                         else self._active_role["kind"])
+            try:
+                UserDefaultsStore().update(default_role={
+                    "name": self._active_role["name"], "kind": role_kind})
+                self._set_activity("Default role saved for all workspaces", GREEN)
+            except (OSError, ValueError, json.JSONDecodeError):
+                self._set_activity("Could not save the default role", RED)
+            self._open_user_defaults_menu()
+            return
+        if kind == "user_default_role_clear":
+            try:
+                UserDefaultsStore().update(default_role=None)
+                self._set_activity("Global default role cleared", MUTED)
+            except (OSError, ValueError, json.JSONDecodeError):
+                self._set_activity("Could not clear the default role", RED)
+            self._open_user_defaults_menu()
+            return
         if kind == "bridge_settings":
             self._open_bridge_settings()
             return
@@ -3323,7 +3487,7 @@ class TUIApp(App):
                 entries.append(self._entry(
                     f"ISyCo Gateway MCP · {gateway.state.replace('_', ' ')}",
                     "info", "", gateway.detail))
-        return entries or [self._entry("No connected MCP tools discovered", "info")]
+            return entries or [self._entry("No connected MCP tools discovered", "info")]
         if key == "lsp":
             entries = []
             for server in self._lsp_inventory:
@@ -3354,6 +3518,8 @@ class TUIApp(App):
             return [self._entry(f"Workspace root · {self._workspace_root}", "info"),
                     self._entry(f"Launch directory · {self._launch_dir}", "info"),
                     self._entry(f"Root source · {self._workspace_identity.workspace_root_source}", "info"),
+                    self._entry(f"Gateway binding · {gateway_workspace_id(self._workspace_root)}", "info", "",
+                                "Opaque workspace match label; it does not grant access."),
                     self._entry(f"Current folder · {self._file_path or self._workspace_root}", "info"),
                     self._entry("Open Files view", "files")]
         if key == "commands":
@@ -3371,19 +3537,22 @@ class TUIApp(App):
                 rows = [self._entry(
                     f"Configure {provider.key_env} before listing account models.", "info")]
             else:
-                host, _, _, decision = self._authorize_provider_request(provider)
-                if not decision.allowed:
+                owner = ProviderNetworkOwner(
+                    self._workspace_root, WorkspaceAuthority(self._workspace_root))
+                models, result = await owner.execute(
+                    provider, {"operation": "models.list", "provider": name,
+                              "model": provider.model},
+                    lambda: asyncio.to_thread(provider.models))
+                if result.decision != "ALLOW" or not isinstance(models, list):
                     rows = [self._entry(
-                        f"ISySentinel denied the model request to {host}.", "info", "",
-                        "Grant this provider host in Settings → Authority & Security. A saved API key is not network authority.")]
+                        f"Provider model request {result.decision.lower()}.", "info", "",
+                        result.reason or "Grant this provider host in Settings → Authority & Security.")]
+                elif not models:
+                    rows = [self._entry("The provider returned an empty model catalog.", "info")]
                 else:
-                    models = await asyncio.to_thread(provider.models)
-                    if not models:
-                        rows = [self._entry("The provider returned an empty model catalog.", "info")]
-                    else:
-                        rows = [self._entry(
-                            f"{model_id}{'  ◂ current' if model_id == provider.model else ''}",
-                            "model", f"{name}|{model_id}") for model_id in models]
+                    rows = [self._entry(
+                        f"{model_id}{'  ◂ current' if model_id == provider.model else ''}",
+                        "model", f"{name}|{model_id}") for model_id in models]
         except ProviderError as error:
             rows = [self._entry(self._provider_failure(error, "Model catalog"), "info")]
         except ConfigurationError:
@@ -3424,9 +3593,16 @@ class TUIApp(App):
             save_provider_selection(name, provider.model)
         except (OSError, ValueError):
             self._append("  Provider is selected for this run; private preference could not be saved.", YELLOW)
-        # Compatibility for the optional IsyMotron planner adapter.
-        os.environ["ISYMOTRON_PROVIDER"] = name
-        os.environ["ISYMOTRON_MODEL"] = provider.model
+        # Keep the optional legacy planner provider separate when the native
+        # ISyCode-only preset is not supported by that adapter.
+        if isymotron_provider_available(name):
+            os.environ["ISYMOTRON_PROVIDER"] = name
+            os.environ["ISYMOTRON_MODEL"] = provider.model
+        elif name in {"groq", "openrouter"}:
+            self._append(
+                "  This provider is configured for ISyCode chat; the optional "
+                "IsyMotron planner keeps its own provider until its adapter supports it.",
+                MUTED)
         if current != name:
             self._clear_pending_plan()
         if provider.configured():
@@ -3638,12 +3814,6 @@ class TUIApp(App):
                 name=provider_name,
                 model=provider_default_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
-            provider_host, _, _, provider_decision = self._authorize_provider_request(provider)
-            if not provider_decision.allowed:
-                self._append(
-                    f"  Provider request DENY · {provider_host}. Open Settings → Authority & Security "
-                    "to grant this host; a saved API key does not grant network access.", YELLOW)
-                return
             if provider.configured():
                 self._append(
                     f"  Model: {provider.model} via {provider.label} — ready", GREEN)
@@ -3687,13 +3857,7 @@ class TUIApp(App):
             app._append(
                 f"  Chat role · {role['name']} ({role['kind']})" if role
                 else "  Chat role · default", MUTED)
-            active = app._chat_sessions.load(app._active_chat_session_id) if (
-                app._chat_sessions and app._active_chat_session_id) else None
-            if active:
-                app._append(f"  Conversation · {active.title} · {len(active.messages)} messages", MUTED)
-                app._append("  Use Sessions to resume another conversation or start a new one.", MUTED)
-            else:
-                app._append("  Chat history is temporary for this launch.", MUTED)
+            app._append("  Chat history is temporary for this launch.", MUTED)
             app._append("  Anything else is plain chat with the configured model.", MUTED)
 
         async def _review_cmd(app: "TUIApp", artifact: str) -> None:
@@ -3726,12 +3890,6 @@ class TUIApp(App):
             if not approved:
                 app._append("  External review cancelled; no text was sent.", MUTED)
                 return
-            _, _, _, review_decision = app._authorize_provider_request(reviewer)
-            if not review_decision.allowed:
-                app._append(
-                    "  ISySentinel denied the OpenAI review request. Grant provider network access "
-                    "in Settings → Authority & Security; no review text was sent.", YELLOW)
-                return
             app._review_used = True
             app._pending_review = None
             app._set_activity("Sending one explicit review request to OpenAI API", CYAN)
@@ -3747,16 +3905,34 @@ class TUIApp(App):
                     "and do not claim to execute tools or change files.")},
                 {"role": "user", "content": artifact},
             ]
-            try:
-                request_task = asyncio.create_task(async_stream_complete(
+            review_owner = ProviderNetworkOwner(
+                app._workspace_root, WorkspaceAuthority(app._workspace_root))
+
+            async def send_review_request():
+                return await async_stream_complete(
                     reviewer.base_url, reviewer.api_key, reviewer.model, messages,
                     max_tokens=1200,
                     token_limit_field=reviewer.token_limit_field,
                     reasoning_effort=reviewer.reasoning_effort,
                     temperature_supported=reviewer.temperature_supported,
-                    timeout_s=120.0))
+                    timeout_s=120.0)
+
+            try:
+                request_task = asyncio.create_task(review_owner.execute(
+                    reviewer,
+                    {"operation": "roundtrip.review", "messages": messages,
+                     "max_tokens": 1200, "token_limit_field": reviewer.token_limit_field,
+                     "reasoning_effort": reviewer.reasoning_effort,
+                     "temperature_supported": reviewer.temperature_supported},
+                    send_review_request))
                 app._review_request_task = request_task
-                result = await request_task
+                result, request_outcome = await request_task
+                if request_outcome.decision != "ALLOW" or not isinstance(result, dict):
+                    app._append(
+                        f"  OpenAI review {request_outcome.decision} · "
+                        f"{request_outcome.reason[:240] or 'no verifiable response'}; "
+                        "no review was added.", YELLOW)
+                    return
             except asyncio.CancelledError:
                 app._append(
                     "  External review cancelled in flight. No retry was made, and partial output was discarded.",
@@ -3883,8 +4059,14 @@ class TUIApp(App):
 
             os.environ["ISYCODE_PROVIDER"] = name
             os.environ["ISYCODE_MODEL"] = provider.model
-            os.environ["ISYMOTRON_PROVIDER"] = name
-            os.environ["ISYMOTRON_MODEL"] = provider.model
+            if isymotron_provider_available(name):
+                os.environ["ISYMOTRON_PROVIDER"] = name
+                os.environ["ISYMOTRON_MODEL"] = provider.model
+            elif name in {"groq", "openrouter"}:
+                app._append(
+                    "  This provider is configured for ISyCode chat; the optional "
+                    "IsyMotron planner keeps its own provider until its adapter supports it.",
+                    MUTED)
             try:
                 save_provider_selection(name, provider.model)
             except (OSError, ValueError):
@@ -3991,44 +4173,10 @@ class TUIApp(App):
             YELLOW)
 
     async def _delete_chat_session(self, session_id: str) -> None:
-        if self._chat_sessions is None:
-            return
-        try:
-            session = self._chat_sessions.load(session_id)
-            authority = WorkspaceAuthority(self._workspace_root)
-            previous = authority.policy().get("grants", {}).get("session.delete", {})
-            old_enabled = bool(previous.get("enabled"))
-            old_targets = list(previous.get("targets", []))
-            targets = sorted(set(old_targets) | {session_id})
-            authority.set_grant("session.delete", enabled=True, targets=targets)
-            request = ActionRequest(
-                "session.delete", self._workspace_root, session_id,
-                {"session_id": session_id, "title": session.title[:80]},
-                execution_owner="session_delete")
-            approval = self._action_approvals.issue(request, ttl_seconds=30)
-            owner = SessionDeleteOwner(
-                self._workspace_root, authority, self._chat_sessions, self._action_approvals)
-            outcome = await asyncio.to_thread(owner.delete, session_id, session.title, approval)
-        except (OSError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Conversation was not deleted ({type(exc).__name__}).", RED)
-            return
-        finally:
-            if "authority" in locals() and "session_id" in locals():
-                try:
-                    authority.set_grant(
-                        "session.delete", enabled=old_enabled if "old_enabled" in locals() else False,
-                        targets=old_targets if "old_targets" in locals() else [])
-                except (WorkspaceAuthorityError, OSError, ValueError):
-                    self._append("  Temporary delete grant cleanup failed; review Authority settings.", RED)
-        if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  Conversation delete denied · {outcome.reason[:220]}", YELLOW)
-            return
-        if self._active_chat_session_id == session_id:
-            self._active_chat_session_id = None
-            self._history.clear()
-            await self.query_one(ChatArea).remove_children()
+        del session_id
         self._append(
-            f"  Deleted conversation · receipt {outcome.receipt.receipt_id[:12]} verified.", GREEN)
+            "  Persistent session deletion is blocked in Secure until an explicit user approval flow is connected.",
+            YELLOW)
 
     def _persist_chat_message(self, role: str, content: str) -> None:
         # Never persist prompts/transcripts until session owners are connected.
@@ -4060,22 +4208,6 @@ class TUIApp(App):
         target = self._workspace_read_owner()._lexical_target(path)
         return ActionRequest(action_id, self._workspace_root, str(target), arguments,
                              execution_owner="workspace_read")
-
-    def _authorize_provider_request(self, provider: Provider):
-        parsed = urlparse(provider.base_url)
-        host = (parsed.hostname or "").casefold().rstrip(".")
-        if parsed.port:
-            host += f":{parsed.port}"
-        request = ActionRequest(
-            "provider.request", self._workspace_root, host,
-            {"provider": provider.name, "model": provider.model, "url": provider.base_url},
-            execution_owner="provider_network",
-        )
-        gate = ProductActionGate(
-            self._workspace_root, WorkspaceAuthority(self._workspace_root),
-            owner_id="provider_network")
-        authority, decision = gate.authorize(request)
-        return host, request, authority, decision
 
     async def _dispatch_chat_tool(self, call: dict) -> tuple[str, str]:
         """Route one provider function call through the canonical local read owner."""
@@ -4223,23 +4355,38 @@ class TUIApp(App):
                     content_buf.append(chunk)
                     _content_line()
 
+            owner = ProviderNetworkOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            request_material = {
+                "operation": "chat.completions", "messages": messages,
+                "max_tokens": 2048, "token_limit_field": provider.token_limit_field,
+                "reasoning_effort": provider.reasoning_effort,
+                "temperature_supported": provider.temperature_supported,
+                "tools": CHAT_WORKSPACE_TOOLS if tools_active else None,
+            }
+
+            async def send_provider_request():
+                return await async_stream_complete(
+                    provider.base_url, provider.api_key, provider.model,
+                    messages, max_tokens=2048,
+                    token_limit_field=provider.token_limit_field,
+                    reasoning_effort=provider.reasoning_effort,
+                    temperature_supported=provider.temperature_supported,
+                    on_chunk=on_chunk,
+                    tools=CHAT_WORKSPACE_TOOLS if tools_active else None)
+
             try:
                 for tool_round in range(5):
-                    provider_host, _, _, provider_decision = self._authorize_provider_request(provider)
-                    if not provider_decision.allowed:
+                    request_material["messages"] = messages
+                    self._chat_request_task = asyncio.create_task(owner.execute(
+                        provider, request_material, send_provider_request))
+                    response, provider_result = await self._chat_request_task
+                    if provider_result.decision != "ALLOW" or not isinstance(response, dict):
                         self._append(
-                            f"  Provider request DENY · {provider_host}. Workspace network grant changed; "
+                            f"  Provider request {provider_result.decision} · "
+                            f"{provider_result.reason[:240] or 'request was not completed'}; "
                             "no further request was sent.", YELLOW)
                         return
-                    self._chat_request_task = asyncio.create_task(async_stream_complete(
-                        provider.base_url, provider.api_key, provider.model,
-                        messages, max_tokens=2048,
-                        token_limit_field=provider.token_limit_field,
-                        reasoning_effort=provider.reasoning_effort,
-                        temperature_supported=provider.temperature_supported,
-                        on_chunk=on_chunk,
-                        tools=CHAT_WORKSPACE_TOOLS if tools_active else None))
-                    response = await self._chat_request_task
                     calls = response.get("tool_calls", [])
                     if not calls:
                         break
@@ -4344,14 +4491,6 @@ class TUIApp(App):
                     setattr, block, "title", f"thinking {elapsed:.0f}s")
 
             runtime = self._runtime_factory(self._workspace_root)
-            host, _, _, decision = self._authorize_provider_request(runtime.provider)
-            if not decision.allowed:
-                failed = "; ".join(
-                    check.reason for check in decision.checks if not check.passed)
-                self._append(
-                    f"  Planning request DENY · {host}. Grant this provider host in "
-                    f"Settings → Authority & Security. {failed[:300]}", YELLOW)
-                return
             outcome = await runtime.plan(intent, on_chunk=on_chunk)
             plan = outcome.plan
             self._append(f"  Model: {outcome.model} via {outcome.provider_label}", MUTED)
@@ -4382,7 +4521,8 @@ class TUIApp(App):
                 self._append("  This is correct behavior, not a failure.", MUTED)
 
         except PlanRejected as e:
-            self._append(f"\n  Plan rejected: {e.reason}. No executable plan was retained.", RED)
+            reason = getattr(e, "reason", str(e))
+            self._append(f"\n  Plan rejected: {reason}. No executable plan was retained.", RED)
         except ProviderError as e:
             self._append(f"\n  {self._provider_failure(e, 'Planning')}", RED)
         except Exception as e:

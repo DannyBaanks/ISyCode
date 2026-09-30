@@ -11,8 +11,10 @@ from typing import Callable
 from isycode.authority import grant_fingerprint, load_workspace_read_grants
 from isycode.config import load_api_key, provider_default_model
 from isycode.contracts import PlanOutcome
+from isycode.action_runtime import ProviderNetworkOwner
 from isycode.receipts import IsyMotronReceiptVerifier
-from isycode.streaming import StreamError, stream_complete
+from isycode.streaming import stream_complete
+from isycode.workspace_authority import WorkspaceAuthority
 
 
 class AuthorityContextChanged(RuntimeError):
@@ -33,9 +35,10 @@ class IsyMotronRuntime:
     SUBJECT = "isycode-tui"
 
     def __init__(self, workspace_root: Path) -> None:
-        from agents.provider import Provider
-        from relay.loopback import LoopbackRelay
+        from agents.provider import Provider  # type: ignore[reportMissingImports]
+        from relay.loopback import LoopbackRelay  # type: ignore[reportMissingImports]
 
+        self._workspace_root = workspace_root.expanduser().resolve(strict=True)
         provider_name = os.environ.get("ISYMOTRON_PROVIDER", "nebius").casefold()
         self.provider = Provider(
             name=provider_name,
@@ -46,7 +49,7 @@ class IsyMotronRuntime:
         mode = os.environ.get("ISYCODE_RUNTIME", "demo").strip().casefold()
         self._grant_snapshot: str | None = None
         if mode == "demo":
-            from hosts.simulator.engines import LegacyHost
+            from hosts.simulator.engines import LegacyHost  # type: ignore[reportMissingImports]
 
             host = LegacyHost(
                 fs={"C:/GAMES/DOOM.EXE": "MZ_BINARY",
@@ -63,7 +66,7 @@ class IsyMotronRuntime:
             self.origin = "demo"
             self.host_name = "win98-retrobox (demo; simulated filesystem)"
         elif mode == "local-readonly":
-            from hosts.linux.host import LinuxHost
+            from hosts.linux.host import LinuxHost  # type: ignore[reportMissingImports]
 
             configured, grants = load_workspace_read_grants(workspace_root)
             self._grant_snapshot = grant_fingerprint(configured)
@@ -84,9 +87,11 @@ class IsyMotronRuntime:
 
     async def plan(self, intent: str,
                    on_chunk: Callable[[str, str], None] | None = None) -> PlanOutcome:
-        from agents.planner import Planner, SYSTEM as PLANNER_SYSTEM
-        from agents.provider import Completion
-        from isymotron.contracts import CapabilityManifest, HostDescription, HostIdentity
+        from agents.planner import Planner, SYSTEM as PLANNER_SYSTEM  # type: ignore[reportMissingImports]
+        from agents.provider import Completion  # type: ignore[reportMissingImports]
+        from isymotron.contracts import (  # type: ignore[reportMissingImports]
+            CapabilityManifest, HostDescription, HostIdentity,
+        )
 
         descriptions = []
         for host in self.relay.hosts():
@@ -120,20 +125,31 @@ class IsyMotronRuntime:
                 temperature_supported=self.provider.temperature_supported,
                 on_chunk=on_chunk)
 
-        try:
-            result = await asyncio.to_thread(stream)
-        except StreamError:
-            plan = await asyncio.to_thread(planner.plan, intent, descriptions, 2000)
-        else:
-            usage = result.get("usage") or {}
-            completion = Completion(
-                text=result["text"], model=self.provider.model,
-                provider=self.provider.name, latency_s=result["latency_s"],
-                prompt_tokens=usage.get("prompt_tokens"),
-                completion_tokens=usage.get("completion_tokens"),
-                finish_reason=result.get("finish_reason"),
-                reasoning=result.get("reasoning", ""))
-            plan = Planner.parse(result["text"], descriptions, raw_completion=completion)
+        owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+
+        async def send():
+            return await asyncio.to_thread(stream)
+
+        result, request_outcome = await owner.execute(
+            self.provider,
+            {"operation": "isycode.plan", "messages": messages,
+             "max_tokens": 2000, "token_limit_field": self.provider.token_limit_field,
+             "reasoning_effort": self.provider.reasoning_effort,
+             "temperature_supported": self.provider.temperature_supported},
+            send)
+        if request_outcome.decision != "ALLOW" or not isinstance(result, dict):
+            raise SecureExecutionUnavailable(
+                f"Provider planning request {request_outcome.decision.lower()}: "
+                f"{request_outcome.reason[:240] or 'no verifiable response'}")
+        usage = result.get("usage") or {}
+        completion = Completion(
+            text=result["text"], model=self.provider.model,
+            provider=self.provider.name, latency_s=result["latency_s"],
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            finish_reason=result.get("finish_reason"),
+            reasoning=result.get("reasoning", ""))
+        plan = Planner.parse(result["text"], descriptions, raw_completion=completion)
         return PlanOutcome(
             plan=plan, model=self.provider.model,
             provider_label=self.provider.label, host_name=self.host_name,
@@ -141,7 +157,7 @@ class IsyMotronRuntime:
 
     def _assert_grants_unchanged(self) -> None:
         if self._grant_snapshot is not None:
-            from windows.grants import Grants
+            from windows.grants import Grants  # type: ignore[reportMissingImports]
 
             current = grant_fingerprint(Grants.load())
             if current != self._grant_snapshot:
