@@ -33,7 +33,7 @@ CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.files.list", "workspace.files.read", "workspace.files.search",
     "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
 })
-CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume"})
+CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume", "git.status", "git.diff"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
 CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_PLAIN_ACTIONS | CLASSIC_SERVICE_ACTIONS
                    | {"provider.request"})

@@ -40,6 +40,10 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("workspace.files.list", "workspace.files.read",
                     "workspace.files.search", "workspace.context.inject"),
     },
+    "isycode.git_owner.GitOwner._request": {
+        "owner": "workspace_git",
+        "actions": ("git.status", "git.diff", "git.commit"),
+    },
     "isycode.broker.BrokerManagementOwner.request_for": {
         "owner": "broker_management",
         "actions": ("broker.health", "broker.logs", "broker.start",
@@ -100,6 +104,9 @@ KNOWN_EFFECT_CALLSITES = (
     ("gateway.semantic.read", "GatewaySemanticOwner.invoke", "gateway_semantic", "COVERED"),
     ("lsp.start", "LPSSymbolOwner.search", "lsp_symbols", "COVERED"),
     ("workspace.command.run", "CommandRunOwner.run", "workspace_command", "COVERED"),
+    ("git.status", "GitOwner.status", "workspace_git", "COVERED"),
+    ("git.diff", "GitOwner.diff", "workspace_git", "COVERED"),
+    ("git.commit", "GitOwner.commit", "workspace_git", "COVERED"),
     ("broker.build", "BrokerProvisionOwner.provision", "broker_provision", "COVERED"),
     ("broker.start", "BrokerProvisionOwner.provision", "broker_provision", "COVERED_VARIANT"),
     ("broker.start", "BrokerManagementOwner.perform", "broker_management", "COVERED_VARIANT"),

@@ -57,6 +57,9 @@ from isycode.agent_loop import (
     AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, MAX_SUMMARY_CHARS, SUMMARY_MAX_TOKENS, AgentLimits,
     compact_turn, split_history, summary_messages, summary_system_message,
 )
+from isycode.git_owner import (
+    GIT_COMMIT_TOOL, GIT_TOOL_NAMES, GIT_TOOLS, CommitPreview, GitOwner, git_executable,
+)
 from isycode.command_runner import (
     COMMAND_TOOL, COMMAND_TOOL_NAME, CommandPreview, CommandRunOwner, sandbox_executable,
 )
@@ -602,6 +605,51 @@ class CommandApprovalScreen(ModalScreen[bool]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "command-approval-run")
+
+    def action_reject(self) -> None:
+        self.dismiss(False)
+
+
+class CommitApprovalScreen(ModalScreen[bool]):
+    """Show the exact message, files and diff of one proposed commit; Reject is the default."""
+
+    CSS = """
+    CommitApprovalScreen { align: center middle; background: #000000 65%; }
+    #commit-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #68696f; background: #292a2e; }
+    #commit-approval-title { height: 2; color: #bb8cff; text-style: bold; }
+    #commit-approval-summary { height: auto; max-height: 10; margin-bottom: 1; }
+    #commit-approval-diff { height: 1fr; border: round #3a3b40; }
+    #commit-approval-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #commit-approval-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "reject", "Reject")]
+
+    def __init__(self, preview: CommitPreview) -> None:
+        super().__init__()
+        self.preview = preview
+
+    def compose(self) -> ComposeResult:
+        preview = self.preview
+        files = ", ".join(preview.paths[:12]) + (f" and {len(preview.paths) - 12} more"
+                                                  if len(preview.paths) > 12 else "")
+        with Vertical(id="commit-approval-card"):
+            yield Static(f"Commit {len(preview.paths)} file{'s' if len(preview.paths) != 1 else ''}",
+                         id="commit-approval-title")
+            yield Static(Text(f"{preview.message}\n\nFiles: {files}\nHooks do not run and "
+                              "nothing is pushed. If a file changes before you approve, the "
+                              "commit is refused."), id="commit-approval-summary")
+            with VerticalScroll(id="commit-approval-diff"):
+                yield Static(Syntax(preview.diff or "(no content changes)", "diff",
+                                    theme="monokai", word_wrap=True))
+            with Horizontal(id="commit-approval-actions"):
+                yield Button("Reject", id="commit-approval-reject")
+                yield Button("Commit", id="commit-approval-apply", variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#commit-approval-reject", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "commit-approval-apply")
 
     def action_reject(self) -> None:
         self.dismiss(False)
@@ -3256,6 +3304,18 @@ class TUIApp(App):
                              str(self._workspace_root) in write_grant.get("path_prefixes", [])),
                 "The assistant can propose changes to text files here. You see the exact diff and "
                 "approve each one. It cannot delete or move files, touch sensitive files, or run commands."))
+            if git_executable() and (self._workspace_root / ".git").is_dir():
+                entries.append(self._capability_entry(
+                    "See git status and diffs", "git_read",
+                    all(displayed_on(action, grants.get(action, {}))
+                        for action in ("git.status", "git.diff")),
+                    "Lets the assistant see the branch, changed files and diffs. Sensitive files "
+                    "stay hidden, and repositories that configure their own programs are refused."))
+                entries.append(self._capability_entry(
+                    "Create git commits · asks before every commit", "git_commit",
+                    displayed_on("git.commit", grants.get("git.commit", {})),
+                    "The assistant can propose a commit. You review the exact files, message and "
+                    "diff. Hooks never run and nothing is pushed."))
             command_sandbox = sandbox_executable()
             if command_sandbox:
                 command_grant = grants.get("workspace.command.run", {})
@@ -3567,6 +3627,31 @@ class TUIApp(App):
                              else "  File edits turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
                 self._append(f"  Edit permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
+    async def _change_git_grant(self, commit: bool, enabled: bool) -> None:
+        actions = ("git.commit",) if commit else ("git.status", "git.diff")
+        if commit:
+            title = "Allow git commits in this workspace?" if enabled else "Turn off git commits?"
+            body = ("The assistant may propose commits. Each one shows its files, message and diff "
+                    "and is created only if you approve it. Hooks never run and nothing is pushed."
+                    if enabled else "No commit can be created from ISyCode in this workspace.")
+        else:
+            title = "Let ISyCode see git status and diffs?" if enabled else "Hide git status and diffs?"
+            body = ("The assistant may read the branch, changed files and diffs. Sensitive files "
+                    "stay hidden." if enabled else "The assistant can no longer read git state here.")
+        if not await self._await_screen(TailscaleConfirmScreen(
+                title, body, ("Allow" if enabled else "Turn off"))):
+            self._open_authority_menu()
+            return
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            for action in actions:
+                authority.set_grant(action, enabled=enabled)
+            self._append(f"  Git {'commits' if commit else 'status and diffs'} "
+                         f"{'allowed' if enabled else 'turned off'} for this workspace.", GREEN)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Git permission could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()
 
     async def _change_command_grant(self, enabled: bool) -> None:
@@ -4131,6 +4216,8 @@ class TUIApp(App):
                 operation = self._change_workspace_write_grant(turn_on)
             elif value == "workspace_command":
                 operation = self._change_command_grant(turn_on)
+            elif value in {"git_read", "git_commit"}:
+                operation = self._change_git_grant(value == "git_commit", turn_on)
             elif value == "sessions":
                 operation = self._change_session_grant(turn_on)
             elif value.startswith("network:"):
@@ -5042,6 +5129,27 @@ class TUIApp(App):
         async def _undo_cmd(app: "TUIApp", arg: str) -> None:
             await app._undo_last_change()
 
+        async def _git_cmd(app: "TUIApp", arg: str) -> None:
+            app._append(await app._git_tool("git_status", {}), MUTED)
+
+        async def _diff_cmd(app: "TUIApp", arg: str) -> None:
+            parts = arg.split()
+            staged = "--staged" in parts
+            paths = [part for part in parts if part != "--staged"]
+            result = json.loads(await app._git_tool(
+                "git_diff", {"path": paths[0] if paths else ".", "staged": staged}))
+            if "diff" in result:
+                chat = app.query_one(ChatArea)
+                chat.mount(Static(Syntax(result["diff"] or "(no changes)", "diff",
+                                         theme="monokai", word_wrap=True)))
+                chat.scroll_end(animate=False)
+
+        async def _commit_cmd(app: "TUIApp", arg: str) -> None:
+            if not arg.strip():
+                app._append("  Usage: /commit <message> · commits every changed file after review", MUTED)
+                return
+            await app._git_tool("git_commit", {"message": arg.strip()})
+
         async def _compact_cmd(app: "TUIApp", arg: str) -> None:
             await app._compact_conversation()
 
@@ -5314,6 +5422,9 @@ class TUIApp(App):
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
+                PluginCommand("git", "show git branch and changed files", _git_cmd),
+                PluginCommand("diff", "show the git diff (optional path, --staged)", _diff_cmd),
+                PluginCommand("commit", "commit changed files after reviewing the diff", _commit_cmd),
                 PluginCommand("help", "list commands", _help_cmd),
                 PluginCommand("session", "show current workspace, provider, and chat role", _session_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
@@ -5535,7 +5646,8 @@ class TUIApp(App):
         tool_call_id = call.get("id") if isinstance(call, dict) else ""
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
-        if name not in TOOL_ACTIONS and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME}:
+        if (name not in TOOL_ACTIONS and name not in GIT_TOOL_NAMES
+                and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME}):
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
             return tool_call_id, json.dumps(outcome)
@@ -5555,6 +5667,8 @@ class TUIApp(App):
             return tool_call_id, await self._dispatch_write_tool(arguments, edit=name == EDIT_TOOL_NAME)
         if name == COMMAND_TOOL_NAME:
             return tool_call_id, await self._run_workspace_command(arguments)
+        if name in GIT_TOOL_NAMES:
+            return tool_call_id, await self._git_tool(name, arguments)
         action_id = TOOL_ACTIONS[name]
         target = arguments.get("path", ".")
         self._append(f"  Tool requested · {action_id} · {target}", CYAN)
@@ -5604,6 +5718,60 @@ class TUIApp(App):
             return False
         return displayed_on("workspace.files.write", grant,
                             str(self._workspace_root) in grant.get("path_prefixes", []))
+
+    def _git_enabled(self, commit: bool = False) -> bool:
+        if git_executable() is None or not self._workspace_chat_tools_enabled():
+            return False
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        actions = ("git.commit",) if commit else ("git.status", "git.diff")
+        return all(displayed_on(action, grants.get(action, {})) for action in actions)
+
+    async def _git_tool(self, name: str, arguments: dict) -> str:
+        """git_status / git_diff read through GitOwner; git_commit shows the diff first."""
+        owner = GitOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                         self._action_approvals)
+        if name == "git_status":
+            outcome = await asyncio.to_thread(owner.status)
+        elif name == "git_diff":
+            path, staged = arguments.get("path", "."), arguments.get("staged", False)
+            if not isinstance(path, str) or not isinstance(staged, bool):
+                return json.dumps({"error": "path must be a string and staged a boolean"})
+            outcome = await asyncio.to_thread(owner.diff, path, staged)
+        else:
+            message, paths = arguments.get("message"), arguments.get("paths")
+            try:
+                preview = await asyncio.to_thread(owner.preview_commit, message, paths)
+            except (OSError, ValueError) as exc:
+                reason = str(exc)[:200] or type(exc).__name__
+                self._append(f"  Commit not proposed · {reason}", YELLOW)
+                return json.dumps({"error": "commit cannot be proposed", "reason": reason})
+            self._append(f"  Commit requested · {len(preview.paths)} files · review it", CYAN)
+            if not await self._await_screen(CommitApprovalScreen(preview)):
+                self._append("  Commit rejected · nothing was committed", MUTED)
+                return json.dumps({"status": "rejected_by_user"})
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+            outcome = await asyncio.to_thread(owner.commit, preview, approval)
+        action = {"git_status": "git.status", "git_diff": "git.diff"}.get(name, "git.commit")
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            self._append(f"  Git {outcome.decision} · {action} · {outcome.reason[:180]}", YELLOW)
+            return json.dumps({"error": "ISyCode denied the git action", "reason": outcome.reason[:300]})
+        if action == "git.status":
+            result = json.loads(outcome.text)
+            changes = result["changes"]
+            self._append(f"  Git · {result['branch']} · "
+                         + (f"{len(changes)} changed file{'s' if len(changes) != 1 else ''}"
+                            if changes else "clean"), GREEN)
+            for entry in changes[:40]:
+                self._append(f"    {entry['status']} {entry['path']}", MUTED)
+        elif action == "git.commit":
+            commit_id = json.loads(outcome.text)["commit"][:12]
+            self._append(f"  Committed {commit_id} · receipt {outcome.receipt.receipt_id}", GREEN)
+        else:
+            self._append(f"  Git ALLOW · {action} · receipt {outcome.receipt.receipt_id}", GREEN)
+        return outcome.text
 
     def _command_tool_enabled(self) -> bool:
         """Commands need the read tools plus a grant for the current sandbox executable."""
@@ -5776,6 +5944,12 @@ class TUIApp(App):
                       else CHAT_WORKSPACE_TOOLS if tools_active else None)
         if command_active:
             chat_tools = chat_tools + [COMMAND_TOOL]
+        git_read_active = tools_active and self._git_enabled()
+        git_commit_active = tools_active and self._git_enabled(commit=True)
+        if git_read_active:
+            chat_tools = chat_tools + GIT_TOOLS
+        if git_commit_active:
+            chat_tools = chat_tools + [GIT_COMMIT_TOOL]
         if not workspace_tools_granted:
             tool_availability = (
                 "Settings → Authority & Security is where the user can explicitly grant bounded read-only access. "
@@ -5800,6 +5974,9 @@ class TUIApp(App):
                "network; the user approves each exact command. Use it to run tests, builds or "
                "linters when useful, and report the real exit code. "
                if command_active else "")
+            + ("git_status and git_diff show the repository state. " if git_read_active else "")
+            + ("git_commit proposes a commit the user reviews and approves; never claim a "
+               "commit exists unless the tool result shows its id. " if git_commit_active else "")
             if tools_active else
             "No action tools are enabled for this workspace. Never emit JSON, XML, or code "
             "pretending to call a tool. " + tool_availability

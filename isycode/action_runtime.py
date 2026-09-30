@@ -102,6 +102,14 @@ COMMAND_MAX_ARGV_CHARS = 16_384
 COMMAND_MAX_TIMEOUT_S = 600
 COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
+GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
+GIT_PARAMETER_KEYS = {
+    "git.status": frozenset({"git", "workspace_root"}),
+    "git.diff": frozenset({"git", "workspace_root", "staged", "path"}),
+    "git.commit": frozenset({"git", "workspace_root", "message", "paths", "diff_sha256"}),
+}
+GIT_MAX_COMMIT_PATHS = 200
+GIT_MAX_MESSAGE_CHARS = 4000
 
 # Actions with no Secure execution owner are explicit denials in the owner
 # binding check. A catalog addition is not enabled by adding a workspace grant.
@@ -172,6 +180,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
                                    "TailscalePrivateServeBoundary"}),
     "mobile_host": frozenset({"MobileHostBoundary"}),
     "workspace_command": frozenset({"CommandProcessBoundary"}),
+    "workspace_git": frozenset({"GitBoundary"}),
 }
 
 
@@ -200,6 +209,7 @@ OWNER_ACTIONS = {
     "tailscale_serve": frozenset({"tailscale.serve.enable", "tailscale.serve.disable"}),
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
     "workspace_command": frozenset({"workspace.command.run"}),
+    "workspace_git": GIT_ACTIONS,
 }
 
 
@@ -436,6 +446,45 @@ class CommandProcessSystembility:
             self.name, True,
             "one reviewed argv in a sandbox: only the workspace is writable, sensitive paths are "
             "masked and socket syscalls are denied")
+
+
+class GitSystembility:
+    """Allow git status/diff/commit only for the workspace repository and a system git."""
+
+    name = "GitBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in GIT_ACTIONS:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        if set(params) != GIT_PARAMETER_KEYS[request.action_id]:
+            return SystembilityResult(self.name, False, "git request shape is not the reviewed one")
+        if (request.target != str(request.workspace_root)
+                or params.get("workspace_root") != str(request.workspace_root)):
+            return SystembilityResult(self.name, False, "git request must target the workspace repository")
+        if not sandbox_program_valid(params.get("git"), "git"):
+            return SystembilityResult(self.name, False, "git must be the system git executable")
+        if request.action_id == "git.diff":
+            if (type(params.get("staged")) is not bool
+                    or not command_relative_path_valid(params.get("path"), allow_root=True)):
+                return SystembilityResult(self.name, False, "git diff scope is invalid")
+        elif request.action_id == "git.commit":
+            message = params.get("message")
+            paths = params.get("paths")
+            if (not isinstance(message, str) or not message.strip() or "\x00" in message
+                    or len(message) > GIT_MAX_MESSAGE_CHARS):
+                return SystembilityResult(self.name, False, "commit message is invalid")
+            if (not isinstance(paths, tuple) or not 1 <= len(paths) <= GIT_MAX_COMMIT_PATHS
+                    or len(set(paths)) != len(paths)
+                    or not all(command_relative_path_valid(path) for path in paths)):
+                return SystembilityResult(self.name, False, "commit paths must be non-sensitive workspace files")
+            digest = params.get("diff_sha256")
+            if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                return SystembilityResult(self.name, False, "commit must be bound to its reviewed diff")
+        return SystembilityResult(
+            self.name, True,
+            "workspace repository only; repository-defined programs and hooks are refused")
 
 
 class ProviderNetworkSystembility:
@@ -1265,7 +1314,7 @@ class ProductActionGate:
             TailscalePackageSystembility(tailscale_facts),
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
-            MobileHostSystembility(), CommandProcessSystembility(),
+            MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
