@@ -47,6 +47,11 @@ from isycode.action_runtime import (
     LocalWorkspaceReadOwner, ProviderNetworkOwner,
     LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
+from isycode.actions import ACTION_BY_ID
+from isycode.authority_view import (
+    MOBILE_HOST_ADDRESS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
+    mobile_host_saved, other_saved_grants,
+)
 from isycode.action_audit import ActionAuditJournal
 from isycode.broker import (
     BrokerManagementOwner, BrokerPreviewOwner, BrokerProvisionOwner, BrokerRegistry,
@@ -1696,22 +1701,10 @@ class TUIApp(App):
         self._mobile_host_owner = owner
         try:
             grants = authority.policy().get("grants", {})
-            start_grant = grants.get("mobile.host.start", {})
-            pair_grant = grants.get("mobile.pair", {})
-            if (start_grant.get("enabled") is not True
-                    or "127.0.0.1:8765" not in start_grant.get("network_hosts", [])
-                    or pair_grant.get("enabled") is not True
-                    or "mobile-host" not in pair_grant.get("targets", [])):
-                accepted = await self.push_screen_wait(TailscaleConfirmScreen(
-                    "Grant Mobile Host for this workspace",
-                    "Allow `mobile.host.start` only at 127.0.0.1:8765 and `mobile.pair` only for the one-use Mobile Host pairing challenge. The listener remains loopback-only. Pair-issued tokens can read the runtime inventory, request runtime selection, and send heartbeats; they cannot read files, execute runtimes, or access sessions.",
-                    "Grant these two actions"))
-                if not accepted:
+            if not mobile_host_enabled(grants):
+                if not await self._grant_mobile_host(authority):
                     self._append("  Mobile Host grant cancelled; no listener started.", MUTED)
                     return
-                authority.set_grant("mobile.host.start", enabled=True,
-                                    network_hosts=["127.0.0.1:8765"])
-                authority.set_grant("mobile.pair", enabled=True, targets=["mobile-host"])
             request = owner.start_request()
             if not await self.push_screen_wait(TailscaleConfirmScreen(
                     "Start Mobile Host", "Start the ISyCode Mobile Host on loopback only: "
@@ -2885,9 +2878,10 @@ class TUIApp(App):
             grants = policy.get("grants", {})
             readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search",
                             "workspace.context.inject"}
-            read_enabled = all(bool(grants.get(action, {}).get("enabled"))
-                               and str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", [])
-                               for action in readonly_ids)
+            read_enabled = all(displayed_on(
+                action, grants.get(action, {}),
+                str(self._workspace_root) in grants.get(action, {}).get("path_prefixes", []))
+                for action in readonly_ids)
             entries.append(self._capability_entry(
                 "Read and search workspace files", "workspace_read", read_enabled,
                 "Lets ISyCode list, read, and find files here. It cannot change or delete them."))
@@ -2904,9 +2898,9 @@ class TUIApp(App):
             except ValueError:
                 provider_host = "invalid endpoint"
             network_grant = grants.get("provider.request", {})
-            provider_network_enabled = (
-                network_grant.get("enabled", False)
-                and provider_host in network_grant.get("network_hosts", []))
+            provider_network_enabled = displayed_on(
+                "provider.request", network_grant,
+                provider_host in network_grant.get("network_hosts", []))
             if provider_host and provider_host != "invalid endpoint":
                 entries.append(self._capability_entry(
                     "Connect to the selected AI model", "provider", provider_network_enabled,
@@ -2928,8 +2922,8 @@ class TUIApp(App):
             try:
                 invoke_target = GatewayMCPInvocationOwner.target_for(gateway_url)
                 mcp_grant = grants.get("mcp.invoke", {})
-                invoke_enabled = (bool(mcp_grant.get("enabled"))
-                                  and invoke_target in mcp_grant.get("targets", []))
+                invoke_enabled = displayed_on("mcp.invoke", mcp_grant,
+                                              invoke_target in mcp_grant.get("targets", []))
                 entries.append(self._capability_entry(
                     "Run a Gateway tool", "gateway_invoke", invoke_enabled,
                     "You will review the tool and its details, then approve each run separately."))
@@ -2941,8 +2935,8 @@ class TUIApp(App):
             if lsp_server and lsp_server.get("state") == "sandbox_ready":
                 lsp_grant = grants.get("lsp.start", {})
                 sandbox_executable = lsp_server["sandbox_executable"]
-                lsp_enabled = (bool(lsp_grant.get("enabled"))
-                               and sandbox_executable in lsp_grant.get("executables", []))
+                lsp_enabled = displayed_on("lsp.start", lsp_grant,
+                                           sandbox_executable in lsp_grant.get("executables", []))
                 entries.append(self._capability_entry(
                     "Local code help", "lsp", lsp_enabled,
                     "Uses the protected language helper to find code symbols on this computer."))
@@ -2960,6 +2954,26 @@ class TUIApp(App):
                 entries.append(self._entry(
                     "Optional integrations · not set up", "info", "",
                     "You can connect these later from Settings."))
+            mobile_on = mobile_host_enabled(grants)
+            partial = not mobile_on and mobile_host_saved(grants)
+            entries.append(self._capability_entry(
+                "Mobile Host on this computer" + (" · partial saved grant" if partial else ""),
+                "mobile_host", mobile_on,
+                f"Lets ISyCode start the loopback Mobile Host at {MOBILE_HOST_ADDRESS} and accept "
+                "one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; "
+                "they cannot read files, run tools, or open sessions. Starting still asks first."))
+            saved = other_saved_grants(grants)
+            if saved:
+                entries.append(self._entry("— Other saved permissions —", "info", "",
+                                           "Every other permission saved for this workspace."))
+            for row in saved:
+                if row.state == "on":
+                    state = "ON · asks before each use" if row.approval_required else "ON"
+                else:
+                    state = "blocked · no Secure owner · saved grant ignored"
+                entries.append(self._entry(
+                    f"{row.label} · {state}", "authority_saved_grant", row.action_id,
+                    f"Scope: {row.scope}. Select to remove this saved permission."))
         except (WorkspaceAuthorityError, OSError, ValueError):
             entries.append(self._entry(
                 "Protection settings are unavailable · everything stays off", "info"))
@@ -2988,7 +3002,7 @@ class TUIApp(App):
             entries.append(self._entry(f"{label} · not ready yet", "info"))
             return
         grant = grants.get(action_id, {})
-        enabled = bool(grant.get("enabled")) and host in grant.get("network_hosts", [])
+        enabled = displayed_on(action_id, grant, host in grant.get("network_hosts", []))
         payload = json.dumps({"action_id": action_id, "label": label, "url": url})
         entries.append(self._capability_entry(label, f"network:{payload}", enabled, detail))
 
@@ -3070,6 +3084,66 @@ class TUIApp(App):
                     f"  {'Granted' if enabled else 'Revoked'} {label} access for {host}.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  Network grant could not be saved; access remains denied.", RED)
+        self._open_authority_menu()
+
+    async def _grant_mobile_host(self, authority: WorkspaceAuthority) -> bool:
+        """Ask once, then save exactly the two scoped Mobile Host grants."""
+        accepted = await self.push_screen_wait(TailscaleConfirmScreen(
+            "Grant Mobile Host for this workspace",
+            f"Allow `mobile.host.start` only at {MOBILE_HOST_ADDRESS} and `mobile.pair` only for the "
+            "one-use Mobile Host pairing challenge. The listener binds loopback only; if a private "
+            "Tailscale route to it is enabled, tailnet devices can reach it through that route. "
+            "Pair-issued tokens can read the runtime inventory, request runtime selection, and send "
+            "heartbeats; they cannot read files, execute runtimes, or access sessions.",
+            "Grant these two actions"))
+        if not accepted:
+            return False
+        authority.set_grant("mobile.host.start", enabled=True,
+                            network_hosts=[MOBILE_HOST_ADDRESS])
+        authority.set_grant("mobile.pair", enabled=True, targets=[MOBILE_PAIR_TARGET])
+        return True
+
+    async def _change_mobile_host_grant(self, enabled: bool) -> None:
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            if enabled:
+                if await self._grant_mobile_host(authority):
+                    self._append("  Mobile Host granted for this workspace. Starting it still asks first.", GREEN)
+                else:
+                    self._append("  Mobile Host grant cancelled; nothing changed.", MUTED)
+            elif await self.push_screen_wait(TailscaleConfirmScreen(
+                    "Revoke Mobile Host for this workspace",
+                    "Remove the saved `mobile.host.start` and `mobile.pair` grants. New starts and "
+                    "new pairing are denied. A host already running keeps serving devices paired "
+                    "earlier until ISyCode exits; their tokens still expire within an hour.",
+                    "Revoke both grants")):
+                authority.set_grant("mobile.host.start", enabled=False, network_hosts=[])
+                authority.set_grant("mobile.pair", enabled=False, targets=[])
+                self._append("  Mobile Host grants revoked for this workspace.", GREEN)
+            else:
+                self._append("  Mobile Host grants unchanged.", MUTED)
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            self._append("  Mobile Host grants could not be changed; starts and pairing stay denied "
+                         "unless a valid saved grant remains.", RED)
+        self._open_authority_menu()
+
+    async def _remove_saved_grant(self, action_id: str) -> None:
+        if action_id not in ACTION_BY_ID:
+            self._append("  Unknown permission; nothing changed.", YELLOW)
+            return
+        action = ACTION_BY_ID[action_id]
+        if await self.push_screen_wait(TailscaleConfirmScreen(
+                "Remove saved permission",
+                f"Remove the saved permission for {action.group} · {action.label} "
+                f"(`{action_id}`) in this workspace, including its saved scope?",
+                "Remove permission")):
+            try:
+                WorkspaceAuthority(self._workspace_root).set_grant(
+                    action_id, enabled=False, path_prefixes=[], network_hosts=[],
+                    executables=[], targets=[])
+                self._append(f"  Saved permission removed · {action_id}.", GREEN)
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                self._append("  Saved permission could not be removed.", RED)
         self._open_authority_menu()
 
     async def _change_mcp_invocation_grant(self, enabled: bool) -> None:
@@ -3532,12 +3606,18 @@ class TUIApp(App):
                     return
                 operation = self._change_lsp_process_grant(
                     server["sandbox_executable"], turn_on)
+            elif value == "mobile_host":
+                operation = self._change_mobile_host_grant(turn_on)
             elif value.startswith("network:"):
                 operation = self._change_network_action_grant(value[len("network:"):], turn_on)
             else:
                 self._append("  This option is unavailable; nothing changed.", YELLOW)
                 return
             self.run_worker(operation, exclusive=True, group="authority-grant")
+            return
+        if kind == "authority_saved_grant":
+            self.run_worker(self._remove_saved_grant(value), exclusive=True,
+                            group="authority-grant")
             return
         if kind == "bridge_settings":
             self._open_bridge_settings()

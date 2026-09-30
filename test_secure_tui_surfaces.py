@@ -83,6 +83,40 @@ def test_authority_settings_does_not_claim_unwired_session_owner_is_connected():
     assert "Delete conversations" not in menu_source
 
 
+def test_authority_settings_never_presents_an_explicit_deny_as_granted():
+    from isycode.action_runtime import EXPLICIT_DENY_ACTIONS
+    from isycode.actions import ACTION_CATALOG
+    from isycode.authority_view import OWNED_ACTIONS, displayed_on, grant_state
+
+    saved = {"enabled": True, "path_prefixes": ["/w"], "network_hosts": ["h"],
+             "executables": ["/bin/x"], "targets": ["t"]}
+    for action in ACTION_CATALOG:
+        if action.id in EXPLICIT_DENY_ACTIONS or action.id not in OWNED_ACTIONS:
+            assert grant_state(action.id, saved) == "blocked", action.id
+            assert displayed_on(action.id, saved) is False, action.id
+        else:
+            assert grant_state(action.id, saved) == "on", action.id
+            assert displayed_on(action.id, saved, scoped=False) is False, action.id
+    assert grant_state("mobile.host.start", saved) == "on"
+    assert grant_state("session.create", saved) == "blocked"
+
+
+def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
+    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    app = next(node for node in module.body
+               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+    methods = {node.name: node for node in app.body
+               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    source = SOURCE.read_text(encoding="utf-8")
+    for name in ("_open_authority_menu", "_append_network_grant_entry"):
+        segment = ast.get_source_segment(source, methods[name])
+        # Raw `enabled` flags must never decide an ON label on their own.
+        assert '.get("enabled")' not in segment, name
+        assert 'get("enabled", False)' not in segment, name
+    calls = _method_calls(methods["_open_authority_menu"])
+    assert {"displayed_on", "mobile_host_enabled", "other_saved_grants"} <= calls
+
+
 def test_authority_capability_indicator_uses_clear_green_and_red_states():
     from isycode.tui import _authority_capability_label
 
