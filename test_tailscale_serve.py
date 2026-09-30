@@ -121,6 +121,26 @@ def test_enable_preview_shows_exact_private_route_and_operation(setup):
     assert preview.request.parameters["funnel"] is False
 
 
+def test_mobile_route_preview_targets_only_the_mobile_host(setup):
+    root, cli, adapter, runner, authority, approvals, store, _ = setup
+    mobile_url = "http://127.0.0.1:8765"
+    adapter.snapshot = replace(adapter.snapshot, gateway_url=mobile_url)
+    owner = TailscaleServeOwner(
+        root, authority, approvals, adapter=adapter, state_store=store,
+        runner=runner, gateway_port=8765, route_id="isycode-mobile-host",
+        service_label="Mobile Host")
+
+    preview = owner.preview_enable()
+
+    assert preview.route == ServeRoute(HOST, PATH, mobile_url, True)
+    assert preview.request.parameters["route_id"] == "isycode-mobile-host"
+    assert preview.request.parameters["gateway_port"] == 8765
+    assert preview.argv[-1] == mobile_url
+    assert "Mobile Host" in preview.description
+    assert "127.0.0.1:8787" not in preview.description
+    assert runner.calls == []
+
+
 def test_enable_requires_fresh_approval_then_verifies_and_records_route(setup):
     preview, approval = approve(setup, "tailscale.serve.enable")
     owner = setup[-1]
@@ -220,6 +240,21 @@ def test_enable_rejects_non_loopback_gateway_and_unverified_health(setup):
     setup[2].snapshot = replace(setup[2].snapshot, gateway_url=GATEWAY, gateway_healthy=False)
     with pytest.raises(ValueError, match="health"):
         setup[-1].preview_enable()
+
+
+def test_mobile_host_health_failure_explains_how_to_recover(setup):
+    root, _, adapter, runner, authority, approvals, store, _ = setup
+    adapter.snapshot = replace(adapter.snapshot,
+                               gateway_url="http://127.0.0.1:8765",
+                               gateway_healthy=False)
+    owner = TailscaleServeOwner(
+        root, authority, approvals, adapter=adapter, state_store=store,
+        runner=runner, gateway_port=8765, route_id="isycode-mobile-host",
+        service_label="Mobile Host")
+
+    with pytest.raises(ValueError, match=r"127\.0\.0\.1:8765.*Start it from Settings"):
+        owner.preview_enable()
+    assert runner.calls == []
 
 
 def test_enable_requires_complete_live_inventory(setup):

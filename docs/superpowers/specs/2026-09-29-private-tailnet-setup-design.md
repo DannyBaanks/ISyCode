@@ -1,16 +1,18 @@
 # ISyCode private tailnet setup — design
 
-**Status:** Draft for user review; no implementation authorized yet  
-**Date:** 2026-09-29  
-**Scope:** Guided private access to the locally running ISyCo Gateway from a
-user's own tailnet, managed from ISyCode Settings.
+**Status:** Implemented in the private worktree for review; live Serve remains opt-in and unverified
+**Date:** 2026-09-29
+**Scope:** Guided private access from a user's own tailnet to the local ISyCode
+Mobile Host, managed from ISyCode Settings. The Tailscale owner remains
+parameterized and can preserve a Gateway route separately.
 
 ## Goal
 
 Let a user follow a clear, observable setup flow in the TUI to install or
 detect Tailscale, authenticate this PC into their own tailnet, and privately
-serve the local Gateway to their other authorized devices. Each PC remains its
-own host. ISyCode does not need a central public server.
+serve the loopback Mobile Host at `127.0.0.1:8765` under `/isycode` to their
+other authorized devices. Each PC remains its own host. ISyCode does not need a
+central public server.
 
 Automation is welcome for installations, tunnel setup, MCP setup, and future
 integrations. It never overrides the user's final approval: every state
@@ -22,7 +24,7 @@ IsySentinel, a concrete preview, and a fresh one-use approval where required.
 Entry point: **Settings → Remote access → Private access (Tailscale)**.
 
 1. **Preflight — read only.** Detect OS/distribution, Tailscale CLI and daemon,
-   login state, local Gateway health, listener address, existing Serve config,
+   login state, local Mobile Host health, listener address, existing Serve config,
    and whether the proposed route conflicts. Show findings without starting,
    installing, or changing anything.
 2. **Choose how to install Tailscale.** For the first supported target
@@ -54,15 +56,15 @@ Entry point: **Settings → Remote access → Private access (Tailscale)**.
    flow, present its URL in the TUI, and wait for the user to finish browser
    authentication. ISyCode never asks for, stores, or logs the user's Tailscale
    password, OAuth token, or reusable auth key.
-4. **Preview private Serve.** Show the local Gateway target, resulting
+4. **Preview private Serve.** Show the local Mobile Host target, resulting
    tailnet-only hostname, TLS state, and the exact Serve configuration delta.
    If the existing Serve configuration is incompatible or cannot be safely
    preserved, stop and explain the conflict instead of replacing it.
 5. **Enable.** After a fresh approval, configure Serve in the background for
-   the Gateway's loopback listener. Keep the Gateway bound to loopback; do not
+   the Mobile Host's loopback listener. Keep the host bound to loopback; do not
    bind it to all network interfaces. Funnel/public sharing remains disabled.
 6. **Verify and show status.** Confirm the Serve configuration and local
-   Gateway health, then display `Private / Online`, the tailnet URL, target,
+   Mobile Host health at `/isycode/v1/health`, then display `Private / Online`, the tailnet URL, target,
    and last verification time. This checks connectivity only; it does not
    claim that a semantic operation passed local Authority or approval.
 7. **Disable.** Show which ISyCode-owned Serve mapping will be removed and ask
@@ -139,7 +141,7 @@ unrelated system state.
   credentials; provide retry and cancel.
 - **Serve conflict:** do not reset all Serve configuration. Show the conflict
   and leave the existing service untouched.
-- **Gateway unavailable:** do not enable Serve; show the local health failure.
+- **Mobile Host unavailable:** do not enable Serve; show the local health failure.
 - **Serve enable succeeds but verification fails:** report the exact owned
   route and offer its approved disable action. Do not claim remote reachability.
 - **Tailscale missing or unsupported OS:** keep private access disabled and
@@ -152,9 +154,9 @@ unrelated system state.
 - A hosted ISyCo control plane or shared ISyCo Tailscale account.
 - Automatically enrolling mobile devices or generating reusable Tailscale
   auth keys.
-- Starting the incomplete Mobile Host runtime/session API. This flow serves
-  the already-running local Gateway only; Mobile Host requires its own owner
-  and secure runtime contract.
+- Starting the incomplete Mobile Host runtime/session API. Serve reaches only
+  the loopback health and pairing routes; runtime/session operations remain
+  unavailable until their own owners and contracts exist.
 - Automatically approving Gateway semantic calls, file access, MCP tools, or
   provider requests.
 - Installing MCP servers or configuring MCP credentials in this change.
@@ -170,12 +172,12 @@ unrelated system state.
   the proper owner and explicit request-bound approval.
 - Package installation is restricted to supported official repositories and
   exact package names; no dynamic command or shell interpolation is accepted.
-- Serve maps only the Gateway loopback endpoint and is confirmed tailnet-only;
+- Serve maps only the Mobile Host loopback endpoint and is confirmed tailnet-only;
   Funnel remains off.
 - Enabling and disabling preserve unrelated Serve entries and are idempotent.
-- Restart/relaunch status is read from Tailscale and the local Gateway rather
+- Restart/relaunch status is read from Tailscale and the local Mobile Host rather
   than inferred from ISyCode's saved preference.
-- A real tailnet device can reach the Gateway over Serve; an outside device
+- A real tailnet device can reach Mobile Host over Serve; an outside device
   cannot. Gateway key/scope and ISyCode grants remain independently enforced.
 - Cancellation, denied privilege, stale approval, wrong executable, route
   drift, timeout, malformed CLI output, and service loss fail closed with a
@@ -198,7 +200,7 @@ unrelated system state.
 
 - **DEMONSTRATED (offline):** exact `/isycode` preview, Authority/IsySentinel binding, fresh approval, one-use receipt, enable/readback/disable, preservation of unrelated Web handlers, TCP listeners and Services, cancellation without mutation, and fail-closed route drift.
 - **DEMONSTRATED (UI smoke):** Settings renders the Private access branch and the missing-CLI install/manual choices in a temporary workspace. The smoke created no `.isyroot` and made no system change.
-- **NOT_DEMONSTRATED:** installing on a real host, completing browser login, enabling/disabling a real Serve route, reaching the Gateway from another tailnet device, rejecting access outside the tailnet, and rechecking Gateway API-key/workspace scopes over the tunnel.
+- **NOT_DEMONSTRATED:** installing on a real host, completing browser login, enabling/disabling a real Serve route, reaching Mobile Host from another tailnet device, rejecting access outside the tailnet, and checking the independent Gateway API-key/workspace scopes over the tunnel.
 - Additional providers, tunnel products and MCP managers remain future adapters with their own owner and approval design.
 
 **Review note:** The implementation exposes guided opt-in steps. No package installation,

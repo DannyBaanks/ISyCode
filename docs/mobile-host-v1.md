@@ -6,9 +6,14 @@ must not infer permission from discovery data.
 
 ## Implemented in this slice
 
-The Textual TUI starts an HTTP host on `127.0.0.1:8765` by default and stops it
-when the TUI exits. Settings shows host liveness, transport, the locally visible
-pairing PIN, active heartbeat clients, and the count of stored credentials.
+The Textual TUI can start the host on `127.0.0.1:8765` after an explicit
+workspace grant and request-bound approval. It remains loopback-only and stops
+when the owning TUI exits. Pairing exchange is gated by the `mobile.pair`
+owner; a valid, single-use PIN is the human-presence proof. Credential metadata
+and a durable result receipt are recorded before the one-time token is returned.
+If the receipt cannot be written, the new credential is revoked and pairing
+fails closed. Settings shows host liveness, transport, the locally visible
+pairing PIN, and active heartbeat clients.
 
 Configuration:
 
@@ -30,17 +35,25 @@ directory/file permissions. Raw API credentials are not persisted.
 
 ## HTTP routes
 
-All routes use the `/v1` version prefix. JSON errors use standard HTTP status
-codes and a short text reason.
+The host accepts both `/v1/...` and `/isycode/v1/...` forms for the mobile
+client. The configured client base URL will be
+`https://<verified-tailnet-name>/isycode`, so its health request is exactly
+`GET /isycode/v1/health`. Both host route forms are registered because the
+local Tailscale CLI help does not specify whether `--set-path` preserves or
+strips the mount prefix when proxying. That behavior remains to be verified
+from another tailnet device. ISyCode's TUI shows the exact route and requires a
+fresh approval before changing it. It does not enable Funnel or replace
+unrelated Serve routes. JSON errors use standard HTTP status codes and a short
+text reason.
 
 | Route | Auth | Current behavior |
 |---|---|---|
-| `GET /v1/health` | None | Minimal service/version/state probe; does not expose clients or pairing state. |
-| `GET /v1/status` | Bearer + `host:status` | Returns state, authenticated connected-client labels, and whether pairing is pending. Pair-issued credentials do not include this operator scope. |
-| `POST /v1/pair/exchange` | Pair PIN | Body: `{"code":"123456","device_name":"Danny's phone"}`. Returns `201` with `{api_key,key_id,expires_at,scopes}` once; PIN is invalidated. |
-| `GET /v1/runtimes` | Bearer + `runtime:read` | Lists known runtime commands, whether each command is installed, and `adapter: "pending"`, `selectable: false` for now. |
-| `POST /v1/runtimes/select` | Bearer + `runtime:select` | Validates JSON `runtime_id` and key runtime scope, then returns `409` because no remote runtime adapter is connected yet. |
-| `POST /v1/clients/heartbeat` | Bearer + `client:heartbeat` | Body: `{"client_id":"stable-device-id","device_name":"Danny's phone"}`. Renews a 45-second in-memory client lease. |
+| `GET /v1/health` and `GET /isycode/v1/health` | None | Minimal service/version/state probe; does not expose clients or pairing state. |
+| `GET /v1/status` and `/isycode/v1/status` | Bearer + `host:status` | Returns state, authenticated connected-client labels, and whether pairing is pending. Pair-issued credentials do not include this operator scope. |
+| `POST /v1/pair/exchange` and `/isycode/v1/pair/exchange` | Pair PIN | Body: `{"code":"123456","device_name":"Danny's phone"}`. Returns `201` with `{api_key,key_id,expires_at,scopes}` once; PIN is invalidated. The local `mobile.pair` grant and Sentinel decision must pass. |
+| `GET /v1/runtimes` and `/isycode/v1/runtimes` | Bearer + `runtime:read` | Lists known runtime commands, whether each command is installed, and `adapter: "pending"`, `selectable: false` for now. |
+| `POST /v1/runtimes/select` and `/isycode/v1/runtimes/select` | Bearer + `runtime:select` | Validates JSON `runtime_id` and key runtime scope, then returns `409` because no remote runtime adapter is connected yet. |
+| `POST /v1/clients/heartbeat` and `/isycode/v1/clients/heartbeat` | Bearer + `client:heartbeat` | Body: `{"client_id":"stable-device-id","device_name":"Danny's phone"}`. Renews a 45-second in-memory client lease. |
 
 Pair-issued credentials currently carry `runtime:read`, `runtime:select`, and
 `client:heartbeat`, scoped to the runtime wildcard. A heartbeat proves client
@@ -54,7 +67,10 @@ and approval flows exist.
 
 There is no remote session creation/resume, conversation history API, WebSocket
 event stream, runtime execution, tool approval endpoint, cancellation endpoint,
-key administration endpoint, or Tailscale integration in this slice. Runtime
+or key administration endpoint in this slice. The TUI has an owner-gated,
+private Tailscale Serve setup for the Mobile Host; actual remote access is not
+claimed until the route is explicitly approved and verified from another
+tailnet device. Runtime
 names in the catalog are inventory only; none is selectable. The mobile app
 must not present a runtime as ready or attempt chat/session calls against
 unimplemented routes. The existing mobile Bridge and pairings remain unchanged

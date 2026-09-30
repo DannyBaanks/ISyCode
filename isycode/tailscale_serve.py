@@ -28,6 +28,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 
 
 ROUTE_ID = "isycode-gateway"
+MOBILE_HOST_ROUTE_ID = "isycode-mobile-host"
 ROUTE_PATH = "/isycode"
 HTTPS_PORT = 443
 COMMAND_TIMEOUT = 15.0
@@ -52,7 +53,9 @@ class TailscaleServeOwner:
                  approvals: ActionApprovalStore, *, adapter: Any | None = None,
                  state_store: PrivateAccessStateStore | None = None,
                  runner: Callable = _bounded_run,
-                 gateway_port: int = DEFAULT_GATEWAY_PORT):
+                 gateway_port: int = DEFAULT_GATEWAY_PORT,
+                 route_id: str = ROUTE_ID,
+                 service_label: str = "Gateway"):
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
@@ -60,6 +63,8 @@ class TailscaleServeOwner:
         self.state_store = state_store or PrivateAccessStateStore()
         self.runner = runner
         self.gateway_port = gateway_port
+        self.route_id = route_id
+        self.service_label = service_label
 
     def _prepare(self, action_id: str) -> tuple[ServePreview, TailscaleAuthorityFacts]:
         if action_id not in {"tailscale.serve.enable", "tailscale.serve.disable"}:
@@ -81,7 +86,7 @@ class TailscaleServeOwner:
             raise ValueError("a verified Tailscale DNS name is required for private Serve")
         host = host.rstrip(".")
         state = self.state_store.load()
-        saved = tuple(route for route in state.owned_routes if route.route_id == ROUTE_ID)
+        saved = tuple(route for route in state.owned_routes if route.route_id == self.route_id)
         if len(saved) > 1:
             raise ValueError("private route ownership state is ambiguous")
 
@@ -89,9 +94,14 @@ class TailscaleServeOwner:
             gateway_url = snapshot.gateway_url
             if (not isinstance(gateway_url, str)
                     or gateway_url != f"http://127.0.0.1:{self.gateway_port}"):
-                raise ValueError("the configured loopback Gateway endpoint is unavailable")
+                raise ValueError(f"the configured loopback {self.service_label} endpoint is unavailable")
             if snapshot.gateway_healthy is not True:
-                raise ValueError("the configured loopback Gateway health check must pass")
+                if self.service_label == "Mobile Host":
+                    raise ValueError(
+                        "Mobile Host health is not reachable at 127.0.0.1:8765. "
+                        "Start it from Settings → Mobile host status, then retry."
+                    )
+                raise ValueError(f"the configured loopback {self.service_label} health check must pass")
             gateway_port = self.gateway_port
             route = ServeRoute(host, ROUTE_PATH, gateway_url, True)
             matches = tuple(item for item in snapshot.routes
@@ -112,9 +122,9 @@ class TailscaleServeOwner:
             operation = (executable, "serve", f"--https={HTTPS_PORT}",
                          f"--set-path={ROUTE_PATH}", "--bg", gateway_url)
             description = (
-                f"Add only https://{route.host}{route.path} -> {route.target} via private Tailscale Serve.\n"
+                f"Add only https://{route.host}{route.path} -> {route.target} ({self.service_label}) via private Tailscale Serve.\n"
                 f"Exact command: {' '.join(operation)}\n"
-                "The Gateway stays bound to loopback. Funnel/public access is disabled. "
+                "The local service stays bound to loopback. Funnel/public access is disabled. "
                 "Other Serve routes must remain unchanged.\n")
         else:
             if not saved:
@@ -144,7 +154,7 @@ class TailscaleServeOwner:
 
         facts = TailscaleAuthorityFacts(
             cli_executable=executable, gateway_url=gateway_url,
-            gateway_port=gateway_port, route_id=ROUTE_ID,
+            gateway_port=gateway_port, route_id=self.route_id,
             proposed_route=route, live_routes=snapshot.routes,
             serve_inventory_complete=True, owned_route=owned,
             serve_digest=snapshot.serve_digest,
@@ -153,7 +163,7 @@ class TailscaleServeOwner:
                                              route, operation)
         request = ActionRequest(action_id, self.root, "tailscale", {
             "executable": executable, "gateway_url": gateway_url,
-            "gateway_port": gateway_port, "route_id": ROUTE_ID,
+            "gateway_port": gateway_port, "route_id": self.route_id,
             "route_host": route.host, "route_path": route.path,
             "route_target": route.target, "serve_digest": snapshot.serve_digest,
             "serve_argv": operation, "serve_delta_digest": delta,
@@ -271,7 +281,7 @@ class TailscaleServeOwner:
         if preview.already_applied:
             if not enabling:
                 try:
-                    self.state_store.clear_owned_route(ROUTE_ID)
+                    self.state_store.clear_owned_route(self.route_id)
                 except (OSError, ValueError):
                     receipt = self._receipt(gate, preview.request, "FAILURE", "state_clear_failed")
                     return ActionOutcome("The stale route record could not be cleared.",
@@ -312,7 +322,7 @@ class TailscaleServeOwner:
                                     == self._unrelated_config(after, preview.route))
                 if route_present:
                     owned = OwnedServeRoute(
-                        ROUTE_ID, preview.route.host, preview.route.path,
+                        self.route_id, preview.route.host, preview.route.path,
                         preview.route.target,
                         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                         "online" if gateway_healthy else "offline")
@@ -343,7 +353,7 @@ class TailscaleServeOwner:
                 config_preserved = (self._unrelated_config(before, preview.route)
                                     == self._unrelated_config(after, preview.route))
                 if route_absent:
-                    self.state_store.clear_owned_route(ROUTE_ID)
+                    self.state_store.clear_owned_route(self.route_id)
                 if not route_absent or not preserved or not config_preserved:
                     receipt = self._receipt(gate, preview.request, "FAILURE",
                                             "route_removal_or_preservation_failed")
@@ -364,8 +374,8 @@ class TailscaleServeOwner:
         if receipt is None:
             return ActionOutcome("Tailscale Serve result is not verifiable.",
                                  "NOT_VERIFIABLE", None, "durable receipt unavailable")
-        message = (f"Private Gateway route enabled: https://{preview.route.host}{preview.route.path}"
-                   if enabling else "ISyCode-owned private Gateway route disabled.")
+        message = (f"Private {self.service_label} route enabled: https://{preview.route.host}{preview.route.path}"
+                   if enabling else f"ISyCode-owned private {self.service_label} route disabled.")
         return ActionOutcome(message, "ALLOW", receipt, event)
 
     def enable(self, preview: ServePreview,

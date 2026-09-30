@@ -23,6 +23,10 @@ from pathlib import Path
 from typing import Any
 
 from aiohttp import web
+from isycode.action_runtime import ActionReceipt, ProductActionGate
+from isycode.approvals import ActionApproval, ActionApprovalStore
+from isycode.security import ActionRequest
+from isycode.workspace_authority import WorkspaceAuthority
 
 
 PAIR_TTL_SECONDS = 5 * 60
@@ -182,7 +186,7 @@ class MobileHostStatus:
 class MobileHost:
     """Async HTTP control plane owned by a TUI or ``isycode host`` process."""
 
-    def __init__(self, *, key_store: ApiKeyStore | None = None):
+    def __init__(self, *, key_store: ApiKeyStore | None = None, pair_authorizer=None):
         self._key_store = key_store
         self.bind = os.environ.get("ISYCODE_MOBILE_HOST_BIND", "127.0.0.1").strip()
         try:
@@ -193,12 +197,15 @@ class MobileHost:
         self._site: web.TCPSite | None = None
         self._pair_digest: str | None = None
         self._pair_expires_at: float | None = None
+        self._pair_challenge_id: str | None = None
         self._pair_failures: dict[str, list[float]] = {}
         self._pair_global_failures: list[float] = []
         self._clients: dict[tuple[str, str], dict[str, Any]] = {}
         self._state = "stopped"
         self._error = ""
         self._ssl_context: ssl.SSLContext | None = None
+        self._pair_authorizer = pair_authorizer
+        self._pair_recorder = None
 
     @property
     def key_store(self) -> ApiKeyStore:
@@ -226,6 +233,7 @@ class MobileHost:
         self._pair_code = code
         self._pair_digest = hashlib.sha256(code.encode()).hexdigest()
         self._pair_expires_at = time.time() + PAIR_TTL_SECONDS
+        self._pair_challenge_id = secrets.token_hex(32)
         self._pair_failures.clear()
         self._pair_global_failures.clear()
         return code, self._pair_expires_at
@@ -268,6 +276,12 @@ class MobileHost:
                 web.get("/v1/runtimes", self._runtimes),
                 web.post("/v1/runtimes/select", self._select_runtime),
                 web.post("/v1/clients/heartbeat", self._heartbeat),
+                web.get("/isycode/v1/health", self._health),
+                web.get("/isycode/v1/status", self._status_endpoint),
+                web.post("/isycode/v1/pair/exchange", self._pair),
+                web.get("/isycode/v1/runtimes", self._runtimes),
+                web.post("/isycode/v1/runtimes/select", self._select_runtime),
+                web.post("/isycode/v1/clients/heartbeat", self._heartbeat),
             ])
             self._runner = web.AppRunner(app, access_log=None)
             await self._runner.setup()
@@ -292,6 +306,10 @@ class MobileHost:
         runner, self._runner, self._site = self._runner, None, None
         if runner is not None:
             await runner.cleanup()
+        self._pair_code = None
+        self._pair_digest = None
+        self._pair_challenge_id = None
+        self._pair_expires_at = None
         self._clients.clear()
         self._state = "stopped"
 
@@ -356,12 +374,21 @@ class MobileHost:
             raise web.HTTPUnauthorized(text="pairing code rejected")
         if not isinstance(label, str) or not 1 <= len(label) <= 96 or any(ord(ch) < 32 for ch in label):
             raise web.HTTPBadRequest(text="invalid device_name")
-        self._pair_digest = None
-        self._pair_expires_at = None
-        self._pair_code = None
+        challenge_id = self._pair_challenge_id
+        if self._pair_authorizer is None or not challenge_id or not self._pair_authorizer(
+                challenge_id, label):
+            raise web.HTTPForbidden(text="pairing is not authorized by the local host owner")
         key_id, api_key, expires_at = self.key_store.issue(
             f"paired · {label}", scopes=PAIR_SCOPES, runtimes=("*",),
             ttl_seconds=API_KEY_TTL_SECONDS)
+        self._pair_digest = None
+        self._pair_expires_at = None
+        self._pair_challenge_id = None
+        self._pair_code = None
+        if self._pair_recorder is None or not self._pair_recorder(
+                challenge_id, label, key_id, expires_at):
+            self.key_store.revoke(key_id)
+            raise web.HTTPServiceUnavailable(text="pairing result could not be recorded")
         return web.json_response({
             "api_key": api_key, "key_id": key_id,
             "expires_at": expires_at, "scopes": sorted(PAIR_SCOPES),
@@ -425,3 +452,71 @@ class MobileHost:
             "last_seen": time.time(),
         }
         return web.json_response({"accepted": True, "lease_seconds": CLIENT_TTL_SECONDS})
+
+
+class MobileHostOwner:
+    """Own MobileHost lifecycle through Workspace Authority and IsySentinel."""
+
+    def __init__(self, root: Path, authority: WorkspaceAuthority,
+                 approvals: ActionApprovalStore, host: MobileHost | None = None):
+        self.root = root.resolve(strict=True)
+        self.authority = authority
+        self.approvals = approvals
+        self.gate = ProductActionGate(self.root, authority, owner_id="mobile_host")
+        self.host = host or MobileHost(pair_authorizer=self.authorize_pair)
+        self.host._pair_authorizer = self.authorize_pair
+        self.host._pair_recorder = self.record_pair
+
+    def start_request(self) -> ActionRequest:
+        return ActionRequest("mobile.host.start", self.root, "127.0.0.1:8765",
+                             {"bind": "127.0.0.1", "port": 8765,
+                              "transport": "loopback"}, execution_owner="mobile_host")
+
+    async def authorize_and_launch(self, approval: ActionApproval) -> tuple[bool, str]:
+        if self.host.bind != "127.0.0.1" or self.host.port != 8765:
+            return False, "Secure TUI requires a loopback listener on port 8765"
+        request = self.start_request()
+        authority, decision = self.gate.authorize(
+            request, approvals=self.approvals, approval=approval)
+        if not authority.allowed or not decision.allowed:
+            reason = authority.reason if not authority.allowed else next(
+                (check.reason for check in decision.checks if not check.passed),
+                "IsySentinel denied the host start")
+            return False, reason
+        status = await self.host.start()
+        if not status.alive:
+            return False, status.error or "host did not become healthy"
+        result = json.dumps({"state": "ready", "bind": status.address,
+                             "port": status.port}, sort_keys=True)
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), request.action_id, request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(result.encode("utf-8")).hexdigest())
+        if not self.gate.persist_receipt(request, receipt):
+            try:
+                await self.host.stop()
+            except Exception:
+                return False, "host started but receipt failed and listener cleanup failed"
+            return False, "host start receipt could not be persisted; listener stopped"
+        return True, "Mobile Host started on loopback"
+
+    async def shutdown(self) -> None:
+        """Release the loopback listener when the owning TUI exits."""
+        await self.host.stop()
+
+    def authorize_pair(self, challenge_id: str, device_name: str) -> bool:
+        request = ActionRequest("mobile.pair", self.root, "mobile-host", {
+            "challenge_id": challenge_id, "device_name": device_name,
+        }, execution_owner="mobile_host")
+        authority, decision = self.gate.authorize(request)
+        return authority.allowed and decision.allowed
+
+    def record_pair(self, challenge_id: str, device_name: str,
+                    key_id: str, expires_at: float) -> bool:
+        request = ActionRequest("mobile.pair", self.root, "mobile-host", {
+            "challenge_id": challenge_id, "device_name": device_name,
+        }, execution_owner="mobile_host")
+        result = f"paired:{key_id}:{expires_at:.3f}:runtime:read,runtime:select,client:heartbeat"
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "mobile.pair", request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(result.encode("utf-8")).hexdigest())
+        return self.gate.persist_receipt(request, receipt)

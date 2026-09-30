@@ -119,7 +119,8 @@ def _gateway_health(url: str) -> bool:
         # Tailscale Serve terminates HTTPS before proxying to this loopback
         # Gateway. Mirror that trusted proxy signal so the Gateway's HTTPS
         # enforcement does not report a healthy tunnel backend as offline.
-        connection.request("GET", "/health", headers={"X-Forwarded-Proto": "https"})
+        connection.request("GET", parsed.path or "/health",
+                           headers={"X-Forwarded-Proto": "https"})
         response = connection.getresponse()
         response.read(1024)
         return response.status == 200
@@ -251,12 +252,16 @@ class TailscaleAdapter:
     def __init__(self, runner: Callable = _bounded_run, platform: str | None = None,
                  gateway_probe: Callable[[str], bool] = _gateway_health,
                  gateway_url: str | None = None,
-                 gateway_port: int = DEFAULT_GATEWAY_PORT):
+                 gateway_port: int = DEFAULT_GATEWAY_PORT,
+                 gateway_health_path: str = "/health"):
         self._runner = runner
         self._platform = sys.platform if platform is None else platform
         self._gateway_probe = gateway_probe
         self._gateway_url = gateway_url or os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787")
         self._gateway_port = gateway_port
+        if gateway_health_path not in {"/health", "/v1/health", "/isycode/v1/health"}:
+            raise ValueError("health path must be an absolute local URL path")
+        self._gateway_health_path = gateway_health_path
 
     def _run(self, executable: str, command: tuple[str, ...]) -> TailscaleCommandResult:
         if command not in READ_COMMANDS:
@@ -325,7 +330,8 @@ class TailscaleAdapter:
             if dns is not None and (not isinstance(dns, str) or len(dns) > 253):
                 raise ValueError("invalid Tailscale DNS name")
             dns = dns.rstrip(".") if dns else None
-            healthy = bool(gateway_url and self._gateway_probe(gateway_url + "/health"))
+            healthy = bool(gateway_url and self._gateway_probe(
+                gateway_url + self._gateway_health_path))
             if tuple(map(int, match.groups())) < (1, 52):
                 return TailscaleSnapshot(state, executable=executable, version=version,
                     dns_name=dns, gateway_url=gateway_url, gateway_healthy=healthy)
