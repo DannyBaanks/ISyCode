@@ -28,8 +28,8 @@ from pathlib import Path
 from typing import Any
 
 from isycode.action_runtime import (
-    MAX_WRITE_BYTES, WRITE_PROTECTED_NAMES, ActionOutcome, ActionReceipt, ProductActionGate,
-    WorkspaceReadSystembility,
+    MAX_MOVE_BYTES, MAX_WRITE_BYTES, WRITE_PROTECTED_NAMES, ActionOutcome, ActionReceipt,
+    ProductActionGate, WorkspaceReadSystembility,
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
@@ -68,6 +68,27 @@ EDIT_TOOL = {"type": "function", "function": {
     }, "required": ["path", "old_text", "new_text"], "additionalProperties": False},
 }}
 
+DELETE_TOOL_NAME = "workspace_delete"
+DELETE_TOOL = {"type": "function", "function": {
+    "name": DELETE_TOOL_NAME,
+    "description": ("Propose deleting one UTF-8 text file (up to 128 KiB) in the workspace. The "
+                    "user sees the full content being removed and must approve; /undo restores it."),
+    "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "Workspace-relative file path."},
+    }, "required": ["path"], "additionalProperties": False},
+}}
+MOVE_TOOL_NAME = "workspace_move"
+MOVE_TOOL = {"type": "function", "function": {
+    "name": MOVE_TOOL_NAME,
+    "description": ("Propose moving or renaming one file (up to 16 MiB) inside the workspace. "
+                    "The destination must not exist; missing folders are created. The user "
+                    "must approve; /undo moves it back."),
+    "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "Current workspace-relative file path."},
+        "to": {"type": "string", "description": "New workspace-relative file path."},
+    }, "required": ["path", "to"], "additionalProperties": False},
+}}
+
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -81,10 +102,16 @@ class WritePreview:
     created: bool
     content: str = field(repr=False)
     removes: bool = False
+    destination: str = ""
 
     @property
     def is_undo(self) -> bool:
-        return self.request.action_id == "workspace.files.restore"
+        return (self.request.action_id == "workspace.files.restore"
+                or bool(self.request.parameters.get("undo_of")))
+
+    @property
+    def kind(self) -> str:
+        return self.request.action_id.rsplit(".", 1)[-1]
 
 
 class CheckpointStore:
@@ -275,22 +302,67 @@ class WorkspaceWriteOwner:
             raise ValueError("there is no ISyCode change to undo")
         if record.get("undone"):
             raise ValueError("this change was already undone")
+        if record.get("kind") == "move":
+            return self._preview_move(record["to"], record["path"], undo_of=record["id"])
         target = self._target(record["path"])
         relative = target.relative_to(self.root).as_posix()
         current = self._current(target, self._missing_folders(target))
-        if current is None or _sha(current) != record["after_sha256"]:
+        if record.get("kind") == "delete":
+            if current is not None:
+                raise ValueError("a file with that name exists again; undo would overwrite it")
+        elif current is None or _sha(current) != record["after_sha256"]:
             raise ValueError("the file changed after that ISyCode change; undo would discard "
                              "those edits")
         before = None if record["before"] is None else record["before"].encode("utf-8")
         diff = self._diff(current, before, relative)
         request = ActionRequest("workspace.files.restore", self.root, str(target), {
             "path": relative, "checkpoint_id": record["id"],
-            "current_sha256": _sha(current),
+            "current_sha256": "absent" if current is None else _sha(current),
             "restore_sha256": "absent" if before is None else _sha(before),
             "diff_sha256": _sha(diff.encode("utf-8")),
         }, execution_owner="workspace_write")
         return WritePreview(request, relative, diff, False,
                             "" if before is None else record["before"], removes=before is None)
+
+    def preview_delete(self, path: str) -> WritePreview:
+        """Show the whole file being removed; only text files that /undo can restore."""
+        target = self._target(path)
+        relative = target.relative_to(self.root).as_posix()
+        current = self._current(target, self._missing_folders(target))
+        if current is None:
+            raise ValueError("the file does not exist")
+        diff = self._diff(current, None, relative)
+        request = ActionRequest("workspace.files.delete", self.root, str(target), {
+            "path": relative, "before_sha256": _sha(current),
+            "diff_sha256": _sha(diff.encode("utf-8")),
+        }, execution_owner="workspace_write")
+        return WritePreview(request, relative, diff, False, current.decode("utf-8"), removes=True)
+
+    def preview_move(self, path: str, to: str) -> WritePreview:
+        return self._preview_move(path, to)
+
+    def _preview_move(self, path: str, to: str, *, undo_of: str = "") -> WritePreview:
+        source = self._target(path)
+        destination = self._target(to)
+        if source == destination:
+            raise ValueError("the source and destination are the same")
+        relative = source.relative_to(self.root).as_posix()
+        target_relative = destination.relative_to(self.root).as_posix()
+        self._missing_folders(source)
+        digest = self._file_digest(source)
+        if digest is None:
+            raise ValueError("the file to move does not exist")
+        missing = self._missing_folders(destination)
+        if not missing and self._exists(destination):
+            raise ValueError("the destination already exists; moves never overwrite")
+        request = ActionRequest("workspace.files.move", self.root, str(source), {
+            "path": relative, "to": target_relative, "sha256": digest,
+            "new_folders": list(missing), "undo_of": undo_of,
+        }, execution_owner="workspace_write")
+        diff = f"rename from {relative}\nrename to {target_relative}\n"
+        if missing:
+            diff += "new folders: " + ", ".join(missing) + "\n"
+        return WritePreview(request, relative, diff, False, "", destination=target_relative)
 
     # ── apply ──────────────────────────────────────────────────
 
@@ -310,8 +382,12 @@ class WorkspaceWriteOwner:
     def apply(self, preview: WritePreview, approval: ActionApproval | None) -> ActionOutcome:
         if not isinstance(preview, WritePreview):
             return ActionOutcome("File change denied.", "DENY", None, "preview has the wrong type")
-        if preview.is_undo:
+        if preview.request.action_id == "workspace.files.restore":
             return self._apply_undo(preview, approval)
+        if preview.request.action_id == "workspace.files.delete":
+            return self._apply_delete(preview, approval)
+        if preview.request.action_id == "workspace.files.move":
+            return self._apply_move(preview, approval)
         try:
             fresh = self.preview(preview.path, preview.content)
         except (OSError, ValueError) as exc:
@@ -375,8 +451,9 @@ class WorkspaceWriteOwner:
                 if self._read_back(target) is not None:
                     raise ValueError("the file is still present")
             else:
+                missing = self._missing_folders(target) if params["current_sha256"] == "absent" else ()
                 self._replace(target, preview.content.encode("utf-8"),
-                              params["current_sha256"], ())
+                              params["current_sha256"], missing)
                 written = self._read_back(target)
                 if written is None or _sha(written) != params["restore_sha256"]:
                     raise ValueError("restored content does not match the checkpoint")
@@ -391,6 +468,82 @@ class WorkspaceWriteOwner:
                                  "NOT_VERIFIABLE", None, "durable action journal is unavailable")
         return ActionOutcome(f"Undid the change to {params['path']}", "ALLOW", receipt,
                              "checkpoint restored and verified")
+
+    def _finish(self, request: ActionRequest, event: str, text: str, note: str) -> ActionOutcome:
+        receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), request.action_id, request.digest,
+                                "ALLOW", "SUCCESS", _sha(event.encode("utf-8")))
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome(f"{text}, but its receipt could not be journaled.",
+                                 "NOT_VERIFIABLE", None, "durable action journal is unavailable")
+        return ActionOutcome(text, "ALLOW", receipt, note)
+
+    def _apply_delete(self, preview: WritePreview, approval: ActionApproval | None) -> ActionOutcome:
+        try:
+            fresh = self.preview_delete(preview.path)
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Delete denied.", "DENY", None, f"file cannot be re-checked: {str(exc)[:200]}")
+        if fresh.request != preview.request:
+            return ActionOutcome("Delete denied.", "DENY", None,
+                                 "the file changed since it was reviewed; review it again")
+        denied = self._authorize(preview.request, approval)
+        if denied is not None:
+            return ActionOutcome("Delete denied.", "DENY", None, denied)
+        params = preview.request.parameters
+        target = Path(preview.request.target)
+        try:
+            self._remove(target, params["before_sha256"])
+            if self._exists(target):
+                raise ValueError("the file is still present")
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Delete failed; check the file.", "ERROR", None, str(exc)[:300])
+        try:
+            checkpoint = self.checkpoints.save({
+                "kind": "delete", "time": time.time(), "path": params["path"],
+                "before": preview.content, "after_sha256": "absent", "new_folders": []})
+        except (OSError, ValueError):
+            checkpoint = ""
+        return self._finish(preview.request, f"deleted:{params['path']}", f"Deleted {params['path']}",
+                            "reviewed delete applied" + ("" if checkpoint else "; undo unavailable"))
+
+    def _apply_move(self, preview: WritePreview, approval: ActionApproval | None) -> ActionOutcome:
+        params = preview.request.parameters
+        try:
+            fresh = self._preview_move(params["path"], params["to"], undo_of=params["undo_of"])
+            if params["undo_of"]:
+                record = self.checkpoints.load(params["undo_of"])
+                if record.get("undone") or record.get("kind") != "move":
+                    raise ValueError("that move was already undone")
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Move denied.", "DENY", None, f"file cannot be re-checked: {str(exc)[:200]}")
+        if fresh.request != preview.request:
+            return ActionOutcome("Move denied.", "DENY", None,
+                                 "the file or destination changed since review; review it again")
+        denied = self._authorize(preview.request, approval)
+        if denied is not None:
+            return ActionOutcome("Move denied.", "DENY", None, denied)
+        source = Path(preview.request.target)
+        destination = self.root / params["to"]
+        try:
+            self._move(source, destination, params["sha256"], tuple(params["new_folders"]))
+            if self._file_digest(destination) != params["sha256"] or self._exists(source):
+                raise ValueError("the moved file could not be verified")
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Move failed; check both paths.", "ERROR", None, str(exc)[:300])
+        checkpoint = "undo"
+        try:
+            if params["undo_of"]:
+                self.checkpoints.mark_undone(params["undo_of"])
+            else:
+                checkpoint = self.checkpoints.save({
+                    "kind": "move", "time": time.time(), "path": params["path"],
+                    "to": params["to"], "after_sha256": params["sha256"], "before": None,
+                    "new_folders": list(params["new_folders"])})
+        except (OSError, ValueError):
+            checkpoint = ""
+        verb = "Moved back" if params["undo_of"] else "Moved"
+        return self._finish(preview.request, f"moved:{params['path']}:{params['to']}",
+                            f"{verb} {params['path']} → {params['to']}",
+                            "reviewed move applied" + ("" if checkpoint else "; undo unavailable"))
 
     def _receipt(self, request: ActionRequest, outcome: str, event: str) -> ActionReceipt | None:
         receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), request.action_id,
@@ -525,6 +678,69 @@ class WorkspaceWriteOwner:
                     pass
             os.close(parent_fd)
 
+    def _exists(self, target: Path) -> bool:
+        try:
+            os.lstat(target)
+        except FileNotFoundError:
+            return False
+        return True
+
+    def _file_digest(self, target: Path) -> str | None:
+        """SHA-256 of any regular file up to 16 MiB, opened without following links."""
+        if use_verified_fs():
+            try:
+                data = VerifiedFS(self.root).read_file(target, MAX_MOVE_BYTES)
+            except FileNotFoundError:
+                return None
+            return None if data is None else _sha(data)
+        try:
+            parent_fd = self._open_directory(target.parent)
+        except FileNotFoundError:
+            return None
+        try:
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+            try:
+                descriptor = os.open(target.name, flags, dir_fd=parent_fd)
+            except FileNotFoundError:
+                return None
+            try:
+                if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                    raise ValueError("only regular files can be moved")
+                digest = hashlib.sha256()
+                total = 0
+                while chunk := os.read(descriptor, 1024 * 1024):
+                    total += len(chunk)
+                    if total > MAX_MOVE_BYTES:
+                        raise ValueError("files over 16 MiB cannot be moved by ISyCode")
+                    digest.update(chunk)
+                return digest.hexdigest()
+            finally:
+                os.close(descriptor)
+        finally:
+            os.close(parent_fd)
+
+    def _move(self, source: Path, destination: Path, expected: str,
+              new_folders: tuple[str, ...]) -> None:
+        """Hard-link then unlink: never replaces an existing destination."""
+        if self._file_digest(source) != expected:
+            raise ValueError("the file changed during approval; nothing was moved")
+        if use_verified_fs():
+            VerifiedFS(self.root).move(source, destination, new_folders)
+            return
+        source_fd = self._open_directory(source.parent)
+        try:
+            destination_fd = self._open_directory(destination.parent, create=new_folders)
+            try:
+                os.link(source.name, destination.name, src_dir_fd=source_fd,
+                        dst_dir_fd=destination_fd, follow_symlinks=False)
+                os.unlink(source.name, dir_fd=source_fd)
+                os.fsync(destination_fd)
+                os.fsync(source_fd)
+            finally:
+                os.close(destination_fd)
+        finally:
+            os.close(source_fd)
+
     def _remove(self, target: Path, expected_current: str) -> None:
         """Remove a file ISyCode created, only if it is still exactly that content."""
         if use_verified_fs():
@@ -544,5 +760,6 @@ class WorkspaceWriteOwner:
             os.close(parent_fd)
 
 
-__all__ = ["CheckpointStore", "EDIT_TOOL", "EDIT_TOOL_NAME", "WRITE_TOOL", "WRITE_TOOL_NAME",
+__all__ = ["CheckpointStore", "DELETE_TOOL", "DELETE_TOOL_NAME", "EDIT_TOOL", "EDIT_TOOL_NAME",
+           "MOVE_TOOL", "MOVE_TOOL_NAME", "WRITE_TOOL", "WRITE_TOOL_NAME",
            "WorkspaceWriteOwner", "WritePreview"]

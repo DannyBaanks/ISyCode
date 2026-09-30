@@ -66,9 +66,12 @@ def test_compaction_elides_oldest_tool_results_but_keeps_every_call_answered():
 
 def test_limits_come_from_my_defaults_and_reject_unknown_values(tmp_path):
     store = UserDefaultsStore(tmp_path)
-    assert AgentLimits.from_defaults(store.load()) == AgentLimits(25, 8, 8192)
+    limits = AgentLimits.from_defaults(store.load())
+    assert limits == AgentLimits(0, 8192) and limits.step_allowed(10_000)
     store.update(agent_steps=50, answer_tokens=16384)
-    assert AgentLimits.from_defaults(store.load()) == AgentLimits(50, 8, 16384)
+    limits = AgentLimits.from_defaults(store.load())
+    assert limits == AgentLimits(50, 16384)
+    assert limits.step_allowed(49) and not limits.step_allowed(50)
     for bad in ({"agent_steps": 7}, {"answer_tokens": 999}, {"agent_steps": True}):
         with pytest.raises(ValueError):
             store.update(**bad)
@@ -91,7 +94,8 @@ def _methods():
 def test_chat_turn_uses_limits_compaction_and_can_be_stopped_as_a_whole():
     methods = _methods()
     chat = methods["_run_chat"]
-    assert "range(limits.max_steps)" in chat and "max_tokens=limits.answer_tokens" in chat
+    assert "limits.step_allowed(tool_round)" in chat and "max_tokens=limits.answer_tokens" in chat
+    assert "max_tool_calls" not in chat and "per-response" not in chat
     assert "self._history[-20:]" not in chat and "compact_turn(messages)" in chat
     assert "self._chat_turn_task = asyncio.current_task()" in chat
     assert "self._chat_turn_task.cancel()" in methods["action_escape_to_chat"]

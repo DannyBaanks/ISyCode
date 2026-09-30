@@ -170,25 +170,33 @@
     {
       "action": "workspace.files.move",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "write",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "workspace_write"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "WorkspaceWriteBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
       "action": "workspace.files.delete",
       "approval_required": true,
-      "authority": "explicit deny at owner binding",
-      "classification": "EXPLICIT_DENY",
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
       "effect": "destructive",
-      "owners": [],
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
-      "sentinel": [],
-      "status": "EXPLICIT_DENY",
+      "owners": [
+        "workspace_write"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "WorkspaceWriteBoundary"
+      ],
+      "status": "OWNER_VALID",
       "variants": []
     },
     {
@@ -1126,6 +1134,18 @@
       "status": "COVERED"
     },
     {
+      "action": "workspace.files.delete",
+      "callsite": "WorkspaceWriteOwner._apply_delete",
+      "owner": "workspace_write",
+      "status": "COVERED"
+    },
+    {
+      "action": "workspace.files.move",
+      "callsite": "WorkspaceWriteOwner._apply_move",
+      "owner": "workspace_write",
+      "status": "COVERED"
+    },
+    {
       "action": "mcp.invoke",
       "callsite": "GatewayMCPInvocationOwner.invoke",
       "owner": "gateway_mcp",
@@ -1413,7 +1433,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1831,
+      "line": 1863,
       "owner": "workspace_read"
     },
     {
@@ -1441,14 +1461,14 @@
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 5981,
+      "line": 6050,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 5247,
+      "line": 5316,
       "owner": "remote_catalog"
     }
   ],
@@ -1460,63 +1480,63 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1651,
+      "line": 1683,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1831,
+      "line": 1863,
       "owner": "workspace_read"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 1440,
+      "line": 1472,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1504,
+      "line": 1536,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 1574,
+      "line": 1606,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 1660,
+      "line": 1692,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 1710,
+      "line": 1742,
       "owner": "lsp_symbols"
     },
     {
       "action": "lsp.diagnostics",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 1718,
+      "line": 1750,
       "owner": "lsp_symbols"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1773,
+      "line": 1805,
       "owner": "provider_network"
     },
     {
@@ -1719,56 +1739,70 @@
       "action": "session.delete",
       "callable": "isycode.tui.TUIApp._delete_chat_session",
       "file": "isycode/tui.py",
-      "line": 5882,
+      "line": 5951,
       "owner": "session_delete"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "file": "isycode/tui.py",
-      "line": 5981,
+      "line": 6050,
       "owner": "workspace_read"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "file": "isycode/tui.py",
-      "line": 3932,
+      "line": 3948,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "file": "isycode/tui.py",
-      "line": 3984,
+      "line": 4000,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "file": "isycode/tui.py",
-      "line": 4144,
+      "line": 4160,
       "owner": "lsp_symbols"
     },
     {
       "action": null,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "file": "isycode/tui.py",
-      "line": 5247,
+      "line": 5316,
       "owner": "remote_catalog"
     },
     {
       "action": "workspace.files.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 240,
+      "line": 267,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.restore",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
       "file": "isycode/workspace_write.py",
-      "line": 286,
+      "line": 318,
+      "owner": "workspace_write"
+    },
+    {
+      "action": "workspace.files.delete",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_delete",
+      "file": "isycode/workspace_write.py",
+      "line": 335,
+      "owner": "workspace_write"
+    },
+    {
+      "action": "workspace.files.move",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner._preview_move",
+      "file": "isycode/workspace_write.py",
+      "line": 358,
       "owner": "workspace_write"
     }
   ],
@@ -1779,9 +1813,9 @@
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "effectful": 55,
-    "explicit_deny": 26,
+    "explicit_deny": 24,
     "owner_shared_read": 1,
-    "owner_valid": 41,
+    "owner_valid": 43,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

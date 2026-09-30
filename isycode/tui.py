@@ -71,7 +71,8 @@ from isycode.command_runner import (
     COMMAND_TOOL, COMMAND_TOOL_NAME, CommandPreview, CommandRunOwner, sandbox_executable,
 )
 from isycode.workspace_write import (
-    EDIT_TOOL, EDIT_TOOL_NAME, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
+    DELETE_TOOL, DELETE_TOOL_NAME, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, MOVE_TOOL_NAME,
+    WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
 )
 from isycode.authority_view import (
     MOBILE_HOST_ADDRESS, MOBILE_PAIR_ACTIONS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
@@ -543,7 +544,11 @@ class WriteApprovalScreen(ModalScreen[bool]):
         lines = self.preview.diff.splitlines()
         added = sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
         removed = sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
-        if self.preview.is_undo:
+        if self.preview.kind == "move":
+            kind = ("Undo · move back" if self.preview.is_undo else "Move file")
+        elif self.preview.kind == "delete":
+            kind = "Delete file"
+        elif self.preview.is_undo:
             kind = "Undo · remove file" if self.preview.removes else "Undo · restore file"
         else:
             kind = "Create new file" if self.preview.created else "Change file"
@@ -615,6 +620,10 @@ class CommandApprovalScreen(ModalScreen[bool]):
 
     def action_reject(self) -> None:
         self.dismiss(False)
+
+
+FILE_CHANGE_GRANTS = ("workspace.files.write", "workspace.files.restore",
+                      "workspace.files.delete", "workspace.files.move")
 
 
 class CommitApprovalScreen(ModalScreen[bool]):
@@ -2794,9 +2803,10 @@ class TUIApp(App):
             for value, label in mode_choices)
         limits = AgentLimits.from_defaults(defaults)
         entries.append(self._entry(
-            f"Agent steps per prompt · {limits.max_steps} · Enter to change", "user_default_steps", "",
-            "How many model/tool rounds one prompt may take before ISyCode stops and asks you to "
-            "continue. Every tool call is still checked and approved as usual."))
+            f"Agent steps per prompt · {limits.steps_label} · Enter to change", "user_default_steps", "",
+            "With no limit the agent keeps working until it answers; Esc stops it at any time. "
+            "Every tool call is still checked by IsySentinel and approved as usual. A limit "
+            "only caps how many model requests (and their cost) one prompt may use."))
         entries.append(self._entry(
             f"Answer length · {limits.answer_tokens:,} tokens · Enter to change",
             "user_default_tokens", "",
@@ -3344,6 +3354,11 @@ class TUIApp(App):
                 "Classic turns on reading files, edit proposals you approve, chat, saved "
                 "conversations and saved keys. Security starts with everything off. Both check every "
                 "action with IsySentinel and record it in the action journal."))
+            entries.append(self._entry(
+                "Turn on all coding tools…", "coding_toolkit", "",
+                "One step for read, search, edit, move, delete, undo, sandboxed commands, git and "
+                "Python checks (whatever this computer supports). Each change, command and commit "
+                "still asks you first, and IsySentinel still checks every action."))
             readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search",
                             "workspace.context.inject"}
             read_enabled = all(displayed_on(
@@ -3374,8 +3389,9 @@ class TUIApp(App):
                 "Edit workspace files · asks before every change", "workspace_write",
                 displayed_on("workspace.files.write", write_grant,
                              str(self._workspace_root) in write_grant.get("path_prefixes", [])),
-                "The assistant can propose changes to text files here. You see the exact diff and "
-                "approve each one. It cannot delete or move files, touch sensitive files, or run commands."))
+                "The assistant can propose creating, changing, moving and deleting files here. You see "
+                "exactly what happens and approve each one; /undo reverts the last change. Sensitive "
+                "files stay off-limits."))
             if git_executable() and (self._workspace_root / ".git").is_dir():
                 entries.append(self._capability_entry(
                     "See git status and diffs", "git_read",
@@ -3707,17 +3723,17 @@ class TUIApp(App):
             return
         accepted = await self._await_screen(TailscaleConfirmScreen(
             "Allow file edits in this workspace?" if enabled else "Turn off file edits?",
-            (f"The assistant may propose new content for text files inside {self._workspace_root}. "
-             "Every change shows its exact diff and is written only if you apply it; a file that "
-             "changed after review is never overwritten. Deleting, moving, sensitive files and "
-             "commands stay off." if enabled else
+            (f"The assistant may propose creating, changing, moving and deleting files inside "
+             f"{self._workspace_root}. Every change shows exactly what happens and runs only if you "
+             "apply it; a file that changed after review is never touched, and /undo reverts the "
+             "last change. Sensitive files and .isyroot stay off-limits." if enabled else
              "The assistant can no longer propose file changes in this workspace. Files already "
              "changed stay as they are."),
             "Allow edits" if enabled else "Turn off edits"))
         if accepted:
             try:
                 authority = WorkspaceAuthority(self._workspace_root)
-                for action in ("workspace.files.write", "workspace.files.restore"):
+                for action in FILE_CHANGE_GRANTS:
                     authority.set_grant(action, enabled=enabled,
                                         path_prefixes=[self._workspace_root] if enabled else [])
                 self._append("  File edits allowed; each change still asks first." if enabled
@@ -4170,6 +4186,56 @@ class TUIApp(App):
             GREEN)
         self._set_activity("Pyright LSP request completed · sandbox closed", GREEN)
 
+    def _coding_toolkit_grants(self) -> list[tuple[str, dict[str, Any], str]]:
+        """(action, grant scope, label) for every coding tool this computer can offer."""
+        root = [self._workspace_root]
+        grants: list[tuple[str, dict[str, Any], str]] = [
+            (action, {"path_prefixes": root}, "read and search files")
+            for action in ("workspace.files.list", "workspace.files.read",
+                           "workspace.files.search", "workspace.context.inject")]
+        grants += [(action, {"path_prefixes": root}, "edit, move, delete and undo files")
+                   for action in FILE_CHANGE_GRANTS]
+        sandbox = sandbox_executable()
+        if sandbox:
+            grants.append(("workspace.command.run", {"executables": [sandbox]},
+                           "run approved commands in the sandbox"))
+        if git_executable() and (self._workspace_root / ".git").is_dir():
+            grants += [(action, {}, "git status, diffs and approved commits")
+                       for action in ("git.status", "git.diff", "git.commit")]
+        pyright = next((item for item in self._lsp_inventory
+                        if item.get("id") == "pyright" and item.get("state") == "sandbox_ready"), None)
+        if pyright:
+            grants.append(("lsp.diagnostics", {"executables": [pyright["sandbox_executable"]]},
+                           "check Python files after edits"))
+        return grants
+
+    async def _enable_coding_toolkit(self) -> None:
+        grants = self._coding_toolkit_grants()
+        labels = list(dict.fromkeys(label for _, _, label in grants))
+        missing = []
+        if not sandbox_executable():
+            missing.append("commands (needs bubblewrap on Linux)")
+        if not (git_executable() and (self._workspace_root / ".git").is_dir()):
+            missing.append("git (no repository here)")
+        body = (f"Saves grants in {self._workspace_root} for: " + "; ".join(labels) + ". "
+                "Every change, command and commit still shows exactly what it does and asks you "
+                "first; IsySentinel checks every action and the journal records it. You can turn "
+                "each one off in this menu." + (" Not available here: " + "; ".join(missing) + "."
+                                                 if missing else ""))
+        if not await self._await_screen(TailscaleConfirmScreen(
+                "Turn on all coding tools?", body, "Turn on coding tools")):
+            self._open_authority_menu()
+            return
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            for action, scope, _ in grants:
+                authority.set_grant(action, enabled=True, **scope)
+            self._append(f"  Coding tools on · {len(grants)} permissions saved; changes, commands "
+                         "and commits still ask first.", GREEN)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Coding tools could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
     async def _change_workspace_read_grant(self, enabled: bool) -> None:
         accepted = await self._await_screen(
             GrantWorkspaceReadScreen(self._workspace_root, revoke=not enabled))
@@ -4338,6 +4404,9 @@ class TUIApp(App):
             return
         if kind == "workspace_mode":
             self.run_worker(self._change_workspace_mode(value), exclusive=True, group="authority-grant")
+            return
+        if kind == "coding_toolkit":
+            self.run_worker(self._enable_coding_toolkit(), exclusive=True, group="authority-grant")
             return
         if kind == "authority_toggle":
             enabled = bool(entry.get("enabled"))
@@ -5997,6 +6066,7 @@ class TUIApp(App):
             return tool_call_id, await self._call_local_mcp(name, mcp_arguments)
         if (name not in TOOL_ACTIONS and name not in GIT_TOOL_NAMES
                 and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
+                                 DELETE_TOOL_NAME, MOVE_TOOL_NAME,
                                  TASK_TOOL_NAME}):
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
@@ -6015,6 +6085,8 @@ class TUIApp(App):
             return tool_call_id, json.dumps(outcome)
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             return tool_call_id, await self._dispatch_write_tool(arguments, edit=name == EDIT_TOOL_NAME)
+        if name in {DELETE_TOOL_NAME, MOVE_TOOL_NAME}:
+            return tool_call_id, await self._dispatch_file_change(name, arguments)
         if name == COMMAND_TOOL_NAME:
             return tool_call_id, await self._run_workspace_command(arguments)
         if name in GIT_TOOL_NAMES:
@@ -6283,6 +6355,48 @@ class TUIApp(App):
                      GREEN if result["exit_code"] == 0 and not result["timed_out"] else YELLOW)
         return outcome.text
 
+    def _file_action_enabled(self, action: str) -> bool:
+        try:
+            grant = WorkspaceAuthority(self._workspace_root).effective_policy().get(
+                "grants", {}).get(action, {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        return displayed_on(action, grant, str(self._workspace_root) in grant.get("path_prefixes", []))
+
+    async def _dispatch_file_change(self, name: str, arguments: dict) -> str:
+        """Delete or move one file after the user approves exactly that change."""
+        action = "workspace.files.delete" if name == DELETE_TOOL_NAME else "workspace.files.move"
+        if not self._workspace_write_tool_enabled() or not self._file_action_enabled(action):
+            self._append(f"  Tool denied · {action} · not enabled for this workspace", YELLOW)
+            return json.dumps({"error": f"{action} is not enabled for this workspace"})
+        path, destination = arguments.get("path"), arguments.get("to")
+        if not isinstance(path, str) or (name == MOVE_TOOL_NAME and not isinstance(destination, str)):
+            return json.dumps({"error": "path (and to, for a move) must be strings"})
+        owner = WorkspaceWriteOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                                    self._action_approvals)
+        try:
+            if name == DELETE_TOOL_NAME:
+                preview = await asyncio.to_thread(owner.preview_delete, path)
+            else:
+                preview = await asyncio.to_thread(owner.preview_move, path, destination)
+        except (OSError, ValueError) as exc:
+            reason = str(exc)[:200] or type(exc).__name__
+            self._append(f"  Tool denied · {action} · {reason}", YELLOW)
+            return json.dumps({"error": "change cannot be previewed", "reason": reason})
+        self._append(f"  Tool requested · {action} · {preview.path} · review it", CYAN)
+        if not await self._await_screen(WriteApprovalScreen(preview)):
+            self._append(f"  Change rejected · {preview.path} · nothing changed", MUTED)
+            return json.dumps({"status": "rejected_by_user", "path": preview.path})
+        outcome = await asyncio.to_thread(
+            owner.apply, preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
+        if outcome.decision == "ALLOW" and outcome.receipt is not None:
+            self._append(f"  Tool ALLOW · {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+            return json.dumps({"status": "done", "result": outcome.text,
+                               "receipt": outcome.receipt.receipt_id})
+        self._append(f"  Tool {outcome.decision} · {action} · {outcome.reason[:180]}", YELLOW)
+        return json.dumps({"error": "change was not applied", "decision": outcome.decision,
+                           "reason": outcome.reason[:300]})
+
     async def _dispatch_write_tool(self, arguments: dict, *, edit: bool = False) -> str:
         """Preview a proposed change, show its diff, and apply only if the user approves."""
         path = arguments.get("path")
@@ -6450,6 +6564,10 @@ class TUIApp(App):
             command_active = tools_active and self._command_tool_enabled()
             chat_tools = (CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active
                           else CHAT_WORKSPACE_TOOLS if tools_active else None)
+            if write_active and self._file_action_enabled("workspace.files.delete"):
+                chat_tools = chat_tools + [DELETE_TOOL]
+            if write_active and self._file_action_enabled("workspace.files.move"):
+                chat_tools = chat_tools + [MOVE_TOOL]
             if command_active:
                 chat_tools = chat_tools + [COMMAND_TOOL]
             git_read_active = tools_active and self._git_enabled()
@@ -6481,7 +6599,8 @@ class TUIApp(App):
                    "proposes the complete content of a new or rewritten file; the user reviews the "
                    "exact diff and must approve each change. Prefer workspace_edit. Use them only when "
                    "the user asked for a change, read the file first, and never claim a file changed "
-                   "unless the tool result says it was written. "
+                   "unless the tool result says it was written. workspace_delete and workspace_move, "
+                   "when offered, remove or rename one file with the same approval. "
                    if write_active else "They cannot write files. ")
                 + ("workspace_run runs one program with its arguments (no shell) in a sandbox with no "
                    "network; the user approves each exact command. Use it to run tests, builds or "
@@ -6599,7 +6718,14 @@ class TUIApp(App):
                                                on_chunk=on_chunk, tools=chat_tools)
 
             try:
-                for tool_round in range(limits.max_steps):
+                tool_round = 0
+                while True:
+                    if not limits.step_allowed(tool_round):
+                        self._append(
+                            f"  Step limit reached ({limits.max_steps}) · say \"continue\" to keep going, "
+                            "or set it to no limit in Settings → My defaults.", YELLOW)
+                        break
+                    tool_round += 1
                     messages[:], elided = compact_turn(messages)
                     if elided:
                         self._append(f"  Context trimmed · {elided} older tool result"
@@ -6619,12 +6745,8 @@ class TUIApp(App):
                     if not calls:
                         break
                     messages.append(assistant_turn(response))
-                    for index, call in enumerate(calls):
-                        if index >= limits.max_tool_calls:
-                            call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]
-                            tool_result = json.dumps({"error": f"maximum of {limits.max_tool_calls} tools per response reached"})
-                            self._append("  Tool denied · per-response call limit reached", YELLOW)
-                        elif not tools_active:
+                    for call in calls:
+                        if not tools_active:
                             call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]
                             tool_result = json.dumps({"error": "workspace chat tools are not enabled"})
                             self._append("  Tool denied · no explicit workspace read grant", YELLOW)
@@ -6633,10 +6755,6 @@ class TUIApp(App):
                         messages.append({
                             "role": "tool", "tool_call_id": call_id, "content": tool_result,
                         })
-                    if tool_round == limits.max_steps - 1:
-                        self._append(
-                            f"  Step limit reached ({limits.max_steps}) · say \"continue\" to keep going, "
-                            "or raise it in Settings → My defaults.", YELLOW)
             except asyncio.CancelledError:
                 if content_buf:
                     _content_line()

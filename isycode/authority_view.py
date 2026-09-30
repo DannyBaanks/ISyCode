@@ -25,6 +25,8 @@ DEDICATED_CONTROLS = {
     "workspace.context.inject": "Read and search workspace files",
     "workspace.files.write": "Edit workspace files",
     "workspace.files.restore": "Edit workspace files",
+    "workspace.files.delete": "Edit workspace files",
+    "workspace.files.move": "Edit workspace files",
     "workspace.command.run": "Run commands in a sandbox",
     "git.status": "See git status and diffs",
     "git.diff": "See git status and diffs",

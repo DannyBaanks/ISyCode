@@ -98,7 +98,8 @@ Cada workspace tiene su modo. Lo eliges la primera vez que abres la carpeta (`Es
 | Ver `git status` y diffs | incluido | lo activas tú |
 | Commits, comandos en sandbox, MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
 | Gateway, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
-| Shell libre, borrar o mover archivos, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
+| Borrar y mover archivos | permiso explícito | permiso explícito |
+| Shell libre, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
 
 Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal en ambos modos. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
 
@@ -112,6 +113,8 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
 | Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto |
 | Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto |
+| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (fuera de Classic) | sí, mostrando todo lo que se borra |
+| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (fuera de Classic) | sí; nunca sobrescribe el destino |
 | Deshacer el último cambio de ISyCode | `/undo` | Edit workspace files | sí, con el diff inverso |
 | Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto |
 | Ver rama, cambios y diffs | `git_status`, `git_diff`, `/git`, `/diff` | See git status and diffs | no |
@@ -120,9 +123,11 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | Revisar errores tras editar un `.py` | automático tras aplicar un cambio | Check Python files after edits | no (solo lectura) |
 | Mostrar su plan de trabajo | `update_tasks` (panel **Tasks**) | ninguno: no es una acción | no |
 
+**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git y diagnósticos (lo que tu equipo soporte). Cada cambio, comando y commit sigue pidiéndote aprobación.
+
 ### Bucle y contexto
 
-- **25 pasos por prompt** y hasta 8 llamadas por respuesta; pasos y longitud de respuesta se cambian en **Settings → My defaults**. Al llegar al límite, di "continue".
+- **Sin límite de pasos por defecto:** el agente trabaja hasta responder, sin tope de llamadas por respuesta. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Si prefieres acotar cuántas peticiones al modelo (y cuánto gasto) usa un prompt, elige 10, 25, 50 o 100 pasos en **Settings → My defaults**.
 - **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
 - Cuando la conversación ya no cabe, ISyCode **resume los mensajes antiguos** con el mismo provider (una petición autorizada y con receipt, como cualquier otra) y recorta resultados de herramientas antiguos dentro de un turno largo. `/compact` lo hace a mano. La conversación guardada conserva siempre el transcript completo.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
@@ -206,7 +211,7 @@ Los demás providers comparten el transporte compatible con OpenAI. Que exista e
 
 | Dónde | Qué |
 | --- | --- |
-| Settings → My defaults | Modo y tipo de las carpetas nuevas, rol por defecto, pasos del agente (10/25/50/100), longitud de respuesta |
+| Settings → My defaults | Modo y tipo de las carpetas nuevas, rol por defecto, pasos del agente (sin límite, 10, 25, 50 o 100), longitud de respuesta |
 | Settings → Authority | Permisos y modo de este workspace |
 | Settings → API keys | Guardar o quitar claves |
 | `~/.config/isycode/commands/*.md` | Tus comandos `/` |
@@ -248,7 +253,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **Mobile Host:** faltan sesiones remotas, streaming, cancelación y approvals remotos.
 - **Tailscale:** flujo de owners y UI probado offline; la conectividad real de tailnet sigue **NOT_DEMONSTRATED**.
 - **Pickers nativos y portapapeles** (`desktop.file_picker`, `clipboard.copy`): bloqueados hasta que tengan owner.
-- **No disponible todavía:** borrar o mover archivos como herramienta, borrar conversaciones guardadas, OAuth, OpenISy L0/L1.
+- **No disponible todavía:** borrar o mover carpetas enteras, borrar archivos binarios o de más de 128 KiB, borrar conversaciones guardadas, OAuth, OpenISy L0/L1.
 
 La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia por superficie.
 

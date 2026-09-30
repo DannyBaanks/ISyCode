@@ -204,6 +204,22 @@ class VerifiedFS:
         if self.read_file(target, max(len(data), 1)) != data:
             raise OSError("the written file could not be verified inside the workspace")
 
+    def move(self, source: Path, destination: Path, create: tuple[str, ...]) -> None:
+        """Hard-link then unlink so an existing destination is never replaced."""
+        self.ensure_folders(destination.parent, create)
+        fd = self.open_read(source)
+        os.close(fd)
+        self.check_chain(destination.parent)
+        os.link(source, destination, follow_symlinks=False)
+        try:
+            fd = self.open_read(destination)
+            os.close(fd)
+            self.check_chain(source)
+        except BaseException:
+            os.unlink(destination)
+            raise
+        os.unlink(source)
+
     def remove(self, target: Path) -> None:
         self.check_chain(target)
         os.unlink(target)

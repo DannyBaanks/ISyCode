@@ -83,6 +83,11 @@ MAX_FILE_BYTES = 128 * 1024
 MAX_WRITE_BYTES = 128 * 1024
 WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256",
                                   "new_folders"})
+DELETE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "diff_sha256"})
+MOVE_PARAMETER_KEYS = frozenset({"path", "to", "sha256", "new_folders", "undo_of"})
+MAX_MOVE_BYTES = 16 * 1024 * 1024
+FILE_CHANGE_ACTIONS = frozenset({"workspace.files.write", "workspace.files.restore",
+                                 "workspace.files.delete", "workspace.files.move"})
 RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "restore_sha256",
                                     "diff_sha256"})
 # Workspace identity: a non-empty marker stops being a boundary, so the chat
@@ -122,7 +127,6 @@ GIT_MAX_MESSAGE_CHARS = 4000
 # Actions with no Secure execution owner are explicit denials in the owner
 # binding check. A catalog addition is not enabled by adding a workspace grant.
 EXPLICIT_DENY_ACTIONS = frozenset({
-    "workspace.files.move", "workspace.files.delete",
     "workspace.files.read_sensitive", "gateway.files.write", "oauth.authorize",
     "lsp.stop",
     "mobile.host.stop",
@@ -198,7 +202,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
 # nested inside four separately bound owners and are reported as such.
 OWNER_ACTIONS = {
     "workspace_read": READ_ACTIONS,
-    "workspace_write": frozenset({"workspace.files.write", "workspace.files.restore"}),
+    "workspace_write": FILE_CHANGE_ACTIONS,
     "provider_network": frozenset({"provider.request"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
@@ -327,7 +331,7 @@ class WorkspaceWriteSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
-        if request.action_id not in {"workspace.files.write", "workspace.files.restore"}:
+        if request.action_id not in FILE_CHANGE_ACTIONS:
             return SystembilityResult(self.name, True, "not applicable to this action")
         if request.workspace_root != self.root:
             return SystembilityResult(self.name, False, "request workspace does not match owner")
@@ -337,14 +341,49 @@ class WorkspaceWriteSystembility:
             return isinstance(value, str) and (
                 (absent and value == "absent") or re.fullmatch(r"[0-9a-f]{64}", value) is not None)
 
+        def new_folders_valid(folders: object, path_value: object) -> bool:
+            ancestors = ({parent.as_posix() for parent in Path(path_value).parents}
+                         if isinstance(path_value, str) else set())
+            return (isinstance(folders, tuple) and len(folders) <= 8
+                    and all(isinstance(item, str) and item in ancestors and item != "."
+                            and not any(WorkspaceReadSystembility.is_sensitive_name(part)
+                                        for part in Path(item).parts)
+                            for item in folders))
+
         if request.action_id == "workspace.files.restore":
             if (set(params) != RESTORE_PARAMETER_KEYS
                     or not isinstance(params.get("checkpoint_id"), str)
                     or re.fullmatch(r"ckpt_[0-9]{13}_[0-9a-f]{8}", params["checkpoint_id"]) is None
-                    or not digest(params.get("current_sha256"))
+                    or not digest(params.get("current_sha256"), absent=True)
                     or not digest(params.get("restore_sha256"), absent=True)
+                    or params.get("current_sha256") == params.get("restore_sha256")
                     or not digest(params.get("diff_sha256"))):
                 return SystembilityResult(self.name, False, "undo request shape is not the reviewed diff")
+        elif request.action_id == "workspace.files.delete":
+            if (set(params) != DELETE_PARAMETER_KEYS or not digest(params.get("before_sha256"))
+                    or not digest(params.get("diff_sha256"))):
+                return SystembilityResult(self.name, False, "delete request shape is not the reviewed one")
+        elif request.action_id == "workspace.files.move":
+            destination = params.get("to")
+            undo_of = params.get("undo_of")
+            if (set(params) != MOVE_PARAMETER_KEYS or not digest(params.get("sha256"))
+                    or not command_relative_path_valid(destination)
+                    or destination == params.get("path")
+                    or Path(destination).name.casefold() in WRITE_PROTECTED_NAMES
+                    or not new_folders_valid(params.get("new_folders"), destination)
+                    or not isinstance(undo_of, str)
+                    or (undo_of and re.fullmatch(r"ckpt_[0-9]{13}_[0-9a-f]{8}", undo_of) is None)):
+                return SystembilityResult(self.name, False, "move request shape is not the reviewed one")
+            current = self.root
+            for part in destination.split("/"):
+                current = current / part
+                try:
+                    if stat.S_ISLNK(current.lstat().st_mode):
+                        return SystembilityResult(self.name, False, "symlink traversal is denied")
+                except FileNotFoundError:
+                    break
+                except OSError:
+                    return SystembilityResult(self.name, False, "destination metadata is unavailable")
         else:
             size = params.get("size")
             folders = params.get("new_folders")
@@ -355,14 +394,7 @@ class WorkspaceWriteSystembility:
                     or not digest(params.get("diff_sha256"))
                     or type(size) is not int or not 0 <= size <= MAX_WRITE_BYTES):
                 return SystembilityResult(self.name, False, "write digests or size are invalid")
-            path_value = params.get("path")
-            ancestors = ({parent.as_posix() for parent in Path(path_value).parents}
-                         if isinstance(path_value, str) else set())
-            if (not isinstance(folders, tuple) or len(folders) > 8
-                    or any(not isinstance(item, str) or item not in ancestors or item == "."
-                           or any(WorkspaceReadSystembility.is_sensitive_name(part)
-                                  for part in Path(item).parts)
-                           for item in folders)):
+            if not new_folders_valid(folders, params.get("path")):
                 return SystembilityResult(self.name, False, "new folders must be the file's own parents")
         lexical = Path(os.path.abspath(request.target or ""))
         if self.root not in lexical.parents:
@@ -384,7 +416,7 @@ class WorkspaceWriteSystembility:
                 break
             except OSError:
                 return SystembilityResult(self.name, False, "target metadata is unavailable")
-        return SystembilityResult(self.name, True, "one reviewed text write inside the workspace")
+        return SystembilityResult(self.name, True, "one reviewed file change inside the workspace")
 
 
 def command_argv_valid(argv: object) -> bool:

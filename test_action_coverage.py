@@ -153,7 +153,7 @@ def test_every_catalog_action_has_an_explicit_authority_classification():
     registered = {action for actions in OWNER_ACTIONS.values() for action in actions}
     assert set(EXPLICIT_DENY_ACTIONS).isdisjoint(registered)
     assert set(ACTION_BY_ID) - registered == set(EXPLICIT_DENY_ACTIONS) | {"role.select"}
-    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 26
+    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 24
 
 
 def test_unclassified_effectful_catalog_addition_fails_the_frontier(monkeypatch):
@@ -174,7 +174,7 @@ def test_explicitly_denied_effect_cannot_be_registered_to_an_owner(tmp_path):
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
     gate = ProductActionGate(root, authority, owner_id="provider_network")
     request = ActionRequest(
-        "workspace.files.delete", root, str(root / "new.txt"), {},
+        "workspace.files.read_sensitive", root, str(root / ".env"), {},
         execution_owner="provider_network")
     authority_result = AuthorityDecision(True, "grant:test", "fixture", request.digest)
 

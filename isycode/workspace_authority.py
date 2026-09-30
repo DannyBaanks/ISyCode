@@ -241,6 +241,14 @@ class WorkspaceAuthority:
                 return AuthorityDecision(False, "", "filesystem target is outside the workspace or unsafe", digest)
             if not roots or not any(self._contains(Path(root), Path(target)) for root in roots):
                 return AuthorityDecision(False, "", "filesystem target is outside granted paths", digest)
+            if request.action_id == "workspace.files.move":
+                # A move writes its destination too; it must be inside the same grant.
+                try:
+                    destination = self._canonical_path((request.parameters or {}).get("to", ""))
+                except (OSError, ValueError, TypeError, WorkspaceAuthorityError):
+                    return AuthorityDecision(False, "", "move destination is outside the workspace or unsafe", digest)
+                if not any(self._contains(Path(root), Path(destination)) for root in roots):
+                    return AuthorityDecision(False, "", "move destination is outside granted paths", digest)
 
         elif spec.effect.startswith("network"):
             try:
