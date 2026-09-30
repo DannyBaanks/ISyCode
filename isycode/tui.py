@@ -1060,10 +1060,10 @@ class GrantLSPProcessScreen(ModalScreen[bool]):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, root: Path, sandbox_executable: str, *, revoke: bool = False) -> None:
+    def __init__(self, root: Path, sandbox_path: str, *, revoke: bool = False) -> None:
         super().__init__()
         self.root = root
-        self.sandbox_executable = sandbox_executable
+        self.sandbox_executable = sandbox_path
         self.revoke = revoke
 
     def compose(self) -> ComposeResult:
@@ -3467,9 +3467,9 @@ class TUIApp(App):
                                if item.get("id") == "pyright"), None)
             if lsp_server and lsp_server.get("state") == "sandbox_ready":
                 lsp_grant = grants.get("lsp.start", {})
-                sandbox_executable = lsp_server["sandbox_executable"]
+                lsp_sandbox = lsp_server["sandbox_executable"]
                 lsp_enabled = displayed_on("lsp.start", lsp_grant,
-                                           sandbox_executable in lsp_grant.get("executables", []))
+                                           lsp_sandbox in lsp_grant.get("executables", []))
                 entries.append(self._capability_entry(
                     "Local code help", "lsp", lsp_enabled,
                     "Uses the protected language helper to find code symbols on this computer."))
@@ -3477,7 +3477,7 @@ class TUIApp(App):
                 entries.append(self._capability_entry(
                     "Check Python files after edits", "lsp_diagnostics",
                     displayed_on("lsp.diagnostics", diagnostics_grant,
-                                 sandbox_executable in diagnostics_grant.get("executables", [])),
+                                 lsp_sandbox in diagnostics_grant.get("executables", [])),
                     "After you apply a change to a .py file, the protected Pyright helper reports "
                     "errors and warnings to you and to the assistant. It cannot change files."))
             elif lsp_server:
@@ -4130,21 +4130,21 @@ class TUIApp(App):
         try:
             authority = WorkspaceAuthority(self._workspace_root)
             grant = authority.policy().get("grants", {}).get("lsp.start", {})
-            sandbox_executable = server["sandbox_executable"]
+            lsp_sandbox = server["sandbox_executable"]
             has_grant = (bool(grant.get("enabled"))
-                         and sandbox_executable in grant.get("executables", []))
+                         and lsp_sandbox in grant.get("executables", []))
         except (WorkspaceAuthorityError, OSError, ValueError):
             self._append("  Workspace Authority is unavailable; LSP process is denied.", RED)
             return
         if not has_grant:
             accepted = await self._await_screen(GrantLSPProcessScreen(
-                self._workspace_root, sandbox_executable))
+                self._workspace_root, lsp_sandbox))
             if not accepted:
                 self._append("  LSP process grant declined; no language server was started.", MUTED)
                 return
             try:
                 executables = set(grant.get("executables", []))
-                executables.add(sandbox_executable)
+                executables.add(lsp_sandbox)
                 authority.set_grant("lsp.start", enabled=True, executables=sorted(executables))
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  LSP process grant could not be saved; the server remains denied.", RED)
@@ -6601,7 +6601,10 @@ class TUIApp(App):
                    "the user asked for a change, read the file first, and never claim a file changed "
                    "unless the tool result says it was written. workspace_delete and workspace_move, "
                    "when offered, remove or rename one file with the same approval. "
-                   if write_active else "They cannot write files. ")
+                   if write_active else
+                   "They cannot write files. If the user asks for edits, commands or git, say that "
+                   "they can turn them on in Settings → Authority → \"Turn on all coding tools…\" "
+                   "(each change still asks for approval). ")
                 + ("workspace_run runs one program with its arguments (no shell) in a sandbox with no "
                    "network; the user approves each exact command. Use it to run tests, builds or "
                    "linters when useful, and report the real exit code. "
