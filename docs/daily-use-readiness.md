@@ -25,7 +25,7 @@ provider-host grant. Its success establishes a chat response, not tool support.
 An environment variable being present does not establish remote authentication.
 
 HTTP proxies are supported through absolute-form HTTP requests and verified-TLS
-CONNECT tunnels (HTTPS proxy streaming requires Python 3.11+). `NO_PROXY` is
+CONNECT tunnels on Python 3.10+. `NO_PROXY` is
 respected for local endpoints. Cancellation closes the proxy connection, and
 plaintext received after CONNECT headers is rejected before TLS.
 

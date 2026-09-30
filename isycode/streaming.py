@@ -25,6 +25,26 @@ class StreamError(Exception):
         self.transport = status is None
 
 
+
+async def _upgrade_client_tls(writer: asyncio.StreamWriter, context: ssl.SSLContext,
+                              host: str) -> None:
+    """Upgrade a CONNECT stream on supported Python 3.10+ runtimes."""
+    if callable(getattr(writer, "start_tls", None)):
+        await writer.start_tls(context, server_hostname=host)
+        return
+    # Python 3.10 exposes loop.start_tls but has no StreamWriter upgrade API.
+    # Keep this compatibility bridge here; never replace certificate validation.
+    await writer.drain()
+    protocol = writer._protocol
+    transport = await asyncio.get_running_loop().start_tls(
+        writer.transport, protocol, context, server_side=False, server_hostname=host)
+    if transport is None:
+        raise StreamError("provider TLS upgrade failed")
+    writer._transport = transport
+    protocol._stream_writer = writer
+    protocol._transport = transport
+    protocol._over_ssl = True
+
 def detect_unexecuted_tool_request(text: str) -> str | None:
     """Recognize a provider's plain-text imitation of a shell tool call.
 
@@ -231,9 +251,7 @@ async def async_stream_complete(
                 writer.transport.pause_reading()
                 if reader._buffer:
                     raise StreamError("proxy sent unexpected plaintext after CONNECT headers")
-                if not hasattr(writer, "start_tls"):
-                    raise StreamError("HTTPS proxy streaming requires Python 3.11 or newer")
-                await bounded(writer.start_tls(tls, server_hostname=host))
+                await bounded(_upgrade_client_tls(writer, tls, host))
             except BaseException:
                 writer.close()
                 try:

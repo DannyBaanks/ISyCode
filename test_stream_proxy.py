@@ -64,21 +64,33 @@ def test_https_proxy_tunnel_preserves_verified_tls(tmp_path, monkeypatch):
     monkeypatch.setattr('isycode.streaming.ssl.create_default_context', lambda: client_tls)
     async def scenario():
         received = []
-        async def proxy(reader, writer):
-            received.append(await reader.readuntil(b'\r\n\r\n'))
-            writer.write(b'HTTP/1.1 200 Connection established\r\n\r\n')
-            await writer.drain()
-            await writer.start_tls(server_tls)
+        async def provider(reader, writer):
             received.append(await reader.readuntil(b'\r\n\r\n'))
             body = b'data: {"choices":[{"delta":{"content":"OK"}}]}\n\ndata: [DONE]\n\n'
             writer.write(b'HTTP/1.1 200 OK\r\nContent-Length: ' + str(len(body)).encode() + b'\r\n\r\n' + body)
             await writer.drain()
             writer.close()
             await writer.wait_closed()
+        upstream = await asyncio.start_server(provider, '127.0.0.1', 0, ssl=server_tls)
+        upstream_port = upstream.sockets[0].getsockname()[1]
+        async def proxy(reader, writer):
+            received.append(await reader.readuntil(b'\r\n\r\n'))
+            remote_reader, remote_writer = await asyncio.open_connection('127.0.0.1', upstream_port)
+            writer.write(b'HTTP/1.1 200 Connection established\r\n\r\n')
+            await writer.drain()
+            async def relay(source, target):
+                while True:
+                    data = await source.read(65536)
+                    if not data:
+                        break
+                    target.write(data)
+                    await target.drain()
+                target.close()
+            await asyncio.gather(relay(reader, remote_writer), relay(remote_reader, writer))
         server = await asyncio.start_server(proxy, '127.0.0.1', 0)
         port = server.sockets[0].getsockname()[1]
         monkeypatch.setattr('urllib.request.getproxies', lambda: {'https': f'http://127.0.0.1:{port}'})
-        async with server:
+        async with upstream, server:
             result = await async_stream_complete('https://provider.invalid/v1', 'private-test-key', 'local', [], timeout_s=3)
         assert result['text'] == 'OK'
         assert b'private-test-key' not in received[0]
