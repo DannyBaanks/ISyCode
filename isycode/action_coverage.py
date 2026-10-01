@@ -150,7 +150,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("desktop.file_picker", "file_picker.choose_context_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_directory", "", "BLOCKED_BY_DESIGN"),
-    ("clipboard.copy", "TUIApp.on_button_pressed", "", "BLOCKED_BY_DESIGN"),
+    ("clipboard.copy", "ClipboardOwner.copy", "clipboard", "COVERED"),
 )
 
 

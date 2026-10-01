@@ -133,7 +133,7 @@ EXPLICIT_DENY_ACTIONS = frozenset({
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
     "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
     "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
-    "l1.disable", "l1.rollback", "clipboard.copy",
+    "l1.disable", "l1.rollback",
     "desktop.file_picker", "bridge.peek", "lsp.discover", "mobile.session.read",
 })
 
@@ -194,6 +194,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_command": frozenset({"CommandProcessBoundary"}),
     "workspace_git": frozenset({"GitBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
+    "clipboard": frozenset({"ClipboardBoundary"}),
 }
 
 
@@ -224,6 +225,7 @@ OWNER_ACTIONS = {
     "workspace_command": frozenset({"workspace.command.run"}),
     "workspace_git": GIT_ACTIONS,
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
+    "clipboard": frozenset({"clipboard.copy"}),
 }
 
 
@@ -564,6 +566,26 @@ class LocalMCPSystembility:
                 or not MCP_TOOL_NAME_RE.match(tool) or not digest(params.get("arguments_sha256"))):
             return SystembilityResult(self.name, False, "MCP call request is not the reviewed one")
         return SystembilityResult(self.name, True, "one reviewed tool call to a running local server")
+
+
+class ClipboardSystembility:
+    """One bounded copy, described only by source, size and digest."""
+
+    name = "ClipboardBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "clipboard.copy":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        size, digest = params.get("size"), params.get("sha256")
+        valid = (set(params) == {"source", "size", "sha256"} and request.target == "clipboard"
+                 and params.get("source") in {"selection", "file_path"}
+                 and type(size) is int and 1 <= size <= 1024 * 1024
+                 and isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest) is not None)
+        return SystembilityResult(self.name, valid,
+                                  "user-initiated copy; the text itself is never recorded" if valid
+                                  else "clipboard request shape is invalid")
 
 
 class ProviderNetworkSystembility:
@@ -1426,7 +1448,7 @@ class ProductActionGate:
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
-            LocalMCPSystembility(),
+            LocalMCPSystembility(), ClipboardSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,

@@ -63,6 +63,7 @@ from isycode.prompt_expansion import (
     MAX_MENTIONS, WORKSPACE_COMMANDS_DIR, attach_files, find_mentions, load_user_commands,
     parse_command, read_result_text, render_command,
 )
+from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
 from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.git_owner import (
     GIT_COMMIT_TOOL, GIT_TOOL_NAMES, GIT_TOOLS, CommitPreview, GitOwner, git_executable,
@@ -248,7 +249,7 @@ class SidePanel(Vertical):
             yield Input(placeholder="Search workspace paths…", id="file-search")
             yield Tree("Workspace", id="workspace-tree")
             with Horizontal(id="file-actions"):
-                yield Button("Copy path · owner pending", id="file-copy-path", disabled=True)
+                yield Button("Copy path", id="file-copy-path", disabled=True)
                 yield Button("Open preview", id="file-open-preview", disabled=True)
             with VerticalScroll(id="file-preview-scroll"):
                 yield Static("Select a file to preview it.", id="file-preview", classes="rail-copy")
@@ -2509,8 +2510,8 @@ class TUIApp(App):
             await self._load_directory(uri)
             return
         self._selected_file_path = uri
-        # Clipboard access is an effectful action and has no registered owner yet.
-        self.query_one("#file-copy-path", Button).disabled = True
+        # Copying goes through ClipboardOwner (clipboard.copy grant + IsySentinel).
+        self.query_one("#file-copy-path", Button).disabled = False
         self.query_one("#file-open-preview", Button).disabled = False
         await self._preview_file(uri)
 
@@ -2592,7 +2593,9 @@ class TUIApp(App):
             self.query_one("#action-search", Input).display = True
             self.query_one("#action-list", OptionList).focus()
         elif button_id == "file-copy-path":
-            self._set_activity("Copy path blocked · clipboard.copy has no registered owner", YELLOW)
+            if self._selected_file_path:
+                path = self._selected_file_path.removeprefix("file://")
+                self._copy_through_owner(path, "file_path")
         elif button_id == "file-open-preview":
             if self._selected_file_path:
                 await self._preview_file(self._selected_file_path)
@@ -3472,6 +3475,14 @@ class TUIApp(App):
                     displayed_on("git.commit", grants.get("git.commit", {})),
                     "The assistant can propose a commit. You review the exact files, message and "
                     "diff. Hooks never run and nothing is pushed."))
+            clipboard_grant = grants.get("clipboard.copy", {})
+            entries.append(self._capability_entry(
+                "Copy selected text to the clipboard", "clipboard",
+                displayed_on("clipboard.copy", clipboard_grant,
+                             CLIPBOARD_TARGET in clipboard_grant.get("targets", [])),
+                "Selecting text with the mouse (or Ctrl+C on a selection, or Copy path) copies "
+                "it. Only your own gesture copies; the assistant cannot. The journal records the "
+                "size, never the text. API keys are never copied."))
             command_sandbox = sandbox_executable()
             if command_sandbox:
                 command_grant = grants.get("workspace.command.run", {})
@@ -3891,6 +3902,16 @@ class TUIApp(App):
             self._append(f"  Git permission could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()
 
+    async def _change_clipboard_grant(self, enabled: bool) -> None:
+        try:
+            WorkspaceAuthority(self._workspace_root).set_grant(
+                "clipboard.copy", enabled=enabled, targets=[CLIPBOARD_TARGET] if enabled else [])
+            self._append("  Copy on select is on; select text with the mouse to copy it."
+                         if enabled else "  Copy on select is off for this workspace.", GREEN)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            self._append(f"  Clipboard permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
     async def _change_command_grant(self, enabled: bool) -> None:
         sandbox = sandbox_executable()
         if enabled and sandbox is None:
@@ -4264,6 +4285,8 @@ class TUIApp(App):
                            "workspace.files.search", "workspace.context.inject")]
         grants += [(action, {"path_prefixes": root}, "edit, move, delete and undo files")
                    for action in FILE_CHANGE_GRANTS]
+        grants.append(("clipboard.copy", {"targets": [CLIPBOARD_TARGET]},
+                       "copy selected text to the clipboard"))
         sandbox = sandbox_executable()
         if sandbox:
             grants.append(("workspace.command.run", {"executables": [sandbox]},
@@ -4538,6 +4561,8 @@ class TUIApp(App):
                 operation = self._change_workspace_write_grant(turn_on)
             elif value == "workspace_command":
                 operation = self._change_command_grant(turn_on)
+            elif value == "clipboard":
+                operation = self._change_clipboard_grant(turn_on)
             elif value in {"git_read", "git_commit"}:
                 operation = self._change_git_grant(value == "git_commit", turn_on)
             elif value == "sessions":
@@ -6355,6 +6380,42 @@ class TUIApp(App):
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
         self._append(f"  MCP ALLOW · {server}.{tool} · receipt {outcome.receipt.receipt_id}", GREEN)
         return outcome.text
+
+    def copy_to_clipboard(self, text: str) -> None:
+        """Every copy Textual makes (selection, Ctrl+C, text fields) goes through the owner."""
+        self._copy_through_owner(text, "selection")
+
+    def on_text_selected(self, event) -> None:
+        """Copy on select: releasing the mouse after selecting text copies it."""
+        get_selected = getattr(self.screen, "get_selected_text", None)
+        text = get_selected() if callable(get_selected) else None
+        if text:
+            self._copy_through_owner(text, "selection")
+
+    def _copy_through_owner(self, text: str, source: str) -> None:
+        try:
+            key_field = self.query_one("#provider-key-input", Input)
+        except Exception:  # noqa: BLE001 - the field only exists in the main screen
+            key_field = None
+        if key_field is not None and self.focused is key_field:
+            self.notify("API keys are never copied.", severity="warning")
+            return
+        try:
+            owner = ClipboardOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            outcome = owner.copy(text, source=source,
+                                 terminal_write=super().copy_to_clipboard)
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            self.notify("Copy failed · Workspace Authority is unavailable.", severity="error")
+            return
+        if outcome.decision == "ALLOW":
+            where = ("terminal clipboard" if outcome.text == "terminal"
+                     else f"clipboard via {outcome.text}")
+            self.notify(f"Copied {len(text)} characters to the {where}.", timeout=2)
+        elif "grant" in outcome.reason:
+            self.notify("Copying is off for this workspace · turn on “Copy selected text” in "
+                        "Settings → Authority.", severity="warning", timeout=5)
+        else:
+            self.notify(f"Nothing copied · {outcome.reason[:120]}", severity="warning")
 
     def _show_agent_tasks(self, tasks: list[dict[str, str]]) -> None:
         """Replace the on-screen task list; an empty or all-done list collapses after a turn."""

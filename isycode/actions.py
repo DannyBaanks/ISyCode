@@ -77,7 +77,9 @@ _ENTRIES = [
     ("session.create", "Sessions", "Create a persistent conversation", "write", False),
     ("session.resume", "Sessions", "Resume a persistent conversation", "read", False),
     ("session.delete", "Sessions", "Delete a persistent conversation", "destructive", True),
-    ("clipboard.copy", "Desktop", "Copy a path or text to clipboard", "external", True),
+    # Only from a user gesture (selection, Ctrl+C, Copy path); that gesture is the
+    # human-presence proof, and the model has no tool that can trigger it.
+    ("clipboard.copy", "Desktop", "Copy selected text or a path to the clipboard", "external", False),
     ("desktop.file_picker", "Desktop", "Open the native file picker", "process", True),
     ("tailscale.inspect", "Private access", "Inspect local Tailscale status", "read", False),
     ("tailscale.install.prepare", "Private access", "Prepare an isolated signed Tailscale package", "process", True),

@@ -42,6 +42,7 @@ DEDICATED_CONTROLS = {
     "mcp.invoke": "Run a Gateway tool",
     "lsp.start": "Local code help",
     "lsp.diagnostics": "Check Python files after edits",
+    "clipboard.copy": "Copy selected text to the clipboard",
     "catalog.external.read": "Browse optional integrations",
     "mobile.host.start": "Mobile Host on this computer",
     "mobile.pair": "Mobile Host on this computer",
