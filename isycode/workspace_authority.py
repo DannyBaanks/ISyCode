@@ -32,6 +32,8 @@ MODES = frozenset({"security", "classic"})
 CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.files.list", "workspace.files.read", "workspace.files.search",
     "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
+    # Delete and move stay inside the workspace and still need a per-action approval.
+    "workspace.files.delete", "workspace.files.move",
 })
 CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume", "git.status", "git.diff"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})

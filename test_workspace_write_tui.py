@@ -31,7 +31,7 @@ def test_write_tool_is_offered_only_when_the_write_grant_is_on():
 def test_write_dispatch_rechecks_the_grant_shows_the_diff_and_uses_the_owner():
     dispatch = _segment("_dispatch_write_tool")
     assert dispatch.index("_workspace_write_tool_enabled()") < dispatch.index("owner.preview")
-    assert dispatch.index("WriteApprovalScreen(preview)") < dispatch.index("owner.apply")
+    assert dispatch.index("WriteApprovalScreen(preview") < dispatch.index("owner.apply")
     assert "rejected_by_user" in dispatch
     for forbidden in ("write_text", "write_bytes", "open(", "os.replace"):
         assert forbidden not in dispatch

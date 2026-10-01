@@ -98,7 +98,7 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
             options = app.query_one("#action-list")
             options.highlighted = target
             await pilot.pause()
-            assert "list, read, and find files" in str(detail.renderable)
+            assert "list, read, and find files" in str(getattr(detail, "renderable", None) or detail.content)
             await pilot.press("question_mark")
             await pilot.pause()
             assert isinstance(app.screen, HelpBubble)

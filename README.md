@@ -98,7 +98,7 @@ Cada workspace tiene su modo. Lo eliges la primera vez que abres la carpeta (`Es
 | Ver `git status` y diffs | incluido | lo activas tú |
 | Commits, comandos en sandbox, MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
 | Gateway, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
-| Borrar y mover archivos | permiso explícito | permiso explícito |
+| Borrar y mover archivos | implícito (con aprobación por acción) | permiso explícito |
 | Shell libre, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
 
 Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal en ambos modos. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
@@ -113,8 +113,8 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
 | Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto |
 | Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto |
-| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (fuera de Classic) | sí, mostrando todo lo que se borra |
-| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (fuera de Classic) | sí; nunca sobrescribe el destino |
+| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra |
+| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (incluido en Classic) | sí; nunca sobrescribe el destino |
 | Deshacer el último cambio de ISyCode | `/undo` | Edit workspace files | sí, con el diff inverso |
 | Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto |
 | Ver rama, cambios y diffs | `git_status`, `git_diff`, `/git`, `/diff` | See git status and diffs | no |

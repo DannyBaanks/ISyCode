@@ -94,7 +94,7 @@ def test_classic_uses_saved_keys_only_for_known_services(workspace):
     ("mobile.host.start", "127.0.0.1:8765",
      {"bind": "127.0.0.1", "port": 8765, "transport": "loopback"}, "mobile_host"),
     ("mcp.invoke", "gateway", {}, "gateway_mcp"),
-    ("workspace.files.delete", "app.py", {}, "workspace_write"),
+    ("workspace.command.run", "/usr/bin/echo", {"argv": ["echo"]}, "workspace_command"),
     ("bridge.connect", "bridge", {}, "bridge"),
 ])
 def test_classic_does_not_imply_integrations_or_denied_actions(workspace, action, target,

@@ -119,11 +119,15 @@ def test_sensitive_or_escaping_moves_are_refused(workspace, path, to):
         owner.preview_move(path, to)
 
 
-def test_classic_does_not_imply_delete_or_move(workspace):
+def test_classic_allows_delete_and_move_only_with_an_approval(workspace):
     owner, authority, approvals, root = workspace
     authority.set_mode("classic")
-    assert _apply(owner, approvals, owner.preview_delete("src/old.py")).decision == "DENY"
-    assert _apply(owner, approvals, owner.preview_move("src/old.py", "a.py")).decision == "DENY"
+    delete = owner.preview_delete("src/old.py")
+    assert owner.apply(delete, None).decision == "DENY"
+    assert (root / "src" / "old.py").exists()
+    move = owner.preview_move("src/old.py", "a.py")
+    assert _apply(owner, approvals, move).decision == "ALLOW"
+    assert (root / "a.py").exists() and not (root / "src" / "old.py").exists()
 
 
 @pytest.mark.parametrize("change", [
