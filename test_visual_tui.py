@@ -1,3 +1,4 @@
+from isycode.tui import plain_text
 import asyncio
 import json
 
@@ -44,13 +45,13 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             banner = app.query_one(Banner)
-            header = banner.renderable.plain
+            header = plain_text(banner)
             assert cell_len(header) <= banner.content_size.width
             assert '● workspace' in header and '日本語-project' in header
             app.action_toggle_sidebar()
             await pilot.pause()
-            assert cell_len(banner.renderable.plain) <= app.query_one(SidePanel).region.x - 1
-            assert '● workspace' in banner.renderable.plain
+            assert cell_len(plain_text(banner)) <= app.query_one(SidePanel).region.x - 1
+            assert '● workspace' in plain_text(banner)
 
     with capsys.disabled():
         asyncio.run(scenario())

@@ -1,3 +1,4 @@
+from isycode.tui import plain_text
 import asyncio
 import json
 
@@ -33,7 +34,7 @@ def test_model_steps_and_owned_tools_stay_in_display_order(tmp_path, monkeypatch
             rows = []
             for child in app.query_one(ChatArea).children:
                 if isinstance(child, ThoughtBlock):
-                    rows.append(child._body.renderable.plain)
+                    rows.append(plain_text(child._body))
                 elif isinstance(child, Static):
                     rows.append(app._render_searchable_text(child))
             positions = [next(i for i, row in enumerate(rows) if text in row) for text in (
