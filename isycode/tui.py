@@ -381,7 +381,22 @@ class HelpBubble(ModalScreen[None]):
         self.dismiss(None)
 
 
-class TailscaleConfirmScreen(ModalScreen[bool]):
+class ApprovalScreen(ModalScreen[bool]):
+    """Approve with y, reject with n or Esc; Reject stays the focused default.
+
+    Plain (non-priority) bindings: a text field inside the screen still types y and n.
+    """
+
+    BINDINGS = [Binding("y", "approve", "Approve"), Binding("n", "decline", "Reject")]
+
+    def action_approve(self) -> None:
+        self.dismiss(True)
+
+    def action_decline(self) -> None:
+        self.dismiss(False)
+
+
+class TailscaleConfirmScreen(ApprovalScreen):
     """Show one exact private-access operation before approval is issued."""
 
     CSS = """
@@ -407,8 +422,11 @@ class TailscaleConfirmScreen(ModalScreen[bool]):
             with VerticalScroll(id="tailscale-confirm-copy"):
                 yield Static(Text(self.details))
             with Horizontal(id="tailscale-confirm-actions"):
-                yield Button("Cancel", id="tailscale-cancel")
-                yield Button(self.confirm_label, id="tailscale-confirm", variant="primary")
+                yield Button("Cancel · n", id="tailscale-cancel")
+                yield Button(f"{self.confirm_label} · y", id="tailscale-confirm", variant="primary")
+
+    def on_mount(self) -> None:
+        self.query_one("#tailscale-cancel", Button).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "tailscale-confirm")
@@ -552,7 +570,7 @@ class WorkspaceModeScreen(ModalScreen[str]):
         self.dismiss("security")
 
 
-class WriteApprovalScreen(ModalScreen[bool]):
+class WriteApprovalScreen(ApprovalScreen):
     """Show the exact diff of one proposed file change; Reject is the default."""
 
     CSS = """
@@ -594,8 +612,8 @@ class WriteApprovalScreen(ModalScreen[bool]):
             with VerticalScroll(id="write-approval-diff"):
                 yield Static(Syntax(self.preview.diff, "diff", theme="monokai", word_wrap=True))
             with Horizontal(id="write-approval-actions"):
-                yield Button("Reject", id="write-approval-reject")
-                yield Button("Apply change", id="write-approval-apply", variant="warning")
+                yield Button("Reject · n", id="write-approval-reject")
+                yield Button("Apply change · y", id="write-approval-apply", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#write-approval-reject", Button).focus()
@@ -607,7 +625,7 @@ class WriteApprovalScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class CommandApprovalScreen(ModalScreen[bool]):
+class CommandApprovalScreen(ApprovalScreen):
     """Show the exact argv of one sandboxed command; Reject is the default."""
 
     CSS = """
@@ -639,8 +657,8 @@ class CommandApprovalScreen(ModalScreen[bool]):
                 "It may change files in this workspace; those changes cannot be undone with /undo. "
                 "Nothing runs unless you approve it.")
             with Horizontal(id="command-approval-actions"):
-                yield Button("Reject", id="command-approval-reject")
-                yield Button("Run command", id="command-approval-run", variant="warning")
+                yield Button("Reject · n", id="command-approval-reject")
+                yield Button("Run command · y", id="command-approval-run", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#command-approval-reject", Button).focus()
@@ -656,7 +674,7 @@ FILE_CHANGE_GRANTS = ("workspace.files.write", "workspace.files.restore",
                       "workspace.files.delete", "workspace.files.move")
 
 
-class CommitApprovalScreen(ModalScreen[bool]):
+class CommitApprovalScreen(ApprovalScreen):
     """Show the exact message, files and diff of one proposed commit; Reject is the default."""
 
     CSS = """
@@ -688,8 +706,8 @@ class CommitApprovalScreen(ModalScreen[bool]):
                 yield Static(Syntax(preview.diff or "(no content changes)", "diff",
                                     theme="monokai", word_wrap=True))
             with Horizontal(id="commit-approval-actions"):
-                yield Button("Reject", id="commit-approval-reject")
-                yield Button("Commit", id="commit-approval-apply", variant="warning")
+                yield Button("Reject · n", id="commit-approval-reject")
+                yield Button("Commit · y", id="commit-approval-apply", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#commit-approval-reject", Button).focus()
@@ -701,7 +719,7 @@ class CommitApprovalScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class LocalMCPConfirmScreen(ModalScreen[bool]):
+class LocalMCPConfirmScreen(ApprovalScreen):
     """Show exactly what a local MCP server start or tool call will do; Cancel is the default."""
 
     CSS = """
@@ -725,8 +743,8 @@ class LocalMCPConfirmScreen(ModalScreen[bool]):
             with VerticalScroll(id="local-mcp-payload"):
                 yield Static(Text(self.payload))
             with Horizontal(id="local-mcp-actions"):
-                yield Button("Cancel", id="local-mcp-cancel")
-                yield Button(self.approve_label, id="local-mcp-approve", variant="warning")
+                yield Button("Cancel · n", id="local-mcp-cancel")
+                yield Button(f"{self.approve_label} · y", id="local-mcp-approve", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#local-mcp-cancel", Button).focus()
@@ -926,7 +944,7 @@ class MCPArgumentsScreen(ModalScreen[dict | None]):
         self.dismiss(None)
 
 
-class MCPInvocationConfirmScreen(ModalScreen[bool]):
+class MCPInvocationConfirmScreen(ApprovalScreen):
     """Display the exact tool call and arguments before one-use approval."""
 
     CSS = """
@@ -958,8 +976,8 @@ class MCPInvocationConfirmScreen(ModalScreen[bool]):
             with VerticalScroll(id="mcp-confirm-payload"):
                 yield Static(payload)
             with Horizontal(id="mcp-confirm-actions"):
-                yield Button("Cancel", id="mcp-confirm-cancel")
-                yield Button("Approve once and invoke", id="mcp-confirm-approve", variant="warning")
+                yield Button("Cancel · n", id="mcp-confirm-cancel")
+                yield Button("Approve once and invoke · y", id="mcp-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "mcp-confirm-approve")
@@ -1034,7 +1052,7 @@ class GatewaySemanticQueryScreen(ModalScreen[tuple[str, dict] | None]):
         self.dismiss(None)
 
 
-class GatewaySemanticConfirmScreen(ModalScreen[bool]):
+class GatewaySemanticConfirmScreen(ApprovalScreen):
     """Show the exact native HTTP semantic request and remote-root limitation."""
 
     CSS = """
@@ -1067,8 +1085,8 @@ class GatewaySemanticConfirmScreen(ModalScreen[bool]):
                 "not added to model context. A one-use local approval is required.",
                 id="semantic-confirm-copy")
             with Horizontal(id="semantic-confirm-actions"):
-                yield Button("Cancel", id="semantic-confirm-cancel")
-                yield Button("Approve once and run", id="semantic-confirm-approve", variant="warning")
+                yield Button("Cancel · n", id="semantic-confirm-cancel")
+                yield Button("Approve once and run · y", id="semantic-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "semantic-confirm-approve")
@@ -1160,7 +1178,7 @@ class LSPQueryScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class LSPConfirmScreen(ModalScreen[bool]):
+class LSPConfirmScreen(ApprovalScreen):
     """Confirm the exact local, sandboxed LSP operation before its one-use approval."""
 
     CSS = """
@@ -1188,8 +1206,8 @@ class LSPConfirmScreen(ModalScreen[bool]):
                 "and output/time limits apply. No Gateway or provider receives this query.",
                 id="lsp-confirm-copy")
             with Horizontal(id="lsp-confirm-actions"):
-                yield Button("Cancel", id="lsp-confirm-cancel")
-                yield Button("Approve once and search", id="lsp-confirm-approve", variant="warning")
+                yield Button("Cancel · n", id="lsp-confirm-cancel")
+                yield Button("Approve once and search · y", id="lsp-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "lsp-confirm-approve")
@@ -1234,7 +1252,7 @@ class BrokerPreviewGrantScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class BrokerProvisionConfirmScreen(ModalScreen[bool]):
+class BrokerProvisionConfirmScreen(ApprovalScreen):
     """Review exact source, root, network effects, and runtime sandbox before Docker."""
 
     CSS = """
@@ -1268,8 +1286,8 @@ class BrokerProvisionConfirmScreen(ModalScreen[bool]):
                 "this root and recipe digest, then revoke those grants after the attempt. Failed health checks "
                 "remove only the container/network created by this request.", id="broker-provision-copy")
             with Horizontal(id="broker-provision-actions"):
-                yield Button("Cancel", id="broker-provision-cancel")
-                yield Button("Approve · Build + Start", id="broker-provision-confirm", variant="warning")
+                yield Button("Cancel · n", id="broker-provision-cancel")
+                yield Button("Approve · Build + Start · y", id="broker-provision-confirm", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-provision-confirm")
@@ -1323,7 +1341,7 @@ class BrokerManagementScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class BrokerOperationConfirmScreen(ModalScreen[bool]):
+class BrokerOperationConfirmScreen(ApprovalScreen):
     CSS = """
     BrokerOperationConfirmScreen { align: center middle; background: #000000 65%; }
     #broker-operation-card { width: 88; max-width: 92%; height: auto; padding: 1 2; border: round #68696f; background: #292a2e; }
@@ -1352,8 +1370,8 @@ class BrokerOperationConfirmScreen(ModalScreen[bool]):
                 "This grants only the exact Docker executable and broker target for this single operation; "
                 "the temporary grant is revoked afterward.", id="broker-operation-copy")
             with Horizontal(id="broker-operation-actions"):
-                yield Button("Cancel", id="broker-operation-cancel")
-                yield Button("Approve once", id="broker-operation-approve", variant="warning")
+                yield Button("Cancel · n", id="broker-operation-cancel")
+                yield Button("Approve once · y", id="broker-operation-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-operation-approve")
@@ -1481,7 +1499,7 @@ class ChatSessionsScreen(ModalScreen[str | None]):
         listing.add_options(self._options(self.visible_sessions))
 
 
-class DeleteSessionScreen(ModalScreen[bool]):
+class DeleteSessionScreen(ApprovalScreen):
     """Confirm deletion of one named conversation before issuing a one-use grant."""
 
     CSS = """
@@ -1503,8 +1521,8 @@ class DeleteSessionScreen(ModalScreen[bool]):
             yield Static("Delete this conversation?", id="delete-session-title")
             yield Static(f"{self.title_text}\n\nThis permanently removes this one transcript. A one-use, session-bound approval will be checked before deletion.", id="delete-session-copy")
             with Horizontal(id="delete-session-actions"):
-                yield Button("Keep", id="delete-session-cancel")
-                yield Button("Delete conversation", id="delete-session-confirm", variant="error")
+                yield Button("Keep · n", id="delete-session-cancel")
+                yield Button("Delete conversation · y", id="delete-session-confirm", variant="error")
 
     def on_mount(self) -> None:
         self.query_one("#delete-session-cancel", Button).focus()
