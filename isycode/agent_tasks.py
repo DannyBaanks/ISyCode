@@ -50,12 +50,20 @@ def validate_tasks(arguments: Any) -> list[dict[str, str]]:
     return clean
 
 
-def render_tasks(tasks: list[dict[str, str]]) -> Text:
+def render_tasks(tasks: list[dict[str, str]], *, collapsed: bool = False) -> Text:
     done = sum(1 for task in tasks if task["status"] == "completed")
     if tasks and done == len(tasks):
         # Finished plans collapse to one line so they stop taking chat space.
         return Text(f"Tasks · {done}/{len(tasks)} done ✓", style="bold #4ade80")
-    text = Text(f"Tasks · {done}/{len(tasks)} done\n", style="bold #bb8cff")
+    if collapsed:
+        current = next((task["title"] for task in tasks if task["status"] == "in_progress"), "")
+        text = Text(f"▸ Tasks · {done}/{len(tasks)} done", style="bold #bb8cff")
+        if current:
+            text.append(f" · now: {current[:80]}", style="#c0c0c4")
+        text.append("   click or Ctrl+T to expand", style="#6c757d")
+        return text
+    text = Text(f"▾ Tasks · {done}/{len(tasks)} done", style="bold #bb8cff")
+    text.append("   click or Ctrl+T to fold\n", style="#6c757d")
     for task in tasks:
         if task["status"] == "completed":
             text.append("  ✔ ", style="#4ade80")

@@ -19,6 +19,7 @@ APP_SHORTCUTS: tuple[Shortcut, ...] = (
     Shortcut("ctrl+p", "toggle_commands_menu", "Commands", "Open the semantic command palette"),
     Shortcut("ctrl+b", "toggle_sidebar", "Toggle sidebar", "Show or hide the workspace rail"),
     Shortcut("ctrl+l", "focus_input", "Focus composer", "Move focus to the chat composer"),
+    Shortcut("ctrl+t", "toggle_tasks", "Tasks", "Fold or expand the agent's task list", True),
     Shortcut("escape", "escape_to_chat", "Back", "Close the current popup and return to chat"),
     Shortcut("f6", "focus_files", "Files", "Open and focus the Files rail", True),
     Shortcut("shift+f6", "focus_overview", "Overview", "Open and focus the Overview rail", True),

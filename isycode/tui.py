@@ -352,6 +352,13 @@ ReviewConsentScreen { align: center middle; background: #000000 65%; }
         self.dismiss(False)
 
 
+class TasksPanel(Static):
+    """The agent's plan; a click folds it to one line or opens it again."""
+
+    def on_click(self) -> None:
+        self.app.action_toggle_tasks()
+
+
 class HelpBubble(ModalScreen[None]):
     """A small box that explains one setting; any of Esc, Enter or ? closes it."""
 
@@ -1815,6 +1822,7 @@ class TUIApp(App):
         self._conversation_summary = ""
         self._chat_turn_task: asyncio.Task | None = None
         self._agent_tasks: list[dict[str, str]] = []
+        self._tasks_collapsed = False
         self._mcp_local: LocalMCPOwner | None = None
         self._action_approvals = ActionApprovalStore()
         self._console_search_hits: list[tuple[Static, TextMatch]] = []
@@ -1895,7 +1903,7 @@ class TUIApp(App):
         yield SidePanel(id="side-panel")
         with Vertical(id="main"):
             yield ChatArea(id="chat")
-            yield Static("", id="agent-tasks")
+            yield TasksPanel("", id="agent-tasks")
             yield Static("Ready · / opens navigation", id="activity-status")
         yield PromptArea(
             id="prompt-input")
@@ -6424,7 +6432,14 @@ class TUIApp(App):
             return
         panel = self.query_one("#agent-tasks", Static)
         panel.display = bool(tasks)
-        panel.update(render_tasks(tasks) if tasks else "")
+        panel.update(render_tasks(tasks, collapsed=self._tasks_collapsed) if tasks else "")
+
+    def action_toggle_tasks(self) -> None:
+        """Fold the Tasks panel to one line, or open it back to full size."""
+        if not self._agent_tasks:
+            return
+        self._tasks_collapsed = not self._tasks_collapsed
+        self._show_agent_tasks(self._agent_tasks)
 
     def _git_enabled(self, commit: bool = False) -> bool:
         if git_executable() is None or not self._workspace_chat_tools_enabled():
