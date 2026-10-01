@@ -119,6 +119,31 @@ def test_an_approved_command_runs_in_the_workspace_and_is_journaled(sandbox):
     assert ActionAuditJournal(owner.root).verify().receipts == 1
 
 
+def test_fast_command_can_finish_before_parent_resumes(sandbox, monkeypatch):
+    owner, authority, approvals, fake, _ = sandbox
+    _grant(authority, fake)
+    spawn = asyncio.create_subprocess_exec
+    async def already_finished(*args, **kwargs):
+        process = await spawn(*args, **kwargs)
+        await process.wait()
+        return process
+    monkeypatch.setattr(asyncio, 'create_subprocess_exec', already_finished)
+    _, outcome = _run(owner, approvals, ['echo', 'finished'])
+    assert outcome.decision == 'ALLOW', outcome.reason
+    result = json.loads(outcome.text)
+    assert result['exit_code'] == 0 and result['output'] == 'finished\n'
+
+
+def test_resource_limits_are_installed_before_the_command(sandbox):
+    owner, authority, approvals, fake, _ = sandbox
+    _grant(authority, fake)
+    _, outcome = _run(owner, approvals, ['python3', '-c',
+        'import json,resource;print(json.dumps([resource.getrlimit(which) for which in '
+        '(resource.RLIMIT_CPU,resource.RLIMIT_NOFILE,resource.RLIMIT_FSIZE)]))'], timeout_s=7)
+    assert outcome.decision == 'ALLOW', outcome.reason
+    assert json.loads(json.loads(outcome.text)['output']) == [[17,17], [1024,1024], [512*1024**2]*2]
+
+
 def test_exit_codes_timeouts_and_output_limits_are_reported(sandbox):
     owner, authority, approvals, fake, _ = sandbox
     _grant(authority, fake)

@@ -66,7 +66,7 @@ COMMAND_TOOL = {"type": "function", "function": {
 
 def sandbox_executable() -> str | None:
     """The resolved bubblewrap path when every sandbox ingredient is present."""
-    if os.name != "posix" or resource is None or not hasattr(resource, "prlimit"):
+    if os.name != "posix" or resource is None or not hasattr(resource, "setrlimit"):
         return None
     found = shutil.which("bwrap")
     if not found or not ctypes.util.find_library("seccomp") or not os.access(PYTHON, os.X_OK):
@@ -149,7 +149,8 @@ def masked_digest(masks: tuple[tuple[str, bool], ...]) -> str:
 
 
 def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...], cwd: str,
-                    masks: tuple[tuple[str, bool], ...]) -> list[str]:
+                    masks: tuple[tuple[str, bool], ...], *,
+                    timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
     """Bubblewrap argv: system files read-only, only the workspace writable, sensitive paths masked."""
     args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all", "--share-net",
             "--clearenv", "--ro-bind", "/usr", "/usr"]
@@ -178,8 +179,24 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
                  "--setenv", "PATH", ":".join(COMMAND_SYSTEM_BIN_DIRS),
                  "--setenv", "LANG", "C.UTF-8", "--setenv", "TERM", "dumb",
                  "--setenv", "NO_COLOR", "1",
-                 "--", PYTHON, "-c", network_deny_bootstrap(MAX_PROCESSES), program, *argv[1:]])
+                 "--", PYTHON, "-c", command_bootstrap(timeout_s), program, *argv[1:]])
     return args
+
+
+def command_bootstrap(timeout_s: int) -> str:
+    """Install hard resource limits in the child before any user program runs.
+
+    Setting limits from the parent races both program execution and reaping:
+    a fast command can exit while the busy UI is waiting to resume.
+    """
+    if type(timeout_s) is not int or not 1 <= timeout_s <= COMMAND_MAX_TIMEOUT_S:
+        raise ValueError("command timeout is invalid")
+    cpu = timeout_s + 10
+    limits = ("import resource\n"
+              f"resource.setrlimit(resource.RLIMIT_CPU, ({cpu}, {cpu}))\n"
+              "resource.setrlimit(resource.RLIMIT_NOFILE, (1024, 1024))\n"
+              f"resource.setrlimit(resource.RLIMIT_FSIZE, ({512 * 1024**2}, {512 * 1024**2}))\n")
+    return limits + network_deny_bootstrap(MAX_PROCESSES)
 
 
 @dataclass(frozen=True)
@@ -271,21 +288,11 @@ class CommandRunOwner:
     async def _execute(self, preview: CommandPreview) -> dict:
         params = preview.request.parameters
         command = sandbox_command(params["executable"], self.root, preview.program, preview.argv,
-                                  preview.cwd, preview.masks)
+                                  preview.cwd, preview.masks, timeout_s=preview.timeout_s)
         proc = await asyncio.create_subprocess_exec(
             *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
             start_new_session=True)
-        try:
-            if resource is None:
-                raise RuntimeError("OS process limits are unavailable")
-            resource.prlimit(proc.pid, resource.RLIMIT_CPU, (preview.timeout_s + 10,) * 2)
-            resource.prlimit(proc.pid, resource.RLIMIT_NOFILE, (1024, 1024))
-            resource.prlimit(proc.pid, resource.RLIMIT_FSIZE, (512 * 1024**2,) * 2)
-        except (AttributeError, OSError, ValueError) as exc:
-            self._kill(proc)
-            await proc.wait()
-            raise RuntimeError("command resource limits could not be applied") from exc
         output = bytearray()
         total = 0
         timed_out = False
