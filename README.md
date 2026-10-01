@@ -5,6 +5,8 @@
 > **Estado:** en desarrollo. Esta página separa lo que ya se ejecutó de verdad de lo que está implementado y probado solo con dobles de prueba. Mira [Qué está probado](#qué-está-probado).
 
 
+**Novedades (2026-10-01):** agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
+
 **Uso diario (2026-09-30):** recuperación manual con `/retry`, borradores y sesiones versionadas, `/context` para AGENTS.md, diagnóstico local `isycode doctor` y `/doctor`, y verificación explícita del proveedor con `/check`. Consulta [la guía y sus límites de verificación](docs/daily-use-readiness.md).
 
 ## Índice
@@ -20,6 +22,7 @@
 - [Qué está probado](#qué-está-probado)
 - [Integraciones](#integraciones)
 - [Atajos](#atajos)
+- [Lo que nos falta](#lo-que-nos-falta)
 - [Roadmap y documentación](#roadmap-y-documentación)
 
 ## La TUI
@@ -29,6 +32,15 @@ Las capturas muestran la TUI real de Textual con un workspace temporal de demost
 | Overview | Archivos |
 | --- | --- |
 | ![TUI: overview](docs/screenshots/01-overview.png) | ![TUI: archivos y límite de autoridad](docs/screenshots/02-files.png) |
+
+Lo que verás al usarla:
+
+- **Chat y transcript limpio:** las lecturas salen en una sola línea gris (`✓ read src/app.py · rcpt_…`); cada cambio de archivo muestra tu decisión (`✓ You approved · ruta` o `✗ You rejected · ruta · nothing was written`) y el modelo la recibe en el resultado (`approved_by_user`), así nunca confunde un rechazo con un éxito.
+- **Aprobaciones:** cada cambio, comando o commit abre una ventana con el diff o el comando exacto. `y` aprueba, `n` o `Esc` rechazan y `Enter` sobre el botón por defecto rechaza. Si una escritura reemplaza un archivo existente completo, la ventana lo dice: *Replace whole file*.
+- **Settings y la paleta `/`:** se abren como una ventana grande y centrada. La opción resaltada se explica debajo de la lista; las que llevan `?` abren un cuadrito de ayuda al pulsar `?`. En el campo de filtro, `?` se escribe normal.
+- **Panel Tasks:** el plan del agente con su progreso. Clic en el panel o `Ctrl+T` lo pliegan a una línea (`▸ Tasks · 3/7 done · now: …`) y lo vuelven a abrir.
+- **Panel lateral:** MCPs, LSPs y Skills aparecen como interruptores **● ON** (verde) u **OFF ○** (rojo), con el motivo en gris y un resumen en el título (`LSPs · 1/2 on`). Cada sección se pliega con un clic en su título; Gateway, Mobile Host, Bridge y Workspace empiezan plegadas.
+- **Copiar:** con el permiso *Copy selected text to the clipboard*, seleccionar texto con el ratón lo copia al portapapeles del sistema (wl-copy, xclip, xsel, pbcopy o clip, y además OSC 52). El botón *Copy path* del árbol de archivos usa el mismo camino. El campo de API key nunca se copia y el journal guarda solo tamaño y digest, nunca el texto.
 
 ## Instalar y arrancar
 
@@ -122,8 +134,11 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | Herramientas de servidores MCP locales | `mcp__<servidor>__<herramienta>`, `/mcp` | se concede al arrancar el servidor | sí: al arrancar y en cada llamada |
 | Revisar errores tras editar un `.py` | automático tras aplicar un cambio | Check Python files after edits | no (solo lectura) |
 | Mostrar su plan de trabajo | `update_tasks` (panel **Tasks**) | ninguno: no es una acción | no |
+| Copiar texto que **tú** seleccionas | selección con el ratón, *Copy path* | Copy selected text to the clipboard | no (es un gesto tuyo; el modelo no tiene esta herramienta) |
 
-**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git y diagnósticos (lo que tu equipo soporte). Cada cambio, comando y commit sigue pidiéndote aprobación.
+**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Cada cambio, comando y commit sigue pidiéndote aprobación.
+
+Si una herramienta está apagada, el agente te dice dónde activarla en vez de solo decir que no puede.
 
 ### Bucle y contexto
 
@@ -205,6 +220,8 @@ Selecciónalo desde **Providers** o con `ISYCODE_PROVIDER` / `ISYCODE_MODEL`. Si
 
 **Claude nativo:** el provider `anthropic` usa la API Messages con el modelo `claude-opus-5-5` por defecto, thinking adaptativo (su resumen aparece en el bloque de razonamiento) y effort `medium`. Los bloques de thinking se devuelven intactos dentro de un turno de herramientas; si ISyCode recorta contexto, la API descarta los bloques afectados en vez de fallar (`prefix_mismatch_behavior: drop_block`). Si Claude rechaza una petición, el servidor puede reintentarla en otro modelo (`fallbacks: "default"`). Una negativa o una llamada a herramienta cortada por longitud nunca se ejecuta.
 
+**Modelos destacados:** si el provider los lista, el selector de modelos pone arriba, con ★, GLM 5.3 Flash, GLM 5.3, Kimi K3 y DeepSeek V4.1 Flash (`deepseek-ai/deepseek-v4.1-flash` en NVIDIA). El resto del catálogo sigue debajo.
+
 Los demás providers comparten el transporte compatible con OpenAI. Que exista el preset no implica que se haya validado una clave real de cada servicio. OAuth no está disponible todavía.
 
 ## Configuración personal
@@ -237,6 +254,8 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **Pyright LSP:** `initialize` y `workspace/symbol` reales en un workspace temporal; las pruebas negativas bloquearon sockets y escritura.
 - **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode, en red interna, montaje read-only y sin credenciales.
 - **Chat con NVIDIA NIM** tras autorizar el host; cancelación de chat y streaming.
+- **Agente con herramientas en la máquina de Danny (Linux):** leer, buscar, escribir, editar y borrar de principio a fin pasando por las aprobaciones. Un modelo de NVIDIA (Nemotron) ejecutó además una autoprueba guiada de lectura, edición, mover, borrar, ataques que deben fallar, comandos y git; sus hallazgos de UX se corrigieron (decisión visible, *Replace whole file*, cómo activar herramientas).
+- **Interfaz con Textual 8.2.8:** capturas de la TUI real confirmaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral.
 
 **Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
 
@@ -244,6 +263,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - Diagnósticos tras editar: servidor LSP simulado, no Pyright.
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
 - MCP local: servidor MCP simulado.
+- Portapapeles: herramienta de copia simulada en las pruebas; falta confirmarlo en el escritorio real (Wayland/X11).
 - Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
 
 **Parcial o pendiente:**
@@ -252,7 +272,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **LSP:** solo Pyright (`workspace/symbol` y diagnósticos); sin autocompletado ni navegación completa.
 - **Mobile Host:** faltan sesiones remotas, streaming, cancelación y approvals remotos.
 - **Tailscale:** flujo de owners y UI probado offline; la conectividad real de tailnet sigue **NOT_DEMONSTRATED**.
-- **Pickers nativos y portapapeles** (`desktop.file_picker`, `clipboard.copy`): bloqueados hasta que tengan owner.
+- **Pickers nativos** (`desktop.file_picker`): bloqueados hasta que tengan owner.
 - **No disponible todavía:** borrar o mover carpetas enteras, borrar archivos binarios o de más de 128 KiB, borrar conversaciones guardadas, OAuth, OpenISy L0/L1.
 
 La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia por superficie.
@@ -278,8 +298,23 @@ La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia
 | `F6` / `Shift+F6` | Files / Overview |
 | `F7` / `Shift+F7` | Ancho del panel lateral |
 | `Ctrl+L` | Volver al composer conservando el borrador |
+| `Ctrl+T` | Plegar o desplegar el panel Tasks |
+| `y` / `n` | Aprobar / rechazar en cualquier ventana de aprobación |
+| `?` | En Settings o `/`, explicar la opción resaltada |
+| Selección con el ratón | Copiar al portapapeles (con el permiso activo) |
 
 El engranaje **Settings** incluye el mapa completo.
+
+## Lo que nos falta
+
+Lo poquito que queda, en orden:
+
+1. **Solo modelos activos de NVIDIA:** filtrar del selector los modelos deprecados. Falta ver qué campos devuelve de verdad `/v1/models` de NVIDIA para no adivinar.
+2. **Rail de IsySentinel:** que el panel lateral muestre en vivo qué decidió Sentinel (ALLOW/DENY) y qué permisos están activos, junto a MCP/LSP.
+3. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
+4. **Ediciones tolerantes a espacios:** que `workspace_edit` encuentre el fragmento aunque cambien espacios o sangría, mostrando siempre el diff exacto antes de aprobar.
+5. **Validar en real** lo que hoy solo tiene dobles de prueba: portapapeles en escritorio, sandbox de comandos, MCP local, Claude nativo y Windows.
+6. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
 
