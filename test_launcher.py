@@ -50,3 +50,27 @@ def test_installer_refuses_to_replace_an_existing_command(tmp_path: Path):
 
     assert result.returncode != 0
     assert command.read_text(encoding="utf-8") == "user-owned"
+
+
+def test_launcher_prefers_repository_virtualenv(tmp_path: Path):
+    repository = tmp_path / "repo"
+    launcher = repository / "scripts" / "isycode"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_bytes((ROOT / "scripts" / "isycode").read_bytes())
+    launcher.chmod(0o755)
+    python = repository / ".venv" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    capture = tmp_path / "python-invocation.txt"
+    python.write_text(
+        "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$CAPTURE\"\n",
+        encoding="utf-8",
+    )
+    python.chmod(0o755)
+    env = os.environ.copy()
+    env.pop("ISYCODE_PYTHON", None)
+    env["CAPTURE"] = str(capture)
+
+    subprocess.run([str(launcher), "--probe"], cwd=tmp_path, env=env,
+                   check=True, capture_output=True, text=True)
+
+    assert capture.read_text(encoding="utf-8").strip() == "-m isycode --probe"
