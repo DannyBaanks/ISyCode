@@ -74,3 +74,39 @@ def test_launcher_prefers_repository_virtualenv(tmp_path: Path):
                    check=True, capture_output=True, text=True)
 
     assert capture.read_text(encoding="utf-8").strip() == "-m isycode --probe"
+
+
+def test_help_lists_spanish_self_update_commands(capsys):
+    from isycode.launcher import main
+
+    assert main(["--help"]) == 0
+    help_text = capsys.readouterr().out
+    assert "isycode actualizar" in help_text
+    assert "--check" in help_text
+
+
+def test_update_command_dispatches_check_and_exit_code(monkeypatch, capsys):
+    import isycode.updater
+    from isycode.launcher import main
+
+    calls = []
+
+    class FakeUpdater:
+        def run(self, check_only=False):
+            calls.append(check_only)
+            return isycode.updater.UpdateReport("available", ("Hay una actualización.",))
+
+    monkeypatch.setattr(isycode.updater, "SelfUpdater", FakeUpdater)
+
+    assert main(["actualizar", "--check"]) == 0
+    assert calls == [True]
+    assert "actualización" in capsys.readouterr().out
+    assert main(["actualizar"]) == 0
+    assert calls == [True, False]
+
+
+def test_update_command_rejects_unknown_flags(capsys):
+    from isycode.launcher import main
+
+    assert main(["actualizar", "--force"]) == 2
+    assert "Uso:" in capsys.readouterr().err

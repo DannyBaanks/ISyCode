@@ -76,6 +76,26 @@ Otras formas de ejecutarlo:
 
 La primera vez que abres una carpeta, ISyCode pregunta si será un workspace **recurrente** (crea un `.isyroot` vacío y puede guardar conversaciones) o **temporal**, y qué **modo** usará. Las conversaciones recurrentes se guardan en `~/.local/state/isycode/` (o bajo `$XDG_STATE_HOME`), nunca dentro del proyecto.
 
+Actualización desde la terminal:
+
+| Comando | Qué hace |
+| --- | --- |
+| **isycode actualizar** | Avanza un checkout limpio o prepara la instalación de usuario |
+| **isycode actualizar --check** | Consulta cambios sin instalar ni avanzar la rama |
+
+El comando detecta el checkout desde el propio programa, así que puedes
+ejecutarlo desde cualquier carpeta. En una instalación de usuario sin checkout,
+descarga el código oficial en `$XDG_DATA_HOME/isycode/source` (o
+`~/.local/share/isycode/source`), prepara un entorno virtual y ofrece el comando
+`isycode`. No usa `sudo`. Si el comando ya pertenece a otra aplicación, lo
+conserva e indica la ruta del launcher de ISyCode.
+
+En un checkout de desarrollo, solo actualiza mediante avance rápido cuando no
+hay cambios locales. Si encuentra archivos modificados o nuevos, muestra los
+cambios entrantes y se detiene para protegerlos; guarda tu trabajo y vuelve a
+ejecutar el comando. `--check` consulta el remoto y resume los commits/diff sin
+cambiar archivos del checkout, instalar paquetes ni crear una instalación.
+
 ### Paquetes precompilados
 
 Al publicar un tag `vX.Y.Z`, CI ejecuta la suite hermética en Linux y, si pasa y coincide con la versión de `pyproject.toml`, construye paquetes nativos. Cada binario pasa un smoke check en su runner antes de adjuntarse a un GitHub Release en borrador con `SHA256SUMS`.

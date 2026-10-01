@@ -11,6 +11,8 @@ Usage:
   isycode tui              Start the chat TUI
   isycode cli              Browse actions by semantic category
   isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
+  isycode actualizar       Actualizar el checkout limpio o preparar una instalación
+  isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
   isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
                            add --json for machine-readable output. Only read-only
                            tools that were granted run; nothing asks for approval.
@@ -23,6 +25,16 @@ The CLI browser groups actions by purpose. It does not run arbitrary shell comma
 
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] == "actualizar":
+        from isycode.updater import SelfUpdater
+
+        if arguments[1:] not in ([], ["--check"]):
+            print("Uso: isycode actualizar [--check]", file=sys.stderr)
+            return 2
+        report = SelfUpdater().run(check_only=arguments[1:] == ["--check"])
+        for line in report.lines:
+            print(line)
+        return 1 if report.status in {"blocked", "dirty", "error"} else 0
     if not arguments or arguments == ["tui"]:
         from isycode.tui import TUIApp
 
