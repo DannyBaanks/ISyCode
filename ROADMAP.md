@@ -9,7 +9,7 @@ Estado de este documento: **plan de trabajo**, no declaración de que las integr
 **Estrategia de producto (2026-09-28):** primero cerrar **ISyCode Secure**, con capacidades pequeñas, tipadas y deny-by-default. Después abrir una línea **ISyCode Full** para ampliar los permisos que el usuario concede. Full no es una omisión de Sentinel ni una elevación implícita: mantiene Workspace Authority, owners, approvals para efectos sensibles, límites y recibos; agrega adapters/acciones una por una. No se porta ni se copia la implementación de otra CLI.
 
 
-**Incremento de uso diario (2026-09-30):** implementados recuperación sin replay automático, sesiones con borradores/metadatos portables y gestión mediante owners, contexto AGENTS.md con recibo, diagnóstico local, `/check` explícito y pruebas headless del flujo leer/editar/test/diff. [Evidencia y pendientes](docs/daily-use-readiness.md): esto no cierra todo M16 ni acredita un proveedor real, Gateway, accesibilidad o pruebas prolongadas.
+**Incremento de uso diario (2026-09-30):** implementados recuperación sin replay automático, sesiones con borradores/metadatos portables y gestión mediante owners, contexto AGENTS.md con recibo, diagnóstico local, `/check` explícito y pruebas headless del flujo leer/editar/test/diff. [Evidencia y pendientes](docs/daily-use-readiness.md): esto no cierra todo M16 ni acredita un proveedor real, Gateway, accesibilidad o estabilidad durante horas. El [soak local del 2026-10-01](docs/long-session-soak-2026-10-01.md) pasó 75 ciclos con herramientas reales y dos reinicios en unos 11 minutos, con proveedor simulado; encontró y corrigió una carrera al arrancar comandos cortos.
 
 ## 1. Producto que queremos construir
 

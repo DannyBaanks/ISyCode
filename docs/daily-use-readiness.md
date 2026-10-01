@@ -146,14 +146,21 @@ cancellation, draft recovery across launches, context reauthorization and
 session deletion. These are headless widget checks, not a visual/accessibility
 audit or a long-duration performance soak.
 
+An additional [local long-session witness](long-session-soak-2026-10-01.md)
+passed on 2026-10-01: 75 real read/edit/test/diff cycles, two restarts and deliberate
+stream failures/cancellations over about 11 minutes. It found and fixed a command
+startup race. Provider responses were simulated; this does not establish real
+provider authentication, multi-hour performance or bounded memory.
+
 ## Still outstanding
 
 - The user chose offline validation. A real provider turn with tool calls,
   authentication failures and quota behavior remains unverified in this environment.
 - Gateway public-origin and approved semantic-query witnesses remain separate
   remote milestones. No Gateway write or Bridge daemon was started.
-- A long-duration performance/memory soak and interactive terminal/accessibility
-  review remain release acceptance work; no broad performance claim is made.
+- Multi-hour performance/memory validation and interactive terminal/accessibility
+  review remain release acceptance work; the recorded local soak is one bounded
+  scenario, not a broad performance claim.
 - MCP remote transports/OAuth, additional LSP features, Mobile Host runtime
   sessions, Bridge and L1 remain optional follow-up integrations.
 - Verified monetary cost estimates, automatic retry policies and portable file/clipboard

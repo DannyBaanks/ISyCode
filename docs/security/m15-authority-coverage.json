@@ -1596,7 +1596,7 @@
       "action": "workspace.command.run",
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "file": "isycode/command_runner.py",
-      "line": 226,
+      "line": 243,
       "owner": "workspace_command"
     },
     {
