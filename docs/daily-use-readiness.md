@@ -198,3 +198,39 @@ suite run.
 ## Verification record (2026-09-30)
 
 The local suite passed 605 tests, skipped 3 optional checks and deselected 11 external integration cases. The focused real-Bubblewrap TUI workflow passed separately (1 test). An unrestricted test collection also exposed five existing external Bridge/broker failures because the separate ISyCo checkout and services are absent; the documented local command excludes that integration marker. Optional Anthropic SDK and Pyright checks remain skipped.
+
+## Sibling folders and automatic file edits
+
+Files → Folders (also available in Settings) adds up to eight direct sibling
+project directories using short aliases such as `other-project`. Absolute paths
+with spaces are supported. Each folder gets its own exact-root read/search grant
+and, if selected, write grant. File tools choose `folder`; omitting it uses
+`main`. The browser can switch folders without changing the primary project,
+provider/session authority or command working directory. Read-only attachments
+remain read-only even if the other project uses Classic mode. Commands, Git,
+deletes and moves still operate only on the primary project. Removing an
+attachment removes this chat's access, keeping files and standalone grants.
+Hidden directories, symlinks, shared parents, children and the private ISyCode
+state are rejected. Keep ISYCODE_STATE_HOME outside project roots.
+
+Every proposed file creation/edit opens its actual folder and exact diff by
+default. **Always allow…** opens a separate danger warning, initially focused on
+Cancel. Confirming enables automatic file creation/editing for that folder and
+persists for that primary workspace. Files → Folders shows ON/OFF and disables
+it immediately. Model mistakes or malicious file instructions can overwrite
+work without individual review; keep backups and inspect Git diffs. ISySentinel,
+Authority, sensitive-path protections, immutable request approvals, checkpoints
+and per-root journals still run for each action. They do not guarantee that an
+allowed edit is correct. Commands/deletes/moves/commits retain their own prompts.
+Tool results label `approval_mode` as `reviewed` or `delegated`; automatic edits
+are never reported as individually reviewed. Removing/readding or replacing an
+attachment invalidates pending diff and warning confirmations.
+
+Verification for this increment: Python 3.10 local CI suite **844 passed, 3
+skipped, 11 integration cases deselected**; separate real Linux sandbox coding
+workflow **1 passed**. Root-aware approval/registry/coverage checks **49 passed**
+on Python 3.10. Native controls were captured at 80×24 and 60×18, with default
+Cancel and visible pinned buttons. Provider replies in the coding fixture were
+simulated; files, approvals, journals, sandbox command and Git diff were real.
+Independent review found no remaining critical/important blockers after fixing
+private-state access and stale registration confirmations.
