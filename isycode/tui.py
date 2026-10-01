@@ -291,6 +291,14 @@ class ThoughtBlock(Collapsible):
         body = Static(Text("", style=MUTED))
         super().__init__(body, title=title, collapsed=False, **kwargs)
         self._body = body
+        self._streaming = True
+
+    def scroll_visible(self, *args, **kwargs):
+        # Collapsible schedules this on its initial expansion. During a live
+        # response the chat owns scrolling, including the user's history view.
+        if self._streaming or self.collapsed:
+            return False
+        return super().scroll_visible(*args, **kwargs)
 
     def set_text(self, text: str) -> None:
         """Thread-safe entry: replace the reasoning body."""
@@ -299,11 +307,60 @@ class ThoughtBlock(Collapsible):
     def collapse_to(self, seconds: float) -> None:
         """Collapse with the elapsed-time title."""
         self.title = f"thought for {seconds:.0f}s"
+        self._streaming = False
         self.collapsed = True
 
 
 class ChatArea(VerticalScroll):
-    """Main chat: a scroll of message widgets (Static / ThoughtBlock)."""
+    """Chat with a layout-aware tail anchor that user scrolling can release."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tail = Static("", classes="chat-tail")
+        self._tail.styles.height = 1
+
+    def compose(self):
+        yield self._tail
+
+    def on_mount(self):
+        self.resume_tail()
+
+    def mount(self, *widgets, before=None, after=None):
+        if before is None and after is None and self._tail.parent is self:
+            before = self._tail
+        return super().mount(*widgets, before=before, after=after)
+
+    def remove_children(self, selector="*"):
+        if selector == "*":
+            selector = [child for child in self.children if child is not self._tail]
+            self.resume_tail()
+        return super().remove_children(selector)
+
+    def pause_tail(self):
+        self._clear_anchor()
+
+    def resume_tail(self):
+        self._tail.anchor(animate=False)
+        self.follow_tail()
+
+    def follow_tail(self):
+        # Mount/update changes are measured later, so do not scroll to the old
+        # extent here. A queued callback must still respect a user's scroll-up.
+        self.call_after_refresh(self._follow_measured_tail)
+
+    def _follow_measured_tail(self):
+        if self._anchored is self._tail:
+            self.scroll_end(animate=False, immediate=True)
+
+    def watch_scroll_y(self, old_value, new_value):
+        super().watch_scroll_y(old_value, new_value)
+        if self.is_mounted and new_value >= self.max_scroll_y:
+            self._tail.anchor(animate=False)
+
+    def action_scroll_end(self):
+        super().action_scroll_end()
+        self.resume_tail()
+
 
 
 class PromptArea(TextArea):
@@ -5351,7 +5408,7 @@ class TUIApp(App):
         """Append a plain message line to the chat."""
         chat = self.query_one(ChatArea)
         chat.mount(Static(Text(text, style=color)))
-        chat.scroll_end(animate=False)
+        chat.follow_tail()
 
     def action_find_console(self) -> None:
         """Open console-wide search regardless of which main view has focus."""
@@ -5362,9 +5419,10 @@ class TUIApp(App):
 
     @staticmethod
     def _render_searchable_text(widget: Static) -> str:
-        console = Console(record=True, width=max(24, widget.size.width), color_system=None)
-        console.print(widget.content)
-        return console.export_text(styles=False)
+        console = Console(width=max(24, widget.size.width), color_system=None)
+        with console.capture() as capture:
+            console.print(widget.renderable)
+        return capture.get()
 
     def _search_console(self, query: str, screen: ConsoleSearchScreen) -> None:
         for widget, _ in self._console_search_hits:
@@ -5411,7 +5469,9 @@ class TUIApp(App):
         widget, _ = self._console_search_hits[self._console_search_index]
         if widget.is_mounted:
             widget.add_class("console-search-current")
-            self.query_one(ChatArea).scroll_to_widget(widget, top=True, animate=False)
+            chat = self.query_one(ChatArea)
+            chat.pause_tail()
+            chat.scroll_to_widget(widget, top=True, animate=False)
 
     def _clear_console_search(self) -> None:
         for widget, _ in self._console_search_hits:
@@ -5426,7 +5486,7 @@ class TUIApp(App):
         chat = self.query_one(ChatArea)
         block = ThoughtBlock(title=title)
         chat.mount(block)
-        chat.scroll_end(animate=False)
+        chat.follow_tail()
         return block, chat
 
     @staticmethod
@@ -5573,7 +5633,7 @@ class TUIApp(App):
                 chat = app.query_one(ChatArea)
                 chat.mount(Static(Syntax(result["diff"] or "(no changes)", "diff",
                                          theme="monokai", word_wrap=True)))
-                chat.scroll_end(animate=False)
+                chat.follow_tail()
 
         async def _commit_cmd(app: "TUIApp", arg: str) -> None:
             if not arg.strip():
@@ -5675,7 +5735,7 @@ class TUIApp(App):
             chat = app.query_one(ChatArea)
             cancel_button = Button("Cancel review", id="review-cancel")
             chat.mount(cancel_button)
-            chat.scroll_end(animate=False)
+            chat.follow_tail()
             messages = [
                 {"role": "system", "content": (
                     "Review the supplied artifact and return concise findings and suggestions. "
@@ -5752,7 +5812,7 @@ class TUIApp(App):
                 classes="external-review"))
             app._pending_review = (artifact, critique)
             chat.mount(Button("Iterate with this review", id="review-iterate"))
-            chat.scroll_end(animate=False)
+            chat.follow_tail()
             app._append("  The reviewer has no tools. Its feedback is not authority.", MUTED)
 
         async def _providers_cmd(app: "TUIApp", arg: str) -> None:
@@ -6131,7 +6191,7 @@ class TUIApp(App):
                 self._append(f"\n> {message['content']}", CYAN)
             else:
                 chat.mount(Static(RichMarkdown(message["content"], code_theme="monokai")))
-        chat.scroll_end(animate=False)
+        chat.follow_tail()
         self._append(f"  Resumed · {session.title} · {len(session.messages)} messages", GREEN)
 
     async def _delete_chat_session(self, session_id: str) -> None:
@@ -6929,10 +6989,13 @@ class TUIApp(App):
                         "END USER-INJECTED AGENT CONTEXT"
                     ),
                 })
-            block, chat = self._mount_thought()
+            chat = self.query_one(ChatArea)
             reason_buf: list[str] = []
             content_buf: list[str] = []
+            step_reason: list[str] = []
+            step_content: list[str] = []
             holder: dict = {"widget": None}
+            thought_started = _time.time()
 
             provider_name = selected_provider_name()
             provider = Provider(
@@ -6941,20 +7004,40 @@ class TUIApp(App):
                 api_key=load_provider_key(provider_name) or None)
 
             def _content_line() -> None:
+                if not step_content:
+                    return
                 w = holder["widget"]
                 if w is None:
                     w = Static(RichMarkdown("", code_theme="monokai"))
                     holder["widget"] = w
                     chat.mount(w)
-                w.update(RichMarkdown("".join(content_buf), code_theme="monokai"))
-                chat.scroll_end(animate=False)
+                w.update(RichMarkdown("".join(step_content), code_theme="monokai"))
+                chat.follow_tail()
+
+            def finish_step() -> None:
+                nonlocal block
+                if block is not None:
+                    block.collapse_to(_time.time() - thought_started)
+                    block = None
+                    chat.follow_tail()
 
             def on_chunk(kind: str, chunk: str) -> None:
+                nonlocal block, thought_started
+                if not chunk:
+                    return
                 if kind == "reasoning":
+                    if block is None:
+                        block, _ = self._mount_thought()
+                        thought_started = _time.time()
                     reason_buf.append(chunk)
-                    block.set_text("".join(reason_buf))
+                    step_reason.append(chunk)
+                    block.set_text("".join(step_reason))
+                    chat.follow_tail()
                 elif kind == "content":
+                    if not step_content and content_buf:
+                        content_buf.append("\n\n")
                     content_buf.append(chunk)
+                    step_content.append(chunk)
                     _content_line()
 
             owner = ProviderNetworkOwner(
@@ -6987,6 +7070,9 @@ class TUIApp(App):
                             "or set it to no limit in Settings → My defaults.", YELLOW)
                         break
                     tool_round += 1
+                    holder["widget"] = None
+                    step_content.clear()
+                    step_reason.clear()
                     messages[:], elided = compact_turn(messages)
                     if elided:
                         self._append(f"  Context trimmed · {elided} older tool result"
@@ -7002,6 +7088,9 @@ class TUIApp(App):
                             f"{provider_result.reason[:240] or 'request was not completed'}; "
                             "no further request was sent.", YELLOW)
                         return
+                    if not step_content and isinstance(response.get("text"), str):
+                        on_chunk("content", response["text"])
+                    finish_step()
                     calls = response.get("tool_calls", [])
                     if not calls:
                         break
@@ -7053,6 +7142,7 @@ class TUIApp(App):
                     "Los comandos solo corren con la herramienta workspace_run y tu aprobación; "
                     "no se ejecutó nada.")
                 content_buf[:] = [full]
+                step_content[:] = [full]
                 _content_line()
             elif attempted_tool:
                 full = (
@@ -7062,6 +7152,7 @@ class TUIApp(App):
                     "solo se habilitarán detrás de Workspace Authority e IsySentinel."
                 )
                 content_buf[:] = [full]
+                step_content[:] = [full]
                 _content_line()
             if full:
                 self._persist_chat_message("user", text)
@@ -7098,7 +7189,8 @@ class TUIApp(App):
             self._chat_request_task = None
             self._chat_turn_task = None
             if block is not None:
-                block.collapse_to(_time.time() - t0)
+                block.collapse_to(_time.time() - thought_started)
+                self.query_one(ChatArea).follow_tail()
 
     def _prepare_retry(self) -> None:
         """Prepare a draft; never replay provider requests or tool effects automatically."""

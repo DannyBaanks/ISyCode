@@ -144,6 +144,7 @@ Si una herramienta está apagada, el agente te dice dónde activarla en vez de s
 
 - **Sin límite de pasos por defecto:** el agente trabaja hasta responder, sin tope de llamadas por respuesta. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Si prefieres acotar cuántas peticiones al modelo (y cuánto gasto) usa un prompt, elige 10, 25, 50 o 100 pasos en **Settings → My defaults**.
 - **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
+- El chat muestra cada explicación y el razonamiento que entregue el provider, luego sus herramientas y después el siguiente paso. El scroll sigue la salida mientras estás abajo; si subes a leer o buscas un mensaje antiguo, conserva tu posición. Pulsa `End` dentro del chat o vuelve al final para seguir la salida otra vez.
 - Cuando la conversación ya no cabe, ISyCode **resume los mensajes antiguos** con el mismo provider (una petición autorizada y con receipt, como cualquier otra) y recorta resultados de herramientas antiguos dentro de un turno largo. `/compact` lo hace a mano. La conversación guardada conserva siempre el transcript completo.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
 
