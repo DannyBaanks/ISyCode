@@ -27,7 +27,7 @@
 
 ## La TUI
 
-Las capturas muestran la TUI real de Textual con un workspace temporal de demostración. El texto del chat es estático: no se llamó a ningún provider, Gateway, MCP ni comando. El árbol de archivos aparece bloqueado porque la captura no tiene permiso de lectura.
+Las capturas son evidencia histórica de la TUI real de Textual con un workspace temporal de demostración; no validan compatibilidad con otras versiones. El texto del chat es estático: no se llamó a ningún provider, Gateway, MCP ni comando. El árbol de archivos aparece bloqueado porque la captura no tiene permiso de lectura.
 
 | Overview | Archivos |
 | --- | --- |
@@ -45,6 +45,8 @@ Lo que verás al usarla:
 ## Instalar y arrancar
 
 Desde el código fuente (Python 3.10 o posterior):
+
+La instalación fija **Textual 1.0.0**, la versión validada con Python 3.10 y 3.12 para arranque, navegación, aprobaciones y panel lateral. Textual 8.x no está soportado.
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git
@@ -145,6 +147,8 @@ Si una herramienta está apagada, el agente te dice dónde activarla en vez de s
 - **Sin límite de pasos por defecto:** el agente trabaja hasta responder, sin tope de llamadas por respuesta. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Si prefieres acotar cuántas peticiones al modelo (y cuánto gasto) usa un prompt, elige 10, 25, 50 o 100 pasos en **Settings → My defaults**.
 - **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
 - El chat muestra cada explicación y el razonamiento que entregue el provider, luego sus herramientas y después el siguiente paso. El scroll sigue la salida mientras estás abajo; si subes a leer o buscas un mensaje antiguo, conserva tu posición. Pulsa `End` dentro del chat o vuelve al final para seguir la salida otra vez.
+- Las sesiones conservan hasta 32 notas de herramientas y el resumen de contexto, con límites y redacción de secretos comunes. Al retomar se muestran como historial que puede estar desactualizado; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
+- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y peticiones de chat/resumen. **Settings → My defaults → Chat budget per session** ofrece 10.000, 50.000, 100.000 o 500.000 tokens; está apagado por defecto. Detiene peticiones posteriores al agotar el presupuesto o si el consumo es desconocido. Una petición en curso puede sobrepasarlo; no es un límite de facturación. `/check` y la revisión externa se cuentan por separado.
 - Cuando la conversación ya no cabe, ISyCode **resume los mensajes antiguos** con el mismo provider (una petición autorizada y con receipt, como cualquier otra) y recorta resultados de herramientas antiguos dentro de un turno largo. `/compact` lo hace a mano. La conversación guardada conserva siempre el transcript completo.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
 
@@ -256,11 +260,11 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode, en red interna, montaje read-only y sin credenciales.
 - **Chat con NVIDIA NIM** tras autorizar el host; cancelación de chat y streaming.
 - **Agente con herramientas en la máquina de Danny (Linux):** leer, buscar, escribir, editar y borrar de principio a fin pasando por las aprobaciones. Un modelo de NVIDIA (Nemotron) ejecutó además una autoprueba guiada de lectura, edición, mover, borrar, ataques que deben fallar, comandos y git; sus hallazgos de UX se corrigieron (decisión visible, *Replace whole file*, cómo activar herramientas).
-- **Interfaz con Textual 8.2.8:** capturas de la TUI real confirmaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral.
+- **Capturas históricas con Textual 8.2.8 (versión no soportada):** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia histórica; la instalación y las pruebas actuales usan Textual 1.0.0.
 
 **Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
 
-- Comandos en sandbox: bubblewrap simulado; el bloqueo de sockets por seccomp sí es real.
+- Comandos en sandbox: los tests unitarios simulan Bubblewrap; un witness local adicional ejecutó lectura, edición aprobada, unittest y Git diff con Bubblewrap real y provider simulado.
 - Diagnósticos tras editar: servidor LSP simulado, no Pyright.
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
 - MCP local: servidor MCP simulado.
@@ -274,7 +278,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **Mobile Host:** faltan sesiones remotas, streaming, cancelación y approvals remotos.
 - **Tailscale:** flujo de owners y UI probado offline; la conectividad real de tailnet sigue **NOT_DEMONSTRATED**.
 - **Pickers nativos** (`desktop.file_picker`): bloqueados hasta que tengan owner.
-- **No disponible todavía:** borrar o mover carpetas enteras, borrar archivos binarios o de más de 128 KiB, borrar conversaciones guardadas, OAuth, OpenISy L0/L1.
+- **No disponible todavía:** borrar o mover carpetas enteras, borrar archivos binarios o de más de 128 KiB, OAuth, OpenISy L0/L1.
 
 La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia por superficie.
 

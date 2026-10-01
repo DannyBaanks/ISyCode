@@ -34,8 +34,6 @@ FALLBACK_MODELS = frozenset({"claude-fable-5-1", "claude-opus-5-5", "claude-opus
 EFFORT_LEVELS = frozenset({"low", "medium", "high", "xhigh", "max"})
 THINKING_BINDING_BETA = "thinking-binding-controls-2026-08-01"
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
-# Thinking counts toward max_tokens, so leave room for it as well as the reply.
-MIN_MAX_TOKENS = 32_000
 
 
 def sdk_available() -> bool:
@@ -152,7 +150,7 @@ async def anthropic_stream_complete(api_key: str | None, model: str, messages: l
     system, converted = to_anthropic(messages)
     options = request_options(model, effort)
     betas = options.pop("betas")
-    request: dict[str, Any] = {"model": model, "max_tokens": max(max_tokens, MIN_MAX_TOKENS),
+    request: dict[str, Any] = {"model": model, "max_tokens": max_tokens,
                                "messages": converted, **options}
     if system:
         request["system"] = system
@@ -188,7 +186,10 @@ async def anthropic_stream_complete(api_key: str | None, model: str, messages: l
         raise ProviderError("could not reach the Anthropic API", transport=True) from exc
     content = [block.to_dict() for block in final.content]
     details = final.stop_details.to_dict() if getattr(final, "stop_details", None) else None
-    return interpret(content, final.stop_reason, details)
+    response = interpret(content, final.stop_reason, details)
+    usage = getattr(final, "usage", None)
+    response["usage"] = usage.to_dict() if usage is not None else None
+    return response
 
 
 def list_models(api_key: str | None, base_url: str = ANTHROPIC_BASE_URL) -> list[str]:

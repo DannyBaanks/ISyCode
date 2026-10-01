@@ -30,7 +30,7 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         token_limit_field=provider.token_limit_field,
         reasoning_effort=provider.reasoning_effort,
         temperature_supported=provider.temperature_supported,
-        on_chunk=on_chunk, tools=tools)
+        on_chunk=on_chunk, tools=tools, include_usage=provider.name == "openai")
 
 
 def assistant_turn(response: dict) -> dict:

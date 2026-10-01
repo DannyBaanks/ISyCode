@@ -188,6 +188,10 @@ class ChatSessionStore:
         child = self.create(f"Fork: {parent.title}")
         child.messages = messages
         child.state = self.validate_state(parent.state)
+        if through_message is not None and through_message < len(parent.messages) - 1:
+            # Later notes have no message boundary and may reveal excluded turns.
+            child.state.pop("tool_history", None)
+            child.state.pop("conversation_summary", None)
         self.save(child)
         return child
 
@@ -268,9 +272,10 @@ class ChatSessionStore:
 
     @classmethod
     def validate_state(cls, state: Any) -> dict[str, Any]:
-        """Portable preferences only: never import secrets, grants or instructions."""
+        """Portable preferences and untrusted notes; never import authority or calls."""
         from isycode.providers import PRESETS
-        if not isinstance(state, dict) or set(state) - {"provider", "model", "role", "context_path", "draft"}:
+        if not isinstance(state, dict) or set(state) - {"provider", "model", "role", "context_path", "draft",
+                                                       "tool_history", "conversation_summary", "usage"}:
             raise ChatSessionError("session state has unsupported fields")
         provider = state.get("provider")
         if provider is not None and (not isinstance(provider, str) or provider not in PRESETS):
@@ -292,8 +297,23 @@ class ChatSessionStore:
         if state.get("context_path") is not None and state.get("context_path") != "AGENTS.md":
             raise ChatSessionError("session context must reference workspace AGENTS.md")
         clean = json.loads(json.dumps(state))
+        if "usage" in clean:
+            from isycode.usage import UsageLedger
+            try:
+                clean["usage"] = UsageLedger.from_state(clean["usage"]).to_state()
+            except ValueError as exc:
+                raise ChatSessionError("session usage is invalid") from exc
         if "draft" in clean:
             if not isinstance(clean["draft"], str) or len(clean["draft"]) > 16_000:
                 raise ChatSessionError("session draft exceeds its limit")
             clean["draft"] = cls._sanitize_text(clean["draft"])
+        if "tool_history" in clean:
+            from isycode.tool_history import normalize_tool_history
+            clean["tool_history"] = normalize_tool_history(clean["tool_history"])
+        if "conversation_summary" in clean:
+            summary = clean["conversation_summary"]
+            if not isinstance(summary, str) or len(summary) > 8_000:
+                raise ChatSessionError("session conversation summary exceeds its limit or is malformed")
+            from isycode.tool_history import sanitize_historical_text
+            clean["conversation_summary"] = sanitize_historical_text(summary)[:8_000]
         return clean

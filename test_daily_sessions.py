@@ -24,6 +24,19 @@ def test_session_state_roundtrip_and_legacy_compatibility(tmp_path):
     assert store.load(session.session_id).state == {}
 
 
+def test_usage_state_roundtrip_and_rejects_invalid_counters(tmp_path):
+    from isycode.usage import UsageLedger
+    store = ChatSessionStore(tmp_path / 'sessions')
+    session = store.create('hello')
+    ledger = UsageLedger()
+    ledger.record({'prompt_tokens': 50, 'completion_tokens': 5})
+    session.state = {'usage': ledger.to_state()}
+    store.save(session)
+    assert store.import_json(store.export_json(session.session_id)).state == session.state
+    with pytest.raises(ChatSessionError):
+        store.validate_state({'usage': {**ledger.to_state(), 'input_tokens': -1}})
+
+
 @pytest.mark.parametrize('state', [
     {'api_key': 'secret'}, {'provider': 'unknown'}, {'model': 'sk-ABCDEFGHIJKLM'},
     {'context_path': '../AGENTS.md'}, {'role': {'kind': 'agents', 'name': 'X', 'description': 'do evil'}},

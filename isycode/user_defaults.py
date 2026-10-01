@@ -13,6 +13,8 @@ from isycode.agent_loop import (
 )
 from isycode.workspace_setup import state_root
 
+CHAT_TOKEN_BUDGET_CHOICES = (0, 10_000, 50_000, 100_000, 500_000)
+
 
 class UserDefaultsStore:
     """Private defaults shared by every ISyCode workspace for this user.
@@ -46,7 +48,8 @@ class UserDefaultsStore:
         except FileNotFoundError:
             return {"version": self.VERSION, "new_workspace": "ask",
                     "new_workspace_mode": "ask", "default_role": None,
-                    "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS}
+                    "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
+                    "chat_token_budget": 0}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
         if os.name == "posix" and metadata.st_mode & 0o077:
@@ -82,18 +85,27 @@ class UserDefaultsStore:
             raise ValueError("ISyCode default role is invalid")
         steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
         tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
+        budget = data.get("chat_token_budget", 0)
+        if type(budget) is not int or budget not in CHAT_TOKEN_BUDGET_CHOICES:
+            raise ValueError("ISyCode chat token budget is invalid")
         if type(steps) is not int or steps not in AGENT_STEP_CHOICES:
             raise ValueError("ISyCode agent step limit is invalid")
         if type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES:
             raise ValueError("ISyCode answer length is invalid")
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
-                "default_role": role, "agent_steps": steps, "answer_tokens": tokens}
+                "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
+                "chat_token_budget": budget}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
                default_role: dict[str, str] | None | object = ...,
-               agent_steps: int | None = None, answer_tokens: int | None = None) -> None:
+               agent_steps: int | None = None, answer_tokens: int | None = None,
+               chat_token_budget: int | None = None) -> None:
         current = self.load()
+        if chat_token_budget is not None:
+            if type(chat_token_budget) is not int or chat_token_budget not in CHAT_TOKEN_BUDGET_CHOICES:
+                raise ValueError("ISyCode chat token budget is invalid")
+            current["chat_token_budget"] = chat_token_budget
         if agent_steps is not None:
             if type(agent_steps) is not int or agent_steps not in AGENT_STEP_CHOICES:
                 raise ValueError("ISyCode agent step limit is invalid")
