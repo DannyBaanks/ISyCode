@@ -6,6 +6,7 @@ from isycode.providers import ProviderError
 from isycode.streaming import StreamError
 from isycode.tui import PromptArea, TUIApp
 from isycode.user_defaults import UserDefaultsStore
+from isycode.workspace_authority import WorkspaceAuthority
 
 
 def configure(tmp_path, monkeypatch):
@@ -19,6 +20,25 @@ def configure(tmp_path, monkeypatch):
     monkeypatch.setenv('ISYCODE_MODEL', 'gpt-6-luna')
     monkeypatch.setenv('OPENAI_API_KEY', 'test-not-real')
     UserDefaultsStore().update(new_workspace='temporary', new_workspace_mode='classic')
+    WorkspaceAuthority(project).set_mode('classic')
+
+    async def no_external_catalog(self):
+        # Product-flow startup remains active; tests do not need live optional
+        # catalog and Gateway work launched by it.
+        return None
+
+    monkeypatch.setattr(TUIApp, '_refresh_openisy', no_external_catalog)
+    monkeypatch.setattr(TUIApp, '_check_gateway_async', no_external_catalog)
+    monkeypatch.setattr(TUIApp, '_check_model', no_external_catalog)
+    original_unmount = TUIApp.on_unmount
+
+    async def test_unmount(self, event):
+        await original_unmount(self, event)
+        # Textual's test driver can leave asyncio.run asleep while its idle
+        # default executor shuts down. This one-shot wake is test-only.
+        asyncio.get_running_loop().call_later(0.5, lambda: None)
+
+    monkeypatch.setattr(TUIApp, 'on_unmount', test_unmount)
     return project
 
 

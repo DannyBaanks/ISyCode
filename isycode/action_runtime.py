@@ -171,6 +171,7 @@ OWNER_ACTION_VARIANTS = (
 OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_read": frozenset({"WorkspaceReadBoundary"}),
     "workspace_write": frozenset({"WorkspaceWriteBoundary"}),
+    "provider_auth": frozenset({"ProviderAuthBoundary"}),
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
@@ -204,6 +205,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
 OWNER_ACTIONS = {
     "workspace_read": READ_ACTIONS,
     "workspace_write": FILE_CHANGE_ACTIONS,
+    "provider_auth": frozenset({"provider.authenticate"}),
     "provider_network": frozenset({"provider.request"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
@@ -588,6 +590,43 @@ class ClipboardSystembility:
                                   else "clipboard request shape is invalid")
 
 
+class ProviderAuthSystembility:
+    """Pure validation of a bounded official connector identity, no token access."""
+    name = "ProviderAuthBoundary"
+
+    @staticmethod
+    def identity_valid(identity):
+        from isycode.provider_auth import connector_identity, connector_home
+        try:
+            executable = identity.get("executable")
+            path = Path(executable).resolve(strict=True)
+            if str(path) != executable or not path.is_file() or not os.access(path, os.X_OK):
+                return False
+            expected = connector_identity(executable)
+            if set(identity) != set(expected):
+                return False
+            if any(identity[key] != value for key, value in expected.items() if key != "hosts"):
+                return False
+            if tuple(identity.get("hosts", ())) != tuple(expected["hosts"]):
+                return False
+            home = connector_home()
+            if home.resolve(strict=False) != home:
+                return False
+            return not any(p.is_symlink() for p in (home, *home.parents))
+        except (OSError, TypeError, ValueError, AttributeError):
+            return False
+
+    def evaluate(self, request, authority):
+        if request.action_id != "provider.authenticate":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        valid = (request.target == "chatgpt" and set(params) == {"operation", "method", "connector"}
+                 and params.get("operation") in {"login", "logout"}
+                 and params.get("method") in {"browser", "device"}
+                 and self.identity_valid(params.get("connector", {})))
+        return SystembilityResult(self.name, valid, "authentication binds official executable, private keyring and fixed hosts")
+
+
 class ProviderNetworkSystembility:
     """Check that provider traffic uses an explicit, safe endpoint and host grant."""
 
@@ -612,6 +651,10 @@ class ProviderNetworkSystembility:
             return SystembilityResult(self.name, False, "provider endpoint port is invalid")
         if host != request.target.casefold().rstrip("."):
             return SystembilityResult(self.name, False, "provider endpoint host does not match the granted target")
+        if request.parameters.get("provider") == "chatgpt":
+            from isycode.provider_auth import CHATGPT_ENDPOINT
+            if url != CHATGPT_ENDPOINT or not ProviderAuthSystembility.identity_valid(request.parameters.get("connector", {})):
+                return SystembilityResult(self.name, False, "subscription inference requires a bound official connector")
         return SystembilityResult(self.name, True, "provider endpoint is secure and host-bound")
 
 
@@ -839,7 +882,7 @@ class GatewaySemanticSystembility:
 
 
 class LSPStartSystembility:
-    """Allow only the Pyright workspace-symbol adapter inside bubblewrap."""
+    """Allow only catalogued workspace-symbol adapters inside bubblewrap."""
 
     name = "LSPProcessBoundary"
 
@@ -860,7 +903,7 @@ class LSPStartSystembility:
         if request.action_id == "lsp.diagnostics":
             params = request.parameters
             digest = params.get("text_sha256")
-            if (set(params) != LSP_DIAGNOSTIC_KEYS or request.target != server["id"]
+            if (server["id"] != "pyright" or set(params) != LSP_DIAGNOSTIC_KEYS or request.target != server["id"]
                     or params.get("operation") != "textDocument/publishDiagnostics"
                     or params.get("executable") != sandbox
                     or params.get("server_executable") != server["server_executable"]
@@ -879,7 +922,8 @@ class LSPStartSystembility:
                 or request.parameters.get("executable") != sandbox
                 or request.parameters.get("server_executable") != server["server_executable"]
                 or request.parameters.get("node_executable") != server["node_executable"]
-                or request.parameters.get("workspace_root") != str(request.workspace_root)):
+                or request.parameters.get("workspace_root") != str(request.workspace_root)
+                or request.parameters.get("runtime_executable", "") != server.get("runtime_executable", "")):
             return SystembilityResult(self.name, False, "LSP request does not match the sandbox owner")
         query = request.parameters.get("query")
         if not isinstance(query, str) or not query.strip() or len(query) > 256:
@@ -1437,7 +1481,7 @@ class ProductActionGate:
         self.sentinel = IsySentinel([
             ExecutionOwnerBindingSystembility(),
             WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
-            ProviderNetworkSystembility(),
+            ProviderAuthSystembility(), ProviderNetworkSystembility(),
             RemoteReadSystembility(), SessionStoreSystembility(), SessionDeleteSystembility(),
             CredentialBoundarySystembility(),
             MCPInvocationSystembility(),
@@ -1697,7 +1741,7 @@ class LPSSymbolOwner:
                         if item.get("id") == server_id), None)
         if (server is None or current is None or server.get("state") != "sandbox_ready"
                 or any(server.get(key) != current.get(key) for key in (
-                    "server_executable", "node_executable", "sandbox_executable"))):
+                    "server_executable", "node_executable", "sandbox_executable", "runtime_executable"))):
             return ActionOutcome("LSP operation denied.", "DENY", None,
                                  "adapter catalog changed or is not sandbox-ready")
         # The language server can inspect the whole selected root. Require the
@@ -1717,7 +1761,8 @@ class LPSSymbolOwner:
                  "query": query, "workspace_root": str(self.root),
                  "executable": server["sandbox_executable"],
                  "server_executable": server["server_executable"],
-                 "node_executable": server["node_executable"]},
+                 "node_executable": server["node_executable"],
+                 **({"runtime_executable": server["runtime_executable"]} if server.get("runtime_executable") else {})},
                 execution_owner="lsp_symbols")
         except (TypeError, ValueError):
             return ActionOutcome("LSP operation denied.", "DENY", None,
@@ -1754,7 +1799,7 @@ class LPSSymbolOwner:
         current = next((item for item in discover_servers() if item.get("id") == server_id), None)
         if (server is None or current is None or server.get("state") != "sandbox_ready"
                 or any(server.get(key) != current.get(key) for key in (
-                    "server_executable", "node_executable", "sandbox_executable"))):
+                    "server_executable", "node_executable", "sandbox_executable", "runtime_executable"))):
             return ActionOutcome("LSP diagnostics denied.", "DENY", None,
                                  "adapter catalog changed or is not sandbox-ready")
         if not isinstance(path, str) or not isinstance(text, str):
@@ -1821,13 +1866,19 @@ class ProviderNetworkOwner:
             host = (parsed.hostname or "").casefold().rstrip(".")
             if parsed.port:
                 host += f":{parsed.port}"
+            connector = getattr(provider, "connector_identity", None)
+            if provider.name == "chatgpt":
+                if not isinstance(request_material, dict) or not ProviderAuthSystembility.identity_valid(connector):
+                    raise ValueError("invalid subscription connector identity")
+                request_material = {**request_material, "connector": connector}
             material = json.dumps(request_material, ensure_ascii=False, sort_keys=True,
                                   separators=(",", ":"))
             material_digest = hashlib.sha256(material.encode("utf-8")).hexdigest()
             request = ActionRequest(
                 "provider.request", self.root, host,
                 {"provider": provider.name, "model": provider.model,
-                 "url": url, "payload_digest": material_digest},
+                 "url": url, "payload_digest": material_digest,
+                 **({"connector": connector} if provider.name == "chatgpt" else {})},
                 execution_owner="provider_network")
         except (AttributeError, TypeError, ValueError, OSError):
             return None, ActionOutcome("Provider request denied.", "DENY", None,

@@ -213,5 +213,7 @@ def test_tui_copies_workspace_paths_only_through_the_clipboard_owner():
 
     # Copy path now goes through ClipboardOwner (clipboard.copy grant + IsySentinel).
     assert "copy_to_clipboard" not in _method_calls(methods["on_button_pressed"])
-    assert "_copy_through_owner" in _method_calls(methods["on_button_pressed"])
+    assert "_request_clipboard_copy" in _method_calls(methods["on_button_pressed"])
+    assert "_copy_through_owner" in _method_calls(methods["_request_clipboard_copy"])
+    assert "copy_to_clipboard" not in _method_calls(methods["_request_clipboard_copy"])
     assert "file-copy-path" in source

@@ -87,6 +87,7 @@ jobs:
             --collect-all keyring \
             --copy-metadata isycode \
             --copy-metadata keyring \
+            --collect-data isycode \
             --copy-metadata rich \
             --copy-metadata textual \
             --copy-metadata pathspec \

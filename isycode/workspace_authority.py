@@ -56,6 +56,8 @@ def _known_provider_hosts() -> list[str]:
                           + (f":{parsed.port}" if parsed.port else ""))
         except ValueError:
             continue
+    for preset in PRESETS.values():
+        hosts.update(preset.get("auth_hosts", []))
     return sorted(hosts)
 
 
@@ -252,6 +254,12 @@ class WorkspaceAuthority:
                 if not any(self._contains(Path(root), Path(destination)) for root in roots):
                     return AuthorityDecision(False, "", "move destination is outside granted paths", digest)
 
+        elif request.action_id == "provider.authenticate":
+            from isycode.provider_auth import connector_scope_matches
+            identity = request.parameters.get("connector", {})
+            if not connector_scope_matches(grant, identity):
+                return AuthorityDecision(False, "", "official connector executable, account and auth hosts need explicit grants", digest)
+
         elif spec.effect.startswith("network"):
             try:
                 host = self._normalize_host(request.target)
@@ -259,6 +267,14 @@ class WorkspaceAuthority:
                 return AuthorityDecision(False, "", "network target is not a valid host", digest)
             if host not in grant.get("network_hosts", []):
                 return AuthorityDecision(False, "", "network host is not explicitly granted", digest)
+            if request.action_id == "provider.request" and request.parameters.get("provider") == "chatgpt":
+                from isycode.provider_auth import AUTH_HOSTS, connector_scope_matches
+                identity = request.parameters.get("connector", {})
+                connector_grant = policy["grants"].get("provider.authenticate", {})
+                if (not set(AUTH_HOSTS).issubset(grant.get("network_hosts", []))
+                        or not connector_scope_matches(connector_grant, identity)):
+                    return AuthorityDecision(False, "", "subscription connector and all authentication hosts need explicit grants", digest)
+
 
         elif spec.effect == "process":
             executable = (request.parameters or {}).get("executable", "")

@@ -5,6 +5,8 @@ planner/runtime, but importing or using this catalog does not require it.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import json
 import os
 import secrets
@@ -23,6 +25,10 @@ PRESETS: dict[str, dict[str, Any]] = {
                "label": "OpenAI API", "default_model": "gpt-6-luna",
                "supports_tools": True,
                "token_limit_field": "max_completion_tokens", "reasoning_effort": "medium"},
+    "chatgpt": {"base_url": "https://chatgpt.com/backend-api/codex", "key_env": "",
+                "label": "ChatGPT subscription (Codex)", "default_model": "auto",
+                "key_required": False, "supports_tools": True, "api": "codex",
+                "auth_hosts": ["auth.openai.com", "chatgpt.com"]},
     "nvidia": {"base_url": "https://integrate.api.nvidia.com/v1",
                "key_env": "NVIDIA_NIM_API_KEY", "label": "NVIDIA NIM",
                "supports_tools": True},
@@ -101,6 +107,25 @@ def _load_preferences() -> dict[str, Any]:
     return data
 
 
+def recent_models() -> list[dict[str, str]]:
+    """Registered model identities; metadata only, never credentials or grants."""
+    data = _load_preferences()
+    candidates = data.get("recent_models", [])
+    if not isinstance(candidates, list):
+        candidates = []
+    candidates = candidates + [{"provider": key, "model": value} for key, value in data["models"].items()]
+    result = []
+    for item in candidates:
+        if (not isinstance(item, dict) or not isinstance(item.get("provider"), str) or item.get("provider") not in PRESETS
+                or not isinstance(item.get("model"), str) or not item["model"].strip()
+                or len(item["model"]) > 256 or any(ord(char) < 32 for char in item["model"])):
+            continue
+        identity = {"provider": item["provider"], "model": item["model"]}
+        if identity not in result:
+            result.append(identity)
+    return result[:12]
+
+
 def save_provider_selection(name: str, model: str) -> None:
     """Persist non-secret provider/model selection in private user state."""
     provider, selected_model = name.casefold(), model.strip()
@@ -110,7 +135,9 @@ def save_provider_selection(name: str, model: str) -> None:
     models = {key: value for key, value in data["models"].items()
               if isinstance(key, str) and isinstance(value, str) and len(value) <= 256}
     models[provider] = selected_model
-    data = {"version": 1, "provider": provider, "models": models}
+    identity = {"provider": provider, "model": selected_model}
+    recent = [identity] + [item for item in recent_models() if item != identity]
+    data = {"version": 1, "provider": provider, "models": models, "recent_models": recent[:12]}
     path = _preferences_path()
     temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
@@ -166,6 +193,8 @@ def selected_model_name() -> str:
 
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
+    if name == "chatgpt":
+        return ""
     from isycode.credentials import read_saved_secret
 
     # Saved keys are read only through the registered reader (Security mode:
@@ -181,6 +210,8 @@ def provider_credential_state(name: str) -> str:
     preset = PRESETS.get(provider)
     if preset is None:
         return "unavailable"
+    if preset.get("api") == "codex":
+        return "subscription"
     if not preset.get("key_required", True):
         return "optional"
     key_env = preset["key_env"]
@@ -229,10 +260,18 @@ class Provider:
         self.model = (model or selected_model_name()
                       or provider_default_model(self.name)
                       or preset.get("default_model") or DEFAULT_MODEL)
+        self.connector_identity = None
+        if preset.get("api") == "codex":
+            from isycode.provider_auth import CHATGPT_ENDPOINT, connector_identity
+            try:
+                self.connector_identity = connector_identity()
+            except (ValueError, OSError) as exc:
+                raise ProviderError("Official Codex CLI is required for ChatGPT subscription login") from exc
+            self.base_url = CHATGPT_ENDPOINT
         self.key_env = preset["key_env"]
         self.key_required = preset.get("key_required", True)
         self.supports_tools = bool(preset.get("supports_tools", False))
-        self.api_key = api_key if api_key is not None else load_provider_key(self.name)
+        self.api_key = "" if preset.get("api") == "codex" else (api_key if api_key is not None else load_provider_key(self.name))
         self.token_limit_field = preset.get("token_limit_field", "max_tokens")
         self.reasoning_effort = (os.environ.get("ISYCODE_REASONING_EFFORT")
                                  or os.environ.get("ISYMOTRON_REASONING_EFFORT")
@@ -250,6 +289,14 @@ class Provider:
         return bool(self.api_key) or not self.key_required
 
     def models(self) -> list[str]:
+        if PRESETS[self.name].get("api") == "codex":
+            import asyncio
+            from isycode.codex_connector import CodexConnector
+            async def catalog():
+                async with CodexConnector(self.connector_identity["executable"],
+                                          Path(self.connector_identity["home"])) as connector:
+                    return await connector.models()
+            return asyncio.run(catalog())
         if not self.configured():
             raise ProviderError(f"no credential configured for {self.name}")
         if PRESETS[self.name].get("api") == "anthropic":

@@ -96,6 +96,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("tailscale.serve.enable", "TailscaleServeOwner.enable", "tailscale_serve", "COVERED"),
     ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "COVERED"),
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
+    ("provider.authenticate", "ProviderAuthOwner.begin", "provider_auth", "COVERED"),
     ("workspace.files.read", "LocalWorkspaceReadOwner.execute", "workspace_read", "COVERED"),
     ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
     ("workspace.files.write", "WorkspaceWriteOwner.apply", "workspace_write", "COVERED"),

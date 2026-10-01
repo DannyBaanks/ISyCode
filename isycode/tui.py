@@ -385,6 +385,9 @@ class PromptArea(TextArea):
 
     BINDINGS = [
         Binding("enter", "submit_prompt", "Send", priority=True),
+        Binding("up", "slash_up", show=False, priority=True),
+        Binding("down", "slash_down", show=False, priority=True),
+        Binding("tab", "slash_complete", show=False, priority=True),
         Binding("ctrl+enter", "submit_prompt", "Send", show=False, priority=True),
     Binding("shift+enter", "insert_line_break", "New line", show=False,
                 priority=True),
@@ -398,7 +401,17 @@ class PromptArea(TextArea):
             self.prompt = prompt
             self.value = value
 
+    def action_slash_up(self) -> None:
+        if not cast(TUIApp, self.app)._move_slash(-1): self.action_cursor_up()
+
+    def action_slash_down(self) -> None:
+        if not cast(TUIApp, self.app)._move_slash(1): self.action_cursor_down()
+
+    def action_slash_complete(self) -> None:
+        if not cast(TUIApp, self.app)._complete_slash(): self.screen.focus_next()
+
     def action_submit_prompt(self) -> None:
+        if cast(TUIApp, self.app)._complete_slash(): return
         self.post_message(self.Submitted(self, self.text))
 
     def action_insert_line_break(self) -> None:
@@ -1265,13 +1278,14 @@ class LSPQueryScreen(ModalScreen[str | None]):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, label: str = "Pyright") -> None:
         super().__init__()
         self.root = root
+        self.label = label
 
     def compose(self) -> ComposeResult:
         with Vertical(id="lsp-query-card"):
-            yield Static("Pyright · workspace symbol search", id="lsp-query-title")
+            yield Static(f"{self.label} · workspace symbol search", id="lsp-query-title")
             yield Static(f"Local workspace: {self.root}\nQuery goes only to the sandboxed local language server.", id="lsp-query-copy")
             yield Input(placeholder="Symbol name…", id="lsp-query-input", max_length=256)
             with Horizontal(id="lsp-query-actions"):
@@ -1306,18 +1320,19 @@ class LSPConfirmScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, root: Path, query: str) -> None:
+    def __init__(self, root: Path, query: str, label: str = "Pyright") -> None:
         super().__init__()
         self.root = root
         self.query_text = query
+        self.label = label
 
     def compose(self) -> ComposeResult:
         with Vertical(id="lsp-confirm-card"):
             yield Static("Confirm local LSP search", id="lsp-confirm-title")
             yield Static(
-                f"Server: Pyright · operation: workspace/symbol\nQuery: {self.query_text}\nWorkspace root: {self.root}\n\n"
+                f"Server: {self.label} · operation: workspace/symbol\nQuery: {self.query_text}\nWorkspace root: {self.root}\n\n"
                 "ISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. "
-                "The workspace is read-only; socket and io_uring syscalls are denied by seccomp, "
+                "The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), "
                 "and output/time limits apply. No Gateway or provider receives this query.",
                 id="lsp-confirm-copy")
             with Horizontal(id="lsp-confirm-actions"):
@@ -1864,6 +1879,8 @@ class TUIApp(App):
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
     }
+    #slash-suggestions { display: none; layer: overlay; dock: bottom; height: 8; max-height: 45%; margin: 0 1; background: #292a2e; border: round #48494e; }
+    #slash-suggestions > .option-list--option-highlighted { background: #5c4077; color: #f0f0f2; }
     #composer { dock: bottom; height: 8; }
     #prompt-input {
         height: 5; background: #242529; color: #e0e0e0;
@@ -1979,7 +1996,11 @@ class TUIApp(App):
         self._file_path = ""
         self._file_browser_alias = "main"
         self._selected_file_path: str | None = None
+        self._slash_matches: list[dict] = []
         self._command_names: list[str] = []
+        self._subagent_running = False
+        self._subagent_task: asyncio.Task | None = None
+        self._active_skills: list[str] = []
         self._command_entries: list[dict[str, str]] = []
         self._menu_entries: list[dict[str, str]] = []
         self._menu_filtered: list[dict[str, str]] = []
@@ -2031,8 +2052,9 @@ class TUIApp(App):
         yield SidePanel(id="side-panel")
         with Vertical(id="main"):
             yield ChatArea(id="chat")
+            yield OptionList(id="slash-suggestions")
             yield TasksPanel("", id="agent-tasks")
-            yield Static("Ready · / opens navigation", id="activity-status")
+            yield Static("Ready · / opens commands", id="activity-status")
             usage_status = Static("", id="usage-status")
             usage_status.styles.height = 1
             yield usage_status
@@ -2519,7 +2541,7 @@ class TUIApp(App):
                 ready = server["state"] == "sandbox_ready"
                 on += ready
                 if ready:
-                    note = "workspace symbols" if server["id"] == "pyright" else ""
+                    note = "workspace symbols"
                 else:
                     note = server["state"].replace("_", " ")
                 rows.append(switch_row(ready, server["label"], note))
@@ -2528,6 +2550,15 @@ class TUIApp(App):
         self._set_rail_title("rail-lsp", title)
 
     def _populate_skill_tree(self, snapshot: CatalogSnapshot) -> None:
+        from isycode.skill_catalog import skills
+        try:
+            bundled = [{"name": name, "origin": "bundled", "description": "Pinned Superpowers MIT workflow guidance; select to toggle for this chat. No tools or authority are added."}
+                       for name in skills()]
+        except (OSError, ValueError):
+            bundled = []
+        if bundled:
+            external = snapshot.items if snapshot.state == "ready" else []
+            snapshot = CatalogSnapshot(True, bundled + external, "ready", snapshot.detail)
         tree = self.query_one("#skills-tree", Tree)
         tree.root.remove_children()
         skill_body, skill_title = self._format_skill_snapshot(snapshot)
@@ -2554,7 +2585,7 @@ class TUIApp(App):
                 Text(f"{item['name']} · {item['origin']}"), data=dict(item))
         tree.root.expand()
         detail = ("Select a skill to inspect its description. Discovery does not activate it; "
-                  "ISyCode will invoke skills only through an explicitly connected runtime.")
+                  "Bundled skills can be toggled here; external metadata remains discovery only.")
         self.query_one("#skill-detail", Static).update(Text(detail))
 
     async def _load_directory(self, logical_path: str) -> None:
@@ -2609,7 +2640,7 @@ class TUIApp(App):
                 continue
             child_path = str(Path(logical_path) / name)
             label = f"📁 {name}/" if entry.get("kind") == "directory" else f"📄 {name}"
-            tree.root.add(label, data={"path": child_path, "kind": entry.get("kind"),
+            tree.root.add(label, allow_expand=entry.get("kind") == "directory", data={"path": child_path, "kind": entry.get("kind"),
                                        "bytes": entry.get("bytes", 0)})
         self._search_mode = False
         receipt_id = outcome.receipt.receipt_id[:12]
@@ -2677,6 +2708,12 @@ class TUIApp(App):
             if not isinstance(skill, dict):
                 return
             name = skill.get("name", "Unknown skill")
+            if skill.get("origin") == "bundled":
+                self._select_skill(name)
+                self.query_one("#skill-detail", Static).update(Text(
+                    f"{name} · {'active' if name in self._active_skills else 'inactive'}\n"
+                    "Workflow guidance only. /skills clear removes selected guidance."))
+                return
             origin = skill.get("origin", "workspace")
             description = skill.get("description") or "No description provided by the skill manifest."
             self.query_one("#skill-detail", Static).update(Text(
@@ -2698,6 +2735,8 @@ class TUIApp(App):
             self._search_query = ""
             self.query_one("#file-search", Input).value = ""
             await self._load_directory(uri)
+            self._selected_file_path = uri
+            self.query_one("#file-copy-path", Button).disabled = False
             return
         self._selected_file_path = uri
         # Copying goes through ClipboardOwner (clipboard.copy grant + IsySentinel).
@@ -2705,7 +2744,7 @@ class TUIApp(App):
         self.query_one("#file-open-preview", Button).disabled = False
         await self._preview_file(uri)
 
-    async def _preview_file(self, uri: str) -> None:
+    async def _preview_file(self, uri: str, *, modal: bool = False) -> None:
         if self._workspace is None:
             return
         self._workspace_generation += 1
@@ -2724,6 +2763,7 @@ class TUIApp(App):
                 raise WorkspaceUnavailable("The local read receipt did not verify; contents were blocked.")
             result = json.loads(read.text)
             preview = result.get("text")
+            full_preview = preview if isinstance(preview, str) else "Preview unavailable: binary or invalid UTF-8."
             if not isinstance(preview, str):
                 preview = "Preview unavailable: file is binary or not valid UTF-8."
             elif len(preview) > 8000:
@@ -2733,6 +2773,9 @@ class TUIApp(App):
             self.query_one("#file-preview", Static).update(
                 f"{relative} · {size} bytes · UTF-8\n"
                 f"IsySentinel ALLOW · local receipt {read.receipt.receipt_id[:12]} verified\n\n{preview}")
+            if modal:
+                from isycode.file_preview import FilePreviewScreen
+                await self._await_screen(FilePreviewScreen(uri, full_preview))
         except (WorkspaceUnavailable, json.JSONDecodeError, OSError, ValueError) as exc:
             if generation == self._workspace_generation:
                 self.query_one("#file-preview", Static).update(
@@ -2788,10 +2831,10 @@ class TUIApp(App):
         elif button_id == "file-copy-path":
             if self._selected_file_path:
                 path = self._selected_file_path.removeprefix("file://")
-                self._copy_through_owner(path, "file_path")
+                self.run_worker(self._request_clipboard_copy(path, "file_path"), group="clipboard-user")
         elif button_id == "file-open-preview":
             if self._selected_file_path:
-                await self._preview_file(self._selected_file_path)
+                self.run_worker(self._preview_file(self._selected_file_path, modal=True), group="file-preview")
         elif button_id == "file-up":
             if self._workspace is None:
                 return
@@ -2837,6 +2880,9 @@ class TUIApp(App):
 
     def action_escape_to_chat(self) -> None:
         """Cancel active model output; otherwise back out and keep the draft."""
+        if self.query_one('#slash-suggestions').display:
+            self.query_one('#slash-suggestions').display = False
+            return
         if self.query_one("#action-menu").display:
             if self._menu_stack:
                 mode, title, entries = self._menu_stack.pop()
@@ -2848,6 +2894,10 @@ class TUIApp(App):
         if self._review_request_task and not self._review_request_task.done():
             self._review_request_task.cancel()
             self._set_activity("Stopping external review…", YELLOW)
+            return
+        if self._subagent_task and not self._subagent_task.done():
+            self._subagent_task.cancel()
+            self._set_activity("Stopping subagent…", YELLOW)
             return
         if self._chat_turn_task and not self._chat_turn_task.done():
             # Stops the whole agent turn: a pending model request, a tool, or a running command.
@@ -2871,9 +2921,13 @@ class TUIApp(App):
         self.query_one("#skills-tree", Tree).focus()
 
     def action_toggle_commands_menu(self) -> None:
-        self._open_palette()
+        self._update_slash_suggestions(force=True)
+        self.query_one(PromptArea).focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if event.option_list.id == 'slash-suggestions':
+            self._complete_slash(event.option_index)
+            return
         if event.option_list.id != "action-list":
             return
         if event.option_index >= len(self._menu_filtered):
@@ -2882,8 +2936,39 @@ class TUIApp(App):
 
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
         self._track_composer_draft(event)
-        if event.text_area.id == "prompt-input" and event.text_area.text == "/":
-            self._open_palette()
+        if event.text_area.id == "prompt-input":
+            self._update_slash_suggestions()
+
+    def _update_slash_suggestions(self, *, force: bool = False) -> None:
+        prompt = self.query_one(PromptArea)
+        text = prompt.text
+        panel = self.query_one('#slash-suggestions', OptionList)
+        eligible = text.startswith('/') and not any(c.isspace() for c in text)
+        query = text[1:].casefold() if eligible else ''
+        self._slash_matches = [entry for entry in self._command_entries
+                               if entry['value'].casefold().startswith(query)] if eligible or force else []
+        panel.clear_options()
+        panel.add_options([Option(Text(entry['label'])) for entry in self._slash_matches])
+        panel.display = bool(self._slash_matches)
+        if self._slash_matches: panel.highlighted = 0
+
+    def _move_slash(self, direction: int) -> bool:
+        panel = self.query_one('#slash-suggestions', OptionList)
+        if not panel.display: return False
+        if direction > 0: panel.action_cursor_down()
+        else: panel.action_cursor_up()
+        return True
+
+    def _complete_slash(self, index: int | None = None) -> bool:
+        panel = self.query_one('#slash-suggestions', OptionList)
+        if not panel.display or not self._slash_matches: return False
+        index = index if index is not None else panel.highlighted or 0
+        if index < 0 or index >= len(self._slash_matches): return False
+        name = self._slash_matches[index]['value']
+        self.query_one(PromptArea).load_text('/' + name + ' ')
+        panel.display = False
+        self.query_one(PromptArea).focus()
+        return True
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "action-search" and self._menu_mode:
@@ -2932,14 +3017,16 @@ class TUIApp(App):
         active = selected_provider_name()
         entries = []
         for name, preset in PRESETS.items():
+            if name == "chatgpt":
+                continue
             state = provider_credential_state(name)
             status = {"environment": "key in environment", "saved": "key saved in ISyCode vault",
                       "stored": "legacy key saved", "legacy": "legacy key", "optional": "key optional",
                       "missing": f"needs {preset['key_env']}",
                       "unavailable": "credential store unavailable"}.get(state, state)
-            selected = "  ◂ current" if name == active else ""
+            selected = "  ◂ current" if name == active or (name == "openai" and active == "chatgpt") else ""
             entries.append(self._entry(
-                f"{preset['label']}  ·  {status}{selected}", "provider", name,
+                f"{'OpenAI · API key / ChatGPT subscription' if name == 'openai' else preset['label']}  ·  {status}{selected}", "provider", name,
                 f"Default model: {provider_default_model(name) or preset.get('default_model') or DEFAULT_MODEL}"))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
@@ -2973,6 +3060,73 @@ class TUIApp(App):
                 "info", "", snapshot.detail or "No additional provider auth metadata is available."))
         self._menu_stack = []
         self._render_menu("providers", "Providers · ISyCode chat", entries)
+
+    def _open_auth_methods(self) -> None:
+        self._render_menu('provider_auth_methods', 'OpenAI · choose connection method', [
+            self._entry('Manually enter API key · separate API quota', 'auth_api_key'),
+            self._entry('ChatGPT Pro/Plus · browser', 'auth_browser'),
+            self._entry('ChatGPT Pro/Plus · headless/device code', 'auth_device'),
+            self._entry('Use saved ChatGPT sign-in · checked on request', 'auth_saved'),
+            self._entry('Disconnect ChatGPT account…', 'auth_logout'),
+            self._entry('Subscription needs official Codex CLI and an unlocked OS keyring. Plan limits apply.', 'info'),
+        ])
+
+    async def _connect_chatgpt(self, method: str, *, logout: bool = False) -> None:
+        from isycode.provider_auth import ProviderAuthOwner, AUTH_HOSTS
+        from isycode.provider_auth_screens import SubscriptionLoginScreen
+        owner = None
+        tasks = []
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            owner = ProviderAuthOwner(self._workspace_root, authority, self._action_approvals)
+            request = owner.request('logout' if logout else 'login', method)
+            identity = request.parameters['connector']
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    'Disconnect ChatGPT?' if logout else 'Connect ChatGPT subscription?',
+                    f"Runs official Codex app-server at {identity['executable']}. "
+                    f"Account storage: {identity['home']} in the OS keyring. "
+                    "Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector "
+                    "and subscription requests in this workspace; file permissions stay separate. "
+                    "ChatGPT plan limits apply; API-key billing remains separate. Never share login codes.",
+                    'Disconnect' if logout else 'Connect ChatGPT')):
+                return
+            authority.set_grant('provider.authenticate', enabled=True, targets=['chatgpt'],
+                                executables=[owner.executable], network_hosts=list(AUTH_HOSTS))
+            if not logout:
+                grant = authority.effective_policy().get('grants', {}).get('provider.request', {})
+                hosts = sorted(set(grant.get('network_hosts', ())) | set(AUTH_HOSTS))
+                authority.set_grant('provider.request', enabled=True, network_hosts=hosts)
+            outcome, challenge = await owner.begin(request, self._action_approvals.issue(request))
+            if outcome.decision != 'ALLOW':
+                self._append(f"  ChatGPT sign-in blocked · {outcome.reason[:160]}", YELLOW)
+                return
+            if logout:
+                self._append('  ChatGPT account disconnected. API keys are unchanged.', GREEN)
+                return
+            screen = SubscriptionLoginScreen(challenge)
+            visible = asyncio.create_task(self._await_screen(screen)); tasks.append(visible)
+            await screen.ready.wait()
+            finished = asyncio.create_task(owner.finish()); tasks.append(finished)
+            done, _ = await asyncio.wait({visible, finished}, return_when=asyncio.FIRST_COMPLETED)
+            if finished not in done:
+                self._append('  ChatGPT sign-in cancelled.', MUTED)
+                return
+            outcome, account = await finished
+            if screen.is_mounted:
+                screen.dismiss(None)
+            await visible
+            if outcome.decision == 'ALLOW' and account:
+                self._append(f"  ChatGPT sign-in verified · plan {account['plan']} · subscription limits apply", GREEN)
+                self._select_provider('chatgpt', 'auto')
+            else:
+                self._append(f"  ChatGPT sign-in not completed · {outcome.reason[:160]}", YELLOW)
+        except (OSError, ValueError, ProviderError, WorkspaceAuthorityError) as exc:
+            self._append(f"  ChatGPT connection unavailable ({type(exc).__name__}). Install official Codex CLI, unlock the OS keyring and check Authority grants.", YELLOW)
+        finally:
+            for task in tasks:
+                if not task.done(): task.cancel()
+            if tasks: await asyncio.gather(*tasks, return_exceptions=True)
+            if owner is not None: await owner.cancel()
 
     def _open_role_menu(self) -> None:
         entries = [
@@ -3918,6 +4072,14 @@ class TUIApp(App):
                 entries.append(self._entry(
                     "Local code help · not ready yet", "info", "",
                     "ISyCode will show this as an option when its protected helper is ready."))
+            if not (lsp_server and lsp_server.get("state") == "sandbox_ready"):
+                other_lsp = next((item for item in self._lsp_inventory if item.get("state") == "sandbox_ready"), None)
+                if other_lsp:
+                    sandbox = other_lsp["sandbox_executable"]
+                    grant = grants.get("lsp.start", {})
+                    entries.append(self._capability_entry("Local code help", "lsp",
+                        displayed_on("lsp.start", grant, sandbox in grant.get("executables", [])),
+                        "Read-only local symbols; each request is reviewed before its protected process starts."))
             external_catalog_url = os.environ.get("OPENISY_API_URL", "").strip()
             if external_catalog_url:
                 self._append_network_grant_entry(
@@ -4538,8 +4700,7 @@ class TUIApp(App):
 
     async def _change_lsp_process_grant(self, executable: str, enabled: bool) -> None:
         server = next((item for item in self._lsp_inventory
-                       if item.get("id") == "pyright"
-                       and item.get("sandbox_executable") == executable
+                       if item.get("sandbox_executable") == executable
                        and item.get("state") == "sandbox_ready"), None)
         if server is None:
             self._append("  LSP sandbox changed or is unavailable; no process grant was changed.", RED)
@@ -4559,7 +4720,7 @@ class TUIApp(App):
                 authority.set_grant(
                     "lsp.start", enabled=bool(executables), executables=sorted(executables))
                 self._append(
-                    f"  Sandboxed Pyright process {'granted' if enabled else 'revoked'} for this workspace.",
+                    f"  Sandboxed LSP process {'granted' if enabled else 'revoked'} for this workspace.",
                     GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  LSP process grant could not be saved; the server remains denied.", RED)
@@ -4594,10 +4755,10 @@ class TUIApp(App):
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  LSP process grant could not be saved; the server remains denied.", RED)
                 return
-        query = await self._await_screen(LSPQueryScreen(self._workspace_root))
+        query = await self._await_screen(LSPQueryScreen(self._workspace_root, server["label"]))
         if query is None:
             return
-        accepted = await self._await_screen(LSPConfirmScreen(self._workspace_root, query))
+        accepted = await self._await_screen(LSPConfirmScreen(self._workspace_root, query, server["label"]))
         if not accepted:
             self._append("  LSP request cancelled; no language server was started.", MUTED)
             return
@@ -4608,7 +4769,8 @@ class TUIApp(App):
                  "query": query, "workspace_root": str(self._workspace_root),
                  "executable": server["sandbox_executable"],
                  "server_executable": server["server_executable"],
-                 "node_executable": server["node_executable"]},
+                 "node_executable": server["node_executable"],
+                 **({"runtime_executable": server["runtime_executable"]} if server.get("runtime_executable") else {})},
                 execution_owner="lsp_symbols")
             approval = self._action_approvals.issue(request, ttl_seconds=30)
             owner = LPSSymbolOwner(
@@ -4624,12 +4786,12 @@ class TUIApp(App):
             self._append(f"  LSP request {outcome.decision} · {outcome.reason[:240]}", YELLOW)
             self._set_activity("LSP request blocked · grant sandbox in Authority settings", YELLOW)
             return
-        self._append(f"  Pyright LSP · {query} · verified workspace/symbol response", CYAN)
+        self._append(f"  {server['label']} LSP · {query} · verified workspace/symbol response", CYAN)
         self.query_one(ChatArea).mount(Static(Text(outcome.text, style=TEXT)))
         self._append(
             f"  ISySentinel ALLOW · local receipt {outcome.receipt.receipt_id[:12]} verified",
             GREEN)
-        self._set_activity("Pyright LSP request completed · sandbox closed", GREEN)
+        self._set_activity("LSP request completed · sandbox closed", GREEN)
 
     def _coding_toolkit_grants(self) -> list[tuple[str, dict[str, Any], str]]:
         """(action, grant scope, label) for every coding tool this computer can offer."""
@@ -4932,8 +5094,7 @@ class TUIApp(App):
                 operation = self._change_mcp_invocation_grant(turn_on)
             elif value == "lsp":
                 server = next((item for item in self._lsp_inventory
-                               if item.get("id") == "pyright"
-                               and item.get("state") == "sandbox_ready"), None)
+                               if item.get("state") == "sandbox_ready"), None)
                 if server is None:
                     self._append("  Local code help is not ready yet; nothing changed.", YELLOW)
                     return
@@ -5084,7 +5245,20 @@ class TUIApp(App):
             self._close_menu()
             return
         if kind == "provider":
+            if value in {"openai", "chatgpt"}:
+                self._open_auth_methods()
+                return
             self._select_provider(value)
+            return
+        if kind == "auth_api_key":
+            self._select_provider("openai")
+            return
+        if kind in {"auth_browser", "auth_device", "auth_logout"}:
+            self._close_menu()
+            self.run_worker(self._connect_chatgpt("browser" if kind == "auth_browser" else "device", logout=kind == "auth_logout"), group="provider-login", exclusive=True)
+            return
+        if kind == "auth_saved":
+            self._select_provider("chatgpt")
             return
         if kind == "providers_open":
             self._open_provider_menu()
@@ -5162,6 +5336,18 @@ class TUIApp(App):
         if kind == "named_credentials":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
             self._open_credentials_menu()
+            return
+        if kind == "skill_use":
+            self._select_skill(value)
+            self._render_menu("branch", "Skills", self._branch_entries("skills"))
+            return
+        if kind == "skill_clear":
+            self._active_skills.clear()
+            self._render_menu("branch", "Skills", self._branch_entries("skills"))
+            return
+        if kind == "mcp_preset":
+            self._add_mcp_preset(value)
+            self._render_menu("branch", "MCP", self._branch_entries("mcp"))
             return
         if kind == "authority_open":
             self._open_authority_menu()
@@ -5326,17 +5512,27 @@ class TUIApp(App):
     def _branch_entries(self, branch: str) -> list[dict[str, str]]:
         key = branch.casefold()
         if key == "skills":
+            from isycode.skill_catalog import skills
+            entries = [self._entry("Clear selected skills", "skill_clear", "",
+                                  "Skills guide the current chat; they do not add tools or authority.")]
+            entries.extend(self._entry(
+                f"{name}{' · active' if name in self._active_skills else ''}", "skill_use", name,
+                "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat")
+                for name in skills())
             snapshot = self._skill_snapshot
-            if snapshot.state != "ready":
-                return [self._entry(f"{snapshot.state.replace('_', ' ').title()} · {snapshot.detail}", "info")]
-            return [self._entry(f"{item['name']}  ·  {item.get('origin', 'workspace')}", "info", "", item.get("description", ""))
-                    for item in snapshot.items] or [self._entry("No skills discovered", "info")]
+            if snapshot.state == "ready":
+                entries.extend(self._entry(f"{item['name']} · discovered", "info", "",
+                    item.get("description", "")) for item in snapshot.items)
+            return entries
         if key == "models":
             active_provider = selected_provider_name()
             current = selected_model_name()
             models = [self._entry(
                 f"Load account models · {active_provider}", "model_list", active_provider,
                 "Makes a read-only catalog request only after you select this item.")]
+            from isycode.providers import recent_models
+            models.extend(self._entry(f"Recent · {item['provider']} · {item['model']}",
+                "model", f"{item['provider']}|{item['model']}") for item in recent_models())
             for name, preset in PRESETS.items():
                 model = (selected_model_name()
                          if name == active_provider and selected_model_name()
@@ -5397,13 +5593,16 @@ class TUIApp(App):
                 entries.append(self._entry(
                     f"ISyCo Gateway MCP · {gateway.state.replace('_', ' ')}",
                     "info", "", gateway.detail))
-            return entries or [self._entry("No connected MCP tools discovered", "info")]
+            from isycode.mcp_presets import PRESETS as MCP_PRESETS
+            entries.extend(self._entry(f"Add {name} preset", "mcp_preset", name, preset["description"])
+                           for name, preset in MCP_PRESETS.items())
+            return entries
         if key == "lsp":
             entries = []
             for server in self._lsp_inventory:
-                if server["id"] == "pyright" and server["state"] == "sandbox_ready":
+                if server["state"] == "sandbox_ready":
                     entries.append(self._entry(
-                        "Pyright · workspace symbol search", "lsp_server", server["id"],
+                        f"{server['label']} · workspace symbol search", "lsp_server", server["id"],
                         "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."))
                 else:
                     entries.append(self._entry(
@@ -5909,8 +6108,35 @@ class TUIApp(App):
                 return
             await app._git_tool("git_commit", {"message": arg.strip()})
 
+        async def _subagent_cmd(app: "TUIApp", arg: str) -> None:
+            result = await app._run_subagent(arg.strip())
+            app._append(f"  Subagent · {result.get('provider', '')} · {result.get('model', '')} · {result['status']}", CYAN)
+            if result.get("text"):
+                app.query_one(ChatArea).mount(Static(RichMarkdown(result["text"], code_theme="monokai")))
+                app.query_one(ChatArea).follow_tail()
+            elif result.get("error"):
+                app._append(result["error"], YELLOW)
+
+        async def _models_cmd(app: "TUIApp", arg: str) -> None:
+            app._render_menu("branch", "Models", app._branch_entries("models"))
+
+        async def _skills_cmd(app: "TUIApp", arg: str) -> None:
+            parts = arg.split()
+            if len(parts) == 2 and parts[0] == "use":
+                app._select_skill(parts[1])
+            elif parts == ["clear"]:
+                app._active_skills.clear()
+                app._append("  Selected skills cleared.", MUTED)
+            else:
+                from isycode.skill_catalog import skills
+                app._append("  Bundled skills: " + ", ".join(skills()), CYAN)
+                app._append("  /skills use <name> toggles guidance; /skills clear disables it.", MUTED)
+
         async def _mcp_cmd(app: "TUIApp", arg: str) -> None:
             parts = arg.split()
+            if len(parts) == 2 and parts[0] == "add":
+                app._add_mcp_preset(parts[1])
+                return
             if len(parts) == 2 and parts[0] in {"start", "stop"}:
                 if parts[0] == "start":
                     await app._start_local_mcp(parts[1])
@@ -6126,7 +6352,13 @@ class TUIApp(App):
                             f"  Configure {provider.key_env} before listing account models.",
                             YELLOW)
                         return
-                    models = await asyncio.to_thread(provider.models)
+                    owner = ProviderNetworkOwner(app._workspace_root, WorkspaceAuthority(app._workspace_root))
+                    models, result = await owner.execute(provider,
+                        {'operation': 'models.list', 'provider': current, 'model': provider.model},
+                        lambda: asyncio.to_thread(provider.models))
+                    if result.decision != 'ALLOW' or not isinstance(models, list):
+                        app._append(f"  Model catalog blocked · {result.reason[:160]}", YELLOW)
+                        return
                     app._append(
                         f"  {provider.label} models visible to this account ({len(models)}):",
                         MUTED)
@@ -6228,7 +6460,10 @@ class TUIApp(App):
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
-                PluginCommand("mcp", "local MCP servers: list, start <name>, stop <name>", _mcp_cmd),
+                PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
+                PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
+                PluginCommand("models", "recent and available models", _models_cmd),
+                PluginCommand("skills", "bundled workflow guidance: list, use <name>, clear", _skills_cmd),
                 PluginCommand("git", "show git branch and changed files", _git_cmd),
                 PluginCommand("diff", "show the git diff (optional path, --staged)", _diff_cmd),
                 PluginCommand("commit", "commit changed files after reviewing the diff", _commit_cmd),
@@ -6346,7 +6581,7 @@ class TUIApp(App):
         elif self._last_plan is not None:
             self._set_activity("Plan ready · review it in Overview", YELLOW)
         else:
-            self._set_activity("Ready · / opens navigation", MUTED)
+            self._set_activity("Ready · / opens commands", MUTED)
 
     async def _await_screen(self, screen):
         """Show a modal screen and wait for its result from a worker or a plain task.
@@ -6616,6 +6851,15 @@ class TUIApp(App):
         tool_call_id = call.get("id") if isinstance(call, dict) else ""
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
+        if name == "delegate_task":
+            try:
+                arguments = json.loads(raw_arguments)
+                if not isinstance(arguments, dict) or set(arguments) != {"task"}:
+                    raise ValueError("Invalid delegation arguments")
+                result = await self._run_subagent(arguments["task"])
+            except (TypeError, ValueError):
+                result = {"status": "denied", "error": "Delegation requires one bounded task"}
+            return tool_call_id, json.dumps(result, ensure_ascii=False)
         if isinstance(name, str) and name.startswith("mcp__"):
             try:
                 mcp_arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
@@ -6729,6 +6973,123 @@ class TUIApp(App):
                                             self._action_approvals)
         return self._mcp_local
 
+    async def _run_subagent(self, task: str) -> dict:
+        from isycode.providers import recent_models
+        from isycode.subagents import run_child
+        from isycode.subagent_screen import SubagentModelScreen
+        if not isinstance(task, str) or not task.strip() or len(task) > 8000:
+            return {"status": "denied", "error": "Use /subagent <task>, up to 8000 characters"}
+        if self._subagent_running:
+            return {"status": "denied", "error": "A child is already running; nested delegation is disabled"}
+        models = recent_models()
+        if not models:
+            return {"status": "denied", "error": "Register a model through /models first"}
+        self._subagent_running = True
+        self._subagent_task = asyncio.current_task()
+        card = None
+        identity = {}
+        try:
+            selected = await self._await_screen(SubagentModelScreen(task, models))
+            if selected is None:
+                return {"status": "cancelled"}
+            if selected not in models or selected not in recent_models():
+                return {"status": "denied", "error": "Selected model is no longer registered"}
+            identity = {"provider": selected["provider"], "model": selected["model"]}
+            # A main provider endpoint override must never receive another provider's key.
+            endpoint = (os.environ.get("ISYCODE_BASE_URL") or os.environ.get("ISYMOTRON_BASE_URL")
+                        if selected["provider"] == selected_provider_name() else None)
+            provider = Provider(name=selected["provider"], model=selected["model"],
+                                base_url=endpoint or PRESETS[selected["provider"]]["base_url"],
+                                api_key=load_provider_key(selected["provider"]) or None)
+            if not provider.configured():
+                return {**identity, "status": "denied", "error": "Selected provider is not configured"}
+            tools = []
+            read_enabled = self._workspace_chat_tools_enabled() or self._additional_folder_access()
+            if read_enabled and PRESETS[provider.name].get("supports_tools"):
+                tools = json.loads(json.dumps(CHAT_WORKSPACE_TOOLS))
+                if self._workspace_write_tool_enabled() or self._additional_folder_access(write=True):
+                    tools += json.loads(json.dumps([EDIT_TOOL, WRITE_TOOL]))
+            context = [{"role": "system", "content": (
+                f"You are an ISyCode child agent. Work only on the assigned task. Main workspace: {self._workspace_root}. "
+                "Use only the tools supplied here. File tools accept registered folder aliases; never ../ across roots. "
+                "Workspace Authority, IsySentinel and per-folder approvals remain mandatory; no new authority is granted. "
+                "Tools execute through the same owners as the main agent. Do not claim changes without verified results. "
+                "Recursive delegation, commands, deletion, moves, Git and MCP are unavailable to children. "
+                "Report completed work, errors and remaining work truthfully.") }]
+            folders = [{"alias": "main", "path": str(self._workspace_root)}] + self._folder_store().list()
+            context[0]["content"] += " Registered folder metadata: " + json.dumps(folders)
+            if self._active_skills:
+                from isycode.skill_catalog import guidance
+                context.append({"role": "system", "content": guidance(self._active_skills)})
+            card = Static(Text(f"Subagent · {provider.name} · {provider.model} · starting", style=CYAN))
+            chat = self.query_one(ChatArea)
+            chat.mount(card); chat.follow_tail()
+            def status(value):
+                card.update(Text(f"Subagent · {provider.name} · {provider.model} · {value}", style=CYAN))
+                chat.follow_tail()
+            owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            async def complete(messages):
+                tokens = self._chat_request_limit(self._agent_limits().answer_tokens)
+                if not tokens:
+                    raise ValueError("Chat budget reached")
+                material = {"operation": "chat.completions", "messages": messages,
+                            "max_tokens": tokens, "tools": tools or None,
+                            "token_limit_field": provider.token_limit_field,
+                            "reasoning_effort": provider.reasoning_effort,
+                            "temperature_supported": provider.temperature_supported}
+                async def send():
+                    return await self._complete_accounted_chat(provider, messages, max_tokens=tokens, tools=tools or None)
+                response, outcome = await owner.execute(provider, material, send)
+                if outcome.decision != "ALLOW" or outcome.receipt is None or response is None:
+                    raise PermissionError("Child provider request denied or unverifiable")
+                return response
+            async def dispatch(call):
+                self._append(f"  Subagent tool · {call['function']['name']}", CYAN)
+                self._tool_history = record_tool_result(self._tool_history, call,
+                    "Child tool attempt started; completion unverified. Cancellation does not prove no effect.")
+                self._save_draft()
+                call_id, output = await self._dispatch_chat_tool(call)
+                self._tool_history = record_tool_result(self._tool_history[:-1], call, output)
+                self._save_draft()
+                return call_id, output
+            result = await run_child(provider, task, context,
+                [tool["function"]["name"] for tool in tools], complete, dispatch,
+                max_steps=min(self._agent_limits().max_steps or 20, 20), on_status=status)
+            status(result["status"])
+            return result
+        except asyncio.CancelledError:
+            if card is not None:
+                card.update(Text("Subagent · cancelled; completed effects remain in the action journal", style=YELLOW))
+            raise
+        except (OSError, ValueError, ProviderError, ConfigurationError, StreamError) as exc:
+            if card is not None:
+                card.update(Text(f"Subagent · stopped ({type(exc).__name__}); inspect completed actions", style=YELLOW))
+            return {**identity, "status": "blocked" if isinstance(exc, PermissionError) else "error",
+                    "error": f"Child stopped ({type(exc).__name__}); inspect provider setup, grants and action journal"}
+        finally:
+            self._subagent_running = False
+            self._subagent_task = None
+
+    def _select_skill(self, name: str) -> None:
+        from isycode.skill_catalog import guidance
+        try:
+            proposed = [item for item in self._active_skills if item != name]
+            if name not in self._active_skills:
+                proposed.append(name)
+            guidance(proposed)
+            self._active_skills = proposed
+            self._append("  Selected skills · " + (", ".join(proposed) or "none"), CYAN)
+        except (OSError, ValueError):
+            self._append("  Skill unavailable or selection too large; existing guidance preserved.", YELLOW)
+
+    def _add_mcp_preset(self, name: str) -> None:
+        from isycode.mcp_presets import add_preset
+        try:
+            add_preset(name)
+            self._append(f"  MCP {name} configured. /mcp start {name} reviews the npm download/process before starting.", GREEN)
+        except (OSError, ValueError):
+            self._append("  MCP preset could not be added; inspect the private config, existing name and available presets.", YELLOW)
+
     async def _list_local_mcp(self) -> None:
         try:
             configs = load_mcp_config()
@@ -6827,6 +7188,19 @@ class TUIApp(App):
         if text:
             self._copy_through_owner(text, "selection")
 
+    async def _request_clipboard_copy(self, text: str, source: str) -> None:
+        authority = WorkspaceAuthority(self._workspace_root)
+        grant = authority.effective_policy().get('grants', {}).get('clipboard.copy', {})
+        if not displayed_on('clipboard.copy', grant, CLIPBOARD_TARGET in grant.get('targets', ())):
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    'Allow copying in this workspace?',
+                    'Copies text or paths you select to the OS clipboard. Other applications may read it. '
+                    'The model receives no clipboard tool; copied contents are not written to the journal.',
+                    'Allow copy')):
+                return
+            authority.set_grant('clipboard.copy', enabled=True, targets=[CLIPBOARD_TARGET])
+        self._copy_through_owner(text, source)
+
     def _copy_through_owner(self, text: str, source: str) -> None:
         try:
             key_field = self.query_one("#provider-key-input", Input)
@@ -6845,7 +7219,10 @@ class TUIApp(App):
         if outcome.decision == "ALLOW":
             where = ("terminal clipboard" if outcome.text == "terminal"
                      else f"clipboard via {outcome.text}")
-            self.notify(f"Copied {len(text)} characters to the {where}.", timeout=2)
+            if outcome.text == 'terminal':
+                self.notify('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', timeout=8)
+            else:
+                self.notify(f"Copied {len(text)} characters to the {where}.", timeout=2)
         elif "grant" in outcome.reason:
             self.notify("Copying is off for this workspace · turn on “Copy selected text” in "
                         "Settings → Authority.", severity="warning", timeout=5)
@@ -7232,7 +7609,8 @@ class TUIApp(App):
             if git_commit_active:
                 chat_tools = chat_tools + [GIT_COMMIT_TOOL]
             if tools_active:
-                chat_tools = chat_tools + [TASK_TOOL]
+                from isycode.subagents import DELEGATE_TOOL
+                chat_tools = chat_tools + [TASK_TOOL, DELEGATE_TOOL]
             mcp_tools = self._local_mcp_owner().chat_tools() if tools_active else []
             if mcp_tools:
                 chat_tools = chat_tools + mcp_tools
@@ -7315,6 +7693,9 @@ class TUIApp(App):
                     +                 "ISySentinel and Workspace Authority govern product actions; IsyMotron is an optional adapter."
                 ),
             })
+            if self._active_skills:
+                from isycode.skill_catalog import guidance
+                messages.insert(1, {"role": "system", "content": guidance(self._active_skills)})
             if self._active_role:
                 messages.insert(1, {
                     "role": "system",

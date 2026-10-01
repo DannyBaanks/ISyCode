@@ -182,6 +182,18 @@ Los servidores stdio se declaran **solo** en tu `~/.config/isycode/mcp.json`, nu
 
 `/mcp` los lista; `/mcp start docs` pide permiso para ese ejecutable y aprobación del comando exacto. Mientras corre, sus herramientas aparecen para el modelo y **cada llamada** muestra los argumentos exactos y pide aprobación. Los servidores corren con tu usuario (red incluida), en la carpeta del workspace y con un entorno mínimo, y se detienen al salir. Sus descripciones y respuestas se tratan como datos no confiables.
 
+### Skills, MCP, LSP y subagentes
+
+`/skills` lista guía Superpowers incluida con licencia MIT; `/skills use brainstorming` alterna una guía solo para el chat actual y `/skills clear` la quita. Las guías se fijan a un commit upstream y se validan por digest. Leerlas no ejecuta scripts ni concede permisos. También aparecen en Settings → Skills.
+
+`/mcp add playwright` o `/mcp add context7` escribe un preset oficial, con versión npm fijada, en la configuración privada. El primer `/mcp start ...` solicita revisión y ejecuta npm con el usuario actual; cada herramienta mantiene su propia aprobación.
+
+Settings → LSP ofrece búsqueda LSP de símbolos para los servidores con un adapter de solo lectura y red denegada disponibles en este equipo. Actualmente Pyright y TypeScript reales pasaron handshake y búsqueda sandboxed; rust-analyzer, gopls y clangd se muestran solo cuando sus runtimes y sandbox están instalados. TypeScript necesita IPC anónimo AF_UNIX para su proceso tsserver; no puede crear sockets ni conectar a la red. Diagnósticos automáticos tras editar siguen disponibles para Pyright/Python.
+
+`/models` enseña hasta doce pares provider/model recientes. `/subagent <tarea>` abre un selector antes de enviar; `delegate_task` permite que el modelo principal proponga uno, que requiere tu selección. Cada subagente usa el proveedor y endpoint elegidos, trabaja de uno en uno y, para editar, comparte los permisos y revisiones diff del workspace. Sus mensajes no reciben la conversación privada completa ni pueden lanzar subagentes anidados.
+
+En Files, `Copy path` funciona para archivos y carpetas; `Open preview` abre un modal de texto de solo lectura seleccionable con botón de copia. La copia sigue pasando por IsySentinel y ClipboardOwner.
+
 ### Modo no interactivo
 
 ```bash
@@ -201,9 +213,9 @@ Responde una vez y sale. Usa los mismos owners, IsySentinel y journal que la TUI
 | `/run <programa> [args]` | Ejecuta un comando en el sandbox (pide aprobación) |
 | `/git`, `/diff [ruta] [--staged]` | Rama y cambios; diff |
 | `/commit <mensaje>` | Commit de los archivos cambiados tras revisar el diff |
-| `/mcp`, `/mcp start <nombre>`, `/mcp stop <nombre>` | Servidores MCP locales |
+| `/mcp add playwright`, `/mcp add context7`, `/mcp`, `/mcp start <nombre>`, `/mcp stop <nombre>` | MCP fijados; al añadir se configura, al iniciar se revisa npm y cada llamada pide aprobación |
 | `/compact` | Resume los mensajes antiguos para liberar contexto |
-| `/providers`, `/provider` | Providers y modelos |
+| `/providers`, `/provider`, `/models` | Providers, catálogo y modelos recientes |
 | `/session` | Workspace, provider y rol actuales |
 | `/readme`, `/plan`, `/review` | Vista previa de README, plan vía IsyMotron (opcional), revisión externa |
 
@@ -227,7 +239,7 @@ Selecciónalo desde **Providers** o con `ISYCODE_PROVIDER` / `ISYCODE_MODEL`. Si
 
 **Modelos destacados:** si el provider los lista, el selector de modelos pone arriba, con ★, GLM 5.3 Flash, GLM 5.3, Kimi K3 y DeepSeek V4.1 Flash (`deepseek-ai/deepseek-v4.1-flash` en NVIDIA). El resto del catálogo sigue debajo.
 
-Los demás providers comparten el transporte compatible con OpenAI. Que exista el preset no implica que se haya validado una clave real de cada servicio. OAuth no está disponible todavía.
+Los demás providers comparten el transporte compatible con OpenAI. Que exista el preset no implica que se haya validado una clave real de cada servicio. ChatGPT cuenta con inicio de sesión oficial por navegador o código de dispositivo mediante Codex app-server, separado de las API keys y con su propia cuenta privada. Los demás providers conservan sus métodos declarados; no se infiere OAuth por preset.
 
 ## Configuración personal
 

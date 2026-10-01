@@ -6,6 +6,7 @@ import ctypes.util
 import json
 import os
 import shutil
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,46 @@ except ModuleNotFoundError:  # pragma: no cover - no resource limits outside POS
 
 MAX_FRAME_BYTES = 2_000_000
 MAX_SYMBOLS = 500
+MAX_INDEXED_SOURCE_BYTES = 64 * 1024
+
+
+def _read_indexed_source(root: Path, path: Path) -> str | None:
+    """Read one bounded regular workspace source without following links or blocking."""
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return None
+    if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    directory_fd = file_fd = None
+    try:
+        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        file_flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+        directory_fd = os.open(root, directory_flags)
+        for component in relative.parts[:-1]:
+            next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+            os.close(directory_fd)
+            directory_fd = next_fd
+        file_fd = os.open(relative.parts[-1], file_flags, dir_fd=directory_fd)
+        metadata = os.fstat(file_fd)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > MAX_INDEXED_SOURCE_BYTES:
+            return None
+        chunks = bytearray()
+        while len(chunks) <= MAX_INDEXED_SOURCE_BYTES:
+            chunk = os.read(file_fd, min(8192, MAX_INDEXED_SOURCE_BYTES + 1 - len(chunks)))
+            if not chunk:
+                break
+            chunks.extend(chunk)
+        if len(chunks) > MAX_INDEXED_SOURCE_BYTES:
+            return None
+        return chunks.decode("utf-8")
+    except (OSError, UnicodeError):
+        return None
+    finally:
+        if file_fd is not None:
+            os.close(file_fd)
+        if directory_fd is not None:
+            os.close(directory_fd)
 
 # This host denies creating a network namespace, and Bubblewrap's --seccomp FD
 # path cannot install a filter through the outer container's prctl policy.
@@ -45,6 +86,24 @@ try:
                 "sendmsg recvmsg sendmmsg recvmmsg shutdown setsockopt getsockopt "
               "getsockname getpeername io_uring_setup io_uring_enter io_uring_register "
               "socketcall unshare setns").split()
+    if @LOCAL_IPC@:
+        # TypeScript's child uses an anonymous AF_UNIX pair, never a named socket.
+        # Deny every other socketpair domain and keep socket/connect/bind denied.
+        class ArgCmp(ctypes.Structure):
+            _fields_ = [("arg", ctypes.c_uint), ("op", ctypes.c_int),
+                        ("datum_a", ctypes.c_uint64), ("datum_b", ctypes.c_uint64)]
+        lib.seccomp_rule_add_array.argtypes = [ctypes.c_void_p, ctypes.c_uint32,
+                                               ctypes.c_int, ctypes.c_uint, ctypes.POINTER(ArgCmp)]
+        lib.seccomp_rule_add_array.restype = ctypes.c_int
+        number = lib.seccomp_syscall_resolve_name(b"socketpair")
+        comparison = ArgCmp(0, 1, 1, 0)  # argument 0 != AF_UNIX (SCMP_CMP_NE)
+        if number < 0 or lib.seccomp_rule_add_array(ctx, 0x00050000 | 1, number, 1, ctypes.byref(comparison)):
+            raise SystemExit("could not compile local IPC policy")
+        denied.remove("socketpair")
+        # libuv receives IPC frames through recvmsg. No network/named socket can
+        # be created or inherited: stdio is pipe-only and all other FDs closed.
+        denied.remove("sendmsg")
+        denied.remove("recvmsg")
     for name in denied:
         number = lib.seccomp_syscall_resolve_name(name.encode())
         if number >= 0 and lib.seccomp_rule_add(ctx, 0x00050000 | 1, number, 0):
@@ -57,11 +116,13 @@ os.execv(sys.argv[1], sys.argv[1:])
 '''
 
 
-def network_deny_bootstrap(max_processes: int = 32) -> str:
+def network_deny_bootstrap(max_processes: int = 32, *, allow_local_ipc: bool = False) -> str:
     """Python bootstrap that caps processes, denies sockets, then execs argv[1:]."""
     if type(max_processes) is not int or not 1 <= max_processes <= 4096:
         raise ValueError("process limit is invalid")
-    return _SECCOMP_BOOTSTRAP_TEMPLATE.replace("@NPROC@", str(max_processes))
+    if type(allow_local_ipc) is not bool:
+        raise ValueError("Invalid local IPC policy")
+    return _SECCOMP_BOOTSTRAP_TEMPLATE.replace("@NPROC@", str(max_processes)).replace("@LOCAL_IPC@", repr(allow_local_ipc))
 
 
 _SECCOMP_BOOTSTRAP = network_deny_bootstrap(32)
@@ -92,16 +153,8 @@ def discover_servers() -> list[dict[str, Any]]:
             "sandbox_executable": str(sandbox) if sandbox else "",
             "capability": "workspace/symbol",
         })
-    rust_analyzer = shutil.which("rust-analyzer")
-    if rust_analyzer:
-        found.append({
-            "id": "rust-analyzer",
-            "label": "rust-analyzer",
-            "state": "installed_unsupported",
-            "command": rust_analyzer,
-            "capability": "",
-        })
     for server_id, label, command in (
+        ("rust-analyzer", "rust-analyzer", "rust-analyzer"),
         ("typescript", "TypeScript Language Server", "typescript-language-server"),
         ("gopls", "gopls", "gopls"),
         ("clangd", "clangd", "clangd"),
@@ -109,10 +162,32 @@ def discover_servers() -> list[dict[str, Any]]:
         ("pylsp", "Python LSP Server", "pylsp"),
     ):
         executable = shutil.which(command)
-        if executable:
-            found.append({"id": server_id, "label": label,
-                          "state": "installed_unsupported", "command": executable,
-                          "capability": ""})
+        if not executable:
+            continue
+        script = Path(executable).resolve(strict=True)
+        # rustup shims dispatch by argv[0]; execute the actual component instead.
+        if server_id == "rust-analyzer" and script.name == "rustup":
+            toolchains = Path(os.environ.get("RUSTUP_HOME", Path.home() / ".rustup")) / "toolchains"
+            candidates = sorted(toolchains.glob("*/bin/rust-analyzer"))
+            candidates.sort(key=lambda value: not value.parts[-3].startswith("stable"))
+            script = next((value.resolve() for value in candidates if value.is_file()), script)
+        supported = server_id in {"rust-analyzer", "gopls", "clangd", "typescript"}
+        runtime_ready = script.is_file() and os.access(script, os.X_OK) and script.name != "rustup"
+        node_path = Path(node).resolve() if node and server_id == "typescript" else None
+        if server_id == "typescript":
+            packages = next((parent for parent in script.parents if parent.name == "node_modules"), None)
+            runtime_ready = bool(node_path and packages and (packages / "typescript/lib/tsserver.js").is_file())
+        ready = bool(supported and runtime_ready and bwrap and ctypes.util.find_library("seccomp")
+                     and resource is not None and hasattr(resource, "prlimit"))
+        go = shutil.which("go") if server_id == "gopls" else None
+        runtime = str(Path(go).resolve(strict=True)) if go else ""
+        found.append({"id": server_id, "label": label,
+                      "state": "sandbox_ready" if ready else "installed_unavailable" if supported else "installed_unsupported",
+                      "command": executable, "server_executable": str(script),
+                      "runtime_executable": runtime,
+                      "node_executable": str(node_path) if node_path else "",
+                      "sandbox_executable": str(Path(bwrap).resolve()) if bwrap else "",
+                      "capability": "workspace/symbol" if ready else ""})
     return found
 
 
@@ -193,9 +268,9 @@ async def _response(reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
 def _sandbox_command(root: Path, server: dict[str, Any]) -> list[str]:
     sandbox = str(Path(server["sandbox_executable"]).resolve(strict=True))
     script = Path(server["server_executable"]).resolve(strict=True)
-    node = Path(server["node_executable"]).resolve(strict=True)
-    if not script.is_file() or not node.is_file() or not os.access(node, os.X_OK):
-        raise RuntimeError("Pyright runtime files are unavailable")
+    node = Path(server["node_executable"]).resolve(strict=True) if server["node_executable"] else None
+    if not script.is_file() or (node is not None and (not node.is_file() or not os.access(node, os.X_OK))):
+        raise RuntimeError("Language server runtime files are unavailable")
     root = root.resolve(strict=True)
     if not root.is_dir():
         raise RuntimeError("Workspace root is unavailable")
@@ -212,21 +287,50 @@ def _sandbox_command(root: Path, server: dict[str, Any]) -> list[str]:
             args.extend(["--symlink", alias, destination])
         elif Path(source).exists():
             args.extend(["--ro-bind", source, destination])
+    runtime_path = "/usr/bin:/bin:/runtime"
     args.extend(["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
-                 "--dir", "/runtime", "--dir", "/runtime/pyright", "--dir", "/workspace",
-                 "--ro-bind", str(script.parent), "/runtime/pyright",
-                 "--ro-bind", str(node), "/runtime/node",
-                 "--ro-bind", str(root), "/workspace",
-                 "--chdir", "/workspace",
-                 "--setenv", "HOME", "/tmp",
-                 "--setenv", "XDG_CONFIG_HOME", "/tmp/config",
-                 "--setenv", "PATH", "/usr/bin:/bin:/runtime",
-                 "--", "/usr/bin/python3", "-c", _SECCOMP_BOOTSTRAP,
-                 "/runtime/node", "/runtime/pyright/langserver.index.js", "--stdio"])
+                 "--dir", "/runtime", "--dir", "/workspace"])
+    if server["id"] == "pyright":
+        args.extend(["--dir", "/runtime/pyright", "--ro-bind", str(script.parent), "/runtime/pyright",
+                     "--ro-bind", str(node), "/runtime/node"])
+        invocation = ["/runtime/node", "/runtime/pyright/langserver.index.js", "--stdio"]
+    elif server["id"] == "typescript":
+        packages = next(parent for parent in script.parents if parent.name == "node_modules")
+        args.extend(["--dir", "/runtime/packages", "--ro-bind", str(packages), "/runtime/packages",
+                     "--ro-bind", str(node), "/runtime/node"])
+        invocation = ["/runtime/node", "/runtime/packages/" + script.relative_to(packages).as_posix(), "--stdio"]
+    elif server["id"] in {"rust-analyzer", "gopls", "clangd"}:
+        args.extend(["--ro-bind", str(script), "/runtime/server"])
+        invocation = ["/runtime/server"]
+        if server["id"] == "clangd":
+            invocation += ["--background-index=false", "--clang-tidy=false", "--enable-config=false"]
+        if server["id"] == "rust-analyzer" and (script.parent.parent / "lib/rustlib").is_dir():
+            args.extend(["--dir", "/runtime/toolchain", "--ro-bind", str(script.parent.parent), "/runtime/toolchain",
+                         "--setenv", "RUST_SYSROOT", "/runtime/toolchain",
+                         "--setenv", "CARGO_NET_OFFLINE", "true",
+                         "--setenv", "RUSTC", "/runtime/toolchain/bin/rustc",
+                         "--setenv", "CARGO", "/runtime/toolchain/bin/cargo"])
+            runtime_path += ":/runtime/toolchain/bin"
+        if server["id"] == "gopls":
+            go = server.get("runtime_executable")
+            if go:
+                go_root = Path(go).resolve(strict=True).parent.parent
+                if (go_root / "src").is_dir() and (go_root / "pkg").is_dir():
+                    args.extend(["--dir", "/runtime/go", "--ro-bind", str(go_root), "/runtime/go",
+                                 "--setenv", "GOROOT", "/runtime/go", "--setenv", "GOPROXY", "off",
+                                 "--setenv", "GOSUMDB", "off", "--setenv", "GOTOOLCHAIN", "local"])
+                    runtime_path += ":/runtime/go/bin"
+    else:
+        raise RuntimeError("Unsupported LSP runtime")
+    args.extend(["--ro-bind", str(root), "/workspace", "--chdir", "/workspace",
+                 "--setenv", "HOME", "/tmp", "--setenv", "XDG_CONFIG_HOME", "/tmp/config",
+                 "--setenv", "PATH", runtime_path,
+                 "--setenv", "RAYON_NUM_THREADS", "2", "--setenv", "GOMAXPROCS", "2",
+                 "--", "/usr/bin/python3", "-c", network_deny_bootstrap(32, allow_local_ipc=server["id"] == "typescript"), *invocation])
     return args
 
 
-async def pyright_workspace_symbols(root: Path, query: str,
+async def workspace_symbols(root: Path, query: str,
                                     server: dict[str, Any],
                                     timeout_s: float = 25.0) -> dict[str, Any]:
     """Perform initialize + workspace/symbol in a bubblewrap, read-only sandbox."""
@@ -259,6 +363,12 @@ async def pyright_workspace_symbols(root: Path, query: str,
                 "rootUri": "file:///workspace",
                 "workspaceFolders": [{"uri": "file:///workspace", "name": root.name}],
                 "capabilities": {}, "trace": "off",
+                "initializationOptions": ({"cargo": {"buildScripts": {"enable": False}},
+                    "procMacro": {"enable": False}, "checkOnSave": False,
+                    "check": {"enable": False}} if server["id"] == "rust-analyzer" else
+                    {"tsserver": {"path": "/runtime/packages/typescript/lib/tsserver.js",
+                                  "maxTsServerMemory": 256, "useSyntaxServer": "never"}}
+                    if server["id"] == "typescript" else {}),
                 "clientInfo": {"name": "isycode", "version": "0.1.0"},
             },
         }
@@ -266,19 +376,56 @@ async def pyright_workspace_symbols(root: Path, query: str,
         await proc.stdin.drain()
         remaining = deadline - asyncio.get_running_loop().time()
         if remaining <= 0:
-            raise asyncio.TimeoutError("Pyright initialize exceeded its deadline")
+            raise asyncio.TimeoutError("Language server initialize exceeded its deadline")
         initialized = await _response(proc.stdout, proc.stdin, 1, remaining)
         capabilities = initialized["result"].get("capabilities", {})
         if not isinstance(capabilities, dict) or not capabilities.get("workspaceSymbolProvider"):
-            raise RuntimeError("Pyright did not advertise workspace symbol search")
+            raise RuntimeError("Language server did not advertise workspace symbol search")
         proc.stdin.write(_frame({"jsonrpc": "2.0", "method": "initialized", "params": {}}))
+        # Open a bounded set of ordinary source files so document-indexed servers
+        # (clangd and TypeScript) can answer workspace/symbol without background writes.
+        if server["id"] != "pyright":
+            from isycode.action_runtime import WorkspaceReadSystembility
+            extensions = {"rust-analyzer": {".rs": "rust"}, "typescript": {".ts": "typescript", ".tsx": "typescriptreact", ".js": "javascript"},
+                          "gopls": {".go": "go"}, "clangd": {".c": "c", ".cpp": "cpp", ".h": "c"}}[server["id"]]
+            opened = total = visited = 0
+            for directory, dirs, files in os.walk(root, followlinks=False):
+                dirs[:] = sorted(name for name in dirs if not name.startswith(".")
+                    and name not in {"node_modules", "target", "build", "dist", "vendor", "venv"}
+                    and not (Path(directory) / name).is_symlink()
+                    and not WorkspaceReadSystembility.is_sensitive_name(name))
+                for name in sorted(files):
+                    visited += 1
+                    path = Path(directory) / name
+                    if (path.suffix not in extensions or path.is_symlink() or name.startswith(".")
+                            or WorkspaceReadSystembility.is_sensitive_name(name)):
+                        continue
+                    try:
+                        text = _read_indexed_source(root, path)
+                    except (OSError, UnicodeError):
+                        continue
+                    if text is None:
+                        continue
+                    if total + len(text.encode("utf-8")) > 512 * 1024:
+                        break
+                    relative = path.relative_to(root)
+                    from urllib.parse import quote
+                    proc.stdin.write(_frame({"jsonrpc": "2.0", "method": "textDocument/didOpen", "params": {
+                        "textDocument": {"uri": "file:///workspace/" + quote(relative.as_posix()),
+                                         "languageId": extensions[path.suffix], "version": 1, "text": text}}}))
+                    opened += 1; total += len(text.encode("utf-8"))
+                    if opened >= 50:
+                        break
+                if opened >= 50 or visited >= 5000 or total >= 512 * 1024:
+                    break
+            await proc.stdin.drain()
         symbols: list[Any] = []
         request_id = 1
         for delay in (0.0, 0.2, 0.5, 0.8):
             if delay:
                 remaining = deadline - asyncio.get_running_loop().time()
                 if remaining <= 0:
-                    raise asyncio.TimeoutError("Pyright workspace indexing exceeded its deadline")
+                    raise asyncio.TimeoutError("Language server workspace indexing exceeded its deadline")
                 await asyncio.sleep(min(delay, remaining))
             request_id += 1
             proc.stdin.write(_frame({"jsonrpc": "2.0", "id": request_id,
@@ -287,13 +434,13 @@ async def pyright_workspace_symbols(root: Path, query: str,
             await proc.stdin.drain()
             remaining = deadline - asyncio.get_running_loop().time()
             if remaining <= 0:
-                raise asyncio.TimeoutError("Pyright workspace search exceeded its deadline")
+                raise asyncio.TimeoutError("Language server workspace search exceeded its deadline")
             response = await _response(proc.stdout, proc.stdin, request_id, remaining, list)
             symbols = response["result"]
             if symbols:
                 break
         if not isinstance(symbols, list):
-            raise RuntimeError("Pyright returned malformed workspace symbols")
+            raise RuntimeError("Language server returned malformed workspace symbols")
         clipped = symbols[:MAX_SYMBOLS]
         clean = []
         for item in clipped:
@@ -320,7 +467,7 @@ async def pyright_workspace_symbols(root: Path, query: str,
             proc.kill()
             await proc.wait()
         return {
-            "server": "pyright",
+            "server": server["id"],
             "protocol": "LSP",
             "operation": "workspace/symbol",
             "query": query.strip(),
@@ -328,13 +475,19 @@ async def pyright_workspace_symbols(root: Path, query: str,
             "symbols": clean,
             "truncated": len(symbols) > MAX_SYMBOLS,
             "sandbox": {"read_only_workspace": True,
-                        "network": "socket syscalls denied by seccomp; host namespace shared"},
+                        "network": "network socket access denied by seccomp; anonymous local IPC allowed only for TypeScript"},
         }
     except (asyncio.CancelledError, Exception):
         if proc.returncode is None:
             proc.kill()
             await proc.wait()
         raise
+
+
+async def pyright_workspace_symbols(root: Path, query: str, server: dict[str, Any],
+                                    timeout_s: float = 25.0) -> dict[str, Any]:
+    """Compatibility entrypoint for the owned multi-server symbols adapter."""
+    return await workspace_symbols(root, query, server, timeout_s)
 
 
 MAX_DIAGNOSTICS = 100
@@ -407,7 +560,7 @@ async def _diagnostics_session(reader: asyncio.StreamReader, writer: asyncio.Str
 
 async def pyright_diagnostics(root: Path, relative_path: str, text: str,
                               server: dict[str, Any], timeout_s: float = 25.0) -> dict[str, Any]:
-    """Pyright diagnostics for one file, in the same read-only, network-denied sandbox."""
+    """Language server diagnostics for one file, in the same read-only, network-denied sandbox."""
     root = root.resolve(strict=True)
     command = _sandbox_command(root, server)
     proc = await asyncio.create_subprocess_exec(
@@ -437,7 +590,7 @@ async def pyright_diagnostics(root: Path, relative_path: str, text: str,
                 await proc.wait()
     return {"server": "pyright", "path": relative_path, "diagnostics": diagnostics,
             "sandbox": {"read_only_workspace": True,
-                        "network": "socket syscalls denied by seccomp; host namespace shared"}}
+                        "network": "network socket access denied by seccomp; anonymous local IPC allowed only for TypeScript"}}
 
 
 __all__ = ["discover_servers", "network_deny_bootstrap", "pyright_diagnostics",

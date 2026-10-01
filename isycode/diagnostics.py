@@ -24,6 +24,8 @@ def collect_diagnostics(root: Path) -> dict:
     name = selected_provider_name()
     preset = PRESETS.get(name, {})
     url = os.environ.get('ISYCODE_BASE_URL') or os.environ.get('ISYMOTRON_BASE_URL') or preset.get('base_url', '')
+    if name == 'chatgpt':
+        url = preset.get('base_url', '')
     try:
         parsed = urlsplit(url)
         endpoint = ('invalid-credential-bearing-url' if parsed.username or parsed.password or parsed.query
@@ -33,6 +35,8 @@ def collect_diagnostics(root: Path) -> dict:
     credential = ('environment-present' if os.environ.get(preset.get('key_env', ''))
                   else 'not-required' if preset.get('key_required') is False
                   else 'environment-absent; saved keys require an authorized lookup')
+    if name == 'chatgpt':
+        credential = 'subscription; sign-in verified on request; dedicated Codex account and unlocked OS keyring required'
     try:
         UserDefaultsStore().load()
         defaults = 'valid'

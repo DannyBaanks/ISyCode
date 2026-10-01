@@ -49,6 +49,13 @@ def test_authority_menu_opens_with_every_integration_state(tmp_path, monkeypatch
     UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
     monkeypatch.setattr("isycode.tui.sandbox_executable", lambda: "/usr/bin/bwrap")
 
+    async def workspace_startup(self):
+        # This test inspects the authority menu, not optional startup catalog or
+        # Gateway requests. Keep its UI harness independent of background I/O.
+        return None
+
+    monkeypatch.setattr(TUIApp, "_startup_workspace", workspace_startup)
+
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
@@ -83,6 +90,12 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
     from isycode.tui import HelpBubble
 
     _app_env(tmp_path, monkeypatch)
+
+    async def workspace_startup(self):
+        # The menu layout does not depend on startup catalogs or file enumeration.
+        return None
+
+    monkeypatch.setattr(TUIApp, "_startup_workspace", workspace_startup)
 
     async def scenario():
         app = TUIApp()

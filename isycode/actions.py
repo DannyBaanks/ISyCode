@@ -28,6 +28,7 @@ _ENTRIES = [
     ("workspace.files.move", "Files", "Move or rename files", "write", True),
     ("workspace.files.delete", "Files", "Delete files", "destructive", True),
     ("workspace.files.read_sensitive", "Files", "Read sensitive files", "sensitive", True),
+    ("provider.authenticate", "Accounts", "Connect/disconnect ChatGPT subscription", "credential", True),
     ("provider.request", "Network", "Send prompts to the selected model provider", "network", False),
     ("catalog.external.read", "Network", "Read an external integration catalog", "network-read", False),
     ("gateway.semantic.read", "Network", "Use ISyCo semantic analysis", "network-read", True),

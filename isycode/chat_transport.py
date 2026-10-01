@@ -18,6 +18,12 @@ def uses_anthropic(provider: Any) -> bool:
 async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: int,
                             on_chunk: Callable[[str, str], None] | None = None,
                             tools: list[dict] | None = None) -> dict:
+    if PRESETS.get(getattr(provider, 'name', ''), {}).get('api') == 'codex':
+        from pathlib import Path
+        from isycode.codex_connector import CodexConnector
+        identity = provider.connector_identity
+        async with CodexConnector(identity['executable'], Path(identity['home'])) as connector:
+            return await connector.complete(provider.model, messages, tools, on_chunk)
     if uses_anthropic(provider):
         from isycode.anthropic_provider import anthropic_stream_complete
 

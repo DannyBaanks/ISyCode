@@ -29,3 +29,6 @@ include = ["isycode*"]
 markers = [
   "integration: requires an external ISyCo checkout or running Gateway service",
 ]
+
+[tool.setuptools.package-data]
+isycode = ["bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md"]
