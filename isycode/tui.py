@@ -132,7 +132,7 @@ except ModuleNotFoundError:
         """A planner rejection raised only when an optional runtime is present."""
 
 from isycode.providers import (
-    DEFAULT_MODEL, PRESETS, Provider, ProviderError, load_provider_key,
+    DEFAULT_MODEL, PRESETS, Provider, ProviderError, featured_models, load_provider_key,
     provider_credential_state, save_provider_selection, selected_model_name, selected_provider_name,
 )
 from isycode.streaming import (
@@ -5049,7 +5049,20 @@ class TUIApp(App):
                 elif not models:
                     rows = [self._entry("The provider returned an empty model catalog.", "info")]
                 else:
-                    rows = [self._entry(
+                    rows = []
+                    for label, model_id in featured_models(models):
+                        if model_id:
+                            rows.append(self._entry(
+                                f"★ {label} · {model_id}"
+                                f"{'  ◂ current' if model_id == provider.model else ''}",
+                                "model", f"{name}|{model_id}",
+                                f"Featured model, found in this account's {provider.label} catalog."))
+                        else:
+                            rows.append(self._entry(
+                                f"★ {label} · not in this account's catalog", "info", "",
+                                f"{provider.label} did not list a model matching {label}; it may "
+                                "not be offered here yet."))
+                    rows += [self._entry(
                         f"{model_id}{'  ◂ current' if model_id == provider.model else ''}",
                         "model", f"{name}|{model_id}") for model_id in models]
         except ProviderError as error:

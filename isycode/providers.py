@@ -48,6 +48,28 @@ PRESETS: dict[str, dict[str, Any]] = {
 }
 
 
+# Models pinned to the top of the model picker. They are matched against the
+# provider's live catalog (never invented): a pattern with no match is reported
+# as missing from the account catalog.
+FEATURED_MODELS: tuple[tuple[str, str], ...] = (
+    ("GLM 5.3 Flash", r"glm[-_. ]?5[._]3(?![0-9]).*flash"),
+    ("GLM 5.3", r"glm[-_. ]?5[._]3(?![0-9])(?!.*flash)"),
+    ("Kimi K3", r"kimi[-_. ]?k3(?![0-9])"),
+)
+
+
+def featured_models(catalog: list[str]) -> list[tuple[str, str | None]]:
+    """(label, matching model id or None) for each featured model, in order."""
+    import re
+
+    result = []
+    for label, pattern in FEATURED_MODELS:
+        matcher = re.compile(pattern, re.IGNORECASE)
+        found = sorted((model for model in catalog if matcher.search(model)), key=len)
+        result.append((label, found[0] if found else None))
+    return result
+
+
 def _preferences_path():
     from isycode.workspace_setup import state_root
     directory = state_root() / "preferences"
@@ -254,6 +276,7 @@ class Provider:
         return headers
 
 
-__all__ = ["DEFAULT_MODEL", "PRESETS", "Provider", "ProviderError",
+__all__ = ["DEFAULT_MODEL", "FEATURED_MODELS", "PRESETS", "Provider", "ProviderError",
+           "featured_models",
            "load_provider_key", "provider_credential_state",
            "save_provider_selection", "selected_model_name", "selected_provider_name"]
