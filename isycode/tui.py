@@ -36,7 +36,9 @@ from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
 )
-from isycode.user_defaults import UserDefaultsStore
+from isycode.user_defaults import CHAT_TOKEN_BUDGET_CHOICES, UserDefaultsStore
+from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
+from isycode.usage import UsageLedger
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
     ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_KERNEL,
@@ -1916,6 +1918,8 @@ class TUIApp(App):
         self._initial_prompt = initial_prompt
         self._openisy_refresh_generation = 0
         self._history: list[dict] = []
+        self._tool_history: list[dict] = []
+        self._usage = UsageLedger()
         # Model-written notes replacing history that no longer fits the budget.
         self._conversation_summary = ""
         self._chat_turn_task: asyncio.Task | None = None
@@ -2003,6 +2007,9 @@ class TUIApp(App):
             yield ChatArea(id="chat")
             yield TasksPanel("", id="agent-tasks")
             yield Static("Ready · / opens navigation", id="activity-status")
+            usage_status = Static("", id="usage-status")
+            usage_status.styles.height = 1
+            yield usage_status
         yield PromptArea(
             id="prompt-input")
         with Horizontal(id="command-bar"):
@@ -2030,6 +2037,7 @@ class TUIApp(App):
         yield Footer(show_command_palette=False)
 
     def on_mount(self) -> None:
+        self._refresh_usage()
         prompt = self.query_one("#prompt-input", PromptArea)
         self.query_one("#role-button", Button).label = self._role_button_label()
         if self._initial_prompt:
@@ -2995,6 +3003,13 @@ class TUIApp(App):
             f"Answer length · {limits.answer_tokens:,} tokens · Enter to change",
             "user_default_tokens", "",
             "Maximum tokens the model may write per response. Longer answers can cost more."))
+        budget = defaults.get("chat_token_budget", 0)
+        entries.append(self._entry(
+            f"Chat budget per session · {f'{budget:,} tokens' if budget else 'off'} · Enter to change",
+            "user_default_budget", "",
+            "Stops subsequent chat/compaction requests when reported input + output tokens reach "
+            "the budget, or usage is unknown. An in-flight request can exceed it; this is not a "
+            "billing cap. Connection checks and external reviews are separate."))
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "user_defaults":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
@@ -3005,6 +3020,66 @@ class TUIApp(App):
             return AgentLimits.from_defaults(UserDefaultsStore().load())
         except (OSError, ValueError, json.JSONDecodeError):
             return AgentLimits()
+
+    def _chat_token_budget(self) -> int:
+        try:
+            return UserDefaultsStore().load().get("chat_token_budget", 0)
+        except (OSError, ValueError, json.JSONDecodeError):
+            return 1  # Broken preferences must not silently remove a configured cap.
+
+    def _usage_status_text(self) -> str:
+        budget = self._chat_token_budget()
+        if budget == 1:
+            return f"Chat · {self._usage.label()} · budget settings unreadable"
+        return f"Chat · {self._usage.label()} · budget {budget:,} tokens" if budget else f"Chat · {self._usage.label()}"
+
+    def _refresh_usage(self) -> None:
+        budget = self._chat_token_budget()
+        total = self._usage.input_tokens + self._usage.output_tokens
+        uncertainty = "+ (usage unknown)" if self._usage.unknown_requests else ""
+        cap = "settings unreadable" if budget == 1 else f"{budget:,}" if budget else "off"
+        label = f"Chat · {total:,}{uncertainty} tokens · {self._usage.requests} req · budget {cap}"
+        self.query_one("#usage-status", Static).update(Text(label, style=MUTED))
+
+    def _chat_request_limit(self, wanted: int) -> int:
+        budget = self._chat_token_budget()
+        if budget == 1:
+            self._append("  Chat budget settings could not be read; no request was sent. "
+                         "Repair Settings → My defaults before retrying.", YELLOW)
+            return 0
+        if not self._usage.allowed(budget):
+            self._append("  Chat budget stopped the next request: exhausted or usage unknown. "
+                         "Review /usage and Settings → My defaults. No automatic retry.", YELLOW)
+            return 0
+        remaining = self._usage.remaining(budget)
+        return min(wanted, remaining) if remaining is not None else wanted
+
+    async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int,
+                                       on_chunk=None, tools=None) -> dict:
+        # Called only by the authorized provider owner's send callback.
+        try:
+            response = await provider_complete(provider, messages, max_tokens=max_tokens,
+                                               on_chunk=on_chunk, tools=tools)
+        except BaseException:
+            self._usage.record(None)
+            self._refresh_usage()
+            self._save_draft()
+            raise
+        self._usage.record(response.get("usage") if isinstance(response, dict) else None)
+        self._refresh_usage()
+        self._save_draft()
+        return response
+
+    def _cycle_chat_budget(self) -> None:
+        current = self._chat_token_budget()
+        index = CHAT_TOKEN_BUDGET_CHOICES.index(current) if current in CHAT_TOKEN_BUDGET_CHOICES else 0
+        try:
+            UserDefaultsStore().update(chat_token_budget=CHAT_TOKEN_BUDGET_CHOICES[
+                (index + 1) % len(CHAT_TOKEN_BUDGET_CHOICES)])
+            self._refresh_usage()
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save the budget; existing settings remain", RED)
+        self._open_user_defaults_menu()
 
     def _cycle_agent_limit(self, steps: bool) -> None:
         current = self._agent_limits()
@@ -4615,6 +4690,9 @@ class TUIApp(App):
         if kind in {"user_default_steps", "user_default_tokens"}:
             self._cycle_agent_limit(kind == "user_default_steps")
             return
+        if kind == "user_default_budget":
+            self._cycle_chat_budget()
+            return
         if kind == "user_default_mode":
             self.run_worker(self._set_global_mode_default(value), exclusive=True,
                             group="user-defaults")
@@ -5932,6 +6010,12 @@ class TUIApp(App):
         async def _check_cmd(app: "TUIApp", arg: str) -> None:
             await app._check_provider_connection()
 
+        async def _usage_cmd(app: "TUIApp", arg: str) -> None:
+            app._append(app._usage_status_text(), MUTED)
+            app._append("  Chat and compaction only; provider-reported tokens, no billing estimate. "
+                        "Set the session budget in Settings → My defaults. Missing usage is unknown; "
+                        "an in-flight request can exceed the budget.", MUTED)
+
         async def _sessions_cmd(app: "TUIApp", arg: str) -> None:
             await app._manage_sessions(arg)
 
@@ -5964,6 +6048,7 @@ class TUIApp(App):
                 PluginCommand("retry", "prepare interrupted prompt for review; never auto-replays tools", _retry_cmd),
                 PluginCommand("doctor", "local configuration and dependencies; no network requests", _doctor_cmd),
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
+                PluginCommand("usage", "show chat token consumption and session budget", _usage_cmd),
                 PluginCommand("context", "read workspace AGENTS.md with permission, or clear", _context_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
             ],
@@ -6011,10 +6096,14 @@ class TUIApp(App):
                 "role": ({"kind": self._active_role["kind"], "name": self._active_role["name"]}
                          if self._active_role else None),
                 "context_path": "AGENTS.md" if self._agent_context and self._agent_context["path"] == "AGENTS.md" else None,
-                "draft": self._draft_text[:16_000]}
+                "draft": self._draft_text[:16_000],
+                "tool_history": self._tool_history,
+                "conversation_summary": self._conversation_summary,
+                "usage": self._usage.to_state()}
 
     def _save_draft(self) -> None:
-        if not self._sessions_enabled() or (not self._active_chat_session_id and not self._draft_text):
+        if not self._sessions_enabled() or (not self._active_chat_session_id and not self._draft_text
+                                            and not self._tool_history and not self._usage.requests):
             return
         try:
             outcome, sid = self._chat_session_owner.manage(
@@ -6134,6 +6223,9 @@ class TUIApp(App):
         self._draft_text = ""
         self._retry_prompt = None
         self._history = []
+        self._tool_history = []
+        self._usage = UsageLedger()
+        self._refresh_usage()
         self._conversation_summary = ""
         self._show_agent_tasks([])
         self._active_chat_session_id = None
@@ -6160,6 +6252,12 @@ class TUIApp(App):
         self._active_chat_session_id = session.session_id
         self._session_save_warned = False
         state = session.state
+        self._tool_history = state.get("tool_history", [])
+        self._conversation_summary = state.get("conversation_summary", "")
+        self._usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        if "usage" not in state and session.messages:
+            self._usage.record(None)
+        self._refresh_usage()
         self._retry_prompt = None
         prompt = self.query_one("#prompt-input", PromptArea)
         prompt.load_text(state.get("draft", ""))
@@ -6192,6 +6290,11 @@ class TUIApp(App):
             else:
                 chat.mount(Static(RichMarkdown(message["content"], code_theme="monokai")))
         chat.follow_tail()
+        for event in self._tool_history:
+            self._append(f"  Historical tool · {event['name']} · {event['arguments']}", MUTED)
+            self._append(f"    {event['result']}", MUTED)
+        if self._tool_history:
+            self._append("  Restored tool notes may be stale; no tool was replayed.", MUTED)
         self._append(f"  Resumed · {session.title} · {len(session.messages)} messages", GREEN)
 
     async def _delete_chat_session(self, session_id: str) -> None:
@@ -6220,6 +6323,8 @@ class TUIApp(App):
         if result.decision == "ALLOW" and self._active_chat_session_id == session_id:
             self._active_chat_session_id = None
             self._draft_text = ""
+            self._tool_history = []
+            self._usage = UsageLedger()
             self._start_new_conversation()
 
     def _persist_chat_message(self, role: str, content: str) -> None:
@@ -6764,18 +6869,21 @@ class TUIApp(App):
     async def _summarize_older(self, provider, owner, older: list[dict],
                                recent: list[dict]) -> bool:
         """Replace ``older`` history with model-written notes sent through the provider owner."""
+        max_tokens = self._chat_request_limit(SUMMARY_MAX_TOKENS)
+        if not max_tokens:
+            return False
         self._append(f"  Compacting · summarizing {len(older)} earlier messages to free up context",
                      MUTED)
         summary_request = summary_messages(older, self._conversation_summary)
 
         async def send():
-            return await provider_complete(provider, summary_request,
-                                           max_tokens=SUMMARY_MAX_TOKENS)
+            return await self._complete_accounted_chat(provider, summary_request,
+                                                       max_tokens=max_tokens)
 
         try:
             response, outcome = await owner.execute(provider, {
                 "operation": "chat.summary", "messages": summary_request,
-                "max_tokens": SUMMARY_MAX_TOKENS,
+                "max_tokens": max_tokens,
                 "token_limit_field": provider.token_limit_field,
                 "reasoning_effort": provider.reasoning_effort,
                 "temperature_supported": provider.temperature_supported, "tools": None,
@@ -6785,13 +6893,15 @@ class TUIApp(App):
             reason = type(exc).__name__
         else:
             reason = outcome.reason if outcome is not None else ""
+        self._save_draft()
         summary = (response.get("text") or "").strip() if isinstance(response, dict) else ""
         if outcome is None or outcome.decision != "ALLOW" or not summary:
             # Keep working: the older messages are simply not sent this turn.
             self._append(f"  Compaction skipped · {reason[:160] or 'no summary returned'}; "
                          "earlier messages are left out of this request", YELLOW)
             return False
-        self._conversation_summary = summary[:MAX_SUMMARY_CHARS]
+        self._conversation_summary = sanitize_historical_text(summary)[:MAX_SUMMARY_CHARS]
+        self._save_draft()
         self._history[:len(older)] = []
         self._append("  Compacted · earlier messages summarized; the saved conversation keeps "
                      "the full transcript", MUTED)
@@ -6940,6 +7050,7 @@ class TUIApp(App):
             )
             limits = self._agent_limits()
             older, recent = split_history(self._history)
+            notes = tool_history_context(self._tool_history)
             messages = [dict(message) for message in recent]
             messages.insert(0, {
                 "role": "system",
@@ -7048,6 +7159,10 @@ class TUIApp(App):
                 leading = next((index for index, message in enumerate(messages)
                                 if message.get("role") != "system"), len(messages))
                 messages.insert(leading, summary_system_message(self._conversation_summary))
+            if notes:
+                leading = next((index for index, message in enumerate(messages)
+                                if message.get("role") != "system"), len(messages))
+                messages.insert(leading, {"role": "system", "content": notes})
             request_material = {
                 "operation": "chat.completions", "messages": messages,
                 "max_tokens": limits.answer_tokens, "token_limit_field": provider.token_limit_field,
@@ -7057,13 +7172,17 @@ class TUIApp(App):
             }
 
             async def send_provider_request():
-                return await provider_complete(provider, messages,
-                                               max_tokens=limits.answer_tokens,
+                return await self._complete_accounted_chat(provider, messages,
+                                               max_tokens=request_material["max_tokens"],
                                                on_chunk=on_chunk, tools=chat_tools)
 
             try:
                 tool_round = 0
                 while True:
+                    max_tokens = self._chat_request_limit(limits.answer_tokens)
+                    if not max_tokens:
+                        break
+                    request_material["max_tokens"] = max_tokens
                     if not limits.step_allowed(tool_round):
                         self._append(
                             f"  Step limit reached ({limits.max_steps}) · say \"continue\" to keep going, "
@@ -7096,12 +7215,28 @@ class TUIApp(App):
                         break
                     messages.append(assistant_turn(response))
                     for call in calls:
+                        noted = False
+                        try:
+                            self._tool_history = record_tool_result(self._tool_history, call,
+                                "Tool attempt started; completion unverified. Cancellation does not "
+                                "prove no effect. Inspect current files and the action journal before "
+                                "retrying; never automatically replay this historical attempt.")
+                            noted = True
+                            self._save_draft()
+                        except ValueError:
+                            pass  # Malformed metadata still reaches the normal typed denial path.
                         if not tools_active:
                             call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]
                             tool_result = json.dumps({"error": "workspace chat tools are not enabled"})
                             self._append("  Tool denied · no explicit workspace read grant", YELLOW)
                         else:
                             call_id, tool_result = await self._dispatch_chat_tool(call)
+                        try:
+                            previous = self._tool_history[:-1] if noted else self._tool_history
+                            self._tool_history = record_tool_result(previous, call, tool_result)
+                        except ValueError:
+                            self._append("  Tool note not retained: malformed tool metadata.", YELLOW)
+                        self._save_draft()
                         messages.append({
                             "role": "tool", "tool_call_id": call_id, "content": tool_result,
                         })
@@ -7188,6 +7323,7 @@ class TUIApp(App):
                              "remain; inspect them before sending again.", YELLOW)
             self._chat_request_task = None
             self._chat_turn_task = None
+            self._save_draft()
             if block is not None:
                 block.collapse_to(_time.time() - thought_started)
                 self.query_one(ChatArea).follow_tail()

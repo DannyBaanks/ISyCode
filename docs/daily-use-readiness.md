@@ -1,4 +1,35 @@
-# Daily-use readiness — 2026-09-30
+# Daily-use readiness — updated 2026-10-01
+
+## Continuity, compatibility and reported consumption
+
+The package now pins Textual 1.0.0, validated with Python 3.10 and 3.12.
+Historical Textual 8.2.8 screenshots do not establish support for that version.
+Chat shows model steps and tools in order and follows the bottom while preserving
+manual history/search navigation.
+
+New sessions retain up to 32 tool notes, each with at most 2,000 argument and
+4,000 result characters. At most 16,000 characters of recent notes are supplied
+as explicitly untrusted, potentially stale context on the next turn. Resume
+displays them without executing anything. Raw reasoning, grants and approvals
+are not saved. A pre-dispatch unverified attempt survives cancellation or a
+crash; a completed result replaces it. Inspect files and the journal before
+retrying an interrupted effect. Partial forks drop tool notes and summaries
+whose message boundaries cannot be determined. Old sessions cannot recover
+results they never stored. Ambiguous explicit secret assignments discard the
+whole note; this is conservative redaction, not proof that arbitrary prose
+contains no confidential data.
+
+The status line and `/usage` report chat/compaction input/output tokens and
+requests. OpenAI requests streamed usage; Anthropic reports actual usage,
+including input cache reads/writes, and respects the requested output limit.
+Other providers may omit usage: reported totals then remain lower bounds.
+Settings → My defaults offers an optional per-session budget of 10,000, 50,000,
+100,000 or 500,000 tokens, off by default. It blocks subsequent requests when
+reported consumption reaches the budget or consumption is unknown, and reduces
+the next output limit to the known remainder. Input tokens and an in-flight
+request can exceed the budget; it is not a billing cap. Connection checks and
+external reviews are separate. Legacy sessions without usage are unknown;
+imported counters are historical data, not verified provider billing records.
 
 This is the current evidence for the local coding workflow. Older milestone
 checkboxes and the competitive inventory describe earlier revisions; they are
@@ -125,7 +156,7 @@ audit or a long-duration performance soak.
   review remain release acceptance work; no broad performance claim is made.
 - MCP remote transports/OAuth, additional LSP features, Mobile Host runtime
   sessions, Bridge and L1 remain optional follow-up integrations.
-- Provider cost budgets, automatic retry policies and portable file/clipboard
+- Verified monetary cost estimates, automatic retry policies and portable file/clipboard
   transfer UI remain future work. Existing ownership/security gates stay in force.
 
 ## Verification record (2026-09-30)

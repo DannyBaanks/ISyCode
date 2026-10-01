@@ -174,6 +174,7 @@ async def async_stream_complete(
     timeout_s: float = 120.0,
     on_chunk: Callable[[str, str], None] | None = None,
     tools: list[dict] | None = None,
+    include_usage: bool = False,
 ) -> dict:
     """Stream a completion over an asyncio-owned socket that its task can cancel."""
     parsed = urlparse(base_url)
@@ -188,6 +189,8 @@ async def async_stream_complete(
         proxy_url = None
 
     body = {"model": model, "messages": messages, "stream": True}
+    if include_usage:
+        body["stream_options"] = {"include_usage": True}
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"

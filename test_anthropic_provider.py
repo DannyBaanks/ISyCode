@@ -123,7 +123,9 @@ def test_sdk_request_and_stream_parsing_end_to_end():
                                                  "parameters": {"type": "object"}}}],
         client=client))
     sent = seen["body"]
-    assert sent["model"] == "claude-opus-5-5" and sent["max_tokens"] == 32000
+    assert sent["model"] == "claude-opus-5-5" and sent["max_tokens"] == 8192
+    assert result["usage"]["input_tokens"] == 5
+    assert result["usage"]["output_tokens"] == 20
     assert sent["system"] == "sys" and sent["fallbacks"] == "default"
     assert sent["thinking"]["block_binding"]["prefix_mismatch_behavior"] == "drop_block"
     assert sent["tools"][0]["eager_input_streaming"] is True
@@ -134,3 +136,41 @@ def test_sdk_request_and_stream_parsing_end_to_end():
     assert json.loads(result["tool_calls"][0]["function"]["arguments"]) == {"path": "app.py"}
     thinking = result["anthropic_content"][0]
     assert thinking["type"] == "thinking" and thinking["signature"] == "sig1"
+
+
+@pytest.mark.parametrize("usage", [{"input_tokens": 5, "output_tokens": 20}, None])
+def test_requested_token_cap_and_final_usage_survive_transport_without_optional_sdk(monkeypatch, usage):
+    import sys
+    from types import SimpleNamespace
+    from isycode.anthropic_provider import anthropic_stream_complete
+
+    monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace())
+    sent = {}
+
+    class Stream:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise StopAsyncIteration
+
+        async def get_final_message(self):
+            return SimpleNamespace(content=[], stop_reason="end_turn", stop_details=None,
+                                   usage=SimpleNamespace(to_dict=lambda: usage) if usage else None)
+
+    def stream(**request):
+        sent.update(request)
+        return Stream()
+
+    client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(stream=stream)))
+    result = asyncio.run(anthropic_stream_complete(
+        "test-not-real", "claude-opus-5-5", [{"role": "user", "content": "hi"}],
+        max_tokens=7, client=client))
+    assert sent["max_tokens"] == 7
+    assert result["usage"] == usage

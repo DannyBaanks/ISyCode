@@ -1,8 +1,50 @@
 import asyncio
+import json
+from types import SimpleNamespace
 
 import pytest
 
 from isycode.streaming import StreamError, async_stream_complete
+
+
+@pytest.mark.parametrize("provider_name", ["openai", "local", "nebius"])
+def test_provider_usage_options_and_final_usage_over_local_sse(monkeypatch, provider_name):
+    from isycode.chat_transport import provider_complete
+
+    monkeypatch.setattr('urllib.request.getproxies', lambda: {})
+
+    async def scenario():
+        received = []
+
+        async def server_handler(reader, writer):
+            headers = await reader.readuntil(b'\r\n\r\n')
+            content_length = next(int(line.split(b':', 1)[1]) for line in headers.split(b'\r\n')
+                                  if line.lower().startswith(b'content-length:'))
+            received.append(json.loads(await reader.readexactly(content_length)))
+            body = (b'data: {"choices":[{"delta":{"content":"OK"}}]}\n\n'
+                    b'data: {"choices":[],"usage":{"prompt_tokens":12,"completion_tokens":3}}\n\n'
+                    b'data: [DONE]\n\n')
+            writer.write(b'HTTP/1.1 200 OK\r\nContent-Length: ' + str(len(body)).encode() + b'\r\n\r\n' + body)
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
+
+        server = await asyncio.start_server(server_handler, '127.0.0.1', 0)
+        port = server.sockets[0].getsockname()[1]
+        provider = SimpleNamespace(name=provider_name, base_url=f'http://127.0.0.1:{port}/v1',
+                                   api_key='', model='fixture', token_limit_field='max_tokens',
+                                   reasoning_effort=None, temperature_supported=True)
+        async with server:
+            result = await provider_complete(provider, [], max_tokens=7)
+        assert result['text'] == 'OK'
+        assert result['usage'] == {'prompt_tokens': 12, 'completion_tokens': 3}
+        assert received[0]['max_tokens'] == 7
+        if provider_name == 'openai':
+            assert received[0]['stream_options'] == {'include_usage': True}
+        else:
+            assert 'stream_options' not in received[0]
+
+    asyncio.run(scenario())
 
 
 def test_http_proxy_streams_sse_and_uses_absolute_target(monkeypatch):

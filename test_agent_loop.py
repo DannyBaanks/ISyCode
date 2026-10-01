@@ -94,7 +94,7 @@ def _methods():
 def test_chat_turn_uses_limits_compaction_and_can_be_stopped_as_a_whole():
     methods = _methods()
     chat = methods["_run_chat"]
-    assert "limits.step_allowed(tool_round)" in chat and "max_tokens=limits.answer_tokens" in chat
+    assert "limits.step_allowed(tool_round)" in chat and "self._chat_request_limit(limits.answer_tokens)" in chat
     assert "max_tool_calls" not in chat and "per-response" not in chat
     assert "self._history[-20:]" not in chat and "compact_turn(messages)" in chat
     assert "self._chat_turn_task = asyncio.current_task()" in chat

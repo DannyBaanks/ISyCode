@@ -226,6 +226,8 @@ def test_draft_resume_context_and_delete_confirmation(tmp_path, monkeypatch, cap
             assert resumed._history == []
             resumed._history = [{'role': 'user', 'content': 'deleted context'}]
             resumed._conversation_summary = 'deleted summary'
+            resumed._tool_history = [{'name': 'workspace_read', 'arguments': '{}', 'result': 'deleted tool context'}]
+            resumed._usage.record({'prompt_tokens': 100, 'completion_tokens': 20})
             # Delete needs a separate grant; it cannot mint one itself.
             await resumed._delete_chat_session(session_id)
             assert resumed._chat_session_owner.resume(session_id)[1] is not None
