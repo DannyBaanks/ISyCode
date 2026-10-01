@@ -101,3 +101,20 @@ def test_aliases_duplicates_and_limits_are_validated(tmp_path, monkeypatch):
     extra.mkdir()
     with pytest.raises(ValueError):
         store.add('extra', str(extra), editable=True)
+
+@pytest.mark.parametrize('name', ['.ssh', '.git', 'state'])
+def test_sensitive_roots_and_internal_state_cannot_be_attached(tmp_path, monkeypatch, name):
+    store, _, _ = make_store(tmp_path, monkeypatch)
+    folder = tmp_path / name
+    folder.mkdir(exist_ok=True)
+    with pytest.raises(ValueError):
+        store.add('sensitive', str(folder), editable=True)
+
+
+def test_private_state_inside_primary_cannot_enable_delegation(tmp_path, monkeypatch):
+    main = tmp_path / 'project'
+    main.mkdir()
+    monkeypatch.setenv('ISYCODE_STATE_HOME', str(main / 'state'))
+    from isycode.workspace_folders import WorkspaceFolders
+    with pytest.raises(ValueError, match='outside'):
+        WorkspaceFolders(main)

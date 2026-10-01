@@ -23,14 +23,14 @@ def _segment(name):
 
 def test_write_tool_is_offered_only_when_the_write_grant_is_on():
     run_chat = _segment("_run_chat")
-    assert "write_active = tools_active and self._workspace_write_tool_enabled()" in run_chat
+    assert "write_active = tools_active and (self._workspace_write_tool_enabled() or self._additional_folder_access(write=True))" in run_chat
     assert "CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active" in run_chat
     assert "tools=chat_tools" in run_chat
 
 
 def test_write_dispatch_rechecks_the_grant_shows_the_diff_and_uses_the_owner():
     dispatch = _segment("_dispatch_write_tool")
-    assert dispatch.index("_workspace_write_tool_enabled()") < dispatch.index("owner.preview")
+    assert dispatch.index("_workspace_write_tool_enabled(root)") < dispatch.index("owner.preview")
     assert dispatch.index("WriteApprovalScreen(preview") < dispatch.index("owner.apply")
     assert "rejected_by_user" in dispatch
     for forbidden in ("write_text", "write_bytes", "open(", "os.replace"):

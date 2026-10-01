@@ -25,7 +25,10 @@ READ_GRANTS = ('workspace.files.list', 'workspace.files.read', 'workspace.files.
 class WorkspaceFolders:
     def __init__(self, main: Path):
         self.main = Path(main).resolve(strict=True)
-        directory = state_root() / 'workspace-folders'
+        private = state_root().resolve()
+        if self.main == private or private in self.main.parents or self.main in private.parents:
+            raise ValueError('ISyCode private state must be outside the project roots')
+        directory = private / 'workspace-folders'
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         if directory.is_symlink() or not directory.is_dir():
             raise ValueError('Folder settings directory is unsafe')
@@ -40,6 +43,12 @@ class WorkspaceFolders:
         if not stat.S_ISDIR(info.st_mode):
             raise ValueError('Folder must be a real directory, not a symlink')
         return [info.st_dev, info.st_ino]
+
+    def _check_project_root(self, root: Path) -> None:
+        private = state_root().resolve()
+        if (root.name.startswith('.') or root == private
+                or private in root.parents or root in private.parents):
+            raise ValueError('Choose a project folder, not a hidden folder or ISyCode private state')
 
     def _load(self) -> dict:
         identity = self._identity(self.main)
@@ -74,8 +83,9 @@ class WorkspaceFolders:
             raise ValueError('Folder settings do not match this workspace')
         aliases, paths = set(), set()
         for item in data['folders']:
-            if (not isinstance(item, dict) or set(item) != {'alias', 'path', 'editable', 'auto_edit', 'identity'}
+            if (not isinstance(item, dict) or set(item) != {'alias', 'path', 'editable', 'auto_edit', 'identity', 'registration'}
                     or not isinstance(item['alias'], str) or not ALIAS.fullmatch(item['alias'])
+                    or not isinstance(item['registration'], str) or not re.fullmatch('[0-9a-f]{32}', item['registration'])
                     or item['alias'] == 'main' or item['alias'] in aliases
                     or not isinstance(item['path'], str) or len(item['path']) > 4096
                     or Path(item['path']).parent != self.main.parent or item['path'] == str(self.main)
@@ -84,6 +94,7 @@ class WorkspaceFolders:
                     or not isinstance(item['identity'], list) or len(item['identity']) != 2
                     or not all(type(n) is int and n >= 0 for n in item['identity'])):
                 raise ValueError('Folder registration is malformed')
+            self._check_project_root(Path(item['path']))
             aliases.add(item['alias'])
             paths.add(item['path'])
         return data
@@ -123,6 +134,15 @@ class WorkspaceFolders:
             raise ValueError('This attachment is read-only')
         return root
 
+    def binding(self, alias: str = 'main') -> tuple:
+        """Stable attachment identity across awaits; removal/re-add invalidates approval."""
+        data = self._load()
+        self.resolve(alias)
+        if alias == 'main':
+            return ('main', *data['identity'])
+        item = next(item for item in data['folders'] if item['alias'] == alias)
+        return (item['path'], *item['identity'], item['registration'])
+
     def add(self, alias: str, path: str, *, editable: bool) -> None:
         data = self._load()
         if (not isinstance(alias, str) or not ALIAS.fullmatch(alias) or alias == 'main'
@@ -131,6 +151,7 @@ class WorkspaceFolders:
         root = Path(path).expanduser()
         if not root.is_absolute() or '..' in root.parts or root.parent != self.main.parent or root == self.main:
             raise ValueError('Choose a direct sibling folder, not the shared parent or a child')
+        self._check_project_root(root)
         try:
             identity = self._identity(root)
             if root.resolve(strict=True) != root:
@@ -145,7 +166,7 @@ class WorkspaceFolders:
         for action in READ_GRANTS + (('workspace.files.write',) if editable else ()):
             authority.set_grant(action, enabled=True, path_prefixes=[str(root)])
         data['folders'].append({'alias': alias, 'path': str(root), 'editable': editable,
-                                'auto_edit': False, 'identity': identity})
+                                'auto_edit': False, 'identity': identity, 'registration': secrets.token_hex(16)})
         self._save(data)
 
     def remove(self, alias: str) -> None:
