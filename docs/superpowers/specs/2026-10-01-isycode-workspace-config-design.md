@@ -2,8 +2,9 @@
 
 ## Status
 
-Design approved for specification on 2026-10-01. Awaiting user review of this
-written spec before implementation planning.
+Design approved and implemented on 2026-10-01. See
+`docs/superpowers/plans/2026-10-01-isycode-workspace-config.md` for the
+implementation record and remaining full-suite verification.
 
 ## Goal
 

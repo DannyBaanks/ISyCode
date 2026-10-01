@@ -66,9 +66,9 @@ follow-up work. The user's real GLM session is separate evidence.
 From the repository with its development environment installed:
 
 ```bash
-PYTHONPATH=. python -m pytest -q -s scripts/long_session_soak.py --tb=short
+PYTHONPATH=src python -m pytest -q -s scripts/long_session_soak.py --tb=short
 python -m pytest -q -m 'not integration' --tb=short
-python -m pytest -q -m integration test_daily_tui.py --tb=short
+python -m pytest -q -m integration tests/test_daily_tui.py --tb=short
 ```
 
 The manual soak is not collected by the default suite: its filename deliberately

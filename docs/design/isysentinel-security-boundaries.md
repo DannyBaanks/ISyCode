@@ -126,24 +126,24 @@ receipt/status without displaying secrets.
 
 ## Implementation status and gaps
 
-The canonical pure contracts now live in `isycode/security.py`: immutable
+The canonical pure contracts now live in `src/isycode/security.py`: immutable
 `ActionRequest`, request-bound `AuthorityDecision`, all-check aggregation, and
 fail-closed handling for unknown actions, missing Systembilities and exceptions.
-`isycode/workspace_authority.py` separately stores explicit path/host/executable/
-target grants per canonical workspace, and `isycode/approvals.py` holds
-short-lived, one-use request-bound approvals. `isycode/actions.py` centralizes
+`src/isycode/workspace_authority.py` separately stores explicit path/host/executable/
+target grants per canonical workspace, and `src/isycode/approvals.py` holds
+short-lived, one-use request-bound approvals. `src/isycode/actions.py` centralizes
 the semantic action catalog. The old combined implementation remains in
-`isycode/isysentinel.py` as `LegacyIsySentinelPrototype`; it is not canonical.
+`src/isycode/isysentinel.py` as `LegacyIsySentinelPrototype`; it is not canonical.
 
 The provider request owner and bounded workspace list/read/name-search owner
 call Workspace Authority and the pure IsySentinel through
-`isycode/action_runtime.py`. Provider requests bind a digest of their complete
+`src/isycode/action_runtime.py`. Provider requests bind a digest of their complete
 request material and append a result receipt without storing prompt or result
 content. Settings has a user-consented management flow to grant or revoke the
 exact read-only workspace scope and active provider host. Provider credentials
 do not imply network scope. The request digest includes a registered
 execution-owner identity; the aggregate gate denies owner/action pairs absent
-from its closed registry. `isycode/action_audit.py` stores decisions and
+from its closed registry. `src/isycode/action_audit.py` stores decisions and
 verified receipt digests in a private per-workspace hash-chain journal outside
 the checkout. Journal failure denies before an action or returns
 NOT_VERIFIABLE after an effect. The Files rail and context injection use the

@@ -22,10 +22,16 @@ anthropic = ["anthropic>=1.10,<2"]
 [project.scripts]
 isycode = "isycode.launcher:main"
 
+[tool.setuptools.package-dir]
+"" = "src"
+
 [tool.setuptools.packages.find]
 include = ["isycode*"]
+where = ["src"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 markers = [
   "integration: requires an external ISyCo checkout or running Gateway service",
 ]

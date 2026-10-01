@@ -13,6 +13,8 @@
 
 - [La TUI](#la-tui)
 - [Instalar y arrancar](#instalar-y-arrancar)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Contribuir](#contribuir)
 - [Modos: Classic y Security](#modos-classic-y-security)
 - [Qué puede hacer el agente](#qué-puede-hacer-el-agente)
 - [Comandos `/`](#comandos-)
@@ -90,11 +92,15 @@ descarga el código oficial en `$XDG_DATA_HOME/isycode/source` (o
 `isycode`. No usa `sudo`. Si el comando ya pertenece a otra aplicación, lo
 conserva e indica la ruta del launcher de ISyCode.
 
-En un checkout de desarrollo, solo actualiza mediante avance rápido cuando no
-hay cambios locales. Si encuentra archivos modificados o nuevos, muestra los
-cambios entrantes y se detiene para protegerlos; guarda tu trabajo y vuelve a
-ejecutar el comando. `--check` consulta el remoto y resume los commits/diff sin
-cambiar archivos del checkout, instalar paquetes ni crear una instalación.
+En un checkout de desarrollo, los archivos modificados o nuevos hacen que la
+actualización se detenga para protegerlos. Si la rama local y la remota
+divergieron, `--check` previsualiza si Git puede integrarlas sin conflictos; la
+actualización crea un merge commit y conserva ambas historias. Si el único
+conflicto es `docs/security/m15-authority-coverage.json`, lo regenera desde el
+código integrado. Cualquier otro conflicto detiene la operación e informa las
+rutas sin dejar un merge pendiente. `--check` puede actualizar metadata de Git
+al hacer fetch, pero no cambia archivos, rama, índice, entorno virtual ni
+launcher.
 
 ### Paquetes precompilados
 
@@ -106,6 +112,22 @@ Al publicar un tag `vX.Y.Z`, CI ejecuta la suite hermética en Linux y, si pasa 
 
 Los paquetes instalan el comando `isycode`; no son una aplicación gráfica.
 
+## Estructura del repositorio
+
+```text
+src/isycode/       Paquete de ISyCode
+tests/             Pruebas automatizadas
+docs/              Guías, diseño, seguridad y roadmap
+examples/          Prototipos de investigación opcionales
+scripts/           Launcher e instalación del comando
+packaging/         Entrada y recursos de los paquetes nativos
+.github/workflows/ CI y empaquetado
+```
+
+La guía rápida está en [docs/GUIA.md](docs/GUIA.md). El roadmap está en
+[docs/ROADMAP.md](docs/ROADMAP.md). Las instrucciones para preparar cambios
+están en [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### Pruebas
 
 ```bash
@@ -115,7 +137,7 @@ python -m pytest -q -m "not integration"
 Las pruebas contra un ISyCo Gateway vivo son opt-in porque hablan con un servicio real (`test_gateway_write_file` escribe y borra un archivo en él):
 
 ```bash
-ISYCODE_LIVE_GATEWAY=1 python -m pytest -q test_gateway.py
+ISYCODE_LIVE_GATEWAY=1 python -m pytest -q tests/test_gateway.py
 ```
 
 ## Modos: Classic y Security
@@ -239,7 +261,7 @@ Responde una vez y sale. Usa los mismos owners, IsySentinel y journal que la TUI
 | `/session` | Workspace, provider y rol actuales |
 | `/readme`, `/plan`, `/review` | Vista previa de README, plan vía IsyMotron (opcional), revisión externa |
 
-**Comandos propios:** un archivo `~/.config/isycode/commands/<nombre>.md` (tuyo) o `.isycode-commands/<nombre>.md` (del workspace, leído con el permiso de lectura) crea `/<nombre>`. `$ARGUMENTS` se sustituye por lo que escribas después. Un comando es solo un prompt: no concede permisos.
+**Comandos propios:** `~/.config/isycode/commands/<nombre>.md` (tuyo) tiene prioridad. Después se busca `.isycode/commands/<nombre>.md` y, por compatibilidad, `.isycode-commands/<nombre>.md`. Las lecturas del workspace requieren el permiso de lectura. `$ARGUMENTS` se sustituye por lo que escribas después. Un comando es solo un prompt: no concede permisos.
 
 ## Providers
 
@@ -270,6 +292,21 @@ Los demás providers comparten el transporte compatible con OpenAI. Que exista e
 | Settings → API keys | Guardar o quitar claves |
 | `~/.config/isycode/commands/*.md` | Tus comandos `/` |
 | `~/.config/isycode/mcp.json` | Tus servidores MCP locales |
+
+**Preferencias por workspace:** en **Settings → Initialize this workspace's
+.isycode/**, ISyCode propone con diff `.isycode/config.json` y, dentro de un
+repositorio Git, un bloque administrado en `.gitignore`. La inicialización solo
+está disponible cuando el workspace tiene su propio `.isyroot`; la identidad
+no concede permisos. Requiere grants existentes de lectura/escritura y, en un
+repo Git, `git.status`. Cada archivo se aprueba por separado. Si `.isycode/` ya
+está versionado o Git no puede comprobarlo, se detiene sin cambiar el índice.
+
+**Workspace preferences** permite guardar `default_role`, `agent_steps`,
+`answer_tokens` y `chat_token_budget` para ese proyecto. Prevalecen sobre los
+valores personales, nunca sobre permisos, modo, scopes o resultados de
+IsySentinel. **Copy legacy workspace commands…** copia un comando antiguo tras
+revisar el diff y conserva el original. `.gitignore` evita commits accidentales;
+no es un límite de seguridad.
 
 ## Seguridad y límites
 
@@ -367,9 +404,14 @@ Prioridades abiertas:
 
 El release no se declara "daily-driver-ready" mientras M15 siga abierto.
 
-- [Guía rápida en español](GUIA.md)
-- [Roadmap por milestones](ROADMAP.md)
+- [Guía rápida en español](docs/GUIA.md)
+- [Roadmap por milestones](docs/ROADMAP.md)
 - [Matriz de features y evidencia](docs/product/tui-feature-matrix.md)
 - [Comparativa con otras CLIs](docs/product/cli-competitive-audit.md)
 - [Fronteras de IsySentinel](docs/design/isysentinel-security-boundaries.md)
 - [Contrato Mobile Host v1](docs/mobile-host-v1.md)
+
+## Contribuir
+
+ISyCode está en desarrollo y agradece reportes y cambios revisables. Lee
+[CONTRIBUTING.md](CONTRIBUTING.md) antes de abrir un pull request.

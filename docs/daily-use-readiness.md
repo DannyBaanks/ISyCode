@@ -130,7 +130,7 @@ Authority for the current conversation and is distinct from permission to save.
 
 ```bash
 python -m pytest -q -m 'not integration' -ra
-python -m pytest -q -m integration test_daily_tui.py -ra
+python -m pytest -q -m integration tests/test_daily_tui.py -ra
 ```
 
 The second command is a local real-Bubblewrap witness, not a Gateway/provider

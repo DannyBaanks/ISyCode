@@ -105,7 +105,7 @@ jobs:
           fi
           python -m PyInstaller --clean --noconfirm --onefile \
             --name isycode \
-            --paths . \
+            --paths src \
             --collect-all rich \
             --collect-all textual \
             --collect-all keyring \

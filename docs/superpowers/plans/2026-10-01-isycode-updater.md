@@ -27,7 +27,7 @@
 - Current branch has no upstream or remote ref is malformed: stop with exact `git branch --set-upstream-to` guidance.
 - Dirty tracked and untracked paths: preserve both; show escaped status and incoming summary; no merge/pip/launcher changes.
 - Remote has credentials, wrong host, wrong repository name, or remote-local filters: reject before fetch/checkout.
-- Remote is behind, diverged, or fetch fails: update only by fast-forward; preserve `HEAD` and working tree on all denials.
+- Fetch fails: preserve `HEAD` and working tree. Clean divergence is preflighted with `git merge-tree` and integrated through a merge commit. The only conflict exception is the generated coverage snapshot, which is regenerated from merged source; any other conflict stops without changing `HEAD`, index, or worktree.
 - User data directory or command already exists but is not an ISyCode-owned path: preserve it and print the prepared launcher's exact path.
 
 ---
@@ -45,7 +45,7 @@
 
 - [x] Write tests using temporary bare/local Git repositories for clean fast-forward, check-only, dirty tracked/untracked paths, divergence, wrong remote, embedded remote credentials, fetch failure, unsafe Git config, and ignored-file collisions.
 - [x] Confirm the initial tests fail because updater behavior is missing.
-- [x] Implement checkout discovery, Git environment/argv policy, remote and filter validation, upstream fetch, incoming summary, clean-tree gate, and `merge --ff-only`.
+- [x] Implement checkout discovery, Git environment/argv policy, remote and filter validation, upstream fetch, incoming summary, clean-tree gate, fast-forward updates, and conflict-free diverged-branch merges.
 - [x] Verify `--check` leaves `HEAD`, index, working files, and environment untouched while reporting incoming commits and a safe diff-review command.
 - [x] Run focused updater tests and inspect report/status behavior.
 
@@ -87,7 +87,7 @@
 **Files:**
 - Modify: `test_updater.py` or focused docs only if a discovered gap requires it.
 
-- [ ] Run the project hermetic suite `python3 -m pytest -q -m "not integration"` using the repository's supported Textual/Rich environment. (Ran: 935 passed, 2 unrelated pre-existing failures, 1 skipped, 11 deselected.)
+- [ ] Run the project hermetic suite `python3 -m pytest -q -m "not integration"` using the repository's supported Textual/Rich environment. Run before the final updater-abort regression test: 932 passed, 52 failed, 1 skipped, 11 deselected; four representative failures also reproduce from a clean archive of pre-change `HEAD`.
 - [x] Run `git diff --check`, `isycode --help`, and temporary-repository end-to-end checks for check-only, fast-forward, bootstrap, and dirty-tree stop.
 - [x] Confirm no tests contact GitHub, no real credentials are used, and no user untracked file was changed.
 - [x] Record test results, the two conservative rulings, and platform scope in the SDD ledger.

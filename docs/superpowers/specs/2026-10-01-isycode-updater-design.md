@@ -22,9 +22,13 @@ la persona que conozca Git.
    estado local, los commits entrantes y el diff entrante. Señalar con claridad
    que todavía no se actualizó.
 4. Si el árbol está limpio y solo hay commits entrantes, avanzar la rama
-   únicamente mediante fast-forward. Si hay divergencia, remoto incorrecto,
-   conflicto o fallo de red, detenerse sin reescribir la rama y mostrar cómo
-   resolverlo.
+   únicamente mediante fast-forward. Si hay divergencia, previsualizarla sin
+   mutar el checkout. Integrar con un merge commit cuando Git confirme que no
+   hay conflictos. La única excepción regenerable es un conflicto aislado en
+   `docs/security/m15-authority-coverage.json`: durante el merge, regenerarlo
+   desde `authority_coverage_snapshot()` del código ya integrado. Si aparece
+   cualquier otro conflicto, remoto incorrecto o fallo de previsualización/red,
+   detenerse y mostrar las rutas afectadas.
 5. Después de avanzar, sincronizar el entorno virtual del checkout con las
    dependencias declaradas y confirmar la versión instalada. No usar `sudo`, no
    borrar el entorno anterior y no reiniciar ISyCode dentro del proceso actual.
@@ -69,6 +73,9 @@ la persona que conozca Git.
 - El estado sucio se considera dato del usuario, incluidos archivos no
   rastreados. El actualizador no los agrega, mueve ni elimina. Un conflicto con
   nuevos archivos detiene la actualización.
+- Ningún conflicto de código o de datos se resuelve automáticamente. Solo se
+  permite regenerar el snapshot de cobertura si es la única ruta en conflicto;
+  la generación falla o detecta otra ruta y el merge se aborta.
 - Los paquetes de sistema (por ejemplo `.deb` o AppImage) no se sustituyen a
   escondidas; si no se pueden administrar desde el checkout de código fuente,
   el comando identifica el formato y explica el método correspondiente.
@@ -83,15 +90,18 @@ la persona que conozca Git.
 - Actualizar herramientas externas o runtimes de IsyMotron.
 - Garantizar firmas de releases: el repositorio no publica actualmente una
   política de firma de commits/releases que este flujo pueda verificar.
-- Hacer push, crear commits de usuario o resolver conflictos automáticamente.
+- Hacer push, crear commits de usuario o resolver conflictos de código/datos
+  automáticamente.
 
 ## Criterios de aceptación
 
 1. Un checkout limpio atrasado puede avanzar solo si Git permite fast-forward.
 2. Un checkout con cambios rastreados o no rastreados no pierde ni altera esos
    archivos; la salida enumera lo entrante y ofrece el diff que hace falta.
-3. Divergencia, conflicto, remoto inesperado y fallo de red no mutan HEAD ni el
-   árbol de trabajo.
+3. La divergencia se integra conservando ambas historias solo cuando no hay
+   conflictos, salvo el snapshot generado que se reconstruye por su función
+   canónica. Cualquier otro conflicto, remoto inesperado o fallo de red no muta
+   HEAD ni deja cambios de merge sin resolver.
 4. Un usuario sin checkout obtiene un clon y un entorno aislado reproducibles;
    los comandos existentes ajenos se conservan.
 5. `--check` no altera el checkout ni el entorno virtual; cualquier escritura
