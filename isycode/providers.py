@@ -55,6 +55,7 @@ FEATURED_MODELS: tuple[tuple[str, str], ...] = (
     ("GLM 5.3 Flash", r"glm[-_. ]?5[._]3(?![0-9]).*flash"),
     ("GLM 5.3", r"glm[-_. ]?5[._]3(?![0-9])(?!.*flash)"),
     ("Kimi K3", r"kimi[-_. ]?k3(?![0-9])"),
+    ("DeepSeek V4.1 Flash", r"deepseek[-_. ]?v4[._]1(?![0-9]).*flash"),
 )
 
 
