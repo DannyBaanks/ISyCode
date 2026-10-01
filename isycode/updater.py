@@ -80,7 +80,7 @@ class SelfUpdater:
              local_file_protocol: bool = False):
         options = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false",
                    "-c", "diff.external=", "-c", "credential.helper=",
-                   "-c", "protocol.allow=never"]
+                   "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
         if local_file_protocol:
             options.extend(["-c", "protocol.file.allow=always"])
         try:
@@ -200,7 +200,18 @@ class SelfUpdater:
             counts, commits, summary, incoming_paths = self._incoming_details()
             ahead, behind = (int(value) for value in counts.split())
             if ahead and behind:
-                return UpdateReport("blocked", ("La rama local y la remota divergieron; no se reescribió historial.",))
+                local_commits = self._git("log", "--format=%h %s", "FETCH_HEAD..HEAD").stdout.splitlines()
+                lines = [
+                    f"Historial divergente: {ahead} commit(s) local(es) y {behind} remoto(s).",
+                    "No se integró nada; se conservaron la rama y los archivos.",
+                    "Commits locales:",
+                ]
+                lines.extend(self._clean_line(line) for line in local_commits[:10])
+                lines.append("Commits remotos:")
+                lines.extend(self._clean_line(line) for line in commits[:10])
+                lines.extend(self._clean_line(line) for line in summary[:12])
+                lines.append("Revisa: git log --oneline --left-right HEAD...FETCH_HEAD")
+                return UpdateReport("blocked", tuple(lines))
             status = self._git("status", "--porcelain=v1", "-z", "--untracked-files=all").stdout
             dirty_paths = [self._clean_line(item[3:]) for item in status.split("\0") if item]
             ignored_paths = self._ignored_paths()

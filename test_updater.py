@@ -115,7 +115,10 @@ def test_diverged_branch_is_never_rewritten(tmp_path):
 
     assert report.status == "blocked"
     assert git("rev-parse", "HEAD", cwd=repo) == before
-    assert any("diverg" in line.casefold() for line in report.lines)
+    output = " ".join(report.lines).casefold()
+    assert "diverg" in output
+    assert "local commit" in output and "remote commit" in output
+    assert any("git log --oneline --left-right" in line for line in report.lines)
 
 
 @pytest.mark.parametrize("url,secret", [
@@ -202,6 +205,24 @@ def test_pip_launcher_recognition_requires_exact_entry_point(tmp_path):
         encoding="utf-8",
     )
     assert not SelfUpdater._is_generated_pip_launcher(candidate)
+
+
+def test_git_policy_allows_https_but_denies_unspecified_protocols(tmp_path):
+    assert SelfUpdater is not None
+    captured = {}
+
+    def runner(args, **kwargs):
+        captured["args"] = args
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    SelfUpdater(source_root=tmp_path, command_runner=runner)._git("version")
+
+    args = captured["args"]
+    pairs = [
+        args[i:i + 2] for i in range(len(args) - 1)
+    ]
+    assert ["-c", "protocol.allow=never"] in pairs
+    assert ["-c", "protocol.https.allow=always"] in pairs
 
 
 def test_incoming_file_cannot_overwrite_an_ignored_local_file(tmp_path):
