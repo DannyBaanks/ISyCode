@@ -21,6 +21,7 @@ import tempfile
 import uuid
 import urllib.request
 from pathlib import Path
+from rich.cells import cell_len
 from typing import Any, cast
 from urllib.parse import urlparse
 
@@ -167,7 +168,7 @@ BG2 = "#292a2e"       # graphite rail background
 ACCENT = "#e94560"    # crush pink-red (softened)
 ACCENT2 = "#9b5de5"   # purple accent
 TEXT = "#e0e0e0"      # main text
-MUTED = "#6c757d"     # muted
+MUTED = "#9aa3ad"     # secondary text, readable on the dark surface
 GREEN = "#4ade80"     # success / granted
 YELLOW = "#fbbf24"    # warning / plan
 RED = "#f87171"       # error / denied
@@ -203,15 +204,26 @@ class Banner(Static):
         header = Text("ISYCODE", style="bold #e94560")
         identity = getattr(self.app, "_workspace_identity", None)
         launch = identity.launch_dir if identity else Path.cwd().resolve()
-        header.append(f"  {launch}", style="#8a8a9c")
+        path = str(launch)
+        rail = self.screen.query_one(SidePanel)
+        width = self.app.size.width - (rail.region.width if rail.display else 0)
+        available = max(1, width - 2 - cell_len("ISYCODE    ● workspace"))
+        if cell_len(path) > available:
+            tail = path[-max(0, available - 1):] if available > 1 else ""
+            while cell_len(tail) > available - 1:
+                tail = tail[1:]
+            path = "…" + tail
+        header.append(f"  {path}", style=MUTED)
         header.append("  ● workspace", style="#4ade80")
         self.update(header)
 
 
-def switch_row(on: bool | None, name: str, note: str = "") -> Text:
-    """One integration as a coloured switch: green ON, red OFF, amber while checking."""
+def switch_row(on: bool | None, name: str, note: str = "", *, inactive: bool = False) -> Text:
+    """Green ON, neutral absent configuration, red failure, amber while checking."""
     row = Text()
-    if on is None:
+    if inactive:
+        row.append(" ○ OFF ", style=MUTED)
+    elif on is None:
         row.append(" ··· ", style=f"bold #1a1a1a on {YELLOW}")
     elif on:
         row.append(" ● ON ", style=f"bold #0b1f12 on {GREEN}")
@@ -236,11 +248,11 @@ class SidePanel(Vertical):
             yield Button("Overview", id="show-overview")
             yield Button("Files", id="show-files")
         with VerticalScroll(id="overview-view"):
-            with Collapsible(title="MCPs", id="rail-mcp", collapsed=False):
+            with Collapsible(title="MCPs", id="rail-mcp"):
                 yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
-            with Collapsible(title="LSPs", id="rail-lsp", collapsed=False):
+            with Collapsible(title="LSPs", id="rail-lsp"):
                 yield Static("Checking installed language servers…", id="lsp-status", classes="rail-copy")
-            with Collapsible(title="Skills", id="rail-skills", collapsed=False):
+            with Collapsible(title="Skills", id="rail-skills"):
                 yield Static("ISyCode skill catalog has not been checked.", id="skill-status", classes="rail-copy")
                 yield Tree("ISyCode skills", id="skills-tree")
                 yield Static(
@@ -308,7 +320,7 @@ class ThoughtBlock(Collapsible):
 
     def collapse_to(self, seconds: float) -> None:
         """Collapse with the elapsed-time title."""
-        self.title = f"thought for {seconds:.0f}s"
+        self.title = "thought for <1s" if seconds < 1 else f"thought for {seconds:.0f}s"
         self._streaming = False
         self.collapsed = True
 
@@ -1817,7 +1829,7 @@ class TUIApp(App):
     #overview-view CollapsibleTitle:focus { background: #3a2f4d; color: #e0e0e0; }
     #overview-view Collapsible > Contents { padding: 0 0 0 1; height: auto; }
     #rail-tabs { height: 3; }
-    #rail-tabs Button { width: 1fr; background: #35363a; color: #c8c8cc; border: none; }
+    #rail-tabs Button { width: 1fr; min-width: 0; padding: 0 1; background: #35363a; color: #c8c8cc; border: none; }
     #overview-view, #files-view { height: 1fr; }
     #skills-tree { height: 10; min-height: 5; background: transparent; }
     #skill-detail { height: auto; padding: 0 0 1 0; }
@@ -1838,19 +1850,22 @@ class TUIApp(App):
     Static.console-search-current { border-left: tall #fbbf24; padding-left: 1; background: #45404c; }
     .external-review { border: round #68696f; background: #303136; padding: 1; margin: 1 0; }
     #main { height: 1fr; }
-    #activity-status { height: 1; padding: 0 2; color: #6c757d; background: $surface; }
+    #activity-status { height: 1; padding: 0 2; color: #9aa3ad; background: $surface; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
     }
+    #composer { dock: bottom; height: 8; }
     #prompt-input {
-        dock: bottom; height: 5; background: #242529; color: #e0e0e0;
+        height: 5; background: #242529; color: #e0e0e0;
         border: round #48494e; margin: 0 1;
     }
     #prompt-input:focus { border: round #9b5de5; }
+    #composer-hint { height: 1; padding: 0 2; color: #9aa3ad; }
+    .tool-receipt CollapsibleTitle { color: #9aa3ad; text-style: none; }
     Footer { background: $surface; color: #6c757d; }
     #command-bar {
-        dock: bottom; height: 2; padding: 0 1; background: $surface;
+        height: 2; padding: 0 1; background: $surface;
     }
     #command-bar Button {
         width: auto; min-width: 10; height: 1; min-height: 1; padding: 0 1;
@@ -1889,9 +1904,9 @@ class TUIApp(App):
     #key-entry Input { height: 3; }
     #key-entry-buttons { height: 3; }
     #key-entry-buttons Button { width: 1fr; }
-    #action-hint { height: 1; color: #6c757d; }
+    #action-hint { height: 1; color: #9aa3ad; }
     Collapsible { background: transparent; padding: 0; }
-    CollapsibleTitle { color: #6c757d; text-style: italic; }
+    CollapsibleTitle { color: #9aa3ad; text-style: italic; }
     """
 
     BINDINGS = [Binding(
@@ -1994,6 +2009,7 @@ class TUIApp(App):
         self._rail_view = "overview"
         self._rail_visible = True
         self._rail_auto_hidden = False
+        self._rail_visibility_override: bool | None = None
         self._rail_width = 38
         self._rail_compact_width = 28
         self._register_builtin_plugins()
@@ -2010,23 +2026,24 @@ class TUIApp(App):
             usage_status = Static("", id="usage-status")
             usage_status.styles.height = 1
             yield usage_status
-        yield PromptArea(
-            id="prompt-input")
-        with Horizontal(id="command-bar"):
-            yield Button("Sidebar", id="sidebar-button")
-            yield Button("Sessions", id="sessions-button")
-            yield Button("Providers", id="providers-button")
-            yield Button("Role", id="role-button")
-            yield Button("Context", id="context-button")
-            yield BarSpacer(id="bar-spacer")
-            yield Button("⚙ Settings", id="settings-button")
+        with Vertical(id="composer"):
+            yield PromptArea(id="prompt-input")
+            yield Static("Enter send · Shift+Enter new line · Esc cancel/back", id="composer-hint")
+            with Horizontal(id="command-bar"):
+                yield Button("Sidebar", id="sidebar-button")
+                yield Button("Sessions", id="sessions-button")
+                yield Button("Providers", id="providers-button")
+                yield Button("Role", id="role-button")
+                yield Button("Context", id="context-button")
+                yield BarSpacer(id="bar-spacer")
+                yield Button("⚙ Settings", id="settings-button")
         with Vertical(id="action-menu"):
             with Vertical(id="action-card"):
                 yield Static("Commands", id="action-title")
                 yield Input(placeholder="Filter this list…", id="action-search")
                 yield OptionList(id="action-list")
                 yield Static("", id="action-detail")
-                yield Static("↑↓ navigate · ? what it does · Shift+Tab search · Enter select · Esc back",
+                yield Static("↑↓ move · Enter select · Esc back · ? help · Shift+Tab search",
                              id="action-hint")
                 with Vertical(id="key-entry"):
                     yield Static("API key is stored outside this project.", id="key-entry-label")
@@ -2054,7 +2071,7 @@ class TUIApp(App):
             self._open_settings_menu()
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(self.size.width)
-        if self.size.width < 80:
+        if self.size.width < 100 and self._rail_visibility_override is None:
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
@@ -2309,11 +2326,19 @@ class TUIApp(App):
             self._rail_auto_hidden = True
             self._rail_visible = False
             rail.display = False
+        elif self._rail_visibility_override is not None:
+            self._rail_visible = self._rail_visibility_override
+            rail.display = self._rail_visible
+        elif event.size.width < 100:
+            self._rail_auto_hidden = True
+            self._rail_visible = False
+            rail.display = False
         else:
             if self._rail_auto_hidden:
                 self._rail_auto_hidden = False
                 self._rail_visible = True
             rail.display = self._rail_visible
+        self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     def _apply_rail_width(self, terminal_width: int) -> None:
         """Keep the rail inside the configured range and available columns."""
@@ -2331,6 +2356,7 @@ class TUIApp(App):
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
         self._set_activity(f"Sidebar width · {width} columns", MUTED)
+        self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     def action_narrow_sidebar(self) -> None:
         if self.size.width >= 100:
@@ -2341,6 +2367,7 @@ class TUIApp(App):
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
         self._set_activity(f"Sidebar width · {width} columns", MUTED)
+        self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     async def _initialize_workspace(self) -> None:
         # .isyroot identifies the Files tree; only explicit Workspace Authority
@@ -2434,9 +2461,10 @@ class TUIApp(App):
             return switch_row(None, "Checking", snapshot.detail), "MCPs · checking"
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
-            return switch_row(False, state.capitalize(), snapshot.detail), f"MCPs · {state}"
+            inactive = snapshot.state in {"not_configured", "not_checked"}
+            return switch_row(False, state.capitalize(), snapshot.detail, inactive=inactive), f"MCPs · {'off' if inactive else state}"
         if not snapshot.items:
-            return switch_row(False, "No MCP servers", "none configured"), "MCPs · none"
+            return switch_row(False, "No MCP servers", "none configured", inactive=True), "MCPs · none"
         rows, on = [], 0
         for item in snapshot.items:
             healthy = (str(item.get("status", "")).lower() in {"connected", "ready", "running", "ok", "active"}
@@ -2452,9 +2480,10 @@ class TUIApp(App):
             return switch_row(None, "Checking", snapshot.detail), "Skills · checking"
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
-            return switch_row(False, state.capitalize(), snapshot.detail), f"Skills · {state}"
+            inactive = snapshot.state in {"not_configured", "not_checked"}
+            return switch_row(False, state.capitalize(), snapshot.detail, inactive=inactive), f"Skills · {'off' if inactive else state}"
         if not snapshot.items:
-            return switch_row(False, "No skills", "none available for this project"), "Skills · none"
+            return switch_row(False, "No skills", "none available for this project", inactive=True), "Skills · none"
         count = len(snapshot.items)
         return (switch_row(True, f"{count} available", "select one below for details"),
                 f"Skills · {count} available")
@@ -2473,7 +2502,7 @@ class TUIApp(App):
         if not self.is_mounted:
             return
         if not self._lsp_inventory:
-            body, title = switch_row(False, "No language servers", "none detected"), "LSPs · none"
+            body, title = switch_row(False, "No language servers", "none detected", inactive=True), "LSPs · none"
         else:
             rows, on = [], 0
             for server in self._lsp_inventory:
@@ -2770,7 +2799,9 @@ class TUIApp(App):
 
     def action_toggle_sidebar(self) -> None:
         self._rail_visible = not self._rail_visible
+        self._rail_visibility_override = self._rail_visible
         self.query_one(SidePanel).display = self._rail_visible
+        self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     def action_focus_input(self) -> None:
         self.query_one("#prompt-input", PromptArea).focus()
@@ -2835,8 +2866,10 @@ class TUIApp(App):
 
     def _set_rail_view(self, view: str) -> None:
         self._rail_visible = True
+        self._rail_visibility_override = True
         self._rail_auto_hidden = False
         self.query_one(SidePanel).display = True
+        self.call_after_refresh(self.query_one(Banner).set_compact, True)
         show_files = view == "files"
         self._rail_view = "files" if show_files else "overview"
         self.query_one("#overview-view").display = not show_files
@@ -2928,21 +2961,30 @@ class TUIApp(App):
     def _open_settings_menu(self) -> None:
         entries = [
             self._entry("My defaults · all workspaces", "user_defaults", ""),
-            self._entry("Mobile host status", "mobile_host_status", ""),
-            self._entry("Bridge coordination · blocked in Secure",
-                        "bridge_settings", ""),
-            self._entry("Named API keys", "named_credentials", ""),
-            self._entry("Private access · Tailscale", "private_access", ""),
             self._entry("Authority & Security", "authority_open", ""),
+            self._entry("Named API keys", "named_credentials", ""),
             self._entry("Action journal · verify / inspect", "security_journal", ""),
             self._entry("Inject AGENTS.md context", "context_inject", ""),
             self._entry("Commands & shortcuts", "shortcuts", ""),
             self._entry("Workspace files", "files", ""),
-            self._entry("Refresh integration catalogs", "refresh", ""),
             self._entry("Clear selected role", "clear_role", ""),
+            self._entry("Integrations · MCP, LSP, Gateway & remote access", "integrations_open", "",
+                        "Optional connections and remote access. Permissions remain separate."),
         ]
         self._menu_stack = []
         self._render_menu("settings", "Settings", entries)
+
+    def _open_integrations_menu(self) -> None:
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("integrations", "Settings · Integrations", [
+            self._entry("Tool servers · MCP & Gateway", "branch", "MCP"),
+            self._entry("Language servers · LSP", "branch", "LSP"),
+            self._entry("Mobile host status", "mobile_host_status", ""),
+            self._entry("Bridge coordination · blocked in Secure", "bridge_settings", ""),
+            self._entry("Private access · Tailscale", "private_access", ""),
+            self._entry("Refresh integration catalogs", "refresh", ""),
+            self._entry("Back to Settings", "settings_back", ""),
+        ])
 
     def _open_user_defaults_menu(self) -> None:
         try:
@@ -4684,6 +4726,9 @@ class TUIApp(App):
 
     def _select_menu_entry(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
+        if kind == "integrations_open":
+            self._open_integrations_menu()
+            return
         if kind == "user_defaults":
             self._open_user_defaults_menu()
             return
@@ -4965,15 +5010,15 @@ class TUIApp(App):
                 ("Session list   Type to search; arrows select; Enter resumes", "info"),
             ])
             rows = [self._entry(label, kind) for label, kind in shortcuts]
-            self._menu_stack.append((self._menu_mode, "Settings", self._menu_entries))
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
             self._render_menu("shortcuts", "Commands & shortcuts", rows)
             return
         if kind == "mobile_host_status":
-            self._menu_stack.append((self._menu_mode, "Settings", self._menu_entries))
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
             self._render_mobile_host_status()
             return
         if kind == "named_credentials":
-            self._menu_stack.append((self._menu_mode, "Settings", self._menu_entries))
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
             self._open_credentials_menu()
             return
         if kind == "authority_open":
@@ -5549,7 +5594,10 @@ class TUIApp(App):
             widget.add_class("console-search-current")
             chat = self.query_one(ChatArea)
             chat.pause_tail()
-            chat.scroll_to_widget(widget, top=True, animate=False)
+            for parent in widget.ancestors:
+                if isinstance(parent, Collapsible):
+                    parent.collapsed = False
+            chat.call_after_refresh(chat.scroll_to_widget, widget, top=True, animate=False)
 
     def _clear_console_search(self) -> None:
         for widget, _ in self._console_search_hits:
@@ -6482,8 +6530,13 @@ class TUIApp(App):
             reason = result.reason or result.decision
             self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", YELLOW)
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
-        # Reads need no approval: one quiet line, receipt kept for the journal trail.
-        self._append(f"  ✓ {summary[:160]} · {result.receipt.receipt_id}", MUTED)
+        # The outcome stays visible; its journal receipt is available on demand.
+        self._append(f"  ✓ {summary[:160]} · completed", TEXT)
+        chat = self.query_one(ChatArea)
+        chat.mount(Collapsible(Static(Text(
+            f"Receipt · {result.receipt.receipt_id}\nOwned read completed · journal verification available in Settings",
+            style=MUTED)), title="Action receipt", collapsed=True, classes="tool-receipt"))
+        chat.follow_tail()
         return tool_call_id, result.text
 
     async def _undo_last_change(self) -> None:
