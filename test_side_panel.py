@@ -44,7 +44,10 @@ def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatc
             # A bracketed label is markup in newer Textual and renders blank.
             assert "Context" in str(button.label) and "[" not in str(button.label)
             section = app.query_one("#rail-lsp")
-            assert not section.collapsed and section.title.startswith("LSPs")
+            assert section.collapsed and section.title.startswith("LSPs")
+            section.collapsed = False
+            await pilot.pause()
+            assert not section.collapsed
             section.collapsed = True
             await pilot.pause()
             assert section.collapsed

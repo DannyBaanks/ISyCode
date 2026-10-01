@@ -152,6 +152,35 @@ stream failures/cancellations over about 11 minutes. It found and fixed a comman
 startup race. Provider responses were simulated; this does not establish real
 provider authentication, multi-hour performance or bounded memory.
 
+## Visual polish (2026-10-01)
+
+The sidebar starts hidden below 100 columns. Its Files/Overview buttons now fit
+the compact rail, and the header shortens long paths from the left while keeping
+the workspace indicator visible. Explicit sidebar choices survive resize at
+80 columns and above; below 80 it temporarily hides, restoring that choice when
+space returns. The composer, keyboard hints and navigation share one layout
+container so they no longer overlap.
+
+Read-tool outcomes have a readable summary with their journal receipt in an
+expandable detail. Console search opens folded details before scrolling to a
+match. Secondary text has stronger contrast. Optional integrations start folded;
+an absent configuration uses a neutral OFF state while errors remain distinct.
+Settings prioritizes defaults, authority, credentials, journal and workspace
+controls; optional connections are grouped under Integrations. Reasoning durations
+under one second display `<1s`. These changes were visually inspected through
+fresh Textual exports at 140×40, 100×30 and 80×24, using a local monospace font.
+Actual terminal font rendering and assistive-technology support remain separate
+validation work.
+
+The final local Python 3.10 suite passed 817 tests (3 skipped, 11 external
+integration cases deselected). Focused layout/scroll/workflow tests also passed
+on Python 3.12. Regression coverage includes real Files-tab clicking at 80×24,
+Unicode/long-path headers with the sidebar open, searchable folded receipts,
+submenu return navigation, and non-overlapping composer hints. The startup
+dialog test caught a pending header refresh looking in the active modal rather
+than the header's containing screen; that lookup was corrected before the final
+suite run.
+
 ## Still outstanding
 
 - The user chose offline validation. A real provider turn with tool calls,
