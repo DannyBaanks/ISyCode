@@ -1,3 +1,4 @@
+from isycode.tui import plain_text
 import asyncio
 import json
 
@@ -33,7 +34,7 @@ def test_model_steps_and_owned_tools_stay_in_display_order(tmp_path, monkeypatch
             rows = []
             for child in app.query_one(ChatArea).children:
                 if isinstance(child, ThoughtBlock):
-                    rows.append(child._body.renderable.plain)
+                    rows.append(plain_text(child._body))
                 elif isinstance(child, Static):
                     rows.append(app._render_searchable_text(child))
             positions = [next(i for i, row in enumerate(rows) if text in row) for text in (
@@ -70,7 +71,9 @@ def test_stream_follows_bottom_but_respects_history_reading(tmp_path, monkeypatc
             assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
             chat.focus()
             await pilot.press('home')
-            await pilot.pause()
+            # Textual animates Home by default; wait for that animation before
+            # comparing the scroll position after another streamed chunk.
+            await pilot.pause(1.1)
             assert chat.scroll_y < chat.max_scroll_y
             before = chat.scroll_y
             continue_stream.set()
@@ -193,7 +196,9 @@ def test_fast_reasoning_round_preserves_history_position(tmp_path, monkeypatch, 
             chat = app.query_one(ChatArea)
             chat.focus()
             await pilot.press('home')
-            await pilot.pause()
+            # Let Textual finish its default one-second Home animation before
+            # asserting that a fast response leaves history at the same offset.
+            await pilot.pause(1.1)
             before = chat.scroll_y
             await app._run_chat('Answer quickly.')
             await pilot.pause()
