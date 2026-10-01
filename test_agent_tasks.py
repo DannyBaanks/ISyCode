@@ -70,3 +70,9 @@ def test_chat_routes_the_task_tool_without_any_owner():
     branch = branch[:branch.index("action_id = TOOL_ACTIONS[name]")]
     assert "validate_tasks(arguments)" in branch and "Owner" not in branch
     assert TASK_TOOL_NAME == "update_tasks"
+
+
+def test_a_finished_plan_collapses_to_one_line():
+    tasks = validate_tasks({"tasks": [{"title": "A", "status": "completed"},
+                                      {"title": "B", "status": "completed"}]})
+    assert render_tasks(tasks).plain == "Tasks · 2/2 done ✓"

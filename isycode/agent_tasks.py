@@ -52,6 +52,9 @@ def validate_tasks(arguments: Any) -> list[dict[str, str]]:
 
 def render_tasks(tasks: list[dict[str, str]]) -> Text:
     done = sum(1 for task in tasks if task["status"] == "completed")
+    if tasks and done == len(tasks):
+        # Finished plans collapse to one line so they stop taking chat space.
+        return Text(f"Tasks · {done}/{len(tasks)} done ✓", style="bold #4ade80")
     text = Text(f"Tasks · {done}/{len(tasks)} done\n", style="bold #bb8cff")
     for task in tasks:
         if task["status"] == "completed":

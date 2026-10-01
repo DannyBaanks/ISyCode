@@ -34,14 +34,15 @@ GIT_TIMEOUT_S = 30
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 MAX_UNTRACKED_PREVIEW = 50
 
-# Local config keys that make git run a program or reach elsewhere.
+# Local config keys that make git run a program or reach elsewhere. Not listed:
+# extensions.worktreeConfig, which only enables .git/config.worktree (git sets it
+# for worktrees and sparse checkouts); that file is checked with this same list.
 _DANGEROUS_KEYS = re.compile(
     r"^(core\.(fsmonitor|hookspath|pager|editor|sshcommand|askpass|gitproxy|worktree"
     r"|alternaterefscommand)"
     r"|sequence\.editor|diff\.external|gpg\..*|credential\..*|include\..*|includeif\..*"
     r"|filter\..*|pager\..*|diff\..+\.(command|textconv)|merge\..+\.driver"
-    r"|remote\..+\.(uploadpack|receivepack|vcs)|uploadpack\..*|receive\..*"
-    r"|extensions\.worktreeconfig)$")
+    r"|remote\..+\.(uploadpack|receivepack|vcs)|uploadpack\..*|receive\..*)$")
 _SAFE_OVERRIDES = (
     "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat",
     "-c", "diff.external=", "-c", "credential.helper=", "-c", "protocol.allow=never",
