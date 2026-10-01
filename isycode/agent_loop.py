@@ -10,11 +10,12 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-AGENT_STEP_CHOICES = (10, 25, 50, 100)
+# 0 means no step limit: the agent runs until it answers or the user presses Esc.
+# Every tool call is still decided by Workspace Authority and IsySentinel.
+AGENT_STEP_CHOICES = (0, 10, 25, 50, 100)
 ANSWER_TOKEN_CHOICES = (2048, 4096, 8192, 16384, 32768)
-DEFAULT_AGENT_STEPS = 25
+DEFAULT_AGENT_STEPS = 0
 DEFAULT_ANSWER_TOKENS = 8192
-MAX_TOOL_CALLS_PER_RESPONSE = 8
 # Rough character budgets (about 4 characters per token) for what is sent.
 HISTORY_BUDGET_CHARS = 60_000
 TURN_BUDGET_CHARS = 160_000
@@ -30,8 +31,15 @@ ELIDED_TOOL_RESULT = json.dumps({
 @dataclass(frozen=True)
 class AgentLimits:
     max_steps: int = DEFAULT_AGENT_STEPS
-    max_tool_calls: int = MAX_TOOL_CALLS_PER_RESPONSE
     answer_tokens: int = DEFAULT_ANSWER_TOKENS
+
+    def step_allowed(self, step: int) -> bool:
+        """Whether request number ``step`` (0-based) may be sent."""
+        return self.max_steps == 0 or step < self.max_steps
+
+    @property
+    def steps_label(self) -> str:
+        return "no limit" if self.max_steps == 0 else str(self.max_steps)
 
     @classmethod
     def from_defaults(cls, defaults: dict[str, Any] | None) -> "AgentLimits":
@@ -39,7 +47,6 @@ class AgentLimits:
         steps = defaults.get("agent_steps", DEFAULT_AGENT_STEPS)
         tokens = defaults.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
         return cls(steps if steps in AGENT_STEP_CHOICES else DEFAULT_AGENT_STEPS,
-                   MAX_TOOL_CALLS_PER_RESPONSE,
                    tokens if tokens in ANSWER_TOKEN_CHOICES else DEFAULT_ANSWER_TOKENS)
 
 
@@ -122,7 +129,7 @@ def compact_turn(messages: list[dict[str, Any]], budget: int = TURN_BUDGET_CHARS
 __all__ = [
     "AGENT_STEP_CHOICES", "ANSWER_TOKEN_CHOICES", "AgentLimits", "DEFAULT_AGENT_STEPS",
     "DEFAULT_ANSWER_TOKENS", "ELIDED_TOOL_RESULT", "HISTORY_BUDGET_CHARS",
-    "MAX_SUMMARY_CHARS", "MAX_TOOL_CALLS_PER_RESPONSE", "SUMMARY_MAX_TOKENS",
+    "MAX_SUMMARY_CHARS", "SUMMARY_MAX_TOKENS",
     "compact_turn", "split_history", "summary_messages", "summary_system_message",
     "total_chars",
 ]

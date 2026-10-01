@@ -197,3 +197,13 @@ def test_commit_screen_rejects_by_default(repo):
     asyncio.run(scenario(lambda pilot: pilot.press("enter")))
     asyncio.run(scenario(lambda pilot: pilot.click("#commit-approval-apply")))
     assert results == [False, False, True]
+
+
+def test_worktree_config_is_allowed_but_its_file_is_still_checked(repo):
+    owner, authority, _, root = repo
+    _grant(authority, "git.status")
+    _git(root, "config", "extensions.worktreeConfig", "true")
+    assert owner.status().decision == "ALLOW"
+    (root / ".git" / "config.worktree").write_text("[core]\n\tfsmonitor = touch /tmp/x\n")
+    outcome = owner.status()
+    assert outcome.decision == "DENY" and "core.fsmonitor" in outcome.reason

@@ -203,7 +203,7 @@ def test_tui_does_not_launch_native_file_pickers_without_an_owner():
     assert not (_method_calls(nested[0]) & {"choose_workspace_file", "create_subprocess_exec"})
 
 
-def test_tui_never_copies_workspace_paths_to_clipboard_without_an_owner():
+def test_tui_copies_workspace_paths_only_through_the_clipboard_owner():
     source = SOURCE.read_text(encoding="utf-8")
     module = ast.parse(source)
     app = next(node for node in module.body
@@ -211,6 +211,7 @@ def test_tui_never_copies_workspace_paths_to_clipboard_without_an_owner():
     methods = {node.name: node for node in app.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
 
+    # Copy path now goes through ClipboardOwner (clipboard.copy grant + IsySentinel).
     assert "copy_to_clipboard" not in _method_calls(methods["on_button_pressed"])
+    assert "_copy_through_owner" in _method_calls(methods["on_button_pressed"])
     assert "file-copy-path" in source
-    assert "Copy path · owner pending" in source

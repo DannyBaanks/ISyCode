@@ -150,7 +150,13 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
     tool_calls = 0
     answer = ""
     try:
-        for step in range(limits.max_steps):
+        step = 0
+        while True:
+            if not limits.step_allowed(step):
+                print(f"isycode: step limit reached ({limits.max_steps}); the answer may be incomplete",
+                      file=log)
+                break
+            step += 1
             messages[:], _ = compact_turn(messages)
             streamed.clear()
             material = {"operation": "chat.completions", "messages": messages,
@@ -171,19 +177,12 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
             if not calls:
                 break
             messages.append(assistant_turn(response))
-            for index, call in enumerate(calls):
-                if index >= limits.max_tool_calls:
-                    call_id = call.get("id") or "call_headless"
-                    result = json.dumps({"error": "per-response tool call limit reached"})
-                else:
-                    call_id, result = await asyncio.to_thread(_dispatch, root, authority, call, log)
-                    tool_calls += 1
+            for call in calls:
+                call_id, result = await asyncio.to_thread(_dispatch, root, authority, call, log)
+                tool_calls += 1
                 messages.append({"role": "tool", "tool_call_id": call_id, "content": result})
             if not json_output and streamed:
                 out.write("\n")
-        else:
-            print(f"isycode: step limit reached ({limits.max_steps}); the answer may be incomplete",
-                  file=log)
     except (ProviderError, StreamError, OSError) as exc:
         print(f"isycode: request failed · {type(exc).__name__}: {str(exc)[:200]}", file=log)
         return EXIT_FAILED

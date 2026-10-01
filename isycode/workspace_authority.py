@@ -32,6 +32,8 @@ MODES = frozenset({"security", "classic"})
 CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.files.list", "workspace.files.read", "workspace.files.search",
     "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
+    # Delete and move stay inside the workspace and still need a per-action approval.
+    "workspace.files.delete", "workspace.files.move",
 })
 CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume", "git.status", "git.diff"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
@@ -241,6 +243,14 @@ class WorkspaceAuthority:
                 return AuthorityDecision(False, "", "filesystem target is outside the workspace or unsafe", digest)
             if not roots or not any(self._contains(Path(root), Path(target)) for root in roots):
                 return AuthorityDecision(False, "", "filesystem target is outside granted paths", digest)
+            if request.action_id == "workspace.files.move":
+                # A move writes its destination too; it must be inside the same grant.
+                try:
+                    destination = self._canonical_path((request.parameters or {}).get("to", ""))
+                except (OSError, ValueError, TypeError, WorkspaceAuthorityError):
+                    return AuthorityDecision(False, "", "move destination is outside the workspace or unsafe", digest)
+                if not any(self._contains(Path(root), Path(destination)) for root in roots):
+                    return AuthorityDecision(False, "", "move destination is outside granted paths", digest)
 
         elif spec.effect.startswith("network"):
             try:
