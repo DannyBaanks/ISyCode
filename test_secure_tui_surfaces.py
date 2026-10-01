@@ -182,7 +182,7 @@ def test_semantic_navigation_keeps_lsp_and_files_branches_reachable(monkeypatch)
     assert file_entries[0]["kind"] == "files"
 
 
-def test_tui_does_not_launch_native_file_pickers_without_an_owner():
+def test_tui_uses_narrow_owner_for_context_picker_and_keeps_other_pickers_blocked():
     source = SOURCE.read_text(encoding="utf-8")
     module = ast.parse(source)
     app = next(node for node in module.body
@@ -190,8 +190,10 @@ def test_tui_does_not_launch_native_file_pickers_without_an_owner():
     methods = {node.name: node for node in app.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
 
-    assert "isycode.file_picker" not in source
-    for method_name in ("_inject_agent_context", "_open_broker_preview", "_provision_broker"):
+    inject_calls = _method_calls(methods["_inject_agent_context"])
+    assert "ContextFilePickerOwner" in inject_calls
+    assert "choose" in inject_calls
+    for method_name in ("_open_broker_preview", "_provision_broker"):
         calls = _method_calls(methods[method_name])
         assert not (calls & {"choose_context_file", "choose_workspace_file",
                              "choose_workspace_directory", "create_subprocess_exec"})

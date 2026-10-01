@@ -91,6 +91,38 @@ def test_project_context_is_owned_and_never_grants_access(tmp_path, monkeypatch,
         asyncio.run(scenario())
 
 
+def test_inject_context_button_flow_uses_picker_owner_and_owned_workspace_read(tmp_path, monkeypatch, capsys):
+    root = configure(tmp_path, monkeypatch)
+    selected = root / "docs" / "AGENT.txt"
+    selected.parent.mkdir()
+    selected.write_text("Use the repository's current conventions.")
+
+    async def choose(_root):
+        return selected
+    monkeypatch.setattr("isycode.file_picker.choose_context_file", choose)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.click("#context-button")
+            assert app._menu_mode == "context_menu"
+            assert any(entry["kind"] == "context_inject" for entry in app._menu_entries)
+            await pilot.press("escape")
+            await pilot.click("#inject-context-button")
+            for _ in range(50):
+                await pilot.pause(0.02)
+                if app._agent_context:
+                    break
+            assert app._agent_context["path"] == "docs/AGENT.txt"
+            assert app._agent_context["text"] == "Use the repository's current conventions."
+            assert app._agent_context["receipt_id"]
+            assert str(app.query_one("#context-button").label) == "Context: AGENT.txt"
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
 @pytest.mark.parametrize('real_command', [False, pytest.param(True, marks=pytest.mark.integration)])
 def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, capsys, real_command):
     import json

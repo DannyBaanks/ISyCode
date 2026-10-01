@@ -151,7 +151,7 @@ class CodexConnector:
         # Exact app-server argv means settings belong in the managed home config.
         lines = ['cli_auth_credentials_store = "keyring"',
                  'forced_login_method = "chatgpt"', 'model_provider = "openai"',
-                 'web_search = "disabled"', 'approval_policy = "untrusted"',
+                 'web_search = "disabled"',
                  'sandbox_mode = "read-only"', '[features]']
         lines += [f"{key} = {'true' if val else 'false'}" for key, val in _FEATURES.items()]
         lines += ["[mcp_servers]", "[plugins]"]

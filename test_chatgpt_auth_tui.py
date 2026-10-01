@@ -74,3 +74,31 @@ def test_slash_catalog_cannot_spawn_connector_without_grants(tmp_path,monkeypatc
             await command.handler(app,arg)
             assert calls==[]
     with capsys.disabled(): asyncio.run(run())
+
+
+def test_providers_opens_the_selector_and_provider_reports_saved_credentials(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setattr("isycode.tui.provider_credential_state",
+                        lambda name: "saved" if name == "nvidia" else "missing")
+
+    async def run():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            _, command, arg = app._plugins.route("/providers")
+            await command.handler(app, arg)
+            assert app._menu_mode == "providers"
+            assert app._menu_title == "Providers · ISyCode chat"
+            assert not any("Provider catalog" in str(child) for child in app.query_one("#chat").children)
+
+            lines = []
+            original = app._append
+            app._append = lambda value, *_args, **_kwargs: lines.append(str(value))
+            _, command, arg = app._plugins.route("/provider")
+            await command.handler(app, arg)
+            app._append = original
+            assert any("nvidia" in line and "key saved in ISyCode vault" in line for line in lines)
+            assert any("/providers to choose" in line for line in lines)
+
+    with capsys.disabled():
+        asyncio.run(run())

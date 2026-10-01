@@ -18,7 +18,7 @@ _ENTRIES = [
     ("workspace.files.list", "Files", "List files", "read", False),
     ("workspace.files.read", "Files", "Read file contents", "read", False),
     ("workspace.files.search", "Files", "Search file names", "read", False),
-    ("workspace.context.inject", "Files", "Inject AGENTS.md context", "read", False),
+    ("workspace.context.inject", "Files", "Inject selected context document", "read", False),
     ("workspace.files.write", "Files", "Create or edit files", "write", True),
     ("workspace.files.restore", "Files", "Undo an ISyCode file change", "write", True),
     ("workspace.command.run", "Commands", "Run a command in the workspace sandbox", "process", True),

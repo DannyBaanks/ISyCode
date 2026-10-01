@@ -40,8 +40,8 @@ COMMAND_BRANCHES: tuple[tuple[str, tuple[CLIAction, ...]], ...] = (
         CLIAction("Integrations", "Refresh catalogs", "Refresh the connected ISyCode integration catalogs."),
     )),
     ("Providers", (
-        CLIAction("Providers", "Choose provider", "Open ISyCode's provider selector and configure credentials in the OS vault.", view="providers"),
-        CLIAction("Providers", "Provider status", "Show provider and credential status without revealing secrets.", prompt="/providers"),
+        CLIAction("Providers", "Choose provider", "Open ISyCode's provider selector and configure credentials in the OS vault.", prompt="/providers"),
+        CLIAction("Providers", "Provider status", "Show saved provider credentials without revealing secrets.", prompt="/provider"),
     )),
     ("Session", (
         CLIAction("Session", "New conversation", "Start a named conversation saved for this workspace."),

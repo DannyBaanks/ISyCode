@@ -164,6 +164,7 @@ def test_hardened_environment_exact_argv_and_private_config(tmp_path, monkeypatc
     config = (connection.home / "config.toml").read_text()
     assert 'cli_auth_credentials_store = "keyring"' in config
     assert 'forced_login_method = "chatgpt"' in config
+    assert 'approval_policy = "untrusted"' not in config
     for flag in ("shell_tool", "multi_agent", "skill_mcp_dependency_install", "enable_mcp_apps", "plugins"):
         assert flag + " = false" in config
     assert (connection.home / "config.toml").stat().st_mode & 0o777 == 0o600

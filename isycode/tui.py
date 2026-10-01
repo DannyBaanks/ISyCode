@@ -2067,6 +2067,7 @@ class TUIApp(App):
                 yield Button("Providers", id="providers-button")
                 yield Button("Role", id="role-button")
                 yield Button("Context", id="context-button")
+                yield Button("Inject context", id="inject-context-button")
                 yield BarSpacer(id="bar-spacer")
                 yield Button("⚙ Settings", id="settings-button")
         with Vertical(id="action-menu"):
@@ -2808,6 +2809,8 @@ class TUIApp(App):
         elif button_id == "workspace-folders":
             self._open_workspace_folders_menu()
         elif button_id == "context-button":
+            self._open_context_menu()
+        elif button_id == "inject-context-button":
             self.run_worker(self._inject_agent_context(), exclusive=True, group="context-inject")
         elif button_id == "review-iterate":
             if self._pending_review:
@@ -3147,7 +3150,7 @@ class TUIApp(App):
             self._entry("Authority & Security", "authority_open", ""),
             self._entry("Named API keys", "named_credentials", ""),
             self._entry("Action journal · verify / inspect", "security_journal", ""),
-            self._entry("Inject AGENTS.md context", "context_inject", ""),
+            self._entry("Choose context file (.md / .txt)", "context_inject", ""),
             self._entry("Commands & shortcuts", "shortcuts", ""),
             self._entry("Workspace files", "files", ""),
             self._entry("Workspace folders & automatic edits", "folders_open", ""),
@@ -3825,22 +3828,32 @@ class TUIApp(App):
     def _open_context_menu(self) -> None:
         entries = [self._entry("Load workspace AGENTS.md", "context_project", "",
                                "Reads only this workspace's AGENTS.md through its read permission."),
-                   self._entry("Inject AGENTS.md… · owner pending", "context_inject", "",
-                               "Blocked in Secure: desktop.file_picker has no registered execution owner. No dialog or file read will occur.")]
+                   self._entry("Choose context file (.md / .txt)", "context_inject", "",
+                               "Choose a document in the native file dialog. Only a file inside this workspace can be loaded.")]
         if self._agent_context:
             entries.insert(0, self._entry(
                 f"Injected · {self._agent_context['path']}", "context_info", "",
                 f"ISyCode local receipt {self._agent_context['receipt_id'][:12]} verified PASS. Content stays in this process memory."))
             entries.append(self._entry("Remove injected context", "context_clear", ""))
         self._menu_stack = []
-        self._render_menu("context_menu", "Context · AGENTS.md", entries)
+        self._render_menu("context_menu", "Context · workspace documents", entries)
 
     def _context_button_label(self) -> str:
-        return "Context: AGENTS" if self._agent_context else "Context"
+        return f"Context: {Path(self._agent_context['path']).name}" if self._agent_context else "Context"
 
     async def _inject_agent_context(self) -> None:
-        self._set_activity(
-            "Context injection blocked · desktop.file_picker has no registered action owner", YELLOW)
+        from isycode.file_picker import ContextFilePickerOwner, FilePickerUnavailable
+        self._close_menu()
+        try:
+            selected = await ContextFilePickerOwner(self._workspace_root).choose()
+        except FilePickerUnavailable as error:
+            self._set_activity(f"Context picker unavailable · {error}", YELLOW)
+            return
+        if selected is None:
+            self._set_activity("Context selection cancelled", MUTED)
+            return
+        relative = selected.relative_to(self._workspace_root.resolve(strict=True)).as_posix()
+        await self._load_context_file(relative)
 
     async def _set_bridge_enabled(self, enabled: bool) -> None:
         # There is deliberately no Bridge execution owner in Secure yet.
@@ -6311,28 +6324,7 @@ class TUIApp(App):
 
         async def _providers_cmd(app: "TUIApp", arg: str) -> None:
             del arg
-            selected = selected_provider_name()
-            app._append("  Provider catalog (selection lasts for this TUI session):", MUTED)
-            for name, preset in PRESETS.items():
-                try:
-                    provider = Provider(
-                        name=name, model=provider_default_model(name),
-                        api_key=load_provider_key(name) or None)
-                    if provider.key_required:
-                        state = ("credential available" if provider.configured()
-                                 else f"needs {provider.key_env}")
-                    else:
-                        state = "keyless; server checked on use"
-                    active = "  ← active" if name == selected else ""
-                    app._append(
-                        f"    {name:<10} {preset['label']} · {state}{active}",
-                        GREEN if provider.key_required and provider.configured()
-                        else YELLOW if provider.key_required else MUTED)
-                except ConfigurationError:
-                    app._append(f"    {name:<10} credential configuration error", RED)
-                except ProviderError as error:
-                    app._append(f"    {name:<10} unavailable · {error}", YELLOW)
-            app._append("  Use /provider <id> [model], /provider models, or /help.", MUTED)
+            app._open_provider_menu()
 
         async def _provider_cmd(app: "TUIApp", arg: str) -> None:
             import os
@@ -6340,7 +6332,17 @@ class TUIApp(App):
             parts = arg.split()
             current = selected_provider_name()
             if not parts:
-                await _providers_cmd(app, "")
+                labels = {"environment": "key in environment", "saved": "key saved in ISyCode vault",
+                          "stored": "legacy key saved", "legacy": "legacy key", "optional": "key optional",
+                          "missing": "no key saved", "unavailable": "credential store unavailable",
+                          "subscription": "ChatGPT subscription · check in selector"}
+                app._append("  Provider credentials (secret values are never shown):", MUTED)
+                for name in PRESETS:
+                    state = provider_credential_state(name)
+                    active = "  ← active" if name == current else ""
+                    color = GREEN if state in {"environment", "saved", "stored", "legacy"} else YELLOW if state == "unavailable" else MUTED
+                    app._append(f"    {name:<10} {labels.get(state, state)}{active}", color)
+                app._append("  Use /providers to choose a provider, or /provider <id> [model].", MUTED)
                 return
             if parts[0].casefold() == "models":
                 try:
@@ -6455,8 +6457,8 @@ class TUIApp(App):
             commands=[
                 PluginCommand("plan", "plan an intent via IsyMotron", _plan_cmd),
                 PluginCommand("readme", "choose and preview a workspace README.md", _readme_cmd),
-                PluginCommand("providers", "list model providers and credential state", _providers_cmd),
-                PluginCommand("provider", "select a provider or list its account models", _provider_cmd),
+                PluginCommand("providers", "open the provider selector", _providers_cmd),
+                PluginCommand("provider", "show saved provider credentials; select with /provider <id>", _provider_cmd),
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
@@ -7996,16 +7998,20 @@ class TUIApp(App):
 
     async def _load_project_context(self) -> bool:
         """Explicitly read root AGENTS.md; the file never supplies grants or tools."""
+        return await self._load_context_file("AGENTS.md")
+
+    async def _load_context_file(self, relative_path: str) -> bool:
+        """Load one selected workspace document through the read owner and receipt."""
         self._agent_context = None
         owner = LocalWorkspaceReadOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
-        outcome = await asyncio.to_thread(owner.execute, "workspace.files.read", {"path": "AGENTS.md"})
+        outcome = await asyncio.to_thread(owner.execute, "workspace.context.inject", {"path": relative_path})
         text = read_result_text(outcome.text) if outcome.decision == "ALLOW" else ""
         if text and outcome.receipt is not None:
-            self._agent_context = {"path": "AGENTS.md", "text": text,
+            self._agent_context = {"path": relative_path, "text": text,
                                    "receipt_id": outcome.receipt.receipt_id, "verification": "PASS"}
-            self._append("  Context loaded · workspace AGENTS.md · owned read; no permissions changed.", MUTED)
+            self._append(f"  Context loaded · {relative_path} · owned read; no permissions changed.", MUTED)
         else:
-            self._append(f"  AGENTS.md not loaded · {outcome.reason[:160]}", YELLOW)
+            self._append(f"  Context not loaded · {outcome.reason[:160]}", YELLOW)
         self.query_one("#context-button", Button).label = self._context_button_label()
         return self._agent_context is not None
 
