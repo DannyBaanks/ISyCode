@@ -1,3 +1,4 @@
+from isycode.tui import plain_text
 import asyncio
 import json
 
@@ -124,7 +125,7 @@ def test_usage_and_budget_fit_the_standard_terminal_width(tmp_path, monkeypatch,
             await pilot.pause()
             app._usage.record(None)
             app._refresh_usage()
-            text = app.query_one('#usage-status', Static).renderable.plain
+            text = plain_text(app.query_one('#usage-status', Static))
             assert len(text) <= 80
             assert 'unknown' in text.lower() and '10,000' in text
     with capsys.disabled():

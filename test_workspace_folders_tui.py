@@ -1,3 +1,4 @@
+from isycode.tui import plain_text
 import asyncio
 import json
 
@@ -144,7 +145,7 @@ def test_file_browser_selection_keeps_primary_identity(tmp_path, monkeypatch, ca
             await app._browse_workspace_folder('sibling')
             assert app._workspace_root == root and app._file_path == str(sibling)
             await app._preview_file(str(sibling / 'file.py'))
-            assert 'value = 1' in str(app.query_one('#file-preview').renderable)
+            assert 'value = 1' in plain_text(app.query_one('#file-preview'))
 
     with capsys.disabled():
         asyncio.run(scenario())

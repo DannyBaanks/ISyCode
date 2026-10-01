@@ -10,6 +10,7 @@ IsyMotron is an optional plugin: /plan <intent> uses its capability runtime.
 """
 from __future__ import annotations
 
+import inspect
 import sys
 import os
 import asyncio
@@ -113,6 +114,9 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.screen import ModalScreen
+from textual.css.query import NoMatches
+from textual.dom import NoScreen
+from textual.widget import Widget
 from textual.widgets import (
     Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select,
 )
@@ -328,6 +332,27 @@ class ThoughtBlock(Collapsible):
         self.collapsed = True
 
 
+def static_content(widget: Static):
+    """What a Static shows: ``renderable`` before Textual 2, ``content`` after."""
+    content = getattr(widget, "renderable", None)
+    if content is None:
+        content = getattr(widget, "content", "")
+    if isinstance(content, (str, Text)) or hasattr(content, "__rich_console__") \
+            or hasattr(content, "__rich__"):
+        return content
+    return getattr(content, "plain", str(content))
+
+
+def plain_text(widget: Static) -> str:
+    content = static_content(widget)
+    return content if isinstance(content, str) else getattr(content, "plain", str(content))
+
+
+# Textual < 2 anchors a child (``child.anchor(animate=...)``); Textual 2+ anchors
+# the scrollable itself (``container.anchor(True)``) and releases it on user scroll.
+_CHILD_ANCHOR = "animate" in inspect.signature(Widget.anchor).parameters
+
+
 class ChatArea(VerticalScroll):
     """Chat with a layout-aware tail anchor that user scrolling can release."""
 
@@ -354,10 +379,24 @@ class ChatArea(VerticalScroll):
         return super().remove_children(selector)
 
     def pause_tail(self):
-        self._clear_anchor()
+        if _CHILD_ANCHOR:
+            self._clear_anchor()
+        else:
+            self.anchor(False)
+
+    def _anchor_tail(self):
+        if _CHILD_ANCHOR:
+            self._tail.anchor(animate=False)
+        else:
+            self.anchor(True)
+
+    def _following_tail(self) -> bool:
+        if _CHILD_ANCHOR:
+            return self._anchored is self._tail
+        return bool(self._anchored) and not getattr(self, "_anchor_released", False)
 
     def resume_tail(self):
-        self._tail.anchor(animate=False)
+        self._anchor_tail()
         self.follow_tail()
 
     def follow_tail(self):
@@ -366,18 +405,17 @@ class ChatArea(VerticalScroll):
         self.call_after_refresh(self._follow_measured_tail)
 
     def _follow_measured_tail(self):
-        if self._anchored is self._tail:
+        if self._following_tail():
             self.scroll_end(animate=False, immediate=True)
 
     def watch_scroll_y(self, old_value, new_value):
         super().watch_scroll_y(old_value, new_value)
-        if self.is_mounted and new_value >= self.max_scroll_y:
+        if _CHILD_ANCHOR and self.is_mounted and new_value >= self.max_scroll_y:
             self._tail.anchor(animate=False)
 
     def action_scroll_end(self):
         super().action_scroll_end()
         self.resume_tail()
-
 
 
 class PromptArea(TextArea):
@@ -2940,12 +2978,17 @@ class TUIApp(App):
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
         self._track_composer_draft(event)
         if event.text_area.id == "prompt-input":
-            self._update_slash_suggestions()
+            self._update_slash_suggestions(prompt=event.text_area)
 
-    def _update_slash_suggestions(self, *, force: bool = False) -> None:
-        prompt = self.query_one(PromptArea)
+    def _update_slash_suggestions(self, *, force: bool = False, prompt: TextArea | None = None) -> None:
+        # The composer lives on the base screen; a modal (or shutdown) may be on top,
+        # where newer Textual's app-level query no longer finds it.
+        try:
+            prompt = prompt or self.query_one(PromptArea)
+            panel = prompt.screen.query_one('#slash-suggestions', OptionList)
+        except (NoMatches, NoScreen):
+            return
         text = prompt.text
-        panel = self.query_one('#slash-suggestions', OptionList)
         eligible = text.startswith('/') and not any(c.isspace() for c in text)
         query = text[1:].casefold() if eligible else ''
         self._slash_matches = [entry for entry in self._command_entries
@@ -5898,7 +5941,7 @@ class TUIApp(App):
     def _render_searchable_text(widget: Static) -> str:
         console = Console(width=max(24, widget.size.width), color_system=None)
         with console.capture() as capture:
-            console.print(widget.renderable)
+            console.print(static_content(widget))
         return capture.get()
 
     def _search_console(self, query: str, screen: ConsoleSearchScreen) -> None:
