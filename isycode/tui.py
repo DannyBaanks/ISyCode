@@ -351,6 +351,36 @@ ReviewConsentScreen { align: center middle; background: #000000 65%; }
         self.dismiss(False)
 
 
+class HelpBubble(ModalScreen[None]):
+    """A small box that explains one setting; any of Esc, Enter or ? closes it."""
+
+    CSS = """
+    HelpBubble { align: center middle; background: #000000 40%; }
+    #help-bubble { width: 64; max-width: 90%; height: auto; max-height: 70%; padding: 1 2;
+                   border: round #9b5de5; background: #292a2e; }
+    #help-bubble-title { color: #bb8cff; text-style: bold; margin-bottom: 1; }
+    #help-bubble-hint { color: #6c757d; margin-top: 1; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close"), Binding("enter", "close", "Close"),
+                Binding("question_mark", "close", "Close")]
+
+    def __init__(self, title: str, body: str) -> None:
+        super().__init__()
+        self.title_text, self.body = title, body
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="help-bubble"):
+            yield Static(Text(self.title_text), id="help-bubble-title")
+            yield Static(Text(self.body))
+            yield Static("Esc or Enter to close", id="help-bubble-hint")
+
+    def on_click(self) -> None:
+        self.dismiss(None)
+
+    def action_close(self) -> None:
+        self.dismiss(None)
+
+
 class TailscaleConfirmScreen(ModalScreen[bool]):
     """Show one exact private-access operation before approval is issued."""
 
@@ -1711,13 +1741,20 @@ class TUIApp(App):
     #bar-spacer { width: 1fr; }
     Footer { display: none; }
     #action-menu {
-        display: none; layer: overlay; dock: bottom; margin: 0 1 3 1;
-        width: 46; height: 16; padding: 0 1; background: #292a2e;
-        border: round #68696f;
+        display: none; layer: overlay; dock: top; width: 100%; height: 100%;
+        background: #000000 65%; align: center middle;
     }
-    #action-title { height: 1; color: #9b5de5; text-style: bold; }
-    #action-search { height: 3; }
-    #action-list { height: 1fr; background: #292a2e; }
+    #action-card {
+        width: 110; max-width: 96%; height: 85%; padding: 1 2;
+        background: #292a2e; border: round #68696f;
+    }
+    #action-title { height: 2; color: #bb8cff; text-style: bold; }
+    #action-search { height: 3; margin-bottom: 1; }
+    #action-list { height: 1fr; background: #292a2e; border: round #3a3b40; }
+    #action-detail {
+        height: auto; min-height: 3; max-height: 8; margin-top: 1; padding: 0 1;
+        color: #b8b9c1; border-left: tall #9b5de5;
+    }
     #action-list > .option-list--option-highlighted {
         background: #424348; color: #f0f0f2;
     }
@@ -1734,7 +1771,9 @@ class TUIApp(App):
     BINDINGS = [Binding(
         item.key, item.action, item.label,
         show=not item.hidden, priority=item.priority)
-        for item in APP_SHORTCUTS]
+        for item in APP_SHORTCUTS] + [
+        # Not a priority binding: text fields keep typing "?" normally.
+        Binding("question_mark", "explain_setting", "What does this do?", show=False)]
 
     def __init__(
         self,
@@ -1850,16 +1889,19 @@ class TUIApp(App):
             yield Static("", id="bar-spacer")
             yield Button("⚙ Settings", id="settings-button")
         with Vertical(id="action-menu"):
-            yield Static("Commands", id="action-title")
-            yield Input(placeholder="Filter this list…", id="action-search")
-            yield OptionList(id="action-list")
-            yield Static("↑↓ navigate · Shift+Tab search · Enter select · Esc back", id="action-hint")
-            with Vertical(id="key-entry"):
-                yield Static("API key is stored outside this project.", id="key-entry-label")
-                yield Input(placeholder="Paste API key…", password=True, id="provider-key-input")
-                with Horizontal(id="key-entry-buttons"):
-                    yield Button("Save key", id="save-provider-key", variant="primary")
-                    yield Button("Cancel", id="cancel-provider-key")
+            with Vertical(id="action-card"):
+                yield Static("Commands", id="action-title")
+                yield Input(placeholder="Filter this list…", id="action-search")
+                yield OptionList(id="action-list")
+                yield Static("", id="action-detail")
+                yield Static("↑↓ navigate · ? what it does · Shift+Tab search · Enter select · Esc back",
+                             id="action-hint")
+                with Vertical(id="key-entry"):
+                    yield Static("API key is stored outside this project.", id="key-entry-label")
+                    yield Input(placeholder="Paste API key…", password=True, id="provider-key-input")
+                    with Horizontal(id="key-entry-buttons"):
+                        yield Button("Save key", id="save-provider-key", variant="primary")
+                        yield Button("Cancel", id="cancel-provider-key")
         yield Footer(show_command_palette=False)
 
     def on_mount(self) -> None:
@@ -3341,7 +3383,8 @@ class TUIApp(App):
         entries: list[dict] = [self._entry(
             "Choose what ISyCode can do in this workspace. Everything else stays off.", "info"),
             self._entry(
-                "Some actions ask again before they run, even when turned on.", "info")]
+                "Some actions ask again before they run, even when turned on. "
+                "Press ? on any option to see what it does.", "info")]
         try:
             authority = WorkspaceAuthority(self._workspace_root)
             policy = authority.effective_policy()
@@ -3375,11 +3418,18 @@ class TUIApp(App):
                         for action in ("session.create", "session.resume")),
                     "Keeps this workspace's chats in your private ISyCode state folder, outside the "
                     "project, so you can resume them. Common secrets are redacted before saving."))
-                entries.append(self._capability_entry(
-                    "Delete current conversation · asks every time", "session_delete",
-                    displayed_on("session.delete", grants.get("session.delete", {}),
-                                 self._active_chat_session_id in grants.get("session.delete", {}).get("targets", [])),
-                    "Permission is scoped to the current saved conversation; deletion also needs a fresh approval."))
+                if self._active_chat_session_id:
+                    entries.append(self._capability_entry(
+                        "Delete current conversation · asks every time", "session_delete",
+                        displayed_on("session.delete", grants.get("session.delete", {}),
+                                     self._active_chat_session_id in grants.get("session.delete", {}).get("targets", [])),
+                        "Lets you delete the saved conversation that is open right now. The "
+                        "permission covers only that conversation, and each deletion still asks you."))
+                else:
+                    entries.append(self._entry(
+                        "Delete a conversation · open a saved one first", "info", "",
+                        "Deleting works one conversation at a time. Open a saved conversation from "
+                        "Sessions, then come back here to allow deleting that one."))
             else:
                 entries.append(self._entry(
                     "Save conversations · recurring workspaces only", "info", "",
@@ -3522,8 +3572,9 @@ class TUIApp(App):
             "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, "
             "and sensitive actions still ask you first."))
         entries.append(self._entry(
-            "Deleting or moving files and running commands stay off. File edits ask before every change.",
-            "info"))
+            "Changes, moves, deletions, commands and commits always ask before they run.",
+            "info", "", "Turning a permission on lets the assistant propose that kind of action. "
+            "Each one still shows exactly what it will do and waits for you to approve it."))
         entries.append(self._entry("Back to Settings", "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
@@ -4352,10 +4403,40 @@ class TUIApp(App):
         for entry in self._menu_filtered:
             if "enabled" in entry:
                 label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
+            elif entry.get("kind") == "info":
+                label = Text(entry["label"], style="#8a8d96")
             else:
                 label = Text(entry["label"])
+            if entry.get("detail"):
+                label.append("  ?", style="bold #9b5de5")
             options.add_option(label)
         options.highlighted = 0 if self._menu_filtered else None
+        self._show_menu_detail(0)
+
+    def _show_menu_detail(self, index: int | None) -> None:
+        """Describe the highlighted entry so choices are clear before pressing Enter."""
+        entries = self._menu_filtered
+        detail = (entries[index].get("detail", "")
+                  if index is not None and 0 <= index < len(entries) else "")
+        panel = self.query_one("#action-detail", Static)
+        panel.display = bool(detail)
+        panel.update(Text(str(detail)))
+
+    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
+        if event.option_list.id == "action-list":
+            self._show_menu_detail(event.option_index)
+
+    def action_explain_setting(self) -> None:
+        """? on a highlighted menu entry explains it in a small box."""
+        if not self.query_one("#action-menu").display:
+            return
+        options = self.query_one("#action-list", OptionList)
+        index = options.highlighted
+        if self.focused is not options or index is None or not 0 <= index < len(self._menu_filtered):
+            return
+        entry = self._menu_filtered[index]
+        self.push_screen(HelpBubble(
+            entry["label"], entry.get("detail") or "No extra explanation for this item."))
 
     def _close_menu(self) -> None:
         self.query_one("#action-menu", Vertical).display = False
@@ -5029,6 +5110,7 @@ class TUIApp(App):
         self._provider_key_target = service
         self.query_one("#action-menu", Vertical).display = True
         self.query_one("#action-list", OptionList).display = False
+        self.query_one("#action-detail", Static).display = False
         self.query_one("#action-search", Input).display = False
         self.query_one("#key-entry-label", Static).update(
             f"API key for {self._credential_label(service)} · saved in your OS keyring for your "
@@ -6100,7 +6182,10 @@ class TUIApp(App):
             return tool_call_id, json.dumps({"status": "shown", "tasks": len(tasks)})
         action_id = TOOL_ACTIONS[name]
         target = arguments.get("path", ".")
-        self._append(f"  Tool requested · {action_id} · {target}", CYAN)
+        query = arguments.get("query")
+        summary = {"workspace_list": f"list {target}", "workspace_read": f"read {target}",
+                   "workspace_search": f"find names “{query}” in {target}",
+                   "workspace_grep": f"grep “{query}” in {target}"}.get(name, f"{name} {target}")
         try:
             owner = LocalWorkspaceReadOwner(
                 self._workspace_root, WorkspaceAuthority(self._workspace_root))
@@ -6110,11 +6195,10 @@ class TUIApp(App):
             return tool_call_id, json.dumps({"error": "ISyCode authorization or read owner unavailable"})
         if result.decision != "ALLOW" or result.receipt is None:
             reason = result.reason or result.decision
-            self._append(f"  Tool {result.decision} · {action_id} · {reason[:180]}", YELLOW)
+            self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", YELLOW)
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
-        self._append(
-            f"  Tool ALLOW · {action_id} · receipt {result.receipt.receipt_id} · "
-            "request/result digest matched", GREEN)
+        # Reads need no approval: one quiet line, receipt kept for the journal trail.
+        self._append(f"  ✓ {summary[:160]} · {result.receipt.receipt_id}", MUTED)
         return tool_call_id, result.text
 
     async def _undo_last_change(self) -> None:

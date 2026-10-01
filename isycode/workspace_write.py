@@ -244,11 +244,15 @@ class WorkspaceWriteOwner:
 
     @staticmethod
     def _diff(before: bytes | None, after: bytes | None, relative: str) -> str:
-        return "".join(difflib.unified_diff(
-            ("" if before is None else before.decode("utf-8")).splitlines(keepends=True),
-            ("" if after is None else after.decode("utf-8")).splitlines(keepends=True),
-            fromfile="/dev/null" if before is None else f"a/{relative}",
-            tofile="/dev/null" if after is None else f"b/{relative}", n=3))
+        lines = []
+        for line in difflib.unified_diff(
+                ("" if before is None else before.decode("utf-8")).splitlines(keepends=True),
+                ("" if after is None else after.decode("utf-8")).splitlines(keepends=True),
+                fromfile="/dev/null" if before is None else f"a/{relative}",
+                tofile="/dev/null" if after is None else f"b/{relative}", n=3):
+            # A last line without a newline would otherwise be glued to the next one.
+            lines.append(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n")
+        return "".join(lines)
 
     def preview(self, path: str, content: str) -> WritePreview:
         """Compute the exact diff and request; performs reads only, never writes."""
