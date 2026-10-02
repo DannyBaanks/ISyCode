@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 74,
-    "effectful": 57,
-    "owner_valid": 48,
+    "actions": 75,
+    "effectful": 58,
+    "owner_valid": 49,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 23,
@@ -231,6 +231,22 @@
       "authority": "Workspace Authority",
       "sentinel": [
         "GitBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "git.push",
+      "effect": "external",
+      "approval_required": true,
+      "owners": [
+        "workspace_publish"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "PublishBoundary"
       ],
       "variants": [],
       "status": "OWNER_VALID",
@@ -1323,6 +1339,12 @@
       "status": "COVERED"
     },
     {
+      "action": "git.push",
+      "callsite": "PublishOwner.run",
+      "owner": "workspace_publish",
+      "status": "COVERED"
+    },
+    {
       "action": "mcp.local.start",
       "callsite": "LocalMCPOwner.start",
       "owner": "mcp_local",
@@ -1557,63 +1579,63 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1907,
+      "line": 1945,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1696,
+      "line": 1734,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1760,
+      "line": 1798,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1830,
+      "line": 1868,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1916,
+      "line": 1954,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1967,
+      "line": 2005,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1975,
+      "line": 2013,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2033,
+      "line": 2071,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2096,
+      "line": 2139,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -1669,7 +1691,7 @@
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 242,
+      "line": 244,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
@@ -1704,14 +1726,14 @@
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 210,
+      "line": 221,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "action": "mcp.local.start",
       "owner": "mcp_local"
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 312,
+      "line": 322,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
       "action": "mcp.local.invoke",
       "owner": "mcp_local"
@@ -1750,6 +1772,13 @@
       "callable": "isycode.provider_auth.ProviderAuthOwner.request",
       "action": "provider.authenticate",
       "owner": "provider_auth"
+    },
+    {
+      "file": "isycode/publish.py",
+      "line": 57,
+      "callable": "isycode.publish.PublishOwner.prepare",
+      "action": "git.push",
+      "owner": "workspace_publish"
     },
     {
       "file": "isycode/session_owner.py",
@@ -1923,7 +1952,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2096,
+      "line": 2139,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"

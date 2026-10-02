@@ -44,6 +44,17 @@ PROTOCOL_VERSION = "2025-06-18"
 BASE_ENV_KEYS = ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "USER", "SHELL")
 
 
+def process_environment(config_env: tuple[tuple[str, str], ...]) -> dict[str, str]:
+    """Fixed base environment plus the keys the user wrote in mcp.json.
+
+    Provider keys and the rest of the host environment are not copied. A value
+    is present only when that mcp.json entry names it.
+    """
+    env = {key: os.environ[key] for key in BASE_ENV_KEYS if key in os.environ}
+    env.update(dict(config_env))
+    return env
+
+
 def config_path() -> Path:
     base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
     return Path(base) / "isycode" / "mcp.json"
@@ -231,8 +242,7 @@ class LocalMCPOwner:
         if not decision.allowed:
             return ActionOutcome("MCP server denied.", "DENY", None,
                                  "; ".join(c.reason for c in decision.checks if not c.passed))
-        env = {key: os.environ[key] for key in BASE_ENV_KEYS if key in os.environ}
-        env.update(dict(config.env))
+        env = process_environment(config.env)
         try:
             process = await asyncio.create_subprocess_exec(
                 executable, *config.argv[1:], cwd=self.root, env=env,

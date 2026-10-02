@@ -28,6 +28,7 @@ _ENTRIES = [
     ("git.status", "Git", "See git status of the workspace", "read", False),
     ("git.diff", "Git", "See git diffs of the workspace", "read", False),
     ("git.commit", "Git", "Create a git commit", "write", True),
+    ("git.push", "Git", "Publish one reviewed ref to one remote", "external", True),
     ("workspace.files.move", "Files", "Move or rename files", "write", True),
     ("workspace.files.delete", "Files", "Delete files", "destructive", True),
     ("workspace.files.read_sensitive", "Files", "Read sensitive files", "sensitive", True),

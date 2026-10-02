@@ -4,6 +4,8 @@ The argv is never given to a shell. Bubblewrap exposes read-only system files
 and a private copy of the workspace; every sensitive path the chat tools refuse
 (``.git``, ``.env``, keys…) is masked, the ``.isyroot`` marker is read-only,
 and a seccomp bootstrap denies socket syscalls before the program starts.
+The network namespace is not shared: a project command has no route to the host
+network, and there is no separate grant that turns that route back on.
 The user tree is unchanged until that measured diff is promoted. There is no
 host-shell fallback. Each run needs a ``workspace.command.run`` grant for the
 exact sandbox executable plus a fresh approval bound to the reviewed request.
@@ -151,7 +153,7 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
                     masks: tuple[tuple[str, bool], ...], *,
                     timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
     """Bubblewrap argv: system files read-only, only the workspace writable, sensitive paths masked."""
-    args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all", "--share-net",
+    args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all",
             "--clearenv", "--ro-bind", "/usr", "/usr"]
     for source, destination, alias in (("/bin", "/bin", "/usr/bin"), ("/sbin", "/sbin", "/usr/sbin"),
                                        ("/lib", "/lib", "/usr/lib"),

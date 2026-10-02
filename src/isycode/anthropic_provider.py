@@ -151,8 +151,14 @@ async def anthropic_stream_complete(api_key: str | None, model: str, messages: l
     system, converted = to_anthropic(messages)
     options = request_options(model, effort)
     betas = options.pop("betas")
-    client = client or anthropic.AsyncAnthropic(
-        api_key=api_key, base_url=base_url, timeout=timeout_s)
+    if client is None:
+        from isycode.egress import EgressDenied, review_destination
+        try:
+            review_destination(base_url)
+        except EgressDenied as exc:
+            raise ProviderError(str(exc), transport=True) from exc
+        client = anthropic.AsyncAnthropic(
+            api_key=api_key, base_url=base_url, timeout=timeout_s)
     request: dict[str, Any] = {"model": model, "messages": converted, **options}
     if max_tokens is None:
         # Anthropic requires max_tokens on Messages. Its model catalog supplies
@@ -218,6 +224,11 @@ def list_models(api_key: str | None, base_url: str = ANTHROPIC_BASE_URL) -> list
     except ImportError as exc:
         raise ProviderError("the Anthropic provider needs the optional SDK: "
                             "pip install 'isycode[anthropic]'") from exc
+    from isycode.egress import EgressDenied, review_destination
+    try:
+        review_destination(base_url)
+    except EgressDenied as exc:
+        raise ProviderError(str(exc), transport=True) from exc
     try:
         client = anthropic.Anthropic(api_key=api_key, base_url=base_url)
         return sorted(model.id for model in client.models.list())

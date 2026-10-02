@@ -193,6 +193,7 @@ def test_sensitive_paths_are_masked_and_the_marker_is_read_only(sandbox):
     command = sandbox_command(fake, owner.root, "/usr/bin/echo", ("echo",), ".", preview.masks)
     assert command.index("--bind") < command.index("--tmpfs", command.index("--bind"))
     assert "--clearenv" in command and "--die-with-parent" in command
+    assert "--share-net" not in command
 
 
 def test_a_new_secret_after_review_denies_the_run(sandbox):

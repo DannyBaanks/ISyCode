@@ -175,6 +175,7 @@ COMMAND_MAX_TIMEOUT_S = 600
 COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
 GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
+PUBLISH_PARAMETER_KEYS = frozenset({"remote", "ref", "content_sha256"})
 GIT_PARAMETER_KEYS = {
     "git.status": frozenset({"git", "workspace_root", "repo_path", "inspect_path"}),
     "git.diff": frozenset({"git", "workspace_root", "repo_path", "staged", "path"}),
@@ -262,6 +263,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "mobile_host": frozenset({"MobileHostBoundary"}),
     "workspace_command": frozenset({"CommandProcessBoundary"}),
     "workspace_git": frozenset({"GitBoundary"}),
+    "workspace_publish": frozenset({"PublishBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
     "clipboard": frozenset({"ClipboardBoundary"}),
 }
@@ -295,6 +297,7 @@ OWNER_ACTIONS = {
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
     "workspace_command": frozenset({"workspace.command.run"}),
     "workspace_git": GIT_ACTIONS,
+    "workspace_publish": frozenset({"git.push"}),
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
     "clipboard": frozenset({"clipboard.copy"}),
 }
@@ -665,6 +668,41 @@ class GitSystembility:
         return SystembilityResult(
             self.name, True,
             "workspace repository only; repository-defined programs and hooks are refused")
+
+
+def _publish_remote_exact(remote: str) -> bool:
+    """One https URL with a host and a repository path, and nothing else."""
+    parsed = urlsplit(remote)
+    return bool(parsed.scheme == "https" and parsed.hostname and not parsed.username
+                and not parsed.password and not parsed.query and not parsed.fragment
+                and parsed.path not in {"", "/"} and ".." not in parsed.path.split("/"))
+
+
+class PublishSystembility:
+    """One https remote, one ref and one content digest. There is no other publication."""
+
+    name = "PublishBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "git.push":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        remote = params.get("remote") if isinstance(params, Mapping) else None
+        ref = params.get("ref") if isinstance(params, Mapping) else None
+        digest = params.get("content_sha256") if isinstance(params, Mapping) else None
+        if (not isinstance(params, Mapping) or set(params) != PUBLISH_PARAMETER_KEYS
+                or not isinstance(remote, str) or remote != request.target
+                or not _publish_remote_exact(remote)):
+            return SystembilityResult(self.name, False,
+                                      "publication remote is not one exact https URL")
+        if not isinstance(ref, str) or re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}", ref) is None:
+            return SystembilityResult(self.name, False, "publication ref is invalid")
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            return SystembilityResult(self.name, False, "publication content digest is invalid")
+        return SystembilityResult(
+            self.name, True, "one https remote, one ref and one content digest")
 
 
 class LocalMCPSystembility:
@@ -1630,7 +1668,7 @@ class ProductActionGate:
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
-            LocalMCPSystembility(), ClipboardSystembility(),
+            PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
@@ -2045,6 +2083,11 @@ class ProviderNetworkOwner:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return None, ActionOutcome("Provider request denied.", "DENY", None,
                                        reason or authority.reason)
+        try:
+            from isycode.egress import EgressDenied, review_destination
+            review_destination(url)
+        except EgressDenied as exc:
+            return None, ActionOutcome("Provider request denied.", "DENY", None, str(exc))
         response = await send()
         try:
             result_text = json.dumps(response, ensure_ascii=False, sort_keys=True,

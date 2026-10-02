@@ -205,14 +205,14 @@ En Linux y macOS se usan descriptores que nunca siguen enlaces. En Windows se us
 Necesita **bubblewrap, libseccomp y python3 en Linux**; sin ellos, la opción aparece como no disponible.
 
 - Sin shell: se ejecuta exactamente el programa y los argumentos aprobados (sin pipes, redirecciones ni variables).
-- **Red bloqueada** por seccomp, solo el workspace es escribible, `.isyroot` es de solo lectura y las rutas sensibles (`.git`, `.env`, claves…) quedan ocultas.
+- **Red bloqueada:** el namespace de red no se comparte y seccomp niega los sockets. Solo el workspace es escribible, `.isyroot` es de solo lectura y las rutas sensibles (`.git`, `.env`, claves…) quedan ocultas. No hay un permiso que vuelva a abrir esa red.
 - Límite de tiempo (120 s por defecto, 600 s como máximo) y 64 KiB de salida.
 - Si aparece un archivo sensible nuevo o cambia el programa después de revisarlo, no se ejecuta.
 - Los cambios hechos por un comando no se deshacen con `/undo`.
 
 ### Git
 
-Status, diffs y commits pasan por su propio owner. Los hooks nunca corren, no se hace push, se ignora la configuración del sistema y los archivos sensibles quedan fuera de status y diffs. Un repositorio cuyo `.git/config` define programas que git ejecutaría (fsmonitor, filtros, pager, textconv, credential helpers, includes…) se rechaza. Solo se admite una carpeta `.git` en la raíz del workspace.
+Status, diffs y commits pasan por su propio owner. Los hooks nunca corren, un commit no hace push, se ignora la configuración del sistema y los archivos sensibles quedan fuera de status y diffs. Publicar un ref es otra acción, `git.push`: exige el remoto https, el ref y el digest exactos, y sin un transporte registrado no contacta a nadie. Un repositorio cuyo `.git/config` define programas que git ejecutaría (fsmonitor, filtros, pager, textconv, credential helpers, includes…) se rechaza. Solo se admite una carpeta `.git` en la raíz del workspace.
 
 ### MCP local
 
@@ -222,7 +222,7 @@ Los servidores stdio se declaran **solo** en tu `~/.config/isycode/mcp.json`, nu
 {"servers": {"docs": {"command": ["npx", "-y", "some-mcp-server"], "env": {"API_TOKEN": "…"}}}}
 ```
 
-`/mcp` los lista; `/mcp start docs` pide permiso para ese ejecutable y aprobación del comando exacto. Mientras corre, sus herramientas aparecen para el modelo y **cada llamada** muestra los argumentos exactos y pide aprobación. Los servidores corren con tu usuario (red incluida), en la carpeta del workspace y con un entorno mínimo, y se detienen al salir. Sus descripciones y respuestas se tratan como datos no confiables.
+`/mcp` los lista; `/mcp start docs` pide permiso para ese ejecutable y aprobación del comando exacto. Mientras corre, sus herramientas aparecen para el modelo y **cada llamada** muestra los argumentos exactos y pide aprobación. Los servidores corren con tu usuario (red incluida), en la carpeta del workspace y con un entorno mínimo: solo unas variables de base y las que escribiste en `mcp.json`. Las claves de proveedor del host no se copian. Se detienen al salir. Sus descripciones y respuestas se tratan como datos no confiables.
 
 ### Skills, MCP, LSP y subagentes
 
