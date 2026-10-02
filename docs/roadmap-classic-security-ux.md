@@ -117,7 +117,7 @@ Restaurar solo preimágenes propias con compare-and-swap; un conflicto con edici
 
 ## 4. Reglas obligatorias de avance
 
-El validador local de M1 ya corre en CI y rechaza un manifiesto ausente, inconsistente o autodeclarado APROBADO. La protección remota de rama no está demostrada: hasta que una comprobación de la API de GitHub la muestre activa, no es enforcement real. Un autor no marca APROBADO.
+El validador local de M1 ya corre en CI y rechaza un manifiesto ausente, inconsistente o autodeclarado APROBADO. La API de GitHub, leída de vuelta el 2026-10-02, exige en `main` los checks `Tests (Linux)`, `Tests (Linux, Textual 8)` y `Gate evidence`. `enforce_admins` está apagado, así que el propietario todavía puede pushear, y no se ensayó una PR de bypass. Eso no es un candado contra el admin ni una puerta APROBADA.
 Cambiar este Markdown o marcar una casilla no desbloquea trabajo dependiente.
 
 1. Estados permitidos: PENDIENTE, EN CURSO, BLOQUEADO, EN REVISIÓN, APROBADO y REABIERTO. Estado inicial de todos: PENDIENTE.

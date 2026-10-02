@@ -62,14 +62,18 @@ casos:
       dependencia falsa y APROBADO con un caso FAIL. validate_tree rechaza
       además un SHA de carpeta distinto y cualquier estado APROBADO. El job
       gate-evidence está en .github/workflows/ci.yml y el empaquetado espera
-      a los dos jobs de tests y a ese job. La protección remota de rama no se
-      ha configurado en este registro: queda BLOQUEADO como enforcement real
-      y no se anuncia. El autor no puede aprobar su propia puerta.
+      a los dos jobs de tests y a ese job. PUT de la protección de main y la
+      lectura de vuelta muestran contexts Tests (Linux), Tests (Linux, Textual 8)
+      y Gate evidence, strict false, enforce_admins false, sin reviews obligatorias.
+      El propietario sigue pudiendo pushear. No se abrió una PR de bypass para
+      verla rechazada. No se anuncia enforcement contra el admin. El autor no
+      puede aprobar su propia puerta.
     resultado: EN_REVISION
     artefactos:
       - scripts/validate_gates.py
 sin_evidencia_real:
-  - protección de rama en GitHub que exija el check Gate evidence
+  - una PR de bypass rechazada por los checks requeridos
+  - enforce_admins encendido
   - Classic autónomo con 0 aprobaciones por acción
   - staging de efectos antes de promover al árbol del usuario
 regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1060 passed, 2 skipped, 11 deselected; 96.19s
