@@ -110,6 +110,7 @@ sin_evidencia_real:
   - Windows y macOS
   - Classic autónomo con 0 aprobaciones por acción
   - una corrida previa del mismo comando falló en tests/test_chat_sequence.py::test_search_history_stays_visible_during_new_output con scroll_y 2 distinto de 53; tres repeticiones de ese test pasaron y esta transcripción es la corrida limpia
+  - este push no esperó los checks; el remoto imprimió Bypassed rule violations para 948b0f9, 3 de 3 checks esperados, enforce_admins sigue apagado
 regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1080 passed, 2 skipped, 11 deselected; 97.52s
 riesgos_residuales: una llamada mayor que el tope aplica 0, no el tope; el replace tipado puede quedar sin cobro si el proceso muere justo después; los workers que no sostienen el lock pueden pisarse la reserva
 rollback_ensayado: revertir c5e409720de6bdf03fe8129dd95be0a860eb1e31 devuelve la promoción sin presupuesto; no cambia grants guardados ni abre autonomía

@@ -427,7 +427,7 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1, G2 y G3 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El push de M2 (`0f9a4e4`) imprimió `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M3 está en [docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/](evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/gate.yaml). El siguiente trabajo de producto es M4, sin abrir Classic autónomo.**
+**Próximo paso: G0, G1, G2 y G3 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El push de M2 (`0f9a4e4`) y el de M3 (`948b0f9`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M3 está en [docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/](evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/gate.yaml). El siguiente trabajo de producto es M4, sin abrir Classic autónomo.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
