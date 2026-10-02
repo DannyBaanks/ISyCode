@@ -1635,6 +1635,26 @@ class ProductActionGate:
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
                   approval: ActionApproval | None = None):
+        # Classification is fail-closed and stays off the success path: a known
+        # action keeps the existing Sentinel checks, and a missing class denies
+        # before any effect. The policy version is not written into the journal.
+        from isycode.effect_policy import POLICY_VERSION, stamp
+        try:
+            bound = stamp(request)
+            classified = (bound.policy_version == POLICY_VERSION
+                          and bound.request_digest == request.digest
+                          and bound.action_id == request.action_id)
+        except (KeyError, TypeError, ValueError):
+            classified = False
+        if not classified:
+            digest = request.digest if isinstance(request, ActionRequest) else ""
+            action_id = request.action_id if isinstance(request, ActionRequest) else ""
+            reason = "action has no effect classification"
+            return (
+                AuthorityDecision(False, "", reason, digest),
+                SentinelDecision(action_id, digest, (
+                    DecisionCheck("EffectClass", False, reason),)),
+            )
         authority = self.authority.evaluate(request, approvals=approvals, approval=approval)
         decision = self.sentinel.evaluate(request, authority)
         try:

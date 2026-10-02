@@ -30,6 +30,7 @@ from isycode.config import (
     ConfigurationError, discover_workspace_identity, gateway_workspace_id,
     find_isymotron_root, isymotron_provider_available, provider_default_model,
 )
+from isycode.decision_view import verified_receipt_line
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.session_owner import ChatSessionOwner
@@ -2833,8 +2834,7 @@ class TUIApp(App):
             tree.root.add(label, allow_expand=entry.get("kind") == "directory", data={"path": child_path, "kind": entry.get("kind"),
                                        "bytes": entry.get("bytes", 0)})
         self._search_mode = False
-        receipt_id = outcome.receipt.receipt_id[:12]
-        status = f"IsySentinel ALLOW · local receipt {receipt_id} verified"
+        status = verified_receipt_line(outcome.receipt.receipt_id)
         self.query_one("#file-preview", Static).update(
             f"{len(tree.root.children)} entries · {browser_root}\n"
             f"{status}")
@@ -2962,7 +2962,7 @@ class TUIApp(App):
             size = len(result.get("text", "").encode("utf-8"))
             self.query_one("#file-preview", Static).update(
                 f"{relative} · {size} bytes · UTF-8\n"
-                f"IsySentinel ALLOW · local receipt {read.receipt.receipt_id[:12]} verified\n\n{preview}")
+                f"{verified_receipt_line(read.receipt.receipt_id)}\n\n{preview}")
             if modal:
                 from isycode.file_preview import FilePreviewScreen
                 await self._await_screen(FilePreviewScreen(uri, full_preview))
@@ -4957,7 +4957,7 @@ class TUIApp(App):
         self._append(f"  MCP {name} · Gateway returned a result", CYAN)
         self.query_one(ChatArea).mount(Static(Text(outcome.text, style=TEXT)))
         self._append(
-            f"  ISySentinel ALLOW · local receipt {outcome.receipt.receipt_id[:12]} verified",
+            f"  {verified_receipt_line(outcome.receipt.receipt_id)}",
             GREEN)
         self._set_activity(f"MCP tool completed · {name}", GREEN)
 
@@ -5007,7 +5007,7 @@ class TUIApp(App):
         self._append(f"  Gateway semantic {operation} · response from configured workspace", CYAN)
         self.query_one(ChatArea).mount(Static(Text(outcome.text, style=TEXT)))
         self._append(
-            f"  ISySentinel ALLOW · local receipt {outcome.receipt.receipt_id[:12]} verified · "
+            f"  {verified_receipt_line(outcome.receipt.receipt_id)} · "
             "configured workspace IDs matched",
             GREEN)
         self._set_activity(f"Native Gateway {operation} completed", GREEN)
@@ -5075,7 +5075,7 @@ class TUIApp(App):
             return
         self.query_one(ChatArea).mount(Static(Text(
             f"Semantic broker · {operation}\n" + outcome.text, style=TEXT)))
-        self._append(f"  ISySentinel ALLOW · receipt {outcome.receipt.receipt_id[:12]} verified", GREEN)
+        self._append(f"  {verified_receipt_line(outcome.receipt.receipt_id, local=False)}", GREEN)
         self._set_activity(f"Semantic broker {operation} completed · local receipt verified", GREEN)
 
     async def _change_lsp_process_grant(self, executable: str, enabled: bool) -> None:
@@ -5169,7 +5169,7 @@ class TUIApp(App):
         self._append(f"  {server['label']} LSP · {query} · verified workspace/symbol response", CYAN)
         self.query_one(ChatArea).mount(Static(Text(outcome.text, style=TEXT)))
         self._append(
-            f"  ISySentinel ALLOW · local receipt {outcome.receipt.receipt_id[:12]} verified",
+            f"  {verified_receipt_line(outcome.receipt.receipt_id)}",
             GREEN)
         self._set_activity("LSP request completed · sandbox closed", GREEN)
 

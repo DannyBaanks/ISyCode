@@ -55,9 +55,26 @@ jobs:
       - name: Run test suite
         run: python -m pytest -q -m "not integration"
 
+  gate-evidence:
+    name: Gate evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Reject bad gate manifests
+        run: |
+          python scripts/validate_gates.py --self-test
+          python scripts/validate_gates.py
+
   package:
     name: Package (${{ matrix.target }})
-    needs: test
+    needs: [test, test-textual-current, gate-evidence]
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
