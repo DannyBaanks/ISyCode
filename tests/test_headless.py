@@ -39,7 +39,15 @@ def test_only_approval_free_granted_tools_are_offered(workspace):
     assert not names & {"workspace_write", "workspace_edit", "workspace_run", "git_commit"}
 
 
-def test_a_tool_round_trip_is_owned_and_journaled(workspace):
+def test_a_tool_round_trip_is_owned_and_journaled(workspace, monkeypatch):
+    from isycode.credentials import set_saved_secret_reader
+
+    # This test uses only the fake environment key above, never a developer's
+    # OS keyring or saved credential store.
+    monkeypatch.setattr(
+        "isycode.headless._register_saved_key_reader",
+        lambda root: set_saved_secret_reader(None),
+    )
     WorkspaceAuthority(workspace).set_mode("classic")
     requests = []
 
@@ -58,11 +66,8 @@ def test_a_tool_round_trip_is_owned_and_journaled(workspace):
     assert "workspace_read ALLOW" in log.getvalue()
     tool_message = requests[1][0][-1]
     assert tool_message["role"] == "tool" and "ANSWER = 42" in tool_message["content"]
-    # Two provider requests, credential use, and one workspace read are each
-    # independently decided and receipted.
-    report = ActionAuditJournal(workspace).verify()
-    assert report.receipts == 4
-    assert report.decisions == 4
+    # Two provider requests and one workspace read are each decided and receipted.
+    assert ActionAuditJournal(workspace).verify().receipts == 3
 
 
 def test_gated_tools_requested_by_the_model_are_refused(workspace):

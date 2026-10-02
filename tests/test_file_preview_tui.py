@@ -39,8 +39,13 @@ def test_copy_path_for_selected_directory(tmp_path,monkeypatch,capsys):
             await pilot.pause();app._set_rail_view('files');await app._load_directory(str(root))
             tree=app.query_one('#workspace-tree',Tree)
             node=next(n for n in tree.root.children if n.data['path']==str(folder))
-            tree.select_node(node);await pilot.pause()
-            assert not app.query_one('#file-copy-path').disabled
+            tree.select_node(node)
+            copy_path=app.query_one('#file-copy-path')
+            for _ in range(20):
+                await pilot.pause(0.05)
+                if not copy_path.disabled:
+                    break
+            assert not copy_path.disabled
             assert app.query_one('#file-open-preview').disabled
             WorkspaceAuthority(root).set_grant('clipboard.copy',enabled=True,targets=['clipboard'])
             await pilot.click('#file-copy-path');await pilot.pause();assert copied==[str(folder)]

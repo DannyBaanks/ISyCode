@@ -120,18 +120,22 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
 
 
 def test_option_list_click_previews_and_double_click_selects():
-    options = PreviewOptionList()
-    options.add_option("Safe option")
+    # Exercise the click handler's contract without constructing Textual's
+    # version-specific component/style registry.
     selected = []
-    options.action_select = lambda: selected.append(options.highlighted)
+    options = SimpleNamespace(
+        _options=[SimpleNamespace(disabled=False)],
+        highlighted=None,
+        action_select=lambda: selected.append(options.highlighted),
+    )
 
     async def scenario():
-        await options._on_click(SimpleNamespace(
+        await PreviewOptionList._on_click(options, SimpleNamespace(
             style=SimpleNamespace(meta={"option": 0}), chain=1,
         ))
         assert options.highlighted == 0
         assert selected == []
-        await options._on_click(SimpleNamespace(
+        await PreviewOptionList._on_click(options, SimpleNamespace(
             style=SimpleNamespace(meta={"option": 0}), chain=2,
         ))
         assert selected == [0]
