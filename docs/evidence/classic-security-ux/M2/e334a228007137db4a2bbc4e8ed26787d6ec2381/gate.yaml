@@ -95,6 +95,7 @@ sin_evidencia_real:
   - promoción multiarchivo atómica
   - Windows y macOS
   - Classic autónomo con 0 aprobaciones por acción
+  - este push no esperó los checks; el remoto imprimió Bypassed rule violations para 0f9a4e4, 3 de 3 checks esperados, enforce_admins sigue apagado
 regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1070 passed, 2 skipped, 11 deselected; 145.89s
 riesgos_residuales: la promoción archivo a archivo puede quedar a medias; un checkout de más de 512 MiB no ejecuta comandos; el doble FAKE_BWRAP no es un namespace; crear o borrar symlinks no se promueve
 rollback_ensayado: revertir e334a228007137db4a2bbc4e8ed26787d6ec2381 devuelve el bind escribible anterior; M2 no cambia grants guardados ni abre autonomía

@@ -427,7 +427,7 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1 y G2 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. El siguiente trabajo de producto es M3.**
+**Próximo paso: G0, G1 y G2 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El push de M2 (`0f9a4e4`) imprimió `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. El siguiente trabajo de producto es M3.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
