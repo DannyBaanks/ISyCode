@@ -18,6 +18,7 @@ import urllib.error
 from typing import Iterator, Callable
 
 from isycode.egress import EgressDenied, review_destination
+from isycode.turn_control import TransportRetry, tool_arguments_complete
 
 DEFAULT_STREAM_TIMEOUT_S = None
 
@@ -245,8 +246,18 @@ async def async_stream_complete(
     # The peer is the address review_destination accepted. The Host header and
     # the TLS name stay the configured hostname. An ambient proxy is not used.
     peer = reviewed.ips[0]
-    reader, writer = await bounded(asyncio.open_connection(
-        peer, reviewed.port, ssl=tls, server_hostname=host if tls else None))
+
+    async def connect_once():
+        # Retries stay here, before request bytes. A lost response is not retried.
+        return await bounded(asyncio.open_connection(
+            peer, reviewed.port, ssl=tls, server_hostname=host if tls else None))
+
+    try:
+        reader, writer = await TransportRetry().attempt(connect_once)
+    except asyncio.CancelledError:
+        raise
+    except (ConnectionRefusedError, TimeoutError, asyncio.TimeoutError, OSError) as exc:
+        raise StreamError("provider connection failed") from exc
     content: list[str] = []
     reasoning: list[str] = []
     usage: dict = {}
@@ -403,12 +414,19 @@ async def async_stream_complete(
                     break
         if not stream_done and not finish_reason:
             raise StreamError("provider closed an incomplete completion stream")
+        executable: list[dict] = []
+        # [DONE] is the end of the frame. A finish reason without it, a length
+        # stop, or arguments that are not one JSON object are not a tool call.
+        if stream_done and finish_reason not in {"length", "content_filter"}:
+            for index in sorted(tool_calls):
+                call = tool_calls[index]
+                raw = (call.get("function") or {}).get("arguments")
+                if tool_arguments_complete(raw):
+                    executable.append(call)
         return {
             "text": "".join(content), "reasoning": "".join(reasoning),
             "finish_reason": finish_reason, "usage": usage,
-            # A syntactically valid prefix is still not a completed tool request.
-            "tool_calls": ([] if finish_reason in {"length", "content_filter"} else
-                           [tool_calls[index] for index in sorted(tool_calls)]),
+            "tool_calls": executable,
             "latency_s": time.monotonic() - started,
         }
     except asyncio.TimeoutError as error:

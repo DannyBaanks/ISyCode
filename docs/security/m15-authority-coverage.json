@@ -1775,7 +1775,7 @@
     },
     {
       "file": "isycode/publish.py",
-      "line": 57,
+      "line": 60,
       "callable": "isycode.publish.PublishOwner.prepare",
       "action": "git.push",
       "owner": "workspace_publish"

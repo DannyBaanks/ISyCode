@@ -25,6 +25,10 @@ class StagingError(OSError):
     """The workspace cannot be staged. Nothing was run on the host."""
 
 
+class PromotionCancelled(Exception):
+    """Promotion stopped at a checkpoint. Later files are not applied."""
+
+
 @dataclass
 class Staging:
     original: Path
@@ -122,14 +126,23 @@ def promote_changes(staging: Staging, changes: list[dict[str, str]]) -> tuple[li
 
 
 def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
-                      ledger=None, crash_at: str | None = None) -> tuple[list[str], list[str], dict]:
+                      ledger=None, crash_at: str | None = None,
+                      operation_id: str | None = None, operations=None,
+                      interrupt=None) -> tuple[list[str], list[str], dict]:
     """Reserve a finite effect, back up preimages, then promote. A crash rolls back.
 
     Directory entries are not part of the reservation. Empty directories are
     removed only after the ledger commit, so a crash before that commit still
-    has the files to restore. ``crash_at`` is a test seam.
+    has the files to restore. ``crash_at`` is a test seam. ``interrupt`` is
+    the cancel seam: it is called at the same steps and may raise
+    ``PromotionCancelled``. The same ``operation_id`` is not applied twice.
     """
     from isycode.effect_ledger import CrashInjected, EffectCost, EffectLedger, LedgerDenied
+
+    if operation_id is not None and operations is not None:
+        replayed = _replay_operation(operations, operation_id, ledger, staging)
+        if replayed is not None:
+            return replayed
 
     live = _index(staging.original)
     staged_now = _index(staging.root)
@@ -179,19 +192,55 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
     book = ledger or EffectLedger(staging.original)
     _crash(crash_at, "before-reserve")
     with book.exclusive():
-        result = _promote_reserved(book, staging, changes, refused, plan, churn, crash_at)
+        result = _promote_reserved(book, staging, changes, refused, plan, churn, crash_at,
+                                   operation_id, operations, interrupt)
     if result[2].get("state") == "committed":
         _remove_empty_deleted_directories(staging, changes, refused)
     return result
 
 
+def _replay_operation(operations, operation_id: str, ledger, staging: Staging):
+    """Return the one recorded effect, or raise when the response was lost."""
+    from isycode.effect_ledger import EffectLedger, LedgerDenied
+
+    try:
+        existing = operations.lookup(operation_id)
+    except Exception as exc:
+        raise LedgerDenied("promotion is uncertain; the operation journal is unreadable",
+                           effect_state="uncertain") from exc
+    if existing is None:
+        return None
+    if existing.phase == "receipt":
+        return list(existing.applied), list(existing.refused), {"state": "committed", "reconciled": True}
+    if existing.phase not in {"effected", "uncertain"}:
+        return None
+    book = ledger or EffectLedger(staging.original)
+    try:
+        outcome = book.reconcile()
+    except LedgerDenied:
+        outcome = "UNCERTAIN"
+    if outcome == "COMMITTED":
+        operations.mark_receipt(operation_id, result="committed",
+                                applied=existing.applied, refused=existing.refused)
+        return list(existing.applied), list(existing.refused), {"state": "committed", "reconciled": True}
+    if existing.phase != "uncertain":
+        operations.mark_uncertain(operation_id, "promotion response was lost")
+    info = book.status()
+    raise LedgerDenied(
+        "promotion is uncertain; "
+        f"ledger has {info['unique_paths']} paths, {info['delete_ops']} deletes "
+        f"and {info['churn_bytes']} churn bytes",
+        effect_state="uncertain")
+
+
 def _promote_reserved(book, staging: Staging, changes: list[dict[str, str]], refused: list[str],
-                      plan: list[dict], churn: int, crash_at: str | None):
+                      plan: list[dict], churn: int, crash_at: str | None,
+                      operation_id: str | None = None, operations=None, interrupt=None):
     from isycode.effect_ledger import CrashInjected, EffectCost, LedgerDenied
 
     reservation = book.reserve(EffectCost(tuple(item["path"] for item in plan),
                                           sum(item["kind"] == "delete" for item in plan), churn))
-    _crash(crash_at, "after-reserve")
+    _checkpoint(crash_at, interrupt, "after-reserve")
     started = False
     committed = False
     applied: list[str] = []
@@ -206,24 +255,59 @@ def _promote_reserved(book, staging: Staging, changes: list[dict[str, str]], ref
             if hashlib.sha256(payload).hexdigest() != item["preimage"]:
                 raise LedgerDenied("preimage changed before backup")
             book.backup_file(reservation, item["path"], payload)
-        _crash(crash_at, "after-backup")
+        _checkpoint(crash_at, interrupt, "after-backup")
         book.store_plan(reservation, plan)
-        _crash(crash_at, "after-plan")
+        _checkpoint(crash_at, interrupt, "after-plan")
         for index, item in enumerate(plan):
-            _crash(crash_at, f"before-apply:{index}")
+            _checkpoint(crash_at, interrupt, f"before-apply:{index}")
+            if index == 0 and operation_id is not None and operations is not None:
+                record, claimed = operations.claim_effect(
+                    operation_id, kind="promote",
+                    applied=[entry["path"] for entry in plan], refused=list(refused))
+                if not claimed:
+                    if record.phase == "receipt":
+                        try:
+                            book.abort(reservation)
+                        except LedgerDenied:
+                            pass
+                        return list(record.applied), list(record.refused), {
+                            "state": "committed", "reconciled": True}
+                    raise LedgerDenied("promotion is uncertain; reconcile before repeating",
+                                       effect_state="uncertain")
             started = True
             book.mark_applying(reservation, item["path"])
-            _crash(crash_at, f"after-mark-applying:{index}")
+            _checkpoint(crash_at, interrupt, f"after-mark-applying:{index}")
             _apply(staging, item["path"], item["kind"])
-            _crash(crash_at, f"after-apply:{index}")
+            _checkpoint(crash_at, interrupt, f"after-apply:{index}")
             book.mark_applied(reservation, item["path"])
             applied.append(item["path"])
-            _crash(crash_at, f"after-mark-applied:{index}")
-        _crash(crash_at, "before-commit")
+            _checkpoint(crash_at, interrupt, f"after-mark-applied:{index}")
+        _checkpoint(crash_at, interrupt, "before-commit")
         book.commit(reservation, applied_paths=tuple(applied),
                     deletes=sum(item["kind"] == "delete" for item in plan), churn_bytes=churn)
         committed = True
-        _crash(crash_at, "after-commit")
+        if operation_id is not None and operations is not None:
+            operations.mark_receipt(operation_id, result="committed",
+                                    applied=applied, refused=list(refused))
+        _checkpoint(crash_at, interrupt, "after-commit")
+    except PromotionCancelled:
+        if not committed and started:
+            try:
+                outcome = book.reconcile()
+            except LedgerDenied:
+                outcome = "UNCERTAIN"
+            if operation_id is not None and operations is not None:
+                if outcome == "COMMITTED":
+                    operations.mark_receipt(operation_id, result="committed",
+                                            applied=applied, refused=list(refused))
+                else:
+                    operations.mark_uncertain(operation_id, "cancelled during promotion")
+        elif not committed:
+            try:
+                book.abort(reservation)
+            except LedgerDenied:
+                pass
+        raise
     except CrashInjected:
         raise
     except (LedgerDenied, OSError) as exc:
@@ -252,6 +336,12 @@ def _crash(crash_at: str | None, step: str) -> None:
     if crash_at == step:
         from isycode.effect_ledger import CrashInjected
         raise CrashInjected(step)
+
+
+def _checkpoint(crash_at: str | None, interrupt, step: str) -> None:
+    _crash(crash_at, step)
+    if interrupt is not None:
+        interrupt(step)
 
 
 def _nbytes(root: Path, relative: str) -> int:

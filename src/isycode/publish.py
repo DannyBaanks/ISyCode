@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from isycode.action_runtime import ActionOutcome, ActionReceipt, ProductActionGate
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
+from isycode.turn_control import OperationError, OperationJournal
 from isycode.workspace_authority import WorkspaceAuthority
 
 OWNER_ID = "workspace_publish"
@@ -43,11 +44,13 @@ class PublishPreview:
 class PublishOwner:
     """The only owner of ``git.push``. It never shells out to git."""
 
-    def __init__(self, root: Path, authority: WorkspaceAuthority, approvals: ActionApprovalStore):
+    def __init__(self, root: Path, authority: WorkspaceAuthority, approvals: ActionApprovalStore, *,
+                 operations: OperationJournal | None = None):
         self.root = root.resolve(strict=True)
         self.authority = authority
         self.approvals = approvals
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
+        self.operations = operations if operations is not None else OperationJournal(self.root)
 
     def prepare(self, remote: str, ref: str, content_sha256: str) -> PublishPreview:
         if not remote_is_exact(remote) or not isinstance(ref, str) or _REF.fullmatch(ref) is None:
@@ -69,6 +72,18 @@ class PublishOwner:
                 or request.target != preview.remote):
             return ActionOutcome("Publication denied.", "DENY", None,
                                  "publication no longer matches the reviewed request")
+        operation_id = request.digest
+        try:
+            existing = self.operations.lookup(operation_id)
+        except OperationError:
+            return ActionOutcome("Publication uncertain.", "UNCERTAIN", None,
+                                 "the publication record is unreadable; reconcile before repeating")
+        if existing is not None and existing.phase == "receipt":
+            return ActionOutcome(existing.result or "published", "ALLOW", None,
+                                 "already published; the effect was not repeated")
+        if existing is not None and existing.phase in {"effected", "uncertain"}:
+            return ActionOutcome("Publication uncertain.", "UNCERTAIN", None,
+                                 "the publication response was lost; reconcile before repeating")
         _, decision = self.gate.authorize(request, approvals=self.approvals, approval=approval)
         if not decision.allowed:
             return ActionOutcome("Publication denied.", "DENY", None,
@@ -77,7 +92,23 @@ class PublishOwner:
         if transport is None:
             return ActionOutcome("Publication denied.", "DENY", None,
                                  "no publication transport is registered")
-        transport(preview.remote, preview.ref, preview.content_sha256)
+        try:
+            record, claimed = self.operations.claim_effect(operation_id, kind="publish")
+        except OperationError:
+            return ActionOutcome("Publication uncertain.", "UNCERTAIN", None,
+                                 "the publication record is unreadable; reconcile before repeating")
+        if not claimed:
+            if record.phase == "receipt":
+                return ActionOutcome(record.result or "published", "ALLOW", None,
+                                     "already published; the effect was not repeated")
+            return ActionOutcome("Publication uncertain.", "UNCERTAIN", None,
+                                 "the publication response was lost; reconcile before repeating")
+        try:
+            transport(preview.remote, preview.ref, preview.content_sha256)
+        except Exception:
+            self.operations.mark_uncertain(operation_id, "transport ended without a receipt")
+            return ActionOutcome("Publication uncertain.", "UNCERTAIN", None,
+                                 "the publication transport ended without a receipt; it was not repeated")
         result = "published"
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "git.push", request.digest,
@@ -85,6 +116,7 @@ class PublishOwner:
         if not receipt.verify(request, result) or not self.gate.persist_receipt(request, receipt):
             return ActionOutcome("Publication is not verifiable.", "NOT_VERIFIABLE", None,
                                  "durable publication receipt could not be persisted")
+        self.operations.mark_receipt(operation_id, result=result)
         return ActionOutcome(result, "ALLOW", receipt, "one approved remote and content digest")
 
 

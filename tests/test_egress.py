@@ -373,23 +373,30 @@ def test_g5_04_publication_requires_exact_approval(tmp_path, monkeypatch):
     assert calls == []
 
     authority.set_grant("git.push", enabled=True, targets=[REMOTE])
+    spent = approvals.issue(preview.request)
+    assert "no publication transport" in owner.run(preview, spent, None).reason
+    assert owner.run(preview, spent, transport).decision == "DENY"
+    assert calls == []
+
     approval = approvals.issue(preview.request)
     allowed = owner.run(preview, approval, transport)
     assert allowed.decision == "ALLOW" and calls == [(REMOTE, "main", DIGEST)]
-    assert owner.run(preview, approval, transport).decision == "DENY"
+    repeated = owner.run(preview, approval, transport)
+    assert repeated.decision == "ALLOW" and "not repeated" in repeated.reason
     assert calls == [(REMOTE, "main", DIGEST)]
 
     changed_digest = owner.prepare(REMOTE, "main", OTHER_DIGEST)
     assert owner.run(changed_digest, approvals.issue(preview.request), transport).decision == "DENY"
     changed_remote = owner.prepare(OTHER_REMOTE, "main", DIGEST)
     assert owner.run(changed_remote, approvals.issue(changed_remote.request), transport).decision == "DENY"
-    fresh = approvals.issue(preview.request)
-    assert "no publication transport" in owner.run(preview, fresh, None).reason
     assert calls == [(REMOTE, "main", DIGEST)]
 
     authority.set_grant("git.push", enabled=False, targets=[REMOTE])
     rejected = owner.prepare(REMOTE, "main", DIGEST)
-    assert owner.run(rejected, approvals.issue(rejected.request), transport).decision == "DENY"
+    again = owner.run(rejected, approvals.issue(rejected.request), transport)
+    assert again.decision == "ALLOW" and "not repeated" in again.reason
+    other = owner.prepare(REMOTE, "refs/heads/other", OTHER_DIGEST)
+    assert owner.run(other, approvals.issue(other.request), transport).decision == "DENY"
     assert calls == [(REMOTE, "main", DIGEST)]
 
     authority.set_mode("classic")
