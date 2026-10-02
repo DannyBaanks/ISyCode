@@ -1,6 +1,6 @@
 # Roadmap ejecutable: Classic seguro, Security explícito y UX de uso diario
 
-Fecha: 2026-10-02. Estado: **M0, M1, M2 y M3 en revisión; M4–M10 pendientes**. Ninguna puerta está APROBADA.
+Fecha: 2026-10-02. Estado: **M0, M1, M2, M3 y M4 en revisión; M5–M10 pendientes**. Ninguna puerta está APROBADA.
 Este documento define el destino y sus puertas de aceptación; publicarlo no supera ninguna puerta.
 La evidencia de M0 está en [docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/](evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml). No aprueba G0.
 La evidencia de M1 está en [docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/](evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/gate.yaml). No aprueba G1 ni abre Classic autónomo.
@@ -149,7 +149,7 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | M1 | Política común, CI de gates y primera separación TUI | M0 | EN REVISIÓN | G1 |
 | M2 | Aislamiento real y staging de efectos | M1 | EN REVISIÓN | G2 |
 | M3 | Ledger de presupuestos y recuperación durable | M2 | EN REVISIÓN | G3 |
-| M4 | Confianza, perfiles Classic/Security y degradación | M3 | PENDIENTE | G4 |
+| M4 | Confianza, perfiles Classic/Security y degradación | M3 | EN REVISIÓN | G4 |
 | M5 | Egress, secretos e integraciones acotadas | M3 | PENDIENTE | G5 |
 | M6 | Bucle, cancelación y retry reconciliado | M4, M5 | PENDIENTE | G6 |
 | M6A | Agentes observables e instrucciones en cola | M6 | PENDIENTE | G6A |
@@ -427,14 +427,14 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1, G2 y G3 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El push de M2 (`0f9a4e4`) y el de M3 (`948b0f9`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M3 está en [docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/](evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/gate.yaml). El siguiente trabajo de producto es M4, sin abrir Classic autónomo.**
+**Próximo paso: G0, G1, G2, G3 y G4 siguen EN REVISIÓN. Ninguna puerta está APROBADA. Los push de M2 (`0f9a4e4`), de M3 (`948b0f9`) y del producto de M4 (`1b43eef`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M4 está en [docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/](evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/gate.yaml). El siguiente trabajo de producto es M5 (egress, secretos y publicación), sin abrir red autónoma ni el bucle de agente.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
 1. Lee AGENTS.md, git status/branch/remotes y las instrucciones aplicables.
 2. Preserva cambios ajenos; identifica baseline y evidencia del ultimo gate.
 3. Selecciona el primer hito cuyas dependencias esten APROBADAS.
-   M0, M1, M2 y M3 están EN REVISIÓN: no los marques APROBADOS ni los reabras como si no hubiera evidencia.
+   M0, M1, M2, M3 y M4 están EN REVISIÓN: no los marques APROBADOS ni los reabras como si no hubiera evidencia.
 4. Reutiliza owners y contratos existentes; verifica fuentes antes de proponer duplicados.
 5. Ejecuta sus IDs de aceptacion y regresiones pertinentes con SHA y entorno.
 6. Si falla una prueba obligatoria, para dependientes y corrige o registra BLOQUEADO.

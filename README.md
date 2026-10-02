@@ -37,8 +37,8 @@ Las capturas son evidencia histórica de la TUI real de Textual con un workspace
 
 Lo que verás al usarla:
 
-- **Chat y transcript limpio:** las lecturas salen en una sola línea gris (`✓ read src/app.py · rcpt_…`); cada cambio de archivo muestra tu decisión (`✓ You approved · ruta` o `✗ You rejected · ruta · nothing was written`) y el modelo la recibe en el resultado (`approved_by_user`), así nunca confunde un rechazo con un éxito.
-- **Aprobaciones:** cada cambio, comando o commit abre una ventana con el diff o el comando exacto. `y` aprueba, `n` o `Esc` rechazan y `Enter` sobre el botón por defecto rechaza. Si una escritura reemplaza un archivo existente completo, la ventana lo dice: *Replace whole file*.
+- **Chat y transcript limpio:** las lecturas salen en una sola línea gris (`✓ read src/app.py · rcpt_…`). Un cambio que revisas muestra tu decisión (`✓ You approved · ruta` o `✗ You rejected · ruta · nothing was written`) y el modelo la recibe en `approved_by_user`. En una carpeta Classic ya confiable, el cambio ordinario sale como `✓ Quiet Classic · ruta` y el modelo recibe `approved_by_user: false` con `approval_mode: quiet-profile`. Un rechazo no se presenta como un éxito, y una edición quieta no se presenta como si la hubieras aprobado una a una.
+- **Aprobaciones:** mientras la carpeta no está confiada, cada cambio, comando o commit abre una ventana con el diff o el comando exacto. `y` aprueba, `n` o `Esc` rechazan y `Enter` sobre el botón por defecto rechaza. Si una escritura reemplaza un archivo existente completo, la ventana lo dice: *Replace whole file*. Tras confiar la carpeta, las ediciones recuperables y los comandos con sandbox dejan de abrir esa ventana. El commit, los secretos, la autoridad, deshacer y MCP siguen abriéndola.
 - **Settings y la paleta `/`:** se abren como una ventana grande y centrada. La opción resaltada se explica debajo de la lista; las que llevan `?` abren un cuadrito de ayuda al pulsar `?`. En el campo de filtro, `?` se escribe normal.
 - **Panel Tasks:** el plan del agente con su progreso. Clic en el panel o `Ctrl+T` lo pliegan a una línea (`▸ Tasks · 3/7 done · now: …`) y lo vuelven a abrir.
 - **Panel lateral:** MCPs, LSPs y Skills aparecen como interruptores **● ON** (verde) u **OFF ○** (rojo), con el motivo en gris y un resumen en el título (`LSPs · 1/2 on`). Cada sección se pliega con un clic en su título; Gateway, Mobile Host, Bridge y Workspace empiezan plegadas.
@@ -147,18 +147,18 @@ Cada workspace tiene su modo. Lo eliges la primera vez que abres la carpeta (`Es
 | | Classic | Security |
 | --- | --- | --- |
 | Leer y buscar archivos del workspace | incluido | lo activas tú |
-| Proponer ediciones (diff + *Apply* en cada cambio) | incluido | lo activas tú |
+| Proponer ediciones (diff + *Apply* en cada cambio) | incluido; tras confiar la carpeta, las ediciones ordinarias se aplican sin preguntar cada una; antes de eso, diff + *Apply* | lo activas tú |
 | Chat con el provider elegido (solo hosts conocidos o el endpoint configurado) | incluido | lo activas tú |
 | Guardar y reanudar conversaciones | incluido | lo activas tú |
 | Guardar, usar y quitar API keys (guardar y quitar piden confirmación) | incluido | lo activas tú por servicio |
 | Git status/diff y commits revisados | incluido; cada commit pide aprobación | permiso explícito; cada commit pide aprobación |
-| Comandos de desarrollo en sandbox Bubblewrap/seccomp (si está disponible) | incluido; revisas y apruebas cada comando | permiso explícito; revisas y apruebas cada comando |
+| Comandos de desarrollo en sandbox Bubblewrap/seccomp (si está disponible) | incluido; tras confiar la carpeta no pregunta cada comando; antes de eso, revisas y apruebas cada uno. Sin sandbox se quedan apagados | permiso explícito; revisas y apruebas cada comando |
 | MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
 | Gateway, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
-| Borrar y mover archivos | implícito (con aprobación por acción) | permiso explícito |
+| Borrar y mover archivos | implícito; tras confiar la carpeta no pregunta cada vez; antes de eso, aprobación por acción | permiso explícito |
 | Shell libre, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
 
-Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: los comandos pasan solo por el sandbox verificado, cambios/commits conservan su aprobación exacta, IsySentinel revisa cada acción y todo queda en el journal. Si no hay sandbox, no existe fallback inseguro. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
+Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: los comandos pasan solo por el sandbox verificado. En una carpeta que todavía no confiaste, cada edición y cada comando conservan su aprobación exacta. Cuando confías la carpeta, las lecturas, las ediciones recuperables dentro del presupuesto y los comandos aislados dejan de preguntar uno a uno. El commit, los secretos, los cambios de autoridad, deshacer, MCP y un comando sin sandbox siguen pidiendo confirmación o se quedan apagados. IsySentinel revisa cada acción y todo queda en el journal. Si no hay sandbox, no existe fallback inseguro. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security. Una carpeta movida, copiada o recreada no hereda la confianza.
 
 ## Qué puede hacer el agente
 
@@ -168,12 +168,12 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | --- | --- | --- | --- |
 | Listar, leer y buscar por nombre | `workspace_list`, `workspace_read`, `workspace_search` | Read and search workspace files | no |
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
-| Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto |
-| Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto |
-| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra |
-| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (incluido en Classic) | sí; nunca sobrescribe el destino |
+| Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
+| Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
+| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra, salvo carpeta Classic ya confiable |
+| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (incluido en Classic) | sí; nunca sobrescribe el destino. En carpeta Classic ya confiable no pregunta cada vez |
 | Deshacer el último cambio de ISyCode | `/undo` | Edit workspace files | sí, con el diff inverso |
-| Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto |
+| Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto, salvo carpeta Classic ya confiable y con sandbox |
 | Ver rama, cambios y diffs | `git_status`, `git_diff`, `/git`, `/diff` | See git status and diffs | no |
 | Crear un commit | `git_commit`, `/commit` | Create git commits | sí, con archivos, mensaje y diff |
 | Herramientas de servidores MCP locales | `mcp__<servidor>__<herramienta>`, `/mcp` | se concede al arrancar el servidor | sí: al arrancar y en cada llamada |
@@ -181,7 +181,7 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | Mostrar su plan de trabajo | `update_tasks` (panel **Tasks**) | ninguno: no es una acción | no |
 | Copiar texto que **tú** seleccionas | selección con el ratón, *Copy path* | Copy selected text to the clipboard | no (es un gesto tuyo; el modelo no tiene esta herramienta) |
 
-**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Cada cambio, comando y commit sigue pidiéndote aprobación.
+**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Eso no apaga las preguntas. Cada commit sigue pidiendo aprobación. Los cambios y comandos ordinarios dejan de preguntar uno a uno solo después de confiar la carpeta. Sin esa confianza, cada uno sigue pidiendo aprobación. Sin sandbox los comandos se quedan apagados.
 
 Si una herramienta está apagada, el agente te dice dónde activarla en vez de solo decir que no puede.
 
@@ -252,7 +252,7 @@ Responde una vez y sale. Usa los mismos owners, IsySentinel y journal que la TUI
 | Comando | Qué hace |
 | --- | --- |
 | `/undo` | Deshace el último cambio de ISyCode, mostrando antes el diff |
-| `/run <programa> [args]` | Ejecuta un comando en el sandbox (pide aprobación) |
+| `/run <programa> [args]` | Ejecuta un comando en el sandbox. Pide aprobación salvo que la carpeta esté confiada y haya sandbox |
 | `/git`, `/diff [ruta] [--staged]` | Rama y cambios; diff |
 | `/commit <mensaje>` | Commit de los archivos cambiados tras revisar el diff |
 | `/mcp add playwright`, `/mcp add context7`, `/mcp`, `/mcp start <nombre>`, `/mcp stop <nombre>` | MCP fijados; al añadir se configura, al iniciar se revisa npm y cada llamada pide aprobación |
@@ -394,7 +394,7 @@ Lo poquito que queda, en orden:
 
 ## Roadmap y documentación
 
-**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0, M1, M2 y M3 están en revisión y no cambian los permisos: el Classic actual todavía confirma cada edición y cada comando. Un comando aprobado escribe en una copia y el árbol cambia al promover ese diff. Esa promoción, igual que escribir, borrar o mover, cuenta en un ledger fuera del checkout. Si pasa el tope, el comando puede terminar y el árbol no cambia. El objetivo sigue siendo autonomía acotada, con confirmación solo al cruzar una frontera real.
+**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0, M1, M2, M3 y M4 están en revisión. Ninguna puerta está APROBADA. En una carpeta Classic que todavía no confiaste, cada edición y cada comando siguen pidiendo confirmación. Tras confiarla, las ediciones recuperables y los comandos con sandbox dejan de preguntar uno a uno; el commit, los secretos y la autoridad siguen preguntando. Un comando escribe en una copia y el árbol cambia al promover ese diff. Esa promoción, igual que escribir, borrar o mover, cuenta en un ledger fuera del checkout. Si pasa el tope, el comando puede terminar y el árbol no cambia. El objetivo sigue siendo autonomía acotada, con confirmación al cruzar una frontera real.
 
 La estrategia histórica describía dos etapas (la evolución Classic/Security se concreta ahora en el roadmap anterior): primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
 
