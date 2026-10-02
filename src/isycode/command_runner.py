@@ -236,7 +236,7 @@ class CommandRunOwner:
             raise ValueError(f"timeout must be 1–{COMMAND_MAX_TIMEOUT_S} seconds")
         sandbox = sandbox_executable()
         if sandbox is None:
-            raise ValueError("the command sandbox needs bubblewrap, libseccomp and python3 on Linux")
+            raise ValueError("the command sandbox needs bubblewrap, libseccomp and python3 on Linux; commands stay disabled and there is no unsandboxed fallback")
         program = resolve_program(self.root, argv[0])
         masks = sensitive_entries(self.root)
         request = ActionRequest(

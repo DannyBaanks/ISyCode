@@ -5,7 +5,7 @@ import json
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible, Static
 
-from isycode.tui import Banner, ChatArea, SidePanel, TUIApp
+from isycode.tui import Banner, ChatArea, SidePanel, TUIApp, TailscaleConfirmScreen
 from test_daily_tui import configure
 
 
@@ -44,6 +44,9 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            if isinstance(app.screen, TailscaleConfirmScreen):
+                await pilot.press("escape")
+                await pilot.pause()
             banner = app.query_one(Banner)
             header = plain_text(banner)
             assert cell_len(header) <= banner.content_size.width

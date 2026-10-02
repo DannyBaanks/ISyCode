@@ -20,7 +20,12 @@ def configure(tmp_path, monkeypatch):
     monkeypatch.setenv('ISYCODE_MODEL', 'gpt-6-luna')
     monkeypatch.setenv('OPENAI_API_KEY', 'test-not-real')
     UserDefaultsStore().update(new_workspace='temporary', new_workspace_mode='classic')
-    WorkspaceAuthority(project).set_mode('classic')
+    authority = WorkspaceAuthority(project)
+    authority.set_mode('classic')
+    # Existing UI tests did not take the quiet-profile onboarding. Remember
+    # that decline so startup does not cover the prompt with the trust screen.
+    from isycode.workspace_trust import WorkspaceTrust
+    WorkspaceTrust().decline(authority)
 
     async def no_external_catalog(self):
         # Product-flow startup remains active; tests do not need live optional

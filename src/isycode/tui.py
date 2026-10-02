@@ -838,7 +838,9 @@ class WorkspaceModeScreen(ModalScreen[str]):
             yield Static("How should ISyCode work in this folder?", id="workspace-mode-title")
             yield Static(
                 f"{self.root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
-                "Each edit, delete/move, command and commit still shows what will happen and asks first.\n"
+                "A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. "
+                "Until you confirm that, each edit, delete/move, command and commit still asks. "
+                "Commits, secrets and authority changes keep asking either way.\n"
                 "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
                 "Both modes use IsySentinel and the action journal. "
                 "Free shell and sensitive files are never implied. Switch any time "
@@ -2392,6 +2394,7 @@ class TUIApp(App):
                     else:
                         chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
                     authority.set_mode(chosen)
+                await self._offer_quiet_trust(authority)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append("  Workspace mode could not be saved · Security rules apply.", YELLOW)
             self._update_workspace_identity_ui()
@@ -2419,13 +2422,57 @@ class TUIApp(App):
         except (WorkspaceAuthorityError, OSError, ValueError):
             return "security"
 
+    def _request_is_quiet(self, request) -> bool:
+        """Trusted Classic covers this request, so the per-action modal stays closed."""
+        try:
+            from isycode.workspace_trust import quiet_classic
+            return bool(quiet_classic(WorkspaceAuthority(request.workspace_root), request))
+        except Exception:
+            return False
+
+    async def _offer_quiet_trust(self, authority, *, again: bool = False) -> None:
+        """Human confirmation only. A decline is remembered; Security never reaches here."""
+        from isycode.workspace_setup import broad_workspace_reason
+        from isycode.workspace_trust import (
+            ACCEPT_PHRASE, WorkspaceTrust, onboarding_brief,
+        )
+
+        try:
+            trust = WorkspaceTrust()
+            if authority.mode() != "classic":
+                return
+            if broad_workspace_reason(authority.root):
+                self._append("  This folder is too broad for the quiet Classic profile. "
+                             "Each edit and command still asks.", YELLOW)
+                return
+            if trust.trusted(authority):
+                return
+            if not again and not trust.needs_onboarding(authority):
+                return
+            brief = onboarding_brief(
+                root=authority.root, mode="Classic", provider=selected_provider_name(),
+                sends_workspace_context=True)
+            confirmed = await self._await_screen(TailscaleConfirmScreen(
+                "Trust this folder?", brief, "Trust this folder"))
+            if confirmed:
+                trust.accept(authority, ACCEPT_PHRASE)
+                self._append("  Quiet Classic is on for ordinary edits and sandboxed tests. "
+                             "Commits, secrets and authority changes still ask.", GREEN)
+            else:
+                trust.decline(authority)
+                self._append("  Quiet Classic stays off. Each edit and command still asks.", MUTED)
+        except (OSError, ValueError, WorkspaceAuthorityError):
+            self._append("  Trust was not saved. Each edit and command still asks.", YELLOW)
+
     async def _change_workspace_mode(self, mode: str) -> None:
         classic = mode == "classic"
         if not await self._await_screen(TailscaleConfirmScreen(
                 "Switch this workspace to Classic?" if classic else "Switch this workspace to Security?",
                 ("Reading/searching, edit proposals, chat, sessions and Git review work without "
-                 "granting each capability. Sandbox commands are ready when supported. Edits, "
-                 "delete/move, commands and commits still show the exact action and ask first. "
+                 "granting each capability. Sandbox commands are ready when supported. "
+                 "The next screen can trust this folder for ordinary edits and isolated tests. "
+                 "Until then, edits, delete/move, commands and commits still ask. "
+                 "Commits, secrets and authority changes keep asking. "
                  "Integrations still need explicit permission; free shell and sensitive files "
                  "stay unavailable." if classic else
                  "Everything starts off; you allow each capability in Settings → Authority. "
@@ -2434,8 +2481,11 @@ class TUIApp(App):
             self._open_authority_menu()
             return
         try:
-            WorkspaceAuthority(self._workspace_root).set_mode(mode)
+            authority = WorkspaceAuthority(self._workspace_root)
+            authority.set_mode(mode)
             self._append(f"  This workspace now uses {'Classic' if classic else 'Security'} mode.", GREEN)
+            if classic:
+                await self._offer_quiet_trust(authority, again=True)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append(f"  Mode could not be changed ({type(exc).__name__}).", RED)
         self._update_workspace_identity_ui()
@@ -4350,7 +4400,8 @@ class TUIApp(App):
                 displayed_on("workspace.files.write", write_grant,
                              str(self._workspace_root) in write_grant.get("path_prefixes", [])),
                 "The assistant can propose creating, changing, moving and deleting files here. You see "
-                "the diff unless automatic edits are enabled for this folder. Moves/deletes still ask. /undo reverts the last change. Sensitive "
+                "the diff unless this folder is trusted for quiet Classic, or automatic edits are on. "
+                "A trusted folder still stays inside the effect budget. /undo reverts the last change. Sensitive "
                 "files stay off-limits."))
             if git_executable() and git_repository_available(self._workspace_root):
                 entries.append(self._capability_entry(
@@ -4376,16 +4427,18 @@ class TUIApp(App):
             if command_sandbox:
                 command_grant = grants.get("workspace.command.run", {})
                 entries.append(self._capability_entry(
-                    "Run commands in a sandbox · asks before every command", "workspace_command",
+                    "Run commands in a sandbox", "workspace_command",
                     displayed_on("workspace.command.run", command_grant,
                                  command_sandbox in command_grant.get("executables", [])),
-                    "The assistant can propose programs like tests or a build. You approve each exact "
-                    "command. It runs without network, with sensitive files hidden, and can only "
-                    "change files inside this workspace."))
+                    "The assistant can propose programs like tests or a build. Each exact command "
+                    "asks unless this folder is trusted for quiet Classic. It runs without network, "
+                    "with sensitive files hidden, and can only change files inside this workspace. "
+                    "There is no unsandboxed fallback."))
             else:
                 entries.append(self._entry(
                     "Run commands · sandbox not available on this computer", "info", "",
-                    "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off."))
+                    "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off. "
+                    "There is no unsandboxed fallback."))
             selected_name = selected_provider_name()
             selected_preset = PRESETS.get(selected_name, {})
             selected_url_text = (os.environ.get("ISYCODE_BASE_URL")
@@ -7735,8 +7788,14 @@ class TUIApp(App):
     async def _run_workspace_command(self, arguments: dict) -> str:
         """Show one exact command, run it in the sandbox only if approved, return its result."""
         if not self._command_tool_enabled():
-            self._append("  Command denied · workspace.command.run · commands are off here", YELLOW)
-            return json.dumps({"error": "sandboxed commands are not enabled for this workspace"})
+            if sandbox_executable() is None:
+                reason = ("the sandbox backend is absent, so commands stay off. "
+                          "There is no unsandboxed fallback.")
+            else:
+                reason = "commands are off here"
+            self._append(f"  Command denied · workspace.command.run · {reason}", YELLOW)
+            return json.dumps({"error": "sandboxed commands are not enabled for this workspace",
+                               "reason": reason})
         owner = CommandRunOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
                                 self._action_approvals)
         try:
@@ -7748,11 +7807,16 @@ class TUIApp(App):
             self._append(f"  Command denied · {reason}", YELLOW)
             return json.dumps({"error": "command cannot run", "reason": reason})
         shown = shlex.join(preview.argv)
-        self._append(f"  Command requested · {shown[:160]} · review it", CYAN)
-        if not await self._await_screen(CommandApprovalScreen(preview)):
-            self._append("  Command rejected · nothing ran", MUTED)
-            return json.dumps({"status": "rejected_by_user", "argv": list(preview.argv)})
-        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        quiet = self._request_is_quiet(preview.request)
+        if quiet:
+            self._append(f"  Command · quiet Classic · {shown[:160]}", CYAN)
+            approval = None
+        else:
+            self._append(f"  Command requested · {shown[:160]} · review it", CYAN)
+            if not await self._await_screen(CommandApprovalScreen(preview)):
+                self._append("  Command rejected · nothing ran", MUTED)
+                return json.dumps({"status": "rejected_by_user", "argv": list(preview.argv)})
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         self._append(f"  Running · {shown[:160]}", MUTED)
         outcome = await owner.run(preview, approval)
         if outcome.decision != "ALLOW" or outcome.receipt is None:
@@ -7800,18 +7864,24 @@ class TUIApp(App):
             reason = str(exc)[:200] or type(exc).__name__
             self._append(f"  Tool denied · {action} · {reason}", YELLOW)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
-        self._append(f"  Tool requested · {action} · {preview.path} · review it", CYAN)
-        if not await self._await_screen(WriteApprovalScreen(preview)):
-            self._append(f"  ✗ You rejected · {preview.path} · nothing changed", MUTED)
-            return json.dumps({"status": "rejected_by_user", "approved_by_user": False,
-                               "path": preview.path})
-        self._append(f"  ✓ You approved · {action.rsplit('.', 1)[-1]} {preview.path}", MUTED)
-        outcome = await asyncio.to_thread(
-            owner.apply, preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
+        quiet = self._request_is_quiet(preview.request)
+        if quiet:
+            self._append(f"  Tool · quiet Classic · {action} · {preview.path}", CYAN)
+            approval = None
+        else:
+            self._append(f"  Tool requested · {action} · {preview.path} · review it", CYAN)
+            if not await self._await_screen(WriteApprovalScreen(preview)):
+                self._append(f"  ✗ You rejected · {preview.path} · nothing changed", MUTED)
+                return json.dumps({"status": "rejected_by_user", "approved_by_user": False,
+                                   "path": preview.path})
+            self._append(f"  ✓ You approved · {action.rsplit('.', 1)[-1]} {preview.path}", MUTED)
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
-            return json.dumps({"status": "done", "approved_by_user": True, "result": outcome.text,
-                               "receipt": outcome.receipt.receipt_id})
+            return json.dumps({"status": "done", "approved_by_user": not quiet,
+                               "approval_mode": "quiet-profile" if quiet else "reviewed",
+                               "result": outcome.text, "receipt": outcome.receipt.receipt_id})
         self._append(f"  Tool {outcome.decision} · {action} · {outcome.reason[:180]}", YELLOW)
         return json.dumps({"error": "change was not applied", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
@@ -7853,14 +7923,21 @@ class TUIApp(App):
             self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
-        self._append(f"  Tool requested · {'replace whole file' if replaces else 'edit'} · "
-                     f"{preview.path} · review the diff", CYAN)
-        try:
-            delegated = self._folder_store().auto_edit_allowed(folder_alias)
-        except (OSError, ValueError) as exc:
-            return json.dumps({'error': f'Folder approval settings unavailable: {str(exc)[:120]}'})
-        choice = True if delegated else await self._await_screen(
-            WriteApprovalScreen(preview, replaces_whole_file=replaces))
+        quiet = self._request_is_quiet(preview.request)
+        if quiet:
+            self._append(f"  Tool · quiet Classic · {'replace whole file' if replaces else 'edit'} · "
+                         f"{preview.path}", CYAN)
+            delegated = False
+            choice = True
+        else:
+            self._append(f"  Tool requested · {'replace whole file' if replaces else 'edit'} · "
+                         f"{preview.path} · review the diff", CYAN)
+            try:
+                delegated = self._folder_store().auto_edit_allowed(folder_alias)
+            except (OSError, ValueError) as exc:
+                return json.dumps({'error': f'Folder approval settings unavailable: {str(exc)[:120]}'})
+            choice = True if delegated else await self._await_screen(
+                WriteApprovalScreen(preview, replaces_whole_file=replaces))
         if choice == 'always':
             delegated = await self._set_folder_auto_edit(folder_alias, True)
             choice = delegated
@@ -7877,14 +7954,24 @@ class TUIApp(App):
                 raise ValueError('Automatic edit approval was revoked')
         except (OSError, ValueError) as exc:
             return json.dumps({'error': str(exc)[:180]})
-        self._append(f"  ✓ {'User-enabled automatic edits' if delegated else 'You approved'} · {folder_alias} · {preview.path}", MUTED)
-        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        if quiet:
+            self._append(f"  ✓ Quiet Classic · {folder_alias} · {preview.path}", MUTED)
+            approval = None
+        else:
+            self._append(f"  ✓ {'User-enabled automatic edits' if delegated else 'You approved'} · {folder_alias} · {preview.path}", MUTED)
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
                          f"receipt {outcome.receipt.receipt_id}", GREEN)
-            result = {"status": "written", "approved_by_user": not delegated,
-                      "approval_mode": "delegated" if delegated else "reviewed", "folder": folder_alias, "path": preview.path,
+            if quiet:
+                approval_mode, approved_by_user = "quiet-profile", False
+            elif delegated:
+                approval_mode, approved_by_user = "delegated", False
+            else:
+                approval_mode, approved_by_user = "reviewed", True
+            result = {"status": "written", "approved_by_user": approved_by_user,
+                      "approval_mode": approval_mode, "folder": folder_alias, "path": preview.path,
                       "replaced_whole_file": replaces, "receipt": outcome.receipt.receipt_id}
             problems = await self._post_edit_diagnostics(preview.path, preview.content) if root == self._workspace_root else None
             if problems is not None:

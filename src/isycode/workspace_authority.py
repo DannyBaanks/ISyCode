@@ -53,10 +53,10 @@ class OneShotActionAuthority:
 
 MODES = frozenset({"security", "classic"})
 
-# Classic mode is a per-workspace preset of implicit grants, not a bypass:
-# IsySentinel, execution owners, per-action approvals (diff Apply, key save
-# and removal) and the action journal are unchanged. Anything not listed here
-# still needs an explicit grant, and explicitly denied actions stay denied.
+# Classic mode is a per-workspace preset of implicit grants, not a bypass.
+# Without a trust record, edits and commands still need a per-action approval.
+# A trusted root may skip that approval only for QUIET_CLASSIC_ACTIONS.
+# Explicit denials, IsySentinel, the journal and the effect ledger stay in force.
 CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.files.list", "workspace.files.read", "workspace.files.search",
     "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
@@ -336,7 +336,7 @@ class WorkspaceAuthority:
             if not request.target or request.target not in grant.get("targets", []):
                 return AuthorityDecision(False, "", "action target is not explicitly granted", digest)
 
-        if spec.approval_required:
+        if spec.approval_required and not _trusted_quiet(self, request):
             if approvals is None or not approvals.consume(request, approval):
                 return AuthorityDecision(False, "", "fresh request-bound approval is required", digest)
 
@@ -401,6 +401,15 @@ class WorkspaceAuthority:
         finally:
             if temporary.exists():
                 temporary.unlink()
+
+
+def _trusted_quiet(authority: WorkspaceAuthority, request: ActionRequest) -> bool:
+    """Fail closed: a broken trust lookup keeps the per-action approval."""
+    try:
+        from isycode.workspace_trust import quiet_classic
+        return bool(quiet_classic(authority, request))
+    except Exception:
+        return False
 
 
 __all__ = ["CLASSIC_ACTIONS", "MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]
