@@ -1,8 +1,9 @@
 # Roadmap ejecutable: Classic seguro, Security explícito y UX de uso diario
 
-Fecha: 2026-10-02. Estado: **M0 en revisión; M1–M10 pendientes**.
+Fecha: 2026-10-02. Estado: **M0 y M1 en revisión; M2–M10 pendientes**. Ninguna puerta está APROBADA.
 Este documento define el destino y sus puertas de aceptación; publicarlo no supera ninguna puerta.
-La evidencia de M0 está en [docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/](evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml). No aprueba G0 ni desbloquea M1.
+La evidencia de M0 está en [docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/](evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml). No aprueba G0.
+La evidencia de M1 está en [docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/](evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/gate.yaml). No aprueba G1 ni abre Classic autónomo.
 Los IDs `M0`–`M10` (incluido `M6A`) son locales a este roadmap, no los del [roadmap histórico](ROADMAP.md).
 Para esta evolución de Classic/Security prevalece esta dirección de producto; las descripciones actuales del README siguen describiendo el software disponible.
 
@@ -116,8 +117,7 @@ Restaurar solo preimágenes propias con compare-and-swap; un conflicto con edici
 
 ## 4. Reglas obligatorias de avance
 
-**Hoy estas reglas son procedimentales para agentes y revisores. No existe todavía enforcement automático de estas puertas.**
-M1 debe implementar posteriormente un validador/manifest de evidencia en CI y protección de rama/release para volverlas técnicamente obligatorias.
+El validador local de M1 ya corre en CI y rechaza un manifiesto ausente, inconsistente o autodeclarado APROBADO. La protección remota de rama no está demostrada: hasta que una comprobación de la API de GitHub la muestre activa, no es enforcement real. Un autor no marca APROBADO.
 Cambiar este Markdown o marcar una casilla no desbloquea trabajo dependiente.
 
 1. Estados permitidos: PENDIENTE, EN CURSO, BLOQUEADO, EN REVISIÓN, APROBADO y REABIERTO. Estado inicial de todos: PENDIENTE.
@@ -146,7 +146,7 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | Hito | Entrega | Dependencias | Estado | Puerta |
 | --- | --- | --- | --- | --- |
 | M0 | Baseline, reuso, amenazas y entorno medido | Ninguna | EN REVISIÓN | G0 |
-| M1 | Política común, CI de gates y primera separación TUI | M0 | PENDIENTE | G1 |
+| M1 | Política común, CI de gates y primera separación TUI | M0 | EN REVISIÓN | G1 |
 | M2 | Aislamiento real y staging de efectos | M1 | PENDIENTE | G2 |
 | M3 | Ledger de presupuestos y recuperación durable | M2 | PENDIENTE | G3 |
 | M4 | Confianza, perfiles Classic/Security y degradación | M3 | PENDIENTE | G4 |
@@ -427,14 +427,14 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: un revisor distinto acepta o devuelve G0. Ninguna puerta está APROBADA. M1 sigue bloqueado.**
+**Próximo paso: G0 y G1 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. El siguiente trabajo de producto es M2.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
 1. Lee AGENTS.md, git status/branch/remotes y las instrucciones aplicables.
 2. Preserva cambios ajenos; identifica baseline y evidencia del ultimo gate.
 3. Selecciona el primer hito cuyas dependencias esten APROBADAS.
-   M0 está EN REVISIÓN: no lo reabras como si no hubiera evidencia y no empieces M1.
+   M0 y M1 están EN REVISIÓN: no los marques APROBADOS ni los reabras como si no hubiera evidencia.
 4. Reutiliza owners y contratos existentes; verifica fuentes antes de proponer duplicados.
 5. Ejecuta sus IDs de aceptacion y regresiones pertinentes con SHA y entorno.
 6. Si falla una prueba obligatoria, para dependientes y corrige o registra BLOQUEADO.
