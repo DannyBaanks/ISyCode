@@ -11,3 +11,8 @@
 - When using the Bridge, call `bridge_core/capabilities/cap.agent_bridge/handshake.py`; do not edit `workspace/agents/bridge/` files directly. Keep identity and lease tokens in process memory and never print them in chat or logs.
 - Preserve unrelated user changes. Inspect repository state before editing and keep changes scoped to the requested work.
 - Do not claim that commands, tests, integrations, or external services ran unless they actually ran.
+
+## Classic/Security evolution gates
+
+- For changes advancing Classic autonomy, Security policy, or the associated UX, follow [the executable roadmap](docs/roadmap-classic-security-ux.md). Its target does not describe current behavior: the per-action approval rule above remains the baseline until the applicable gates authorize a tested transition.
+- Do not advance dependent milestones or release affected capabilities with failed, missing, or reopened prerequisites. Preserve evidence and user work; document publication is not gate completion. These are procedural requirements today; automated CI enforcement is a pending roadmap deliverable.
