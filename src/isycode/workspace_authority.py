@@ -29,6 +29,28 @@ class WorkspaceAuthorityError(RuntimeError):
     """Workspace grant state is invalid or unsafe to access."""
 
 
+class OneShotActionAuthority:
+    """Overlay one human-approved request without persisting a workspace grant.
+
+    ProductActionGate still runs ISySentinel, including owner binding and the
+    filesystem boundary. The overlay accepts one immutable request digest once;
+    every other request falls through to the normal WorkspaceAuthority policy.
+    """
+
+    def __init__(self, authority: "WorkspaceAuthority", approved_request: ActionRequest):
+        self.authority = authority
+        self._request_digest = approved_request.digest
+        self._used = False
+
+    def evaluate(self, request: ActionRequest, *, approvals=None, approval=None) -> AuthorityDecision:
+        if not self._used and request.digest == self._request_digest:
+            self._used = True
+            return AuthorityDecision(
+                True, "user-approved-once", "one exact request approved by the user",
+                request.digest)
+        return self.authority.evaluate(request, approvals=approvals, approval=approval)
+
+
 MODES = frozenset({"security", "classic"})
 
 # Classic mode is a per-workspace preset of implicit grants, not a bypass:
@@ -49,15 +71,16 @@ CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_PLAIN_ACTIONS | CLASSIC_SERVIC
 
 def _known_provider_hosts() -> list[str]:
     """Hosts of the provider presets and any configured endpoint override."""
-    from isycode.providers import PRESETS  # local import: providers loads lazily
+    from isycode.providers import PRESETS, provider_base_url  # providers loads lazily
 
     urls = [str(preset.get("base_url", "")) for preset in PRESETS.values()]
-    urls += [os.environ.get("ISYCODE_BASE_URL", ""), os.environ.get("ISYMOTRON_BASE_URL", "")]
+    urls += [provider_base_url(name) for name in PRESETS]
     hosts = set()
     for url in urls:
         try:
             parsed = urlsplit(url.strip())
-            if parsed.hostname:
+            if (parsed.scheme in {"http", "https"} and parsed.hostname
+                    and not parsed.username and not parsed.password):
                 hosts.add(parsed.hostname.casefold().rstrip(".")
                           + (f":{parsed.port}" if parsed.port else ""))
         except ValueError:
@@ -171,6 +194,9 @@ class WorkspaceAuthority:
         grants = {action: dict(grant) for action, grant in policy["grants"].items()}
 
         def merge(action: str, key: str | None = None, values: list[str] | None = None) -> None:
+            # An explicit denial overrides the implicit Classic preset.
+            if grants.get(action, {}).get("enabled") is False:
+                return
             current = grants.setdefault(action, {})
             current["enabled"] = True
             if key is not None:
@@ -239,6 +265,8 @@ class WorkspaceAuthority:
             policy = self.effective_policy()
         except WorkspaceAuthorityError:
             return AuthorityDecision(False, "", "workspace grant policy unavailable or invalid", digest)
+        if policy["grants"].get(request.action_id, {}).get("enabled") is False:
+            return AuthorityDecision(False, "", "action explicitly revoked", digest)
         grant_action_id = AUTHORITY_GRANT_ALIASES.get(request.action_id, request.action_id)
         grant = policy["grants"].get(grant_action_id, {})
         if not grant.get("enabled", False):

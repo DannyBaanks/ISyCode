@@ -433,7 +433,7 @@ class WorkspaceWriteOwner:
         except (OSError, ValueError) as exc:
             return ActionOutcome("File change denied.", "DENY", None,
                                  f"file cannot be re-checked: {str(exc)[:200]}")
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("File change denied.", "DENY", None,
                                  "the file changed since the reviewed diff; review a new one")
         denied = self._authorize(preview.request, approval)
@@ -487,7 +487,7 @@ class WorkspaceWriteOwner:
             fresh = self.preview_undo(params["checkpoint_id"])
         except (OSError, ValueError, KeyError) as exc:
             return ActionOutcome("Undo denied.", "DENY", None, str(exc)[:200])
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("Undo denied.", "DENY", None,
                                  "the file changed since the reviewed undo; review a new one")
         denied = self._authorize(preview.request, approval)
@@ -531,7 +531,7 @@ class WorkspaceWriteOwner:
             fresh = self.preview_delete(preview.path)
         except (OSError, ValueError) as exc:
             return ActionOutcome("Delete denied.", "DENY", None, f"file cannot be re-checked: {str(exc)[:200]}")
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("Delete denied.", "DENY", None,
                                  "the file changed since it was reviewed; review it again")
         denied = self._authorize(preview.request, approval)
@@ -564,7 +564,7 @@ class WorkspaceWriteOwner:
                     raise ValueError("that move was already undone")
         except (OSError, ValueError) as exc:
             return ActionOutcome("Move denied.", "DENY", None, f"file cannot be re-checked: {str(exc)[:200]}")
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("Move denied.", "DENY", None,
                                  "the file or destination changed since review; review it again")
         denied = self._authorize(preview.request, approval)

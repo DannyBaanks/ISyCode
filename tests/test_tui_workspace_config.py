@@ -29,9 +29,9 @@ def test_tui_uses_authorized_workspace_preferences(tmp_path, monkeypatch):
     authority.set_grant("workspace.files.read", enabled=True, path_prefixes=[tmp_path])
     app = TUIApp()
 
-    assert app._agent_limits().max_steps == 50
-    assert app._agent_limits().answer_tokens == 4096
-    assert app._chat_token_budget() == 10000
+    assert app._workspace_preference_values() == {
+        "agent_steps": 50, "answer_tokens": 4096, "chat_token_budget": 10000}
+    assert ActionAuditJournal(tmp_path).verify().receipts >= 1
 
 
 def test_tui_ignores_workspace_preferences_without_read_authority(tmp_path, monkeypatch):
@@ -46,8 +46,8 @@ def test_tui_ignores_workspace_preferences_without_read_authority(tmp_path, monk
     from isycode.tui import TUIApp
 
     app = TUIApp()
-    assert app._agent_limits().max_steps != 50
-    assert app._chat_token_budget() != 10000
+    assert app._workspace_preference_values() == {}
+    assert "unavailable" in app._workspace_config_warning
 
 
 def test_persistent_workspace_settings_are_hidden_without_own_marker(tmp_path, monkeypatch, capsys):

@@ -15,7 +15,7 @@ def uses_anthropic(provider: Any) -> bool:
     return PRESETS.get(getattr(provider, "name", ""), {}).get("api") == "anthropic"
 
 
-async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: int,
+async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: int | None = None,
                             on_chunk: Callable[[str, str], None] | None = None,
                             tools: list[dict] | None = None) -> dict:
     if PRESETS.get(getattr(provider, 'name', ''), {}).get('api') == 'codex':
@@ -30,12 +30,13 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         return await anthropic_stream_complete(
             provider.api_key, provider.model, messages, max_tokens=max_tokens,
             effort=provider.reasoning_effort, on_chunk=on_chunk, tools=tools,
-            base_url=provider.base_url)
+            base_url=provider.base_url, timeout_s=None)
     return await async_stream_complete(
         provider.base_url, provider.api_key, provider.model, messages, max_tokens=max_tokens,
         token_limit_field=provider.token_limit_field,
         reasoning_effort=provider.reasoning_effort,
         temperature_supported=provider.temperature_supported,
+        timeout_s=None,
         on_chunk=on_chunk, tools=tools, include_usage=provider.name == "openai")
 
 

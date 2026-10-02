@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main, master]
   push:
     branches: ['**']
     tags: ['v*']
@@ -33,8 +33,7 @@ jobs:
         run: python -m pytest -q -m "not integration"
 
   test-textual-current:
-    # Running from source with a system Python often picks up a newer Textual
-    # than the packaged pin; its API changed (anchor, Static.content, queries).
+    # Keep the selection-capable Textual pin verified on a second Python runtime.
     name: Tests (Linux, Textual 8)
     runs-on: ubuntu-latest
     steps:

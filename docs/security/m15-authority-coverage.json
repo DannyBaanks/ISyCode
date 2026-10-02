@@ -1,48 +1,34 @@
 {
-  "format": "isycode.m15-authority-coverage.v1",
-  "summary": {
-    "actions": 74,
-    "effectful": 57,
-    "owner_valid": 48,
-    "owner_shared_read": 1,
-    "owner_variants": 1,
-    "explicit_deny": 23,
-    "secure_excluded": 1,
-    "unclassified": 0,
-    "ambiguous": 0,
-    "authority_frontier_pass": true,
-    "secure_tui_closed": true,
-    "secure_closed": true
-  },
   "actions": [
     {
       "action": "workspace.files.list",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_read"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "workspace.files.read",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_SHARED_READ",
+      "effect": "read",
       "owners": [
         "broker_preview",
         "broker_provision",
         "lsp_symbols",
         "workspace_read"
       ],
-      "classification": "OWNER_SHARED_READ",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "BrokerProvisionBoundary",
         "BrokerRecipeBoundary",
@@ -50,1109 +36,1104 @@
         "LSPProcessBoundary",
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_SHARED_READ",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.files.search",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_read"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "workspace.context.inject",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_read"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.config.read",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_config"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceConfigBoundary",
         "WorkspaceReadBoundary",
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.config.list",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_config"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceConfigBoundary",
         "WorkspaceReadBoundary",
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.config.write",
-      "effect": "write",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
       "owners": [
         "workspace_config"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceConfigBoundary",
         "WorkspaceReadBoundary",
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.files.write",
-      "effect": "write",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
       "owners": [
         "workspace_write"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.files.restore",
-      "effect": "write",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
       "owners": [
         "workspace_write"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.command.run",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "workspace_command"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "CommandProcessBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "git.status",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_git"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "GitBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "git.diff",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "workspace_git"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "GitBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "git.commit",
-      "effect": "write",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
       "owners": [
         "workspace_git"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "GitBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.files.move",
-      "effect": "write",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
       "owners": [
         "workspace_write"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.files.delete",
-      "effect": "destructive",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "destructive",
       "owners": [
         "workspace_write"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "WorkspaceWriteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "workspace.files.read_sensitive",
-      "effect": "sensitive",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "sensitive",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "provider.authenticate",
-      "effect": "credential",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "credential",
       "owners": [
         "provider_auth"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "ProviderAuthBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "provider.request",
-      "effect": "network",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "network",
       "owners": [
         "provider_network"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "ProviderNetworkBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "catalog.external.read",
-      "effect": "network-read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "network-read",
       "owners": [
         "remote_catalog"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "RemoteReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "gateway.semantic.read",
-      "effect": "network-read",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "network-read",
       "owners": [
         "gateway_semantic"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "GatewaySemanticBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "gateway.files.read",
-      "effect": "network-read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "network-read",
       "owners": [
         "remote_catalog"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "RemoteReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "gateway.files.write",
-      "effect": "network-write",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "network-write",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "oauth.authorize",
-      "effect": "credential",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "credential",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "credentials.add",
-      "effect": "credential",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "credential",
       "owners": [
         "credentials"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "CredentialBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "credentials.use",
-      "effect": "credential",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "credential",
       "owners": [
         "credential_use"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "CredentialBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "credentials.revoke",
-      "effect": "destructive",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "destructive",
       "owners": [
         "credentials"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "CredentialBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "mcp.discover",
-      "effect": "network-read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "network-read",
       "owners": [
         "remote_catalog"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "RemoteReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "mcp.invoke",
-      "effect": "external",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "external",
       "owners": [
         "gateway_mcp"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "MCPInvocationBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "mcp.local.start",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "mcp_local"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "LocalMCPBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "mcp.local.invoke",
-      "effect": "external",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "external",
       "owners": [
         "mcp_local"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "LocalMCPBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "lsp.discover",
-      "effect": "read",
       "approval_required": false,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "read",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "lsp.start",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "lsp_symbols"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "LSPProcessBoundary",
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "lsp.stop",
-      "effect": "process",
       "approval_required": false,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "process",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "lsp.diagnostics",
-      "effect": "process",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "lsp_symbols"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "LSPProcessBoundary",
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "broker.preview",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "broker_preview"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "BrokerRecipeBoundary",
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "broker.build",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "broker_provision"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "BrokerProvisionBoundary",
         "BrokerRegistryBoundary",
         "WorkspaceReadBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "broker.start",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VARIANTS",
+      "effect": "process",
       "owners": [
         "broker_management",
         "broker_provision"
       ],
-      "classification": "OWNER_VARIANTS",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "BrokerProvisionBoundary",
         "BrokerRegistryBoundary",
         "WorkspaceReadBoundary"
       ],
+      "status": "OWNER_VARIANTS",
       "variants": [
         {
+          "absent": [
+            "managed_existing"
+          ],
           "owner": "broker_provision",
           "requires": {
             "operation": "start"
-          },
-          "absent": [
-            "managed_existing"
-          ]
+          }
         },
         {
+          "absent": [],
           "owner": "broker_management",
           "requires": {
-            "operation": "start",
-            "managed_existing": true
-          },
-          "absent": []
+            "managed_existing": true,
+            "operation": "start"
+          }
         }
-      ],
-      "status": "OWNER_VARIANTS",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      ]
     },
     {
       "action": "broker.health",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "broker_management"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "BrokerRegistryBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "broker.logs",
-      "effect": "read",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "broker_management"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "BrokerRegistryBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "broker.stop",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "broker_management"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "BrokerRegistryBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "broker.remove",
-      "effect": "destructive",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "destructive",
       "owners": [
         "broker_management"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "NOT_DEMONSTRATED",
       "sentinel": [
         "BrokerRegistryBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "NOT_DEMONSTRATED"
+      "variants": []
     },
     {
       "action": "mobile.host.start",
-      "effect": "network",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "network",
       "owners": [
         "mobile_host"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "MobileHostBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "mobile.host.stop",
-      "effect": "process",
       "approval_required": false,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "process",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "mobile.pair",
-      "effect": "credential",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "credential",
       "owners": [
         "mobile_host"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "MobileHostBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "mobile.pair.issue",
-      "effect": "credential",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "credential",
       "owners": [
         "mobile_host"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "MobileHostBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "mobile.session.read",
-      "effect": "read",
       "approval_required": false,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "read",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "mobile.session.create",
-      "effect": "external",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "external",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "mobile.session.cancel",
-      "effect": "external",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "external",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "mobile.approval.respond",
-      "effect": "external",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "external",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "bridge.connect",
-      "effect": "network",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "network",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "bridge.peek",
-      "effect": "read",
       "approval_required": false,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "read",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "bridge.send",
-      "effect": "external",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "external",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "bridge.lease.claim",
-      "effect": "coordination",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "coordination",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "bridge.lease.release",
-      "effect": "coordination",
       "approval_required": false,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "coordination",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "bridge.wake",
-      "effect": "external",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "external",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "l1.create",
-      "effect": "write",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "write",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "l1.validate",
-      "effect": "process",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "process",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "l1.test",
-      "effect": "process",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "process",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "l1.activate",
-      "effect": "write",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "write",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "l1.disable",
-      "effect": "write",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "write",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "l1.rollback",
-      "effect": "write",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "write",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "session.create",
-      "effect": "write",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
       "owners": [
         "chat_sessions"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "SessionStoreBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "session.resume",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "chat_sessions"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "SessionStoreBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "session.delete",
-      "effect": "destructive",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "destructive",
       "owners": [
         "session_delete"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "SessionDeleteBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "clipboard.copy",
-      "effect": "external",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "external",
       "owners": [
         "clipboard"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "ClipboardBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "desktop.file_picker",
-      "effect": "process",
       "approval_required": true,
-      "owners": [],
-      "classification": "EXPLICIT_DENY",
       "authority": "explicit deny at owner binding",
+      "classification": "EXPLICIT_DENY",
+      "effect": "process",
+      "owners": [],
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING",
       "sentinel": [],
-      "variants": [],
       "status": "EXPLICIT_DENY",
-      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+      "variants": []
     },
     {
       "action": "tailscale.inspect",
-      "effect": "read",
       "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
       "owners": [
         "tailscale_read"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary",
         "TailscaleGatewayBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "tailscale.install.prepare",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "tailscale_package_install"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscalePackageBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "tailscale.install.stage",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "tailscale_package_install"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscalePackageBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "tailscale.install",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "tailscale_package_install"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscalePackageBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "tailscale.login",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "tailscale_login"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "tailscale.serve.enable",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "tailscale_serve"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary",
         "TailscaleGatewayBoundary",
         "TailscalePrivateServeBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "tailscale.serve.disable",
-      "effect": "process",
       "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "process",
       "owners": [
         "tailscale_serve"
       ],
-      "classification": "OWNER_VALID",
-      "authority": "Workspace Authority",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
       "sentinel": [
         "TailscaleExecutableBoundary",
         "TailscaleGatewayBoundary",
         "TailscalePrivateServeBoundary"
       ],
-      "variants": [],
       "status": "OWNER_VALID",
-      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+      "variants": []
     },
     {
       "action": "role.select",
-      "effect": "read",
       "approval_required": false,
-      "owners": [],
-      "classification": "SECURE_EXCLUDED",
       "authority": "not an effect authority action",
+      "classification": "SECURE_EXCLUDED",
+      "effect": "read",
+      "owners": [],
+      "secure_reachability": "NOT_AN_EFFECT_ACTION",
       "sentinel": [],
-      "variants": [],
       "status": "SECURE_EXCLUDED",
-      "secure_reachability": "NOT_AN_EFFECT_ACTION"
+      "variants": []
     }
   ],
-  "owner_action_mismatches": [],
-  "owner_contract_gaps": [],
-  "variant_contract_gaps": [],
   "ambiguous_actions": [],
-  "unclassified_actions": [],
   "callsites": [
     {
       "action": "tailscale.inspect",
@@ -1545,417 +1526,443 @@
       "status": "COVERED"
     }
   ],
-  "secure_tui_direct_api_bypasses": [],
-  "stale_callsites": [],
-  "request_constructors": [
+  "dynamic_request_constructors": [
     {
+      "action": null,
+      "callable": "isycode.action_runtime._workspace_config_request",
       "file": "isycode/action_runtime.py",
       "line": 91,
-      "callable": "isycode.action_runtime._workspace_config_request",
-      "action": null,
       "owner": "workspace_config"
     },
     {
+      "action": null,
+      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 1868,
-      "callable": "isycode.action_runtime.LPSSymbolOwner.search",
+      "line": 2076,
+      "owner": "workspace_read"
+    },
+    {
+      "action": null,
+      "callable": "isycode.broker.BrokerManagementOwner.request_for",
+      "file": "isycode/broker.py",
+      "line": 749,
+      "owner": "broker_management"
+    },
+    {
+      "action": null,
+      "callable": "isycode.git_owner.GitOwner._request",
+      "file": "isycode/git_owner.py",
+      "line": 305,
+      "owner": "workspace_git"
+    },
+    {
+      "action": null,
+      "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
+      "file": "isycode/tailscale_serve.py",
+      "line": 184,
+      "owner": "tailscale_serve"
+    },
+    {
+      "action": null,
+      "callable": "isycode.tui.TUIApp._workspace_request",
+      "file": "isycode/tui.py",
+      "line": 7233,
+      "owner": "workspace_read"
+    },
+    {
+      "action": null,
+      "callable": "isycode.tui.TUIApp._authorize_remote_read",
+      "file": "isycode/tui.py",
+      "line": 6432,
+      "owner": "remote_catalog"
+    }
+  ],
+  "format": "isycode.m15-authority-coverage.v1",
+  "owner_action_mismatches": [],
+  "owner_contract_gaps": [],
+  "request_constructors": [
+    {
+      "action": null,
+      "callable": "isycode.action_runtime._workspace_config_request",
+      "file": "isycode/action_runtime.py",
+      "line": 91,
+      "owner": "workspace_config"
+    },
+    {
       "action": "workspace.files.read",
+      "callable": "isycode.action_runtime.LPSSymbolOwner.search",
+      "file": "isycode/action_runtime.py",
+      "line": 1887,
       "owner": "lsp_symbols"
     },
     {
-      "file": "isycode/action_runtime.py",
-      "line": 1657,
-      "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
+      "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
+      "file": "isycode/action_runtime.py",
+      "line": 1676,
       "owner": "session_delete"
     },
     {
-      "file": "isycode/action_runtime.py",
-      "line": 1721,
-      "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
+      "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
+      "file": "isycode/action_runtime.py",
+      "line": 1740,
       "owner": "gateway_mcp"
     },
     {
-      "file": "isycode/action_runtime.py",
-      "line": 1791,
-      "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
+      "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
+      "file": "isycode/action_runtime.py",
+      "line": 1810,
       "owner": "gateway_semantic"
     },
     {
-      "file": "isycode/action_runtime.py",
-      "line": 1877,
-      "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
+      "callable": "isycode.action_runtime.LPSSymbolOwner.search",
+      "file": "isycode/action_runtime.py",
+      "line": 1896,
       "owner": "lsp_symbols"
     },
     {
-      "file": "isycode/action_runtime.py",
-      "line": 1928,
-      "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
-      "owner": "lsp_symbols"
-    },
-    {
-      "file": "isycode/action_runtime.py",
-      "line": 1936,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
-      "action": "lsp.diagnostics",
+      "file": "isycode/action_runtime.py",
+      "line": 1947,
       "owner": "lsp_symbols"
     },
     {
+      "action": "lsp.diagnostics",
+      "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 1996,
-      "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
+      "line": 1955,
+      "owner": "lsp_symbols"
+    },
+    {
       "action": "provider.request",
+      "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
+      "file": "isycode/action_runtime.py",
+      "line": 2013,
       "owner": "provider_network"
     },
     {
-      "file": "isycode/action_runtime.py",
-      "line": 2062,
-      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
+      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
+      "file": "isycode/action_runtime.py",
+      "line": 2076,
       "owner": "workspace_read"
     },
     {
+      "action": "broker.build",
+      "callable": "isycode.broker.provision_requests",
       "file": "isycode/broker.py",
       "line": 453,
-      "callable": "isycode.broker.provision_requests",
-      "action": "broker.build",
       "owner": "broker_provision"
     },
     {
+      "action": "broker.start",
+      "callable": "isycode.broker.provision_requests",
       "file": "isycode/broker.py",
       "line": 458,
-      "callable": "isycode.broker.provision_requests",
-      "action": "broker.start",
       "owner": "broker_provision"
     },
     {
+      "action": "workspace.files.read",
+      "callable": "isycode.broker.BrokerProvisionOwner.provision",
       "file": "isycode/broker.py",
       "line": 552,
-      "callable": "isycode.broker.BrokerProvisionOwner.provision",
-      "action": "workspace.files.read",
       "owner": "broker_provision"
     },
     {
+      "action": "workspace.files.read",
+      "callable": "isycode.broker.BrokerPreviewOwner.preview",
       "file": "isycode/broker.py",
       "line": 485,
-      "callable": "isycode.broker.BrokerPreviewOwner.preview",
-      "action": "workspace.files.read",
       "owner": "broker_preview"
     },
     {
+      "action": "broker.preview",
+      "callable": "isycode.broker.BrokerPreviewOwner.preview",
       "file": "isycode/broker.py",
       "line": 493,
-      "callable": "isycode.broker.BrokerPreviewOwner.preview",
-      "action": "broker.preview",
       "owner": "broker_preview"
     },
     {
+      "action": null,
+      "callable": "isycode.broker.BrokerManagementOwner.request_for",
       "file": "isycode/broker.py",
       "line": 749,
-      "callable": "isycode.broker.BrokerManagementOwner.request_for",
-      "action": null,
       "owner": "broker_management"
     },
     {
+      "action": "clipboard.copy",
+      "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
       "file": "isycode/clipboard_owner.py",
       "line": 70,
-      "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
-      "action": "clipboard.copy",
       "owner": "clipboard"
     },
     {
-      "file": "isycode/command_runner.py",
-      "line": 243,
-      "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
+      "callable": "isycode.command_runner.CommandRunOwner.prepare",
+      "file": "isycode/command_runner.py",
+      "line": 238,
       "owner": "workspace_command"
     },
     {
+      "action": "credentials.add",
+      "callable": "isycode.credential_owner.CredentialOwner.add_request",
       "file": "isycode/credential_owner.py",
       "line": 54,
-      "callable": "isycode.credential_owner.CredentialOwner.add_request",
-      "action": "credentials.add",
       "owner": "credentials"
     },
     {
+      "action": "credentials.revoke",
+      "callable": "isycode.credential_owner.CredentialOwner.revoke_request",
       "file": "isycode/credential_owner.py",
       "line": 93,
-      "callable": "isycode.credential_owner.CredentialOwner.revoke_request",
-      "action": "credentials.revoke",
       "owner": "credentials"
     },
     {
+      "action": "credentials.use",
+      "callable": "isycode.credential_owner.CredentialUseOwner.use_request",
       "file": "isycode/credential_owner.py",
       "line": 155,
-      "callable": "isycode.credential_owner.CredentialUseOwner.use_request",
-      "action": "credentials.use",
       "owner": "credential_use"
     },
     {
-      "file": "isycode/git_owner.py",
-      "line": 185,
-      "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
+      "callable": "isycode.git_owner.GitOwner._request",
+      "file": "isycode/git_owner.py",
+      "line": 305,
       "owner": "workspace_git"
     },
     {
-      "file": "isycode/mcp_local.py",
-      "line": 211,
-      "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "action": "mcp.local.start",
-      "owner": "mcp_local"
-    },
-    {
+      "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "file": "isycode/mcp_local.py",
-      "line": 313,
-      "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
-      "action": "mcp.local.invoke",
+      "line": 210,
       "owner": "mcp_local"
     },
     {
+      "action": "mcp.local.invoke",
+      "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
+      "file": "isycode/mcp_local.py",
+      "line": 312,
+      "owner": "mcp_local"
+    },
+    {
+      "action": "mobile.host.start",
+      "callable": "isycode.mobile_host.MobileHostOwner.start_request",
       "file": "isycode/mobile_host.py",
       "line": 482,
-      "callable": "isycode.mobile_host.MobileHostOwner.start_request",
-      "action": "mobile.host.start",
       "owner": "mobile_host"
     },
     {
+      "action": "mobile.pair.issue",
+      "callable": "isycode.mobile_host.MobileHostOwner.pin_request",
       "file": "isycode/mobile_host.py",
       "line": 519,
-      "callable": "isycode.mobile_host.MobileHostOwner.pin_request",
-      "action": "mobile.pair.issue",
       "owner": "mobile_host"
     },
     {
+      "action": "mobile.pair",
+      "callable": "isycode.mobile_host.MobileHostOwner.authorize_pair",
       "file": "isycode/mobile_host.py",
       "line": 554,
-      "callable": "isycode.mobile_host.MobileHostOwner.authorize_pair",
-      "action": "mobile.pair",
       "owner": "mobile_host"
     },
     {
+      "action": "mobile.pair",
+      "callable": "isycode.mobile_host.MobileHostOwner.record_pair",
       "file": "isycode/mobile_host.py",
       "line": 562,
-      "callable": "isycode.mobile_host.MobileHostOwner.record_pair",
-      "action": "mobile.pair",
       "owner": "mobile_host"
     },
     {
+      "action": "provider.authenticate",
+      "callable": "isycode.provider_auth.ProviderAuthOwner.request",
       "file": "isycode/provider_auth.py",
       "line": 73,
-      "callable": "isycode.provider_auth.ProviderAuthOwner.request",
-      "action": "provider.authenticate",
       "owner": "provider_auth"
     },
     {
+      "action": "session.resume",
+      "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
       "file": "isycode/session_owner.py",
       "line": 108,
-      "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
-      "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
+      "action": "session.create",
+      "callable": "isycode.session_owner.ChatSessionOwner.manage",
       "file": "isycode/session_owner.py",
       "line": 170,
-      "callable": "isycode.session_owner.ChatSessionOwner.manage",
-      "action": "session.create",
       "owner": "chat_sessions"
     },
     {
+      "action": "session.create",
+      "callable": "isycode.session_owner.ChatSessionOwner.record",
       "file": "isycode/session_owner.py",
       "line": 73,
-      "callable": "isycode.session_owner.ChatSessionOwner.record",
-      "action": "session.create",
       "owner": "chat_sessions"
     },
     {
+      "action": "session.resume",
+      "callable": "isycode.session_owner.ChatSessionOwner.resume",
       "file": "isycode/session_owner.py",
       "line": 122,
-      "callable": "isycode.session_owner.ChatSessionOwner.resume",
-      "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
+      "action": "tailscale.install.prepare",
+      "callable": "isycode.tailscale_install.UbuntuDebianInstallPlan.prepare_request",
       "file": "isycode/tailscale_install.py",
       "line": 117,
-      "callable": "isycode.tailscale_install.UbuntuDebianInstallPlan.prepare_request",
-      "action": "tailscale.install.prepare",
       "owner": "tailscale_package_install"
     },
     {
+      "action": "tailscale.install.stage",
+      "callable": "isycode.tailscale_install.PreparedTransaction.stage_request",
       "file": "isycode/tailscale_install.py",
       "line": 220,
-      "callable": "isycode.tailscale_install.PreparedTransaction.stage_request",
-      "action": "tailscale.install.stage",
       "owner": "tailscale_package_install"
     },
     {
+      "action": "tailscale.install",
+      "callable": "isycode.tailscale_install.PreparedTransaction.request",
       "file": "isycode/tailscale_install.py",
       "line": 224,
-      "callable": "isycode.tailscale_install.PreparedTransaction.request",
-      "action": "tailscale.install",
       "owner": "tailscale_package_install"
     },
     {
+      "action": "tailscale.login",
+      "callable": "isycode.tailscale_login.TailscaleLoginOwner.login_request",
       "file": "isycode/tailscale_login.py",
       "line": 128,
-      "callable": "isycode.tailscale_login.TailscaleLoginOwner.login_request",
-      "action": "tailscale.login",
       "owner": "tailscale_login"
     },
     {
+      "action": "tailscale.login",
+      "callable": "isycode.tailscale_login.TailscaleLoginOwner.begin_login",
       "file": "isycode/tailscale_login.py",
       "line": 165,
-      "callable": "isycode.tailscale_login.TailscaleLoginOwner.begin_login",
-      "action": "tailscale.login",
       "owner": "tailscale_login"
     },
     {
+      "action": "tailscale.inspect",
+      "callable": "isycode.tailscale_read.TailscaleReadOwner.inspect",
       "file": "isycode/tailscale_read.py",
       "line": 39,
-      "callable": "isycode.tailscale_read.TailscaleReadOwner.inspect",
-      "action": "tailscale.inspect",
       "owner": "tailscale_read"
     },
     {
+      "action": null,
+      "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "file": "isycode/tailscale_serve.py",
       "line": 184,
-      "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
-      "action": null,
       "owner": "tailscale_serve"
     },
     {
+      "action": "workspace.context.inject",
+      "callable": "isycode.tui.TUIApp._confirm_and_load_external_context",
       "file": "isycode/tui.py",
-      "line": 7018,
-      "callable": "isycode.tui.TUIApp._delete_chat_session",
+      "line": 4193,
+      "owner": "workspace_read"
+    },
+    {
       "action": "session.delete",
+      "callable": "isycode.tui.TUIApp._delete_chat_session",
+      "file": "isycode/tui.py",
+      "line": 7131,
       "owner": "session_delete"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 7120,
-      "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
+      "callable": "isycode.tui.TUIApp._workspace_request",
+      "file": "isycode/tui.py",
+      "line": 7233,
       "owner": "workspace_read"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 4824,
-      "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "action": "mcp.invoke",
+      "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
+      "file": "isycode/tui.py",
+      "line": 4935,
       "owner": "gateway_mcp"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 4876,
-      "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
+      "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
+      "file": "isycode/tui.py",
+      "line": 4987,
       "owner": "gateway_semantic"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 5035,
-      "callable": "isycode.tui.TUIApp._open_lsp_server",
       "action": "lsp.start",
+      "callable": "isycode.tui.TUIApp._open_lsp_server",
+      "file": "isycode/tui.py",
+      "line": 5146,
       "owner": "lsp_symbols"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 6328,
-      "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
+      "callable": "isycode.tui.TUIApp._authorize_remote_read",
+      "file": "isycode/tui.py",
+      "line": 6432,
       "owner": "remote_catalog"
     },
     {
+      "action": "workspace.files.restore",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
       "file": "isycode/workspace_write.py",
       "line": 354,
-      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
-      "action": "workspace.files.restore",
       "owner": "workspace_write"
     },
     {
+      "action": "workspace.files.delete",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_delete",
       "file": "isycode/workspace_write.py",
       "line": 371,
-      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_delete",
-      "action": "workspace.files.delete",
       "owner": "workspace_write"
     },
     {
+      "action": "workspace.files.move",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner._preview_move",
       "file": "isycode/workspace_write.py",
       "line": 394,
-      "callable": "isycode.workspace_write.WorkspaceWriteOwner._preview_move",
-      "action": "workspace.files.move",
       "owner": "workspace_write"
     },
     {
+      "action": "workspace.config.write",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
       "line": 306,
-      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
-      "action": "workspace.config.write",
       "owner": "workspace_config"
     },
     {
+      "action": "workspace.files.write",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
       "line": 309,
-      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
-      "action": "workspace.files.write",
       "owner": "workspace_write"
     }
   ],
-  "dynamic_request_constructors": [
-    {
-      "file": "isycode/action_runtime.py",
-      "line": 91,
-      "callable": "isycode.action_runtime._workspace_config_request",
-      "action": null,
-      "owner": "workspace_config"
-    },
-    {
-      "file": "isycode/action_runtime.py",
-      "line": 2062,
-      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
-      "action": null,
-      "owner": "workspace_read"
-    },
-    {
-      "file": "isycode/broker.py",
-      "line": 749,
-      "callable": "isycode.broker.BrokerManagementOwner.request_for",
-      "action": null,
-      "owner": "broker_management"
-    },
-    {
-      "file": "isycode/git_owner.py",
-      "line": 185,
-      "callable": "isycode.git_owner.GitOwner._request",
-      "action": null,
-      "owner": "workspace_git"
-    },
-    {
-      "file": "isycode/tailscale_serve.py",
-      "line": 184,
-      "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
-      "action": null,
-      "owner": "tailscale_serve"
-    },
-    {
-      "file": "isycode/tui.py",
-      "line": 7120,
-      "callable": "isycode.tui.TUIApp._workspace_request",
-      "action": null,
-      "owner": "workspace_read"
-    },
-    {
-      "file": "isycode/tui.py",
-      "line": 6328,
-      "callable": "isycode.tui.TUIApp._authorize_remote_read",
-      "action": null,
-      "owner": "remote_catalog"
-    }
-  ],
-  "unresolved_dynamic_request_constructors": []
+  "secure_tui_direct_api_bypasses": [],
+  "stale_callsites": [],
+  "summary": {
+    "actions": 74,
+    "ambiguous": 0,
+    "authority_frontier_pass": true,
+    "effectful": 57,
+    "explicit_deny": 23,
+    "owner_shared_read": 1,
+    "owner_valid": 48,
+    "owner_variants": 1,
+    "secure_closed": true,
+    "secure_excluded": 1,
+    "secure_tui_closed": true,
+    "unclassified": 0
+  },
+  "unclassified_actions": [],
+  "unresolved_dynamic_request_constructors": [],
+  "variant_contract_gaps": []
 }

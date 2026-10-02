@@ -119,7 +119,7 @@ class IsyMotronRuntime:
         def stream() -> dict:
             return stream_complete(
                 self.provider.base_url, self.provider.api_key, self.provider.model,
-                messages, max_tokens=2000,
+                messages, max_tokens=None,
                 token_limit_field=self.provider.token_limit_field,
                 reasoning_effort=self.provider.reasoning_effort,
                 temperature_supported=self.provider.temperature_supported,
@@ -133,7 +133,7 @@ class IsyMotronRuntime:
         result, request_outcome = await owner.execute(
             self.provider,
             {"operation": "isycode.plan", "messages": messages,
-             "max_tokens": 2000, "token_limit_field": self.provider.token_limit_field,
+             "max_tokens": None, "token_limit_field": self.provider.token_limit_field,
              "reasoning_effort": self.provider.reasoning_effort,
              "temperature_supported": self.provider.temperature_supported},
             send)

@@ -31,11 +31,9 @@ class ChatSessionStore:
     """Atomically store chat history under a private, external state directory."""
 
     _SESSION_ID = re.compile(r"^[a-f0-9]{32}$")
-    MAX_BYTES = 4_000_000
-    MAX_MESSAGES = 20_000
     _SECRET_VALUE = re.compile(
         r"(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization)"
-        r"(\s*[:=]\s*)([^\s,;]+)"
+        r"(\"?\s*[:=]\s*)(\"(?:[^\"\\]|\\.)*\"|'[^']*'|[^\s,;]+)"
     )
     _BEARER_VALUE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{12,}={0,2}")
     _API_TOKEN = re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b")
@@ -74,8 +72,6 @@ class ChatSessionStore:
 
     def save(self, session: ChatSession) -> Path:
         state = self.validate_state(session.state)
-        if len(session.messages) > self.MAX_MESSAGES:
-            raise ChatSessionError("chat session exceeds the message limit")
         for message in session.messages:
             if (not isinstance(message, dict)
                     or message.get("role") not in {"user", "assistant"}
@@ -92,8 +88,6 @@ class ChatSessionStore:
             "updated_at": session.updated_at,
             "state": state,
         }, ensure_ascii=False, allow_nan=False)
-        if len(payload.encode("utf-8")) > self.MAX_BYTES:
-            raise ChatSessionError("chat session exceeds the 4 MB storage limit")
         fd, temporary = tempfile.mkstemp(prefix=f".{session.session_id}-", dir=self.root)
         try:
             if os.name == "posix":
@@ -120,13 +114,15 @@ class ChatSessionStore:
 
     def load(self, session_id: str) -> ChatSession:
         path = self._path(session_id)
-        flags = os.O_RDONLY
+        # Opening a FIFO must not block before fstat can reject it. O_NONBLOCK
+        # does not change regular-file reads and also closes the lstat/open race.
+        flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
         descriptor = os.open(path, flags)
         with os.fdopen(descriptor, "r", encoding="utf-8") as stream:
             info = os.fstat(stream.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_size > self.MAX_BYTES:
+            if not stat.S_ISREG(info.st_mode):
                 raise ChatSessionError("chat session is not a bounded regular file")
             try:
                 payload = json.load(stream)
@@ -210,8 +206,10 @@ class ChatSessionStore:
 
     @classmethod
     def _sanitize_text(cls, value: str) -> str:
-        value = cls._SECRET_VALUE.sub(lambda match: f"{match.group(1)}{match.group(2)}[redacted]", value)
+        # Redact bearer values before key/value matching consumes "Bearer" and
+        # leaves the actual credential orphaned after Authorization:.
         value = cls._BEARER_VALUE.sub("Bearer [redacted]", value)
+        value = cls._SECRET_VALUE.sub(lambda match: f"{match.group(1)}{match.group(2)}[redacted]", value)
         return cls._API_TOKEN.sub("[redacted]", value)
 
     def export_json(self, session_id: str, *, sanitize: bool = True) -> str:
@@ -244,8 +242,8 @@ class ChatSessionStore:
         return imported
 
     def parse_import(self, serialized: str, *, session_id: str | None = None) -> ChatSession:
-        if not isinstance(serialized, str) or len(serialized.encode("utf-8")) > self.MAX_BYTES:
-            raise ChatSessionError("session import exceeds the storage limit")
+        if not isinstance(serialized, str):
+            raise ChatSessionError("session import is malformed")
         try:
             payload = json.loads(serialized)
         except (json.JSONDecodeError, UnicodeError) as exc:
@@ -259,8 +257,6 @@ class ChatSessionStore:
                or message.get("role") not in {"user", "assistant"}
                or not isinstance(message.get("content"), str) for message in messages):
             raise ChatSessionError("session import contains malformed messages")
-        if len(messages) > self.MAX_MESSAGES:
-            raise ChatSessionError("session import exceeds the message limit")
         state = self.validate_state(payload.get("state", {}))
         clean_title = self._sanitize_text(" ".join(payload["title"].split())[:80]) or "Imported session"
         now = time.time()
@@ -304,16 +300,16 @@ class ChatSessionStore:
             except ValueError as exc:
                 raise ChatSessionError("session usage is invalid") from exc
         if "draft" in clean:
-            if not isinstance(clean["draft"], str) or len(clean["draft"]) > 16_000:
-                raise ChatSessionError("session draft exceeds its limit")
+            if not isinstance(clean["draft"], str):
+                raise ChatSessionError("session draft is malformed")
             clean["draft"] = cls._sanitize_text(clean["draft"])
         if "tool_history" in clean:
             from isycode.tool_history import normalize_tool_history
             clean["tool_history"] = normalize_tool_history(clean["tool_history"])
         if "conversation_summary" in clean:
             summary = clean["conversation_summary"]
-            if not isinstance(summary, str) or len(summary) > 8_000:
-                raise ChatSessionError("session conversation summary exceeds its limit or is malformed")
+            if not isinstance(summary, str):
+                raise ChatSessionError("session conversation summary is malformed")
             from isycode.tool_history import sanitize_historical_text
-            clean["conversation_summary"] = sanitize_historical_text(summary)[:8_000]
+            clean["conversation_summary"] = sanitize_historical_text(summary)
         return clean

@@ -48,7 +48,7 @@ Lo que verás al usarla:
 
 Desde el código fuente (Python 3.10 o posterior):
 
-La instalación fija **Textual 1.0.0**, la versión validada con Python 3.10 y 3.12 para arranque, navegación, aprobaciones y panel lateral. Textual 8.x no está soportado.
+La instalación fija **Textual 8.2.8**, que habilita seleccionar texto en el chat y copiarlo mediante el permiso del workspace. CI ejecuta la suite con Python 3.10 y 3.12.
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git
@@ -186,12 +186,11 @@ Si una herramienta está apagada, el agente te dice dónde activarla en vez de s
 
 ### Bucle y contexto
 
-- **Sin límite de pasos por defecto:** el agente trabaja hasta responder, sin tope de llamadas por respuesta. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Si prefieres acotar cuántas peticiones al modelo (y cuánto gasto) usa un prompt, elige 10, 25, 50 o 100 pasos en **Settings → My defaults**.
+- **Sin límite local de pasos:** el agente trabaja hasta responder. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Las opciones heredadas de número de pasos se conservan por compatibilidad, pero no limitan el turno.
 - **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
 - El chat muestra cada explicación y el razonamiento que entregue el provider, luego sus herramientas y después el siguiente paso. El scroll sigue la salida mientras estás abajo; si subes a leer o buscas un mensaje antiguo, conserva tu posición. Pulsa `End` dentro del chat o vuelve al final para seguir la salida otra vez.
-- Las sesiones conservan hasta 32 notas de herramientas y el resumen de contexto, con límites y redacción de secretos comunes. Al retomar se muestran como historial que puede estar desactualizado; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
-- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y peticiones de chat/resumen. **Settings → My defaults → Chat budget per session** ofrece 10.000, 50.000, 100.000 o 500.000 tokens; está apagado por defecto. Detiene peticiones posteriores al agotar el presupuesto o si el consumo es desconocido. Una petición en curso puede sobrepasarlo; no es un límite de facturación. `/check` y la revisión externa se cuentan por separado.
-- Cuando la conversación ya no cabe, ISyCode **resume los mensajes antiguos** con el mismo provider (una petición autorizada y con receipt, como cualquier otra) y recorta resultados de herramientas antiguos dentro de un turno largo. `/compact` lo hace a mano. La conversación guardada conserva siempre el transcript completo.
+- Las sesiones conservan notas de herramientas completas, sin recortes automáticos de longitud o número, y su resumen de contexto. Los resultados se muestran como datos no confiables y pueden estar desactualizados; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
+- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y solicitudes. Las opciones heredadas `chat_token_budget`, `answer_tokens` y `agent_steps` no limitan la conversación activa. No hay límite local de generación ni recorte/compactación automática; el endpoint puede tener límites propios y cobrar según su configuración. `/compact` resume solo cuando lo pides. `/check` y la revisión externa son solicitudes aparte.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
 
 ### Ediciones
@@ -301,10 +300,12 @@ no concede permisos. Requiere grants existentes de lectura/escritura y, en un
 repo Git, `git.status`. Cada archivo se aprueba por separado. Si `.isycode/` ya
 está versionado o Git no puede comprobarlo, se detiene sin cambiar el índice.
 
-**Workspace preferences** permite guardar `default_role`, `agent_steps`,
-`answer_tokens` y `chat_token_budget` para ese proyecto. Prevalecen sobre los
-valores personales, nunca sobre permisos, modo, scopes o resultados de
-IsySentinel. **Copy legacy workspace commands…** copia un comando antiguo tras
+**Workspace preferences** permite guardar `default_role` para ese proyecto.
+Las opciones heredadas `agent_steps`, `answer_tokens` y `chat_token_budget` se
+ignoran. Las llamadas al modelo no tienen límites locales de salida ni
+compactación automática del historial; el endpoint aplica sus propios límites.
+Workspace Authority, IsySentinel y las aprobaciones de herramientas siguen
+activos. **Copy legacy workspace commands…** copia un comando antiguo tras
 revisar el diff y conserva el original. `.gitignore` evita commits accidentales;
 no es un límite de seguridad.
 
@@ -329,7 +330,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode, en red interna, montaje read-only y sin credenciales.
 - **Chat con NVIDIA NIM** tras autorizar el host; cancelación de chat y streaming.
 - **Agente con herramientas en la máquina de Danny (Linux):** leer, buscar, escribir, editar y borrar de principio a fin pasando por las aprobaciones. Un modelo de NVIDIA (Nemotron) ejecutó además una autoprueba guiada de lectura, edición, mover, borrar, ataques que deben fallar, comandos y git; sus hallazgos de UX se corrigieron (decisión visible, *Replace whole file*, cómo activar herramientas).
-- **Capturas históricas con Textual 8.2.8 (versión no soportada):** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia histórica; la instalación y las pruebas actuales usan Textual 1.0.0.
+- **Capturas históricas con Textual 8.2.8:** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia de esa revisión de la interfaz.
 
 **Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
 

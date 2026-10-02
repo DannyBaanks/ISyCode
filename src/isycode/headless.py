@@ -18,7 +18,6 @@ from typing import Any, Awaitable, Callable, TextIO
 from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS, TOOL_ACTIONS, LocalWorkspaceReadOwner, ProviderNetworkOwner,
 )
-from isycode.agent_loop import AgentLimits, compact_turn
 from isycode.authority_view import displayed_on
 from isycode.config import discover_workspace_identity, provider_default_model
 from isycode.git_owner import GIT_TOOLS, GitOwner, git_executable
@@ -109,11 +108,6 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
     authority = WorkspaceAuthority(root)
     _register_saved_key_reader(root)
     try:
-        from isycode.user_defaults import UserDefaultsStore
-        limits = AgentLimits.from_defaults(UserDefaultsStore().load())
-    except (OSError, ValueError):
-        limits = AgentLimits()
-    try:
         name = selected_provider_name()
         provider = Provider(name=name, model=provider_default_model(name),
                             api_key=load_provider_key(name) or None)
@@ -142,7 +136,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
 
     async def default_transport(request_messages, request_tools, callback):
         return await provider_complete(provider, request_messages,
-                                       max_tokens=limits.answer_tokens,
+                                       max_tokens=None,
                                        on_chunk=callback, tools=request_tools)
 
     send = transport or default_transport
@@ -150,17 +144,10 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
     tool_calls = 0
     answer = ""
     try:
-        step = 0
         while True:
-            if not limits.step_allowed(step):
-                print(f"isycode: step limit reached ({limits.max_steps}); the answer may be incomplete",
-                      file=log)
-                break
-            step += 1
-            messages[:], _ = compact_turn(messages)
             streamed.clear()
             material = {"operation": "chat.completions", "messages": messages,
-                        "max_tokens": limits.answer_tokens,
+                        "max_tokens": None,
                         "token_limit_field": provider.token_limit_field,
                         "reasoning_effort": provider.reasoning_effort,
                         "temperature_supported": provider.temperature_supported,

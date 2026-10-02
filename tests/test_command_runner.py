@@ -64,7 +64,7 @@ def sandbox(tmp_path: Path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    fake.write_text(FAKE_BWRAP.format(python=sys.executable), encoding="utf-8")
+    fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     log = tmp_path / "bwrap.json"

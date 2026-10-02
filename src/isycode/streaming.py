@@ -17,6 +17,8 @@ import urllib.request
 import urllib.error
 from typing import Iterator, Callable
 
+DEFAULT_STREAM_TIMEOUT_S = None
+
 
 class StreamError(Exception):
     def __init__(self, message: str, status: int | None = None):
@@ -78,12 +80,12 @@ def stream_complete(
     api_key: str,
     model: str,
     messages: list[dict],
-    max_tokens: int = 2000,
+    max_tokens: int | None = None,
     temperature: float = 0.2,
     token_limit_field: str = "max_tokens",
     reasoning_effort: str | None = None,
     temperature_supported: bool = True,
-    timeout_s: float = 120.0,
+    timeout_s: float | None = DEFAULT_STREAM_TIMEOUT_S,
     on_chunk: Callable[[str, str], None] | None = None,
 ) -> dict:
     """Stream a chat completion. Returns collected result.
@@ -97,7 +99,8 @@ def stream_complete(
         "messages": messages,
         "stream": True,
     }
-    body[token_limit_field] = max_tokens
+    if max_tokens is not None:
+        body[token_limit_field] = max_tokens
     if temperature_supported:
         body["temperature"] = temperature
     if reasoning_effort is not None:
@@ -167,11 +170,11 @@ async def async_stream_complete(
     api_key: str,
     model: str,
     messages: list[dict],
-    max_tokens: int = 1200,
+    max_tokens: int | None = None,
     token_limit_field: str = "max_tokens",
     reasoning_effort: str | None = None,
     temperature_supported: bool = True,
-    timeout_s: float = 120.0,
+    timeout_s: float | None = DEFAULT_STREAM_TIMEOUT_S,
     on_chunk: Callable[[str, str], None] | None = None,
     tools: list[dict] | None = None,
     include_usage: bool = False,
@@ -194,7 +197,8 @@ async def async_stream_complete(
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
-    body[token_limit_field] = max_tokens
+    if max_tokens is not None:
+        body[token_limit_field] = max_tokens
     if temperature_supported:
         body["temperature"] = 0.2
     if reasoning_effort is not None:
@@ -212,13 +216,10 @@ async def async_stream_complete(
         raise StreamError("provider URL contains invalid request-target characters")
 
     loop = asyncio.get_running_loop()
-    deadline = loop.time() + timeout_s
-
     async def bounded(awaitable):
-        remaining = deadline - loop.time()
-        if remaining <= 0:
-            raise asyncio.TimeoutError
-        return await asyncio.wait_for(awaitable, timeout=remaining)
+        if timeout_s is None:
+            return await awaitable
+        return await asyncio.wait_for(awaitable, timeout=timeout_s)
 
     tls = ssl.create_default_context() if parsed.scheme == "https" else None
     if proxy_url:
@@ -273,15 +274,17 @@ async def async_stream_complete(
     tool_calls: dict[int, dict] = {}
     finish_reason = None
     line_buffer = bytearray()
+    stream_done = False
     started = time.monotonic()
 
     def consume_sse_line(raw_line: bytes) -> bool:
-        nonlocal finish_reason, usage
+        nonlocal finish_reason, usage, stream_done
         line = raw_line.decode("utf-8", errors="replace").strip()
         if not line.startswith("data:"):
             return False
         data = line[5:].strip()
         if data == "[DONE]":
+            stream_done = True
             return True
         try:
             event = json.loads(data)
@@ -289,6 +292,10 @@ async def async_stream_complete(
             return False
         if not isinstance(event, dict):
             return False
+        if "error" in event:
+            # Providers may fail after sending HTTP 200. Never echo their body:
+            # it can contain credentials or private request/transcript data.
+            raise StreamError("provider reported a streaming API error")
         choices = event.get("choices") or []
         if not choices:
             if isinstance(event.get("usage"), dict):
@@ -330,9 +337,9 @@ async def async_stream_complete(
         line_buffer.extend(data)
         while True:
             newline = line_buffer.find(b"\n")
+            if (newline < 0 and len(line_buffer) > 1024 * 1024) or newline > 1024 * 1024:
+                raise StreamError("provider SSE frame exceeds 1 MiB")
             if newline < 0:
-                if len(line_buffer) > 1_000_000:
-                    raise StreamError("provider sent an oversized streaming event")
                 return False
             raw_line = bytes(line_buffer[:newline])
             del line_buffer[:newline + 1]
@@ -415,10 +422,14 @@ async def async_stream_complete(
                 data = await bounded(reader.read(65536))
                 if not data or await consume_bytes(data):
                     break
+        if not stream_done and not finish_reason:
+            raise StreamError("provider closed an incomplete completion stream")
         return {
             "text": "".join(content), "reasoning": "".join(reasoning),
             "finish_reason": finish_reason, "usage": usage,
-            "tool_calls": [tool_calls[index] for index in sorted(tool_calls)],
+            # A syntactically valid prefix is still not a completed tool request.
+            "tool_calls": ([] if finish_reason in {"length", "content_filter"} else
+                           [tool_calls[index] for index in sorted(tool_calls)]),
             "latency_s": time.monotonic() - started,
         }
     except asyncio.TimeoutError as error:

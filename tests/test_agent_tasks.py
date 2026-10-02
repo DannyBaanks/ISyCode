@@ -66,7 +66,7 @@ def test_chat_routes_the_task_tool_without_any_owner():
     app = next(node for node in module.body
                if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
     dispatch = ast.get_source_segment(source, next(
-        node for node in app.body if getattr(node, "name", "") == "_dispatch_chat_tool"))
+        node for node in app.body if getattr(node, "name", "") == "_dispatch_chat_tool_impl"))
     branch = dispatch[dispatch.index("if name == TASK_TOOL_NAME"):]
     branch = branch[:branch.index("action_id = TOOL_ACTIONS[name]")]
     assert "validate_tasks(arguments)" in branch and "Owner" not in branch

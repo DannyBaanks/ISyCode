@@ -55,4 +55,5 @@ def test_connection_check_binds_transport_settings(tmp_path, monkeypatch):
     assert material['token_limit_field'] == provider.token_limit_field
     assert material['reasoning_effort'] == provider.reasoning_effort
     assert material['temperature_supported'] == provider.temperature_supported
-    assert material['max_tokens'] == 256 and material['tools'] is None
+    # Connection checks intentionally leave the provider output cap unset.
+    assert material['max_tokens'] is None and material['tools'] is None

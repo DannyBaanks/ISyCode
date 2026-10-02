@@ -121,6 +121,16 @@ CHAT_WORKSPACE_TOOLS = [
         }, "required": ["query"], "additionalProperties": False},
     }},
 ]
+CONTEXT_ACCESS_TOOL_NAME = "request_context_access"
+CONTEXT_ACCESS_TOOL = {"type": "function", "function": {
+    "name": CONTEXT_ACCESS_TOOL_NAME,
+    "description": ("Pide permiso explícito para leer un único archivo de contexto .md o .txt "
+                    "de un proyecto hermano directo. Abre un aviso; no concede acceso hasta "
+                    "que el usuario lo apruebe."),
+    "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "Ruta absoluta a un archivo .md o .txt de un proyecto hermano directo."},
+    }, "required": ["path"], "additionalProperties": False},
+}}
 TOOL_ACTIONS = {
     "workspace_list": "workspace.files.list",
     "workspace_read": "workspace.files.read",
@@ -166,9 +176,9 @@ COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
 GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
 GIT_PARAMETER_KEYS = {
-    "git.status": frozenset({"git", "workspace_root", "inspect_path"}),
-    "git.diff": frozenset({"git", "workspace_root", "staged", "path"}),
-    "git.commit": frozenset({"git", "workspace_root", "message", "paths", "diff_sha256"}),
+    "git.status": frozenset({"git", "workspace_root", "repo_path", "inspect_path"}),
+    "git.diff": frozenset({"git", "workspace_root", "repo_path", "staged", "path"}),
+    "git.commit": frozenset({"git", "workspace_root", "repo_path", "message", "paths", "diff_sha256"}),
 }
 MCP_SERVER_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
@@ -620,9 +630,15 @@ class GitSystembility:
                            and set(params) == expected - {"inspect_path"}))
         if not valid_shape:
             return SystembilityResult(self.name, False, "git request shape is not the reviewed one")
-        if (request.target != str(request.workspace_root)
+        repo_path = params.get("repo_path", ".")
+        repo_valid = (isinstance(repo_path, str) and
+                      (repo_path == "." or
+                       (command_relative_path_valid(repo_path)
+                        and len(Path(repo_path).parts) == 1
+                        and not repo_path.startswith("."))))
+        if (not repo_valid or request.target != str(request.workspace_root)
                 or params.get("workspace_root") != str(request.workspace_root)):
-            return SystembilityResult(self.name, False, "git request must target the workspace repository")
+            return SystembilityResult(self.name, False, "git request must target one direct workspace repository")
         if not sandbox_program_valid(params.get("git"), "git"):
             return SystembilityResult(self.name, False, "git must be the system git executable")
         if request.action_id == "git.diff":
@@ -1574,13 +1590,16 @@ class ProductActionGate:
                             if item.action_id == request.action_id]
                 owner_variants = [item for item in variants if item.owner_id == owner_id]
                 denied = request.action_id in EXPLICIT_DENY_ACTIONS
-                bound = (not denied and request.execution_owner == owner_id
+                bound = (not denied and request.workspace_root == canonical
+                         and request.execution_owner == owner_id
                          and request.action_id in allowed_actions
                          and (not variants or any(item.matches(request) for item in owner_variants)))
                 if denied:
                     reason = "action is explicitly denied in Secure"
                 elif not owner_id or not allowed_actions:
                     reason = "no execution owner is registered for this gate"
+                elif request.workspace_root != canonical:
+                    reason = "request workspace does not match execution owner"
                 elif request.execution_owner != owner_id:
                     reason = "request is bound to a different execution owner"
                 elif request.action_id not in allowed_actions:
@@ -1963,14 +1982,12 @@ class LPSSymbolOwner:
 
 
 class ProviderNetworkOwner:
-    """Authorize one provider request and durably receipt its bounded response.
+    """Authorize one provider request and durably receipt its response.
 
     The transport callback is supplied by trusted ISyCode code, never by a
     model or workspace file. Its request material is hashed into the immutable
     action identity; neither prompt nor response contents enter the journal.
     """
-
-    MAX_RESULT_BYTES = 2_000_000
 
     def __init__(self, root: Path, authority: WorkspaceAuthority):
         self.root = root.resolve(strict=True)
@@ -2015,9 +2032,6 @@ class ProviderNetworkOwner:
         except (TypeError, ValueError):
             return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
                                        "provider result is not JSON serializable")
-        if len(result_text.encode("utf-8")) > self.MAX_RESULT_BYTES:
-            return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
-                                       "provider result exceeded the 2 MB receipt limit")
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "provider.request", request.digest,
             "ALLOW", "SUCCESS", hashlib.sha256(result_text.encode("utf-8")).hexdigest())

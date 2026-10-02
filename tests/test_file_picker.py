@@ -11,7 +11,7 @@ from isycode.file_picker import (ContextFilePickerOwner, build_linux_file_picker
 def test_zenity_picker_opens_native_markdown_and_text_filter(tmp_path: Path):
     command = build_linux_file_picker_command("/usr/bin/zenity", tmp_path)
 
-    assert command[:3] == ["/usr/bin/zenity", "--file-selection", "--title=Choose context file"]
+    assert command[:3] == ["/usr/bin/zenity", "--file-selection", "--title=Elegir archivo de contexto"]
     assert "--file-filter=Context documents | *.md *.txt" in command
 
 
@@ -19,7 +19,7 @@ def test_kdialog_picker_starts_at_launch_directory(tmp_path: Path):
     command = build_linux_file_picker_command("/usr/bin/kdialog", tmp_path)
 
     assert command == [
-        "/usr/bin/kdialog", "--title", "Choose context file",
+        "/usr/bin/kdialog", "--title", "Elegir archivo de contexto",
         "--getopenfilename", str(tmp_path), "*.md *.txt",
     ]
 
@@ -49,7 +49,7 @@ def test_context_owner_accepts_only_plain_markdown_or_text_in_workspace(tmp_path
     async def select_outside(_root):
         return outside
     monkeypatch.setattr("isycode.file_picker.choose_context_file", select_outside)
-    with pytest.raises(FilePickerUnavailable, match="inside this workspace"):
+    with pytest.raises(FilePickerUnavailable, match="this workspace or a direct sibling project"):
         asyncio.run(choose())
 
     binaryish = root / "notes.pdf"
@@ -57,7 +57,7 @@ def test_context_owner_accepts_only_plain_markdown_or_text_in_workspace(tmp_path
     async def select_binaryish(_root):
         return binaryish
     monkeypatch.setattr("isycode.file_picker.choose_context_file", select_binaryish)
-    with pytest.raises(FilePickerUnavailable, match="inside this workspace"):
+    with pytest.raises(FilePickerUnavailable, match="this workspace or a direct sibling project"):
         asyncio.run(choose())
 
 

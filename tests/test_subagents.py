@@ -22,10 +22,21 @@ def test_child_loop_executes_tools_and_denies_recursive_delegation():
     result=asyncio.run(run_child(Provider(), 'inspect parser', [{'role':'system','content':'boundary'}], ['workspace_read'], complete, dispatch))
     assert result['status']=='completed' and result['provider']=='nvidia' and result['model']=='child-model'
     assert len(tools)==1 and calls[1][-1]['content']=='verified read'
-    async def recursive(messages):return {'text':'','tool_calls':[{'id':'loop','function':{'name':'delegate_task','arguments':'{}'}}]}
+    recursive_calls=[]
+    async def recursive(messages):
+        recursive_calls.append(True)
+        if len(recursive_calls)==1:
+            return {'text':'','tool_calls':[{'id':'loop','function':{'name':'delegate_task','arguments':'{}'}}]}
+        return {'text':'done','tool_calls':[]}
     tools.clear()
-    result=asyncio.run(run_child(Provider(),'task',[],['workspace_read'],recursive,dispatch,max_steps=1))
-    assert result['status']=='limit' and tools==[]
+    recursive_tools=[]
+    async def dispatch_recursive(call):
+        recursive_tools.append(call)
+        return await dispatch(call)
+    result=asyncio.run(run_child(Provider(),'task',[],['workspace_read'],recursive,dispatch_recursive))
+    assert result['status']=='completed' and tools==[]
+    assert len(recursive_calls)==2
+    assert recursive_tools==[]
     with pytest.raises(ValueError):asyncio.run(run_child(Provider(),'',[],[],complete,dispatch))
 
 @pytest.mark.parametrize('deny_network',[False,True])

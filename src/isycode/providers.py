@@ -20,6 +20,9 @@ from isycode.config import credential_state, load_api_key, provider_default_mode
 
 
 DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+# supports_tools describes the endpoint's function-calling protocol, not a
+# guarantee for every hosted model. Tools remain filtered by Workspace Authority;
+# users must select a tool-capable model (and llama.cpp chat template).
 PRESETS: dict[str, dict[str, Any]] = {
     "openai": {"base_url": "https://api.openai.com/v1", "key_env": "OPENAI_API_KEY",
                "label": "OpenAI API", "default_model": "gpt-6-luna",
@@ -47,10 +50,10 @@ PRESETS: dict[str, dict[str, Any]] = {
                   "supports_tools": True, "api": "anthropic", "reasoning_effort": "medium"},
     "ollama": {"base_url": "http://127.0.0.1:11434/v1", "key_env": "OLLAMA_API_KEY",
                "label": "Ollama (local)", "key_required": False,
-               "default_model": "llama3.1:8b"},
+               "default_model": "llama3.1:8b", "supports_tools": True},
     "llamacpp": {"base_url": "http://127.0.0.1:8080/v1", "key_env": "LLAMACPP_API_KEY",
                  "label": "llama.cpp server (local)", "key_required": False,
-                 "default_model": "local"},
+                 "default_model": "local", "supports_tools": True},
 }
 
 
@@ -63,6 +66,16 @@ FEATURED_MODELS: tuple[tuple[str, str], ...] = (
     ("Kimi K3", r"kimi[-_. ]?k3(?![0-9])"),
     ("DeepSeek V4.1 Flash", r"deepseek[-_. ]?v4[._]1(?![0-9]).*flash"),
 )
+
+
+def provider_base_url(name: str, base_url: str | None = None) -> str:
+    """Resolve the transport endpoint without credentials or workspace grants."""
+    preset = PRESETS[name]
+    return (base_url or os.environ.get("ISYCODE_BASE_URL")
+            or os.environ.get("ISYMOTRON_BASE_URL")
+            or (os.environ.get("OLLAMA_HOST", "").rstrip("/") + "/v1"
+                if name == "ollama" and os.environ.get("OLLAMA_HOST")
+                else preset["base_url"])).rstrip("/")
 
 
 def featured_models(catalog: list[str]) -> list[tuple[str, str | None]]:
@@ -252,11 +265,7 @@ class Provider:
         if preset is None:
             raise ProviderError(f"unknown provider {self.name!r}")
         self.label = preset["label"]
-        self.base_url = (base_url or os.environ.get("ISYCODE_BASE_URL")
-                         or os.environ.get("ISYMOTRON_BASE_URL")
-                         or (os.environ.get("OLLAMA_HOST", "").rstrip("/") + "/v1"
-                             if self.name == "ollama" and os.environ.get("OLLAMA_HOST")
-                             else preset["base_url"])).rstrip("/")
+        self.base_url = provider_base_url(self.name, base_url)
         self.model = (model or selected_model_name()
                       or provider_default_model(self.name)
                       or preset.get("default_model") or DEFAULT_MODEL)

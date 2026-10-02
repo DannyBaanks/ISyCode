@@ -37,8 +37,7 @@ OWNER_ID = "mcp_local"
 MAX_CONFIG_BYTES = 64 * 1024
 MAX_SERVERS = 20
 MAX_TOOLS_PER_SERVER = 64
-MAX_LINE_BYTES = 4 * 1024 * 1024
-MAX_RESULT_CHARS = 64 * 1024
+MAX_LINE_BYTES = 2**63 - 1  # Do not truncate large endpoint results before chat sees them.
 START_TIMEOUT_S = 30
 CALL_TIMEOUT_S = 120
 PROTOCOL_VERSION = "2025-06-18"
@@ -342,10 +341,9 @@ class LocalMCPOwner:
             elif isinstance(item, dict):
                 parts.append(f"[{item.get('type', 'content')} omitted]")
         text = "\n".join(parts)
-        truncated = len(text) > MAX_RESULT_CHARS
         return self._finish(preview.request, {
-            "server": preview.server, "tool": preview.tool, "text": text[:MAX_RESULT_CHARS],
-            "truncated": truncated,
+            "server": preview.server, "tool": preview.tool, "text": text,
+            "truncated": False,
             "is_error": bool(result.get("isError")) if isinstance(result, dict) else False},
             f"{preview.server}.{preview.tool} returned")
 

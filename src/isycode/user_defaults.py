@@ -90,7 +90,7 @@ class UserDefaultsStore:
             raise ValueError("ISyCode chat token budget is invalid")
         if type(steps) is not int or steps not in AGENT_STEP_CHOICES:
             raise ValueError("ISyCode agent step limit is invalid")
-        if type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES:
+        if tokens is not None and (type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES):
             raise ValueError("ISyCode answer length is invalid")
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role, "agent_steps": steps, "answer_tokens": tokens,

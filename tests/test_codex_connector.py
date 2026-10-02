@@ -123,7 +123,9 @@ MESSAGES = [{"role": "system", "content": "system-imported"},
 
 def connector(tmp_path, scenario="normal", *, timeout_s=2):
     executable = tmp_path / "fake-codex"
-    executable.write_text(f"#!{sys.executable}\n" + FAKE.replace("__SCENARIO__", repr(scenario)))
+    # The project's interpreter path contains spaces, which POSIX shebangs
+    # cannot represent. The fake peer uses stdlib only and the sanitized PATH.
+    executable.write_text("#!/usr/bin/env python3\n" + FAKE.replace("__SCENARIO__", repr(scenario)))
     executable.chmod(0o700)
     return CodexConnector(str(executable), tmp_path / "managed", timeout_s=timeout_s)
 

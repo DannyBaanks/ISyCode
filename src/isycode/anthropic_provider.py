@@ -136,10 +136,11 @@ def interpret(content: list[dict[str, Any]], stop_reason: str | None,
 
 
 async def anthropic_stream_complete(api_key: str | None, model: str, messages: list[dict],
-                                    *, max_tokens: int, effort: str | None = None,
+                                    *, max_tokens: int | None = None, effort: str | None = None,
                                     on_chunk: Callable[[str, str], None] | None = None,
                                     tools: list[dict] | None = None,
                                     base_url: str = ANTHROPIC_BASE_URL,
+                                    timeout_s: float | None = None,
                                     client: Any = None) -> dict[str, Any]:
     """Stream one Messages API request and return ISyCode's response shape."""
     try:
@@ -150,15 +151,34 @@ async def anthropic_stream_complete(api_key: str | None, model: str, messages: l
     system, converted = to_anthropic(messages)
     options = request_options(model, effort)
     betas = options.pop("betas")
-    request: dict[str, Any] = {"model": model, "max_tokens": max_tokens,
-                               "messages": converted, **options}
+    client = client or anthropic.AsyncAnthropic(
+        api_key=api_key, base_url=base_url, timeout=timeout_s)
+    request: dict[str, Any] = {"model": model, "messages": converted, **options}
+    if max_tokens is None:
+        # Anthropic requires max_tokens on Messages. Its model catalog supplies
+        # the endpoint's per-model ceiling; ISyCode does not choose one.
+        try:
+            metadata = await client.models.retrieve(model)
+        except anthropic.AuthenticationError as exc:
+            raise ProviderError("Anthropic rejected the API key", 401) from exc
+        except anthropic.PermissionDeniedError as exc:
+            raise ProviderError("this API key cannot use that model", 403) from exc
+        except anthropic.NotFoundError as exc:
+            raise ProviderError(f"model {model!r} was not found", 404) from exc
+        except anthropic.RateLimitError as exc:
+            raise ProviderError("Anthropic rate limit reached; try again shortly", 429) from exc
+        except anthropic.APIStatusError as exc:
+            raise ProviderError(f"Anthropic API error {exc.status_code}", exc.status_code) from exc
+        except anthropic.APIConnectionError as exc:
+            raise ProviderError("could not reach the Anthropic API", transport=True) from exc
+        max_tokens = metadata.max_tokens
+    request["max_tokens"] = max_tokens
     if system:
         request["system"] = system
     if tools:
         request["tools"] = to_anthropic_tools(tools)
     if betas:
         request["betas"] = betas
-    client = client or anthropic.AsyncAnthropic(api_key=api_key, base_url=base_url)
     try:
         async with client.beta.messages.stream(**request) as stream:
             async for event in stream:

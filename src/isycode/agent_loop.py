@@ -1,4 +1,4 @@
-"""Pure helpers for the chat agent loop: limits, context budget and compaction.
+"""Helpers for explicit conversation compaction and legacy settings compatibility.
 
 Nothing here talks to a provider or performs an effect. The TUI sends the
 summary request through the same ProviderNetworkOwner as any chat turn, so
@@ -15,23 +15,23 @@ from typing import Any
 AGENT_STEP_CHOICES = (0, 10, 25, 50, 100)
 ANSWER_TOKEN_CHOICES = (2048, 4096, 8192, 16384, 32768)
 DEFAULT_AGENT_STEPS = 0
-DEFAULT_ANSWER_TOKENS = 8192
-# Rough character budgets (about 4 characters per token) for what is sent.
+DEFAULT_ANSWER_TOKENS = None
+# Legacy values retained for compatibility with callers; normal chat does not
+# use them. Only the explicit /compact command calls these helpers.
 HISTORY_BUDGET_CHARS = 60_000
 TURN_BUDGET_CHARS = 160_000
 KEEP_RECENT_TOOL_RESULTS = 4
 KEEP_RECENT_MESSAGES = 6
-SUMMARY_MAX_TOKENS = 1500
-MAX_SUMMARY_CHARS = 8_000
+SUMMARY_MAX_TOKENS = None
+MAX_SUMMARY_CHARS = None
 ELIDED_TOOL_RESULT = json.dumps({
-    "elided": "older tool result removed to stay within the context budget; "
-              "call the tool again if you still need it"})
+    "elided": "older tool result removed by explicit user-requested compaction"})
 
 
 @dataclass(frozen=True)
 class AgentLimits:
     max_steps: int = DEFAULT_AGENT_STEPS
-    answer_tokens: int = DEFAULT_ANSWER_TOKENS
+    answer_tokens: int | None = DEFAULT_ANSWER_TOKENS
 
     def step_allowed(self, step: int) -> bool:
         """Whether request number ``step`` (0-based) may be sent."""
@@ -43,11 +43,9 @@ class AgentLimits:
 
     @classmethod
     def from_defaults(cls, defaults: dict[str, Any] | None) -> "AgentLimits":
-        defaults = defaults or {}
-        steps = defaults.get("agent_steps", DEFAULT_AGENT_STEPS)
-        tokens = defaults.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
-        return cls(steps if steps in AGENT_STEP_CHOICES else DEFAULT_AGENT_STEPS,
-                   tokens if tokens in ANSWER_TOKEN_CHOICES else DEFAULT_ANSWER_TOKENS)
+        # Legacy user/workspace settings remain readable but cannot impose a
+        # local cap on provider generation or tool round-trips.
+        return cls(DEFAULT_AGENT_STEPS, None)
 
 
 def message_chars(message: dict[str, Any]) -> int:
@@ -89,8 +87,8 @@ def summary_messages(older: list[dict[str, Any]], previous: str = "") -> list[di
     for message in older:
         role = message.get("role", "")
         if role in {"user", "assistant"} and message.get("content"):
-            lines.append(f"[{role}]\n{message['content'][:6000]}")
-    transcript = "\n\n".join(lines)[-120_000:]
+            lines.append(f"[{role}]\n{message['content']}")
+    transcript = "\n\n".join(lines)
     return [
         {"role": "system", "content": (
             "Summarize the conversation below as concise working notes for continuing it: the "

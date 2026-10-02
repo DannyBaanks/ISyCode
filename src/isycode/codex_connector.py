@@ -17,10 +17,10 @@ from urllib.parse import urlsplit
 from isycode.providers import ProviderError
 
 
-MAX_FRAME = 1_000_000  # Existing streaming-event transport limit.
+MAX_FRAME = 2**63 - 1  # No local transcript/response size ceiling.
 MAX_ARGUMENTS = 64 * 1024
 MAX_EVENTS = 64
-MAX_TEXT = 1_000_000
+MAX_TEXT = 2**63 - 1
 _FEATURES = dict.fromkeys((
     "shell_tool", "unified_exec", "multi_agent", "collab", "plugins",
     "remote_plugin", "recommended_plugins", "plugin_hooks", "hooks",
@@ -105,7 +105,7 @@ class CodexConnector:
     A dynamic tool call ends this connection before returning the call to its owner.
     """
 
-    def __init__(self, executable: str, home: Path, *, timeout_s: float = 120):
+    def __init__(self, executable: str, home: Path, *, timeout_s: float | None = None):
         if (not isinstance(executable, str) or not Path(executable).is_absolute()
                 or "\x00" in executable):
             raise CodexConnectorError("Codex requires an explicitly selected executable")
@@ -113,8 +113,9 @@ class CodexConnector:
         if (not home.is_absolute() or ".." in home.parts or home in (
                 Path(home.anchor), Path.home(), Path.home() / ".codex")):
             raise CodexConnectorError("Codex requires a dedicated absolute home")
-        if not isinstance(timeout_s, (int, float)) or not math.isfinite(timeout_s) or timeout_s <= 0:
-            raise CodexConnectorError("Codex requires a positive deadline")
+        if timeout_s is not None and (not isinstance(timeout_s, (int, float))
+                                      or not math.isfinite(timeout_s) or timeout_s <= 0):
+            raise CodexConnectorError("Codex deadline must be positive or disabled")
         self.executable, self.home, self.timeout_s = executable, home, timeout_s
         self._process: asyncio.subprocess.Process | None = None
         self._reader: asyncio.Task | None = None
@@ -536,7 +537,7 @@ class CodexConnector:
     async def _complete(self, model: str, messages: list[dict], tools: list[dict] | None,
                         on_chunk: Callable[[str, str], None] | None) -> dict:
         model = _string(model)
-        if not isinstance(messages, list) or not messages or len(messages) > 1024:
+        if not isinstance(messages, list) or not messages:
             raise CodexConnectorError("Codex transcript is invalid")
         for message in messages:
             if not isinstance(message, dict) or message.get("role") not in (
@@ -642,15 +643,11 @@ class CodexConnector:
                     raise CodexConnectorError("Codex text event is invalid")
                 if method == "item/reasoning/summaryTextDelta":
                     reasoning_bytes += len(delta.encode("utf-8"))
-                    if reasoning_bytes > MAX_TEXT:
-                        raise CodexConnectorError("Codex summary exceeds the transport limit")
                     reasoning.append(delta)
                     if on_chunk:
                         on_chunk("reasoning", delta)
                     continue
                 text_bytes += len(delta.encode("utf-8"))
-                if text_bytes > MAX_TEXT:
-                    raise CodexConnectorError("Codex response exceeds the transport limit")
                 content.append(delta)
                 if on_chunk:
                     on_chunk("content", delta)

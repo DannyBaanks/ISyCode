@@ -39,7 +39,6 @@ from isycode.workspace_authority import WorkspaceAuthority
 OWNER_ID = "workspace_command"
 COMMAND_TOOL_NAME = "workspace_run"
 DEFAULT_TIMEOUT_S = 120
-MAX_MASK_SCAN = 100_000
 MAX_PROCESSES = 256
 PYTHON = "/usr/bin/python3"
 # Only the files dynamic linking and user lookups need; no hosts, resolv or keys.
@@ -119,21 +118,17 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
     """Every sensitive file or folder in the workspace, as (relative path, is_folder).
 
     Symlinks are not masked: only the workspace is mounted, so their targets
-    are either outside the sandbox or a real entry that is masked itself.
-    Too many entries fails closed instead of running with partial masking.
+    are either outside the sandbox or a real entry that is masked itself. The
+    scan is exhaustive: command execution never proceeds with only a partial
+    list of sensitive paths, and large workspaces are not rejected by an
+    arbitrary entry-count ceiling.
     """
     found: list[tuple[str, bool]] = []
     stack = [root]
-    seen = 0
     while stack:
         folder = stack.pop()
         with os.scandir(folder) as entries:
             for entry in entries:
-                seen += 1
-                if seen > MAX_MASK_SCAN:
-                    raise ValueError(
-                        f"the workspace has more than {MAX_MASK_SCAN:,} entries; sensitive files "
-                        "cannot be masked safely")
                 if entry.is_symlink():
                     continue
                 is_folder = entry.is_dir(follow_symlinks=False)

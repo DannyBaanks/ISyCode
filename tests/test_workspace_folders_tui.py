@@ -194,6 +194,10 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
     (sibling / 'file.py').write_text('value = 1\n')
     store = WorkspaceFolders(root)
 
+    async def choose_sibling(self):
+        return sibling
+    monkeypatch.setattr('isycode.tui.SiblingFolderPickerOwner.choose', choose_sibling)
+
     async def scenario():
         from isycode.tui import AddWorkspaceFolderScreen, AutomaticEditsWarningScreen
         from textual.widgets import Input
@@ -204,7 +208,6 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
             await pilot.pause()
             assert isinstance(app.screen, AddWorkspaceFolderScreen)
             app.screen.query_one('#folder-alias', Input).value = 'sibling'
-            app.screen.query_one('#folder-path', Input).value = str(sibling)
             button = app.screen.query_one('#folder-add')
             assert button.region.bottom <= 24
             await pilot.click('#folder-add')
