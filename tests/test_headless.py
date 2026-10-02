@@ -58,8 +58,11 @@ def test_a_tool_round_trip_is_owned_and_journaled(workspace):
     assert "workspace_read ALLOW" in log.getvalue()
     tool_message = requests[1][0][-1]
     assert tool_message["role"] == "tool" and "ANSWER = 42" in tool_message["content"]
-    # Two provider requests and one read, each decided and receipted.
-    assert ActionAuditJournal(workspace).verify().receipts == 3
+    # Two provider requests, credential use, and one workspace read are each
+    # independently decided and receipted.
+    report = ActionAuditJournal(workspace).verify()
+    assert report.receipts == 4
+    assert report.decisions == 4
 
 
 def test_gated_tools_requested_by_the_model_are_refused(workspace):
