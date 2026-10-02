@@ -236,11 +236,24 @@ async def async_stream_complete(
     if any(char in request_path for char in "\r\n "):
         raise StreamError("provider URL contains invalid request-target characters")
 
-    loop = asyncio.get_running_loop()
     async def bounded(awaitable):
+        """Wait with a deadline without turning cancellation into a timeout.
+
+        Python 3.10's ``asyncio.wait_for`` can report a cancelled read as
+        ``TimeoutError``. ``asyncio.wait`` leaves ``CancelledError`` alone.
+        """
         if timeout_s is None:
             return await awaitable
-        return await asyncio.wait_for(awaitable, timeout=timeout_s)
+        inner = asyncio.ensure_future(awaitable)
+        try:
+            done, _pending = await asyncio.wait({inner}, timeout=timeout_s)
+        except asyncio.CancelledError:
+            inner.cancel()
+            raise
+        if inner not in done:
+            inner.cancel()
+            raise asyncio.TimeoutError()
+        return inner.result()
 
     tls = ssl.create_default_context() if parsed.scheme == "https" else None
     # The peer is the address review_destination accepted. The Host header and
