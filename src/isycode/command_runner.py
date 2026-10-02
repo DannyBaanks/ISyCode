@@ -1,10 +1,11 @@
 """Run one reviewed command inside the workspace sandbox after Authority and IsySentinel.
 
 The argv is never given to a shell. Bubblewrap exposes read-only system files
-and the workspace as the only writable host folder; every sensitive path the
-chat tools refuse (``.git``, ``.env``, keys…) is masked, the ``.isyroot``
-marker is read-only, and a seccomp bootstrap denies socket syscalls before
-the program starts. Each run needs a ``workspace.command.run`` grant for the
+and a private copy of the workspace; every sensitive path the chat tools refuse
+(``.git``, ``.env``, keys…) is masked, the ``.isyroot`` marker is read-only,
+and a seccomp bootstrap denies socket syscalls before the program starts.
+The user tree is unchanged until that measured diff is promoted. There is no
+host-shell fallback. Each run needs a ``workspace.command.run`` grant for the
 exact sandbox executable plus a fresh approval bound to the reviewed request.
 """
 from __future__ import annotations
@@ -34,6 +35,9 @@ from isycode.action_runtime import (
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.lsp import network_deny_bootstrap
 from isycode.security import ActionRequest
+from isycode.staging import (
+    StagingError, cleanup_staging, measure_changes, prepare_staging, promote_changes,
+)
 from isycode.workspace_authority import WorkspaceAuthority
 
 OWNER_ID = "workspace_command"
@@ -246,6 +250,16 @@ class CommandRunOwner:
 
     async def run(self, preview: CommandPreview,
                   approval: ActionApproval | None) -> ActionOutcome:
+        """Run in staging and promote the measured diff after the process exits."""
+        return await self._run(preview, approval, promote=True)
+
+    async def run_staged(self, preview: CommandPreview,
+                         approval: ActionApproval | None) -> ActionOutcome:
+        """Run in staging and leave the user tree untouched."""
+        return await self._run(preview, approval, promote=False)
+
+    async def _run(self, preview: CommandPreview, approval: ActionApproval | None, *,
+                   promote: bool) -> ActionOutcome:
         request = preview.request
         # Re-derive the sandbox facts: a new secret or a swapped program after
         # review denies instead of running with a stale mask set.
@@ -263,10 +277,11 @@ class CommandRunOwner:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return ActionOutcome("Command denied.", "DENY", None, reason)
         try:
-            result = await self._execute(preview)
+            result = await self._execute(preview, promote=promote)
         except (OSError, RuntimeError, ValueError) as exc:
+            detail = str(exc).strip() or type(exc).__name__
             return ActionOutcome("Command could not start.", "ERROR", None,
-                                 f"sandboxed command failed to start ({type(exc).__name__})")
+                                 f"sandboxed command failed to start ({detail[:200]})")
         result_text = json.dumps(result, ensure_ascii=False, sort_keys=True)
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "workspace.command.run", request.digest,
@@ -280,41 +295,65 @@ class CommandRunOwner:
         return ActionOutcome(result_text, "ALLOW", receipt,
                              f"sandboxed command finished with exit code {result['exit_code']}")
 
-    async def _execute(self, preview: CommandPreview) -> dict:
+    async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
-        command = sandbox_command(params["executable"], self.root, preview.program, preview.argv,
-                                  preview.cwd, preview.masks, timeout_s=preview.timeout_s)
-        proc = await asyncio.create_subprocess_exec(
-            *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True)
-        output = bytearray()
-        total = 0
-        timed_out = False
-
-        async def drain() -> None:
-            nonlocal total
-            while chunk := await proc.stdout.read(8192):
-                total += len(chunk)
-                room = COMMAND_MAX_OUTPUT_BYTES - len(output)
-                if room > 0:
-                    output.extend(chunk[:room])
-            await proc.wait()
-
         try:
-            await asyncio.wait_for(drain(), timeout=preview.timeout_s)
-        except asyncio.TimeoutError:
-            timed_out = True
-            self._kill(proc)
-            await proc.wait()
-        except asyncio.CancelledError:
-            self._kill(proc)
-            await proc.wait()
-            raise
-        return {"argv": list(preview.argv), "cwd": preview.cwd,
-                "exit_code": proc.returncode, "timed_out": timed_out,
-                "output": output.decode("utf-8", errors="replace"),
-                "output_truncated": total > len(output), "output_bytes": total}
+            staging = prepare_staging(self.root)
+        except StagingError as exc:
+            raise OSError(str(exc)) from exc
+        try:
+            command = sandbox_command(params["executable"], staging.root, preview.program,
+                                      preview.argv, preview.cwd, preview.masks,
+                                      timeout_s=preview.timeout_s)
+            proc = await asyncio.create_subprocess_exec(
+                *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True)
+            output = bytearray()
+            total = 0
+            timed_out = False
+
+            async def drain() -> None:
+                nonlocal total
+                while chunk := await proc.stdout.read(8192):
+                    total += len(chunk)
+                    room = COMMAND_MAX_OUTPUT_BYTES - len(output)
+                    if room > 0:
+                        output.extend(chunk[:room])
+                await proc.wait()
+
+            try:
+                await asyncio.wait_for(drain(), timeout=preview.timeout_s)
+            except asyncio.TimeoutError:
+                timed_out = True
+                self._kill(proc)
+                await proc.wait()
+            except asyncio.CancelledError:
+                self._kill(proc)
+                await proc.wait()
+                raise
+            changes = measure_changes(staging)
+            if promote:
+                applied, refused = promote_changes(staging, changes)
+                pending: list[str] = []
+            else:
+                applied, refused = [], []
+                pending = [item["path"] for item in changes]
+            return {"argv": list(preview.argv), "cwd": preview.cwd,
+                    "exit_code": proc.returncode, "timed_out": timed_out,
+                    "output": output.decode("utf-8", errors="replace"),
+                    "output_truncated": total > len(output), "output_bytes": total,
+                    "staging": {
+                        "backend": "copy",
+                        "promoted_count": len(applied),
+                        "promoted": applied[:300],
+                        "pending_count": len(pending),
+                        "pending": pending[:300],
+                        "refused_count": len(refused),
+                        "refused": refused[:300],
+                    }}
+        finally:
+            cleanup_staging(staging)
 
     @staticmethod
     def _kill(proc: asyncio.subprocess.Process) -> None:

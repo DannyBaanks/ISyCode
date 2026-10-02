@@ -217,7 +217,9 @@ class L1Store:
                 # The temp workspace contains only the candidate. The runner's
                 # sandbox clears the environment, blocks sockets, limits resources
                 # and caps output; no ambient project files or credentials are mounted.
-                result = asyncio.run(runner._execute(preview))
+                # Observe only. The temporary workspace is discarded, so there
+                # is nothing to promote back into a project tree.
+                result = asyncio.run(runner._execute(preview, promote=False))
             if result["exit_code"] != 0:
                 return GateResult("P", False, "sandboxed candidate probe failed")
             json.loads(result["output"])

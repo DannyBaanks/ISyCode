@@ -34,6 +34,7 @@ from isycode.action_runtime import (
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
+from isycode.staging import remove_spill, spill_bytes
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_setup import state_root
 from isycode.winfs import VerifiedFS, is_link, use_verified_fs
@@ -415,6 +416,12 @@ class WorkspaceWriteOwner:
         return "; ".join(f"{item.name}: {item.reason}" for item in decision.checks
                          if not item.passed)[:300]
 
+    def stage_preview(self, preview: WritePreview) -> Path:
+        """Put the approved bytes outside the workspace. The user file stays unchanged."""
+        if not isinstance(preview, WritePreview):
+            raise TypeError("preview has the wrong type")
+        return spill_bytes(preview.content.encode("utf-8"))
+
     def apply(self, preview: WritePreview, approval: ActionApproval | None) -> ActionOutcome:
         if not isinstance(preview, WritePreview):
             return ActionOutcome("File change denied.", "DENY", None, "preview has the wrong type")
@@ -442,6 +449,7 @@ class WorkspaceWriteOwner:
 
         params = preview.request.parameters
         target = Path(preview.request.target)
+        staged = self.stage_preview(preview)
         try:
             if ".isycode/commands" in params["new_folders"]:
                 commands_directory = self.root / ".isycode" / "commands"
@@ -452,7 +460,10 @@ class WorkspaceWriteOwner:
                     directory_fd = self._open_directory(commands_directory,
                                                         tuple(params["new_folders"]))
                     os.close(directory_fd)
-            before = self._replace(target, preview.content.encode("utf-8"),
+            payload = staged.read_bytes()
+            if payload != preview.content.encode("utf-8"):
+                raise ValueError("staged bytes do not match the approved content")
+            before = self._replace(target, payload,
                                    params["before_sha256"], tuple(params["new_folders"]))
             written = self._read_back(target)
             if written is None or _sha(written) != params["after_sha256"]:
@@ -461,6 +472,8 @@ class WorkspaceWriteOwner:
             receipt = self._receipt(preview.request, "FAILURE", "write_failed")
             return ActionOutcome("File change failed; the approved content is not verified.",
                                  "ERROR", receipt, str(exc)[:300])
+        finally:
+            remove_spill(staged)
         try:
             checkpoint = self.checkpoints.save({
                 "time": time.time(), "path": params["path"],

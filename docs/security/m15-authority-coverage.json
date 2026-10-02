@@ -1704,7 +1704,7 @@
       "action": "workspace.command.run",
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "file": "isycode/command_runner.py",
-      "line": 238,
+      "line": 242,
       "owner": "workspace_command"
     },
     {
@@ -1914,35 +1914,35 @@
       "action": "workspace.files.restore",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
       "file": "isycode/workspace_write.py",
-      "line": 354,
+      "line": 355,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.delete",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_delete",
       "file": "isycode/workspace_write.py",
-      "line": 371,
+      "line": 372,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.move",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner._preview_move",
       "file": "isycode/workspace_write.py",
-      "line": 394,
+      "line": 395,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.config.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 306,
+      "line": 307,
       "owner": "workspace_config"
     },
     {
       "action": "workspace.files.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 309,
+      "line": 310,
       "owner": "workspace_write"
     }
   ],

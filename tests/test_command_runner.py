@@ -124,7 +124,10 @@ def test_an_approved_command_runs_in_the_workspace_and_is_journaled(sandbox):
     result = json.loads(outcome.text)
     assert outcome.decision == "ALLOW" and outcome.receipt is not None
     assert result["exit_code"] == 0 and not result["timed_out"]
-    assert result["output"].splitlines() == [str(owner.root / "src"), "/tmp"]
+    cwd_line, home = result["output"].splitlines()
+    assert home == "/tmp"
+    assert cwd_line.endswith("/src") and Path(cwd_line) != owner.root / "src"
+    assert (owner.root / "src" / "app.py").read_text(encoding="utf-8") == "print('app')\n"
     assert preview.program in {"/usr/local/bin/python3", "/usr/bin/python3", "/bin/python3"}
     assert ActionAuditJournal(owner.root).verify().receipts == 1
 
