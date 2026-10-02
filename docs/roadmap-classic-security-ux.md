@@ -1,7 +1,8 @@
 # Roadmap ejecutable: Classic seguro, Security explícito y UX de uso diario
 
-Fecha: 2026-10-02. Estado: **plan pendiente de implementación**.
+Fecha: 2026-10-02. Estado: **M0 en revisión; M1–M10 pendientes**.
 Este documento define el destino y sus puertas de aceptación; publicarlo no supera ninguna puerta.
+La evidencia de M0 está en [docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/](evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml). No aprueba G0 ni desbloquea M1.
 Los IDs `M0`–`M10` (incluido `M6A`) son locales a este roadmap, no los del [roadmap histórico](ROADMAP.md).
 Para esta evolución de Classic/Security prevalece esta dirección de producto; las descripciones actuales del README siguen describiendo el software disponible.
 
@@ -144,7 +145,7 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 
 | Hito | Entrega | Dependencias | Estado | Puerta |
 | --- | --- | --- | --- | --- |
-| M0 | Baseline, reuso, amenazas y entorno medido | Ninguna | PENDIENTE | G0 |
+| M0 | Baseline, reuso, amenazas y entorno medido | Ninguna | EN REVISIÓN | G0 |
 | M1 | Política común, CI de gates y primera separación TUI | M0 | PENDIENTE | G1 |
 | M2 | Aislamiento real y staging de efectos | M1 | PENDIENTE | G2 |
 | M3 | Ledger de presupuestos y recuperación durable | M2 | PENDIENTE | G3 |
@@ -390,7 +391,7 @@ Aceptación: release solo con G10 aprobado. Si aparece regresión, detener rollo
 
 ## 6. Evidencia y aceptación por hito
 
-Ruta **propuesta, aún no creada**: `docs/evidence/classic-security-ux/<hito>/<sha>/`; no guardar secretos, home completo ni dumps de credenciales.
+Ruta de evidencia: `docs/evidence/classic-security-ux/<hito>/<sha>/`. M0 ya tiene una carpeta para el SHA medido. Los hitos siguientes no. Esa carpeta no certifica la puerta. No guardar secretos, home completo ni dumps de credenciales.
 Los nuevos archivos de tests/validator son entregables futuros: elegir sus rutas al implementar y registrar comando/node ID exacto.
 Cada caso debe probar también ausencia de efectos indebidos, no únicamente que salió un mensaje de error.
 Conservar checksums del workspace y procesos/tráfico cuando sean relevantes; nunca usar datos personales para fixtures.
@@ -426,14 +427,14 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo hito: M0. Ninguna puerta está aprobada por este documento.**
+**Próximo paso: un revisor distinto acepta o devuelve G0. Ninguna puerta está APROBADA. M1 sigue bloqueado.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
 1. Lee AGENTS.md, git status/branch/remotes y las instrucciones aplicables.
 2. Preserva cambios ajenos; identifica baseline y evidencia del ultimo gate.
-3. Selecciona el primer hito pendiente cuyas dependencias esten APROBADAS.
-   Hoy es M0. Si falta evidencia, no inventes progreso ni actives autonomia.
+3. Selecciona el primer hito cuyas dependencias esten APROBADAS.
+   M0 está EN REVISIÓN: no lo reabras como si no hubiera evidencia y no empieces M1.
 4. Reutiliza owners y contratos existentes; verifica fuentes antes de proponer duplicados.
 5. Ejecuta sus IDs de aceptacion y regresiones pertinentes con SHA y entorno.
 6. Si falla una prueba obligatoria, para dependientes y corrige o registra BLOQUEADO.

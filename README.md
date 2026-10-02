@@ -394,7 +394,7 @@ Lo poquito que queda, en orden:
 
 ## Roadmap y documentación
 
-**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. Es un plan pendiente: el Classic actual todavía confirma cada edición/comando; el objetivo es autonomía acotada con confirmaciones solo en fronteras reales.
+**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0 está en revisión y no cambia el producto: el Classic actual todavía confirma cada edición y cada comando. El objetivo sigue siendo autonomía acotada, con confirmación solo al cruzar una frontera real.
 
 La estrategia histórica describía dos etapas (la evolución Classic/Security se concreta ahora en el roadmap anterior): primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
 
