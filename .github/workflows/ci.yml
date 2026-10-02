@@ -24,6 +24,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bubblewrap
 
+      - name: Let bubblewrap configure its private loopback
+        run: |
+          # Ubuntu 24.04 denies CAP_NET_ADMIN inside an unprivileged user
+          # namespace, so bwrap dies with "loopback: Failed RTM_NEWADDR" before
+          # the command starts. This ephemeral runner may set up that namespace.
+          # The product sandbox still passes --unshare-all and does not share
+          # the host network.
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v7
         with:
@@ -49,6 +60,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y bubblewrap
+
+      - name: Let bubblewrap configure its private loopback
+        run: |
+          # Same runner restriction as the Python 3.10 job. The sandbox argv
+          # is unchanged: no --share-net.
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v7

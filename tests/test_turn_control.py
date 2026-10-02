@@ -383,6 +383,23 @@ def test_g6_04_retry_keeps_the_new_draft_and_transcript_order(tmp_path, monkeypa
         asyncio.run(scenario())
 
 
+def test_g6_05_python_310_tasks_have_no_cancelling_attribute(monkeypatch):
+    class LegacyTask:
+        def cancelled(self):
+            return False
+
+    monkeypatch.setattr(asyncio, "current_task", lambda: LegacyTask())
+    TransportRetry._raise_if_cancelled(None)
+
+    class CancellingTask:
+        def cancelling(self):
+            return 1
+
+    monkeypatch.setattr(asyncio, "current_task", lambda: CancellingTask())
+    with pytest.raises(asyncio.CancelledError):
+        TransportRetry._raise_if_cancelled(None)
+
+
 def test_g6_05_backoff_is_bounded_cancellable_and_does_not_change_authority(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         TransportRetry(max_attempts=5)

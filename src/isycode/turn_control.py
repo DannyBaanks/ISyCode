@@ -301,7 +301,10 @@ class TransportRetry:
     @staticmethod
     def _raise_if_cancelled(cancelled: asyncio.Event | None) -> None:
         task = asyncio.current_task()
-        if task is not None and task.cancelling():
+        # Task.cancelling() is Python 3.11+. The Linux CI job is 3.10, where
+        # the next await raises CancelledError before another connect starts.
+        cancelling = getattr(task, "cancelling", None) if task is not None else None
+        if cancelling is not None and cancelling():
             raise asyncio.CancelledError()
         if cancelled is not None and cancelled.is_set():
             raise RetryCancelled("transport retry cancelled")

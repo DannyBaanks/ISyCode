@@ -221,7 +221,9 @@ class L1Store:
                 # is nothing to promote back into a project tree.
                 result = asyncio.run(runner._execute(preview, promote=False))
             if result["exit_code"] != 0:
-                return GateResult("P", False, "sandboxed candidate probe failed")
+                detail = " ".join(str(result.get("output") or "").split())[:160]
+                suffix = f": {detail}" if detail else ""
+                return GateResult("P", False, f"sandboxed candidate probe failed{suffix}")
             json.loads(result["output"])
         except (OSError, RuntimeError, TypeError, ValueError, KeyError,
                 asyncio.TimeoutError, json.JSONDecodeError) as exc:
