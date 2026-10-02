@@ -161,7 +161,8 @@ except ModuleNotFoundError:
         """A planner rejection raised only when an optional runtime is present."""
 
 from isycode.providers import (
-    DEFAULT_MODEL, PRESETS, Provider, ProviderError, featured_models, load_provider_key,
+    DEFAULT_MODEL, PRESETS, PROVIDER_SCREEN, Provider, ProviderError, featured_models,
+    load_provider_key,
     provider_credential_state, save_provider_selection, selected_model_name, selected_provider_name,
 )
 from isycode.streaming import (
@@ -172,7 +173,7 @@ from isycode.gateway_client import GatewayClient
 from isycode.gateway_mcp import (
     GatewayMCPUnavailable, discover_gateway_tools, tool_schema_digest,
 )
-from isycode.lsp import discover_servers
+from isycode.lsp import discover_servers, language_server_catalog
 from isycode.workspace import IsyMotronWorkspace, WorkspaceUnavailable
 from isycode.openisy_client import OpenIsyClient
 from isycode.runtime import AuthorityContextChanged, IsyMotronRuntime
@@ -233,29 +234,105 @@ class Banner(Static):
         path = str(launch)
         rail = self.screen.query_one(SidePanel)
         width = self.app.size.width - (rail.region.width if rail.display else 0)
-        available = max(1, width - 2 - cell_len("ISYCODE    ● workspace"))
+        mode = "Security"
+        workspace_mode = getattr(self.app, "_workspace_mode", None)
+        if callable(workspace_mode):
+            try:
+                mode = "Classic" if workspace_mode() == "classic" else "Security"
+            except Exception:
+                mode = "Security"
+        mark = f"  ● {mode}"
+        # Two spaces are prepended to the path, and two more stay clear of the frame.
+        available = max(1, width - 4 - cell_len("ISYCODE" + mark))
         if cell_len(path) > available:
             tail = path[-max(0, available - 1):] if available > 1 else ""
             while cell_len(tail) > available - 1:
                 tail = tail[1:]
             path = "…" + tail
         header.append(f"  {path}", style=MUTED)
-        header.append("  ● workspace", style="#4ade80")
+        header.append(mark, style="#4ade80" if mode == "Classic" else "#fbbf24")
         self.update(header)
 
 
+class IdleBoard(Static):
+    """Empty state: the ISYCODE wordmark, a small village, then LSP / MCP / skill columns."""
+
+    def on_mount(self) -> None:
+        self.styles.height = "auto"
+
+
+def _village_style(row_index: int, column: int, char: str) -> str | None:
+    """Ink for one cell of the idle village. Spaces stay unpainted."""
+    if char == " ":
+        return None
+    if char in {"*", "#"}:
+        return "bold #fbbf24"
+    if char == "~":
+        return "#22d3ee"
+    if char == "o":
+        return "bold #e94560"
+    if column <= 7:
+        return "#a67c52" if char == "|" else "#3cba6a"
+    if char in "/\\_":
+        return "#c47a45" if row_index <= 3 else "#c4a35a"
+    if char == "|":
+        return "#e6d3a3"
+    return None
+
+
+def _village_lines() -> list[Text]:
+    """Night village beside the wordmark: tree, two cottages, a pond, one villager.
+
+    The picture is 34 columns and six rows, the same height as the figlet::
+
+      *                           *
+         /\\       ___         ___
+        /  \\    _/   \\_     _/   \\_
+       /____\\  /  |##|  \\  /  |##|  \\
+         ||    |   o     | |  |  |   |
+      ~~/||\\~~~|__|__|___|~|__|__|___|~~
+    """
+    rows = (
+        "  *                           *   ",
+        "   /\\       ___         ___       ",
+        "  /  \\    _/   \\_     _/   \\_     ",
+        " /____\\  /  |##|  \\  /  |##|  \\   ",
+        "   ||    |   o     | |  |  |   |  ",
+        "~~/||\\~~~|__|__|___|~|__|__|___|~~",
+    )
+    if any(len(row) != 34 for row in rows):
+        raise ValueError("village art rows must stay 34 columns")
+    lines: list[Text] = []
+    for row_index, row in enumerate(rows):
+        line = Text()
+        start = 0
+        style = _village_style(row_index, 0, row[0])
+        for column in range(1, len(row) + 1):
+            nxt = _village_style(row_index, column, row[column]) if column < len(row) else None
+            if column == len(row) or nxt != style:
+                piece = row[start:column]
+                if style:
+                    line.append(piece, style=style)
+                else:
+                    line.append(piece)
+                start = column
+                style = nxt
+        lines.append(line)
+    return lines
+
+
 def switch_row(on: bool | None, name: str, note: str = "", *, inactive: bool = False) -> Text:
-    """Green ON, neutral absent configuration, red failure, amber while checking."""
+    """A colored mark and a name. The row itself stays unfilled."""
     row = Text()
     if inactive:
-        row.append(" ○ OFF ", style=MUTED)
+        row.append("○ ", style=MUTED)
     elif on is None:
-        row.append(" ··· ", style=f"bold #1a1a1a on {YELLOW}")
+        row.append("··· ", style=f"bold {YELLOW}")
     elif on:
-        row.append(" ● ON ", style=f"bold #0b1f12 on {GREEN}")
+        row.append("● ", style=f"bold {GREEN}")
     else:
-        row.append(" OFF ○ ", style=f"bold #2a0b0b on {RED}")
-    row.append(f" {name}", style=f"bold {TEXT}")
+        row.append("● ", style=f"bold {RED}")
+    row.append(name, style=f"bold {TEXT}")
     if note:
         row.append(f"\n  {note}", style=MUTED)
     return row
@@ -278,6 +355,8 @@ class SidePanel(Vertical):
                 yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
             with Collapsible(title="LSPs", id="rail-lsp"):
                 yield Static("Checking installed language servers…", id="lsp-status", classes="rail-copy")
+                yield Button("Install commands", id="lsp-install-hint", compact=True)
+                yield Static("", id="lsp-install-note", classes="rail-copy")
             with Collapsible(title="Skills", id="rail-skills"):
                 yield Static("ISyCode skill catalog has not been checked.", id="skill-status", classes="rail-copy")
                 yield Tree("ISyCode skills", id="skills-tree")
@@ -316,10 +395,27 @@ class SidePanel(Vertical):
     def on_mount(self) -> None:
         self.styles.background = BG2
         self.styles.border = ("round", "#48494e")
+        for button in self.query(Button):
+            button.compact = True
+        self.query_one("#show-overview", Button).add_class("rail-lit")
+
+
+def _fit_cells(text: str, width: int) -> str:
+    """Keep one label inside a column without breaking a wide character."""
+    if width <= 0 or cell_len(text) <= width:
+        return text
+    if width == 1:
+        return "…"
+    kept = text
+    while kept and cell_len(kept) > width - 1:
+        kept = kept[:-1]
+    return kept + "…"
 
 
 def _elapsed_label(seconds: float) -> str:
     """Format elapsed wall time compactly for live activity labels."""
+    if seconds < 1:
+        return "<1s"
     total = max(0, int(seconds))
     hours, remainder = divmod(total, 3600)
     minutes, secs = divmod(remainder, 60)
@@ -646,26 +742,26 @@ class ContextAccessScreen(ModalScreen[dict | None]):
         self.requested_by_agent = requested_by_agent
 
     def compose(self) -> ComposeResult:
-        title = ("El agente solicita acceso a un archivo de contexto externo"
+        title = ("The agent is asking to read an external context file"
                  if self.requested_by_agent else
-                 "¿Cargar contexto de otro proyecto?")
-        warning = ("Esta solicitud la inició el agente. El archivo se leerá y su contenido "
-                   "se enviará al modelo como contexto. Un archivo malicioso o comprometido puede "
-                   "incluir instrucciones para manipularlo. Acepta solo si confías en este origen "
-                   "exacto. Esto no permite editar, ejecutar comandos, leer secretos ni acceder "
-                   "a otros archivos."
+                 "Load context from another project?")
+        warning = ("The agent started this request. The file will be read and its contents "
+                   "sent to the model as context. A malicious or compromised file can "
+                   "include instructions that try to steer the model. Allow it only if you "
+                   "trust this exact origin. This does not allow edits, commands, secrets, "
+                   "or any other file."
                    if self.requested_by_agent else
-                   "Se leerá el archivo y su contenido se enviará al modelo como contexto. "
-                   "El permiso se limita a este archivo. Sus instrucciones no pueden conceder "
-                   "acceso a otros archivos, comandos, ediciones o secretos.")
+                   "The file will be read and its contents sent to the model as context. "
+                   "Permission is limited to this file. Its instructions cannot grant "
+                   "other files, commands, edits, or secrets.")
         with Vertical(id="context-access-card"):
             yield Static(title, id="context-access-title")
             yield Static(warning, id="context-access-copy")
             yield Static(str(self.path), id="context-access-path", markup=False)
-            yield Checkbox("Recordar permiso para este archivo exacto", id="context-access-remember")
+            yield Checkbox("Remember permission for this exact file", id="context-access-remember")
             with Horizontal(id="context-access-actions"):
                 yield Button("No · n", id="context-access-no")
-                yield Button("Permitir una vez · y", id="context-access-yes", variant="error")
+                yield Button("Allow once · y", id="context-access-yes", variant="error")
 
     def on_mount(self) -> None:
         self.query_one("#context-access-no", Button).focus()
@@ -2011,9 +2107,9 @@ class TUIApp(App):
         background: #202126; color: #e6e3ee;
         border: round #484650; padding: 0 1;
     }
-    Input:focus { background: #27242e; border: round #a77be8; }
+    Input:focus { background: #27242e; border: round #9aa3ad; }
     TextArea { background: #202126; border: round #484650; }
-    TextArea:focus { border: round #a77be8; }
+    TextArea:focus { border: round #9aa3ad; }
     ModalScreen Button {
         border: none; border-top: none; border-bottom: none;
         background: #39383f; color: #e6e3ee;
@@ -2042,19 +2138,38 @@ class TUIApp(App):
     #overview-view CollapsibleTitle:hover { background: #35363a; color: #e0e0e0; }
     #overview-view CollapsibleTitle:focus { background: #3a2f4d; color: #e0e0e0; }
     #overview-view Collapsible > Contents { padding: 0 0 0 1; height: auto; }
-    #rail-tabs { height: 3; }
-    #rail-tabs Button { width: 1fr; min-width: 0; padding: 0 1; background: #35363a; color: #c8c8cc; border: none; }
+    #side-panel Button {
+        height: 1; min-height: 1; min-width: 0; padding: 0 1;
+        border: none; background: transparent; color: #b9a3d4;
+    }
+    #side-panel Button:hover, #side-panel Button:focus, #side-panel Button.-active {
+        border: none; border-top: none; border-bottom: none;
+        tint: transparent; background-tint: transparent; text-style: bold;
+    }
+    #side-panel Button:hover { background: #35363a; color: #f0f0f2; }
+    #side-panel Button:focus { background: #2d2440; color: #e6d3ff; }
+    #side-panel Button:disabled {
+        background: transparent; color: #6c757d; border: none;
+        border-top: none; border-bottom: none; text-style: none;
+    }
+    #side-panel Button.rail-lit {
+        color: #f4f1ea; text-style: bold; background: transparent;
+    }
+    #side-panel Button.rail-lit:hover { background: #35363a; color: #f4f1ea; }
+    #rail-tabs { height: 1; }
+    #rail-tabs Button { width: 1fr; }
     #overview-view, #files-view { height: 1fr; }
-    #skills-tree { height: 10; min-height: 5; background: transparent; }
+    #skills-tree { height: 10; min-height: 5; background: transparent; overflow-x: hidden; }
     #skill-detail { height: auto; padding: 0 0 1 0; }
+    #lsp-install-note { display: none; height: auto; }
     #files-view { display: none; }
-    #file-controls { height: 3; }
-    #file-controls Button { width: 1fr; min-width: 0; padding: 0; border: none; }
+    #file-controls { height: 1; }
+    #file-controls Button { width: 1fr; }
     #filter-controls { height: 3; }
     #filter-controls Button { width: 1fr; }
     #file-search { height: 3; }
     #workspace-tree { height: 1fr; min-height: 6; background: transparent; }
-    #file-actions { height: 3; }
+    #file-actions { height: 1; }
     #file-actions Button { width: 1fr; }
     #file-preview-scroll { height: 7; min-height: 4; border-top: round #48494e; }
     #chat {
@@ -2076,7 +2191,16 @@ class TUIApp(App):
         height: 5; background: #242529; color: #e0e0e0;
         border: round #484650; margin: 0 1;
     }
-    #prompt-input:focus { border: round #a77be8; background: #292630; }
+    #prompt-input:focus { border: round #9aa3ad; background: #292630; }
+    #idle-board { height: auto; padding: 0 1 1 1; }
+    .user-turn {
+        height: auto; margin: 1 2; padding: 0 1;
+        border: round #c4a35a; background: #241c28;
+    }
+    ThoughtBlock {
+        height: auto; margin: 1 2; padding: 0 1;
+        border: round #514d5a;
+    }
     #composer-hint { height: 1; padding: 0 2; color: #9aa3ad; }
     .tool-receipt CollapsibleTitle { color: #9aa3ad; text-style: none; }
     Footer { background: $surface; color: #6c757d; }
@@ -2115,6 +2239,9 @@ class TUIApp(App):
     #action-list > .option-list--option-highlighted {
         background: #424348; color: #f0f0f2;
     }
+    #action-card.provider-menu #action-list > .option-list--option-highlighted {
+        background: #c47a45; color: #1a120c;
+    }
     #key-entry { display: none; height: auto; }
     #key-entry-label { height: auto; color: #aab0c0; padding: 1 0; }
     #key-entry Input { height: 3; }
@@ -2149,6 +2276,8 @@ class TUIApp(App):
         self._history: list[dict] = []
         self._tool_history: list[dict] = []
         self._usage = UsageLedger()
+        self._model_line = ""
+        self._model_line_style = MUTED
         # Model-written notes replacing history that no longer fits the budget.
         self._conversation_summary = ""
         self._chat_turn_task: asyncio.Task | None = None
@@ -2250,7 +2379,7 @@ class TUIApp(App):
             yield usage_status
         with Vertical(id="composer"):
             yield PromptArea(id="prompt-input")
-            yield Static("Enter send · Shift+Enter new line · Esc cancel/back", id="composer-hint")
+            yield Static("Enter send  ·  Shift+Enter newline  ·  / commands  ·  Esc back", id="composer-hint")
             with Horizontal(id="command-bar"):
                 yield Button("Sidebar", id="sidebar-button")
                 yield Button("Sessions", id="sessions-button")
@@ -2298,6 +2427,7 @@ class TUIApp(App):
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
+        self._mount_idle_board()
         self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
                           f"launch {self._launch_dir}")
         self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
@@ -2311,8 +2441,6 @@ class TUIApp(App):
             {"label": f"/{name}  {description}", "kind": "command", "value": name}
             for name, description in commands
         ]
-        self._append("◇ ISyCode TUI — local-first agent host", CYAN)
-        self._append("  Type / to browse. /plan <intent> uses the optional IsyMotron runtime.", MUTED)
         if self._workspace_config_warning:
             self._append(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
         self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup")
@@ -2406,10 +2534,7 @@ class TUIApp(App):
             self.run_worker(self._check_model(), exclusive=False)
             if not recurring:
                 self._append("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
-            if self._sessions_enabled():
-                self._append("  Conversations are saved for this workspace · Sessions lists them.",
-                             MUTED)
-            else:
+            if not self._sessions_enabled():
                 self._append(
                     "  This conversation stays in memory · turn on “Save conversations” in "
                     "Settings → Authority (recurring workspaces only).", MUTED)
@@ -2612,6 +2737,7 @@ class TUIApp(App):
                 self._rail_visible = True
             rail.display = self._rail_visible
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._paint_idle)
 
     def _apply_rail_width(self, terminal_width: int) -> None:
         """Keep the rail inside the configured range and available columns."""
@@ -2726,6 +2852,7 @@ class TUIApp(App):
         finally:
             if generation == self._openisy_refresh_generation:
                 refresh.disabled = False
+                self._paint_idle()
 
     @staticmethod
     def _format_mcp_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
@@ -2774,21 +2901,66 @@ class TUIApp(App):
             self._lsp_inventory = []
         if not self.is_mounted:
             return
-        if not self._lsp_inventory:
-            body, title = switch_row(False, "No language servers", "none detected", inactive=True), "LSPs · none"
+        try:
+            catalog = language_server_catalog(self._lsp_inventory)
+        except (OSError, RuntimeError, ValueError):
+            catalog = []
+        if not catalog:
+            body = switch_row(False, "No language servers", "none detected", inactive=True)
+            title = "LSPs · none"
         else:
-            rows, on = [], 0
-            for server in self._lsp_inventory:
-                ready = server["state"] == "sandbox_ready"
-                on += ready
-                if ready:
-                    note = "workspace symbols"
+            rows = []
+            ready = missing = 0
+            for server in catalog:
+                state = server.get("state")
+                label = str(server.get("label") or server.get("id") or "language server")
+                if state == "sandbox_ready":
+                    ready += 1
+                    rows.append(switch_row(True, label, "workspace symbols"))
+                elif state == "not_installed":
+                    missing += 1
+                    rows.append(switch_row(False, label, "not on PATH", inactive=True))
+                elif state == "installed_unsupported":
+                    rows.append(switch_row(False, label, "installed · sandbox does not run it"))
                 else:
-                    note = server["state"].replace("_", " ")
-                rows.append(switch_row(ready, server["label"], note))
-            body, title = switch_rows(rows), f"LSPs · {on}/{len(self._lsp_inventory)} on"
+                    rows.append(switch_row(False, label, "installed · sandbox unavailable"))
+            title = f"LSPs · {ready} ready"
+            if missing:
+                title += f" · {missing} missing"
+            body = switch_rows(rows)
         self.query_one("#lsp-status", Static).update(body)
         self._set_rail_title("rail-lsp", title)
+        self._paint_idle()
+
+    def _show_lsp_install_hints(self) -> None:
+        """Show the exact install command. Nothing is downloaded or started."""
+        try:
+            self.query_one("#rail-lsp", Collapsible).collapsed = False
+            target = self.query_one("#lsp-install-note", Static)
+        except NoMatches:
+            return
+        catalog = language_server_catalog(getattr(self, "_lsp_inventory", []))
+        note = Text()
+        note.append("ISyCode does not download language servers. Nothing was installed.\n", style=MUTED)
+        missing = [row for row in catalog if row.get("state") == "not_installed"]
+        blocked = [row for row in catalog
+                   if row.get("presence") == "installed" and row.get("state") != "sandbox_ready"]
+        if not missing:
+            note.append("Nothing is missing from PATH.\n", style=TEXT)
+        else:
+            note.append("Not on PATH. Run the command yourself, then Refresh integrations:\n", style=TEXT)
+            for row in missing:
+                note.append(str(row["label"]) + "\n", style=f"bold {TEXT}")
+                note.append("  " + str(row["install_hint"]) + "\n", style=YELLOW)
+        if blocked:
+            note.append("Already on PATH. Installing again will not make these ready:\n", style=MUTED)
+            for row in blocked:
+                reason = ("the sandbox does not run it" if row.get("state") == "installed_unsupported"
+                          else "the sandbox cannot launch it")
+                note.append(f"  {row['label']} · {reason}\n", style=MUTED)
+        target.display = True
+        target.update(note)
+        self._set_activity("Language servers were not installed · commands are under LSPs", YELLOW)
 
     def _populate_skill_tree(self, snapshot: CatalogSnapshot) -> None:
         from isycode.skill_catalog import skills
@@ -3107,6 +3279,8 @@ class TUIApp(App):
                 await self._load_directory(self._file_path or str(browser_root))
         elif button_id == "review-plan":
             self.action_run_plan()
+        elif button_id == "lsp-install-hint":
+            self._show_lsp_install_hints()
         elif button_id == "refresh-openisy":
             self.run_worker(self._check_gateway_mcp_async(), exclusive=False, group="gateway-mcp")
             await self._refresh_openisy()
@@ -3237,10 +3411,8 @@ class TUIApp(App):
         self.query_one("#files-view").display = show_files
         overview = self.query_one("#show-overview", Button)
         files = self.query_one("#show-files", Button)
-        overview.styles.background = "#4b4c52" if not show_files else "#35363a"
-        overview.styles.color = "#f0f0f2" if not show_files else "#c8c8cc"
-        files.styles.background = "#4b4c52" if show_files else "#35363a"
-        files.styles.color = "#f0f0f2" if show_files else "#c8c8cc"
+        overview.set_class(not show_files, "rail-lit")
+        files.set_class(show_files, "rail-lit")
 
     # ── semantic navigation and account menus ─────────────────────
 
@@ -3263,18 +3435,30 @@ class TUIApp(App):
     def _open_provider_menu(self) -> None:
         active = selected_provider_name()
         entries = []
-        for name, preset in PRESETS.items():
-            if name == "chatgpt":
-                continue
-            state = provider_credential_state(name)
-            status = {"environment": "key in environment", "saved": "key saved in ISyCode vault",
-                      "stored": "legacy key saved", "legacy": "legacy key", "optional": "key optional",
-                      "missing": f"needs {preset['key_env']}",
-                      "unavailable": "credential store unavailable"}.get(state, state)
-            selected = "  ◂ current" if name == active or (name == "openai" and active == "chatgpt") else ""
-            entries.append(self._entry(
-                f"{'OpenAI · API key / ChatGPT subscription' if name == 'openai' else preset['label']}  ·  {status}{selected}", "provider", name,
-                f"Default model: {provider_default_model(name) or preset.get('default_model') or DEFAULT_MODEL}"))
+        group = ""
+        for section, key, label, blurb in PROVIDER_SCREEN:
+            if section != group:
+                group = section
+                entries.append(self._entry("Popular" if section == "popular" else "Providers", "section"))
+            if key and key in PRESETS:
+                preset = PRESETS[key]
+                state = provider_credential_state(key)
+                status = {"environment": "key in environment", "saved": "key saved",
+                          "stored": "legacy key saved", "legacy": "legacy key",
+                          "optional": "no key required", "subscription": "subscription",
+                          "missing": f"needs {preset['key_env']}",
+                          "unavailable": "credential store unavailable"}.get(state, state)
+                current = key == active or (key == "openai" and active == "chatgpt")
+                mark = "✓" if current else "○"
+                note = "  ← currently active" if current else f"  ·  {blurb}"
+                entries.append(self._entry(
+                    f"{mark}  {label}{note}",
+                    "provider", key,
+                    f"{blurb}. {status}. Default model: "
+                    f"{provider_default_model(key) or preset.get('default_model') or DEFAULT_MODEL}"))
+            else:
+                entries.append(self._entry(
+                    f"·  {label}  ·  {blurb}", "provider_unwired", label, blurb))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
                         for item in snapshot.items} if snapshot.state == "ready" else {}
@@ -3306,7 +3490,7 @@ class TUIApp(App):
                 f"OAuth discovery · {snapshot.state.replace('_', ' ')}",
                 "info", "", snapshot.detail or "No additional provider auth metadata is available."))
         self._menu_stack = []
-        self._render_menu("providers", "Providers · ISyCode chat", entries)
+        self._render_menu("providers", "Select provider", entries)
 
     def _open_auth_methods(self) -> None:
         self._render_menu('provider_auth_methods', 'OpenAI · choose connection method', [
@@ -5374,6 +5558,11 @@ class TUIApp(App):
         self._menu_mode = mode
         self._menu_title = title
         self._menu_entries = entries
+        card = self.query_one("#action-card", Vertical)
+        if mode == "providers":
+            card.add_class("provider-menu")
+        else:
+            card.remove_class("provider-menu")
         menu = self.query_one("#action-menu", Vertical)
         menu.display = True
         self.query_one("#action-title", Static).update(title)
@@ -5383,24 +5572,55 @@ class TUIApp(App):
         self.query_one("#action-list", OptionList).display = True
         self.query_one("#key-entry", Vertical).display = False
         self._render_options("")
+        hint = ("↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter"
+                if mode == "providers" else
+                "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search")
+        self.query_one("#action-hint", Static).update(hint)
         self.query_one("#action-list", OptionList).focus()
 
     def _render_options(self, query: str) -> None:
-        self._menu_filtered = [entry for entry in self._menu_entries
-                               if query in entry["label"].casefold()
-                               or query in entry.get("detail", "").casefold()]
+        if query and self._menu_mode == "providers":
+            filtered: list[dict[str, str]] = []
+            pending = None
+            used = False
+            for entry in self._menu_entries:
+                if entry.get("kind") == "section":
+                    pending = entry
+                    used = False
+                    continue
+                if (query in entry["label"].casefold()
+                        or query in entry.get("detail", "").casefold()):
+                    if pending is not None and not used:
+                        filtered.append(pending)
+                        used = True
+                    filtered.append(entry)
+            self._menu_filtered = filtered
+        else:
+            self._menu_filtered = [entry for entry in self._menu_entries
+                                   if query in entry["label"].casefold()
+                                   or query in entry.get("detail", "").casefold()]
         options = self.query_one("#action-list", OptionList)
         options.clear_options()
         for entry in self._menu_filtered:
             if "enabled" in entry:
                 label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
+            elif entry.get("kind") == "section":
+                label = Text(entry["label"], style="bold #c7b8d4")
             elif entry.get("kind") == "info":
                 label = Text(entry["label"], style="#8a8d96")
+            elif entry.get("kind") == "provider_unwired":
+                label = Text(entry["label"], style="#8a8d96")
+            elif str(entry.get("label", "")).startswith("✓"):
+                label = Text(entry["label"], style="bold #f0f0f2")
             else:
                 label = Text(entry["label"])
             options.add_option(label)
-        options.highlighted = 0 if self._menu_filtered else None
-        self._show_menu_detail(0)
+        highlight = 0 if self._menu_filtered else None
+        if self._menu_mode == "providers" and self._menu_filtered:
+            highlight = next((index for index, entry in enumerate(self._menu_filtered)
+                              if entry.get("kind") != "section"), 0)
+        options.highlighted = highlight
+        self._show_menu_detail(highlight or 0)
 
     def _show_menu_detail(self, index: int | None) -> None:
         """Describe the highlighted entry so choices are clear before pressing Enter."""
@@ -5683,6 +5903,11 @@ class TUIApp(App):
             name = value
             prompt.load_text(f"/{name}" + (" " if name == "plan" else ""))
             self._close_menu()
+            return
+        if kind == "section":
+            return
+        if kind == "provider_unwired":
+            self._append(f"  {value} is on the list. ISyCode has no transport for it yet, so nothing was contacted.", MUTED)
             return
         if kind == "provider":
             if value in {"openai", "chatgpt"}:
@@ -6314,6 +6539,183 @@ class TUIApp(App):
         chat.mount(SelectableText(Text(text, style=color), selection_text=text))
         chat.follow_tail()
 
+    def _mount_user_turn(self, text: str) -> None:
+        """Paint one user message as a rounded card and leave the idle board."""
+        self._dismiss_idle()
+        chat = self.query_one(ChatArea)
+        chat.mount(SelectableText(Text(text, style=TEXT), selection_text=text, classes="user-turn"))
+        chat.follow_tail()
+
+    def _idle_mounted(self) -> bool:
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except Exception:
+            return False
+        return bool(board.is_mounted and board.display)
+
+    def _mount_idle_board(self) -> None:
+        chat = self.query_one(ChatArea)
+        if any(getattr(child, "id", None) == "idle-board" for child in chat.children):
+            self._paint_idle()
+            return
+        chat.mount(IdleBoard(id="idle-board"))
+        self._paint_idle()
+
+    def _dismiss_idle(self) -> None:
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except Exception:
+            return
+        if board.is_mounted:
+            board.remove()
+
+    def _paint_idle(self) -> None:
+        if not self.is_mounted:
+            return
+        try:
+            board = self.query_one("#idle-board", IdleBoard)
+        except Exception:
+            return
+        if not board.is_mounted:
+            return
+        board.update(self._idle_board_text())
+
+    def _idle_content_width(self) -> int:
+        rail = self.query_one(SidePanel)
+        rail_width = rail.region.width if rail.display else 0
+        return max(24, self.size.width - rail_width - 8)
+
+    def _idle_board_text(self) -> Text:
+        """Wordmark, village, path, model, then three columns."""
+        width = self._idle_content_width()
+        body = Text()
+        identity = getattr(self, "_workspace_identity", None)
+        launch = identity.launch_dir if identity else Path.cwd().resolve()
+        path = _fit_cells(str(launch), max(8, width))
+        banner_lines = [line.rstrip() for line in BANNER.strip("\n").split("\n")]
+        longest = max(cell_len(line) for line in banner_lines)
+        village = _village_lines()
+        village_width = cell_len(village[0].plain) if village else 0
+        if width >= longest and village_width and width >= longest + 2 + village_width:
+            for index, line in enumerate(banner_lines):
+                body.append(line, style="bold #e94560")
+                body.append(" " * (longest - cell_len(line) + 2))
+                if index < len(village):
+                    body.append(village[index])
+                body.append("\n")
+            body.append(path + "\n", style=MUTED)
+        elif width >= longest:
+            for line in banner_lines:
+                body.append(line, style="bold #e94560")
+                body.append("\n")
+            for scene in village:
+                body.append(self._clip_idle_line(scene, width))
+                body.append("\n")
+            body.append(path + "\n", style=MUTED)
+        else:
+            body.append("ISYCODE", style="bold #e94560")
+            body.append("  " + path + "\n", style=MUTED)
+            if width >= 16:
+                for scene in village:
+                    body.append(self._clip_idle_line(scene, width))
+                    body.append("\n")
+        model = self._model_line or "Checking the configured model"
+        body.append("◇ ", style=ACCENT)
+        body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
+        columns = [
+            self._idle_column("LSPs", self._idle_lsp_rows()),
+            self._idle_column("MCPs", self._idle_mcp_rows()),
+            self._idle_column("Skills", self._idle_skill_rows()),
+        ]
+        gap = 2
+        budgets = [max(cell_len(line.plain) for line in column) for column in columns]
+        room = width - gap * (len(columns) - 1)
+        if sum(budgets) > room:
+            share = max(8, room // len(columns))
+            budgets = [min(budget, share) for budget in budgets]
+            columns = [[self._clip_idle_line(line, budget) for line in column]
+                       for column, budget in zip(columns, budgets)]
+        height = max(len(column) for column in columns)
+        for row in range(height):
+            for index, column in enumerate(columns):
+                line = column[row] if row < len(column) else Text("")
+                body.append(line)
+                pad = budgets[index] - cell_len(line.plain)
+                if index < len(columns) - 1:
+                    body.append(" " * (pad + gap))
+            if row < height - 1:
+                body.append("\n")
+        return body
+
+    @staticmethod
+    def _clip_idle_line(line: Text, width: int) -> Text:
+        if cell_len(line.plain) <= width:
+            return line
+        clipped = Text()
+        used = 0
+        for start, end, style in line._spans:
+            piece = line.plain[start:end]
+            room = width - used
+            if room <= 0:
+                break
+            if cell_len(piece) > room:
+                piece = _fit_cells(piece, room)
+            clipped.append(piece, style=style)
+            used += cell_len(piece)
+        return clipped
+
+    @staticmethod
+    def _idle_column(title: str, rows: list[tuple[str, str]]) -> list[Text]:
+        lines = [Text(title, style="bold #c7b8d4")]
+        if not rows:
+            lines.append(Text("None", style=MUTED))
+            return lines
+        shown = rows[:14]
+        for color, name in shown:
+            line = Text()
+            line.append("● ", style=color)
+            line.append(name, style=TEXT)
+            lines.append(line)
+        extra = len(rows) - len(shown)
+        if extra:
+            lines.append(Text(f"+{extra} more", style=MUTED))
+        return lines
+
+    def _idle_lsp_rows(self) -> list[tuple[str, str]]:
+        rows = []
+        for server in self._lsp_inventory:
+            ready = server.get("state") == "sandbox_ready"
+            name = str(server.get("label") or server.get("id") or "language server")
+            rows.append((GREEN if ready else YELLOW, name))
+        return rows
+
+    def _idle_mcp_rows(self) -> list[tuple[str, str]]:
+        snapshot = self._mcp_snapshot
+        if snapshot.state != "ready":
+            return []
+        rows = []
+        for item in snapshot.items:
+            status = str(item.get("status", "")).lower()
+            healthy = status in {"connected", "ready", "running", "ok", "active"} and not item.get("has_error")
+            starting = "start" in status or status in {"checking", "loading"}
+            color = GREEN if healthy else YELLOW if starting or status else MUTED
+            rows.append((color, str(item.get("name") or "mcp")))
+        return rows
+
+    def _idle_skill_rows(self) -> list[tuple[str, str]]:
+        names: list[str] = []
+        try:
+            from isycode.skill_catalog import skills
+            names.extend(str(name) for name in skills())
+        except (OSError, ValueError):
+            names = []
+        if self._skill_snapshot.state == "ready":
+            for item in self._skill_snapshot.items:
+                name = str(item.get("name") or "")
+                if name and name not in names:
+                    names.append(name)
+        return [(GREEN, name) for name in names]
+
     def action_find_console(self) -> None:
         """Open console-wide search regardless of which main view has focus."""
         if isinstance(self.screen, ConsoleSearchScreen):
@@ -6502,12 +6904,16 @@ class TUIApp(App):
                 name=provider_name,
                 model=provider_default_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
+            ready = f"{provider.model} via {provider.label}"
             if provider.configured():
-                self._append(
-                    f"  Model: {provider.model} via {provider.label} — ready", GREEN)
+                self._model_line = ready + "  ·  ready"
+                self._model_line_style = GREEN
             else:
-                self._append(
-                    f"  Model: {provider.label} needs provider configuration ({provider.key_env})", YELLOW)
+                self._model_line = f"{provider.label} needs {provider.key_env}"
+                self._model_line_style = YELLOW
+            self._paint_idle()
+            if not self._idle_mounted():
+                self._append("  Model: " + self._model_line, self._model_line_style)
         except ConfigurationError as e:
             self._append(f"  Model: {e}", YELLOW)
         except Exception as e:
@@ -6986,7 +7392,7 @@ class TUIApp(App):
             prompt.value = ""
         self._clear_pending_plan()
         plugin, cmd, arg = self._plugins.route(text)
-        self._append(f"\n> {text}", CYAN)
+        self._mount_user_turn(text)
         if cmd is not None:
             label = "Planning · IsyMotron" if cmd.name == "plan" else f"Running /{cmd.name}"
             self._start_operation(cmd.handler(self, arg), label)
@@ -7092,6 +7498,7 @@ class TUIApp(App):
         self._active_chat_session_id = None
         self._session_save_warned = False
         self.query_one(ChatArea).remove_children()
+        self._mount_idle_board()
         self._append("  New conversation.", MUTED)
 
     async def _resume_chat_session(self, session_id: str) -> None:
@@ -7144,26 +7551,26 @@ class TUIApp(App):
         chat.remove_children()
         for message in session.messages:
             if message["role"] == "user":
-                self._append(f"\n> {message['content']}", CYAN)
+                self._mount_user_turn(message["content"])
             else:
                 chat.mount(SelectableText(
                     RichMarkdown(message["content"], code_theme="monokai"),
                     selection_text=message["content"]))
         chat.follow_tail()
         if self._tool_history:
-            history_text = "Notas históricas: pueden estar desactualizadas. No se reejecutó ninguna herramienta.\n\n" + "\n\n".join(
+            history_text = "Earlier tool notes. They may be stale. No tool was run again.\n\n" + "\n\n".join(
                 f"{index}. {event['name']}\n"
-                f"Argumentos: {event['arguments']}\n"
-                f"Resultado:\n{event['result']}"
+                f"Arguments: {event['arguments']}\n"
+                f"Result:\n{event['result']}"
                 for index, event in enumerate(self._tool_history, start=1)
             )
             chat.mount(Collapsible(
                 Static(Text(history_text, style=MUTED)),
-                title=f"Herramientas anteriores · {len(self._tool_history)} · no se repitieron",
+                title=f"Earlier tools · {len(self._tool_history)} · not run again",
                 collapsed=True,
                 classes="tool-history",
             ))
-        self._append(f"  Conversación reabierta · {session.title} · {len(session.messages)} mensajes", GREEN)
+        self._append(f"  Conversation reopened · {session.title} · {len(session.messages)} messages", GREEN)
 
     async def _delete_chat_session(self, session_id: str) -> None:
         owner = self._chat_session_owner
@@ -8399,14 +8806,14 @@ class TUIApp(App):
                     if content_buf:
                         _content_line()
                     self._append(
-                        "  Transmisión interrumpida. La respuesta quedó parcial y no se guardó en el historial.",
+                        "  Stream interrupted. The partial answer was not added to chat history.",
                         YELLOW)
                     if self._history and self._history[-1] == {"role": "user", "content": text}:
                         self._history.pop()
                     return
                 self._append(
                     (self._provider_failure(exc, "Chat") if exc.status is not None else
-                     "  El stream falló antes de responder. No hubo reintento automático."),
+                     "  The stream failed before an answer. Nothing was retried."),
                     RED)
                 if self._history and self._history[-1] == {"role": "user", "content": text}:
                     self._history.pop()
@@ -8416,18 +8823,18 @@ class TUIApp(App):
             attempted_tool = detect_unexecuted_tool_request(full)
             if attempted_tool and command_active:
                 full = (
-                    f"ISyCode no ejecutó esta solicitud de `{attempted_tool}` escrita como texto. "
-                    "Los comandos solo corren con la herramienta workspace_run y tu aprobación; "
-                    "no se ejecutó nada.")
+                    f"ISyCode did not run this `{attempted_tool}` request written as text. "
+                    "Commands run only through the workspace_run tool and your approval; "
+                    "nothing was executed.")
                 content_buf[:] = [full]
                 step_content[:] = [full]
                 _content_line()
             elif attempted_tool:
                 full = (
-                    f"ISyCode no ejecutó esta solicitud de `{attempted_tool}`: el chat no tiene "
-                    "un execution owner de comandos conectado. No se ejecutó ningún comando. "
-                    "Usa una acción nativa disponible en la paleta `/`; las acciones de shell "
-                    "solo se habilitarán detrás de Workspace Authority e IsySentinel."
+                    f"ISyCode did not run this `{attempted_tool}` request: chat has no "
+                    "command execution owner connected. No command was executed. "
+                    "Use a native action from the `/` palette; shell actions "
+                    "stay behind Workspace Authority and IsySentinel."
                 )
                 content_buf[:] = [full]
                 step_content[:] = [full]

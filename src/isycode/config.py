@@ -132,16 +132,8 @@ def load_api_key(provider_name: str | None = None) -> str:
         key_file = Path(configured_file).expanduser()
     else:
         provider = selected_provider
-        key_env = {
-            "openai": "OPENAI_API_KEY",
-            "anthropic": "ANTHROPIC_API_KEY",
-            "nvidia": "NVIDIA_NIM_API_KEY",
-            "nebius": "NEBIUS_API_KEY",
-            "groq": "GROQ_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
-            "ollama": "OLLAMA_API_KEY",
-            "llamacpp": "LLAMACPP_API_KEY",
-        }.get(provider)
+        from isycode.providers import PRESETS
+        key_env = str(PRESETS.get(provider, {}).get("key_env") or "")
         if not key_env:
             return ""
         provider_value = os.environ.get(key_env, "").strip()

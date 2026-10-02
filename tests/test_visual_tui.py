@@ -1,6 +1,7 @@
 from isycode.tui import plain_text
 import asyncio
 import json
+import os
 
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible, Static
@@ -50,11 +51,11 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
             banner = app.query_one(Banner)
             header = plain_text(banner)
             assert cell_len(header) <= banner.content_size.width
-            assert '● workspace' in header and '日本語-project' in header
+            assert ('● Classic' in header or '● Security' in header) and '日本語-project' in header
             app.action_toggle_sidebar()
             await pilot.pause()
             assert cell_len(plain_text(banner)) <= app.query_one(SidePanel).region.x - 1
-            assert '● workspace' in plain_text(banner)
+            assert '● Classic' in plain_text(banner) or '● Security' in plain_text(banner)
 
     with capsys.disabled():
         asyncio.run(scenario())
@@ -102,6 +103,45 @@ def test_owned_read_keeps_receipt_in_expandable_detail(tmp_path, monkeypatch, ca
             await pilot.pause()
             assert not detail.collapsed
             assert any('rcpt_' in app._render_searchable_text(row) for row in detail.query(Static))
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_idle_board_uses_ascii_and_provider_list_keeps_unwired_rows_quiet(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            board = plain_text(app.query_one("#idle-board"))
+            assert "██" in board
+            assert "LSPs" in board and "MCPs" in board and "Skills" in board
+            assert "╱" not in board
+            assert "|##|" in board and "~~" in board
+            await pilot.resize_terminal(80, 24)
+            await pilot.pause()
+            narrow = plain_text(app.query_one("#idle-board"))
+            assert "ISYCODE" in narrow or "██" in narrow
+            assert "LSPs" in narrow
+            assert "╱" not in narrow
+            assert "|##|" in narrow
+            app._open_provider_menu()
+            assert app._menu_title == "Select provider"
+            assert any(entry["kind"] == "section" and entry["label"] == "Popular"
+                       for entry in app._menu_entries)
+            assert any(entry["kind"] == "provider" and "xAI Grok" in entry["label"]
+                       for entry in app._menu_entries)
+            unwired = next(entry for entry in app._menu_entries
+                           if entry["kind"] == "provider_unwired" and entry["value"] == "GitHub Copilot")
+            before_provider = os.environ.get("ISYCODE_PROVIDER")
+            app._select_menu_entry(unwired)
+            assert app._menu_mode == "providers"
+            assert os.environ.get("ISYCODE_PROVIDER") == before_provider
+            chat = "\n".join(plain_text(widget) for widget in app.query_one(ChatArea).query(Static))
+            assert "no transport" in chat
+            assert "GitHub Copilot" in chat
 
     with capsys.disabled():
         asyncio.run(scenario())

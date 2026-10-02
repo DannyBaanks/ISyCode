@@ -88,7 +88,7 @@ def test_providers_opens_the_selector_and_provider_reports_saved_credentials(tmp
             _, command, arg = app._plugins.route("/providers")
             await command.handler(app, arg)
             assert app._menu_mode == "providers"
-            assert app._menu_title == "Providers · ISyCode chat"
+            assert app._menu_title == "Select provider"
             assert not any("Provider catalog" in str(child) for child in app.query_one("#chat").children)
 
             lines = []
