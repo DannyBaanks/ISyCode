@@ -99,6 +99,7 @@ sin_evidencia_real:
   - git push en vivo; el transporte de la prueba es un recorder en proceso
   - G0, G1, G2, G3, G4 y G5 siguen EN_REVISION
   - este push del producto no esperó los checks; el remoto imprimió Bypassed rule violations para a495361, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - este push de la evidencia no esperó los checks; el remoto imprimió Bypassed rule violations para c339060, 3 de 3 checks esperados, enforce_admins sigue apagado
   - no se afirma que CI pasó
 regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1105 passed, 2 skipped, 11 deselected; 98.73s; skips anthropic ausente y TypeScript sandbox_ready ausente
 riesgos_residuales: marcar effected antes del transporte deja UNCERTAIN si el proceso muere antes de la llamada; el retry de connect no envuelve el urllib síncrono ni el turno de chat; una promoción incierta sigue bloqueando reservas nuevas del ledger

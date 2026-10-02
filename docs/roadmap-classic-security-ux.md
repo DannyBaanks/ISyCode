@@ -427,7 +427,7 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1, G2, G3, G4, G5 y G6 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El push del producto de M6 (`a495361`) imprimió `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M6 está en [docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/](evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/gate.yaml). El siguiente trabajo de producto es M6A (agentes observables e instrucciones en cola). M6 no abrió el bucle de agente.**
+**Próximo paso: G0, G1, G2, G3, G4, G5 y G6 siguen EN REVISIÓN. Ninguna puerta está APROBADA. Los push del producto de M6 (`a495361`) y de su evidencia (`c339060`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M6 está en [docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/](evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/gate.yaml). El siguiente trabajo de producto es M6A (agentes observables e instrucciones en cola). M6 no abrió el bucle de agente.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
