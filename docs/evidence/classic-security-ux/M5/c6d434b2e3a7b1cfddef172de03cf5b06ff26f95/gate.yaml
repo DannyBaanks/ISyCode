@@ -105,6 +105,7 @@ sin_evidencia_real:
   - Windows y macOS
   - G0, G1, G2, G3 y G4 siguen EN_REVISION
   - este push del producto no esperó los checks; el remoto imprimió Bypassed rule violations para c6d434b, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - este push de la evidencia no esperó los checks; el remoto imprimió Bypassed rule violations para e82d32b, 3 de 3 checks esperados, enforce_admins sigue apagado
   - no se afirma que CI pasó
 regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1096 passed, 2 skipped, 11 deselected; 108.39s; skips anthropic ausente y TypeScript sandbox_ready ausente
 riesgos_residuales: la ventana de rebinding queda en el catálogo sync y en el cliente Anthropic que crea el SDK; un mcp.json escrito por el usuario puede llevar una key; LSP sigue con namespace de red compartido

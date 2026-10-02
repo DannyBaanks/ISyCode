@@ -427,7 +427,7 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1, G2, G3, G4 y G5 siguen EN REVISIÓN. Ninguna puerta está APROBADA. El push del producto de M5 (`c6d434b`) imprimió `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M5 está en [docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/](evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/gate.yaml). El siguiente trabajo de producto es M6 (bucle, cancelación y retry reconciliado). Ese hito todavía no abre el bucle de agente: espera su propia puerta.**
+**Próximo paso: G0, G1, G2, G3, G4 y G5 siguen EN REVISIÓN. Ninguna puerta está APROBADA. Los push del producto de M5 (`c6d434b`) y de su evidencia (`e82d32b`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M5 está en [docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/](evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/gate.yaml). El siguiente trabajo de producto es M6 (bucle, cancelación y retry reconciliado). Ese hito todavía no abre el bucle de agente: espera su propia puerta.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
