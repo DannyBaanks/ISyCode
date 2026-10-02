@@ -394,7 +394,7 @@ Lo poquito que queda, en orden:
 
 ## Roadmap y documentación
 
-**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0, M1 y M2 están en revisión y no cambian los permisos: el Classic actual todavía confirma cada edición y cada comando. Un comando aprobado escribe en una copia y el árbol cambia al promover ese diff. El objetivo sigue siendo autonomía acotada, con confirmación solo al cruzar una frontera real.
+**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0, M1, M2 y M3 están en revisión y no cambian los permisos: el Classic actual todavía confirma cada edición y cada comando. Un comando aprobado escribe en una copia y el árbol cambia al promover ese diff. Esa promoción, igual que escribir, borrar o mover, cuenta en un ledger fuera del checkout. Si pasa el tope, el comando puede terminar y el árbol no cambia. El objetivo sigue siendo autonomía acotada, con confirmación solo al cruzar una frontera real.
 
 La estrategia histórica describía dos etapas (la evolución Classic/Security se concreta ahora en el roadmap anterior): primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
 

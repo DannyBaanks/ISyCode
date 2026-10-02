@@ -1,0 +1,116 @@
+hito: M3
+puerta: G3
+estado: EN_REVISION
+sha_evaluado: c5e409720de6bdf03fe8129dd95be0a860eb1e31
+fecha_utc: 2026-10-02T13:28:00Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; Classic sigue pidiendo aprobación por edición y por comando; este hito no abre autonomía
+dependencias: G2
+dependencias_estado:
+  G2: EN_REVISION
+casos:
+  - id: G3-01
+    prueba: tests/test_effect_ledger.py::test_one_oversized_call_charges_nothing_and_split_calls_stop_at_the_cap tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: una llamada grande y mil llamadas chicas no rebasan el mismo tope; 3 reaperturas y 8 workers tampoco
+    observado: >
+      Con MAX_DELETE_OPS en 40, una reserva de 41 borrados se niega y el saldo
+      queda en 0. Mil reservas de un borrado aceptan 40 y la 41 falla. Tres
+      objetos nuevos leen 40. Ocho procesos con fork y el lock sostenido
+      aceptan 3 y niegan 5. El saldo queda en 3. Partir el trabajo no rebasa
+      el tope; la llamada grande no aplica una parte.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/pytest-not-integration.txt
+        sha256: 4ce697e00c59971fd0c0351939dfb09137ccd3d01a346f8e036114bd3c0932e5
+  - id: G3-02
+    prueba: tests/test_effect_ledger.py::test_rename_alias_clock_and_corruption_do_not_open_a_fresh_budget
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: rename, alias, reloj, truncado, JSON roto, identidad distinta y un symlink del ledger no ponen el saldo a cero
+    observado: >
+      Tras cobrar 4 bytes, renombrar el directorio y abrirlo por un symlink
+      conserva identidad, 1 ruta y 4 bytes. Un directorio nuevo tiene otro
+      inodo y saldo 0. touched_at en 2^31-1 y utime a 10 no cambian el saldo
+      y una reserva enorme sigue negada. Vaciar el fichero, dejar "{" o
+      cambiar la identidad niega sin reescribir un saldo cero. Un symlink en
+      el puesto del ledger niega y no modifica el destino.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/pytest-not-integration.txt
+        sha256: 4ce697e00c59971fd0c0351939dfb09137ccd3d01a346f8e036114bd3c0932e5
+  - id: G3-03
+    prueba: tests/test_effect_ledger.py::test_registered_crash_seeds_settle_once
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: 100 semillas registradas, crash antes y después de cada paso durable, una transición y la segunda lectura en IDLE
+    observado: >
+      Las semillas son range(100) sobre 18 fases (antes de reservar, después
+      de reservar, backup, plan, commit, y antes/después de aplicar cada uno
+      de 3 archivos). Cada una termina con el árbol original o con el árbol
+      nuevo, nunca mezclado. Si quedó el nuevo, hay 1 borrado cobrado. Si
+      quedó el original, el cobro es 0. La segunda y la tercera reconcile
+      devuelven IDLE. Ninguna semilla limpia quedó uncertain.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/pytest-not-integration.txt
+        sha256: 4ce697e00c59971fd0c0351939dfb09137ccd3d01a346f8e036114bd3c0932e5
+  - id: G3-04
+    prueba: tests/test_effect_ledger.py::test_rollback_keeps_human_bytes_and_git_state
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: un conflicto humano queda intacto; dirty, staged, untracked e ignored no se tocan; no hay git reset ni git clean
+    observado: >
+      El crash deja target.txt en el contenido nuevo y una edición humana lo
+      pasa a human. reconcile devuelve UNCERTAIN, el archivo sigue en human
+      y la reserva siguiente se niega. git status --porcelain y git show del
+      índice de staged.txt quedan iguales. tracked.txt sigue dirty,
+      untracked.txt e ignored.txt siguen con sus bytes. La frase incorrecta
+      no borra el ledger. La frase exacta sí, y no está en el catálogo ni en
+      la TUI.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/pytest-not-integration.txt
+        sha256: 4ce697e00c59971fd0c0351939dfb09137ccd3d01a346f8e036114bd3c0932e5
+  - id: G3-05
+    prueba: tests/test_effect_ledger.py::test_a_failed_backup_does_not_mutate_and_a_bad_backup_blocks tests/test_effect_ledger.py::test_sandbox_cannot_remove_the_ledger
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: un backup que no se puede escribir, uno ausente o alterado no deja seguir mutando; el sandbox no borra el ledger
+    observado: >
+      Con el directorio de preimágenes en modo 0500, la promoción lanza
+      LedgerDenied y a.txt sigue en a. No se llenó el disco: el fallo es
+      PermissionError, el mismo OSError que usaría un disco lleno. Un backup
+      reescrito a tampered y un backup borrado dejan UNCERTAIN, conservan el
+      byte ya aplicado y niegan la reserva siguiente. Bubblewrap real ejecutó
+      rm contra la ruta absoluta del ledger; el fichero siguió igual y esa
+      ruta no está entre los bind anteriores a --.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/pytest-not-integration.txt
+        sha256: 4ce697e00c59971fd0c0351939dfb09137ccd3d01a346f8e036114bd3c0932e5
+  - id: G3-06
+    prueba: tests/test_effect_ledger.py::test_over_limit_keeps_the_approval_and_the_model_cannot_reset tests/test_effect_ledger.py::test_a_command_over_the_cap_is_not_promoted
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: pasar el tope muestra el saldo y no consume la aprobación; el modelo no tiene acción para subirlo o ponerlo a cero
+    observado: >
+      Una escritura de hello con el tope de bytes en 4 devuelve DENY, el
+      archivo sigue en hi y el motivo dice ledger has. La misma aprobación
+      escribe hello cuando el tope vuelve a su valor. El segundo borrado, con
+      MAX_DELETE_OPS en 1, se niega y other.py sigue. El catálogo no tiene
+      reset y tui.py no nombra user_reset ni effect_ledger. Un comando que
+      reescribe app.py por encima del tope termina ALLOW, promotion.state
+      denied, promoted_count 0 y el archivo sigue en keep.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/pytest-not-integration.txt
+        sha256: 4ce697e00c59971fd0c0351939dfb09137ccd3d01a346f8e036114bd3c0932e5
+sin_evidencia_real:
+  - revisor distinto del autor
+  - llenar el disco hasta ENOSPC; el backup fallido se provocó con un directorio 0500
+  - el crash de una escritura tipada entre os.replace y el commit puede no cobrar ese archivo
+  - un directorio vacío puede quedar si el proceso muere después del commit y antes del rmdir
+  - Windows y macOS
+  - Classic autónomo con 0 aprobaciones por acción
+  - una corrida previa del mismo comando falló en tests/test_chat_sequence.py::test_search_history_stays_visible_during_new_output con scroll_y 2 distinto de 53; tres repeticiones de ese test pasaron y esta transcripción es la corrida limpia
+regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1080 passed, 2 skipped, 11 deselected; 97.52s
+riesgos_residuales: una llamada mayor que el tope aplica 0, no el tope; el replace tipado puede quedar sin cobro si el proceso muere justo después; los workers que no sostienen el lock pueden pisarse la reserva
+rollback_ensayado: revertir c5e409720de6bdf03fe8129dd95be0a860eb1e31 devuelve la promoción sin presupuesto; no cambia grants guardados ni abre autonomía
+revision: ausente
