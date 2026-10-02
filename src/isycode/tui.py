@@ -836,11 +836,11 @@ class WorkspaceModeScreen(ModalScreen[str]):
         with Vertical(id="workspace-mode-card"):
             yield Static("How should ISyCode work in this folder?", id="workspace-mode-title")
             yield Static(
-                f"{self.root}\n\nClassic: ready to use. ISyCode reads your files and proposes edits "
-                "you approve one diff at a time; chats and saved keys just work.\n"
+                f"{self.root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
+                "Each edit, delete/move, command and commit still shows what will happen and asks first.\n"
                 "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
-                "Both check every action with IsySentinel and record it in the action journal. "
-                "Shell, deleting files and sensitive files stay off in both. You can switch later "
+                "Both modes use IsySentinel and the action journal. "
+                "Free shell and sensitive files are never implied. Switch any time "
                 "in Settings → Authority.", id="workspace-mode-copy")
             yield OptionList(
                 Option("Classic · ready to use", id="classic"),
@@ -2422,11 +2422,11 @@ class TUIApp(App):
         classic = mode == "classic"
         if not await self._await_screen(TailscaleConfirmScreen(
                 "Switch this workspace to Classic?" if classic else "Switch this workspace to Security?",
-                ("Reading and searching files, edit proposals (each still shows its diff and asks "
-                 "you), chat with your chosen provider, saved conversations and saved keys work "
-                 "without setting permissions one by one. Integrations like Gateway, MCP, LSP, "
-                 "Tailscale and Mobile Host still need explicit permission. Shell, delete and "
-                 "sensitive files stay off." if classic else
+                ("Reading/searching, edit proposals, chat, sessions and Git review work without "
+                 "granting each capability. Sandbox commands are ready when supported. Edits, "
+                 "delete/move, commands and commits still show the exact action and ask first. "
+                 "Integrations still need explicit permission; free shell and sensitive files "
+                 "stay unavailable." if classic else
                  "Everything starts off; you allow each capability in Settings → Authority. "
                  "Permissions you granted explicitly stay as they are."),
                 "Use Classic" if classic else "Use Security")):
@@ -4304,9 +4304,9 @@ class TUIApp(App):
                 ("Mode · Classic · ready to use; switch to Security…" if classic
                  else "Mode · Security · nothing runs until you allow it; switch to Classic…"),
                 "workspace_mode", "security" if classic else "classic",
-                "Classic turns on reading files, edit proposals you approve, chat, saved "
-                "conversations and saved keys. Security starts with everything off. Both check every "
-                "action with IsySentinel and record it in the action journal."))
+                "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, "
+                "and sandboxed commands where supported. Each edit, delete/move, command and commit "
+                "still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."))
             entries.append(self._entry(
                 "Turn on all coding tools…", "coding_toolkit", "",
                 "One step for read, search, edit, move, delete, undo, sandboxed commands, git and "
@@ -4819,8 +4819,8 @@ class TUIApp(App):
             "Allow sandboxed commands in this workspace?" if enabled else "Turn off commands?",
             (f"The assistant may propose programs to run inside {self._workspace_root}. Each exact "
              "command is shown and runs only if you approve it, through bubblewrap with the network "
-             "blocked, sensitive files hidden and only this workspace writable. Classic mode never "
-             "turns this on for you." if enabled else
+             "blocked, sensitive files hidden and only this workspace writable. Classic includes "
+             "this sandbox when available; Security requires an explicit grant." if enabled else
              "No command can run in this workspace. Nothing already changed is undone."),
             "Allow commands" if enabled else "Turn off commands"))
         if accepted:

@@ -79,9 +79,11 @@ integration from API-key billing and is not implemented by this increment.
 
 ## Work on code
 
-Classic includes bounded workspace read/edit, saved-key access and saved-session
-permissions for a recurring project. Security requires explicit grants.
-Commands require a separate executable grant and approval in either mode.
+Classic includes bounded workspace read/edit, saved-key/session access, Git review,
+reviewed commits and exact-executable sandboxed commands when Bubblewrap/seccomp
+are available. Every command, edit, delete/move and commit still requires its own
+approval. Security begins with grants off; use individual grants or the reviewed
+coding-tool bundle. No mode enables a free shell or offers an unsandboxed fallback.
 
 1. Use `/context` or Context → Load workspace AGENTS.md to load project guidance.
    Reads are owned and journaled. Only the root AGENTS.md is supported here; an
@@ -244,3 +246,14 @@ Cancel and visible pinned buttons. Provider replies in the coding fixture were
 simulated; files, approvals, journals, sandbox command and Git diff were real.
 Independent review found no remaining critical/important blockers after fixing
 private-state access and stale registration confirmations.
+
+
+## Classic coding defaults (2026-10-02)
+
+Classic now supports the common daily loop without a setup grant per tool: read/edit,
+Git status/diff/approved commits and Bubblewrap/seccomp commands when available.
+Per-action previews and approvals, IsySentinel and the journal remain mandatory;
+explicitly disabled grants still override the preset. Security remains opt-in by
+capability and offers the same tools through individual grants or the bundled
+coding-tool setup. The local Python 3.12 run passed 1,053 tests with 7 skips; compileall and the focused
+security/mode regression set (101 tests) also passed.

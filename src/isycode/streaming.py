@@ -20,6 +20,13 @@ from typing import Iterator, Callable
 DEFAULT_STREAM_TIMEOUT_S = None
 
 
+class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Streaming requests carry bearer credentials; never follow redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class StreamError(Exception):
     def __init__(self, message: str, status: int | None = None):
         super().__init__(message)
@@ -119,7 +126,8 @@ def stream_complete(
     usage: dict = {}
     t0 = time.time()
     try:
-        resp = urllib.request.urlopen(req, timeout=timeout_s)
+        resp = urllib.request.build_opener(_RejectRedirectHandler).open(
+            req, timeout=timeout_s)
     except urllib.error.HTTPError as e:
         raise StreamError(f"HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
     except (urllib.error.URLError, OSError) as e:

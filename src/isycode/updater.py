@@ -11,7 +11,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 OFFICIAL_REPOSITORY = "https://github.com/DannyBaanks/ISyCode.git"
@@ -138,7 +138,21 @@ class SelfUpdater:
         if (parsed.scheme != "https" or parsed.hostname != "github.com" or parsed.username
                 or parsed.password or port not in (None, 443) or parsed.query or parsed.fragment):
             return False
-        return Path(parsed.path).name.removesuffix(".git").casefold() == "isycode"
+        try:
+            official = urlsplit(self.official_repository)
+            path = unquote(parsed.path)
+            official_path = unquote(official.path)
+        except (AttributeError, ValueError):
+            return False
+        # Bind both owner and repository to the configured official source; a
+        # matching final component alone lets any GitHub user impersonate ISyCode.
+        if (official.scheme != "https" or official.hostname != "github.com"
+                or not official_path or official.username or official.password):
+            return False
+        def canonical(value: str) -> str:
+            return value.rstrip("/").removesuffix(".git").casefold()
+
+        return canonical(path) == canonical(official_path)
 
     @staticmethod
     def _clean_line(value: str) -> str:

@@ -151,13 +151,14 @@ Cada workspace tiene su modo. Lo eliges la primera vez que abres la carpeta (`Es
 | Chat con el provider elegido (solo hosts conocidos o el endpoint configurado) | incluido | lo activas tú |
 | Guardar y reanudar conversaciones | incluido | lo activas tú |
 | Guardar, usar y quitar API keys (guardar y quitar piden confirmación) | incluido | lo activas tú por servicio |
-| Ver `git status` y diffs | incluido | lo activas tú |
-| Commits, comandos en sandbox, MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
+| Git status/diff y commits revisados | incluido; cada commit pide aprobación | permiso explícito; cada commit pide aprobación |
+| Comandos de desarrollo en sandbox Bubblewrap/seccomp (si está disponible) | incluido; revisas y apruebas cada comando | permiso explícito; revisas y apruebas cada comando |
+| MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
 | Gateway, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
 | Borrar y mover archivos | implícito (con aprobación por acción) | permiso explícito |
 | Shell libre, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
 
-Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal en ambos modos. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
+Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: los comandos pasan solo por el sandbox verificado, cambios/commits conservan su aprobación exacta, IsySentinel revisa cada acción y todo queda en el journal. Si no hay sandbox, no existe fallback inseguro. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
 
 ## Qué puede hacer el agente
 

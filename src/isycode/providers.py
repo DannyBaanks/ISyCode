@@ -168,6 +168,13 @@ def save_provider_selection(name: str, model: str) -> None:
             temporary.unlink()
 
 
+class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Do not forward provider authorization headers to a redirect target."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class ProviderError(RuntimeError):
     def __init__(self, message: str, status: int | None = None, body: str = "",
                  attempts: int = 1, transport: bool = False):
@@ -315,7 +322,8 @@ class Provider:
         request = urllib.request.Request(
             self.base_url + "/models", headers=self._headers(), method="GET")
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
+            opener = urllib.request.build_opener(_RejectRedirectHandler)
+            with opener.open(request, timeout=self.timeout_s) as response:
                 payload = json.loads(response.read(2_000_001))
         except urllib.error.HTTPError as exc:
             raise ProviderError("provider model catalog request failed", exc.code) from exc

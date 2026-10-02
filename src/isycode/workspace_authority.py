@@ -63,10 +63,12 @@ CLASSIC_PATH_ACTIONS = frozenset({
     # Delete and move stay inside the workspace and still need a per-action approval.
     "workspace.files.delete", "workspace.files.move",
 })
-CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume", "git.status", "git.diff"})
+# These are grants only; execution owners still require exact approvals for commits.
+CLASSIC_GRANTED_ACTIONS = frozenset({
+    "session.create", "session.resume", "git.status", "git.diff", "git.commit"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
-CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_PLAIN_ACTIONS | CLASSIC_SERVICE_ACTIONS
-                   | {"provider.request"})
+CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_GRANTED_ACTIONS | CLASSIC_SERVICE_ACTIONS
+                   | {"provider.request", "workspace.command.run"})
 
 
 def _known_provider_hosts() -> list[str]:
@@ -204,12 +206,21 @@ class WorkspaceAuthority:
 
         for action in CLASSIC_PATH_ACTIONS:
             merge(action, "path_prefixes", [str(self.root)])
-        for action in CLASSIC_PLAIN_ACTIONS:
+        for action in CLASSIC_GRANTED_ACTIONS:
             merge(action)
         services = _known_services()
         for action in CLASSIC_SERVICE_ACTIONS:
             merge(action, "targets", services)
         merge("provider.request", "network_hosts", _known_provider_hosts())
+        # Commands are ready in Classic only when the verified sandbox exists.
+        # The grant is bound to that exact executable; there is no shell fallback.
+        try:
+            from isycode.command_runner import sandbox_executable
+            sandbox = sandbox_executable()
+        except (ImportError, OSError, RuntimeError, ValueError):
+            sandbox = None
+        if sandbox:
+            merge("workspace.command.run", "executables", [sandbox])
         return {**policy, "grants": grants}
 
     @staticmethod

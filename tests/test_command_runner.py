@@ -88,6 +88,16 @@ def _run(owner, approvals, argv, **kwargs):
     return preview, asyncio.run(owner.run(preview, approvals.issue(preview.request)))
 
 
+def test_classic_uses_exact_sandbox_grant_but_keeps_per_command_approval(sandbox):
+    owner, authority, approvals, fake, _ = sandbox
+    authority.set_mode("classic")
+    preview = owner.prepare(["echo", "classic"])
+    assert authority.effective_policy()["grants"]["workspace.command.run"]["executables"] == [fake]
+    assert asyncio.run(owner.run(preview, None)).decision == "DENY"
+    result = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+    assert result.decision == "ALLOW" and "classic" in json.loads(result.text)["output"]
+
+
 def test_no_grant_denies_even_with_an_approval(sandbox):
     owner, _, approvals, _, log = sandbox
     _, outcome = _run(owner, approvals, ["echo", "hi"])
@@ -243,13 +253,6 @@ def test_sentinel_rejects_forged_command_requests(sandbox, change):
     gate = ProductActionGate(owner.root, authority, owner_id="workspace_command")
     _, decision = gate.authorize(request, approvals=approvals, approval=approvals.issue(request))
     assert not decision.allowed
-
-
-def test_classic_mode_never_implies_commands(sandbox):
-    owner, authority, approvals, _, log = sandbox
-    authority.set_mode("classic")
-    _, outcome = _run(owner, approvals, ["echo", "hi"])
-    assert outcome.decision == "DENY" and not log.exists()
 
 
 def test_without_bubblewrap_nothing_can_be_prepared(sandbox, monkeypatch):

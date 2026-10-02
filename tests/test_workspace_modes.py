@@ -94,7 +94,6 @@ def test_classic_uses_saved_keys_only_for_known_services(workspace):
     ("mobile.host.start", "127.0.0.1:8765",
      {"bind": "127.0.0.1", "port": 8765, "transport": "loopback"}, "mobile_host"),
     ("mcp.invoke", "gateway", {}, "gateway_mcp"),
-    ("workspace.command.run", "/usr/bin/echo", {"argv": ["echo"]}, "workspace_command"),
     ("bridge.connect", "bridge", {}, "bridge"),
 ])
 def test_classic_does_not_imply_integrations_or_denied_actions(workspace, action, target,
@@ -104,11 +103,19 @@ def test_classic_does_not_imply_integrations_or_denied_actions(workspace, action
     assert not _allowed(authority, root, action, target, parameters, owner, approval=True)
 
 
-def test_classic_preset_is_never_written_into_the_explicit_policy(workspace):
+def test_classic_preset_is_ready_for_coding_but_never_written_to_policy(workspace, monkeypatch):
     authority, _ = workspace
+    monkeypatch.setattr("isycode.command_runner.sandbox_executable", lambda: "/usr/bin/bwrap")
     authority.set_mode("classic")
-    assert authority.policy()["grants"] == {}
-    assert authority.effective_policy()["grants"]["workspace.files.read"]["enabled"] is True
+    policy = authority.policy()
+    effective = authority.effective_policy()["grants"]
+    assert policy["grants"] == {}
+    assert effective["workspace.files.read"]["enabled"] is True
+    assert effective["workspace.command.run"]["executables"] == ["/usr/bin/bwrap"]
+    assert effective["git.commit"]["enabled"] is True
+    # Explicit denials still win even in Classic.
+    authority.set_grant("workspace.command.run", enabled=False)
+    assert authority.effective_policy()["grants"]["workspace.command.run"]["enabled"] is False
     authority.set_mode("security")
     assert "workspace.files.read" not in authority.effective_policy()["grants"]
 
