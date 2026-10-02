@@ -104,6 +104,7 @@ sin_evidencia_real:
   - Windows y macOS
   - G0, G1, G2 y G3 siguen EN_REVISION
   - este push del producto no esperó los checks; el remoto imprimió Bypassed rule violations para 1b43eef, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - este push de la evidencia no esperó los checks; el remoto imprimió Bypassed rule violations para e9b372c, 3 de 3 checks esperados, enforce_admins sigue apagado
   - no se afirma que CI pasó
 regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1090 passed, 2 skipped, 11 deselected; 102.52s; skips anthropic ausente y TypeScript sandbox_ready ausente
 riesgos_residuales: la confianza no sigue un directorio movido ni una copia; un reemplazo en el mismo path cambia el inodo y no hereda; headless sigue sin ofrecer escrituras; deshacer en la TUI sigue preguntando aunque restore esté en el conjunto quieto

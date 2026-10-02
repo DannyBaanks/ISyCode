@@ -427,7 +427,7 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1, G2, G3 y G4 siguen EN REVISIÓN. Ninguna puerta está APROBADA. Los push de M2 (`0f9a4e4`), de M3 (`948b0f9`) y del producto de M4 (`1b43eef`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M4 está en [docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/](evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/gate.yaml). El siguiente trabajo de producto es M5 (egress, secretos y publicación), sin abrir red autónoma ni el bucle de agente.**
+**Próximo paso: G0, G1, G2, G3 y G4 siguen EN REVISIÓN. Ninguna puerta está APROBADA. Los push de M2 (`0f9a4e4`), de M3 (`948b0f9`), del producto de M4 (`1b43eef`) y de su evidencia (`e9b372c`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M4 está en [docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/](evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/gate.yaml). El siguiente trabajo de producto es M5 (egress, secretos y publicación), sin abrir red autónoma ni el bucle de agente.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
