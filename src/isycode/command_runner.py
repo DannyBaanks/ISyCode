@@ -36,7 +36,7 @@ from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.lsp import network_deny_bootstrap
 from isycode.security import ActionRequest
 from isycode.staging import (
-    StagingError, cleanup_staging, measure_changes, prepare_staging, promote_changes,
+    StagingError, cleanup_staging, measure_changes, prepare_staging, promote_accounted,
 )
 from isycode.workspace_authority import WorkspaceAuthority
 
@@ -292,8 +292,14 @@ class CommandRunOwner:
         if not self.gate.persist_receipt(request, receipt):
             return ActionOutcome("Command receipt could not be persisted.", "NOT_VERIFIABLE", None,
                                  "durable action journal is unavailable")
-        return ActionOutcome(result_text, "ALLOW", receipt,
-                             f"sandboxed command finished with exit code {result['exit_code']}")
+        promotion = result.get("staging", {}).get("promotion") or {}
+        if promotion.get("state") == "uncertain":
+            note = "command finished; the effect ledger is uncertain and further changes are blocked"
+        elif promotion.get("state") == "denied":
+            note = "command finished; its changes were not promoted (" + str(promotion.get("reason", ""))[:160] + ")"
+        else:
+            note = f"sandboxed command finished with exit code {result['exit_code']}"
+        return ActionOutcome(result_text, "ALLOW", receipt, note)
 
     async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
@@ -334,11 +340,22 @@ class CommandRunOwner:
                 raise
             changes = measure_changes(staging)
             if promote:
-                applied, refused = promote_changes(staging, changes)
-                pending: list[str] = []
+                from isycode.effect_ledger import EffectLedger, LedgerDenied
+                try:
+                    applied, refused, promotion = promote_accounted(staging, changes)
+                    pending = []
+                except LedgerDenied as exc:
+                    try:
+                        recovered = EffectLedger(self.root).reconcile()
+                    except LedgerDenied:
+                        recovered = "UNCERTAIN"
+                    applied, refused, pending = [], [], []
+                    promotion = {"state": exc.effect_state if recovered != "UNCERTAIN" else "uncertain",
+                                 "reason": str(exc)[:300]}
             else:
                 applied, refused = [], []
                 pending = [item["path"] for item in changes]
+                promotion = {"state": "staged"}
             return {"argv": list(preview.argv), "cwd": preview.cwd,
                     "exit_code": proc.returncode, "timed_out": timed_out,
                     "output": output.decode("utf-8", errors="replace"),
@@ -351,6 +368,7 @@ class CommandRunOwner:
                         "pending": pending[:300],
                         "refused_count": len(refused),
                         "refused": refused[:300],
+                        "promotion": promotion,
                     }}
         finally:
             cleanup_staging(staging)
