@@ -18,6 +18,7 @@ def workspace(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
+    monkeypatch.setattr("isycode.egress.review_destination", lambda _url: None)
     for name in ("ISYCODE_BASE_URL", "ISYMOTRON_BASE_URL", "ISYCODE_MODEL", "ISYMOTRON_PROVIDER"):
         monkeypatch.delenv(name, raising=False)
     root = tmp_path / "project"

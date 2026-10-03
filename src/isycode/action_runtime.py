@@ -1646,7 +1646,8 @@ class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
     def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str,
-                 tailscale_facts: TailscaleAuthorityFacts | None = None):
+                 tailscale_facts: TailscaleAuthorityFacts | None = None,
+                 journal: bool = True):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
         owner_id = self.owner_id
@@ -1682,9 +1683,12 @@ class ProductActionGate:
                 return SystembilityResult(self.name, bound, reason)
 
         self.authority = authority
-        try:
-            self.audit: ActionAuditJournal | None = ActionAuditJournal(canonical)
-        except ActionAuditError:
+        if journal:
+            try:
+                self.audit: ActionAuditJournal | None = ActionAuditJournal(canonical)
+            except ActionAuditError:
+                self.audit = None
+        else:
             self.audit = None
         self.sentinel = IsySentinel([
             ExecutionOwnerBindingSystembility(),
@@ -1704,6 +1708,28 @@ class ProductActionGate:
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
             BridgePresenceSystembility(),
         ])
+
+    def preview(self, request: ActionRequest):
+        """Evaluate the real grant/Systembility chain without audit or approval consumption."""
+        from isycode.effect_policy import POLICY_VERSION, stamp
+        try:
+            bound = stamp(request)
+            classified = (bound.policy_version == POLICY_VERSION
+                          and bound.request_digest == request.digest
+                          and bound.action_id == request.action_id)
+        except (KeyError, TypeError, ValueError):
+            classified = False
+        if not classified:
+            digest = request.digest if isinstance(request, ActionRequest) else ""
+            action_id = request.action_id if isinstance(request, ActionRequest) else ""
+            reason = "action has no effect classification"
+            return (
+                AuthorityDecision(False, "", reason, digest),
+                SentinelDecision(action_id, digest, (
+                    DecisionCheck("EffectClass", False, reason),)),
+            )
+        authority = self.authority.evaluate(request, preview=True)
+        return authority, self.sentinel.evaluate(request, authority)
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
                   approval: ActionApproval | None = None):

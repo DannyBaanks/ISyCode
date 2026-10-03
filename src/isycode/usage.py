@@ -11,6 +11,41 @@ MAX_COUNTER = 10**12
 _STATE_FIELDS = frozenset({"requests", "input_tokens", "output_tokens", "unknown_requests"})
 
 
+@dataclass(frozen=True)
+class CostBucket:
+    """Display-only cost classification; absence of pricing stays unknown."""
+
+    status: str
+    usd: float | None = None
+    source: str = ""
+
+    @classmethod
+    def unknown(cls) -> "CostBucket":
+        return cls("unknown")
+
+    @classmethod
+    def included(cls, source: str) -> "CostBucket":
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError("included cost source is required")
+        return cls("included", source=source.strip())
+
+    @classmethod
+    def estimated(cls, usd: float, *, source: str) -> "CostBucket":
+        if (type(usd) not in {int, float} or usd < 0
+                or not isinstance(source, str) or not source.strip()):
+            raise ValueError("estimated cost requires a nonnegative amount and source")
+        return cls("estimated", float(usd), source.strip())
+
+    def to_state(self) -> dict:
+        if self.status == "unknown":
+            return {"status": "unknown"}
+        if self.status == "included":
+            return {"status": "included", "source": self.source}
+        if self.status == "estimated" and self.usd is not None:
+            return {"status": "estimated", "usd": self.usd, "source": self.source}
+        raise ValueError("invalid cost bucket")
+
+
 def _valid_counter(value: object) -> bool:
     return type(value) is int and 0 <= value <= MAX_COUNTER
 

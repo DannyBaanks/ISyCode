@@ -181,7 +181,8 @@ except ModuleNotFoundError:
 from isycode.providers import (
     DEFAULT_MODEL, PRESETS, PROVIDER_SCREEN, Provider, ProviderError, featured_models,
     load_provider_key,
-    provider_credential_state, save_provider_selection, selected_model_name, selected_provider_name,
+    model_slot, provider_credential_state, save_provider_selection, selected_model_name,
+    selected_provider_name,
 )
 from isycode.streaming import (
     StreamError, async_stream_complete, detect_unexecuted_tool_request,
@@ -246,7 +247,8 @@ class Banner(Static):
     def set_compact(self, compact: bool) -> None:
         del compact
         self.styles.height = 1
-        header = Text("ISYCODE", style="bold #e94560")
+        wordmark = ":3_ ISYCODE"
+        header = Text(wordmark, style="bold #e94560")
         identity = getattr(self.app, "_workspace_identity", None)
         launch = identity.launch_dir if identity else Path.cwd().resolve()
         path = str(launch)
@@ -261,13 +263,14 @@ class Banner(Static):
                 mode = "Security"
         mark = f"  ● {mode}"
         # Two spaces are prepended to the path, and two more stay clear of the frame.
-        available = max(1, width - 4 - cell_len("ISYCODE" + mark))
+        available = max(1, width - 4 - cell_len(wordmark + mark))
         if cell_len(path) > available:
             tail = path[-max(0, available - 1):] if available > 1 else ""
             while cell_len(tail) > available - 1:
                 tail = tail[1:]
             path = "…" + tail
         header.append(f"  {path}", style=MUTED)
+        header.append(" " * max(0, width - 2 - cell_len(header.plain + mark)))
         header.append(mark, style="#4ade80" if mode == "Classic" else "#fbbf24")
         self.update(header)
 
@@ -4519,12 +4522,15 @@ class TUIApp(App):
         self._render_menu("user_defaults", "Settings · My defaults", entries)
 
     def _usage_status_text(self) -> str:
-        return f"Chat · {self._usage.label()}"
+        from isycode.context_meter import compact_context_label
+        return f"Chat · {self._usage.label()} · {compact_context_label(self._history)} · cost ?"
 
     def _refresh_usage(self) -> None:
         total = self._usage.input_tokens + self._usage.output_tokens
         uncertainty = "+ (usage unknown)" if self._usage.unknown_requests else ""
-        label = f"Chat · {total:,}{uncertainty} tokens · {self._usage.requests} req"
+        from isycode.context_meter import compact_context_label
+        label = (f"Chat · {total:,}{uncertainty} tokens · {self._usage.requests} req"
+                 f" · {compact_context_label(self._history)} · cost ?")
         self.query_one("#usage-status", Static).update(Text(label, style=MUTED))
 
     async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int | None = None,
@@ -7662,7 +7668,7 @@ class TUIApp(App):
             await app._list_local_mcp()
 
         async def _compact_cmd(app: "TUIApp", arg: str) -> None:
-            await app._compact_conversation()
+            await app._compact_conversation(arg.strip())
 
         async def _run_cmd(app: "TUIApp", arg: str) -> None:
             try:
@@ -9524,11 +9530,12 @@ class TUIApp(App):
                            "reason": outcome.reason[:300]})
 
     async def _summarize_older(self, provider, owner, older: list[dict],
-                               recent: list[dict]) -> bool:
+                               recent: list[dict], instructions: str = "") -> bool:
         """Replace ``older`` history with model-written notes sent through the provider owner."""
         self._append(f"  Compacting · summarizing {len(older)} earlier messages to free up context",
                      MUTED)
-        summary_request = summary_messages(older, self._conversation_summary)
+        summary_request = summary_messages(
+            older, self._conversation_summary, instructions=instructions)
 
         async def send():
             return await self._complete_accounted_chat(provider, summary_request,
@@ -9561,7 +9568,7 @@ class TUIApp(App):
                      "the full transcript", MUTED)
         return True
 
-    async def _compact_conversation(self) -> None:
+    async def _compact_conversation(self, instructions: str = "") -> None:
         """/compact: summarize everything except the latest exchange now."""
         if self._loop_task and self._loop_task is not asyncio.current_task() \
                 and not self._loop_task.done():
@@ -9571,15 +9578,17 @@ class TUIApp(App):
         if not older:
             self._append("  Nothing to compact yet.", MUTED)
             return
-        provider_name = selected_provider_name()
+        compact_slot = model_slot("small")
+        provider_name = (compact_slot or {}).get("provider") or selected_provider_name()
+        provider_model = (compact_slot or {}).get("model") or provider_default_model(provider_name)
         try:
-            provider = Provider(name=provider_name, model=provider_default_model(provider_name),
+            provider = Provider(name=provider_name, model=provider_model,
                                 api_key=load_provider_key(provider_name) or None)
         except ProviderError as exc:
             self._append(f"  {self._provider_failure(exc, 'Compaction')}", RED)
             return
         owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
-        await self._summarize_older(provider, owner, older, recent)
+        await self._summarize_older(provider, owner, older, recent, instructions)
 
     async def _run_custom_command(self, text: str) -> None:
         """Expand /name from the user's or the workspace's prompt files, else chat as typed."""

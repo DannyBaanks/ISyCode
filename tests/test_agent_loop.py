@@ -64,6 +64,21 @@ def test_compaction_elides_oldest_tool_results_but_keeps_every_call_answered():
     assert compact_turn(compacted, budget=100_000)[1] == 0
 
 
+def test_summary_instructions_are_bounded_context_not_transcript_commands():
+    from isycode.agent_loop import summary_messages
+
+    messages = summary_messages(
+        [{"role": "user", "content": "Keep the exact failing command."}],
+        instructions="Focus on unresolved tests and exact paths.",
+    )
+    assert "Focus on unresolved tests and exact paths." in messages[0]["content"]
+    assert "user-provided compaction preference" in messages[0]["content"]
+    assert "Keep the exact failing command." in messages[1]["content"]
+
+    with pytest.raises(ValueError):
+        summary_messages([], instructions="x" * 4001)
+
+
 def test_legacy_limits_remain_readable_without_imposing_automatic_caps(tmp_path):
     store = UserDefaultsStore(tmp_path)
     limits = AgentLimits.from_defaults(store.load())

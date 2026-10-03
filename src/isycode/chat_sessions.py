@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import html
 import os
 import re
 import stat
@@ -219,6 +220,30 @@ class ChatSessionStore:
     def export_json(self, session_id: str, *, sanitize: bool = True) -> str:
         session = self.load(session_id)
         return self.serialize(session, sanitize=sanitize)
+
+    def export_html(self, session_id: str, *, sanitize: bool = True) -> str:
+        """Return a self-contained local review document; never uploads it."""
+        session = self.load(session_id)
+        title = self._sanitize_text(session.title) if sanitize else session.title
+        parts = [
+            "<!doctype html>",
+            '<html lang="en"><head><meta charset="utf-8">',
+            f"<title>{html.escape(title)}</title>",
+            "<style>body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;"
+            "padding:0 1rem;background:#17171b;color:#eceaf1}article{border:1px solid #45424e;"
+            "border-radius:10px;padding:1rem;margin:1rem 0}pre{white-space:pre-wrap;word-break:break-word}"
+            ".role{opacity:.72;font-size:.85rem;text-transform:uppercase}</style></head><body>",
+            f"<h1>{html.escape(title)}</h1>",
+        ]
+        for message in session.messages:
+            content = message["content"]
+            if sanitize:
+                content = self._sanitize_text(content)
+            role = html.escape(message["role"])
+            parts.append(
+                f'<article><div class="role">{role}</div><pre>{html.escape(content)}</pre></article>')
+        parts.append("</body></html>")
+        return "\n".join(parts)
 
     @classmethod
     def serialize(cls, session: ChatSession, *, sanitize: bool = True) -> str:

@@ -1,7 +1,9 @@
 import pytest
 
 from isycode.config import load_api_key
-from isycode.providers import PRESETS, Provider
+from isycode.providers import (
+    PRESETS, Provider, model_slot, save_model_slot,
+)
 
 
 @pytest.mark.parametrize(("name", "base_url", "key_env"), [
@@ -48,3 +50,15 @@ def test_provider_screen_lists_wired_presets_and_unwired_names():
 def test_openrouter_does_not_advertise_model_agnostic_tool_support():
     provider = Provider(name="openrouter", model="example/model", api_key="test")
     assert provider.supports_tools is False
+
+
+def test_small_model_slot_is_typed_private_metadata(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    save_model_slot("small", "openai", "gpt-5.6-mini")
+
+    assert model_slot("small") == {"provider": "openai", "model": "gpt-5.6-mini"}
+    assert model_slot("chat") is None
+    with pytest.raises(ValueError):
+        save_model_slot("admin", "openai", "gpt-5.6-mini")
+    with pytest.raises(ValueError):
+        save_model_slot("small", "missing-provider", "x")

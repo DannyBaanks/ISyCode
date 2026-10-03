@@ -24,6 +24,9 @@ from isycode.git_owner import GIT_TOOLS, GitOwner, git_executable
 from isycode.providers import Provider, ProviderError, load_provider_key, selected_provider_name
 from isycode.chat_transport import assistant_turn, provider_complete
 from isycode.streaming import StreamError
+from isycode.turn_events import TurnEventStream
+from isycode.usage import CostBucket, UsageLedger
+from isycode.context_meter import context_snapshot
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
 EXIT_OK = 0
@@ -102,8 +105,12 @@ def _dispatch(root: Path, authority: WorkspaceAuthority, call: dict, log: TextIO
 
 async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = sys.stdout,
                        log: TextIO = sys.stderr, json_output: bool = False,
-                       transport: Transport | None = None) -> int:
+                       transport: Transport | None = None,
+                       tool_profile: str = "read-only") -> int:
     """Answer one prompt. Returns a process exit code."""
+    if tool_profile not in {"read-only", "none"}:
+        print("isycode: unknown tool profile", file=log)
+        return EXIT_USAGE
     root = (root or discover_workspace_identity(Path.cwd()).workspace_root).resolve()
     authority = WorkspaceAuthority(root)
     _register_saved_key_reader(root)
@@ -114,7 +121,8 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
     except ProviderError as exc:
         print(f"isycode: provider unavailable · {exc}", file=log)
         return EXIT_FAILED
-    tools = available_tools(root, authority) if provider.supports_tools else []
+    tools = (available_tools(root, authority)
+             if provider.supports_tools and tool_profile != "none" else [])
     messages: list[dict] = [
         {"role": "system", "content": (
             f"You are ISyCode running non-interactively in the workspace {root}. Nobody can "
@@ -125,6 +133,9 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
         {"role": "user", "content": prompt},
     ]
     owner = ProviderNetworkOwner(root, authority)
+    events = TurnEventStream()
+    usage = UsageLedger()
+    events.emit("turn.start", {"source": "headless", "tool_profile": tool_profile})
     streamed: list[str] = []
 
     def on_chunk(kind: str, chunk: str) -> None:
@@ -152,13 +163,20 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                         "reasoning_effort": provider.reasoning_effort,
                         "temperature_supported": provider.temperature_supported,
                         "tools": tools or None}
+            events.emit("provider.request", {"provider": provider.name, "model": provider.model})
             response, outcome = await owner.execute(
                 provider, material, lambda: send(messages, tools or None, on_chunk))
             if outcome.decision != "ALLOW" or not isinstance(response, dict):
+                events.emit("agent.end", {"status": "denied"})
                 print(f"isycode: provider request {outcome.decision} · {outcome.reason[:240]}",
                       file=log)
                 return EXIT_DENIED
             receipts.append(outcome.receipt.receipt_id)
+            usage.record(response.get("usage"))
+            events.emit("provider.result", {
+                "receipt": outcome.receipt.receipt_id,
+                "has_tools": bool(response.get("tool_calls")),
+            })
             answer = response.get("text") or "".join(streamed)
             calls = response.get("tool_calls") or []
             if not calls:
@@ -167,15 +185,21 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
             for call in calls:
                 call_id, result = await asyncio.to_thread(_dispatch, root, authority, call, log)
                 tool_calls += 1
+                events.emit("tool.result", {"tool_call_id": call_id})
                 messages.append({"role": "tool", "tool_call_id": call_id, "content": result})
             if not json_output and streamed:
                 out.write("\n")
     except (ProviderError, StreamError, OSError) as exc:
+        events.emit("agent.end", {"status": "failed", "error": type(exc).__name__})
         print(f"isycode: request failed · {type(exc).__name__}: {str(exc)[:200]}", file=log)
         return EXIT_FAILED
+    events.emit("agent.end", {"status": "complete"})
     if json_output:
         out.write(json.dumps({"answer": answer, "workspace": str(root), "tool_calls": tool_calls,
-                              "provider_receipts": receipts}, ensure_ascii=False) + "\n")
+                              "provider_receipts": receipts, "events": events.records(),
+                              "usage": usage.to_state(),
+                              "context": context_snapshot(messages),
+                              "cost": CostBucket.unknown().to_state()}, ensure_ascii=False) + "\n")
     elif not answer.endswith("\n"):
         out.write("\n")
     return EXIT_OK
@@ -184,7 +208,12 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
 def main(arguments: list[str], stdin: TextIO = sys.stdin) -> int:
     """``isycode -p [PROMPT|-] [--json]``: PROMPT or stdin when omitted or "-"."""
     json_output = "--json" in arguments
-    rest = [item for item in arguments if item != "--json"]
+    offline = "--offline" in arguments
+    no_tools = "--no-tools" in arguments
+    rest = [item for item in arguments if item not in {"--json", "--offline", "--no-tools"}]
+    if offline:
+        print("isycode: offline mode disables provider network requests", file=sys.stderr)
+        return EXIT_FAILED
     if not rest or rest[0] not in {"-p", "--print"}:
         print("usage: isycode -p [PROMPT|-] [--json]", file=sys.stderr)
         return EXIT_USAGE
@@ -194,7 +223,8 @@ def main(arguments: list[str], stdin: TextIO = sys.stdin) -> int:
     if not prompt:
         print("isycode: empty prompt", file=sys.stderr)
         return EXIT_USAGE
-    return asyncio.run(run_headless(prompt, json_output=json_output))
+    return asyncio.run(run_headless(prompt, json_output=json_output,
+                                    tool_profile="none" if no_tools else "read-only"))
 
 
 __all__ = ["EXIT_DENIED", "EXIT_FAILED", "EXIT_OK", "EXIT_USAGE", "available_tools", "main",

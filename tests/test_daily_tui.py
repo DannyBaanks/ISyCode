@@ -19,6 +19,9 @@ def configure(tmp_path, monkeypatch):
     monkeypatch.setenv('ISYCODE_PROVIDER', 'openai')
     monkeypatch.setenv('ISYCODE_MODEL', 'gpt-6-luna')
     monkeypatch.setenv('OPENAI_API_KEY', 'test-not-real')
+    # Fake provider transports must not depend on live DNS. Keep the real
+    # destination policy and supply one public resolver result for fixtures.
+    monkeypatch.setattr('isycode.egress._ips', lambda _host, _port: ('93.184.216.34',))
     UserDefaultsStore().update(new_workspace='temporary', new_workspace_mode='classic')
     authority = WorkspaceAuthority(project)
     authority.set_mode('classic')

@@ -263,7 +263,8 @@ class WorkspaceAuthority:
 
     def evaluate(self, request: ActionRequest, *,
                  approvals: ActionApprovalStore | None = None,
-                 approval: ActionApproval | None = None) -> AuthorityDecision:
+                 approval: ActionApproval | None = None,
+                 preview: bool = False) -> AuthorityDecision:
         if not isinstance(request, ActionRequest):
             return AuthorityDecision(False, "", "invalid action request", "")
         digest = request.digest
@@ -336,7 +337,7 @@ class WorkspaceAuthority:
             if not request.target or request.target not in grant.get("targets", []):
                 return AuthorityDecision(False, "", "action target is not explicitly granted", digest)
 
-        if spec.approval_required and not _trusted_quiet(self, request):
+        if spec.approval_required and not _trusted_quiet(self, request) and not preview:
             if approvals is None or not approvals.consume(request, approval):
                 return AuthorityDecision(False, "", "fresh request-bound approval is required", digest)
 

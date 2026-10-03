@@ -106,6 +106,21 @@ def test_usage_and_legacy_budget_do_not_impose_local_chat_caps(tmp_path, monkeyp
         asyncio.run(scenario())
 
 
+def test_usage_status_shows_estimated_context_and_unknown_cost(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._history = [{"role": "user", "content": "x" * 400}]
+            text = app._usage_status_text().lower()
+            assert "ctx ~100 est" in text
+            assert "cost ?" in text
+            assert "$0" not in text
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
 def test_budget_defaults_are_validated_and_legacy_settings_load(tmp_path):
     store = UserDefaultsStore(tmp_path)
     assert store.load()['chat_token_budget'] == 0
@@ -192,6 +207,36 @@ def test_failed_explicit_compaction_saves_unknown_consumption(tmp_path, monkeypa
             assert app._active_chat_session_id
             state = app._chat_session_owner.resume(app._active_chat_session_id)[1].state
             assert state['usage']['unknown_requests'] == 1
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_compact_uses_small_slot_and_user_instructions(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    from isycode.providers import save_model_slot
+    save_model_slot('small', 'openai', 'gpt-small-fixture')
+    calls = []
+
+    async def complete(provider, messages, **kwargs):
+        calls.append((provider.name, provider.model, messages))
+        return {'text': 'Compact summary.', 'tool_calls': [],
+                'usage': {'prompt_tokens': 10, 'completion_tokens': 2}}
+
+    monkeypatch.setattr('isycode.tui.provider_complete', complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._history = [
+                {'role': 'user', 'content': 'Old conversation.'},
+                {'role': 'assistant', 'content': 'Old answer.'},
+            ] * 4
+            await app._compact_conversation('Keep failing tests and exact paths.')
+            assert calls[0][0:2] == ('openai', 'gpt-small-fixture')
+            assert 'Keep failing tests and exact paths.' in calls[0][2][0]['content']
+            assert app._conversation_summary == 'Compact summary.'
+
     with capsys.disabled():
         asyncio.run(scenario())
 

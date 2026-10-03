@@ -201,17 +201,21 @@ def _load_preferences() -> dict[str, Any]:
     try:
         info = path.lstat()
     except FileNotFoundError:
-        return {"version": 1, "provider": "", "models": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}}
     if not stat.S_ISREG(info.st_mode) or info.st_size > 64 * 1024:
-        return {"version": 1, "provider": "", "models": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
-        return {"version": 1, "provider": "", "models": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}}
     if (not isinstance(data, dict) or data.get("version") != 1
             or not isinstance(data.get("provider"), str)
             or not isinstance(data.get("models"), dict)):
-        return {"version": 1, "provider": "", "models": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}}
+    slots = data.get("slots", {})
+    if not isinstance(slots, dict):
+        slots = {}
+    data["slots"] = slots
     return data
 
 
@@ -264,7 +268,52 @@ def save_provider_selection(name: str, model: str) -> None:
     models[provider] = selected_model
     identity = {"provider": provider, "model": selected_model}
     recent = [identity] + [item for item in recent_models() if item != identity]
-    data = {"version": 1, "provider": provider, "models": models, "recent_models": recent[:12]}
+    data = {"version": 1, "provider": provider, "models": models,
+            "recent_models": recent[:12], "slots": data.get("slots", {})}
+    path = _preferences_path()
+    temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(temporary, flags, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(data, stream, ensure_ascii=False, sort_keys=True)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        if os.name == "posix":
+            path.chmod(0o600)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def model_slot(slot: str) -> dict[str, str] | None:
+    """Return one optional model role; slots carry metadata, never authority."""
+    if slot != "small":
+        return None
+    item = _load_preferences().get("slots", {}).get(slot)
+    if (not isinstance(item, dict) or set(item) != {"provider", "model"}
+            or item.get("provider") not in PRESETS
+            or not isinstance(item.get("model"), str)
+            or not 1 <= len(item["model"]) <= 256
+            or any(ord(char) < 32 for char in item["model"])):
+        return None
+    return {"provider": item["provider"], "model": item["model"]}
+
+
+def save_model_slot(slot: str, provider: str, model: str) -> None:
+    """Persist a bounded non-secret model role in the same private preferences file."""
+    provider = provider.casefold()
+    model = model.strip()
+    if slot != "small":
+        raise ValueError("unknown model slot")
+    if (provider not in PRESETS or not model or len(model) > 256
+            or any(ord(char) < 32 for char in model)):
+        raise ValueError("model slot selection is invalid")
+    data = _load_preferences()
+    slots = dict(data.get("slots", {}))
+    slots[slot] = {"provider": provider, "model": model}
+    data["slots"] = slots
     path = _preferences_path()
     temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
