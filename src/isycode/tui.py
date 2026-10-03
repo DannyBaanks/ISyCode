@@ -2115,7 +2115,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     .harness-count { width: auto; height: 3; padding: 0 1; margin-right: 2; border: round #514d5a; background: #24232b; color: #c2b9ce; }
     #harness-summary { height: auto; color: #aeb6c5; margin-bottom: 1; }
     #harness-scroll { height: 1fr; margin-bottom: 1; scrollbar-color: #7b4f9c; }
-    .harness-section { width: 100%; height: auto; padding: 1 2; margin-bottom: 1; background: #2d2934; border-left: thick #8153a0; }
+    .harness-section { width: 100%; height: auto; padding: 0; margin: 0; background: transparent; border: none; }
+    .harness-section > Contents { padding: 1 2; background: #2d2934; }
     .harness-section-text { width: 100%; height: auto; color: #e0e0e0; }
     .harness-actions { width: 100%; height: auto; margin-top: 1; }
     .harness-actions Button { margin-right: 1; }
@@ -2144,7 +2145,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
             yield Static(self._render_summary(), id="harness-summary")
             with VerticalScroll(id="harness-scroll"):
                 for harness_id in CATALOG_IDS:
-                    with Vertical(classes="harness-section"):
+                    with Collapsible(title=self._section_title(harness_id), collapsed=True,
+                                     id=f"harness-fold-{harness_id}", classes="harness-section"):
                         yield Static(self._render_harness(harness_id),
                                      id=f"harness-section-text-{harness_id}",
                                      classes="harness-section-text")
@@ -2166,8 +2168,14 @@ class MultiHarnessScreen(ModalScreen[str | None]):
         summary = Text()
         if checking:
             summary.append(f"{checking} checking…", style="#f6c77b")
-        summary.append("\nBrowse each card · no settings are changed here.", style="#9097a7")
+        summary.append("Expand a harness to inspect it · no settings are changed here.", style="#9097a7")
         return summary
+
+    def _section_title(self, harness_id: str) -> str:
+        section = next((item for item in self.sections if item["harness_id"] == harness_id), {})
+        state = ("checking…" if section.get("checking") else
+                 "ready" if section.get("unlocked") else "folder unavailable")
+        return f"{harness_id.upper()} · {state}"
 
     def _render_harness(self, harness_id: str) -> Text:
         section = next((item for item in self.sections if item["harness_id"] == harness_id), None)
@@ -2321,6 +2329,7 @@ class MultiHarnessScreen(ModalScreen[str | None]):
             self.query_one("#harness-gap-content", Static).update(self._render_gaps())
             self.query_one("#harness-gap-panel", Collapsible).title = self._gap_title()
             for harness_id in CATALOG_IDS:
+                self.query_one(f"#harness-fold-{harness_id}", Collapsible).title = self._section_title(harness_id)
                 self.query_one(f"#harness-section-text-{harness_id}", Static).update(
                     self._render_harness(harness_id))
                 self.query_one("#" + self._copy_button_id(harness_id), Button).display = (
