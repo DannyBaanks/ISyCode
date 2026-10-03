@@ -275,6 +275,14 @@ class Banner(Static):
         self.update(header)
 
 
+class ActivityStatus(Static):
+    """Repaint the cat after this widget receives its final resized geometry."""
+
+    def on_resize(self, event) -> None:
+        if self.is_mounted and self.app.is_mounted:
+            self.app._refresh_activity()
+
+
 class IdleBoard(Static):
     """One-time ASCII landscape and integration status in the chat history."""
 
@@ -2771,7 +2779,7 @@ class TUIApp(App):
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
-    #activity-status { width: 20%; height: 3; padding: 1 1 0 1; color: #9aa3ad; background: transparent; }
+    #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; }
     #usage-status { width: 20%; height: 3; padding: 1 1 0 1; content-align: right top; color: #9aa3ad; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
@@ -2982,7 +2990,7 @@ class TUIApp(App):
                 yield TasksPanel("", id="agent-tasks")
                 with Vertical(id="composer"):
                     with Horizontal(id="idea-box-row"):
-                        yield Static("Chat ready", id="activity-status")
+                        yield ActivityStatus("Chat ready", id="activity-status")
                         yield Static("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
                         yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
@@ -3017,6 +3025,7 @@ class TUIApp(App):
 
     def on_mount(self) -> None:
         self._refresh_usage()
+        self._set_activity("Chat ready", MUTED)
         self.set_interval(1.0, self._paint_work_status)
         prompt = self.query_one("#prompt-input", PromptArea)
         self.query_one("#role-button", Button).label = self._role_button_label()
@@ -8194,9 +8203,10 @@ class TUIApp(App):
         self._activity_label = label
         self._activity_frame = 0
         self._set_activity(label, CYAN)
-        self._activity_timer = self.set_interval(0.3, self._animate_activity)
+        self._activity_timer = self.set_interval(0.12, self._animate_activity)
         task = asyncio.create_task(coroutine)
         self._loop_task = task
+        self._animate_activity()
         self._paint_idea_box()
         task.add_done_callback(self._operation_finished)
 
@@ -8240,13 +8250,32 @@ class TUIApp(App):
     def _animate_activity(self) -> None:
         if self._loop_task is None or self._loop_task.done():
             return
-        self._activity_frame = (self._activity_frame + 1) % 4
-        self._set_activity(self._activity_label + "." * (self._activity_frame + 1), CYAN)
+        from isycode.cat_activity import walking_cat
+        self._activity_frame += 1
+        try:
+            status = self.query_one("#activity-status", Static)
+            status.update(walking_cat(status.content_size.width, self._activity_frame))
+        except (NoScreen, ScreenStackError):
+            pass
+
+    def _refresh_activity(self) -> None:
+        if self._loop_task is not None and not self._loop_task.done():
+            self._animate_activity()
+        else:
+            self._set_activity(getattr(self, "_activity_message", "Chat ready"),
+                               getattr(self, "_activity_color", MUTED))
 
     def _set_activity(self, message: str, color: str = MUTED) -> None:
+        self._activity_message = message
+        self._activity_color = color
         if self.is_mounted:
             try:
-                self.query_one("#activity-status", Static).update(Text(message, style=color))
+                status = self.query_one("#activity-status", Static)
+                if message == "Chat ready":
+                    from isycode.cat_activity import sleeping_cat
+                    status.update(sleeping_cat(status.content_size.width))
+                else:
+                    status.update(Text(message, style=color))
             except (NoScreen, ScreenStackError):
                 pass
 

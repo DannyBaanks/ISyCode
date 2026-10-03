@@ -30,9 +30,17 @@ def test_status_flanks_idea_box_and_animation_stops(tmp_path, monkeypatch, size)
             assert plain_text(activity) != first
             gate.set()
             await pilot.pause()
-            assert plain_text(activity) == 'Chat ready'
+            assert 'Chat ready' in plain_text(activity)
+            asleep = plain_text(activity)
             app._animate_activity()
-            assert plain_text(activity) == 'Chat ready'
+            assert plain_text(activity) == asleep
+            await pilot.resize_terminal(80, 24)
+            await pilot.pause()
+            from rich.cells import cell_len
+            assert all(cell_len(row) <= activity.content_size.width
+                       for row in plain_text(activity).splitlines())
+            app._animate_activity()
+            assert 'Chat ready' in plain_text(activity)
             bar = app.query_one('#chat').vertical_scrollbar
             assert isinstance(bar, QuietScrollBar)
             bar._direction = 1
