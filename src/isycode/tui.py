@@ -636,6 +636,11 @@ class SelectableText(Static):
                 group="clipboard-user")
 
 
+from contextvars import ContextVar
+
+_tool_display_context = ContextVar("tool_display_context", default=None)
+
+
 class CommandOutputCard(VerticalScroll):
     """Two visible output rows; Enter/Space opens the retained command output."""
 
@@ -2805,6 +2810,9 @@ class TUIApp(App):
     }
     #composer-hint { height: 1; padding: 0 2; color: #9aa3ad; }
     .tool-receipt CollapsibleTitle { color: #9aa3ad; text-style: none; }
+    .tool-activity { height: auto; padding: 0; margin: 1 0; border-left: solid #397e90; background: #17191f; }
+    .tool-activity CollapsibleTitle { color: #9aa3ad; }
+    .tool-activity-body { height: auto; padding: 0 1; }
     Footer { background: $surface; color: #6c757d; }
     #command-bar {
         height: 1; padding: 0 1; background: $surface;
@@ -7280,6 +7288,14 @@ class TUIApp(App):
         """Append output, releasing the welcome pause only on the first message."""
         if not startup:
             self._dismiss_idle()
+        context = _tool_display_context.get()
+        if context is not None and context[0] is self:
+            _, body, notes = context
+            if notes.plain:
+                notes.append("\n")
+            notes.append(text, style=color)
+            body.set_selectable_content(notes.copy(), notes.plain)
+            return
         chat = self.query_one(ChatArea)
         chat.mount(SelectableText(Text(text, style=color), selection_text=text))
         chat.follow_tail()
@@ -8890,12 +8906,49 @@ class TUIApp(App):
         if name == IDEA_BOX_TOOL_NAME:
             return await self._dispatch_chat_tool_impl(call)
         label = name if isinstance(name, str) and name else "unknown tool"
-        started_at = _time.monotonic()
         try:
-            return await self._dispatch_chat_tool_impl(call)
+            arguments = json.loads(function.get("arguments") or "{}")
+        except (ValueError, TypeError):
+            arguments = {}
+        if isinstance(arguments, dict) and isinstance(arguments.get("path"), str):
+            label += " · " + sanitize_historical_text(arguments["path"])[:80]
+        started_at = _time.monotonic()
+        self._dismiss_idle()
+        notes = Text()
+        body = SelectableText(Text(""), selection_text="", classes="tool-activity-body")
+        card = Collapsible(body, title=f"{label} · Running", collapsed=True,
+                           classes="tool-activity")
+        chat = self.query_one(ChatArea)
+        await chat.mount(card)
+        chat.follow_tail()
+        token = _tool_display_context.set((self, body, notes))
+        state = "Failed"
+        try:
+            result = await self._dispatch_chat_tool_impl(call)
+            try:
+                material = json.loads(result[1])
+            except (ValueError, TypeError):
+                material = {}
+            state = "Completed"
+            if isinstance(material, dict):
+                if material.get("status") == "rejected_by_user":
+                    state = "Rejected"
+                elif material.get("error"):
+                    state = str(material.get("decision") or "Error")
+                elif material.get("timed_out"):
+                    state = "Timed out"
+                elif material.get("exit_code") is not None:
+                    state = f"Exit {material['exit_code']}"
+            return result
+        except asyncio.CancelledError:
+            state = "Cancelled"
+            raise
         finally:
             elapsed = _elapsed_label(_time.monotonic() - started_at)
-            self._append(f"  Tool duration · {label} · {elapsed}", MUTED)
+            self._append(f"Tool duration · {label} · {elapsed}", MUTED)
+            _tool_display_context.reset(token)
+            card.title = f"{label} · {state} · {elapsed}"
+            chat.follow_tail()
 
     async def _dispatch_chat_tool_impl(self, call: dict) -> tuple[str, str]:
         """Route one provider function call through the canonical local read owner."""
