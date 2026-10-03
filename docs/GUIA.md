@@ -164,3 +164,16 @@ Exits: passthrough del motor | 2 uso/gate | 3 motor pendiente.
 | LSP muestra que no hay adapters | ISyCode todavía no tiene adapter LSP configurado. | No indica una falla del TUI; los MCP aparecen por separado. |
 
 Trampas frecuentes: ejecuta `isycode` o `isycode cli` desde el workspace correcto para que Files capture ese directorio; un MCP/skill visible sigue sin permiso de ejecución; y `isyco` sin más argumentos sigue siendo el CLI de motores OpenISy.
+
+## Tarjetas de comandos
+
+Los comandos nuevos del chat muestran dos filas de salida en una tarjeta.
+El borde superior identifica el comando y el inferior muestra su estado.
+Pulsa Enter o Espacio con la tarjeta enfocada, o haz clic en su borde, para
+ver la salida retenida completa y el recibo. La búsqueda abre las tarjetas
+con coincidencias ocultas. Un aviso de límite significa que el owner no
+retuvo más salida; expandir no recupera esos bytes.
+
+La confirmación usa opciones grandes: Rechazar está enfocado inicialmente.
+Las tarjetas cambian la presentación; no conceden permisos ni ejecutan
+comandos por sí mismas.

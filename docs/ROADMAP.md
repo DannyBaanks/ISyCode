@@ -552,6 +552,50 @@ Reglas de frontera:
 - [x] Witnesses offline de habilitar, verificar y deshabilitar conservan otras rutas; smoke temporal de Settings mostró la opción de instalación sin crear `.isyroot`.
 - [ ] Verificar login/instalación en un equipo opt-in y acceso desde otro dispositivo del tailnet; confirmar rechazo desde fuera del tailnet y scopes independientes del Gateway. Estado actual: **NOT_DEMONSTRATED**; no se ejecutaron cambios reales en el equipo.
 
+### M19 — Lenguaje visual de tarjetas y auditorías pendientes
+
+**Origen (2026-10-03):** referencias visuales compartidas por Danny: cajas con
+el título sobre el borde de Elia, salida plegable de Gemini y opciones grandes
+con foco claro de Crush. Son referencias de diseño, no un port ni pruebas de
+sus providers. El resumen de fx fue aportado por Danny (Bridge RESULT 5186);
+esta entrega no repitió esa auditoría ni el comando `maintainer check`.
+
+- [x] Comandos del chat agrupados en una tarjeta con **dos filas de salida**.
+  El borde lleva el comando; Enter/Espacio o clic en el borde expande y pliega.
+  La salida completa retenida y el recibo se consultan al expandir.
+- [x] Un comando que alcanza el límite del owner indica que la salida fue
+  truncada. La vista compacta no elimina datos ni cambia el resultado del tool.
+- [x] La búsqueda encuentra texto fuera de las dos filas y abre la tarjeta.
+- [x] Confirmación de comandos con caja interna titulada y opciones grandes;
+  Rechazar sigue enfocado inicialmente. Escape/Enter inicial no ejecutan.
+- [x] Contadores compactos tipo la caja To-Do de Crush en Multi Harness:
+  carpetas y conversaciones separadas. El To-Do de ISyCode se conserva.
+- [ ] Reutilizar esos contadores para cambios y resultados, sin inventar
+  números ni duplicar paneles de tareas.
+- [ ] Extender este lenguaje a selección de modelo y configuración: secciones
+  con título sobre el borde, opciones en tarjetas y ayudas breves. Evitar
+  convertir todas las respuestas del agente en cajas de altura fija.
+- [ ] Diálogos de permisos inspirados en la última captura de Crush:
+  herramienta/operación y ruta o destino visibles, argumentos en caja propia,
+  botones de una vez/cancelar y alcance explícito. Una opción de sesión solo
+  aparece si el owner ya soporta ese contrato; el estilo no crea un grant.
+- [ ] Unificar tarjetas de otras tools, estados pendientes/error y resultados
+  paginados. La ejecución continúa teniendo el mismo owner y el mismo recibo.
+- [ ] Recuperar estas tarjetas al reabrir una sesión a partir de los resultados
+  existentes; la entrega actual agrupa comandos nuevos de la TUI.
+
+**fx como complemento del roadmap:** revisar doctor/status JSON y checks
+componibles sobre el CLI existente; inspección/resume/fork de sesiones en M7/M16;
+delegación en el owner existente; estado MCP en M3/M14; ACP como adapter por
+diseñar; referencias paginadas para resultados grandes. Para ISyCo Console,
+extender Passport/Inbox/Memory/Session/Locks/Events/Scheduler en su propio
+roadmap. No crear paquetes paralelos aquí ni marcar estos ítems como completos
+por la presencia de otra CLI. Deny explícito prevalece en todos los casos.
+
+**Validación visual:** 80×24 y 120×40, títulos largos, salida con líneas anchas,
+expansión por teclado, búsqueda, estado final y foco de rechazo. La vista previa
+usa datos de demostración y no acredita comandos ni servicios reales.
+
 ## 5. Orden y puertas de dependencia
 
 ```text

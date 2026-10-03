@@ -575,6 +575,76 @@ class SelectableText(Static):
                 group="clipboard-user")
 
 
+class CommandOutputCard(VerticalScroll):
+    """Two visible output rows; Enter/Space opens the retained command output."""
+
+    can_focus = True
+    BINDINGS = [Binding("enter,space", "toggle_output", "Expand output", show=False)]
+    DEFAULT_CSS = """
+    CommandOutputCard { height: 4; width: 100%; padding: 0 1; margin: 1 0; border: round #414650; background: #17191f; }
+    CommandOutputCard:focus-within { border: round #bb8cff; }
+    CommandOutputCard.-expanded { height: 18; }
+    CommandOutputCard .command-output-body { height: auto; width: 100%; }
+    """
+
+    def __init__(self, command: str) -> None:
+        super().__init__()
+        self.command = command
+        self.output = ""
+        self.status = "Running"
+        self.receipt = ""
+        self.output_truncated = False
+        self.expanded = False
+        self._body = SelectableText(classes="command-output-body")
+        self.border_title = Text(command, style=CYAN)
+        self._paint_output()
+
+    def compose(self) -> ComposeResult:
+        yield self._body
+
+    def append_output(self, chunk: str) -> None:
+        self.output += chunk
+        self._paint_output()
+
+    def finish(self, status: str, *, output: str | None = None,
+               receipt: str = "", truncated: bool = False) -> None:
+        self.status = status
+        if output is not None:
+            self.output = output
+        self.receipt = receipt
+        self.output_truncated = truncated
+        self._paint_output()
+
+    def _paint_output(self) -> None:
+        note = " · output limit reached" if self.output_truncated else ""
+        hint = "collapse" if self.expanded else "expand"
+        self.border_subtitle = Text(f"{self.status}{note} · Enter / Space {hint}", style=MUTED)
+        if self.expanded:
+            shown = self.output or "No output."
+            if self.receipt:
+                shown += f"\n\nReceipt · {self.receipt}"
+            if self.output_truncated:
+                shown += "\nOutput reached the execution owner's limit; more bytes were not retained."
+        else:
+            shown = "\n".join(self.output.splitlines()[-2:])
+            if not shown:
+                shown = "Waiting for output…" if self.status == "Running" else "No output."
+        self._body.set_selectable_content(
+            Text(shown, style=MUTED, no_wrap=not self.expanded, overflow="ellipsis"), shown)
+
+    def action_toggle_output(self) -> None:
+        self.expanded = not self.expanded
+        self.set_class(self.expanded, "-expanded")
+        self._paint_output()
+        self.scroll_home(animate=False)
+
+    def on_click(self, event) -> None:
+        # The border opens the card; selecting body text remains available.
+        if event.widget is self:
+            self.focus()
+            self.action_toggle_output()
+
+
 class PromptArea(TextArea):
     """Enter sends; Shift+Enter adds a line; Ctrl+Enter remains an alias."""
 
@@ -1113,10 +1183,11 @@ class CommandApprovalScreen(ApprovalScreen):
     CSS = """
     CommandApprovalScreen { align: center middle; background: #000000 58%; }
     #command-approval-card { width: 100; max-width: 96%; height: auto; max-height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #command-approval-title { height: 2; color: #bb8cff; text-style: bold; }
-    #command-approval-argv { height: auto; max-height: 12; border: none; background: #202126; padding: 0 1; margin-bottom: 1; }
-    #command-approval-actions { height: 3; align-horizontal: right; margin-top: 1; }
-    #command-approval-actions Button { margin-left: 1; }
+    #command-approval-title { height: 1; color: #bb8cff; text-style: bold; }
+    #command-approval-argv { height: auto; max-height: 6; border: round #414650; background: #17191f; padding: 0 1; margin-bottom: 1; }
+    #command-approval-actions { height: 5; align-horizontal: right; margin-top: 1; }
+    #command-approval-actions Button { width: 1fr; height: 5; margin-left: 1; border: round #414650; background: #202126; }
+    #command-approval-actions Button:focus { border: round #bb8cff; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
 
@@ -1143,6 +1214,9 @@ class CommandApprovalScreen(ApprovalScreen):
                 yield Button("Run command · y", id="command-approval-run", variant="warning")
 
     def on_mount(self) -> None:
+        card = self.query_one("#command-approval-card")
+        card.border_title = "Command · review"
+        self.query_one("#command-approval-argv").border_title = "Exact command"
         self.query_one("#command-approval-reject", Button).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -1984,6 +2058,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     MultiHarnessScreen { align: center middle; background: #000000 58%; }
     #harness-card { width: 100; max-width: 95%; height: 88%; padding: 1 2; border: round #6c557e; background: #24232b; }
     #harness-title { height: 1; color: #d7a9ff; text-style: bold; }
+    #harness-counts { height: 3; margin-bottom: 1; }
+    .harness-count { width: auto; height: 3; padding: 0 1; margin-right: 2; border: round #514d5a; background: #24232b; color: #c2b9ce; }
     #harness-summary { height: auto; color: #aeb6c5; margin-bottom: 1; }
     #harness-scroll { height: 1fr; margin-bottom: 1; scrollbar-color: #7b4f9c; }
     .harness-section { width: 100%; height: auto; padding: 1 2; margin-bottom: 1; background: #2d2934; border-left: thick #8153a0; }
@@ -2009,6 +2085,9 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="harness-card"):
             yield Static("MULTI HARNESS  /  FIELD NOTES", id="harness-title")
+            with Horizontal(id="harness-counts"):
+                yield Static(f"Folders  0/{len(CATALOG_IDS)}", id="harness-folders-count", classes="harness-count")
+                yield Static("Conversations  0", id="harness-sessions-count", classes="harness-count")
             yield Static(self._render_summary(), id="harness-summary")
             with VerticalScroll(id="harness-scroll"):
                 for harness_id in CATALOG_IDS:
@@ -2031,12 +2110,9 @@ class MultiHarnessScreen(ModalScreen[str | None]):
 
     def _render_summary(self) -> Text:
         checking = sum(bool(section.get("checking")) for section in self.sections)
-        ready = sum(bool(section.get("unlocked")) for section in self.sections)
         summary = Text()
-        summary.append(f"{ready}/{len(CATALOG_IDS)} folders read", style="bold #77d8b0")
-        summary.append(f"    {self.transcript_count} ISyCode conversations", style="#c2b9ce")
         if checking:
-            summary.append(f"    {checking} checking…", style="#f6c77b")
+            summary.append(f"{checking} checking…", style="#f6c77b")
         summary.append("\nBrowse each card · no settings are changed here.", style="#9097a7")
         return summary
 
@@ -2185,15 +2261,18 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                         setting["provider_id"], setting["model_id"])
                     break
         if self.is_mounted:
+            ready = sum(bool(section.get("unlocked")) for section in self.sections)
+            self.query_one("#harness-folders-count", Static).update(f"Folders  {ready}/{len(CATALOG_IDS)}")
+            self.query_one("#harness-sessions-count", Static).update(f"Conversations  {self.transcript_count}")
             self.query_one("#harness-summary", Static).update(self._render_summary())
             self.query_one("#harness-gap-content", Static).update(self._render_gaps())
             self.query_one("#harness-gap-panel", Collapsible).title = self._gap_title()
             for harness_id in CATALOG_IDS:
                 self.query_one(f"#harness-section-text-{harness_id}", Static).update(
                     self._render_harness(harness_id))
-                self.query_one(self._copy_button_id(harness_id), Button).display = (
+                self.query_one("#" + self._copy_button_id(harness_id), Button).display = (
                     harness_id in self.copyable_models)
-                self.query_one(self._transcript_button_id(harness_id), Button).display = (
+                self.query_one("#" + self._transcript_button_id(harness_id), Button).display = (
                     harness_id in self.transcript_sources)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -7323,6 +7402,9 @@ class TUIApp(App):
         self._console_search_index = -1
         if query.strip():
             chat = self.query_one(ChatArea)
+            for card in chat.query(CommandOutputCard):
+                if query.strip().casefold() in card.output.casefold() and not card.expanded:
+                    card.action_toggle_output()
             for widget in chat.query(Static):
                 if not widget.display:
                     continue
@@ -9266,26 +9348,32 @@ class TUIApp(App):
                 self._append("  Command rejected · nothing ran", MUTED)
                 return json.dumps({"status": "rejected_by_user", "argv": list(preview.argv)})
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        self._append(f"  Running · {shown[:160]}", MUTED)
-        pending_output = ""
+        self._dismiss_idle()
+        chat = self.query_one(ChatArea)
+        card = CommandOutputCard(shown)
+        chat.mount(card)
+        chat.follow_tail()
         def show_output(chunk):
-            nonlocal pending_output
-            pending_output += chunk
-            while "\n" in pending_output:
-                line, pending_output = pending_output.split("\n", 1)
-                self._append("  │ " + line[:300], MUTED)
-        outcome = await owner.run(preview, approval, on_output=show_output)
+            card.append_output(chunk)
+            chat.follow_tail()
+        try:
+            outcome = await owner.run(preview, approval, on_output=show_output)
+        except asyncio.CancelledError:
+            card.finish("Cancelled")
+            raise
+        except Exception:
+            card.finish("Failed")
+            raise
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  Command {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            card.finish(outcome.decision, output=outcome.reason[:300])
             return json.dumps({"error": "command did not run", "decision": outcome.decision,
                                "reason": outcome.reason[:300]})
         result = json.loads(outcome.text)
-        if pending_output:
-            self._append("  │ " + pending_output[:300], MUTED)
         status = ("stopped after the time limit" if result["timed_out"]
                   else f"exit code {result['exit_code']}")
-        self._append(f"  Command finished · {status} · receipt {outcome.receipt.receipt_id}",
-                     GREEN if result["exit_code"] == 0 and not result["timed_out"] else YELLOW)
+        card.finish(status, output=result["output"], receipt=outcome.receipt.receipt_id,
+                    truncated=result.get("output_truncated", False))
+        chat.follow_tail()
         return outcome.text
 
     def _file_action_enabled(self, action: str) -> bool:
