@@ -275,6 +275,49 @@ class Banner(Static):
         self.update(header)
 
 
+class IdeaNoteScreen(ModalScreen):
+    """Scrollable live view of the full idea note."""
+
+    CSS = """
+    IdeaNoteScreen { align: center middle; background: #000000 58%; }
+    #idea-note-card { width: 90; max-width: 95%; height: 75%; padding: 1 2; border: round #514d5a; background: #242529; }
+    #idea-note-heading { height: 1; color: #c7b8d4; text-style: bold; }
+    #idea-note-scroll { height: 1fr; margin: 1 0; }
+    #idea-note-content { height: auto; }
+    #idea-note-close { width: 16; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, note: str):
+        super().__init__()
+        self.note = note
+
+    def compose(self):
+        with Vertical(id="idea-note-card"):
+            yield Static("Idea box · full note", id="idea-note-heading")
+            with VerticalScroll(id="idea-note-scroll"):
+                yield Static(Text(self.note), id="idea-note-content")
+            yield Button("Close · Esc", id="idea-note-close")
+
+    def action_close(self):
+        self.dismiss()
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "idea-note-close":
+            self.dismiss()
+
+
+class IdeaBox(Static):
+    can_focus = True
+    BINDINGS = [Binding("enter,space", "expand", "Expand note", show=False)]
+
+    def on_mount(self):
+        self.border_title = "Enter / Space expand"
+
+    def action_expand(self):
+        self.app._open_idea_note()
+
+
 class ActivityStatus(Static):
     """Repaint the cat after this widget receives its final resized geometry."""
 
@@ -2999,7 +3042,7 @@ class TUIApp(App):
                 with Vertical(id="composer"):
                     with Horizontal(id="idea-box-row"):
                         yield ActivityStatus("Chat ready", id="activity-status")
-                        yield Static("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
+                        yield IdeaBox("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
                         yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
                     yield Static("Enter send · Ctrl+J newline · ↑ history · Esc back", id="composer-hint")
@@ -7748,6 +7791,9 @@ class TUIApp(App):
                 return
             await app._list_local_mcp()
 
+        async def _idea_cmd(app: "TUIApp", arg: str) -> None:
+            app._open_idea_note()
+
         async def _compact_cmd(app: "TUIApp", arg: str) -> None:
             await app._compact_conversation(arg.strip())
 
@@ -8054,6 +8100,7 @@ class TUIApp(App):
                 PluginCommand("provider", "show saved provider credentials; select with /provider <id>", _provider_cmd),
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
+                PluginCommand("idea", "expand the current idea note", _idea_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
@@ -8123,9 +8170,16 @@ class TUIApp(App):
                 "idea_box": self._idea_box,
                 "usage": self._usage.to_state()}
 
+    def _open_idea_note(self) -> None:
+        self.push_screen(IdeaNoteScreen(self._idea_box or "Waiting for the agent to leave a note."))
+
     def _paint_idea_box(self) -> None:
         if not self.is_mounted:
             return
+        for screen in self.screen_stack:
+            if isinstance(screen, IdeaNoteScreen) and screen.is_mounted:
+                screen.query_one("#idea-note-content", Static).update(
+                    Text(self._idea_box or "Waiting for the agent to leave a note."))
         try:
             box = self.query_one("#idea-box", Static)
         except NoMatches:
