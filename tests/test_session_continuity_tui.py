@@ -115,7 +115,8 @@ def test_usage_status_shows_estimated_context_and_unknown_cost(tmp_path, monkeyp
             app._history = [{"role": "user", "content": "x" * 400}]
             text = app._usage_status_text().lower()
             assert "ctx ~100 est" in text
-            assert "cost ?" in text
+            assert "cost" not in text
+            assert "req" not in text
             assert "$0" not in text
     with capsys.disabled():
         asyncio.run(scenario())
@@ -143,7 +144,7 @@ def test_usage_and_budget_fit_the_standard_terminal_width(tmp_path, monkeypatch,
             app._refresh_usage()
             text = plain_text(app.query_one('#usage-status', Static))
             assert len(text) <= 80
-            assert 'unknown' in text.lower()
+            assert '+?' in text
     with capsys.disabled():
         asyncio.run(scenario())
 

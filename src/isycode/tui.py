@@ -477,6 +477,47 @@ def plain_text(widget: Static) -> str:
 _CHILD_ANCHOR = "animate" in inspect.signature(Widget.anchor).parameters
 
 
+from rich.style import Style
+from textual.scrollbar import ScrollBar
+
+
+class QuietScrollBar(ScrollBar):
+    """Three quiet direction strokes, retaining native wheel/drag controls."""
+
+    def render(self):
+        previous = getattr(self, "_last_position", self.position)
+        if self.position != previous:
+            self._direction = -1 if self.position < previous else 1
+            self._last_position = self.position
+            timer = getattr(self, "_settle_timer", None)
+            if timer is not None:
+                timer.stop()
+            self._settle_timer = self.set_timer(0.45, self._settle)
+        else:
+            self._last_position = self.position
+        direction = getattr(self, "_direction", 0)
+        strokes = ["---", " - ", " - "] if direction < 0 else (
+            [" - ", " - ", "___"] if direction > 0 else ["   ", " - ", "   "])
+        height = self.size.height
+        rows = ["   "] * max(0, height)
+        start = max(0, (height - 3) // 2)
+        for offset, stroke in enumerate(strokes):
+            if start + offset < height:
+                rows[start + offset] = stroke
+        result = Text()
+        for index, row in enumerate(rows):
+            action = "scroll_up" if index < start else (
+                "scroll_down" if index >= start + 3 else "grab")
+            result.append(row, style=Style(color="#9aa3ad", meta={"@mouse.down": action}))
+            if index < height - 1:
+                result.append("\n")
+        return result
+
+    def _settle(self):
+        self._direction = 0
+        self.refresh()
+
+
 class ChatArea(VerticalScroll):
     """Chat with a layout-aware tail anchor that user scrolling can release."""
 
@@ -484,6 +525,15 @@ class ChatArea(VerticalScroll):
         super().__init__(*args, **kwargs)
         self._tail = Static("", classes="chat-tail")
         self._tail.styles.height = 1
+
+    @property
+    def vertical_scrollbar(self):
+        if self._vertical_scrollbar is None:
+            bar = QuietScrollBar(vertical=True, name="vertical", thickness=3)
+            self._vertical_scrollbar = bar
+            bar.display = False
+            self.app._start_widget(self, bar)
+        return self._vertical_scrollbar
 
     def compose(self):
         yield self._tail
@@ -2697,6 +2747,7 @@ class TUIApp(App):
     #file-preview-scroll { height: 7; min-height: 4; border: round #414650; background: #11151b; }
     #chat {
         height: 1fr; background: $surface; padding: 1 2;
+        scrollbar-size-vertical: 3; scrollbar-background: transparent;
     }
     Static.console-search-match { border-left: tall #9b5de5; padding-left: 1; background: #34313b; }
     Static.console-search-current { border-left: tall #fbbf24; padding-left: 1; background: #45404c; }
@@ -2711,7 +2762,8 @@ class TUIApp(App):
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
-    #activity-status { height: 1; padding: 0 2; color: #9aa3ad; background: $surface; }
+    #activity-status { width: 20%; height: 3; padding: 1 1 0 1; color: #9aa3ad; background: transparent; }
+    #usage-status { width: 20%; height: 3; padding: 1 1 0 1; content-align: right top; color: #9aa3ad; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
@@ -2919,13 +2971,11 @@ class TUIApp(App):
                 yield ChatArea(id="chat")
                 yield OptionList(id="slash-suggestions")
                 yield TasksPanel("", id="agent-tasks")
-                yield Static("Ready · / opens commands", id="activity-status")
-                usage_status = Static("", id="usage-status")
-                usage_status.styles.height = 1
-                yield usage_status
                 with Vertical(id="composer"):
                     with Horizontal(id="idea-box-row"):
+                        yield Static("Chat ready", id="activity-status")
                         yield Static("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
+                        yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
                     yield Static("Enter send · Ctrl+J newline · ↑ history · Esc back", id="composer-hint")
                     with Horizontal(id="command-bar"):
@@ -4523,15 +4573,12 @@ class TUIApp(App):
 
     def _usage_status_text(self) -> str:
         from isycode.context_meter import compact_context_label
-        return f"Chat · {self._usage.label()} · {compact_context_label(self._history)} · cost ?"
+        total = self._usage.input_tokens + self._usage.output_tokens
+        unknown = " +?" if self._usage.unknown_requests else ""
+        return f"{total:,}{unknown} tokens\n{compact_context_label(self._history)}"
 
     def _refresh_usage(self) -> None:
-        total = self._usage.input_tokens + self._usage.output_tokens
-        uncertainty = "+ (usage unknown)" if self._usage.unknown_requests else ""
-        from isycode.context_meter import compact_context_label
-        label = (f"Chat · {total:,}{uncertainty} tokens · {self._usage.requests} req"
-                 f" · {compact_context_label(self._history)} · cost ?")
-        self.query_one("#usage-status", Static).update(Text(label, style=MUTED))
+        self.query_one("#usage-status", Static).update(Text(self._usage_status_text(), style=MUTED))
 
     async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int | None = None,
                                        on_chunk=None, tools=None) -> dict:
@@ -8135,7 +8182,10 @@ class TUIApp(App):
             self._start_operation(self._run_chat(text), "Chat · working")
 
     def _start_operation(self, coroutine, label: str) -> None:
+        self._activity_label = label
+        self._activity_frame = 0
         self._set_activity(label, CYAN)
+        self._activity_timer = self.set_interval(0.3, self._animate_activity)
         task = asyncio.create_task(coroutine)
         self._loop_task = task
         self._paint_idea_box()
@@ -8145,6 +8195,9 @@ class TUIApp(App):
         if self._loop_task is not task:
             return
         self._loop_task = None
+        timer = getattr(self, "_activity_timer", None)
+        if timer is not None:
+            timer.stop()
         if task.cancelled():
             self._set_activity("Interrupted · inspect the transcript before retrying", YELLOW)
         elif task.exception() is not None:
@@ -8152,7 +8205,7 @@ class TUIApp(App):
         elif self._last_plan is not None:
             self._set_activity("Plan ready · review it in Overview", YELLOW)
         else:
-            self._set_activity("Ready · / opens commands", MUTED)
+            self._set_activity("Chat ready", MUTED)
         self._paint_idea_box()
 
     async def _await_screen(self, screen):
@@ -8174,6 +8227,12 @@ class TUIApp(App):
 
         self.push_screen(screen, finished)
         return await future
+
+    def _animate_activity(self) -> None:
+        if self._loop_task is None or self._loop_task.done():
+            return
+        self._activity_frame = (self._activity_frame + 1) % 4
+        self._set_activity(self._activity_label + "." * (self._activity_frame + 1), CYAN)
 
     def _set_activity(self, message: str, color: str = MUTED) -> None:
         if self.is_mounted:

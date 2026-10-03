@@ -55,6 +55,11 @@ def render_landscape(width: int) -> Text:
     pad_left = max(0, (width - SCENE_WIDTH) // 2)
     result = Text()
     for y, source in enumerate(source_lines()):
+        # An original ASCII cat sits between the trees, inside the existing hero.
+        if y in (12, 13):
+            cat = r" /\_/\ " if y == 12 else "(=^.^=)"
+            left = (SCENE_WIDTH - len(cat)) // 2
+            source = source[:left] + cat + source[left + len(cat):]
         row = source[start:start + min(width, SCENE_WIDTH)]
         result.append(" " * pad_left)
         for x, char in enumerate(row, start=start):
