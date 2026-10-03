@@ -266,6 +266,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_publish": frozenset({"PublishBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
     "clipboard": frozenset({"ClipboardBoundary"}),
+    "bridge_presence": frozenset({"BridgePresenceBoundary"}),
 }
 
 
@@ -300,6 +301,7 @@ OWNER_ACTIONS = {
     "workspace_publish": frozenset({"git.push"}),
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
     "clipboard": frozenset({"clipboard.copy"}),
+    "bridge_presence": frozenset({"bridge.agents"}),
 }
 
 
@@ -587,7 +589,7 @@ class CommandProcessSystembility:
         if request.action_id != "workspace.command.run":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        if set(params) != COMMAND_PARAMETER_KEYS:
+        if set(params) not in (COMMAND_PARAMETER_KEYS, COMMAND_PARAMETER_KEYS | {"scope"}):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
         argv = params.get("argv")
         if not command_argv_valid(argv):
@@ -596,6 +598,8 @@ class CommandProcessSystembility:
             return SystembilityResult(self.name, False, "program must be a system or workspace executable")
         timeout = params.get("timeout_s")
         count = params.get("masked_count")
+        if "scope" in params and not command_relative_path_valid(params["scope"], allow_root=True):
+            return SystembilityResult(self.name, False, "command staging scope is invalid")
         if (not command_relative_path_valid(params.get("cwd"), allow_root=True)
                 or type(timeout) is not int or not 1 <= timeout <= COMMAND_MAX_TIMEOUT_S
                 or params.get("network") != "denied"
@@ -1609,6 +1613,35 @@ class MobileHostSystembility:
         return SystembilityResult(self.name, False, "Mobile Host owner does not implement this action")
 
 
+class BridgePresenceSystembility:
+    """Allow only a reviewed local agents listing. Never connect, send, or wake."""
+
+    name = "BridgePresenceBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        del authority
+        if request.action_id != "bridge.agents":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        handshake = params.get("handshake")
+        valid = (
+            request.target == "agents"
+            and request.execution_owner == "bridge_presence"
+            and set(params) == {"executable", "handshake", "sha256", "operation"}
+            and params.get("operation") == "agents"
+            and isinstance(params.get("executable"), str)
+            and params["executable"].startswith("/")
+            and isinstance(handshake, str)
+            and handshake.endswith("/handshake.py")
+            and ".." not in Path(handshake).parts
+            and isinstance(params.get("sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", params["sha256"]) is not None
+        )
+        return SystembilityResult(
+            self.name, valid, "presence read is limited to the agents listing")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
@@ -1669,6 +1702,7 @@ class ProductActionGate:
             TailscalePrivateServeSystembility(tailscale_facts),
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
+            BridgePresenceSystembility(),
         ])
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,

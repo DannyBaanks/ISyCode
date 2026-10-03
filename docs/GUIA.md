@@ -5,10 +5,24 @@
 Desde la carpeta del proyecto que quieres explorar:
 
 ```bash
-isyco cli
+isycode
+isycode cli
 ```
 
-Ramas disponibles en el navegador:
+`isycode` abre la TUI. `isycode cli` abre el navegador de acciones.
+
+Al iniciar la TUI aparece un paisaje nocturno dibujado con caracteres alrededor
+del logo `ISYCODE`. Se centra y recorta simétricamente según el ancho real del
+chat; no requiere que el terminal soporte imágenes. Tras el primer mensaje, la
+pantalla de inicio queda en el historial y se desplaza hacia arriba con el chat.
+
+**Multi Harness** en la barra inferior, en ⚙ Settings o con `/harness` abre
+tarjetas por herramienta: versión, ajustes revisados y acciones disponibles.
+El mapa de diferencias está plegado al final. La vista es de solo lectura;
+**Esc** o **Close** la cierran. Al elegir una carpeta o copiar un modelo se
+muestra la confirmación correspondiente antes de guardar cambios.
+
+Ramas del navegador de acciones:
 
 ```text
 ISYCO CLI · COMMANDS BY INTENT
@@ -57,7 +71,7 @@ Si ISyCode está instalado desde otro checkout, define su ruta antes de abrir:
 
 ```bash
 export ISYCODE_ROOT="/ruta/a/ISyCode"
-isyco cli
+isycode
 ```
 
 La búsqueda de la ruta vecina por defecto corresponde a este layout de desarrollo; en otra instalación configura `ISYCODE_ROOT`.
@@ -103,9 +117,13 @@ Descubrir un MCP o una skill no concede permiso para invocarlo. Files es de solo
 
 ## Comandos observados
 
-### `isyco cli`
+### `isycode`
 
-Ejecutado desde el checkout de ISyCode; abre el navegador interactivo anterior. Salir con `q` o `Esc`.
+Abre la TUI en la carpeta actual.
+
+### `isycode cli`
+
+Abre el navegador de acciones por intención. Salir con `q` o `Esc`.
 
 ### `isyco --help`
 
@@ -135,8 +153,8 @@ Exits: passthrough del motor | 2 uso/gate | 3 motor pendiente.
 |---|---|---|
 | Árbol `Agent / Workspace / Integrations` | El navegador semántico inició. | Elige una acción y pulsa **Open selected**. |
 | `no encuentro el checkout de ISyCode` | La ruta vecina no existe en este layout. | Configura `ISYCODE_ROOT` con el checkout correcto. |
-| `isyco` muestra los roles | Es el CLI existente de motores OpenISy. | Usa `isyco cli` para abrir ISyCode; no reemplaces el ejecutable. |
+| `isyco` muestra los roles | Es el CLI de motores OpenISy, no ISyCode. | `isycode` abre la TUI. `isycode cli` abre el navegador. |
 | El chat informa que falta una API key | No hay credencial del provider seleccionado. | Configura su variable (`OPENAI_API_KEY`, `NEBIUS_API_KEY`, `NVIDIA_NIM_API_KEY`) antes de pedir chat o plan. |
 | LSP muestra que no hay adapters | ISyCode todavía no tiene adapter LSP configurado. | No indica una falla del TUI; los MCP aparecen por separado. |
 
-Trampas frecuentes: ejecuta `isyco cli` desde el workspace correcto para que Files capture ese directorio; un MCP/skill visible sigue sin permiso de ejecución; y `isyco` sin `cli` continúa mostrando los motores por rol existentes.
+Trampas frecuentes: ejecuta `isycode` o `isycode cli` desde el workspace correcto para que Files capture ese directorio; un MCP/skill visible sigue sin permiso de ejecución; y `isyco` sin más argumentos sigue siendo el CLI de motores OpenISy.

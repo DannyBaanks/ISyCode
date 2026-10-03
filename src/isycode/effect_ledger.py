@@ -230,7 +230,7 @@ class EffectLedger:
             self._charge(state, tuple(applied), deletes, churn)
             state["reservation"] = None
             return "COMMITTED"
-        for relative in applied:
+        for relative in reversed(applied):
             item = plan.get(relative)
             if item is None or self._restore(reservation["id"], relative, item) == "uncertain":
                 state["uncertain"] = f"cannot restore {relative} without guessing"
@@ -242,7 +242,11 @@ class EffectLedger:
     def _classify(self, reservation_id: str, relative: str, item: dict | None) -> str:
         if item is None:
             return "uncertain"
-        current = _file_sha(self.root / relative)
+        from isycode.effect_fs import digest, read_file
+        try:
+            current = digest(read_file(self.root, relative))
+        except OSError:
+            return "uncertain"
         if current == item["target"]:
             return "target"
         if current == item["preimage"]:
@@ -250,39 +254,23 @@ class EffectLedger:
         return "uncertain"
 
     def _restore(self, reservation_id: str, relative: str, item: dict) -> str:
-        destination = self.root / relative
-        current = _file_sha(destination)
+        from isycode.effect_fs import apply_file, digest, read_file
+        try:
+            current = digest(read_file(self.root, relative))
+        except OSError:
+            return "uncertain"
         if current == item["preimage"]:
             return "preimage"
         if current != item["target"]:
             return "uncertain"
-        parent = destination.parent
-        if not _parents_are_real(self.root, parent):
-            return "uncertain"
-        if item["preimage"] is None:
-            if destination.is_symlink() or (destination.exists() and not destination.is_file()):
+        try:
+            payload = None if item["preimage"] is None else self.read_backup(reservation_id, relative)
+            if payload is not None and hashlib.sha256(payload).hexdigest() != item["preimage"]:
                 return "uncertain"
-            if destination.is_file():
-                destination.unlink()
-            return "restored"
-        parent.mkdir(parents=True, exist_ok=True)
-        temporary = parent / f".isycode-restore-{destination.name}"
-        try:
-            payload = self.read_backup(reservation_id, relative)
-        except LedgerDenied:
+            apply_file(self.root, relative, payload, expected=item["target"],
+                       mode=item.get("preimage_mode") or 0o600)
+        except (LedgerDenied, OSError):
             return "uncertain"
-        if hashlib.sha256(payload).hexdigest() != item["preimage"]:
-            return "uncertain"
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(temporary, flags, 0o600)
-        try:
-            view = memoryview(payload)
-            while view:
-                view = view[os.write(descriptor, view):]
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
-        os.replace(temporary, destination)
         return "restored"
 
     def _check(self, state: dict, cost: EffectCost) -> None:

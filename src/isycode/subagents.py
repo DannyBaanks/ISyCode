@@ -5,7 +5,7 @@ from isycode.chat_transport import assistant_turn
 
 DELEGATE_TOOL = {'type': 'function', 'function': {
     'name': 'delegate_task',
-    'description': 'Delegate a bounded task to a child agent. The user selects a recent model before launch. The parent waits; file actions retain current approvals. No nested delegation.',
+    'description': 'Delegate one bounded task to a child. The user picks a configured provider model before launch, and the child reply is shown in this chat. The parent waits. No nested delegation.',
     'parameters': {'type': 'object', 'properties': {'task': {'type': 'string'}},
                    'required': ['task'], 'additionalProperties': False}}}
 

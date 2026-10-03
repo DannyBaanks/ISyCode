@@ -23,7 +23,7 @@ class SubagentModelScreen(ModalScreen[dict | None]):
         super().__init__();self.ready=asyncio.Event();self.assigned_task=task;self.models=[dict(item) for item in models]
     def compose(self) -> ComposeResult:
         with Vertical(id='child-card'):
-            yield Static('Subagent · select a recent model',markup=False)
+            yield Static('Subagent · select a model from your providers',markup=False)
             with VerticalScroll(id='child-task'):
                 yield Static(self.assigned_task,markup=False)
             yield Static('Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing.',id='child-copy',markup=False)

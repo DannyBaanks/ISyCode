@@ -37,4 +37,4 @@ markers = [
 ]
 
 [tool.setuptools.package-data]
-isycode = ["bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md"]
+isycode = ["assets/*.rgbz", "assets/*.png", "assets/*.gf", "assets/*.txt", "bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md"]

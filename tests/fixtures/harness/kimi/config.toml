@@ -1,0 +1,10 @@
+default_model = "kimi-test"
+[providers."managed:kimi-code"]
+type = "managed"
+base_url = "https://secret-endpoint.example"
+api_key = "never"
+[thinking]
+enabled = true
+[services.moonshot_search]
+base_url = "https://search.example"
+api_key = "never"

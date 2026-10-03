@@ -108,7 +108,7 @@ PROVIDER_SCREEN: tuple[tuple[str, str, str, str], ...] = (
     ("popular", "anthropic", "Anthropic", "Claude models via API key"),
     ("popular", "opencode", "OpenCode Zen", "OpenCode catalog, OpenAI-compatible"),
     ("popular", "opencode-go", "OpenCode Go", "OpenCode Go endpoint"),
-    ("popular", "xai", "xAI Grok", "Direct API at api.x.ai"),
+    ("popular", "xai", "xAI Grok", "API key or Grok sign-in"),
     ("popular", "google", "Google AI Studio", "Gemini, OpenAI-compatible endpoint"),
     ("popular", "openrouter", "OpenRouter", "One key, many models"),
     ("providers", "groq", "Groq", "Fast OpenAI-compatible inference"),
@@ -234,6 +234,25 @@ def recent_models() -> list[dict[str, str]]:
     return result[:12]
 
 
+def child_model_choices() -> list[dict[str, str]]:
+    """Models the user can assign to a child. Metadata only; no network, no keys."""
+    choices = list(recent_models())
+    saved = _load_preferences().get("models", {})
+    for name, preset in PRESETS.items():
+        if provider_credential_state(name) == "missing":
+            continue
+        model = saved.get(name) if isinstance(saved.get(name), str) else ""
+        if not str(model).strip():
+            model = str(preset.get("default_model") or provider_default_model(name) or "")
+        model = model.strip()
+        if not model or len(model) > 256 or any(ord(char) < 32 for char in model):
+            continue
+        identity = {"provider": name, "model": model}
+        if identity not in choices:
+            choices.append(identity)
+    return choices[:24]
+
+
 def save_provider_selection(name: str, model: str) -> None:
     """Persist non-secret provider/model selection in private user state."""
     provider, selected_model = name.casefold(), model.strip()
@@ -310,6 +329,10 @@ def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
     if name == "chatgpt":
         return ""
+    if name == "xai":
+        from isycode.grok_session import access_token, xai_auth_mode
+        if xai_auth_mode() == "session":
+            return access_token()
     from isycode.credentials import read_saved_secret
 
     # Saved keys are read only through the registered reader (Security mode:
@@ -327,6 +350,10 @@ def provider_credential_state(name: str) -> str:
         return "unavailable"
     if preset.get("api") == "codex":
         return "subscription"
+    if provider == "xai":
+        from isycode.grok_session import status as grok_status, xai_auth_mode
+        if xai_auth_mode() == "session" and grok_status() == "signed-in":
+            return "signed-in"
     if not preset.get("key_required", True):
         return "optional"
     key_env = preset["key_env"]
@@ -368,6 +395,13 @@ class Provider:
             raise ProviderError(f"unknown provider {self.name!r}")
         self.label = preset["label"]
         self.base_url = provider_base_url(self.name, base_url)
+        if (self.name == "xai" and base_url is None
+                and not os.environ.get("ISYCODE_BASE_URL")
+                and not os.environ.get("ISYMOTRON_BASE_URL")):
+            from isycode.grok_session import session_transport
+            session_url = session_transport()
+            if session_url:
+                self.base_url = session_url
         self.model = (model or selected_model_name()
                       or provider_default_model(self.name)
                       or preset.get("default_model") or DEFAULT_MODEL)

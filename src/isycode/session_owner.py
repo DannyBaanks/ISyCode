@@ -15,6 +15,7 @@ import json
 import secrets
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 from isycode.action_runtime import ActionOutcome, ActionReceipt, ProductActionGate
@@ -28,6 +29,17 @@ LIST_TARGET = "sessions"
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _owned_sent_at(value: str | None) -> str:
+    """Keep a caller stamp only when it is already a real offset timestamp."""
+    if isinstance(value, str):
+        try:
+            ChatSessionStore._validate_sent_at({"sent_at": value})
+            return value
+        except ChatSessionError:
+            pass
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 class ChatSessionOwner:
@@ -57,7 +69,8 @@ class ChatSessionOwner:
         return receipt if self.gate.persist_receipt(request, receipt) else None
 
     def record(self, session_id: str | None, role: str,
-               content: str, *, state: dict | None = None) -> tuple[ActionOutcome, str | None]:
+               content: str, *, state: dict | None = None,
+               sent_at: str | None = None) -> tuple[ActionOutcome, str | None]:
         """Append one message, creating the transcript when session_id is None."""
         if role not in {"user", "assistant"} or not isinstance(content, str):
             return ActionOutcome("Message not saved.", "DENY", None, "message is malformed"), None
@@ -81,15 +94,17 @@ class ChatSessionOwner:
         denied = self._authorize(request)
         if denied is not None:
             return ActionOutcome("Message not saved.", "DENY", None, denied), None
+        stamp = _owned_sent_at(sent_at)
         try:
             if creating:
                 now = time.time()
                 session = ChatSession(target, self.store._auto_title(clean) if role == "user"
-                                      else "New session", [{"role": role, "content": clean}],
+                                      else "New session", [{"role": role, "content": clean,
+                                          "sent_at": stamp}],
                                       now, now)
             else:
                 session = self.store.load(target)
-                session.messages.append({"role": role, "content": clean})
+                session.messages.append({"role": role, "content": clean, "sent_at": stamp})
                 if session.title in {"New session", "Draft conversation"} and role == "user":
                     session.title = self.store._auto_title(clean)
             if clean_state is not None:

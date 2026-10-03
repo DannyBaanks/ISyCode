@@ -55,7 +55,7 @@ def test_secure_tui_persists_chat_sessions_only_through_the_owner():
 
     store_methods = {"create", "append", "save", "load", "list_sessions", "import_json"}
     for name in ("_startup_workspace", "_persist_chat_message", "_show_chat_sessions",
-                 "_resume_chat_session"):
+                 "_refresh_work_list", "_resume_chat_session"):
         assert "ChatSessionStore" not in _method_calls(methods[name]), name
         for node in ast.walk(methods[name]):
             if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
@@ -64,7 +64,9 @@ def test_secure_tui_persists_chat_sessions_only_through_the_owner():
                 assert "session" not in receiver.casefold(), (name, receiver)
     persist = ast.get_source_segment(source, methods["_persist_chat_message"])
     assert persist.index("_sessions_enabled()") < persist.index("owner.record(")
-    assert "owner.list_conversations" in ast.get_source_segment(source, methods["_show_chat_sessions"])
+    shown = ast.get_source_segment(source, methods["_show_chat_sessions"])
+    assert "_refresh_work_list" in shown
+    assert "owner.list_conversations" in ast.get_source_segment(source, methods["_refresh_work_list"])
     assert "owner.resume" in ast.get_source_segment(source, methods["_resume_chat_session"])
 
 

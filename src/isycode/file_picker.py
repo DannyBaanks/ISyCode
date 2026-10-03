@@ -118,7 +118,36 @@ async def choose_sibling_workspace_folder(main_directory: Path, *,
     raise FilePickerUnavailable("No native folder picker is available on this platform.")
 
 
-def _choose_windows_directory(initial_directory: Path) -> Path | None:
+async def choose_harness_folder(initial_directory: Path, *, title: str,
+                                timeout: float = 300.0) -> Path | None:
+    """Open one native folder chooser for Multi Harness. Grants nothing."""
+    initial_directory = initial_directory.expanduser().resolve(strict=True)
+    if not initial_directory.is_dir():
+        raise FilePickerUnavailable("The initial folder is unavailable.")
+    if os.name == "nt":
+        try:
+            return await asyncio.to_thread(
+                _choose_windows_directory, initial_directory, title=title)
+        except FilePickerUnavailable as exc:
+            raise FilePickerUnavailable(f"Folder selection for {title.removeprefix('Choose the folder for ')} failed.") from exc
+    if sys.platform.startswith("linux"):
+        executable = next((found for name in ("zenity", "kdialog")
+                           if (found := shutil.which(name))), None)
+        if executable is None:
+            harness = title.removeprefix("Choose the folder for ")
+            raise FilePickerUnavailable(f"Folder selection for {harness} failed.")
+        argv = build_linux_directory_picker_command(executable, initial_directory, title=title)
+        try:
+            return await _run_picker(argv, timeout)
+        except FilePickerUnavailable as exc:
+            harness = title.removeprefix("Choose the folder for ")
+            raise FilePickerUnavailable(f"Folder selection for {harness} failed.") from exc
+    harness = title.removeprefix("Choose the folder for ")
+    raise FilePickerUnavailable(f"Folder selection for {harness} failed.")
+
+
+def _choose_windows_directory(initial_directory: Path, *,
+                              title: str = "Choose sibling project folder") -> Path | None:
     """Use Windows' native folder chooser without launching a shell."""
     try:
         import tkinter as tk
@@ -128,7 +157,7 @@ def _choose_windows_directory(initial_directory: Path) -> Path | None:
         try:
             root.attributes("-topmost", True)
             selected = filedialog.askdirectory(
-                title="Choose sibling project folder",
+                title=title,
                 initialdir=str(initial_directory), mustexist=True)
         finally:
             root.destroy()

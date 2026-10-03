@@ -101,6 +101,10 @@ def test_install_commands_are_shown_and_nothing_is_launched(tmp_path, monkeypatc
             assert "Nothing was installed" in text
             assert "go install golang.org/x/tools/gopls@latest" in text
             assert "sandbox cannot launch it" in text
+            note = app.query_one("#lsp-install-note")
+            assert note.content_size.width > 0
+            assert all(len(note.render_line(i).text) <= note.content_size.width
+                       for i in range(note.content_size.height))
             assert "ON" not in plain_text(app.query_one("#lsp-status"))
 
     with capsys.disabled():

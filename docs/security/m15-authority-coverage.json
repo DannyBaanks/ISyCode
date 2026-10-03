@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 75,
+    "actions": 76,
     "effectful": 58,
-    "owner_valid": 49,
+    "owner_valid": 50,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 23,
@@ -887,6 +887,22 @@
       "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
     },
     {
+      "action": "bridge.agents",
+      "effect": "read",
+      "approval_required": true,
+      "owners": [
+        "bridge_presence"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "BridgePresenceBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
       "action": "l1.create",
       "effect": "write",
       "approval_required": true,
@@ -1565,6 +1581,12 @@
       "callsite": "ClipboardOwner.copy",
       "owner": "clipboard",
       "status": "COVERED"
+    },
+    {
+      "action": "bridge.agents",
+      "callsite": "BridgePresenceOwner.read",
+      "owner": "bridge_presence",
+      "status": "COVERED"
     }
   ],
   "secure_tui_direct_api_bypasses": [],
@@ -1579,66 +1601,73 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1945,
+      "line": 1979,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1734,
+      "line": 1768,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1798,
+      "line": 1832,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1868,
+      "line": 1902,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1954,
+      "line": 1988,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2005,
+      "line": 2039,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2013,
+      "line": 2047,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2071,
+      "line": 2105,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2139,
+      "line": 2173,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/bridge_presence.py",
+      "line": 52,
+      "callable": "isycode.bridge_presence.BridgePresenceOwner.prepare",
+      "action": "bridge.agents",
+      "owner": "bridge_presence"
     },
     {
       "file": "isycode/broker.py",
@@ -1691,7 +1720,7 @@
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 244,
+      "line": 253,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
@@ -1782,28 +1811,28 @@
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 108,
+      "line": 123,
       "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 170,
+      "line": 185,
       "callable": "isycode.session_owner.ChatSessionOwner.manage",
       "action": "session.create",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 73,
+      "line": 86,
       "callable": "isycode.session_owner.ChatSessionOwner.record",
       "action": "session.create",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 122,
+      "line": 137,
       "callable": "isycode.session_owner.ChatSessionOwner.resume",
       "action": "session.resume",
       "owner": "chat_sessions"
@@ -1859,49 +1888,49 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 4427,
+      "line": 4878,
       "callable": "isycode.tui.TUIApp._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 7591,
+      "line": 8453,
       "callable": "isycode.tui.TUIApp._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui.py",
-      "line": 7693,
+      "line": 8553,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 5172,
+      "line": 5625,
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/tui.py",
-      "line": 5224,
+      "line": 5677,
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/tui.py",
-      "line": 5383,
+      "line": 5836,
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/tui.py",
-      "line": 6887,
+      "line": 7351,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
@@ -1952,7 +1981,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2139,
+      "line": 2173,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -1980,14 +2009,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 7693,
+      "line": 8553,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 6887,
+      "line": 7351,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"

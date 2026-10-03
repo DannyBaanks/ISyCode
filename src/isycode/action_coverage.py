@@ -160,6 +160,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("desktop.file_picker", "file_picker.choose_workspace_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_directory", "", "BLOCKED_BY_DESIGN"),
     ("clipboard.copy", "ClipboardOwner.copy", "clipboard", "COVERED"),
+    ("bridge.agents", "BridgePresenceOwner.read", "bridge_presence", "COVERED"),
 )
 
 

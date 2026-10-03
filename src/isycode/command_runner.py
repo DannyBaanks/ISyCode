@@ -23,6 +23,7 @@ import signal
 import stat
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 try:
     import resource
@@ -63,6 +64,7 @@ COMMAND_TOOL = {"type": "function", "function": {
         "argv": {"type": "array", "items": {"type": "string"}, "minItems": 1,
                  "description": "Program and arguments, e.g. [\"python3\", \"-m\", \"pytest\", \"-q\"]."},
         "cwd": {"type": "string", "description": "Workspace-relative folder; defaults to the root."},
+        "scope": {"type": "string", "description": "Optional workspace-relative folder to stage in isolation for a small project inside a large workspace. Paths remain workspace-relative; siblings are not mounted."},
         "timeout_s": {"type": "integer", "minimum": 1, "maximum": COMMAND_MAX_TIMEOUT_S,
                       "description": f"Seconds before the command is stopped; default {DEFAULT_TIMEOUT_S}."},
     }, "required": ["argv"], "additionalProperties": False},
@@ -208,6 +210,7 @@ class CommandPreview:
     cwd: str
     timeout_s: int
     masks: tuple[tuple[str, bool], ...]
+    scope: str = "."
 
 
 class CommandRunOwner:
@@ -221,7 +224,7 @@ class CommandRunOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
 
     def prepare(self, argv: object, cwd: object = ".",
-                timeout_s: object = DEFAULT_TIMEOUT_S) -> CommandPreview:
+                timeout_s: object = DEFAULT_TIMEOUT_S, *, scope: object = ".") -> CommandPreview:
         """Build the exact request the user reviews. Raises ValueError when it cannot run."""
         if isinstance(argv, list):
             argv = tuple(argv)
@@ -240,20 +243,35 @@ class CommandRunOwner:
         if sandbox is None:
             raise ValueError("the command sandbox needs bubblewrap, libseccomp and python3 on Linux; commands stay disabled and there is no unsandboxed fallback")
         program = resolve_program(self.root, argv[0])
-        masks = sensitive_entries(self.root)
+        if not isinstance(scope, str) or not command_relative_path_valid(scope, allow_root=True):
+            raise ValueError("scope must be a non-sensitive workspace-relative folder")
+        if scope != "." and (not _no_symlinks(self.root, scope) or not (self.root / scope).is_dir()):
+            raise ValueError("scope must be an existing folder without symlinks")
+        if scope != "." and cwd != "." and not (cwd == scope or cwd.startswith(scope + "/")):
+            raise ValueError("cwd is outside the selected staging scope")
+        masks = self._scope_masks(scope)
         request = ActionRequest(
             "workspace.command.run", self.root, program,
             {"argv": argv, "program": program, "cwd": cwd, "timeout_s": timeout_s,
              "network": "denied", "executable": sandbox, "workspace_root": str(self.root),
              "masked_sha256": masked_digest(masks), "masked_count": len(masks),
-             "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES},
+             "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES,
+             **({"scope": scope} if scope != "." else {})},
             execution_owner="workspace_command")
-        return CommandPreview(request, argv, program, cwd, timeout_s, masks)
+        return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope)
+
+    def _scope_masks(self, scope: str) -> tuple[tuple[str, bool], ...]:
+        entries = sensitive_entries(self.root / scope)
+        return entries if scope == "." else tuple((scope + "/" + path, folder) for path, folder in entries)
 
     async def run(self, preview: CommandPreview,
-                  approval: ActionApproval | None) -> ActionOutcome:
+                  approval: ActionApproval | None, *, on_output: Callable[[str], None] | None = None) -> ActionOutcome:
         """Run in staging and promote the measured diff after the process exits."""
-        return await self._run(preview, approval, promote=True)
+        self._on_output = on_output
+        try:
+            return await self._run(preview, approval, promote=True)
+        finally:
+            self._on_output = None
 
     async def run_staged(self, preview: CommandPreview,
                          approval: ActionApproval | None) -> ActionOutcome:
@@ -266,7 +284,10 @@ class CommandRunOwner:
         # Re-derive the sandbox facts: a new secret or a swapped program after
         # review denies instead of running with a stale mask set.
         try:
-            masks = sensitive_entries(self.root)
+            fresh = self.prepare(list(preview.argv), preview.cwd, preview.timeout_s, scope=preview.scope)
+            if fresh != preview:
+                raise ValueError("sensitive files, command scope or the program changed after review")
+            masks = self._scope_masks(preview.scope)
             program = resolve_program(self.root, preview.argv[0])
         except (OSError, ValueError) as exc:
             return ActionOutcome("Command denied.", "DENY", None, str(exc)[:200] or "sandbox facts unavailable")
@@ -306,7 +327,7 @@ class CommandRunOwner:
     async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
         try:
-            staging = prepare_staging(self.root)
+            staging = prepare_staging(self.root, scope=preview.scope)
         except StagingError as exc:
             raise OSError(str(exc)) from exc
         try:
@@ -327,7 +348,11 @@ class CommandRunOwner:
                     total += len(chunk)
                     room = COMMAND_MAX_OUTPUT_BYTES - len(output)
                     if room > 0:
-                        output.extend(chunk[:room])
+                        accepted = chunk[:room]
+                        output.extend(accepted)
+                        callback = getattr(self, "_on_output", None)
+                        if callback is not None:
+                            callback(accepted.decode("utf-8", errors="replace"))
                 await proc.wait()
 
             try:

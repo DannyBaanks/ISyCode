@@ -58,5 +58,5 @@ def test_command_tool_is_offered_only_with_an_effective_sandbox_grant():
 def test_every_command_goes_through_the_approval_screen_and_the_owner():
     body = _methods()["_run_workspace_command"]
     assert body.index("CommandApprovalScreen(preview)") < body.index("self._action_approvals.issue")
-    assert body.index("self._action_approvals.issue") < body.index("owner.run(preview, approval)")
+    assert body.index("self._action_approvals.issue") < body.index("owner.run(preview, approval, on_output=show_output)")
     assert "create_subprocess" not in body and "subprocess." not in body

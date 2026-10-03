@@ -73,6 +73,7 @@ _ENTRIES = [
     ("bridge.lease.claim", "Bridge", "Claim a coordination lease", "coordination", True),
     ("bridge.lease.release", "Bridge", "Release a coordination lease", "coordination", False),
     ("bridge.wake", "Bridge", "Wake another registered agent", "external", True),
+    ("bridge.agents", "Bridge", "Read recent Bridge agent names", "read", True),
     ("l1.create", "L1 tools", "Create a staged L1 tool", "write", True),
     ("l1.validate", "L1 tools", "Validate a staged L1 tool", "process", True),
     ("l1.test", "L1 tools", "Run L1 tool tests and probe", "process", True),

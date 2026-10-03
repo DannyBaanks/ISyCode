@@ -34,6 +34,7 @@ class Staging:
     original: Path
     root: Path
     baseline: dict[str, tuple]
+    scope: str = "."
 
 
 def spill_bytes(payload: bytes) -> Path:
@@ -52,10 +53,16 @@ def remove_spill(path: Path) -> None:
         shutil.rmtree(folder, ignore_errors=True)
 
 
-def prepare_staging(original: Path) -> Staging:
+def prepare_staging(original: Path, *, scope: str = ".") -> Staging:
     """Copy ``original`` to a new directory outside it. The original is not mounted writable."""
     source = original.resolve(strict=True)
-    size = _tree_bytes(source)
+    if (Path(scope).is_absolute() or ".." in Path(scope).parts
+            or not _parents_are_real(source, source / scope)):
+        raise StagingError("staging scope must be a real folder inside the workspace")
+    selected = source / scope
+    if not selected.is_dir() or selected.is_symlink():
+        raise StagingError("staging scope is not an existing folder")
+    size = _tree_bytes(selected)
     if size > MAX_STAGE_BYTES:
         raise StagingError("workspace is larger than the staging budget; command was not run")
     usage = shutil.disk_usage(tempfile.gettempdir())
@@ -70,11 +77,13 @@ def prepare_staging(original: Path) -> Staging:
         shutil.rmtree(destination, ignore_errors=True)
         raise StagingError("staging directory must sit outside the workspace")
     try:
-        _copy_tree(source, destination)
+        target = destination / scope
+        target.mkdir(parents=True, exist_ok=True)
+        _copy_tree(selected, target)
     except OSError as exc:
         shutil.rmtree(destination, ignore_errors=True)
         raise StagingError("workspace could not be copied into staging; command was not run") from exc
-    return Staging(source, destination, _index(source))
+    return Staging(source, destination, _index(destination), scope)
 
 
 def cleanup_staging(staging: Staging) -> None:
@@ -87,6 +96,8 @@ def measure_changes(staging: Staging) -> list[dict[str, str]]:
     current = _index(staging.root)
     changes: list[dict[str, str]] = []
     for relative in sorted(set(staging.baseline) | set(current)):
+        if staging.scope != "." and not relative.startswith(staging.scope + "/"):
+            continue
         if staging.baseline.get(relative) == current.get(relative):
             continue
         if relative not in current:
@@ -103,7 +114,7 @@ def promote_changes(staging: Staging, changes: list[dict[str, str]]) -> tuple[li
     """Apply a measured diff. Protected paths and human conflicts are left untouched."""
     applied: list[str] = []
     refused: list[str] = []
-    live = _index(staging.original)
+    live = _scoped_index(staging.original, staging.scope)
     staged_now = _index(staging.root)
     ordered = sorted(changes, key=lambda item: (item.get("kind") != "delete", item.get("path", "")))
     for change in ordered:
@@ -144,7 +155,7 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
         if replayed is not None:
             return replayed
 
-    live = _index(staging.original)
+    live = _scoped_index(staging.original, staging.scope)
     staged_now = _index(staging.root)
     refused: list[str] = []
     eligible: list[tuple[str, str, tuple | None, tuple | None]] = []
@@ -188,7 +199,9 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
             file_churn = _nbytes(staging.original, relative) + _nbytes(staging.root, relative)
         churn += file_churn
         plan.append({"path": relative, "kind": kind, "preimage": preimage,
-                     "target": target, "churn": file_churn})
+                     "target": target, "churn": file_churn,
+                     "preimage_mode": None if before is None else before[2],
+                     "target_mode": None if after is None else after[2]})
     book = ledger or EffectLedger(staging.original)
     _crash(crash_at, "before-reserve")
     with book.exclusive():
@@ -378,23 +391,20 @@ def _protected(relative: str) -> bool:
 
 
 def _apply(staging: Staging, relative: str, kind: str) -> None:
-    destination = _lexical(staging.original, relative)
-    source = _lexical(staging.root, relative)
-    if destination is None or (kind != "delete" and source is None):
-        raise OSError("path escapes the workspace")
-    if kind == "delete":
-        if destination.is_file() and not destination.is_symlink():
-            destination.unlink()
-        return
-    if source is None or not source.is_file() or source.is_symlink():
+    from isycode.effect_fs import apply_file, read_file
+
+    if staging.scope != "." and not relative.startswith(staging.scope + "/"):
+        raise OSError("effect path is outside the selected staging scope")
+    before = staging.baseline.get(relative)
+    if _protected(relative) or (before is not None and before[0] != "file"):
+        raise OSError("effect path is protected or not a regular file")
+    after = None if kind == "delete" else read_file(staging.root, relative)
+    if kind != "delete" and after is None:
         raise OSError("staged path is not a regular file")
-    parent = destination.parent
-    if not _parents_are_real(staging.original, parent):
-        raise OSError("a parent path is a symlink")
-    parent.mkdir(parents=True, exist_ok=True)
-    temporary = parent / f".isycode-promote-{destination.name}"
-    shutil.copy2(source, temporary, follow_symlinks=False)
-    os.replace(temporary, destination)
+    apply_file(staging.original, relative, None if after is None else after[0],
+               expected=None if before is None else before[1],
+               mode=0o644 if after is None else after[1],
+               expected_mode=None if before is None else before[2])
 
 
 def _parents_are_real(root: Path, parent: Path) -> bool:
@@ -494,6 +504,14 @@ def _index(root: Path) -> dict[str, tuple]:
 
     walk(root)
     return found
+
+
+def _scoped_index(root: Path, scope: str) -> dict[str, tuple]:
+    if scope == ".":
+        return _index(root)
+    if not _parents_are_real(root, root / scope):
+        raise StagingError("selected folder changed before promotion")
+    return {scope + "/" + path: value for path, value in _index(root / scope).items()}
 
 
 def _sha(path: Path) -> str:

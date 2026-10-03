@@ -98,6 +98,23 @@ def test_classic_uses_exact_sandbox_grant_but_keeps_per_command_approval(sandbox
     assert result.decision == "ALLOW" and "classic" in json.loads(result.text)["output"]
 
 
+def test_scoped_command_streams_before_exit_and_does_not_copy_siblings(sandbox, monkeypatch):
+    owner, authority, approvals, fake, _ = sandbox
+    _grant(authority, fake)
+    monkeypatch.setattr("isycode.staging.MAX_STAGE_BYTES", 100)
+    (owner.root / "large.dat").write_bytes(b"x" * 200)
+    seen = []
+    preview = owner.prepare(["python3", "-c",
+                             "import pathlib; print('tick', flush=True); "
+                             "assert not pathlib.Path('large.dat').exists()"], scope="src")
+    outcome = asyncio.run(owner.run(preview, approvals.issue(preview.request), on_output=seen.append))
+    assert outcome.decision == "ALLOW", outcome.reason
+    assert json.loads(outcome.text)["exit_code"] == 0
+    assert "tick" in "".join(seen)
+    assert (owner.root / "large.dat").read_bytes() == b"x" * 200
+
+
+
 def test_no_grant_denies_even_with_an_approval(sandbox):
     owner, _, approvals, _, log = sandbox
     _, outcome = _run(owner, approvals, ["echo", "hi"])

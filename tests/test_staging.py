@@ -246,6 +246,78 @@ def test_promote_does_not_follow_a_swapped_parent_symlink(tmp_path):
     assert (root / "sub-kept" / "old.txt").read_text(encoding="utf-8") == "old\n"
 
 
+def test_accounted_promotion_never_follows_a_preplanted_temporary_symlink(tmp_path):
+    from isycode.effect_ledger import EffectLedger
+    from isycode.staging import cleanup_staging, promote_accounted
+
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "victim.txt").write_bytes(b"old\n")
+    outside = tmp_path / "outside.txt"
+    outside.write_bytes(b"outside-safe\n")
+    planted = root / ".isycode-promote-victim.txt"
+    planted.symlink_to(outside)
+    staging = prepare_staging(root)
+    try:
+        (staging.root / "victim.txt").write_bytes(b"new\n")
+        applied, refused, result = promote_accounted(
+            staging, measure_changes(staging),
+            ledger=EffectLedger(root, state_directory=tmp_path / "ledger"))
+    finally:
+        cleanup_staging(staging)
+    assert outside.read_bytes() == b"outside-safe\n"
+    assert not (root / "victim.txt").is_symlink()
+    assert (root / "victim.txt").read_bytes() == b"new\n"
+    assert planted.is_symlink()
+    assert applied == ["victim.txt"] and refused == []
+    assert result["state"] == "committed"
+
+
+def test_scoped_staging_preserves_siblings_and_skips_no_project_data(tmp_path, monkeypatch):
+    import isycode.staging as module
+    from isycode.effect_ledger import EffectLedger
+    root = tmp_path / "project"
+    (root / "probe" / "build").mkdir(parents=True)
+    (root / "probe/build/data.txt").write_bytes(b"keep\n")
+    (root / "large-sibling").mkdir()
+    (root / "large-sibling/data.txt").write_bytes(b"x" * 100)
+    monkeypatch.setattr(module, "MAX_STAGE_BYTES", 50)
+    staging = module.prepare_staging(root, scope="probe")
+    try:
+        assert not (staging.root / "large-sibling").exists()
+        assert (staging.root / "probe/build/data.txt").read_bytes() == b"keep\n"
+        assert module.measure_changes(staging) == []
+        (staging.root / "probe/new.txt").write_bytes(b"new\n")
+        module.promote_accounted(staging, module.measure_changes(staging),
+                                 ledger=EffectLedger(root, state_directory=tmp_path / "ledger"))
+    finally:
+        module.cleanup_staging(staging)
+    assert (root / "large-sibling/data.txt").read_bytes() == b"x" * 100
+    assert (root / "probe/build/data.txt").read_bytes() == b"keep\n"
+    assert (root / "probe/new.txt").read_bytes() == b"new\n"
+
+
+def test_concurrent_edit_at_promotion_preserves_human_bytes(tmp_path):
+    from isycode.effect_ledger import EffectLedger, LedgerDenied
+    from isycode.staging import cleanup_staging, promote_accounted
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "file.txt").write_bytes(b"old\n")
+    staging = prepare_staging(root)
+    try:
+        (staging.root / "file.txt").write_bytes(b"agent\n")
+        def interrupt(step):
+            if step == "before-apply:0":
+                (root / "file.txt").write_bytes(b"human\n")
+        with pytest.raises(LedgerDenied):
+            promote_accounted(staging, measure_changes(staging),
+                              ledger=EffectLedger(root, state_directory=tmp_path / "ledger"),
+                              interrupt=interrupt)
+        assert (root / "file.txt").read_bytes() == b"human\n"
+    finally:
+        cleanup_staging(staging)
+
+
 def test_binary_space_and_unicode_keep_bytes_and_mode(tmp_path):
     root = tmp_path / "project"
     root.mkdir()

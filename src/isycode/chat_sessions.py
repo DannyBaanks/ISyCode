@@ -8,6 +8,7 @@ import stat
 import tempfile
 import time
 import uuid
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -77,6 +78,7 @@ class ChatSessionStore:
                     or message.get("role") not in {"user", "assistant"}
                     or not isinstance(message.get("content"), str)):
                 raise ChatSessionError("chat message is malformed")
+            self._validate_sent_at(message)
         session.updated_at = time.time()
         target = self._path(session.session_id)
         payload = json.dumps({
@@ -140,6 +142,8 @@ class ChatSessionStore:
                or message.get("role") not in {"user", "assistant"}
                or not isinstance(message.get("content"), str) for message in messages):
             raise ChatSessionError("chat session contains malformed messages")
+        for message in messages:
+            self._validate_sent_at(message)
         return ChatSession(session_id, payload["title"], messages,
                            float(payload["created_at"]), float(payload["updated_at"]),
                            self.validate_state(payload.get("state", {})))
@@ -222,7 +226,8 @@ class ChatSessionStore:
         title = session.title
         if sanitize:
             title = cls._sanitize_text(title)
-            messages = [{"role": item["role"],
+            messages = [{**({"sent_at": item["sent_at"]} if "sent_at" in item else {}),
+                         "role": item["role"],
                          "content": cls._sanitize_text(item["content"])}
                         for item in messages]
         payload = {
@@ -261,17 +266,31 @@ class ChatSessionStore:
         clean_title = self._sanitize_text(" ".join(payload["title"].split())[:80]) or "Imported session"
         now = time.time()
         imported = ChatSession(session_id or uuid.uuid4().hex, clean_title, [], now, now)
-        imported.messages = [{"role": message["role"], "content": self._sanitize_text(message["content"])}
+        for message in messages:
+            self._validate_sent_at(message)
+        imported.messages = [{**({"sent_at": message["sent_at"]} if "sent_at" in message else {}),
+                              "role": message["role"], "content": self._sanitize_text(message["content"])}
                              for message in messages]
         imported.state = state
         return imported
+
+    @staticmethod
+    def _validate_sent_at(message: dict) -> None:
+        if "sent_at" not in message:
+            return
+        value = message["sent_at"]
+        try:
+            if not isinstance(value, str) or len(value) > 40 or datetime.fromisoformat(value).tzinfo is None:
+                raise ValueError("invalid local timestamp")
+        except ValueError as exc:
+            raise ChatSessionError("message sent_at is not an offset timestamp") from exc
 
     @classmethod
     def validate_state(cls, state: Any) -> dict[str, Any]:
         """Portable preferences and untrusted notes; never import authority or calls."""
         from isycode.providers import PRESETS
         if not isinstance(state, dict) or set(state) - {"provider", "model", "role", "context_path", "draft",
-                                                       "tool_history", "conversation_summary", "usage"}:
+                                                       "tool_history", "conversation_summary", "usage", "idea_box"}:
             raise ChatSessionError("session state has unsupported fields")
         provider = state.get("provider")
         if provider is not None and (not isinstance(provider, str) or provider not in PRESETS):
@@ -312,4 +331,10 @@ class ChatSessionStore:
                 raise ChatSessionError("session conversation summary is malformed")
             from isycode.tool_history import sanitize_historical_text
             clean["conversation_summary"] = sanitize_historical_text(summary)
+        if "idea_box" in clean:
+            idea = clean["idea_box"]
+            if not isinstance(idea, str) or len(idea) > 2000:
+                raise ChatSessionError("session idea box is malformed")
+            from isycode.tool_history import sanitize_historical_text
+            clean["idea_box"] = sanitize_historical_text(idea)
         return clean

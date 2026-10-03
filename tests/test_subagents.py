@@ -10,6 +10,19 @@ def test_recent_models_keep_provider_identity_and_multiple_models(tmp_path,monke
     save_provider_selection('openai','same')
     assert len(recent_models())==3 and recent_models()[0]=={'provider':'openai','model':'same'}
 
+
+def test_child_choices_offer_configured_providers_and_hide_missing_keys(tmp_path, monkeypatch):
+    from isycode.providers import child_model_choices, save_provider_selection
+    monkeypatch.setenv('ISYCODE_STATE_HOME', str(tmp_path / 'state'))
+    save_provider_selection('nvidia', 'child-model')
+    monkeypatch.setattr('isycode.providers.provider_credential_state',
+                        lambda name: {'nvidia': 'saved', 'xai': 'environment'}.get(name, 'missing'))
+    choices = child_model_choices()
+    assert choices[0] == {'provider': 'nvidia', 'model': 'child-model'}
+    assert {'provider': 'xai', 'model': 'grok-4'} in choices
+    assert all(item['provider'] != 'groq' for item in choices)
+    assert 'key' not in json.dumps(choices)
+
 def test_child_loop_executes_tools_and_denies_recursive_delegation():
     from isycode.subagents import run_child
     class Provider:name='nvidia';model='child-model'
@@ -42,7 +55,8 @@ def test_child_loop_executes_tools_and_denies_recursive_delegation():
 @pytest.mark.parametrize('deny_network',[False,True])
 def test_native_cross_provider_child_edits_with_existing_diff_approval(tmp_path,monkeypatch,capsys,deny_network):
     from test_daily_tui import configure
-    from isycode.tui import TUIApp,WriteApprovalScreen
+    from isycode.tui import TUIApp, WriteApprovalScreen, plain_text
+    from textual.widgets import Static
     from isycode.providers import save_provider_selection,selected_provider_name,selected_model_name
     from isycode.subagent_screen import SubagentModelScreen
     from isycode.workspace_authority import WorkspaceAuthority
@@ -90,6 +104,8 @@ def test_native_cross_provider_child_edits_with_existing_diff_approval(tmp_path,
                 assert result['status']=='completed' and len(seen)==2 and seen[0][:3]==('nvidia','child-model','https://integrate.api.nvidia.com/v1')
                 assert (root/'app.py').read_text()=='value = 2\n'
                 assert ActionAuditJournal(root).verify().status=='PASS'
+                visible=' '.join(plain_text(item) for item in app.query(Static))
+                assert 'Edit verified.' in visible
     with capsys.disabled():asyncio.run(scenario())
 
 def test_native_child_cancel_never_sends_or_changes_main_model(tmp_path,monkeypatch,capsys):

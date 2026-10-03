@@ -418,7 +418,9 @@ class WorkspaceWriteOwner:
         book._acquire()
         self._effect_book = book
         try:
-            return book.reserve(EffectCost(paths, deletes, churn))
+            reservation = book.reserve(EffectCost(paths, deletes, churn))
+            self._effect_reservation = reservation
+            return reservation
         except LedgerDenied as exc:
             book._release()
             self._effect_book = None
@@ -430,7 +432,7 @@ class WorkspaceWriteOwner:
         if book is None:
             return
         try:
-            book.abort(reservation_id)
+            book.reconcile()
         except LedgerDenied:
             return
         finally:
@@ -439,11 +441,61 @@ class WorkspaceWriteOwner:
 
     def _commit_effect(self, reservation_id: str, paths: tuple[str, ...], deletes: int, churn: int) -> None:
         book = self._effect_book
+        assert book is not None
         try:
+            book.mark_applied(reservation_id, paths[0])
             book.commit(reservation_id, applied_paths=paths, deletes=deletes, churn_bytes=churn)
         finally:
             book._release()
             self._effect_book = None
+
+    def _prepare_effect(self, reservation_id: str, preview: WritePreview) -> str:
+        """Persist preimages, a recovery plan and undo before the first mutation."""
+        from isycode.effect_fs import digest, read_file
+
+        book = self._effect_book
+        assert book is not None
+        params = preview.request.parameters
+        before = read_file(self.root, preview.path)
+        if preview.kind == "move":
+            after = read_file(self.root, preview.destination)
+            if before is None or after is not None or digest(before) != params["sha256"]:
+                raise ValueError("move preimage changed")
+            plan = [
+                {"path": preview.destination, "kind": "move-destination", "preimage": None,
+                 "target": digest(before), "churn": 0, "preimage_mode": None,
+                 "target_mode": before[1], "typed": True},
+                {"path": preview.path, "kind": "move-source", "preimage": digest(before),
+                 "target": None, "churn": len(before[0]), "preimage_mode": before[1],
+                 "target_mode": None, "typed": True},
+            ]
+            record = {"kind": "move", "time": time.time(), "path": preview.path,
+                      "to": preview.destination, "after_sha256": params["sha256"],
+                      "before": None, "new_folders": list(params["new_folders"])}
+        else:
+            expected = params.get("before_sha256", params.get("current_sha256"))
+            if ("absent" if before is None else digest(before)) != expected:
+                raise ValueError("file preimage changed")
+            payload = None if preview.removes else preview.content.encode("utf-8")
+            plan = [{"path": preview.path, "kind": "delete" if preview.removes else "write",
+                     "preimage": digest(before), "target": None if payload is None else _sha(payload),
+                     "churn": (0 if before is None else len(before[0]))
+                              + (0 if payload is None else len(payload)),
+                     "preimage_mode": None if before is None else before[1],
+                     "target_mode": None if payload is None else 0o644 if before is None else before[1],
+                     "typed": True}]
+            record = {"time": time.time(), "path": preview.path,
+                      "before": None if before is None else before[0].decode("utf-8"),
+                      "after_sha256": "absent" if payload is None else _sha(payload),
+                      "new_folders": list(params.get("new_folders", ()))}
+            if preview.kind == "delete":
+                record["kind"] = "delete"
+        if before is not None:
+            book.backup_file(reservation_id, preview.path, before[0])
+        book.store_plan(reservation_id, plan)
+        checkpoint = "undo" if preview.is_undo else self.checkpoints.save(record)
+        book.mark_applying(reservation_id, plan[0]["path"])
+        return checkpoint
 
     def _regular_size(self, target: Path) -> int:
         try:
@@ -509,7 +561,13 @@ class WorkspaceWriteOwner:
 
         params = preview.request.parameters
         target = Path(preview.request.target)
-        staged = self.stage_preview(preview)
+        try:
+            checkpoint = self._prepare_effect(reservation, preview)
+            staged = self.stage_preview(preview)
+        except (OSError, ValueError) as exc:
+            self._cancel_effect(reservation)
+            return ActionOutcome("File change denied.", "DENY", None,
+                                 f"durable recovery could not be prepared: {str(exc)[:200]}")
         try:
             if ".isycode/commands" in params["new_folders"]:
                 commands_directory = self.root / ".isycode" / "commands"
@@ -543,15 +601,6 @@ class WorkspaceWriteOwner:
                 return ActionOutcome("File written, but the effect ledger did not accept it.",
                                      "NOT_VERIFIABLE", None, str(exc)[:300])
             raise
-        try:
-            checkpoint = self.checkpoints.save({
-                "time": time.time(), "path": params["path"],
-                "before": None if before is None else before.decode("utf-8"),
-                "after_sha256": params["after_sha256"],
-                "new_folders": list(params["new_folders"]),
-            })
-        except (OSError, ValueError):
-            checkpoint = ""
         result = json.dumps({"path": params["path"], "after_sha256": params["after_sha256"]},
                             sort_keys=True)
         receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), preview.request.action_id,
@@ -587,6 +636,7 @@ class WorkspaceWriteOwner:
             return ActionOutcome("Undo denied.", "DENY", None, denied)
         target = Path(preview.request.target)
         try:
+            self._prepare_effect(reservation, preview)
             if preview.removes:
                 self._remove(target, params["current_sha256"])
                 if self._read_back(target) is not None:
@@ -645,6 +695,7 @@ class WorkspaceWriteOwner:
         params = preview.request.parameters
         target = Path(preview.request.target)
         try:
+            checkpoint = self._prepare_effect(reservation, preview)
             self._remove(target, params["before_sha256"])
             if self._exists(target):
                 raise ValueError("the file is still present")
@@ -658,12 +709,6 @@ class WorkspaceWriteOwner:
                 raise
             return ActionOutcome("Delete changed the file, but the effect ledger did not accept it.",
                                  "NOT_VERIFIABLE", None, str(exc)[:300])
-        try:
-            checkpoint = self.checkpoints.save({
-                "kind": "delete", "time": time.time(), "path": params["path"],
-                "before": preview.content, "after_sha256": "absent", "new_folders": []})
-        except (OSError, ValueError):
-            checkpoint = ""
         return self._finish(preview.request, f"deleted:{params['path']}", f"Deleted {params['path']}",
                             "reviewed delete applied" + ("" if checkpoint else "; undo unavailable"))
 
@@ -692,6 +737,7 @@ class WorkspaceWriteOwner:
             return ActionOutcome("Move denied.", "DENY", None, denied)
         destination = self.root / params["to"]
         try:
+            checkpoint = self._prepare_effect(reservation, preview)
             self._move(source, destination, params["sha256"], tuple(params["new_folders"]))
             if self._file_digest(destination) != params["sha256"] or self._exists(source):
                 raise ValueError("the moved file could not be verified")
@@ -705,15 +751,9 @@ class WorkspaceWriteOwner:
                 raise
             return ActionOutcome("Move changed the file, but the effect ledger did not accept it.",
                                  "NOT_VERIFIABLE", None, str(exc)[:300])
-        checkpoint = "undo"
         try:
             if params["undo_of"]:
                 self.checkpoints.mark_undone(params["undo_of"])
-            else:
-                checkpoint = self.checkpoints.save({
-                    "kind": "move", "time": time.time(), "path": params["path"],
-                    "to": params["to"], "after_sha256": params["sha256"], "before": None,
-                    "new_folders": list(params["new_folders"])})
         except (OSError, ValueError):
             checkpoint = ""
         verb = "Moved back" if params["undo_of"] else "Moved"
@@ -900,6 +940,12 @@ class WorkspaceWriteOwner:
             raise ValueError("the file changed during approval; nothing was moved")
         if use_verified_fs():
             VerifiedFS(self.root).move(source, destination, new_folders)
+            book = self._effect_book
+            assert book is not None
+            book.mark_applied(self._effect_reservation,
+                              destination.relative_to(self.root).as_posix())
+            book.mark_applying(self._effect_reservation,
+                               source.relative_to(self.root).as_posix())
             return
         source_fd = self._open_directory(source.parent)
         try:
@@ -907,6 +953,13 @@ class WorkspaceWriteOwner:
             try:
                 os.link(source.name, destination.name, src_dir_fd=source_fd,
                         dst_dir_fd=destination_fd, follow_symlinks=False)
+                os.fsync(destination_fd)
+                book = self._effect_book
+                assert book is not None
+                book.mark_applied(self._effect_reservation,
+                                  destination.relative_to(self.root).as_posix())
+                book.mark_applying(self._effect_reservation,
+                                   source.relative_to(self.root).as_posix())
                 os.unlink(source.name, dir_fd=source_fd)
                 os.fsync(destination_fd)
                 os.fsync(source_fd)

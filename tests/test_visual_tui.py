@@ -108,25 +108,34 @@ def test_owned_read_keeps_receipt_in_expandable_detail(tmp_path, monkeypatch, ca
         asyncio.run(scenario())
 
 
-def test_idle_board_uses_ascii_and_provider_list_keeps_unwired_rows_quiet(tmp_path, monkeypatch, capsys):
+def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
 
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            board = plain_text(app.query_one("#idle-board"))
-            assert "██" in board
+            widget = app.query_one("#idle-board")
+            board = plain_text(widget)
             assert "LSPs" in board and "MCPs" in board and "Skills" in board
+            assert "#####" in board and ".--." in board
             assert "╱" not in board
-            assert "|##|" in board and "~~" in board
+            assert "|##|" not in board
+            assert not list(app.query("#open-idle-art"))
+            assert all(cell_len(line) <= widget.content_size.width for line in board.splitlines()), (
+                widget.content_size.width,
+                [(cell_len(line), line[:70]) for line in board.splitlines()
+                 if cell_len(line) > widget.content_size.width],
+            )
+            assert not any("\u2800" <= char <= "\u28ff" for char in board)
             await pilot.resize_terminal(80, 24)
             await pilot.pause()
-            narrow = plain_text(app.query_one("#idle-board"))
-            assert "ISYCODE" in narrow or "██" in narrow
+            narrow = plain_text(widget)
+            assert "#####" in narrow or "ISYCODE" in narrow
             assert "LSPs" in narrow
             assert "╱" not in narrow
-            assert "|##|" in narrow
+            assert all(cell_len(line) <= widget.content_size.width for line in narrow.splitlines())
+            assert not any("\u2800" <= char <= "\u28ff" for char in narrow)
             app._open_provider_menu()
             assert app._menu_title == "Select provider"
             assert any(entry["kind"] == "section" and entry["label"] == "Popular"
@@ -142,6 +151,26 @@ def test_idle_board_uses_ascii_and_provider_list_keeps_unwired_rows_quiet(tmp_pa
             chat = "\n".join(plain_text(widget) for widget in app.query_one(ChatArea).query(Static))
             assert "no transport" in chat
             assert "GitHub Copilot" in chat
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_startup_splash_remains_in_chat_and_scrolls_away(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            board = app.query_one("#idle-board")
+            assert app._idle_mounted()
+            app._mount_user_turn("hola")
+            await pilot.pause()
+            assert app.query_one("#idle-board") is board
+            assert board.has_class("startup-archived")
+            assert not app._idle_mounted()
+            assert app.query_one(ChatArea).scroll_y > 0
 
     with capsys.disabled():
         asyncio.run(scenario())
