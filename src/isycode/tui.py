@@ -622,10 +622,10 @@ class PromptArea(TextArea):
         Binding("tab", "slash_complete", show=False, priority=True),
         Binding("ctrl+enter", "submit_prompt", "Send", show=False, priority=True),
         Binding("ctrl+a", "select_all", "Select all", show=False, priority=True),
-    Binding("shift+enter", "insert_line_break", "New line", show=False,
-                priority=True),
-        Binding("escape", "escape_to_app", "Cancel / back", show=False,
-                priority=True),
+        Binding("shift+enter", "insert_line_break", "New line", show=False, priority=True),
+        Binding("ctrl+j", "insert_line_break", "New line", show=False, priority=True),
+        Binding("alt+enter", "insert_line_break", "New line", show=False, priority=True),
+        Binding("escape", "escape_to_app", "Cancel / back", show=False, priority=True),
     ]
 
     class Submitted(Message):
@@ -635,10 +635,28 @@ class PromptArea(TextArea):
             self.value = value
 
     def action_slash_up(self) -> None:
-        if not cast(TUIApp, self.app)._move_slash(-1): self.action_cursor_up()
+        app = cast(TUIApp, self.app)
+        if app._move_slash(-1):
+            return
+        if self.cursor_location[0] == 0:
+            recalled = app._navigate_prompt_history(-1, self.text)
+            if recalled is not None:
+                self.load_text(recalled)
+                self.move_cursor((len(self.document.lines) - 1, len(self.document.lines[-1])))
+                return
+        self.action_cursor_up()
 
     def action_slash_down(self) -> None:
-        if not cast(TUIApp, self.app)._move_slash(1): self.action_cursor_down()
+        app = cast(TUIApp, self.app)
+        if app._move_slash(1):
+            return
+        if self.cursor_location[0] == len(self.document.lines) - 1:
+            recalled = app._navigate_prompt_history(1, self.text)
+            if recalled is not None:
+                self.load_text(recalled)
+                self.move_cursor((len(self.document.lines) - 1, len(self.document.lines[-1])))
+                return
+        self.action_cursor_down()
 
     def action_slash_complete(self) -> None:
         if not cast(TUIApp, self.app)._complete_slash(): self.screen.focus_next()
@@ -2124,8 +2142,14 @@ class TUIApp(App):
         dock: top; height: 1; background: $surface; color: $text;
         text-align: left; padding: 0 1;
     }
+    #workspace-layout {
+        height: 1fr; width: 100%;
+    }
+    #main {
+        height: 1fr; width: 1fr;
+    }
     #side-panel {
-        dock: right; width: 38; height: 100%; background: #292a2e;
+        width: 38; height: 100%; background: #292a2e;
         border-left: round #48494e; padding: 1 1;
     }
     .panel-title { color: #c7b8d4; text-style: bold; padding: 0 0 1 0; }
@@ -2186,9 +2210,22 @@ class TUIApp(App):
     }
     #slash-suggestions { display: none; layer: overlay; dock: bottom; height: 8; max-height: 45%; margin: 0 1; background: #292a2e; border: round #48494e; }
     #slash-suggestions > .option-list--option-highlighted { background: #5c4077; color: #f0f0f2; }
-    #composer { dock: bottom; height: 8; }
+    #composer { dock: bottom; height: 5; }
+    #idea-box-panel {
+        dock: bottom; height: auto; min-height: 3; max-height: 8;
+        width: 60%; align-horizontal: center;
+        margin: 0 auto 0 auto;
+        border: round #514d5a; background: #242529;
+        padding: 0 1; display: none;
+    }
+    #idea-box-thinking {
+        height: 1; color: #c7b8d4; text-style: bold;
+    }
+    #idea-box-body {
+        height: auto; color: #b8b9c1;
+    }
     #prompt-input {
-        height: 5; background: #242529; color: #e0e0e0;
+        height: 1; background: #242529; color: #e0e0e0;
         border: round #484650; margin: 0 1;
     }
     #prompt-input:focus { border: round #9aa3ad; background: #292630; }
@@ -2210,6 +2247,10 @@ class TUIApp(App):
     #command-bar Button {
         width: auto; min-width: 10; height: 1; min-height: 1; padding: 0 1;
         border: none; background: $surface; color: #9b5de5;
+    }
+    /* Hidden from view but kept in DOM for dynamic label updates */
+    #providers-button, #role-button, #context-button, #inject-context-button {
+        display: none;
     }
     /* Newer Textual adds a tall top border and a focus text style on hover/focus;
        in a one-row bar that border covers the label, so pin every state flat. */
@@ -2362,6 +2403,9 @@ class TUIApp(App):
         self._rail_visibility_override: bool | None = None
         self._rail_width = 38
         self._rail_compact_width = 28
+        self._idea_box: str = ""
+        self._prompt_history: list[str] = []
+        self._prompt_history_idx: int = -1
         self._register_builtin_plugins()
 
     # ── layout ───────────────────────────────────────────────────
@@ -2377,18 +2421,22 @@ class TUIApp(App):
             usage_status = Static("", id="usage-status")
             usage_status.styles.height = 1
             yield usage_status
+        with Vertical(id="idea-box-panel"):
+            yield Static("", id="idea-box-thinking")
+            yield Static("", id="idea-box-body")
         with Vertical(id="composer"):
             yield PromptArea(id="prompt-input")
-            yield Static("Enter send  ·  Shift+Enter newline  ·  / commands  ·  Esc back", id="composer-hint")
+            yield Static("Enter ↵ send  ·  Shift+Enter newline  ·  / commands  ·  Esc back", id="composer-hint")
             with Horizontal(id="command-bar"):
-                yield Button("Sidebar", id="sidebar-button")
+                yield Button("≡ Sidebar", id="sidebar-button")
                 yield Button("Sessions", id="sessions-button")
+                # Hidden in DOM — code references these for dynamic label updates
                 yield Button("Providers", id="providers-button")
                 yield Button("Role", id="role-button")
                 yield Button("Context", id="context-button")
                 yield Button("Inject context", id="inject-context-button")
                 yield BarSpacer(id="bar-spacer")
-                yield Button("⚙ Settings", id="settings-button")
+                yield Button("⚙", id="settings-button")
         with Vertical(id="action-menu"):
             with Vertical(id="action-card"):
                 yield Static("Commands", id="action-title")
@@ -2745,6 +2793,39 @@ class TUIApp(App):
         preferred = self._rail_width if terminal_width >= 100 else self._rail_compact_width
         requested = min(preferred, available)
         self.query_one(SidePanel).styles.width = requested
+
+    def _paint_idea_box(self) -> None:
+        """Update the idea-box-panel widget with the current agent note."""
+        panel = self.query_one("#idea-box-panel")
+        if not self._idea_box:
+            panel.display = False
+            return
+        panel.display = True
+        thinking = self.query_one("#idea-box-thinking", Static)
+        body = self.query_one("#idea-box-body", Static)
+        thinking.update("💡 Idea box")
+        body.update(self._idea_box)
+
+    def _navigate_prompt_history(self, delta: int, current: str) -> str | None:
+        """Navigate prompt history. delta=-1 goes older, +1 goes newer.
+
+        Returns the recalled prompt string, or None when out of bounds.
+        """
+        if not self._prompt_history:
+            return None
+        # Save current text if we're starting navigation
+        if self._prompt_history_idx == -1 and delta == -1:
+            self._prompt_history_idx = len(self._prompt_history)
+        new_idx = self._prompt_history_idx + delta
+        if new_idx < 0 or new_idx >= len(self._prompt_history):
+            if new_idx >= len(self._prompt_history):
+                # Went past the end — clear history navigation
+                self._prompt_history_idx = -1
+                return ""
+            return None
+        self._prompt_history_idx = new_idx
+        return self._prompt_history[new_idx]
+
 
     def action_widen_sidebar(self) -> None:
         if self.size.width >= 100:
@@ -3831,10 +3912,8 @@ class TUIApp(App):
         provider = PRESETS.get(provider_name, {})
         model_name = selected_model_name() or provider.get("default_model", "provider default")
         entries = [
-            self._entry("These personal defaults follow you between workspaces.", "info"),
-            self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
-            self._entry(f"Default model · {provider.get('label', provider_name)} · {model_name}",
-                        "info", "", "Change it from Providers; model selection is already saved globally."),
+            self._entry(f"Model · {provider.get('label', provider_name)} · {model_name}",
+                        "info", "", "Change model from Providers."),
         ]
         role = defaults.get("default_role")
         entries.append(self._entry(
@@ -7390,6 +7469,10 @@ class TUIApp(App):
             prompt.load_text("")
         else:
             prompt.value = ""
+        # Track prompt history for ↑/↓ navigation
+        if not self._prompt_history or self._prompt_history[-1] != text:
+            self._prompt_history.append(text)
+        self._prompt_history_idx = -1
         self._clear_pending_plan()
         plugin, cmd, arg = self._plugins.route(text)
         self._mount_user_turn(text)
