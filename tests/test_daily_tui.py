@@ -110,11 +110,15 @@ def test_inject_context_button_flow_uses_picker_owner_and_owned_workspace_read(t
         app = TUIApp()
         async with app.run_test() as pilot:
             await pilot.pause()
-            await pilot.click("#context-button")
+            await pilot.click("#settings-button")
+            app._select_menu_entry(next(entry for entry in app._menu_entries
+                                       if entry['kind'] == 'context_menu'))
             assert app._menu_mode == "context_menu"
             assert any(entry["kind"] == "context_inject" for entry in app._menu_entries)
             await pilot.press("escape")
-            await pilot.click("#inject-context-button")
+            app._open_settings_menu()
+            app._select_menu_entry(next(entry for entry in app._menu_entries
+                                       if entry['kind'] == 'context_inject'))
             for _ in range(50):
                 await pilot.pause(0.02)
                 if app._agent_context:

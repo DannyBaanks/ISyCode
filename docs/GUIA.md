@@ -54,11 +54,17 @@ Filtra por nombre o descripción en **Search actions…**. Usa ↑/↓ para move
 
 Dentro del prompt de ISyCode, **Enter** envía el mensaje y **Shift+Enter** agrega una línea. **Ctrl+Enter** también envía.
 
+El campo muestra una línea a la vez; **Ctrl+J** o **Alt+Enter** también agregan
+saltos de línea. **↑/↓** recuperan los mensajes enviados cuando el cursor está
+en la primera/última línea; volver al final restaura el borrador. La Idea Box
+ocupa el 60% del ancho del campo, centrada encima, y marca **Thinking…** durante
+una operación. La barra lateral usa secciones plegables en cajas separadas.
+
 Las respuestas del asistente y de Roundtrip se muestran con parser Markdown de terminal: `#`/`##` crean encabezados, `**texto**` se resalta en negritas, las listas conservan su estructura, los acentos graves simples marcan código en línea y los bloques con tres acentos graves reciben resaltado de sintaxis. **Esc** cancela la respuesta activa y descarta su salida parcial; si no hay generación activa, vuelve/cierra el menú o enfoca el composer sin borrar el borrador.
 
 `/review <texto>` ofrece una revisión aislada con GPT-6 Luna vía OpenAI API. Antes de enviar, muestra exactamente el texto y pide confirmación. El revisor no tiene herramientas; la respuesta queda aparte. **Cancel review** o **Esc** interrumpe la conexión/stream y descarta cualquier salida parcial; no se reintenta ni se libera el único intento de la sesión. **Iterate with this review** prepara la respuesta como borrador para el modelo principal; todavía debes editarla o presionar Enter. El límite de salida es 1,200 tokens y solo se permite una revisión por sesión TUI. Si detecta un proxy configurado, ISyCode cancela el envío en lugar de saltárselo; aplica igual al chat cancelable.
 
-La barra inferior tiene **Sidebar**, **Sessions**, **Providers**, **Role**, **Context** y **⚙**. El engranaje reúne las opciones y todos los atajos. `Ctrl+F` busca texto en toda la salida del chat; usa Enter o los botones para recorrer coincidencias y **Esc** para cerrar. Al escribir `/` solo se abre una paleta con diez ramas: Skills, Models, MCP, LSP, Files, Roles, Providers, Session, Workspace y Commands. Elige una rama para ver su lista; puedes desplazarte y volver con **Esc**. En Models, `Load account models` consulta los IDs del provider activo solo después de elegirlo; seleccionar uno cambia el modelo de esta sesión.
+La barra inferior tiene **Sidebar**, **Sessions**, **Multi Harness** y **⚙**. Providers, Role y Context están en Settings. El engranaje reúne las opciones y todos los atajos. `Ctrl+F` busca texto en toda la salida del chat; usa Enter o los botones para recorrer coincidencias y **Esc** para cerrar. Al escribir `/` solo se abre una paleta con diez ramas: Skills, Models, MCP, LSP, Files, Roles, Providers, Session, Workspace y Commands. Elige una rama para ver su lista; puedes desplazarte y volver con **Esc**. En Models, `Load account models` consulta los IDs del provider activo solo después de elegirlo; seleccionar uno cambia el modelo de esta sesión.
 
 En **Context → Choose AGENTS.md…**, el selector de archivos de Linux te deja elegirlo sin escribir ruta. El archivo debe estar dentro del workspace y pasa por el grant `workspace.context.inject` de Workspace Authority e IsySentinel.
 `/readme` abre el selector nativo de Linux, deja escoger un README del workspace y lo previsualiza tras el grant de lectura y Sentinel.

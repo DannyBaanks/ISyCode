@@ -356,8 +356,8 @@ class SidePanel(Vertical):
                 yield Static("Select a file to preview it.", id="file-preview", classes="rail-copy")
 
     def on_mount(self) -> None:
-        self.styles.background = BG2
-        self.styles.border = ("round", "#48494e")
+        self.styles.background = "#17191f"
+        self.styles.border = ("round", "#414650")
         for button in self.query(Button):
             button.compact = True
         self.query_one("#show-overview", Button).add_class("rail-lit")
@@ -585,8 +585,9 @@ class PromptArea(TextArea):
         Binding("tab", "slash_complete", show=False, priority=True),
         Binding("ctrl+enter", "submit_prompt", "Send", show=False, priority=True),
         Binding("ctrl+a", "select_all", "Select all", show=False, priority=True),
-    Binding("shift+enter", "insert_line_break", "New line", show=False,
-                priority=True),
+        Binding("shift+enter", "insert_line_break", "New line", show=False, priority=True),
+        Binding("ctrl+j", "insert_line_break", "New line", show=False, priority=True),
+        Binding("alt+enter", "insert_line_break", "New line", show=False, priority=True),
         Binding("escape", "escape_to_app", "Cancel / back", show=False,
                 priority=True),
     ]
@@ -598,10 +599,28 @@ class PromptArea(TextArea):
             self.value = value
 
     def action_slash_up(self) -> None:
-        if not cast(TUIApp, self.app)._move_slash(-1): self.action_cursor_up()
+        app = cast(TUIApp, self.app)
+        if app._move_slash(-1):
+            return
+        if self.cursor_location[0] == 0:
+            recalled = app._navigate_prompt_history(-1, self.text)
+            if recalled is not None:
+                self.load_text(recalled)
+                self.move_cursor((0, len(self.document.lines[0])))
+                return
+        self.action_cursor_up()
 
     def action_slash_down(self) -> None:
-        if not cast(TUIApp, self.app)._move_slash(1): self.action_cursor_down()
+        app = cast(TUIApp, self.app)
+        if app._move_slash(1):
+            return
+        if self.cursor_location[0] == len(self.document.lines) - 1:
+            recalled = app._navigate_prompt_history(1, self.text)
+            if recalled is not None:
+                self.load_text(recalled)
+                self.move_cursor((len(self.document.lines) - 1, len(self.document.lines[-1])))
+                return
+        self.action_cursor_down()
 
     def action_slash_complete(self) -> None:
         if not cast(TUIApp, self.app)._complete_slash(): self.screen.focus_next()
@@ -2544,20 +2563,22 @@ class TUIApp(App):
         dock: top; height: 1; background: $surface; color: $text;
         text-align: left; padding: 0 1;
     }
+    #workspace-layout { height: 1fr; width: 100%; }
+    #main { height: 100%; width: 1fr; min-width: 0; }
     #side-panel {
-        dock: right; width: 38; height: 100%; background: #292a2e;
-        border-left: round #48494e; padding: 1 1;
+        width: 38; height: 100%; background: #17191f;
+        border: round #414650; padding: 1 1;
     }
     .panel-title { color: #c7b8d4; text-style: bold; padding: 0 0 1 0; }
     .section-title { color: #c7b8d4; text-style: bold; padding: 1 0 0 0; }
     .rail-copy { color: #c0c0c4; height: auto; padding: 0 0 1 0; }
     #overview-view Collapsible {
-        background: transparent; border-top: none; padding: 0; margin: 0 0 1 0; height: auto;
+        background: #11151b; border: round #414650; padding: 0; margin: 0 0 1 0; height: auto;
     }
-    #overview-view CollapsibleTitle { color: #c7b8d4; text-style: bold; padding: 0; background: transparent; }
+    #overview-view CollapsibleTitle { color: #c5cad3; text-style: bold; padding: 0; background: transparent; }
     #overview-view CollapsibleTitle:hover { background: #35363a; color: #e0e0e0; }
     #overview-view CollapsibleTitle:focus { background: #3a2f4d; color: #e0e0e0; }
-    #overview-view Collapsible > Contents { padding: 0 0 0 1; height: auto; }
+    #overview-view Collapsible > Contents { padding: 0 1; height: auto; }
     #side-panel Button {
         height: 1; min-height: 1; min-width: 0; padding: 0 1;
         border: none; background: transparent; color: #b9a3d4;
@@ -2576,7 +2597,7 @@ class TUIApp(App):
         color: #f4f1ea; text-style: bold; background: transparent;
     }
     #side-panel Button.rail-lit:hover { background: #35363a; color: #f4f1ea; }
-    #rail-tabs { height: 1; }
+    #rail-tabs { height: 3; border: round #414650; align: center middle; margin-bottom: 1; }
     #rail-tabs Button { width: 1fr; }
     #overview-view, #files-view { height: 1fr; }
     #skills-tree { height: 10; min-height: 5; background: transparent; overflow-x: hidden; }
@@ -2588,10 +2609,10 @@ class TUIApp(App):
     #filter-controls { height: 3; }
     #filter-controls Button { width: 1fr; }
     #file-search { height: 3; }
-    #workspace-tree { height: 1fr; min-height: 6; background: transparent; }
+    #workspace-tree { height: 1fr; min-height: 6; background: #11151b; border: round #414650; }
     #file-actions { height: 1; }
     #file-actions Button { width: 1fr; }
-    #file-preview-scroll { height: 7; min-height: 4; border-top: round #48494e; }
+    #file-preview-scroll { height: 7; min-height: 4; border: round #414650; background: #11151b; }
     #chat {
         height: 1fr; background: $surface; padding: 1 2;
     }
@@ -2600,12 +2621,13 @@ class TUIApp(App):
     .external-review { border: round #514d5a; background: #303136; padding: 1; margin: 1 0; }
     #main { height: 1fr; layers: base overlay; }
     #idea-box-row {
-        layer: overlay; dock: top; width: 100%; height: auto; max-height: 6;
-        align-horizontal: right; padding: 0 1 0 0; background: transparent;
+        width: 1fr; height: auto; max-height: 4;
+        align-horizontal: center; margin: 0 1; background: transparent;
     }
     #idea-box {
-        width: 38; height: auto; max-height: 6; padding: 0 1;
-        border: round #514d5a; background: #1e1f22; color: #c7b8d4;
+        width: 60%; height: auto; max-height: 4; padding: 0 1;
+        border: round #514d5a; border-bottom: none;
+        background: #1e1f22; color: #c7b8d4;
     }
     #activity-status { height: 1; padding: 0 2; color: #9aa3ad; background: $surface; }
     #agent-tasks {
@@ -2614,9 +2636,9 @@ class TUIApp(App):
     }
     #slash-suggestions { display: none; layer: overlay; dock: bottom; height: 8; max-height: 45%; margin: 0 1; background: #292a2e; border: round #48494e; }
     #slash-suggestions > .option-list--option-highlighted { background: #5c4077; color: #f0f0f2; }
-    #composer { dock: bottom; height: 8; }
+    #composer { height: auto; }
     #prompt-input {
-        height: 5; background: #242529; color: #e0e0e0;
+        height: 3; background: #242529; color: #e0e0e0;
         border: round #484650; margin: 0 1;
     }
     #prompt-input:focus { border: round #9aa3ad; background: #292630; }
@@ -2634,12 +2656,13 @@ class TUIApp(App):
     .tool-receipt CollapsibleTitle { color: #9aa3ad; text-style: none; }
     Footer { background: $surface; color: #6c757d; }
     #command-bar {
-        height: 2; padding: 0 1; background: $surface;
+        height: 1; padding: 0 1; background: $surface;
     }
     #command-bar Button {
-        width: auto; min-width: 10; height: 1; min-height: 1; padding: 0 1;
+        width: auto; min-width: 0; height: 1; min-height: 1; padding: 0 1;
         border: none; background: $surface; color: #9b5de5;
     }
+    #providers-button, #role-button, #context-button, #inject-context-button { display: none; }
     /* Newer Textual adds a tall top border and a focus text style on hover/focus;
        in a one-row bar that border covers the label, so pin every state flat. */
     #command-bar Button:hover, #command-bar Button:focus, #command-bar Button.-active {
@@ -2799,37 +2822,42 @@ class TUIApp(App):
         self._rail_compact_width = 28
         self._work_rows: list[dict[str, Any]] = []
         self._work_refresh_busy = False
+        self._prompt_history: list[str] = []
+        self._prompt_history_idx = -1
+        self._prompt_history_draft = ""
         self._register_builtin_plugins()
 
     # ── layout ───────────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
         yield Banner(id="banner")
-        yield SidePanel(id="side-panel")
-        with Vertical(id="main"):
-            yield WorkList(id="work-list")
-            with Horizontal(id="idea-box-row"):
-                yield Static("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
-            yield ChatArea(id="chat")
-            yield OptionList(id="slash-suggestions")
-            yield TasksPanel("", id="agent-tasks")
-            yield Static("Ready · / opens commands", id="activity-status")
-            usage_status = Static("", id="usage-status")
-            usage_status.styles.height = 1
-            yield usage_status
-        with Vertical(id="composer"):
-            yield PromptArea(id="prompt-input")
-            yield Static("Enter send  ·  Shift+Enter newline  ·  / commands  ·  Esc back", id="composer-hint")
-            with Horizontal(id="command-bar"):
-                yield Button("Sidebar", id="sidebar-button")
-                yield Button("Sessions", id="sessions-button")
-                yield Button("Multi Harness", id="harness-button")
-                yield Button("Providers", id="providers-button")
-                yield Button("Role", id="role-button")
-                yield Button("Context", id="context-button")
-                yield Button("Inject context", id="inject-context-button")
-                yield BarSpacer(id="bar-spacer")
-                yield Button("⚙ Settings", id="settings-button")
+        with Horizontal(id="workspace-layout"):
+            with Vertical(id="main"):
+                yield WorkList(id="work-list")
+                yield ChatArea(id="chat")
+                yield OptionList(id="slash-suggestions")
+                yield TasksPanel("", id="agent-tasks")
+                yield Static("Ready · / opens commands", id="activity-status")
+                usage_status = Static("", id="usage-status")
+                usage_status.styles.height = 1
+                yield usage_status
+                with Vertical(id="composer"):
+                    with Horizontal(id="idea-box-row"):
+                        yield Static("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
+                    yield PromptArea(id="prompt-input")
+                    yield Static("Enter send · Ctrl+J newline · ↑ history · Esc back", id="composer-hint")
+                    with Horizontal(id="command-bar"):
+                        yield Button("Sidebar", id="sidebar-button")
+                        yield Button("Sessions", id="sessions-button")
+                        yield Button("Multi Harness", id="harness-button")
+                        # Preserve dynamic labels; these actions are in Settings.
+                        yield Button("Providers", id="providers-button")
+                        yield Button("Role", id="role-button")
+                        yield Button("Context", id="context-button")
+                        yield Button("Inject context", id="inject-context-button")
+                        yield BarSpacer(id="bar-spacer")
+                        yield Button("⚙", id="settings-button")
+            yield SidePanel(id="side-panel")
         with Vertical(id="action-menu"):
             with Vertical(id="action-card"):
                 yield Static("Commands", id="action-title")
@@ -2884,7 +2912,7 @@ class TUIApp(App):
             for name, description in commands
         ]
         if self._workspace_config_warning:
-            self._append(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
+            self._append_startup(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
         self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup")
         # Mobile Host and Bridge have catalog actions but no product execution owners yet.
         # A saved preference is not an Authority grant, approval, or Sentinel decision.
@@ -2931,7 +2959,7 @@ class TUIApp(App):
                     self._update_workspace_identity_ui()
             warning = self._shared_root_warning()
             if warning:
-                self._append(f"  {warning}", YELLOW)
+                self._append_startup(f"  {warning}", YELLOW)
             if self._initial_view == "files":
                 self.query_one("#workspace-tree", Tree).focus()
             else:
@@ -2959,14 +2987,14 @@ class TUIApp(App):
                         preferred = "ask"
                     if preferred in {"classic", "security"}:
                         chosen = preferred
-                        self._append(f"  New workspace · using your default {preferred.title()} mode "
+                        self._append_startup(f"  New workspace · using your default {preferred.title()} mode "
                                      "· change it in Settings → Authority.", MUTED)
                     else:
                         chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
                     authority.set_mode(chosen)
                 await self._offer_quiet_trust(authority)
             except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  Workspace mode could not be saved · Security rules apply.", YELLOW)
+                self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
             self._update_workspace_identity_ui()
             self._register_saved_key_reader()
             await self._initialize_workspace()
@@ -2975,13 +3003,13 @@ class TUIApp(App):
             self.run_worker(self._check_gateway_async(), exclusive=False)
             self.run_worker(self._check_model(), exclusive=False)
             if not recurring:
-                self._append("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
+                self._append_startup("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
             if not self._sessions_enabled():
-                self._append(
+                self._append_startup(
                     "  This conversation stays in memory · turn on “Save conversations” in "
                     "Settings → Authority (recurring workspaces only).", MUTED)
         except Exception as exc:
-            self._append(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+            self._append_startup(f"  Workspace startup failed ({type(exc).__name__}).", RED)
 
     def _workspace_mode(self) -> str:
         try:
@@ -4105,6 +4133,9 @@ class TUIApp(App):
 
     def _open_settings_menu(self) -> None:
         entries = [
+            self._entry("Providers & models", "providers_open", ""),
+            self._entry("Choose role", "roles_open", ""),
+            self._entry("Context", "context_menu", ""),
             self._entry("My defaults · all workspaces", "user_defaults", ""),
         ]
         if self._workspace_identity.workspace_root_source == "isyroot":
@@ -6483,6 +6514,9 @@ class TUIApp(App):
         if kind == "providers_open":
             self._open_provider_menu()
             return
+        if kind == "roles_open":
+            self._open_role_menu()
+            return
         if kind == "model":
             provider_name, model_name = value.split("|", 1)
             self._select_provider(provider_name, model_name)
@@ -7088,8 +7122,14 @@ class TUIApp(App):
 
     # ── helpers ──────────────────────────────────────────────────
 
-    def _append(self, text: str, color: str = TEXT) -> None:
-        """Append a plain message line to the chat."""
+    def _append_startup(self, text: str, color: str = TEXT) -> None:
+        """Keep startup notices beneath the welcome art without archiving it."""
+        self._append(text, color, startup=True)
+
+    def _append(self, text: str, color: str = TEXT, *, startup: bool = False) -> None:
+        """Append output, releasing the welcome pause only on the first message."""
+        if not startup:
+            self._dismiss_idle()
         chat = self.query_one(ChatArea)
         chat.mount(SelectableText(Text(text, style=color), selection_text=text))
         chat.follow_tail()
@@ -7922,7 +7962,24 @@ class TUIApp(App):
         except NoMatches:
             return
         body = self._idea_box or "Waiting for the agent to leave a note."
-        box.update(Text.assemble(("Idea box\n", "bold #c7b8d4"), (body, TEXT)))
+        busy = self._loop_task is not None and not self._loop_task.done()
+        label = "Idea box · ● Thinking…\n" if busy else "Idea box\n"
+        box.update(Text.assemble((label, "bold #c7b8d4"), (body, TEXT)))
+
+    def _navigate_prompt_history(self, delta: int, current: str) -> str | None:
+        if not self._prompt_history or (self._prompt_history_idx == -1 and delta > 0):
+            return None
+        if self._prompt_history_idx == -1:
+            self._prompt_history_draft = current
+            self._prompt_history_idx = len(self._prompt_history)
+        next_index = self._prompt_history_idx + delta
+        if next_index < 0:
+            return None
+        if next_index >= len(self._prompt_history):
+            self._prompt_history_idx = -1
+            return self._prompt_history_draft
+        self._prompt_history_idx = next_index
+        return self._prompt_history[next_index]
 
     def _mark_idea_nudge_due(self) -> None:
         self._idea_nudge_due = True
@@ -7972,6 +8029,11 @@ class TUIApp(App):
             prompt.load_text("")
         else:
             prompt.value = ""
+        if not self._prompt_history or self._prompt_history[-1] != text:
+            self._prompt_history.append(text)
+            self._prompt_history = self._prompt_history[-200:]
+        self._prompt_history_idx = -1
+        self._prompt_history_draft = ""
         self._clear_pending_plan()
         plugin, cmd, arg = self._plugins.route(text)
         self._pending_user_sent_at = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -7988,6 +8050,7 @@ class TUIApp(App):
         self._set_activity(label, CYAN)
         task = asyncio.create_task(coroutine)
         self._loop_task = task
+        self._paint_idea_box()
         task.add_done_callback(self._operation_finished)
 
     def _operation_finished(self, task: asyncio.Task) -> None:
@@ -8002,6 +8065,7 @@ class TUIApp(App):
             self._set_activity("Plan ready · review it in Overview", YELLOW)
         else:
             self._set_activity("Ready · / opens commands", MUTED)
+        self._paint_idea_box()
 
     async def _await_screen(self, screen):
         """Show a modal screen and wait for its result from a worker or a plain task.
@@ -9486,6 +9550,7 @@ class TUIApp(App):
 
     async def _run_chat(self, text: str) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
+        self._dismiss_idle()
         original_prompt = text
         completed = False
         self._chat_turn_task = asyncio.current_task()
