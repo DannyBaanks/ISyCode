@@ -199,13 +199,21 @@ def test_sensitive_paths_are_masked_and_the_marker_is_read_only(sandbox):
     _grant(authority, fake)
     (owner.root / ".env").write_text("TOKEN=x\n", encoding="utf-8")
     (owner.root / ".git").mkdir()
+    (owner.root / ".netrc").write_text(
+        "machine example login user password secret\n", encoding="utf-8")
+    (owner.root / ".npmrc").write_text(
+        "//registry.example/:_authToken=secret\n", encoding="utf-8")
+    (owner.root / ".pypirc").write_text("[pypi]\npassword = secret\n", encoding="utf-8")
     (owner.root / "src" / "server.pem").write_text("key\n", encoding="utf-8")
     (owner.root / "src" / "link.pem").symlink_to(owner.root / "src" / "app.py")
     preview, outcome = _run(owner, approvals, ["echo", "ok"])
     assert outcome.decision == "ALLOW"
-    assert preview.request.parameters["masked_count"] == 3
+    assert preview.request.parameters["masked_count"] == 6
     logged = json.loads(log.read_text())
-    assert sorted(logged["masks"]) == ["/workspace/.env", "/workspace/.git", "/workspace/src/server.pem"]
+    assert sorted(logged["masks"]) == [
+        "/workspace/.env", "/workspace/.git", "/workspace/.netrc",
+        "/workspace/.npmrc", "/workspace/.pypirc", "/workspace/src/server.pem",
+    ]
     assert logged["readonly"] == ["/workspace/.isyroot"]
     command = sandbox_command(fake, owner.root, "/usr/bin/echo", ("echo",), ".", preview.masks)
     assert command.index("--bind") < command.index("--tmpfs", command.index("--bind"))

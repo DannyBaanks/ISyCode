@@ -16,6 +16,7 @@ from isycode.approvals import ActionApprovalStore
 from isycode.command_runner import CommandRunOwner
 from isycode.headless import available_tools
 from isycode.security import ActionRequest
+from isycode.workspace import IsyMotronWorkspace
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_trust import (
     ACCEPT_PHRASE, WorkspaceTrust, modal_required, onboarding_brief, quiet_classic,
@@ -78,6 +79,16 @@ def test_wrong_phrase_broad_root_and_inside_state_do_not_trust(project, monkeypa
     with pytest.raises(ValueError):
         WorkspaceTrust().accept(authority, ACCEPT_PHRASE)
     assert not WorkspaceTrust().trusted(authority)
+
+
+@pytest.mark.parametrize("name", [".netrc", ".npmrc", ".pypirc"])
+def test_common_credential_files_are_denied_to_workspace_reads(project, name):
+    authority, root = project
+    (root / name).write_text("credential = secret\n", encoding="utf-8")
+    reader = LocalWorkspaceReadOwner(root, authority)
+
+    assert IsyMotronWorkspace.is_sensitive_name(name)
+    assert reader.execute("workspace.files.read", {"path": name}).decision == "DENY"
 
 
 def test_untrusted_classic_still_asks_and_trust_is_not_a_tool(project):
