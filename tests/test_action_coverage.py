@@ -21,7 +21,7 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     assert callsites["MobileHostOwner.shutdown"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["BridgeClient.agents"]["status"] == "UNWIRED"
     assert callsites["BridgeClient._run"]["status"] == "UNWIRED"
-    assert callsites["TUIApp._inject_agent_context"]["status"] == "COVERED"
+    assert callsites["WorkspaceMixin._inject_agent_context"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.read_config"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.commands"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.apply"]["status"] == "COVERED"

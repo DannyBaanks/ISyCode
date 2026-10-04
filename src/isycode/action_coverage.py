@@ -53,7 +53,7 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("broker.health", "broker.logs", "broker.start",
                     "broker.stop", "broker.remove"),
     },
-    "isycode.tui.TUIApp._workspace_request": {
+    "isycode.tui_app_workspace.WorkspaceMixin._workspace_request": {
         "owner": "workspace_read",
         "actions": ("workspace.files.list", "workspace.files.read",
                     "workspace.files.search", "workspace.context.inject"),
@@ -109,8 +109,8 @@ KNOWN_EFFECT_CALLSITES = (
     ("workspace.config.read", "WorkspaceConfigOwner.read_config", "workspace_config", "COVERED"),
     ("workspace.config.list", "WorkspaceConfigOwner.commands", "workspace_config", "COVERED"),
     ("workspace.config.write", "WorkspaceConfigOwner.apply", "workspace_config", "COVERED"),
-    ("workspace.context.inject", "TUIApp._inject_agent_context", "workspace_read", "COVERED"),
-    ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
+    ("workspace.context.inject", "WorkspaceMixin._inject_agent_context", "workspace_read", "COVERED"),
+    ("workspace.files.read", "WorkspaceMixin._workspace_request", "workspace_read", "COVERED"),
     ("workspace.files.write", "WorkspaceWriteOwner.apply", "workspace_write", "COVERED"),
     ("workspace.files.restore", "WorkspaceWriteOwner._apply_undo", "workspace_write", "COVERED"),
     ("workspace.files.delete", "WorkspaceWriteOwner._apply_delete", "workspace_write", "COVERED"),

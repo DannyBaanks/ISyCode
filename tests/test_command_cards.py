@@ -73,7 +73,7 @@ def test_command_owner_output_is_grouped_and_returned_unchanged(tmp_path, monkey
             return SimpleNamespace(decision='ALLOW', text=response,
                                    receipt=SimpleNamespace(receipt_id='verified-test'), reason='')
 
-    monkeypatch.setattr('isycode.tui.CommandRunOwner', Owner)
+    monkeypatch.setattr('isycode.tui_app_workspace.CommandRunOwner', Owner)
     monkeypatch.setattr(TUIApp, '_command_tool_enabled', lambda self: True)
     monkeypatch.setattr(TUIApp, '_request_is_quiet', lambda *args: False)
     async def approve(*args):

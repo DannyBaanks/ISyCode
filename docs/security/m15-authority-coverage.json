@@ -1322,13 +1322,13 @@
     },
     {
       "action": "workspace.context.inject",
-      "callsite": "TUIApp._inject_agent_context",
+      "callsite": "WorkspaceMixin._inject_agent_context",
       "owner": "workspace_read",
       "status": "COVERED"
     },
     {
       "action": "workspace.files.read",
-      "callsite": "TUIApp._workspace_request",
+      "callsite": "WorkspaceMixin._workspace_request",
       "owner": "workspace_read",
       "status": "COVERED"
     },
@@ -1984,20 +1984,6 @@
       "owner": "tailscale_serve"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 1749,
-      "callable": "isycode.tui.TUIApp._confirm_and_load_external_context",
-      "action": "workspace.context.inject",
-      "owner": "workspace_read"
-    },
-    {
-      "file": "isycode/tui.py",
-      "line": 3698,
-      "callable": "isycode.tui.TUIApp._workspace_request",
-      "action": null,
-      "owner": "workspace_read"
-    },
-    {
       "file": "isycode/tui_app_remote.py",
       "line": 622,
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
@@ -2031,6 +2017,20 @@
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
+    },
+    {
+      "file": "isycode/tui_app_workspace.py",
+      "line": 82,
+      "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
+      "action": "workspace.context.inject",
+      "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/tui_app_workspace.py",
+      "line": 166,
+      "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
+      "action": null,
+      "owner": "workspace_read"
     },
     {
       "file": "isycode/web_fetch.py",
@@ -2112,18 +2112,18 @@
       "owner": "tailscale_serve"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 3698,
-      "callable": "isycode.tui.TUIApp._workspace_request",
-      "action": null,
-      "owner": "workspace_read"
-    },
-    {
       "file": "isycode/tui_app_remote.py",
       "line": 846,
       "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
+    },
+    {
+      "file": "isycode/tui_app_workspace.py",
+      "line": 166,
+      "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
+      "action": null,
+      "owner": "workspace_read"
     }
   ],
   "unresolved_dynamic_request_constructors": []
