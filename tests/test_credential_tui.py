@@ -5,21 +5,39 @@ from pathlib import Path
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
 
 
+def _owned_methods():
+    """TUIApp plus mixins. Key methods moved; the secret lock still sees them."""
+    methods = {}
+    sources = {}
+    paths = [SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))]
+    for path in paths:
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    methods[item.name] = item
+                    sources[item.name] = source
+    return sources, methods
+
+
 def _methods():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    return {node.name: node for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    return _owned_methods()[1]
 
 
 def _segment(name):
-    return ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), _methods()[name])
+    sources, methods = _owned_methods()
+    return ast.get_source_segment(sources[name], methods[name])
 
 
 def test_key_input_is_masked():
-    assert 'Input(placeholder="Paste API key…", password=True, id="provider-key-input")' in \
-        SOURCE.read_text(encoding="utf-8")
+    surface = "\n".join(path.read_text(encoding="utf-8")
+                         for path in [SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))])
+    assert 'Input(placeholder="Paste API key…", password=True, id="provider-key-input")' in surface
 
 
 def test_the_pasted_key_is_cleared_before_anything_else():
@@ -28,8 +46,9 @@ def test_the_pasted_key_is_cleared_before_anything_else():
 
 
 def test_the_secret_never_reaches_messages_activity_or_state():
-    source = SOURCE.read_text(encoding="utf-8")
-    for name, node in _methods().items():
+    sources, methods = _owned_methods()
+    for name, node in methods.items():
+        source = sources[name]
         for call in ast.walk(node):
             if not isinstance(call, ast.Call):
                 continue

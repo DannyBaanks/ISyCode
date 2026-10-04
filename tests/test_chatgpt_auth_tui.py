@@ -77,7 +77,7 @@ def test_slash_catalog_cannot_spawn_connector_without_grants(tmp_path,monkeypatc
 
 def test_providers_opens_the_selector_and_keys_reports_grouped_credentials(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
-    monkeypatch.setattr("isycode.tui.provider_credential_state",
+    monkeypatch.setattr("isycode.tui_app_providers.provider_credential_state",
                         lambda name: "saved" if name == "nvidia" else "missing")
 
     async def run():

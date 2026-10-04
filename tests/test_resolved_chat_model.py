@@ -70,10 +70,11 @@ def test_image_capability_uses_the_saved_model_not_the_catalog_default(tmp_path,
 
 def test_chat_call_sites_do_not_pass_the_catalog_default_as_the_chosen_model():
     root = Path(__file__).resolve().parents[1] / "src" / "isycode"
-    for name in ("tui.py", "headless.py"):
-        text = (root / name).read_text(encoding="utf-8")
-        assert "model=provider_default_model" not in text
-        assert "model=provider_default_model" not in text.replace(" ", "")
-    tui = (root / "tui.py").read_text(encoding="utf-8")
-    assert tui.count("provider_default_model(") == 1
-    assert "Default model:" in tui
+    surfaces = [root / "headless.py", *sorted(root.glob("tui*.py"))]
+    texts = [(path, path.read_text(encoding="utf-8")) for path in surfaces]
+    for path, text in texts:
+        assert "model=provider_default_model" not in text, path.name
+        assert "model=provider_default_model" not in text.replace(" ", ""), path.name
+    tui_text = "\n".join(text for path, text in texts if path.name.startswith("tui"))
+    assert tui_text.count("provider_default_model(") == 1
+    assert "Default model:" in tui_text
