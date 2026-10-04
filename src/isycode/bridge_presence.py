@@ -39,6 +39,64 @@ def parse_agents(output: str, *, now: datetime | None = None) -> list[dict]:
     return sorted(rows, key=lambda row: row['name'])
 
 
+_NAME_PREFIXES = (
+    ("copilot_audit", "Copilot audit"),
+    ("copilot", "Copilot"),
+    ("claude_code", "Claude"),
+    ("claude", "Claude"),
+    ("chatgpt", "ChatGPT"),
+    ("codex", "Codex"),
+    ("opencode", "OpenCode"),
+    ("grok", "Grok"),
+)
+
+
+def display_name(name: str) -> str:
+    """A short name for the sessions line. Machine ids stay off the screen."""
+    folded = name.casefold()
+    for prefix, label in _NAME_PREFIXES:
+        if folded == prefix or folded.startswith(prefix + "_") or folded.startswith(prefix + "-"):
+            return label
+    if re.search(r"(?:^|[_-])(?:[0-9a-f]{8,}|20\d{6})", name, re.IGNORECASE):
+        stem = re.split(r"[_-](?:[0-9a-f]{8,}|20\d{6})", name, maxsplit=1, flags=re.IGNORECASE)[0]
+        stem = stem.replace("_", " ").replace("-", " ").strip()
+        return stem or "agent"
+    return name
+
+
+def _clip_line(text: str, width: int) -> str:
+    from rich.cells import cell_len
+    if width <= 0 or cell_len(text) <= width:
+        return text
+    if width == 1:
+        return text[:1]
+    cut = text
+    while cut and cell_len(cut) > width - 1:
+        cut = cut[:-1]
+    return cut.rstrip(" ·") + "…"
+
+
+def presence_line(rows: list[dict], width: int = 0) -> str:
+    """One clipped line: how many are online, then readable names."""
+    if not rows:
+        return "No recent agents"
+    parts = []
+    seen = set()
+    for row in rows:
+        label = display_name(str(row.get("name") or "agent"))
+        status = str(row.get("status") or "active")
+        piece = f"{label} {status}"
+        if piece in seen:
+            continue
+        seen.add(piece)
+        parts.append(piece)
+    text = " · ".join(parts)
+    if len(rows) > 1:
+        text = f"Bridge · {len(rows)} online · {text}"
+    limit = width if width > 0 else 72
+    return _clip_line(text, limit)
+
+
 class BridgePresenceOwner:
     def __init__(self, root, authority, approvals):
         self.root = Path(root).resolve(strict=True)

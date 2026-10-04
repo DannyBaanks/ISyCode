@@ -51,6 +51,27 @@ def banner_text() -> Text:
     return t
 
 
+def status_phrase(text: str) -> str:
+    """Title-case a short status chip.
+
+    PATH, MCPs, ISyCode, and counts such as 1/2 stay as written. Do not pass
+    skill slugs, server ids, or paths through this.
+    """
+    pieces = []
+    for token in str(text).split(" "):
+        letters = "".join(character for character in token if character.isalpha())
+        if (
+            not letters
+            or letters.isupper()
+            or any(character.isupper() for character in letters[1:])
+            or any(character.isdigit() for character in token)
+        ):
+            pieces.append(token)
+            continue
+        pieces.append(token[0].upper() + token[1:].lower())
+    return " ".join(pieces)
+
+
 def switch_row(on: bool | None, name: str, note: str = "", *, inactive: bool = False) -> Text:
     """A colored mark and a name. The row itself stays unfilled."""
     row = Text()

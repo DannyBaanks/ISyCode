@@ -34,6 +34,7 @@ from isycode.harness_readers.transcript import (
     transcript_candidates,
 )
 from isycode.harness_copy import copy_default_model_selection
+from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 from isycode.catalog import (
     ISYCODE_AGENTS,
@@ -689,6 +690,7 @@ class SessionMixin:
         self._idea_nudge_due = False
         self._paint_idea_box()
         self._usage = UsageLedger()
+        self._throughput = ThroughputMeter()
         self._refresh_usage()
         self._conversation_summary = ""
         self._show_agent_tasks([])
@@ -745,6 +747,7 @@ class SessionMixin:
         self._idea_box = state.get("idea_box", "")
         self._paint_idea_box()
         self._usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        self._throughput = ThroughputMeter()
         if "usage" not in state and session.messages:
             self._usage.record(None)
         self._refresh_usage()

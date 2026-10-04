@@ -1,10 +1,7 @@
-"""Startup village drawn at the size the chat shows.
+"""Original lighthouse scene as a full-width, top-anchored panoramic header.
 
-The picture is a night village in the style of the lighthouse scene:
-tower, moon, beam, mill wheel, bridge, and warm windows. It is stored
-at one pixel per half-cell, so a wide terminal centers it and does not
-scale it up. A shorter or narrower chat shrinks it. Width under 42
-falls back to the text title. Nothing outside this package is read.
+Half-block cells preserve the source proportions. Wide or short terminals
+crop the bottom of the scene instead of enlarging it beyond the row budget.
 """
 
 from __future__ import annotations
@@ -18,7 +15,7 @@ from isycode.terminal_art import load_raster, render_half_blocks
 
 
 RASTER_PATH = Path(__file__).resolve().parent / "assets" / "isycode_landscape.rgbz"
-# The drawing is 36 half-block rows. Taller than this, it would be scaled up.
+# Header height ceiling; the chat can request a smaller viewport.
 MAX_SCENE_ROWS = 36
 _TITLE_STYLE = "bold #e94560"
 
@@ -29,7 +26,7 @@ def source_size() -> tuple[int, int]:
 
 
 def render_landscape(width: int, max_rows: int | None = None) -> Text:
-    """Center the village. Never grow it, and never wrap a row."""
+    """Fill the chat width within its row budget, without wrapping."""
     width = max(1, int(width))
     if width < 42:
         title = "*  ISYCODE  *"
@@ -39,11 +36,8 @@ def render_landscape(width: int, max_rows: int | None = None) -> Text:
             style=_TITLE_STYLE,
         )
 
-    source_w, source_h = source_size()
-    native_rows = max(1, source_h // 2)
-    limit = native_rows if max_rows is None else max(1, min(native_rows, int(max_rows)))
-    columns = min(width, source_w)
-    lines = render_half_blocks(RASTER_PATH, columns, limit)
+    limit = MAX_SCENE_ROWS if max_rows is None else max(1, min(MAX_SCENE_ROWS, int(max_rows)))
+    lines = render_half_blocks(RASTER_PATH, width, limit, cover_top=True)
     result = Text()
     for index, line in enumerate(lines):
         gap = width - cell_len(line.plain)

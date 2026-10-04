@@ -8,6 +8,7 @@ from textual.message import Message
 from rich.style import Style
 from textual.binding import Binding
 from textual.widgets import Button, OptionList, Static
+from isycode.tui_widgets import activate_on_second_click
 from textual.widgets.option_list import Option
 
 
@@ -156,8 +157,20 @@ class SessionDetails(Static):
     can_focus = True
     BINDINGS = [Binding("enter,space", "expand_message", "Full message", show=False)]
 
+    class Resized(Message):
+        """The preview must use the detail panel's completed layout."""
+
+    def on_resize(self):
+        self.post_message(self.Resized())
+
     def on_click(self, event):
+        # prevent_default skips Widget._on_click, which would select all the
+        # preview text on a double-click instead of leaving the open in place.
+        event.prevent_default()
+        event.stop()
         self.focus()
+        if activate_on_second_click(self, event, "message"):
+            self.action_expand_message()
 
     def action_expand_message(self):
         message = getattr(self, "full_message", "")
@@ -187,7 +200,7 @@ class WorkList(Vertical):
     #work-heading { height: 1; color: #9aa3ad; }
     #work-conversations { height: 1fr; border: none; background: transparent; padding: 0; }
     #work-conversations > .option-list--option-highlighted { background: #2a2b30; color: #f4f1ea; }
-    #work-presence { height: 1; color: #6d7580; }
+    #work-presence { height: 1; color: #6d7580; overflow-x: hidden; text-overflow: ellipsis; }
     """
 
     def compose(self):
@@ -204,7 +217,7 @@ class WorkList(Vertical):
             yield Button("Idle", id="work-filter-idle")
         with Horizontal(id="work-body"):
             listing = SessionOptionList(id="work-conversations")
-            listing.tooltip = "↑/↓ select · Enter open · Ctrl+D delete selected conversation"
+            listing.tooltip = "↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation"
             yield listing
             yield SessionDetails("Select a conversation to inspect it.", id="work-details", markup=False)
         yield Static("Bridge presence off", id="work-presence", markup=False)
@@ -220,6 +233,9 @@ class WorkList(Vertical):
         compact = self.content_size.width < 62
         self.query_one("#work-new", Button).label = "+ New" if compact else "+ New conversation"
         self.query_one("#work-bridge", Button).label = "Bridge" if compact else "Bridge presence…"
+        paint = getattr(self.app, "_paint_bridge_presence", None)
+        if callable(paint):
+            self.call_after_refresh(paint)
 
     def _refresh_rows(self):
         self.show_rows(self._rows, heading=self._heading)
@@ -281,6 +297,10 @@ class WorkList(Vertical):
         if row is not None:
             self._render_detail(row)
 
+    def on_session_details_resized(self, event):
+        event.stop()
+        self._refresh_selected_detail()
+
     def _render_detail(self, row):
         detail = Text(style="#e0e0e0")
         detail.append(row.get("title") or "Untitled", style="bold #d7a9ff")
@@ -305,7 +325,7 @@ class WorkList(Vertical):
         budget = max(1, panel.content_size.height - overhead)
         detail.append("\n\nLast message\n", style="#9aa3ad")
         detail.append(quoted_preview(panel.full_message or "No message preview", self.app.console, width, budget))
-        detail.append("\nEnter / Space: full message", style="#77d8b0")
+        detail.append("\nEnter / Space / double-click: full message", style="#77d8b0")
         panel.update(detail)
 
     def on_button_pressed(self, event):

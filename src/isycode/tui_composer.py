@@ -9,7 +9,7 @@ from textual.message import Message
 from textual.widgets import OptionList, Static, TextArea
 from rich.text import Text
 from typing import cast
-from isycode.tui_widgets import BoxTitle, ExpandableBox
+from isycode.tui_widgets import BoxTitle, ExpandableBox, activate_on_second_click
 from isycode.tui_theme import MUTED
 from isycode.tui_screens_sessions import PastedTextScreen
 
@@ -20,7 +20,12 @@ class IdeaBox(Static):
     BINDINGS = [Binding("enter,space", "expand", "Expand note", show=False)]
 
     def on_mount(self):
-        self.border_title = "Enter / Space expand"
+        self.border_title = "Enter / Space / double-click expand"
+
+    def on_click(self, event) -> None:
+        self.focus()
+        if activate_on_second_click(self, event, "idea"):
+            self.action_expand()
 
     def action_expand(self):
         self.app._open_idea_note()

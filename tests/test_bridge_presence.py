@@ -86,6 +86,28 @@ def test_presence_button_lists_names_only_after_confirmation(tmp_path, monkeypat
         asyncio.run(scenario())
 
 
+def test_presence_line_uses_readable_names_and_stays_on_one_width():
+    from rich.cells import cell_len
+    from isycode.bridge_presence import presence_line
+
+    rows = [
+        {"name": "chatgpt_sse_01a0fe9afe9c7242", "status": "alive"},
+        {"name": "claude_code_01a0fe9afe9c7242", "status": "alive"},
+        {"name": "codex_visual_cat", "status": "alive"},
+        {"name": "copilot_20261004_033922", "status": "alive"},
+        {"name": "peer", "status": "idle"},
+    ]
+    wide = presence_line(rows, 160)
+    assert "ChatGPT" in wide and "Claude" in wide and "peer" in wide and "idle" in wide
+    assert "01a0fe" not in wide and "20261004" not in wide and "chatgpt_sse" not in wide
+    assert cell_len(wide) <= 160
+    narrow = presence_line(rows, 40)
+    assert cell_len(narrow) <= 40
+    assert "01a0fe" not in narrow and "20261004" not in narrow
+    single = presence_line([{"name": "peer", "status": "idle"}])
+    assert single == "peer idle"
+
+
 def test_real_button_message_pump_can_cancel_modal(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     async def run():

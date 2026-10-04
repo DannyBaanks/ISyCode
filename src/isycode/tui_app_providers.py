@@ -599,7 +599,7 @@ class ProviderMixin:
                 api_key=load_provider_key(provider_name) or None)
             ready = self._model_display_label(provider.name, provider.model)
             if provider.configured():
-                self._model_line = ready + "  ·  ready"
+                self._model_line = ready + "  ·  Ready"
                 self._model_line_style = GREEN
             else:
                 self._model_line = f"{provider.label} needs {provider.key_env}"

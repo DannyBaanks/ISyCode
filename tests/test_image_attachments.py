@@ -34,6 +34,29 @@ def test_missing_or_invalid_images_are_not_fake_attachments():
     assert images.content("plain text") == "plain text"
 
 
+def test_image_turn_can_continue_as_text_once():
+    from isycode.image_attachments import image_failure_should_continue, plain_prompt
+    from isycode.providers import ProviderError
+    from isycode.streaming import StreamError
+
+    images = ImageAttachments()
+    label = images.capture("image/png", PNG)
+    original = [{"role": "user", "content": f"{label} puedes ver la imagen?"}]
+    stripped = images.without_images(images.prepare(original, "openai", "unknown"))
+    assert isinstance(stripped[0]["content"], str)
+    assert "image_url" not in stripped[0]["content"]
+    assert stripped[0]["content"] == plain_prompt(original[0]["content"])
+    assert original[0]["content"].startswith("[IMAGE#")
+    broken = StreamError("provider closed an incomplete completion stream")
+    assert image_failure_should_continue(broken, sent=True, used=False, saw_output=False)
+    assert not image_failure_should_continue(broken, sent=True, used=True, saw_output=False)
+    assert not image_failure_should_continue(broken, sent=True, used=False, saw_output=True)
+    assert not image_failure_should_continue(
+        ProviderError("connection failed", transport=True), sent=True, used=False, saw_output=False)
+    assert not image_failure_should_continue(
+        ProviderError("rejected", status=401), sent=True, used=False, saw_output=False)
+
+
 def test_clipboard_read_is_denied_before_os_access(tmp_path, monkeypatch):
     from isycode.clipboard_owner import ClipboardOwner
     from isycode.workspace_authority import WorkspaceAuthority

@@ -11,12 +11,14 @@ isycode cli
 
 `isycode` abre la TUI. `isycode cli` abre el navegador de acciones.
 
-Al iniciar la TUI aparece un pueblo nocturno dibujado (faro, luna, haz, molino,
-puente y ventanas). Mide 36 filas y se queda centrado: no se estira al ancho de
-la ventana. Si el chat es más bajo o más angosto, se encoge. Debajo quedan el
-modelo y las columnas, y el chat se puede desplazar. No requiere que el terminal
-soporte imágenes. Tras el primer mensaje, la pantalla de inicio queda en el
-historial y se desplaza hacia arriba con el chat.
+Al iniciar la TUI aparece la imagen original del pueblo nocturno como header
+panorámico a todo el ancho disponible del chat, con un máximo de 36 filas.
+Conserva las proporciones del faro y la luna: en ventanas anchas se recorta la
+parte inferior, no se estira la imagen. Si falta altura se reduce para dejar
+visibles el compositor, el modelo y las columnas de estado. Usa bloques de
+medio carácter y color real; no necesita soporte de imágenes ni librerías de
+imagen en ejecución. Tras el primer mensaje queda en el historial y se desplaza
+hacia arriba con el chat.
 
 **Multi Harness** en la barra inferior, en ⚙ Settings o con `/harness` abre
 tarjetas por herramienta: versión, ajustes revisados y acciones disponibles.

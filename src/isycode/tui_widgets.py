@@ -36,17 +36,34 @@ from isycode.tui_theme import (
 )
 
 
+def activate_on_second_click(host, event, key) -> bool:
+    """Return whether this click should open a row that is already selected.
+
+    The first click only arms that row. Textual reports a double-click only
+    when the second press lands on the exact same cell, so a one-cell jitter
+    stays at chain 1 and used to do nothing. A later click on the same row
+    opens it anyway.
+    """
+    if getattr(event, "chain", 0) >= 2 or getattr(host, "_activate_key", None) == key:
+        host._activate_key = None
+        return True
+    host._activate_key = key
+    return False
+
 
 class PreviewOptionList(OptionList):
-    """Show option detail on one click and select only on a double click."""
+    """Show option detail on one click and select only on a second click."""
 
     async def _on_click(self, event: Click) -> None:
         option_index = event.style.meta.get("option")
         if (option_index is None or option_index < 0 or option_index >= len(self._options)
                 or self._options[option_index].disabled):
             return
+        prevent_default = getattr(event, "prevent_default", None)
+        if prevent_default is not None:
+            prevent_default()
         self.highlighted = option_index
-        if event.chain == 2:
+        if activate_on_second_click(self, event, option_index):
             self.action_select()
 
 
@@ -115,13 +132,21 @@ class BoxTitle(CollapsibleTitle):
             self.parent.action_toggle_box()
 
     async def _on_click(self, event) -> None:
+        # prevent_default skips CollapsibleTitle._on_click. Textual runs every
+        # handler in the class chain, and that base handler would toggle again.
+        event.prevent_default()
         event.stop()
         self.focus()
         parent = self.parent
+        box = parent if isinstance(parent, ExpandableBox) else self
+        if activate_on_second_click(box, event, "title"):
+            if isinstance(parent, ExpandableBox):
+                parent.action_toggle_box()
+            else:
+                self.post_message(self.Toggle())
+            return
         if isinstance(parent, ThoughtBlock) and parent.collapsed and event.x >= 3:
             parent.toggle_marquee()
-        else:
-            self.post_message(self.Toggle())
 
 
 class ExpandableBox(Collapsible):
@@ -132,6 +157,7 @@ class ExpandableBox(Collapsible):
     DEFAULT_CSS = """
     ExpandableBox { border-bottom: solid #414650; border-subtitle-align: right; }
     ExpandableBox:focus-within { border-bottom: solid #bb8cff; }
+    ExpandableBox CollapsibleTitle { width: 1fr; }
     """
 
     def __init__(self, *children, **kwargs) -> None:
@@ -228,12 +254,39 @@ class ExpandableBox(Collapsible):
         self.collapsed = not self.collapsed
 
     def on_click(self, event) -> None:
-        if not isinstance(event.widget, (Button, Input, TextArea)):
-            self.focus()
+        # The title handles its own row. A click on the box padding selects it,
+        # and a second click there opens it the same way Space does.
+        if event.widget is not self:
+            return
+        self.focus()
+        if activate_on_second_click(self, event, "title"):
+            self.action_toggle_box()
 
 
 # Keep native Collapsible composition and messages; unify our existing boxes.
 Collapsible = ExpandableBox
+
+
+class ActivateTree(Tree):
+    """One click highlights a node. The next click on that node opens it."""
+
+    async def _on_click(self, event: Click) -> None:
+        async with self.lock:
+            meta = event.style.meta
+            if "line" not in meta:
+                return
+            event.prevent_default()
+            event.stop()
+            line = meta["line"]
+            if meta.get("toggle"):
+                node = self.get_node_at_line(line)
+                if node is not None:
+                    self._toggle_node(node)
+                return
+            self.focus()
+            self.cursor_line = line
+            if activate_on_second_click(self, event, line):
+                await self.run_action("select_cursor")
 
 
 class SidePanel(Vertical):
@@ -245,33 +298,33 @@ class SidePanel(Vertical):
             yield Button("Overview", id="show-overview")
             yield Button("Files", id="show-files")
         with VerticalScroll(id="overview-view"):
-            with Collapsible(title="MCPs", id="rail-mcp"):
-                yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
-            with Collapsible(title="LSPs", id="rail-lsp"):
-                yield Static("Checking installed language servers…", id="lsp-status", classes="rail-copy")
-                yield Button("Install commands", id="lsp-install-hint", compact=True)
-                yield Static("", id="lsp-install-note", classes="rail-copy")
-            with Collapsible(title="Skills", id="rail-skills"):
-                yield Static("ISyCode skill catalog has not been checked.", id="skill-status", classes="rail-copy")
-                yield Tree("ISyCode skills", id="skills-tree")
-                yield Static(
-                    "Select a skill to inspect it. Discovery does not activate it in ISyCode.",
-                    id="skill-detail", classes="rail-copy")
+            with Vertical(id="rail-card"):
+                with Collapsible(title="MCPs", id="rail-mcp"):
+                    yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
+                with Collapsible(title="LSPs", id="rail-lsp"):
+                    yield Static("Checking installed language servers…", id="lsp-status", classes="rail-copy")
+                    yield Button("Install commands", id="lsp-install-hint", compact=True)
+                    yield Static("", id="lsp-install-note", classes="rail-copy")
+                with Collapsible(title="Skills", id="rail-skills"):
+                    yield Static("ISyCode skill catalog has not been checked.", id="skill-status", classes="rail-copy")
+                    yield ActivateTree("ISyCode skills", id="skills-tree")
+                    yield Static("", id="skill-detail", classes="rail-copy")
+                with Collapsible(title="Connections · 4", id="rail-connections", collapsed=True):
+                    with Collapsible(title="ISyCo Gateway", id="rail-gateway"):
+                        yield Static("Gateway status has not been checked.", id="gateway-status", classes="rail-copy")
+                    with Collapsible(title="Gateway MCP", id="rail-gateway-mcp"):
+                        yield Static("Tool catalog has not been checked.", id="gateway-mcp-status", classes="rail-copy")
+                    with Collapsible(title="Mobile Host", id="rail-mobile"):
+                        yield Static("Starting local mobile host…", id="mobile-host-status", classes="rail-copy")
+                        yield Static("No mobile clients connected.", id="mobile-client-status", classes="rail-copy")
+                    with Collapsible(title="Bridge Coordination", id="rail-bridge"):
+                        yield Static("Disabled · No Bridge Handshake", id="bridge-status", classes="rail-copy")
+                with Collapsible(title="Workspace", id="rail-workspace"):
+                    yield Static("", id="workspace-label", classes="rail-copy")
+                    yield Static("", id="workspace-launch-label", classes="rail-copy")
+                    yield Static("", id="workspace-source-label", classes="rail-copy")
+                    yield Static("", id="workspace-authority-label", classes="rail-copy")
             yield Button("Refresh integrations", id="refresh-openisy")
-            with Collapsible(title="ISyCo Gateway", id="rail-gateway"):
-                yield Static("Gateway status has not been checked.", id="gateway-status", classes="rail-copy")
-            with Collapsible(title="Gateway MCP", id="rail-gateway-mcp"):
-                yield Static("Tool catalog has not been checked.", id="gateway-mcp-status", classes="rail-copy")
-            with Collapsible(title="Mobile Host", id="rail-mobile"):
-                yield Static("Starting local mobile host…", id="mobile-host-status", classes="rail-copy")
-                yield Static("No mobile clients connected.", id="mobile-client-status", classes="rail-copy")
-            with Collapsible(title="Bridge coordination", id="rail-bridge"):
-                yield Static("Disabled · no Bridge handshake", id="bridge-status", classes="rail-copy")
-            with Collapsible(title="Workspace", id="rail-workspace"):
-                yield Static("", id="workspace-label", classes="rail-copy")
-                yield Static("", id="workspace-launch-label", classes="rail-copy")
-                yield Static("", id="workspace-source-label", classes="rail-copy")
-                yield Static("", id="workspace-authority-label", classes="rail-copy")
             yield Button("No plan pending", id="review-plan", disabled=True)
         with Vertical(id="files-view"):
             with Horizontal(id="file-controls"):
@@ -279,7 +332,7 @@ class SidePanel(Vertical):
                 yield Button("Refresh", id="file-refresh")
                 yield Button("Folders", id="workspace-folders")
             yield Input(placeholder="Search workspace paths…", id="file-search")
-            yield Tree("Workspace", id="workspace-tree")
+            yield ActivateTree("Workspace", id="workspace-tree")
             with Horizontal(id="file-actions"):
                 yield Button("Copy path", id="file-copy-path", disabled=True)
                 yield Button("Open preview", id="file-open-preview", disabled=True)
@@ -422,7 +475,10 @@ class ThoughtBlock(Collapsible):
         self._paint_preview()
 
     def on_click(self, event) -> None:
-        self.focus()
+        if isinstance(event.widget, SelectableText):
+            self.focus()
+            return
+        super().on_click(event)
 
     def action_select_thought_all(self) -> None:
         self._body.text_select_all()
@@ -624,7 +680,7 @@ class CommandOutputCard(VerticalScroll):
     def _paint_output(self) -> None:
         note = " · output limit reached" if self.output_truncated else ""
         hint = "collapse" if self.expanded else "expand"
-        self.border_subtitle = Text(f"{self.status}{note} · Enter / Space {hint}", style=MUTED)
+        self.border_subtitle = Text(f"{self.status}{note} · Enter / Space / double-click {hint}", style=MUTED)
         if self.expanded:
             shown = self.output or "No output."
             if self.receipt:
@@ -645,7 +701,12 @@ class CommandOutputCard(VerticalScroll):
         self.scroll_home(animate=False)
 
     def on_click(self, event) -> None:
-        # The border opens the card; selecting body text remains available.
-        if event.widget is self:
-            self.focus()
+        # The border and the output text share one row. The first click focuses
+        # the card. The next click opens it the same way Space does. A drag
+        # inside the text still selects; only a later click expands.
+        if event.widget is not self and not isinstance(event.widget, SelectableText):
+            return
+        self.focus()
+        if activate_on_second_click(self, event, "output"):
+            event.prevent_default()
             self.action_toggle_output()

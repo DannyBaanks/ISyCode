@@ -3,6 +3,8 @@ import asyncio
 
 from isycode.contracts import CatalogSnapshot
 from isycode.tui import GREEN, RED, TUIApp, plain_text, switch_row
+from isycode.tui_widgets import BoxTitle
+from isycode.tui_theme import status_phrase
 from isycode.user_defaults import UserDefaultsStore
 
 
@@ -25,8 +27,26 @@ def test_mcp_snapshot_counts_healthy_services():
                                       {"name": "web", "status": "connected", "has_error": True}],
                                "ready", "")
     body, title = TUIApp._format_mcp_snapshot(snapshot)
-    assert title == "MCPs · 1/2 on"
-    assert "files" in body.plain and "service reports an error" in body.plain
+    assert title == "MCPs · 1/2 On"
+    assert "files" in body.plain and "Service Reports An Error" in body.plain
+    assert "web" in body.plain
+
+
+def test_status_chips_use_title_case_and_leave_names_alone():
+    assert status_phrase("LSPs · 2 ready · 3 missing") == "LSPs · 2 Ready · 3 Missing"
+    assert status_phrase("6 available") == "6 Available"
+    assert status_phrase("not on PATH") == "Not On PATH"
+    assert status_phrase("installed · sandbox unavailable") == "Installed · Sandbox Unavailable"
+    assert status_phrase("MCPs · 1/2 on") == "MCPs · 1/2 On"
+    skills = CatalogSnapshot(
+        True, [{"name": "brainstorming", "origin": "bundled"}], "ready", "")
+    _body, title = TUIApp._format_skill_snapshot(skills)
+    assert title == "Skills · 1 Available"
+    assert "1 Available" in _body.plain
+    assert "Select One Below For Details" in _body.plain
+    assert TUIApp._origin_tag("bundled") == "Bundled"
+    assert TUIApp._origin_tag("/home/danny/skills") == "/home/danny/skills"
+    assert TUIApp._origin_tag("verification-before-completion") == "verification-before-completion"
 
 
 def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatch, capsys):
@@ -49,12 +69,86 @@ def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatc
             assert "Context" in str(button.label) and "[" not in str(button.label)
             section = app.query_one("#rail-lsp")
             assert section.collapsed and section.title.startswith("LSPs")
+            assert app.query_one("#rail-card")
+            connections = app.query_one("#rail-connections")
+            assert connections.collapsed and connections.title.startswith("Connections")
+            assert app.query_one("#rail-gateway").parent.parent.id == "rail-connections"
             section.collapsed = False
             await pilot.pause()
             assert not section.collapsed
             section.collapsed = True
             await pilot.pause()
             assert section.collapsed
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_second_click_opens_a_selected_row_and_tree_node(tmp_path, monkeypatch, capsys):
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(140, 40)) as pilot:
+            await pilot.pause()
+            app._set_rail_view("overview")
+            await pilot.pause()
+            section = app.query_one("#rail-mcp")
+            title = section.query_one(BoxTitle)
+            await pilot.click(title)
+            await pilot.pause()
+            assert section.collapsed
+            await pilot.click(title, offset=(max(0, title.size.width - 2), 0))
+            await pilot.pause()
+            assert not section.collapsed
+            connections = app.query_one("#rail-connections")
+            connections.query_one(BoxTitle).focus()
+            await pilot.press("space")
+            await pilot.pause()
+            assert not connections.collapsed
+            skills = app.query_one("#rail-skills")
+            skills.collapsed = False
+            tree = app.query_one("#skills-tree")
+            tree.display = True
+            tree.root.expand()
+            tree.root.remove_children()
+            folder = tree.root.add("Folder", allow_expand=True)
+            leaf = tree.root.add_leaf(
+                "local-skill",
+                data={"name": "local-skill", "origin": "workspace", "description": "A local note."},
+            )
+            await pilot.pause()
+            assert folder._line >= 0 and leaf._line > folder._line
+
+            def at(node):
+                region = tree._get_label_region(node._line)
+                assert region is not None
+                # Past the ▶ icon. That icon still expands on one click.
+                return (region.x + 3, region.y - tree.scroll_offset.y)
+
+            await pilot.click(tree, offset=at(folder))
+            await pilot.pause()
+            assert tree.cursor_line == folder._line and not folder.is_expanded
+            await pilot.click(tree, offset=at(folder))
+            await pilot.pause()
+            assert folder.is_expanded
+            detail = app.query_one("#skill-detail")
+            await pilot.click(tree, offset=at(leaf))
+            await pilot.pause()
+            assert tree.cursor_line == leaf._line and not detail.display
+            await pilot.click(tree, offset=at(leaf))
+            await pilot.pause()
+            assert detail.display and "A local note." in plain_text(detail)
+            arrow = tree._get_label_region(folder._line)
+            await pilot.click(tree, offset=(arrow.x, arrow.y - tree.scroll_offset.y))
+            await pilot.pause()
+            assert not folder.is_expanded
 
     with capsys.disabled():
         asyncio.run(scenario())

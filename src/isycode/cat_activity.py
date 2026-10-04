@@ -3,17 +3,67 @@ from rich.text import Text
 
 
 # Each terminal cell holds two by four dots; spaces preserve the silhouette.
-_WALK = (
-    "..........#...#.",
-    ".........##..##.",
-    ".##......######.",
-    "#..#.....#..#.#.",
-    "#..#.....#....##",
-    "#...######...#..",
-    ".#.#......###...",
-    "..##.......#....",
-    "...#.......#....",
-    "...#########....",
+# Loading-bar walk of U+130E0. The Noto glyph was mirrored to face right, its
+# own leg strokes were swung, and each pose was downsampled with ascii-art
+# (width 16, legacy box filter). One dot is dropped wherever a cell would be
+# U+28FF, which DejaVu draws as .notdef. The resting sprites stay as they were.
+_WALK_FRAMES = (
+    (
+        "................",
+        "................",
+        "...........###..",
+        "..........#####.",
+        "..........######",
+        "........###.####",
+        "....######..##..",
+        "######.....##...",
+        "..######....##..",
+        ".##.##########..",
+        ".##.#####..####.",
+        ".####.#.##..#.##",
+    ),
+    (
+        "................",
+        "................",
+        "...........###..",
+        "..........#####.",
+        "..........######",
+        "........###.####",
+        "....######..##..",
+        "######.....##...",
+        "..######....##..",
+        ".##.##########..",
+        ".##.#####..###..",
+        ".####.#.#####.##",
+    ),
+    (
+        "................",
+        "................",
+        "...........###..",
+        "..........#####.",
+        "..........######",
+        "........###.####",
+        "....######..##..",
+        "######.....##...",
+        "..######....##..",
+        ".##.##########..",
+        ".##..####.###...",
+        ".######.#######.",
+    ),
+    (
+        "................",
+        "................",
+        "...........###..",
+        "..........#####.",
+        "..........######",
+        "........###.####",
+        "....######..##..",
+        "######.....##...",
+        "..######..####..",
+        ".##.##########..",
+        ".##.#####..#####",
+        ".####.#.#####.##",
+    ),
 )
 # Face on the left, tail trailing on the right. The widest one is used when
 # the caption line has room; the others keep a face and a tail in narrow columns.
@@ -71,9 +121,7 @@ def walking_cat(width: int, tick: int) -> Text:
     phase = tick % (2 * travel) if travel else 0
     right = phase <= travel
     position = phase if right else 2 * travel - phase
-    feet = ("...#.#...#.#....", "..##......##....") if tick % 2 else (
-        "....#.#.#.#.....", "....##..##......")
-    bitmap = _WALK + feet
+    bitmap = _WALK_FRAMES[tick % 4]
     if not right:
         bitmap = tuple(row[::-1] for row in bitmap)
     result = Text()
@@ -96,19 +144,81 @@ def _rest_rows(bitmap: tuple[str, ...]) -> tuple[str, str]:
     return packed[0], packed[1]
 
 
+def _clip_cells(text: str, width: int) -> str:
+    from rich.cells import cell_len
+
+    if width <= 0:
+        return ""
+    if cell_len(text) <= width:
+        return text
+    if width == 1:
+        return text[:1]
+    ellipsis = "…"
+    budget = width - cell_len(ellipsis)
+    cut = text
+    while cut and cell_len(cut) > budget:
+        cut = cut[:-1]
+    return (cut.rstrip() + ellipsis) if cut else ellipsis
+
+
+def _wrap_words(label: str, width: int, rows: int = 3) -> list[str]:
+    """Fit a status into the activity column. No line paints past that column."""
+    from rich.cells import cell_len
+
+    words = label.split(" ")
+    lines: list[str] = []
+    current = ""
+    index = 0
+    while index < len(words) and len(lines) < rows:
+        word = words[index]
+        candidate = word if not current else f"{current} {word}"
+        if cell_len(candidate) <= width:
+            current = candidate
+            index += 1
+            continue
+        if current:
+            lines.append(current)
+            current = ""
+            continue
+        lines.append(_clip_cells(word, width))
+        index += 1
+    if current and len(lines) < rows:
+        lines.append(current)
+    if index < len(words) and lines:
+        lines[-1] = _clip_cells(lines[-1] + " …", width)
+    # Blanks go under the words. A blank on top drops the last line onto the prompt border.
+    while len(lines) < rows:
+        lines.append("")
+    padded = []
+    for line in lines[:rows]:
+        gap = width - cell_len(line)
+        padded.append(line + (" " * gap if gap > 0 else ""))
+    return padded
+
+
+def _wrapped_status(label: str, width: int, style: str) -> Text:
+    result = Text()
+    for index, line in enumerate(_wrap_words(label, width)):
+        if index:
+            result.append("\n")
+        result.append(line, style=style)
+    return result
+
+
 def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad") -> Text:
     """Cat resting on the caption line, z on its face and a tail behind it.
 
     The walking pose still fills the activity box and bounces when a turn starts.
+    A caption that does not fit beside the cat wraps inside the column.
     """
     from rich.cells import cell_len
 
     width = max(1, width)
     label = " ".join((caption or "Chat ready").split()) or "Chat ready"
     if width < 10:
-        return Text(label[:width], style=caption_style)
+        return Text(_clip_cells(label, width), style=caption_style)
     if cell_len(label) > width:
-        label = label[:width]
+        return _wrapped_status(label, width, caption_style)
 
     chosen: tuple[str, str, int] | None = None
     for bitmap, gap in (

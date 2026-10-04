@@ -44,6 +44,12 @@ def test_status_flanks_idea_box_and_animation_stops(tmp_path, monkeypatch, size)
             app._set_activity('Draft kept')
             kept = plain_text(activity)
             assert 'Draft kept' in kept and 'z' in kept
+            app._set_activity('Interrupted')
+            stopped = plain_text(activity)
+            assert stopped.splitlines()[-1].lstrip().startswith('Interrupted')
+            assert 'transcript' not in stopped
+            if activity.content_size.width >= 15:
+                assert 'z' in stopped
             bar = app.query_one('#chat').vertical_scrollbar
             assert isinstance(bar, QuietScrollBar)
             bar._direction = 1

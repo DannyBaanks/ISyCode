@@ -7,7 +7,7 @@ import pytest
 from isycode.streaming import StreamError, async_stream_complete
 
 
-@pytest.mark.parametrize("provider_name", ["openai", "local", "nebius"])
+@pytest.mark.parametrize("provider_name", ["openai", "nvidia", "local", "nebius"])
 def test_provider_usage_options_and_final_usage_over_local_sse(monkeypatch, provider_name):
     from isycode.chat_transport import provider_complete
 
@@ -39,7 +39,7 @@ def test_provider_usage_options_and_final_usage_over_local_sse(monkeypatch, prov
         assert result["text"] == "OK"
         assert result["usage"] == {"prompt_tokens": 12, "completion_tokens": 3}
         assert received[0]["max_tokens"] == 7
-        if provider_name == "openai":
+        if provider_name in {"openai", "nvidia"}:
             assert received[0]["stream_options"] == {"include_usage": True}
         else:
             assert "stream_options" not in received[0]

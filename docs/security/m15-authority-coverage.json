@@ -1726,7 +1726,7 @@
     },
     {
       "file": "isycode/bridge_presence.py",
-      "line": 52,
+      "line": 110,
       "callable": "isycode.bridge_presence.BridgePresenceOwner.prepare",
       "action": "bridge.agents",
       "owner": "bridge_presence"
@@ -1985,49 +1985,49 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 2139,
+      "line": 2168,
       "callable": "isycode.tui.TUIApp._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 4400,
+      "line": 4472,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 2303,
+      "line": 2332,
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/tui.py",
-      "line": 2355,
+      "line": 2384,
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/tui.py",
-      "line": 2486,
+      "line": 2515,
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/tui.py",
-      "line": 3744,
+      "line": 3792,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 816,
+      "line": 819,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
@@ -2113,14 +2113,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 4400,
+      "line": 4472,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 3744,
+      "line": 3792,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"

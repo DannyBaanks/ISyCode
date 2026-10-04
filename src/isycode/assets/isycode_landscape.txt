@@ -1,1 +1,3 @@
-The startup picture is a 108x72 night village in isycode_landscape.rgbz.
+Source: user-provided original lighthouse village, 2026-10-04.
+SHA256: 4e84dda43a6e0b943af404047d994a43286f0e11f121c65b7f240fde942b5004
+Raster: 1224x816 RGB nearest-neighbor; top-anchored panoramic half-block header, maximum 36 terminal rows.

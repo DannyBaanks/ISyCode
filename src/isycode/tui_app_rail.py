@@ -27,6 +27,7 @@ from isycode.tui_theme import (
     TEXT,
     MUTED,
     YELLOW,
+    status_phrase,
     switch_row,
     switch_rows,
 )
@@ -73,7 +74,7 @@ class RailMixin:
         self._openisy_refresh_generation += 1
         generation = self._openisy_refresh_generation
         self.query_one("#mcp-status", Static).update(
-            switch_row(None, "Checking", "connected tool services"))
+            switch_row(None, "Checking", status_phrase("connected tool services")))
         self._set_rail_title("rail-mcp", "MCPs · checking")
         self._populate_skill_tree(
             CatalogSnapshot(True, [], "loading", "Fetching the ISyCode skill catalog."))
@@ -136,42 +137,77 @@ class RailMixin:
                 self._paint_idle()
 
     @staticmethod
+    def _status_note(note: str) -> str:
+        """Title-case a short chip. Sentences and server ids stay as written."""
+        text = str(note)
+        if not text or "." in text or len(text) > 48:
+            return text
+        return status_phrase(text)
+
+    @staticmethod
     def _format_mcp_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
         """Switch rows for the MCP section, plus its folded title."""
         if snapshot.state == "loading":
-            return switch_row(None, "Checking", snapshot.detail), "MCPs · checking"
+            return switch_row(None, "Checking", snapshot.detail), status_phrase("MCPs · checking")
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
             inactive = snapshot.state in {"not_configured", "not_checked"}
-            return switch_row(False, state.capitalize(), snapshot.detail, inactive=inactive), f"MCPs · {'off' if inactive else state}"
+            shown = "off" if inactive else state
+            return (
+                switch_row(False, status_phrase(state), snapshot.detail, inactive=inactive),
+                status_phrase(f"MCPs · {shown}"),
+            )
         if not snapshot.items:
-            return switch_row(False, "No MCP servers", "none configured", inactive=True), "MCPs · none"
+            return (
+                switch_row(False, "No MCP Servers", status_phrase("none configured"), inactive=True),
+                status_phrase("MCPs · none"),
+            )
         rows, on = [], 0
         for item in snapshot.items:
             healthy = (str(item.get("status", "")).lower() in {"connected", "ready", "running", "ok", "active"}
                        and not item.get("has_error"))
             on += healthy
-            note = "service reports an error" if item.get("has_error") else str(item.get("status", ""))
-            rows.append(switch_row(healthy, str(item["name"]), "" if healthy else note))
-        return switch_rows(rows), f"MCPs · {on}/{len(snapshot.items)} on"
+            note = ("service reports an error" if item.get("has_error") else str(item.get("status", "")))
+            rows.append(switch_row(
+                healthy, str(item["name"]), "" if healthy else RailMixin._status_note(note)))
+        return switch_rows(rows), status_phrase(f"MCPs · {on}/{len(snapshot.items)} on")
 
     @staticmethod
     def _format_skill_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
         if snapshot.state == "loading":
-            return switch_row(None, "Checking", snapshot.detail), "Skills · checking"
+            return switch_row(None, "Checking", snapshot.detail), status_phrase("Skills · checking")
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
             inactive = snapshot.state in {"not_configured", "not_checked"}
-            return switch_row(False, state.capitalize(), snapshot.detail, inactive=inactive), f"Skills · {'off' if inactive else state}"
+            shown = "off" if inactive else state
+            return (
+                switch_row(False, status_phrase(state), snapshot.detail, inactive=inactive),
+                status_phrase(f"Skills · {shown}"),
+            )
         if not snapshot.items:
-            return switch_row(False, "No skills", "none available for this project", inactive=True), "Skills · none"
+            return (
+                switch_row(False, "No Skills", status_phrase("none available for this project"), inactive=True),
+                status_phrase("Skills · none"),
+            )
         count = len(snapshot.items)
-        return (switch_row(True, f"{count} available", "select one below for details"),
-                f"Skills · {count} available")
+        return (
+            switch_row(True, status_phrase(f"{count} available"), status_phrase("select one below for details")),
+            status_phrase(f"Skills · {count} available"),
+        )
+
+    @staticmethod
+    def _origin_tag(origin: object) -> str:
+        """Title-case a short origin word. Paths and skill names stay untouched."""
+        text = str(origin or "")
+        if not text or any(mark in text for mark in "/\\ ."):
+            return text
+        if len(text) > 24 or any(character.isdigit() for character in text):
+            return text
+        return status_phrase(text)
 
     def _set_rail_title(self, section: str, title: str) -> None:
         try:
-            self.query_one(f"#{section}", Collapsible).title = title
+            self.query_one(f"#{section}", Collapsible).title = status_phrase(title)
         except Exception:
             pass
 
@@ -187,8 +223,8 @@ class RailMixin:
         except (OSError, RuntimeError, ValueError):
             catalog = []
         if not catalog:
-            body = switch_row(False, "No language servers", "none detected", inactive=True)
-            title = "LSPs · none"
+            body = switch_row(False, "No Language Servers", status_phrase("none detected"), inactive=True)
+            title = "LSPs · None"
         else:
             rows = []
             ready = missing = 0
@@ -197,17 +233,17 @@ class RailMixin:
                 label = str(server.get("label") or server.get("id") or "language server")
                 if state == "sandbox_ready":
                     ready += 1
-                    rows.append(switch_row(True, label, "workspace symbols"))
+                    rows.append(switch_row(True, label, status_phrase("workspace symbols")))
                 elif state == "not_installed":
                     missing += 1
-                    rows.append(switch_row(False, label, "not on PATH", inactive=True))
+                    rows.append(switch_row(False, label, status_phrase("not on PATH"), inactive=True))
                 elif state == "installed_unsupported":
-                    rows.append(switch_row(False, label, "installed · sandbox does not run it"))
+                    rows.append(switch_row(False, label, status_phrase("installed · sandbox does not run it")))
                 else:
-                    rows.append(switch_row(False, label, "installed · sandbox unavailable"))
-            title = f"LSPs · {ready} ready"
+                    rows.append(switch_row(False, label, status_phrase("installed · sandbox unavailable")))
+            title = status_phrase(f"LSPs · {ready} ready")
             if missing:
-                title += f" · {missing} missing"
+                title = status_phrase(f"{title} · {missing} missing")
             body = switch_rows(rows)
         self.query_one("#lsp-status", Static).update(body)
         self._set_rail_title("rail-lsp", title)
@@ -260,27 +296,22 @@ class RailMixin:
         self._set_rail_title("rail-skills", skill_title)
         has_skills = snapshot.state == "ready" and bool(snapshot.items)
         tree.display = has_skills
-        self.query_one("#skill-detail", Static).display = has_skills
+        detail = self.query_one("#skill-detail", Static)
+        detail.display = False
+        detail.update("")
         if snapshot.state != "ready":
             tree.root.set_label(
                 "Loading skills…" if snapshot.state == "loading"
-                else f"Skills · {snapshot.state.replace('_', ' ')}")
-            self.query_one("#skill-detail", Static).update(
-                Text(snapshot.detail or "ISyCode skill discovery is unavailable in this state."))
+                else status_phrase(f"Skills · {snapshot.state.replace('_', ' ')}"))
             return
         if not snapshot.items:
-            tree.root.set_label("No skills available")
-            self.query_one("#skill-detail", Static).update(
-                "The configured skill source returned an empty catalog.")
+            tree.root.set_label(status_phrase("No skills available"))
             return
-        tree.root.set_label(f"Available skills ({len(snapshot.items)})")
+        tree.root.set_label(status_phrase(f"Available skills ({len(snapshot.items)})"))
         for item in snapshot.items:
             tree.root.add_leaf(
-                Text(f"{item['name']} · {item['origin']}"), data=dict(item))
+                Text(f"{item['name']} · {self._origin_tag(item.get('origin', ''))}"), data=dict(item))
         tree.root.expand()
-        detail = ("Select a skill to inspect its description. Discovery does not activate it; "
-                  "Bundled skills can be toggled here; external metadata remains discovery only.")
-        self.query_one("#skill-detail", Static).update(Text(detail))
 
     async def _load_directory(self, logical_path: str) -> None:
         if self._workspace is None:
@@ -401,18 +432,20 @@ class RailMixin:
             if not isinstance(skill, dict):
                 return
             name = skill.get("name", "Unknown skill")
+            detail = self.query_one("#skill-detail", Static)
+            detail.display = True
             if skill.get("origin") == "bundled":
                 self._select_skill(name)
-                self.query_one("#skill-detail", Static).update(Text(
-                    f"{name} · {'active' if name in self._active_skills else 'inactive'}\n"
+                state = "Active" if name in self._active_skills else "Inactive"
+                detail.update(Text(
+                    f"{name} · {state}\n"
                     "Workflow guidance only. /skills clear removes selected guidance."))
                 return
-            origin = skill.get("origin", "workspace")
+            origin = self._origin_tag(skill.get("origin", "workspace"))
             description = skill.get("description") or "No description provided by the skill manifest."
-            self.query_one("#skill-detail", Static).update(Text(
-                f"{name} · {origin}\n{description}\n\n"
-                "ISyCode can inspect this skill manifest. Skill invocation is not wired into this session, "
-                "and the skill is not an execution grant."))
+            detail.update(Text(
+                f"{name} · {origin}\n{description}\n"
+                "Discovery only. This does not activate the skill."))
             return
         data = event.node.data
         if not isinstance(data, dict) or self._workspace is None:

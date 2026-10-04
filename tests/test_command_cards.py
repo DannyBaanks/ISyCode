@@ -38,6 +38,21 @@ def test_command_card_has_two_preview_rows_and_preserves_full_output(size):
             await pilot.pause()
             assert not card.expanded
             assert card.content_size.height == 2
+            await pilot.click(card)
+            await pilot.pause()
+            assert not card.expanded
+            await pilot.click(card)
+            await pilot.pause()
+            assert card.expanded
+            await pilot.press('space')
+            await pilot.pause()
+            assert not card.expanded
+            await pilot.click(card._body, offset=(2, 0))
+            await pilot.pause()
+            assert not card.expanded
+            await pilot.click(card._body, offset=(4, 0))
+            await pilot.pause()
+            assert card.expanded
     asyncio.run(scenario())
 
 

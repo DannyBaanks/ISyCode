@@ -46,6 +46,24 @@ def test_sleeping_cat_sits_beside_the_caption_with_z_on_its_face():
 
 def test_cat_uses_fine_dots_instead_of_solid_block_pixels():
     from isycode.cat_activity import sleeping_cat
-    for drawing in (walking_cat(30, 1), sleeping_cat(30)):
+    for tick in range(8):
+        drawing = walking_cat(30, tick)
         assert any("\u2801" <= char <= "\u28ff" for char in drawing.plain)
+        assert "\u28ff" not in drawing.plain
         assert not any("\u2580" <= char <= "\u259f" for char in drawing.plain)
+    assert "\u28ff" not in sleeping_cat(30).plain
+    assert not any("\u2580" <= char <= "\u259f" for char in sleeping_cat(30).plain)
+    assert walking_cat(30, 0).plain != walking_cat(30, 1).plain
+
+
+def test_long_caption_wraps_inside_the_activity_column():
+    from isycode.cat_activity import sleeping_cat
+    label = "Interrupted · inspect the transcript before retrying"
+    for width in (16, 28, 40):
+        rows = sleeping_cat(width, label).plain.splitlines()
+        assert len(rows) == 3
+        assert all(cell_len(row) == width for row in rows)
+        assert rows[0].lstrip().startswith("Interrupted")
+        assert "Interrupted" in sleeping_cat(width, label).plain
+        if width >= 28:
+            assert "retrying" in sleeping_cat(width, label).plain

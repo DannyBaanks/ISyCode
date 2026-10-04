@@ -21,6 +21,29 @@ def record_image_result(provider, model, supported):
     from isycode.capability_observations import record
     return record(provider, model, "images", supported)
 
+
+_IMAGE_RETRY_KINDS = {"IMAGES", "STREAM", "REQUEST", "UNKNOWN", "TIMEOUT"}
+
+
+def plain_prompt(text: str) -> str:
+    """The words of a turn after its image labels are removed."""
+    cleaned = re.sub(r"\[IMAGE#\d+\]", "", text)
+    cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned or "I attached an image, but it could not be sent."
+
+
+def image_failure_should_continue(exc, *, sent: bool, used: bool, saw_output: bool) -> bool:
+    """One text continuation after an image payload dies before any answer.
+
+    Auth, quota, and connection failures are not image failures. A turn that
+    already produced text or reasoning is left alone.
+    """
+    if not sent or used or saw_output:
+        return False
+    from isycode.provider_errors import classify_provider_error
+    return classify_provider_error(exc)["error_kind"] in _IMAGE_RETRY_KINDS
+
 class ImageAttachments:
     def __init__(self):
         self.items = {}
@@ -47,6 +70,21 @@ class ImageAttachments:
             content.append({"type": "text", "text": label})
             content.append({"type": "image_url", "image_url": {"url": "data:" + mime + ";base64," + base64.b64encode(data).decode("ascii")}})
         return content
+
+    def without_images(self, messages):
+        """Copy of the turn with image payloads removed and the question kept."""
+        result = []
+        for message in messages:
+            copied = dict(message)
+            text = copied.get("content")
+            if copied.get("role") == "user" and isinstance(text, str) and re.search(r"\[IMAGE#\d+\]", text):
+                copied["content"] = plain_prompt(text)
+            elif copied.get("role") == "user" and isinstance(text, list):
+                words = [str(part.get("text") or "") for part in text
+                         if isinstance(part, dict) and part.get("type") == "text"]
+                copied["content"] = plain_prompt("\n".join(words))
+            result.append(copied)
+        return result
 
     def prepare(self, messages, provider, model):
         result = []

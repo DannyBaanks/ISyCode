@@ -49,6 +49,21 @@ def fit_cells(width: int, height: int, max_columns: int, max_rows: int) -> tuple
     return columns, rows
 
 
+def _nearest_resize(width: int, height: int, rgb: bytes,
+                    out_width: int, out_height: int) -> bytes:
+    """Sample one source pixel per cell so pixel art keeps its hard edges."""
+    result = bytearray(out_width * out_height * 3)
+    for out_y in range(out_height):
+        source_y = min(height - 1, out_y * height // out_height)
+        row = source_y * width
+        for out_x in range(out_width):
+            source_x = min(width - 1, out_x * width // out_width)
+            start = (row + source_x) * 3
+            dest = (out_y * out_width + out_x) * 3
+            result[dest:dest + 3] = rgb[start:start + 3]
+    return bytes(result)
+
+
 def _box_resize(width: int, height: int, rgb: bytes,
                 out_width: int, out_height: int) -> bytes:
     """Average source pixels into each terminal half-cell pixel."""
@@ -73,22 +88,31 @@ def _box_resize(width: int, height: int, rgb: bytes,
 
 
 @lru_cache(maxsize=16)
-def _scaled(path: str, columns: int, rows: int) -> bytes:
+def _scaled(path: str, columns: int, rows: int, cover_top: bool = False) -> bytes:
     width, height, rgb = load_raster(path)
+    if cover_top:
+        # Keep the lighthouse and moon, crop the bottom, and do not blend pixels.
+        height = min(height, max(1, round(width * rows * 2 / columns)))
+        rgb = rgb[:width * height * 3]
+        return _nearest_resize(width, height, rgb, columns, rows * 2)
     return _box_resize(width, height, rgb, columns, rows * 2)
 
 
-def sample_half_cells(path: str | Path, max_columns: int, max_rows: int) -> tuple[int, int, bytes]:
+def sample_half_cells(path: str | Path, max_columns: int, max_rows: int, *,
+                      cover_top: bool = False) -> tuple[int, int, bytes]:
     """Return the exact upper/lower RGB pixels used in the terminal preview."""
     path = str(path)
     width, height, _ = load_raster(path)
     columns, rows = fit_cells(width, height, int(max_columns), int(max_rows))
-    return columns, rows, _scaled(path, columns, rows) if columns and rows else b""
+    if cover_top and columns and rows:
+        columns = int(max_columns)
+    return columns, rows, _scaled(path, columns, rows, cover_top) if columns and rows else b""
 
 
-def render_half_blocks(path: str | Path, max_columns: int, max_rows: int) -> list[Text]:
+def render_half_blocks(path: str | Path, max_columns: int, max_rows: int, *,
+                       cover_top: bool = False) -> list[Text]:
     """Render the complete raster with independent RGB colors above and below."""
-    columns, rows, pixels = sample_half_cells(path, max_columns, max_rows)
+    columns, rows, pixels = sample_half_cells(path, max_columns, max_rows, cover_top=cover_top)
     if not columns or not rows:
         return []
     lines: list[Text] = []

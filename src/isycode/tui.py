@@ -59,6 +59,7 @@ from isycode.workspace_setup import (
 )
 from isycode.user_defaults import UserDefaultsStore
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
+from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
@@ -214,6 +215,7 @@ from isycode.tui_theme import (
     CYAN,
     BANNER,
     banner_text,
+    status_phrase,
     switch_row,
     switch_rows,
     _semantic_box_title,
@@ -347,9 +349,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
     .panel-title { color: #c7b8d4; text-style: bold; padding: 0 0 1 0; }
     .section-title { color: #c7b8d4; text-style: bold; padding: 1 0 0 0; }
     .rail-copy { color: #c0c0c4; height: auto; padding: 0 0 1 0; }
-    #overview-view Collapsible {
-        background: #11151b; border: round #414650; padding: 0; margin: 0 0 1 0; height: auto;
+    #rail-card {
+        background: #11151b; border: round #414650; padding: 0 1; height: auto; margin: 0 0 1 0;
     }
+    #overview-view Collapsible {
+        background: transparent; border: none; padding: 0; margin: 0; height: auto;
+    }
+    #rail-card > Collapsible { border-bottom: solid #2c313a; }
+    #rail-card > Collapsible:last-of-type { border-bottom: none; }
+    #overview-view Collapsible:focus-within { border-bottom: solid #bb8cff; }
+    #overview-view #rail-connections > Contents { padding: 0 1 0 2; }
     #overview-view CollapsibleTitle { color: #c5cad3; text-style: bold; padding: 0; background: transparent; }
     #overview-view CollapsibleTitle:hover { background: #35363a; color: #e0e0e0; }
     #overview-view CollapsibleTitle:focus { background: #3a2f4d; color: #e0e0e0; }
@@ -375,8 +384,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
     #rail-tabs { height: 3; border: round #414650; align: center middle; margin-bottom: 1; }
     #rail-tabs Button { width: 1fr; }
     #overview-view, #files-view { height: 1fr; }
-    #skills-tree { height: 10; min-height: 5; background: transparent; overflow-x: hidden; }
-    #skill-detail { height: auto; padding: 0 0 1 0; }
+    #skills-tree {
+        height: auto; max-height: 8; min-height: 1; background: transparent;
+        overflow-x: hidden; text-wrap: nowrap;
+    }
+    #skills-tree .tree--label { text-wrap: nowrap; }
+    #skill-detail { display: none; height: auto; padding: 0 0 1 0; }
     #lsp-install-note { display: none; height: auto; width: 1fr; min-width: 0; }
     #files-view { display: none; }
     #file-controls { height: 1; }
@@ -414,8 +427,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
-    #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; }
-    #usage-status { width: 20%; height: 3; padding: 1 1 0 1; content-align: right top; color: #9aa3ad; }
+    #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
+    #usage-status { width: 20%; height: 3; padding: 0 1; content-align: right top; color: #9aa3ad; overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
@@ -530,6 +543,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         self._idea_nudge_due = False
         self._idea_nudge_timer = None
         self._usage = UsageLedger()
+        self._throughput = ThroughputMeter()
+        self._presence_rows = None
         self._model_line = ""
         self._model_line_style = MUTED
         # Model-written notes replacing history that no longer fits the budget.
@@ -725,11 +740,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         self._mount_idle_board()
         self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
                           f"launch {self._launch_dir}")
-        self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
-        self.query_one("#workspace-launch-label", Static).update(f"Launch directory · {self._launch_dir}")
+        self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
+        self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self.query_one("#workspace-authority-label", Static).update(
-            "Filesystem authority · loading ISyCode grants…")
+            "Filesystem Authority · loading ISyCode grants…")
         commands = self._plugins.command_items()
         self._command_names = [name for name, _ in commands]
         self._command_entries = [
@@ -833,7 +848,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             self.run_worker(self._check_gateway_async(), exclusive=False)
             self.run_worker(self._check_model(), exclusive=False)
             if not recurring:
-                self._append_startup("  Temporary workspace · chat history will be removed when ISyCode exits.", MUTED)
+                self._append_startup("  Temporary workspace · this folder is the workspace; .isyroot is optional. "
+                                     "File access follows the selected mode and grants. Chat history is not saved.", MUTED)
             if not self._sessions_enabled():
                 self._append_startup(
                     "  This conversation stays in memory · turn on “Save conversations” in "
@@ -857,18 +873,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                                    self._launch_dir)
 
     def _root_source_label(self) -> str:
-        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "fallback"
-        broad = " · broad shared root" if self._shared_root_warning() else ""
+        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "Fallback"
+        broad = " · Broad Shared Root" if self._shared_root_warning() else ""
         mode = "Classic" if self._workspace_mode() == "classic" else "Security"
-        return f"Root source · {source}{broad} · {mode} mode"
+        return f"Root Source · {source}{broad} · {mode} Mode"
 
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
             return
         self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
                           f"launch {self._launch_dir}")
-        self.query_one("#workspace-label", Static).update(f"Workspace root · {self._workspace_root}")
-        self.query_one("#workspace-launch-label", Static).update(f"Launch directory · {self._launch_dir}")
+        self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
+        self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
 
     async def _start_mobile_host(self) -> None:
@@ -917,7 +933,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             return
         if status.alive:
             scheme = "https" if status.secure_transport else "http"
-            transport = "TLS" if status.secure_transport else "loopback only"
+            transport = "TLS" if status.secure_transport else "Loopback Only"
             self.query_one("#mobile-host-status", Static).update(Text(
                 f"Alive · {scheme}://{status.address}:{status.port} · {transport}"))
         elif status.state == "error":
@@ -931,7 +947,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         else:
             lines = [f"{len(clients)} connected mobile client(s):"]
             lines.extend(
-                f"• {client['device_name']} · connected"
+                f"• {client['device_name']} · Connected"
                 for client in clients[:4]
             )
             if len(clients) > 4:
@@ -978,9 +994,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             )
         except (WorkspaceAuthorityError, OSError, ValueError):
             enabled = False
-        authority_text = ("Filesystem authority · list/read/name-search granted for this workspace"
+        authority_text = ("Filesystem Authority · list/read/name-search granted for this workspace"
                           if enabled else
-                          "Filesystem authority · no read grant; tree enumeration is unavailable")
+                          "Filesystem Authority · no read grant; tree enumeration is unavailable")
         self.query_one("#workspace-authority-label", Static).update(authority_text)
         await self._load_directory(self._file_path)
 
@@ -1455,9 +1471,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                 entries.append(self._entry(f"{'Browse' if available else 'Unavailable'} {alias} · {item['path']}", "folder_browse" if available else "info", alias))
                 if item['editable'] and available:
                     enabled = store.auto_edit_allowed(alias)
+                    automatic_available = store.auto_edit_available(alias)
                     entries.append(self._entry(
-                        f"{alias} · automatic edits {'ON — dangerous; disable' if enabled else 'OFF — enable…'}",
-                        'folder_auto_off' if enabled else 'folder_auto_on', alias,
+                        f"{alias} · automatic edits " + ('OFF · Security requires each review' if not automatic_available
+                            else 'ON — dangerous; disable' if enabled else 'OFF — enable…'),
+                        'info' if not automatic_available else 'folder_auto_off' if enabled else 'folder_auto_on', alias,
                         'Only file creation/edits. Authority and ISySentinel stay active.'))
                 if alias != 'main':
                     entries.append(self._entry(f"Remove attachment · {alias}", "folder_remove", alias,
@@ -1492,6 +1510,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             store = self._folder_store()
             root = store.resolve(alias, write=enabled)
             binding = store.binding(alias)
+            if enabled and not store.auto_edit_available(alias):
+                raise ValueError('Security requires review of each edit')
             if enabled and not await self._await_screen(AutomaticEditsWarningScreen(root)):
                 return False
             if store.resolve(alias, write=enabled) != root or store.binding(alias) != binding:
@@ -1575,7 +1595,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         new_mode = defaults.get("new_workspace_mode", "ask")
         mode_choices = (
             ("ask", "Ask me which mode a new folder uses"),
-            ("classic", "Start new folders in Classic · ready to use"),
+            ("classic", "Start new folders in Classic · Ready To Use"),
             ("security", "Start new folders in Security · everything off until I allow it"),
         )
         entries.extend(self._entry(
@@ -1591,8 +1611,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
     def _usage_status_text(self) -> str:
         from isycode.context_meter import compact_context_label
         total = self._usage.input_tokens + self._usage.output_tokens
-        unknown = " +?" if self._usage.unknown_requests else ""
-        return f"{total:,}{unknown} tokens\n{compact_context_label(self._history)}"
+        return self._throughput.widget_text(
+            total, bool(self._usage.unknown_requests), compact_context_label(self._history))
 
     def _refresh_usage(self) -> None:
         self.query_one("#usage-status", Static).update(Text(self._usage_status_text(), style=MUTED))
@@ -1600,15 +1620,24 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
     async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int | None = None,
                                        on_chunk=None, tools=None) -> dict:
         # Called only by the authorized provider owner's send callback.
+        # The rate is output tokens divided by this call's own clock.
+        self._throughput.measuring = True
+        self._refresh_usage()
+        started = _time.monotonic()
         try:
             response = await provider_complete(provider, messages, max_tokens=max_tokens,
                                                on_chunk=on_chunk, tools=tools)
         except BaseException:
             self._usage.record(None)
+            self._throughput.measuring = False
             self._refresh_usage()
             self._save_draft()
             raise
-        self._usage.record(response.get("usage") if isinstance(response, dict) else None)
+        elapsed = _time.monotonic() - started
+        usage = response.get("usage") if isinstance(response, dict) else None
+        self._usage.record(usage)
+        self._throughput.note(usage, elapsed)
+        self._throughput.measuring = False
         self._refresh_usage()
         self._save_draft()
         return response
@@ -2192,7 +2221,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
     def _refresh_bridge_status_text(self) -> None:
         if not self.is_mounted:
             return
-        text = "Blocked in Secure · no Bridge owner"
+        text = status_phrase("Blocked in Secure · no Bridge owner")
         self.query_one("#bridge-status", Static).update(text)
 
     async def _issue_pairing_pin(self) -> None:
@@ -2763,8 +2792,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             turn_on = not enabled
             if (value in {"workspace_read", "provider", "workspace_write", "sessions"}
                     and self._workspace_mode() == "classic"):
-                self._append("  Included in Classic mode · switch this workspace to Security to "
-                             "control it on its own.", MUTED)
+                self._blocked_notice(
+                    "Included in Classic",
+                    "Included in Classic mode. Switch this workspace to Security to control it on its own.")
                 return
             if value == "workspace_read":
                 operation = self._change_workspace_read_grant(turn_on)
@@ -2776,7 +2806,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                 server = next((item for item in self._lsp_inventory
                                if item.get("state") == "sandbox_ready"), None)
                 if server is None:
-                    self._append("  Local code help is not ready yet; nothing changed.", YELLOW)
+                    self._blocked_notice(
+                        "Code help is not ready",
+                        "Local code help is not ready yet; nothing changed.")
                     return
                 operation = self._change_lsp_process_grant(
                     server["sandbox_executable"], turn_on)
@@ -2799,7 +2831,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             elif value.startswith("network:"):
                 operation = self._change_network_action_grant(value[len("network:"):], turn_on)
             else:
-                self._append("  This option is unavailable; nothing changed.", YELLOW)
+                self._blocked_notice("Nothing changed", "This option is unavailable; nothing changed.")
                 return
             self.run_worker(operation, exclusive=True, group="authority-grant")
             return
@@ -2927,7 +2959,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         if kind == "section":
             return
         if kind == "provider_unwired":
-            self._append(f"  {value} is on the list. ISyCode has no transport for it yet, so nothing was contacted.", MUTED)
+            self._blocked_notice(
+                "No transport",
+                f"{value} is on the list. ISyCode has no transport for it yet, so nothing was contacted.")
             return
         if kind == "provider":
             if value in {"openai", "chatgpt"}:
@@ -3207,9 +3241,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                 self._open_settings_menu()
             return
         if kind == "mobile_host_pairing":
-            self._append(
-                "  Mobile pairing is blocked in Secure · no Authority/Sentinel execution owner is connected.",
-                YELLOW)
+            self._blocked_notice(
+                "Pairing blocked",
+                "Mobile pairing is blocked in Secure · no Authority/Sentinel execution owner is connected.")
             self._open_settings_menu()
             return
         if kind == "files":
@@ -3234,22 +3268,27 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             self._close_menu()
             return
         if kind == "oauth_info":
-            self._append(f"  {value}: {entry.get('detail', '')}", YELLOW)
-            self._append("  ISyCode does not yet have an authorization flow for this provider; no credential was stored or used.", MUTED)
+            self._blocked_notice(
+                "No authorization flow",
+                f"{value}: {entry.get('detail', '')}\n"
+                "ISyCode does not yet have an authorization flow for this provider; "
+                "no credential was stored or used.")
             self._close_menu()
             return
         if kind == "openisy_provider":
-            self._append(f"  {entry['label']}", MUTED)
-            self._append("  This account is discovered but is not connected to ISyCode inference. Use ISyCode credential settings when an API key is supported.", YELLOW)
+            self._blocked_notice(
+                "Account not connected",
+                f"{entry['label']}\n"
+                "This account is discovered but is not connected to ISyCode inference. "
+                "Use ISyCode credential settings when an API key is supported.")
             self._close_menu()
             return
         if kind == "info":
-            if entry.get("detail"):
-                self._append(f"  {entry['label']} · {entry['detail']}", MUTED)
+            self._blocked_notice("Nothing ran", str(entry.get("detail") or entry.get("label") or ""))
             if entry.get("value"):
                 self._close_menu()
             return
-        self._append(f"  {entry['label']}", MUTED)
+        self._blocked_notice("Nothing ran", str(entry.get("label") or ""))
         self._close_menu()
 
     def _branch_entries(self, branch: str) -> list[dict[str, str]]:
@@ -3361,16 +3400,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             for server in self._lsp_inventory:
                 if server["state"] == "sandbox_ready":
                     entries.append(self._entry(
-                        f"{server['label']} · workspace symbol search", "lsp_server", server["id"],
+                        f"{server['label']} · {status_phrase('workspace symbol search')}", "lsp_server", server["id"],
                         "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."))
                 else:
                     entries.append(self._entry(
-                        f"{server['label']} · {server['state'].replace('_', ' ')}", "info", "",
+                        f"{server['label']} · {status_phrase(server['state'].replace('_', ' '))}", "info", "",
                         "Detected executable only; no safe LSP execution adapter is connected for this server."))
             return entries or [self._entry("No LSP servers detected", "info", "", "Install or configure a supported language server.")]
         if key == "files":
             return [self._entry("Open workspace file browser", "files"),
-                    self._entry(f"Current directory · {self._file_path or self._workspace_root}", "info")]
+                    self._entry(f"Current Directory · {self._file_path or self._workspace_root}", "info")]
         if key == "roles":
             return [self._entry("ISyCode agents", "role_category", "agents"),
                     self._entry("ISyCode specialists", "role_category", "subagents"),
@@ -3383,12 +3422,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                     self._entry(f"Provider · {selected_provider_name()}", "providers_open"),
                     self._entry(f"Role · {self._role_button_label()}", "info")]
         if key == "workspace":
-            return [self._entry(f"Workspace root · {self._workspace_root}", "info"),
-                    self._entry(f"Launch directory · {self._launch_dir}", "info"),
-                    self._entry(f"Root source · {self._workspace_identity.workspace_root_source}", "info"),
-                    self._entry(f"Gateway binding · {gateway_workspace_id(self._workspace_root)}", "info", "",
+            return [self._entry(f"Workspace Root · {self._workspace_root}", "info"),
+                    self._entry(f"Launch Directory · {self._launch_dir}", "info"),
+                    self._entry(f"Root Source · {self._workspace_identity.workspace_root_source}", "info"),
+                    self._entry(f"Gateway Binding · {gateway_workspace_id(self._workspace_root)}", "info", "",
                                 "Opaque workspace match label; it does not grant access."),
-                    self._entry(f"Current folder · {self._file_path or self._workspace_root}", "info"),
+                    self._entry(f"Current Folder · {self._file_path or self._workspace_root}", "info"),
                     self._entry("Open Files view", "files")]
         if key == "commands":
             return self._command_entries + [self._entry("Keyboard shortcuts", "shortcuts")]
@@ -3478,12 +3517,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         rail_width = rail.region.width if rail.display else 0
         return max(24, self.size.width - rail_width - 8)
 
+    def _idle_status_rows(self) -> int:
+        """Model line, the blank under it, the status columns, and board padding."""
+        columns = [
+            self._idle_column("LSPs", self._idle_lsp_rows()),
+            self._idle_column("MCPs", self._idle_mcp_rows()),
+            self._idle_column("Skills", self._idle_skill_rows()),
+        ]
+        return 2 + max(len(column) for column in columns) + 1
+
     def _landscape_row_budget(self) -> int:
-        """Rows for the village so the model line and columns stay on screen."""
+        """Panorama rows that still leave the model line and status columns visible."""
         chat_h = self.query_one(ChatArea).content_size.height
         if chat_h <= 0:
             return 16
-        return max(8, min(MAX_SCENE_ROWS, chat_h - 11))
+        return max(1, min(MAX_SCENE_ROWS, chat_h - self._idle_status_rows()))
 
     def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
         """Cell-accurate landscape, model, and integration columns."""
@@ -4279,7 +4327,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
         if timer is not None:
             timer.stop()
         if task.cancelled():
-            self._set_activity("Interrupted · inspect the transcript before retrying", YELLOW)
+            self._set_activity("Interrupted", YELLOW)
         elif task.exception() is not None:
             self._set_activity(f"Failed · {type(task.exception()).__name__}", RED)
         elif self._last_plan is not None:
@@ -4345,10 +4393,35 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             except (NoScreen, ScreenStackError):
                 pass
 
+    def _blocked_notice(self, short: str, detail: str = "") -> None:
+        """A menu choice that did not run. The chat transcript stays untouched."""
+        self._set_activity(short, YELLOW)
+        if not detail:
+            return
+        try:
+            panel = self.screen_stack[0].query_one("#action-detail", Static)
+        except (NoMatches, NoScreen, IndexError):
+            return
+        panel.display = True
+        panel.update(Text(detail))
+
+    def _paint_bridge_presence(self) -> None:
+        rows = self._presence_rows
+        if rows is None:
+            return
+        try:
+            panel = self.query_one("#work-presence", Static)
+        except (NoMatches, NoScreen):
+            return
+        from isycode.bridge_presence import presence_line
+        width = panel.content_size.width or panel.size.width
+        panel.update(presence_line(rows, width))
+
     async def _show_bridge_presence(self) -> None:
         confirmed = await self._await_screen(BridgePresenceScreen())
         panel = self.query_one("#work-presence", Static)
         if not confirmed:
+            self._presence_rows = None
             panel.update("Bridge presence off")
             return
         root = self._workspace_root
@@ -4361,16 +4434,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             outcome, rows = await asyncio.to_thread(
                 owner.read, request, approvals.issue(request))
         except (OSError, RuntimeError, ValueError):
+            self._presence_rows = None
             panel.update("Presence unavailable")
             return
         if outcome.decision != "ALLOW":
+            self._presence_rows = None
             panel.update("Presence unavailable")
             return
-        label = " · ".join(
-            f"{row['name']} {row['status']}" + (f" {age_label(row.get('heartbeat'))}"
-                                                if age_label(row.get("heartbeat")) else "")
-            for row in rows) or "No recent agents"
-        panel.update(label[:240])
+        self._presence_rows = rows
+        self._paint_bridge_presence()
 
     # ── chat (default path) ──────────────────────────────────────
 
@@ -5337,7 +5409,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
             except (OSError, ValueError) as exc:
                 return json.dumps({'error': f'Folder approval settings unavailable: {str(exc)[:120]}'})
             choice = True if delegated else await self._await_screen(
-                WriteApprovalScreen(preview, replaces_whole_file=replaces))
+                WriteApprovalScreen(preview, replaces_whole_file=replaces,
+                    allow_automatic_edits=self._folder_store().auto_edit_available(folder_alias)))
         if choice == 'always':
             delegated = await self._set_folder_auto_edit(folder_alias, True)
             choice = delegated
@@ -5690,7 +5763,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                 api_key=load_provider_key(provider_name) or None)
 
             self._active_chat_provider = (provider.name, provider.model)
-            messages = self._image_attachments.prepare(messages, provider.name, provider.model)
+            from isycode.image_attachments import accepts_images
+            base_messages = [dict(message) for message in messages]
+            image_turn = "[IMAGE#" in text
+            known_blind = image_turn and accepts_images(provider.name, provider.model) is False
+            image_sent = image_turn and not known_blind
+            image_fallback_used = False
+            if known_blind:
+                self._append(
+                    "  Picture not sent · this model does not take images. The question goes as text.",
+                    YELLOW)
+                messages = self._image_attachments.without_images(base_messages)
+            else:
+                messages = self._image_attachments.prepare(messages, provider.name, provider.model)
 
             def _content_line() -> None:
                 nonlocal assistant_sent_at
@@ -5793,6 +5878,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                                 continue
                         response, provider_result = await self._chat_request_task
                     except (ProviderError, StreamError) as exc:
+                        steered = steer_trial is not None
                         if steer_trial is not None:
                             from isycode.provider_errors import classify_provider_error
                             unsupported = classify_provider_error(exc)["error_kind"] == "STEER"
@@ -5803,6 +5889,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, App):
                                 steer_trial = None
                                 if unsupported:
                                     continue
+                        from isycode.image_attachments import image_failure_should_continue, record_image_result
+                        saw_output = bool(content_buf or reason_buf or step_content or step_reason)
+                        if (not steered and image_failure_should_continue(
+                                exc, sent=image_sent, used=image_fallback_used, saw_output=saw_output)):
+                            image_fallback_used = True
+                            record_image_result(provider.name, provider.model, False)
+                            messages = self._image_attachments.without_images(messages)
+                            self._append(
+                                "  Picture not accepted · sending the question as text.", YELLOW)
+                            continue
                         raise
                     except asyncio.CancelledError:
                         if self._pending_steering and not asyncio.current_task().cancelling():

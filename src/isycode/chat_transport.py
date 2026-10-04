@@ -41,7 +41,8 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         reasoning_effort=None if thinking is not None else provider.reasoning_effort,
         temperature_supported=provider.temperature_supported,
         timeout_s=None,
-        on_chunk=on_chunk, tools=tools, include_usage=provider.name == "openai", **extra)
+        on_chunk=on_chunk, tools=tools,
+        include_usage=provider.name in {"openai", "nvidia"}, **extra)
 
 
 def assistant_turn(response: dict) -> dict:
