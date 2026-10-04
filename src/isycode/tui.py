@@ -8433,6 +8433,9 @@ class TUIApp(App):
             elif result.get("error"):
                 app._append(result["error"], YELLOW)
 
+        async def _iteration_cmd(app: "TUIApp", arg: str) -> None:
+            await app._run_iteration_window(arg.strip())
+
         async def _models_cmd(app: "TUIApp", arg: str) -> None:
             app._render_menu("branch", "Models", app._branch_entries("models"))
 
@@ -8634,102 +8637,33 @@ class TUIApp(App):
             del arg
             app._open_provider_menu()
 
-        async def _provider_cmd(app: "TUIApp", arg: str) -> None:
-            import os
-
-            parts = arg.split()
+        async def _keys_cmd(app: "TUIApp", arg: str) -> None:
+            del arg
             current = selected_provider_name()
-            if not parts:
-                labels = {"environment": "key in environment", "saved": "key saved in ISyCode vault",
-                          "stored": "legacy key saved", "legacy": "legacy key", "optional": "key optional",
-                          "missing": "no key saved", "unavailable": "credential store unavailable",
-                          "subscription": "ChatGPT subscription · check in selector"}
-                app._append("  Provider credentials (secret values are never shown):", MUTED)
-                for name in PRESETS:
-                    state = provider_credential_state(name)
-                    active = "  ← active" if name == current else ""
-                    color = GREEN if state in {"environment", "saved", "stored", "legacy"} else YELLOW if state == "unavailable" else MUTED
-                    app._append(f"    {name:<10} {labels.get(state, state)}{active}", color)
-                app._append("  Use /providers to choose a provider, or /provider <id> [model].", MUTED)
-                return
-            if parts[0].casefold() == "models":
-                try:
-                    provider = Provider(
-                        name=current, model=provider_default_model(current),
-                        api_key=load_provider_key(current) or None)
-                    if not provider.configured():
-                        app._append(
-                            f"  Configure {provider.key_env} before listing account models.",
-                            YELLOW)
-                        return
-                    owner = ProviderNetworkOwner(app._workspace_root, WorkspaceAuthority(app._workspace_root))
-                    models, result = await owner.execute(provider,
-                        {'operation': 'models.list', 'provider': current, 'model': provider.model},
-                        lambda: asyncio.to_thread(provider.models))
-                    if result.decision != 'ALLOW' or not isinstance(models, list):
-                        app._append(f"  Model catalog blocked · {result.reason[:160]}", YELLOW)
-                        return
-                    app._append(
-                        f"  {provider.label} models visible to this account ({len(models)}):",
-                        MUTED)
-                    for model_id in models:
-                        app._append(f"    {model_id}", TEXT)
-                except ProviderError as error:
-                    app._append(f"  Model catalog unavailable: {error}", RED)
-                except ConfigurationError:
-                    app._append("  Provider key file could not be loaded.", RED)
-                return
-
-            name = parts[0].casefold()
-            if name not in PRESETS:
-                app._append(
-                    f"  Unknown provider {name!r}. Available: {', '.join(PRESETS)}",
-                    YELLOW)
-                return
-            model = parts[1] if len(parts) > 1 else None
-            try:
-                target_model = model
-                if target_model is None and current == name:
-                    target_model = selected_model_name()
-                if target_model is None:
-                    target_model = (provider_default_model(name)
-                                    or PRESETS[name].get("default_model")
-                                    or DEFAULT_MODEL)
-                provider = Provider(
-                    name=name, model=target_model,
-                    api_key=load_provider_key(name) or None)
-            except ProviderError as error:
-                app._append(f"  Provider configuration rejected: {error}", RED)
-                return
-            except ConfigurationError:
-                app._append("  Provider key file could not be loaded.", RED)
-                return
-
-            os.environ["ISYCODE_PROVIDER"] = name
-            os.environ["ISYCODE_MODEL"] = provider.model
-            if isymotron_provider_available(name):
-                os.environ["ISYMOTRON_PROVIDER"] = name
-                os.environ["ISYMOTRON_MODEL"] = provider.model
-            elif name in {"groq", "openrouter"}:
-                app._append(
-                    "  This provider is configured for ISyCode chat; the optional "
-                    "IsyMotron planner keeps its own provider until its adapter supports it.",
-                    MUTED)
-            try:
-                save_provider_selection(name, provider.model)
-            except (OSError, ValueError):
-                app._append("  Provider selected for this run; private preference could not be saved.", YELLOW)
-            if current != name:
-                app._clear_pending_plan()
-            if provider.configured():
-                app._append(
-                    "  Active for this session: " + app._model_display_label(name, provider.model),
-                    GREEN)
-            else:
-                app._append(
-                    f"  Selected {provider.label}, but {provider.key_env} is missing. "
-                    f"Store it with `isymotron keys set {provider.key_env}` and restart ISyCode.",
-                    YELLOW)
+            labels = {"environment": "Environment", "saved": "ISyCode vault",
+                "stored": "Legacy key saved", "legacy": "Legacy key", "optional": "No key required",
+                "missing": "Not configured", "unavailable": "Store unavailable",
+                "subscription": "Subscription · check in selector", "signed-in": "Signed in"}
+            groups = {"Configured": [], "Optional / subscription": [], "Needs setup": []}
+            for name, preset in PRESETS.items():
+                state = provider_credential_state(name)
+                group = "Configured" if state in {"environment", "saved", "stored", "legacy", "signed-in"} else "Optional / subscription" if state in {"optional", "subscription"} else "Needs setup"
+                color = GREEN if group == "Configured" else CYAN if group == "Optional / subscription" else YELLOW if state == "unavailable" else MUTED
+                line = Text()
+                line.append("● " if group == "Configured" else "○ ", style=color)
+                line.append(str(preset.get("label", name)), style=TEXT)
+                line.append("  ·  " + labels.get(state, state), style=color)
+                if name == current:
+                    line.append("  ← active", style="bold " + CYAN)
+                groups[group].append(line)
+            app._append("Keys · credential status", CYAN)
+            chat = app.query_one(ChatArea)
+            for group, lines in groups.items():
+                content = Text("\n").join(lines)
+                chat.mount(ExpandableBox(SelectableText(content, selection_text=content.plain),
+                    title=f"{group} · {len(lines)}", collapsed=group != "Configured"))
+            app._append("Use /providers to choose a provider. Secret values are never displayed.", MUTED)
+            chat.follow_tail()
 
         async def _retry_cmd(app: "TUIApp", arg: str) -> None:
             app._prepare_retry()
@@ -8768,15 +8702,15 @@ class TUIApp(App):
                 PluginCommand("plan", "plan an intent via IsyMotron", _plan_cmd),
                 PluginCommand("readme", "choose and preview a workspace README.md", _readme_cmd),
                 PluginCommand("providers", "open the provider selector", _providers_cmd),
-                PluginCommand("provider", "show saved provider credentials; select with /provider <id>", _provider_cmd),
+                PluginCommand("keys", "show credential status grouped by setup state", _keys_cmd),
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("idea", "expand the current idea note", _idea_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
+                PluginCommand("iteration", "sequential iteration with three chosen models; /iteration retry <id>", _iteration_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
                 PluginCommand("models", "recent and available models", _models_cmd),
-                PluginCommand("model", "choose model and reasoning", _models_cmd),
                 PluginCommand("skills", "bundled workflow guidance: list, use <name>, clear", _skills_cmd),
                 PluginCommand("git", "show git branch and changed files", _git_cmd),
                 PluginCommand("diff", "show the git diff (optional path, --staged)", _diff_cmd),
@@ -8994,7 +8928,8 @@ class TUIApp(App):
         self._clear_pending_plan()
         plugin, cmd, arg = self._plugins.route(text)
         self._pending_user_sent_at = datetime.now().astimezone().isoformat(timespec="seconds")
-        self._mount_user_turn(text, self._pending_user_sent_at)
+        if cmd is None:
+            self._mount_user_turn(text, self._pending_user_sent_at)
         if cmd is not None:
             label = "Planning · IsyMotron" if cmd.name == "plan" else f"Running /{cmd.name}"
             self._start_operation(cmd.handler(self, arg), label)
@@ -9455,7 +9390,8 @@ class TUIApp(App):
                 return
             for row in self._work_rows:
                 row["current"] = row["id"] == (self._active_chat_session_id or "memory")
-                row["status"] = self._conversation_status() if row["current"] else "idle"
+                if row.get("session_kind") != "iterative":
+                    row["status"] = self._conversation_status() if row["current"] else "idle"
             rows = list(self._work_rows)
             if self._subagent_running:
                 rows.append({"id": "child", "workspace": self._workspace_root.name,
@@ -9481,6 +9417,19 @@ class TUIApp(App):
                 if outcome.decision != "ALLOW":
                     self._set_activity("Conversations unavailable · " + outcome.reason[:100], YELLOW)
             self._work_rows = [self._conversation_row(session) for session in sessions]
+            if self._sessions_enabled():
+                from isycode.iteration import IterationOwner
+                try:
+                    iterations = await asyncio.to_thread(self._iteration_owner().list_sessions)
+                    for item in iterations:
+                        self._work_rows.append({"id": "iteration:" + item["iteration_session_id"],
+                            "title": item["title"], "session_kind": "iterative",
+                            "workspace": self._workspace_root.name,
+                            "status": "generating" if item["status"] == "RUNNING" else "waiting" if item["status"] == "WAITING_FOR_HUMAN" else "idle",
+                            "age": age_label(item["created_at"]),
+                            "detail": " → ".join(self._model_display_label(p["provider"], p["model"]) for p in item["participants"]) + "\n" + item["status"] + "\n\n" + (item["turns"][-1]["content"] if item["turns"] else "")})
+                except (OSError, RuntimeError, ValueError):
+                    self._set_activity("Iteration sessions unavailable; ordinary sessions preserved.", YELLOW)
             if not self._active_chat_session_id:
                 self._work_rows.insert(0, {"id": "memory", "workspace": self._workspace_root.name,
                                           "title": "Current conversation", "preview": "",
@@ -9549,6 +9498,14 @@ class TUIApp(App):
         self.run_worker(self._refresh_work_list(), group="work-list")
 
     async def _resume_chat_session(self, session_id: str) -> None:
+        if session_id.startswith("iteration:"):
+            try:
+                state = await asyncio.to_thread(self._iteration_owner().inspect, session_id.removeprefix("iteration:"))
+                self._show_chat_again()
+                self._show_iteration_state(state)
+            except (OSError, RuntimeError, ValueError):
+                self._append("Iteration unavailable or denied.", YELLOW)
+            return
         owner = self._chat_session_owner
         if owner is None or not self._sessions_enabled():
             self._append("  Saving conversations is off; nothing was resumed.", MUTED)
@@ -9983,6 +9940,70 @@ class TUIApp(App):
             self._mcp_local = LocalMCPOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
                                             self._action_approvals)
         return self._mcp_local
+
+    def _iteration_owner(self):
+        from isycode.iteration import IterationOwner
+        return IterationOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+
+    def _show_iteration_state(self, state):
+        self._append("Iteration · " + state["title"] + " · " + state["status"], CYAN)
+        participants = {p["participant_id"]: p for p in state["participants"]}
+        for turn in state["turns"]:
+            p = participants.get(turn["actor_id"])
+            label = self._model_display_label(p["provider"], p["model"]) if p else "Human"
+            self._append(str(turn["seq"]) + " · " + label + " · " + turn["kind"], CYAN)
+            self.query_one(ChatArea).mount(SelectableText(RichMarkdown(turn["content"], code_theme="monokai"), selection_text=turn["content"]))
+        self.query_one(ChatArea).follow_tail()
+        if state["status"] == "PARTICIPANT_ERROR":
+            self._append("Iteration paused · " + str(state["receipts"][-1].get("error_kind")) + " · /iteration retry " + state["iteration_session_id"], YELLOW)
+
+    async def _run_iteration_window(self, objective):
+        from isycode.iteration import run_iteration
+        from isycode.providers import child_model_choices
+        from isycode.subagent_screen import SubagentModelScreen
+        if self._subagent_running or (self._loop_task and self._loop_task is not asyncio.current_task() and not self._loop_task.done()):
+            self._append("Finish the active task before starting an iteration.", YELLOW)
+            return
+        if not objective:
+            self._append("Usage: /iteration <objective> · choose three participants. Esc cancels.", MUTED)
+            return
+        self._subagent_running = True
+        self._subagent_task = asyncio.current_task()
+        try:
+            owner = self._iteration_owner()
+            if objective.startswith("retry "):
+                sid = objective.removeprefix("retry ").strip()
+            else:
+                participants = []
+                choices = child_model_choices()
+                for role in ("PROPOSER", "REVIEWER", "FINAL HUMAN_HANDOFF"):
+                    selected = await self._await_screen(SubagentModelScreen("Iteration · " + role + " · " + objective, choices))
+                    if selected is None:
+                        return
+                    if selected not in choices:
+                        raise ValueError("unregistered participant")
+                    participants.append(dict(selected, role=role))
+                sid = owner.create_iteration(objective[:100], participants)
+                owner.human(sid, objective)
+            self._show_chat_again()
+            self._append("Iteration order · " + " → ".join(self._model_display_label(p["provider"], p["model"]) for p in owner.inspect(sid)["participants"]), CYAN)
+            def factory(p):
+                return Provider(name=p["provider"], model=p["model"],
+                    base_url=PRESETS[p["provider"]]["base_url"], api_key=load_provider_key(p["provider"]) or None)
+            state = await run_iteration(owner, sid, factory,
+                on_status=lambda status: self._set_activity("Iteration · " + status, CYAN))
+            self._show_iteration_state(state)
+        except asyncio.CancelledError:
+            self._append("Iteration aborted; durable contributions preserved.", YELLOW)
+            raise
+        except (OSError, RuntimeError, ValueError) as exc:
+            self._append("Iteration unavailable · " + type(exc).__name__, YELLOW)
+        finally:
+            self._subagent_running = False
+            self._subagent_task = None
+            self._set_activity("Chat ready", MUTED)
+            self.query_one("#prompt-input", PromptArea).focus()
+            await self._refresh_work_list()
 
     async def _run_subagent(self, task: str) -> dict:
         previous_error = None

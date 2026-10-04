@@ -92,6 +92,9 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
 KNOWN_EFFECT_CALLSITES = (
+    ("session.create", "IterationOwner._persist", "chat_sessions", "COVERED"),
+    ("session.resume", "IterationOwner.inspect", "chat_sessions", "COVERED"),
+    ("provider.request", "run_iteration.complete", "provider_network", "COVERED"),
     ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "COVERED"),
     ("tailscale.install.prepare", "TailscalePackageInstallOwner.prepare", "tailscale_package_install", "COVERED"),
     ("tailscale.install.stage", "TailscalePackageInstallOwner.stage", "tailscale_package_install", "COVERED"),

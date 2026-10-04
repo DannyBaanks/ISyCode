@@ -219,7 +219,7 @@ class WorkList(Vertical):
             for row in items:
                 age = row.get("age") or ""
                 line = Text()
-                line.append("◇ ", style="#8fbc8f")
+                line.append("↻ Iterative · " if row.get("session_kind") == "iterative" else "◇ ", style="#77d8b0" if row.get("session_kind") == "iterative" else "#8fbc8f")
                 line.append(row.get("title") or "Untitled", style="bold #f4f1ea" if row.get("current") else "")
                 line.append(f"  ·  {row.get('workspace') or ''}", style="#9aa3ad")
                 if age:

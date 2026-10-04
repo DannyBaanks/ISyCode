@@ -70,13 +70,12 @@ def test_slash_catalog_cannot_spawn_connector_without_grants(tmp_path,monkeypatc
             await p.pause()
             from isycode.workspace_authority import WorkspaceAuthority
             WorkspaceAuthority(root).set_grant('provider.request',enabled=False)
-            _,command,arg=app._plugins.route('/provider models')
-            await command.handler(app,arg)
+            await app._load_account_models()
             assert calls==[]
     with capsys.disabled(): asyncio.run(run())
 
 
-def test_providers_opens_the_selector_and_provider_reports_saved_credentials(tmp_path, monkeypatch, capsys):
+def test_providers_opens_the_selector_and_keys_reports_grouped_credentials(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     monkeypatch.setattr("isycode.tui.provider_credential_state",
                         lambda name: "saved" if name == "nvidia" else "missing")
@@ -94,10 +93,15 @@ def test_providers_opens_the_selector_and_provider_reports_saved_credentials(tmp
             lines = []
             original = app._append
             app._append = lambda value, *_args, **_kwargs: lines.append(str(value))
-            _, command, arg = app._plugins.route("/provider")
+            _, command, arg = app._plugins.route("/keys")
             await command.handler(app, arg)
             app._append = original
-            assert any("nvidia" in line and "key saved in ISyCode vault" in line for line in lines)
+            from isycode.tui import ExpandableBox
+            boxes = list(app.query_one("#chat").query(ExpandableBox))
+            assert any("Configured" in str(box.title) for box in boxes)
+            assert app._plugins.route("/provider")[1] is None
+            assert app._plugins.route("/model")[1] is None
+            assert app._plugins.route("/models")[1] is not None
             assert any("/providers to choose" in line for line in lines)
 
     with capsys.disabled():

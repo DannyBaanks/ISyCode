@@ -1203,6 +1203,24 @@
   "unclassified_actions": [],
   "callsites": [
     {
+      "action": "session.create",
+      "callsite": "IterationOwner._persist",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "session.resume",
+      "callsite": "IterationOwner.inspect",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "provider.request",
+      "callsite": "run_iteration.complete",
+      "owner": "provider_network",
+      "status": "COVERED"
+    },
+    {
       "action": "tailscale.inspect",
       "callsite": "TailscaleReadOwner.inspect",
       "owner": "tailscale_read",
@@ -1790,6 +1808,27 @@
       "owner": "session_delete"
     },
     {
+      "file": "isycode/iteration.py",
+      "line": 195,
+      "callable": "isycode.iteration.IterationOwner.list_sessions",
+      "action": "session.resume",
+      "owner": "chat_sessions"
+    },
+    {
+      "file": "isycode/iteration.py",
+      "line": 61,
+      "callable": "isycode.iteration.IterationOwner._authorize",
+      "action": "session.resume",
+      "owner": "chat_sessions"
+    },
+    {
+      "file": "isycode/iteration.py",
+      "line": 65,
+      "callable": "isycode.iteration.IterationOwner._authorize",
+      "action": "session.create",
+      "owner": "chat_sessions"
+    },
+    {
       "file": "isycode/mcp_local.py",
       "line": 221,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
@@ -1931,14 +1970,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 9645,
+      "line": 9602,
       "callable": "isycode.tui.TUIApp._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui.py",
-      "line": 9745,
+      "line": 9702,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -2045,7 +2084,7 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 9745,
+      "line": 9702,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
