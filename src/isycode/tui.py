@@ -181,8 +181,8 @@ except ModuleNotFoundError:
 from isycode.providers import (
     DEFAULT_MODEL, PRESETS, PROVIDER_SCREEN, Provider, ProviderError, featured_models,
     load_provider_key,
-    model_slot, provider_credential_state, save_provider_selection, selected_model_name,
-    selected_provider_name,
+    model_slot, provider_credential_state, resolved_chat_model, save_provider_selection,
+    selected_model_name, selected_provider_name,
 )
 from isycode.streaming import (
     StreamError, async_stream_complete, detect_unexecuted_tool_request,
@@ -4748,7 +4748,7 @@ class TUIApp(App):
         if self._active_chat_provider is not None:
             return self._active_chat_provider
         provider = selected_provider_name()
-        return provider, (selected_model_name() or provider_default_model(provider) or PRESETS.get(provider, {}).get("default_model") or DEFAULT_MODEL)
+        return provider, resolved_chat_model(provider)
 
     def _queue_steer_warning(self):
         from isycode.reasoning_options import steering_support
@@ -5432,7 +5432,7 @@ class TUIApp(App):
         provider_name = selected_provider_name()
         provider = PRESETS.get(provider_name, {})
         from isycode.model_presentation import model_display_name
-        model_name = model_display_name(selected_model_name() or provider.get("default_model", "provider default"))
+        model_name = model_display_name(resolved_chat_model(provider_name))
         entries = [
             self._entry("These personal defaults follow you between workspaces.", "info"),
             self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
@@ -7293,7 +7293,7 @@ class TUIApp(App):
     def _step_reasoning(self, direction: int) -> None:
         from isycode.reasoning_options import reasoning_levels, effective_reasoning, select_reasoning
         name = selected_provider_name()
-        model = selected_model_name() or provider_default_model(name) or PRESETS.get(name, {}).get("default_model") or DEFAULT_MODEL
+        model = resolved_chat_model(name)
         order = {"none": 0, "off": 0, "minimal": 1, "on": 1, "low": 2, "medium": 3, "high": 4, "xhigh": 5, "max": 6}
         levels = tuple(sorted(reasoning_levels(name, model), key=order.__getitem__))
         if not levels:
@@ -7315,8 +7315,7 @@ class TUIApp(App):
     def _open_reasoning_menu(self, name: str | None = None, model: str | None = None) -> None:
         from isycode.reasoning_options import reasoning_levels
         name = name or selected_provider_name()
-        model = model or (selected_model_name() or provider_default_model(name)
-                          or PRESETS.get(name, {}).get("default_model") or DEFAULT_MODEL)
+        model = model or resolved_chat_model(name)
         levels = reasoning_levels(name, model)
         detail = ("Use the provider's default reasoning behavior." if levels else
                   "This provider/model does not publish supported levels in the loaded catalog. Keep its default.")
@@ -7943,10 +7942,7 @@ class TUIApp(App):
             models.extend(self._entry(f"Recent · {item['provider']} · {item['model']}",
                 "model", f"{item['provider']}|{item['model']}") for item in recent_models())
             for name, preset in PRESETS.items():
-                model = (selected_model_name()
-                         if name == active_provider and selected_model_name()
-                         else provider_default_model(name)
-                         or preset.get("default_model") or DEFAULT_MODEL)
+                model = resolved_chat_model(name)
                 selected = name == active_provider and (not current or model == current)
                 if name == active_provider and current:
                     model = current
@@ -8068,7 +8064,7 @@ class TUIApp(App):
         name = name or selected_provider_name()
         try:
             provider = Provider(
-                name=name, model=provider_default_model(name),
+                name=name, model=resolved_chat_model(name),
                 api_key=load_provider_key(name) or None)
             if not provider.configured():
                 rows = [self._entry(
@@ -8129,13 +8125,8 @@ class TUIApp(App):
     def _select_provider(self, name: str, model: str | None = None) -> None:
         current = selected_provider_name()
         try:
-            target_model = model
-            if target_model is None and current == name:
-                target_model = selected_model_name()
-            if target_model is None:
-                target_model = (provider_default_model(name)
-                                or PRESETS[name].get("default_model")
-                                or DEFAULT_MODEL)
+            explicit = model.strip() if isinstance(model, str) else ""
+            target_model = explicit or resolved_chat_model(name)
             provider = Provider(
                 name=name, model=target_model,
                 api_key=load_provider_key(name) or None)
@@ -8677,7 +8668,7 @@ class TUIApp(App):
             provider_name = selected_provider_name()
             provider = Provider(
                 name=provider_name,
-                model=provider_default_model(provider_name),
+                model=resolved_chat_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
             ready = self._model_display_label(provider.name, provider.model)
             if provider.configured():
@@ -8809,9 +8800,7 @@ class TUIApp(App):
         async def _session_cmd(app: "TUIApp", arg: str) -> None:
             import os
             provider = selected_provider_name()
-            model = (selected_model_name()
-                     or provider_default_model(provider)
-                     or PRESETS.get(provider, {}).get("default_model") or DEFAULT_MODEL)
+            model = resolved_chat_model(provider)
             role = app._active_role
             app._append(f"  Workspace · {app._workspace_root}", MUTED)
             app._append("  Model · " + app._model_display_label(provider, model), MUTED)
@@ -9072,9 +9061,7 @@ class TUIApp(App):
         self._draft_timer = self.set_timer(1.0, self._save_draft)
 
     def _session_state(self) -> dict:
-        return {"provider": selected_provider_name(), "model": selected_model_name()
-                or provider_default_model(selected_provider_name())
-                or PRESETS.get(selected_provider_name(), {}).get("default_model") or DEFAULT_MODEL,
+        return {"provider": selected_provider_name(), "model": resolved_chat_model(),
                 "role": ({"kind": self._active_role["kind"], "name": self._active_role["name"]}
                          if self._active_role else None),
                 "context_path": "AGENTS.md" if self._agent_context and self._agent_context["path"] == "AGENTS.md" else None,
@@ -9104,8 +9091,7 @@ class TUIApp(App):
         heading = Text(label, style="bold #c7b8d4")
         try:
             name = selected_provider_name()
-            model = (selected_model_name() or provider_default_model(name)
-                     or PRESETS.get(name, {}).get("default_model") or DEFAULT_MODEL)
+            model = resolved_chat_model(name)
             from isycode.model_presentation import model_display_name
             from isycode.reasoning_options import reasoning_label
             preset = PRESETS.get(name, {})
@@ -9183,7 +9169,7 @@ class TUIApp(App):
             self._promote_queued_message()
             return
         try:
-            self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), provider_default_model(selected_provider_name()))
+            self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), resolved_chat_model(selected_provider_name()))
         except ValueError as exc:
             self.notify(str(exc), severity="warning")
             return
@@ -9277,7 +9263,7 @@ class TUIApp(App):
             return
         text = self._queued_messages[0]
         try:
-            self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), provider_default_model(selected_provider_name()))
+            self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), resolved_chat_model(selected_provider_name()))
         except ValueError as exc:
             self.notify("Queue paused · " + str(exc), severity="warning")
             return
@@ -11061,7 +11047,7 @@ class TUIApp(App):
             return
         compact_slot = model_slot("small")
         provider_name = (compact_slot or {}).get("provider") or selected_provider_name()
-        provider_model = (compact_slot or {}).get("model") or provider_default_model(provider_name)
+        provider_model = (compact_slot or {}).get("model") or resolved_chat_model(provider_name)
         try:
             provider = Provider(name=provider_name, model=provider_model,
                                 api_key=load_provider_key(provider_name) or None)
@@ -11314,7 +11300,7 @@ class TUIApp(App):
             provider_name = selected_provider_name()
             provider = Provider(
                 name=provider_name,
-                model=provider_default_model(provider_name),
+                model=resolved_chat_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
 
             self._active_chat_provider = (provider.name, provider.model)
@@ -11640,7 +11626,7 @@ class TUIApp(App):
         """Explicit minimal provider request; credentials alone never authorize it."""
         try:
             name = selected_provider_name()
-            provider = Provider(name=name, model=provider_default_model(name),
+            provider = Provider(name=name, model=resolved_chat_model(name),
                                 api_key=load_provider_key(name) or None)
             messages = [{"role": "user", "content": "Reply with OK only. Do not call any tools."}]
             material = {"operation": "chat.completions", "messages": messages,

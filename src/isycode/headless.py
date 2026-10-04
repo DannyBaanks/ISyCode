@@ -19,9 +19,11 @@ from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS, TOOL_ACTIONS, LocalWorkspaceReadOwner, ProviderNetworkOwner,
 )
 from isycode.authority_view import displayed_on
-from isycode.config import discover_workspace_identity, provider_default_model
+from isycode.config import discover_workspace_identity
 from isycode.git_owner import GIT_TOOLS, GitOwner, git_executable
-from isycode.providers import Provider, ProviderError, load_provider_key, selected_provider_name
+from isycode.providers import (
+    Provider, ProviderError, load_provider_key, resolved_chat_model, selected_provider_name,
+)
 from isycode.chat_transport import assistant_turn, provider_complete
 from isycode.streaming import StreamError
 from isycode.turn_events import TurnEventStream
@@ -123,7 +125,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
     _register_saved_key_reader(root)
     try:
         name = selected_provider_name()
-        provider = Provider(name=name, model=provider_default_model(name),
+        provider = Provider(name=name, model=resolved_chat_model(name),
                             api_key=load_provider_key(name) or None)
     except ProviderError as exc:
         print(f"isycode: provider unavailable · {exc}", file=log)

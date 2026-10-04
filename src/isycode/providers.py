@@ -374,6 +374,34 @@ def selected_model_name() -> str:
     return os.environ.get("ISYMOTRON_MODEL", "")
 
 
+def resolved_chat_model(provider_name: str | None = None) -> str:
+    """Model a chat request should use for this provider.
+
+    A saved selection wins over the catalog default. ``ISYCODE_MODEL`` and
+    ``ISYMOTRON_MODEL`` apply only to the active provider, the same rule as
+    ``selected_model_name``. Passing ``provider_default_model`` into
+    ``Provider`` skips that saved selection because the NVIDIA default is
+    always truthy.
+    """
+    name = (provider_name or selected_provider_name()).casefold()
+    if name == selected_provider_name():
+        saved = selected_model_name().strip()
+    else:
+        saved = ""
+        try:
+            value = _load_preferences().get("models", {}).get(name, "")
+            if isinstance(value, str):
+                saved = value.strip()
+        except (AttributeError, OSError, ValueError):
+            saved = ""
+    if saved:
+        return saved
+    preset = PRESETS.get(name, {})
+    return (provider_default_model(name)
+            or str(preset.get("default_model") or "")
+            or DEFAULT_MODEL)
+
+
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
     if name == "chatgpt":
