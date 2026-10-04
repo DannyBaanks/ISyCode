@@ -15,15 +15,37 @@ _WALK = (
     "...#.......#....",
     "...#########....",
 )
-_SLEEP = (
-    "..#...#.......",
-    "..##.##..###..",
-    "..#####.#...#.",
-    "..#...##.....#",
-    "..#.#.#..##..#",
-    "...###..#..#.#",
-    "..#.....####.#",
-    "...##########.",
+# Face on the left, tail trailing on the right. The widest one is used when
+# the caption line has room; the others keep a face and a tail in narrow columns.
+_REST_FULL = (
+    "#...#.............",
+    "##.##.............",
+    "#####.............",
+    "#...#.............",
+    ".###..##..........",
+    "....#..#.#........",
+    ".......#.#.#......",
+    "........#...#.....",
+)
+_REST_MED = (
+    "#.#.......",
+    "#.#.......",
+    "###.......",
+    "#.........",
+    ".###.#....",
+    "...#.#.#..",
+    "....#.#...",
+    ".....#....",
+)
+_REST_TINY = (
+    "#.#.",
+    "#..#",
+    ".##.",
+    ".#..",
+    ".##.",
+    "..##",
+    "..#.",
+    "...#",
 )
 
 
@@ -66,20 +88,58 @@ def walking_cat(width: int, tick: int) -> Text:
     return result
 
 
+def _rest_rows(bitmap: tuple[str, ...]) -> tuple[str, str]:
+    cols = max(len(row) for row in bitmap)
+    if cols % 2:
+        cols += 1
+    packed = _dots(tuple(row.ljust(cols, ".")[:cols] for row in bitmap))
+    return packed[0], packed[1]
+
+
 def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad") -> Text:
-    """Outlined cat with its tail curled around its body, resting quietly."""
+    """Cat resting on the caption line, z on its face and a tail behind it.
+
+    The walking pose still fills the activity box and bounces when a turn starts.
+    """
+    from rich.cells import cell_len
+
     width = max(1, width)
     label = " ".join((caption or "Chat ready").split()) or "Chat ready"
     if width < 10:
         return Text(label[:width], style=caption_style)
-    travel = width - 10
-    left = travel // 2
-    right = travel - left
-    sprite = _dots(_SLEEP)
+    if cell_len(label) > width:
+        label = label[:width]
+
+    chosen: tuple[str, str, int] | None = None
+    for bitmap, gap in (
+        (_REST_FULL, 1), (_REST_MED, 1), (_REST_TINY, 1), (_REST_TINY, 0),
+    ):
+        top, body = _rest_rows(bitmap)
+        block = 1 + cell_len(top)  # the z sits on the face, then the sprite
+        if cell_len(label) + gap + block <= width:
+            chosen = (top, body, gap)
+            break
+
+    blank = " " * width
+    if chosen is None:
+        result = Text()
+        result.append(blank + "\n" + blank + "\n")
+        result.append(label.ljust(width), style=caption_style)
+        return result
+
+    top, body, gap = chosen
+    start = cell_len(label) + gap
+    face = Text(" " * start)
+    face.append("z" + top, style="#77d8b0")
+    face.append(" " * (width - start - cell_len("z" + top)))
+    feet = Text(label, style=caption_style)
+    feet.append(" " * gap)
+    feet.append(" " + body, style="#77d8b0")  # the space sits under the z
+    feet.append(" " * (width - cell_len(label) - gap - cell_len(" " + body)))
     result = Text()
-    result.append(" " + " " * left + sprite[0] + "z" + " " * right + " ", style="#77d8b0")
-    result.append("\n[", style="#9aa3ad")
-    result.append(" " * left + sprite[1] + " " + " " * right, style="#77d8b0")
-    result.append("]\n", style="#9aa3ad")
-    result.append(label[:width].ljust(width), style=caption_style)
+    result.append(blank)
+    result.append("\n")
+    result.append(face)
+    result.append("\n")
+    result.append(feet)
     return result
