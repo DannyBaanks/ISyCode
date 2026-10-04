@@ -189,6 +189,8 @@ def test_composer_help_is_visible_without_covering_input_or_navigation(tmp_path,
             assert app.screen.region.contains_region(hint.region)
             assert not hint.region.overlaps(prompt.region)
             assert not hint.region.overlaps(bar.region)
+            from rich.cells import cell_len
+            assert cell_len(hint.render().plain.splitlines()[0]) <= hint.content_size.width
 
     with capsys.disabled():
         asyncio.run(scenario())

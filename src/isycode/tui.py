@@ -3730,7 +3730,7 @@ class TUIApp(App):
                         yield ShellBox("ShellBox · no processes", id="shell-box", markup=False)
                         yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
-                    yield Static("Enter send / queue · select queued + empty Send: steer · Esc: undo queue · Ctrl+J newline", id="composer-hint")
+                    yield Static("Enter send/queue · empty Enter steers · Esc restores queue · Ctrl+J newline", id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button("Sidebar", id="sidebar-button")
                         yield Button("Sessions", id="sessions-button")
@@ -9361,11 +9361,10 @@ class TUIApp(App):
         if self.is_mounted:
             try:
                 status = self.query_one("#activity-status", Static)
-                if message == "Chat ready":
-                    from isycode.cat_activity import sleeping_cat
-                    status.update(sleeping_cat(status.content_size.width))
-                else:
-                    status.update(Text(message, style=color))
+                if self._loop_task is not None and not self._loop_task.done():
+                    return
+                from isycode.cat_activity import sleeping_cat
+                status.update(sleeping_cat(status.content_size.width, message, color))
             except (NoScreen, ScreenStackError):
                 pass
 

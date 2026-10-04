@@ -41,6 +41,9 @@ def test_status_flanks_idea_box_and_animation_stops(tmp_path, monkeypatch, size)
                        for row in plain_text(activity).splitlines())
             app._animate_activity()
             assert 'Chat ready' in plain_text(activity)
+            app._set_activity('Draft kept')
+            kept = plain_text(activity)
+            assert 'Draft kept' in kept and 'z' in kept
             bar = app.query_one('#chat').vertical_scrollbar
             assert isinstance(bar, QuietScrollBar)
             bar._direction = 1

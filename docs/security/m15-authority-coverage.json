@@ -1992,14 +1992,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 9911,
+      "line": 9910,
       "callable": "isycode.tui.TUIApp._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui.py",
-      "line": 10014,
+      "line": 10013,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -2113,7 +2113,7 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 10014,
+      "line": 10013,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"

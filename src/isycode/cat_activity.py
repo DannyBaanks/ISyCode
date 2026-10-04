@@ -66,11 +66,12 @@ def walking_cat(width: int, tick: int) -> Text:
     return result
 
 
-def sleeping_cat(width: int) -> Text:
+def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad") -> Text:
     """Outlined cat with its tail curled around its body, resting quietly."""
     width = max(1, width)
+    label = " ".join((caption or "Chat ready").split()) or "Chat ready"
     if width < 10:
-        return Text("Chat ready"[:width], style="#9aa3ad")
+        return Text(label[:width], style=caption_style)
     travel = width - 10
     left = travel // 2
     right = travel - left
@@ -80,5 +81,5 @@ def sleeping_cat(width: int) -> Text:
     result.append("\n[", style="#9aa3ad")
     result.append(" " * left + sprite[1] + " " + " " * right, style="#77d8b0")
     result.append("]\n", style="#9aa3ad")
-    result.append("Chat ready"[:width].ljust(width), style="#9aa3ad")
+    result.append(label[:width].ljust(width), style=caption_style)
     return result
