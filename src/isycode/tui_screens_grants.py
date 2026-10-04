@@ -138,7 +138,7 @@ class WorkspaceModeScreen(ModalScreen[str]):
                 "Free shell and sensitive files are never implied. Switch any time "
                 "in Settings → Authority.", id="workspace-mode-copy")
             yield OptionList(
-                Option("Classic · ready to use", id="classic"),
+                Option("Classic · Ready To Use", id="classic"),
                 Option("Security · everything off until I allow it", id="security"),
                 id="workspace-mode-options")
 

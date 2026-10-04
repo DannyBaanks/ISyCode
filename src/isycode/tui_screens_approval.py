@@ -185,10 +185,12 @@ class WriteApprovalScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
 
-    def __init__(self, preview: WritePreview, *, replaces_whole_file: bool = False) -> None:
+    def __init__(self, preview: WritePreview, *, replaces_whole_file: bool = False,
+                 allow_automatic_edits: bool = True) -> None:
         super().__init__()
         self.preview = preview
         self.replaces_whole_file = replaces_whole_file
+        self.allow_automatic_edits = allow_automatic_edits
 
     def compose(self) -> ComposeResult:
         lines = self.preview.diff.splitlines()
@@ -219,7 +221,7 @@ class WriteApprovalScreen(ApprovalScreen):
             with Horizontal(id="write-approval-actions"):
                 yield Button("Reject · n", id="write-approval-reject")
                 yield Button("Apply change · y", id="write-approval-apply", variant="warning")
-                if self.preview.kind == "write" and not self.preview.is_undo:
+                if self.allow_automatic_edits and self.preview.kind == "write" and not self.preview.is_undo:
                     yield Button("Always allow…", id="write-approval-always", variant="error")
 
     def on_mount(self) -> None:

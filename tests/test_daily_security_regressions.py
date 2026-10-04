@@ -1,5 +1,9 @@
 """Adversarial regressions for daily workspace authorization."""
 from dataclasses import replace
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -81,3 +85,29 @@ def test_file_change_rejects_unbound_review_display(workspace, kind):
     assert owner.apply(forged, approvals.issue(preview.request)).decision == "DENY"
     assert target.read_text() == "original\n"
     assert not (root / "b.txt").exists()
+
+
+@pytest.mark.skipif(not hasattr(os, 'mkfifo'), reason='named pipes require POSIX')
+def test_reading_a_named_pipe_returns_without_waiting_for_a_writer(tmp_path):
+    root = tmp_path / 'project'
+    root.mkdir()
+    os.mkfifo(root / 'input.txt')
+    source = Path(__file__).resolve().parents[1] / 'src'
+    code = '''
+import sys
+from pathlib import Path
+from isycode.workspace_authority import WorkspaceAuthority
+from isycode.action_runtime import LocalWorkspaceReadOwner
+root = Path(sys.argv[1])
+authority = WorkspaceAuthority(root)
+authority.set_mode('classic')
+outcome = LocalWorkspaceReadOwner(root, authority).execute('workspace.files.read', {'path': 'input.txt'})
+assert outcome.decision in {'DENY', 'ERROR'}, outcome
+assert outcome.receipt is None
+print('refused')
+'''
+    result = subprocess.run([sys.executable, '-c', code, str(root)],
+        env={**os.environ, 'PYTHONPATH': str(source), 'ISYCODE_STATE_HOME': str(tmp_path / 'state')},
+        capture_output=True, text=True, timeout=5)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == 'refused'

@@ -2428,7 +2428,11 @@ class LocalWorkspaceReadOwner:
             return VerifiedFS(self.root).open_read(path)
         parent_fd = self._open_directory(path.parent)
         try:
-            return os.open(path.name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+            # Open before checking the descriptor's type without waiting for a
+            # FIFO writer. A repository-controlled named pipe must not pin an
+            # executor thread (or prevent shutdown after cancellation).
+            return os.open(path.name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                           | getattr(os, "O_NONBLOCK", 0),
                            dir_fd=parent_fd)
         finally:
             os.close(parent_fd)

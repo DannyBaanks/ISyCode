@@ -204,3 +204,29 @@ def test_receipt_text_is_presentation_and_imports_no_policy():
     assert "verified_receipt_line(" in joined
     assert "_workspace_read_owner().execute" in joined
 
+
+def test_tui_read_dispatch_obeys_live_owner_revocation(tmp_path, monkeypatch, capsys):
+    import asyncio
+    from isycode.tui import TUIApp
+    from test_daily_tui import configure
+
+    root = configure(tmp_path, monkeypatch)
+    (root / 'app.py').write_text('audit-content-canary\n')
+    authority = WorkspaceAuthority(root)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            call = {'id': 'audit-read', 'function': {'name': 'workspace_read',
+                    'arguments': json.dumps({'path': 'app.py'})}}
+            _, allowed = await app._dispatch_chat_tool(call)
+            assert 'audit-content-canary' in allowed
+            authority.set_grant('workspace.files.read', enabled=False)
+            _, denied = await app._dispatch_chat_tool(call)
+            assert 'error' in json.loads(denied)
+            assert 'audit-content-canary' not in denied
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+

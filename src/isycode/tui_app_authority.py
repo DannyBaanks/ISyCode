@@ -52,6 +52,8 @@ class AuthorityMixin:
 
     def _request_is_quiet(self, request) -> bool:
         """Trusted Classic covers this request, so the per-action modal stays closed."""
+        if self._workspace_mode() != 'classic':
+            return False
         try:
             from isycode.workspace_trust import quiet_classic
             return bool(quiet_classic(WorkspaceAuthority(request.workspace_root), request))
@@ -131,7 +133,7 @@ class AuthorityMixin:
             grants = policy.get("grants", {})
             classic = authority.mode() == "classic"
             entries.append(self._entry(
-                ("Mode · Classic · ready to use; switch to Security…" if classic
+                ("Mode · Classic · Ready To Use; switch to Security…" if classic
                  else "Mode · Security · nothing runs until you allow it; switch to Classic…"),
                 "workspace_mode", "security" if classic else "classic",
                 "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, "
