@@ -114,12 +114,19 @@ def test_mobile_host_toggle_covers_the_issue_grant():
 def test_tui_replaces_the_pin_only_through_the_owner():
     import ast
 
-    source = (Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py").read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    method = next(node for node in app.body
-                  if isinstance(node, ast.AsyncFunctionDef) and node.name == "_issue_pairing_pin")
+    package = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    method = None
+    for path in (package / "tui.py", *sorted(package.glob("tui_app_*.py"))):
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, ast.AsyncFunctionDef) and item.name == "_issue_pairing_pin":
+                    method = item
+    assert method is not None
     # to_thread receives the owner method by reference, so check attribute uses.
     used = {node.attr for node in ast.walk(method) if isinstance(node, ast.Attribute)}
     assert "issue_pairing_pin" in used and "rotate_pairing_code" not in used

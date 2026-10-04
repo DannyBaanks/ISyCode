@@ -9,16 +9,27 @@ from isycode.workspace_write import WritePreview
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
 
 
-def _methods():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    return {node.name: node for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+def _owned():
+    methods = {}
+    sources = {}
+    for path in (SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))):
+        text = path.read_text(encoding="utf-8")
+        module = ast.parse(text)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    methods[item.name] = item
+                    sources[item.name] = text
+    return sources, methods
 
 
 def _segment(name):
-    return ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), _methods()[name])
+    sources, methods = _owned()
+    return ast.get_source_segment(sources[name], methods[name])
 
 
 def test_write_tool_is_offered_only_when_the_write_grant_is_on():

@@ -1604,13 +1604,13 @@
     },
     {
       "action": "desktop.file_picker",
-      "callsite": "TUIApp._open_broker_preview",
+      "callsite": "RemoteMixin._open_broker_preview",
       "owner": null,
       "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "desktop.file_picker",
-      "callsite": "TUIApp._provision_broker",
+      "callsite": "RemoteMixin._provision_broker",
       "owner": null,
       "status": "BLOCKED_BY_DESIGN"
     },
@@ -1985,43 +1985,43 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 2168,
+      "line": 1749,
       "callable": "isycode.tui.TUIApp._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 4472,
+      "line": 3698,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 2332,
-      "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
+      "file": "isycode/tui_app_remote.py",
+      "line": 622,
+      "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 2384,
-      "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
+      "file": "isycode/tui_app_remote.py",
+      "line": 674,
+      "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 2515,
-      "callable": "isycode.tui.TUIApp._open_lsp_server",
+      "file": "isycode/tui_app_remote.py",
+      "line": 805,
+      "callable": "isycode.tui_app_remote.RemoteMixin._open_lsp_server",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 3792,
-      "callable": "isycode.tui.TUIApp._authorize_remote_read",
+      "file": "isycode/tui_app_remote.py",
+      "line": 846,
+      "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
     },
@@ -2113,15 +2113,15 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 4472,
+      "line": 3698,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 3792,
-      "callable": "isycode.tui.TUIApp._authorize_remote_read",
+      "file": "isycode/tui_app_remote.py",
+      "line": 846,
+      "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
     }

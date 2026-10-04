@@ -193,11 +193,14 @@ def test_receipt_text_is_presentation_and_imports_no_policy():
         return found
 
     view = root / "src" / "isycode" / "decision_view.py"
-    tui = root / "src" / "isycode" / "tui.py"
+    package = root / "src" / "isycode"
+    tui = package / "tui.py"
+    surfaces = [tui, *sorted(package.glob("tui_*.py"))]
     assert imported(view).isdisjoint(forbidden)
-    tui_imports = imported(tui)
+    tui_imports = set().union(*(imported(path) for path in surfaces))
     assert "isycode.decision_view" in tui_imports
     assert "isycode.effect_policy" not in tui_imports
-    source = tui.read_text(encoding="utf-8")
-    assert "verified_receipt_line(" in source
-    assert "_workspace_read_owner().execute" in source
+    joined = "\n".join(path.read_text(encoding="utf-8") for path in surfaces)
+    assert "verified_receipt_line(" in joined
+    assert "_workspace_read_owner().execute" in joined
+

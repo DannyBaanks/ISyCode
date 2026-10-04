@@ -5,12 +5,39 @@ from pathlib import Path
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
 
 
+def _surfaces() -> list[Path]:
+    return [SOURCE, *sorted(SOURCE.parent.glob("tui_*.py"))]
+
+
+def _surface_text() -> str:
+    return "\n".join(path.read_text(encoding="utf-8") for path in _surfaces())
+
+
+def _owned():
+    methods = {}
+    sources = {}
+    for path in _surfaces():
+        text = path.read_text(encoding="utf-8")
+        module = ast.parse(text)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    methods[item.name] = item
+                    sources[item.name] = text
+    return sources, methods
+
+
 def _app_methods():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    return {node.name: node for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    return _owned()[1]
+
+
+def _segment(name: str) -> str:
+    sources, methods = _owned()
+    return ast.get_source_segment(sources[name], methods[name])
 
 
 def _calls(method):
@@ -20,7 +47,7 @@ def _calls(method):
 
 
 def test_private_access_is_reachable_from_settings_and_open_is_read_only():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = _surface_text()
     methods = _app_methods()
     assert '"private_access"' in source
     assert "TailscaleReadOwner" in _calls(methods["_refresh_private_access"])
@@ -65,15 +92,14 @@ def test_tailscale_serve_targets_mobile_host_and_mounted_health_path():
 
 
 def test_serve_failure_reports_owner_validation_reason_without_command_output():
-    method = _app_methods()["_run_tailscale_serve"]
-    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), method)
+    source = _segment("_run_tailscale_serve")
     assert "isinstance(exc, ValueError)" in source
     assert "str(exc)[:180]" in source
     assert "No route change was approved" in source
 
 
 def test_tui_does_not_run_tailscale_or_package_commands_directly():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = _surface_text()
     methods = _app_methods()
     for name in ("on_mount", "_open_settings_menu", "_refresh_private_access",
                  "_select_menu_entry"):
@@ -87,7 +113,7 @@ def test_tui_does_not_run_tailscale_or_package_commands_directly():
 def test_authority_grant_is_separately_confirmed_and_narrowly_scoped():
     methods = _app_methods()
     calls = _calls(methods["_change_tailscale_grant"])
-    source_text = SOURCE.read_text(encoding="utf-8")
+    source_text = _surface_text()
     assert "_await_screen" in calls
     assert "set_grant" in calls
     assert "executables" in source_text
@@ -98,7 +124,7 @@ def test_manual_path_is_documented_without_starting_tailscale():
     methods = _app_methods()
     calls = _calls(methods["_show_tailscale_manual_steps"])
     assert "_await_screen" in calls
-    assert "tailscale.com/docs/install/linux" in SOURCE.read_text(encoding="utf-8")
+    assert "tailscale.com/docs/install/linux" in _surface_text()
     assert "tailscale" not in calls
 
 
@@ -106,20 +132,17 @@ def test_manual_path_is_documented_without_starting_tailscale():
 def test_serve_route_lifetime_policy_is_explicit_and_never_unapproved():
     """Exit never disables Serve without approval; Settings says the route persists."""
     methods = _app_methods()
-    source = SOURCE.read_text(encoding="utf-8")
     assert not set(_calls(methods["on_unmount"])) & {
         "disable", "preview_disable", "_run_tailscale_serve"}
-    refresh = ast.get_source_segment(source, methods["_refresh_private_access"])
+    refresh = _segment("_refresh_private_access")
     assert "Route stays on after ISyCode exits" in refresh
-    start = ast.get_source_segment(source, methods["_start_mobile_host"])
+    start = _segment("_start_mobile_host")
     assert "already points here" in start
 
 
 def test_linux_operator_guidance_is_text_only_and_shown_on_failures():
-    methods = _app_methods()
-    source = SOURCE.read_text(encoding="utf-8")
     for name in ("_run_tailscale_serve", "_check_tailscale_login"):
-        assert "LINUX_OPERATOR_HINT" in ast.get_source_segment(source, methods[name]), name
+        assert "LINUX_OPERATOR_HINT" in _segment(name), name
     package = Path(__file__).resolve().parents[1] / "src" / "isycode"
     for module in ("tailscale.py", "tailscale_login.py", "tailscale_serve.py", "tailscale_read.py"):
         tree = ast.parse((package / module).read_text(encoding="utf-8"))
@@ -129,8 +152,6 @@ def test_linux_operator_guidance_is_text_only_and_shown_on_failures():
 
 
 def test_mobile_host_status_reports_a_saved_private_route():
-    methods = _app_methods()
-    segment = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"),
-                                     methods["_render_mobile_host_status"])
+    segment = _segment("_render_mobile_host_status")
     assert "Tailscale Serve is not modified" not in segment
     assert "route_url(" in segment

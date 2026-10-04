@@ -61,12 +61,20 @@ def test_panel_shows_and_hides_with_the_list():
 
 
 def test_chat_routes_the_task_tool_without_any_owner():
-    source = (Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py").read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    dispatch = ast.get_source_segment(source, next(
-        node for node in app.body if getattr(node, "name", "") == "_dispatch_chat_tool_impl"))
+    package = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    dispatch = None
+    for path in (package / "tui.py", *sorted(package.glob("tui_app_*.py"))):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if getattr(item, "name", "") == "_dispatch_chat_tool_impl":
+                    dispatch = ast.get_source_segment(source, item)
+    assert dispatch is not None
     branch = dispatch[dispatch.index("if name == TASK_TOOL_NAME"):]
     branch = branch[:branch.index("action_id = TOOL_ACTIONS[name]")]
     assert "validate_tasks(arguments)" in branch and "Owner" not in branch

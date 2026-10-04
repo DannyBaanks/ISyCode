@@ -3,7 +3,6 @@ from pathlib import Path
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
-SESSIONS = SOURCE.with_name("tui_app_sessions.py")
 AUTHORITY = SOURCE.with_name("tui_app_authority.py")
 
 
@@ -11,15 +10,18 @@ def _tui_methods() -> tuple[dict[str, str], dict[str, ast.AST]]:
     """Methods of TUIApp plus mixins that now own part of the class."""
     sources: dict[str, str] = {}
     methods: dict[str, ast.AST] = {}
-    for path, class_name in ((SOURCE, "TUIApp"), (SESSIONS, "SessionMixin")):
+    for path in (SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))):
         source = path.read_text(encoding="utf-8")
         module = ast.parse(source)
-        klass = next(node for node in module.body
-                     if isinstance(node, ast.ClassDef) and node.name == class_name)
-        for node in klass.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                methods[node.name] = node
-                sources[node.name] = source
+        for klass in module.body:
+            if not isinstance(klass, ast.ClassDef):
+                continue
+            if klass.name != "TUIApp" and not klass.name.endswith("Mixin"):
+                continue
+            for node in klass.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    methods[node.name] = node
+                    sources[node.name] = source
     return sources, methods
 
 
@@ -49,11 +51,7 @@ def test_secure_tui_mount_does_not_start_mobile_or_bridge_services():
 
 
 def test_secure_tui_adapter_controls_have_no_unmediated_effect_calls():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    _, methods = _tui_methods()
     forbidden = {"start", "rotate_pairing_code", "hello", "heartbeat", "goodbye",
                  "peek", "claim", "release", "send", "wake"}
 
@@ -129,17 +127,7 @@ def test_authority_settings_never_presents_an_explicit_deny_as_granted():
 
 
 def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
-    methods = {}
-    sources = {}
-    for path, class_name in ((SOURCE, "TUIApp"), (AUTHORITY, "AuthorityMixin")):
-        source = path.read_text(encoding="utf-8")
-        module = ast.parse(source)
-        app = next(node for node in module.body
-                   if isinstance(node, ast.ClassDef) and node.name == class_name)
-        for node in app.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                methods[node.name] = node
-                sources[node.name] = source
+    sources, methods = _tui_methods()
     for name in ("_open_authority_menu", "_append_network_grant_entry",
                  "_open_tailscale_permissions", "_initialize_workspace",
                  "_workspace_chat_tools_enabled"):
@@ -202,12 +190,7 @@ def test_semantic_navigation_keeps_lsp_and_files_branches_reachable(monkeypatch)
 
 
 def test_tui_uses_narrow_owner_for_context_picker_and_keeps_other_pickers_blocked():
-    source = SOURCE.read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    _, methods = _tui_methods()
 
     inject_calls = _method_calls(methods["_inject_agent_context"])
     assert "ContextFilePickerOwner" in inject_calls

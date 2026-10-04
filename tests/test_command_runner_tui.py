@@ -38,12 +38,20 @@ def test_command_screen_rejects_by_default_and_runs_only_on_the_button(tmp_path)
 
 
 def _methods():
-    source = (Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py").read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    return {node.name: ast.get_source_segment(source, node) for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    package = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    found = {}
+    for path in (package / "tui.py", *sorted(package.glob("tui_app_*.py"))):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    found[item.name] = ast.get_source_segment(source, item)
+    return found
 
 
 def test_command_tool_is_offered_only_with_an_effective_sandbox_grant():

@@ -138,7 +138,16 @@ def test_multi_harness_tui_keeps_processes_outside_tuiapp_and_lists_sessions_via
                if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
     forbidden_names = {"create_subprocess_exec", "Popen", "check_call", "check_output"}
     forbidden_subprocess_attrs = {"Popen", "run", "call", "check_call", "check_output"}
-    for source, klass in ((app_source, app), (session_source, mixin)):
+    scanned = [(app_source, app), (session_source, mixin)]
+    for path in sorted(SOURCE.parent.glob("tui_app_*.py")):
+        if path.name == "tui_app_sessions.py":
+            continue
+        text = path.read_text(encoding="utf-8")
+        module = ast.parse(text)
+        for node in module.body:
+            if isinstance(node, ast.ClassDef) and node.name.endswith("Mixin"):
+                scanned.append((text, node))
+    for source, klass in scanned:
         for node in ast.walk(klass):
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Name):

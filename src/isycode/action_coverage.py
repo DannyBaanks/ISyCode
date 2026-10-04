@@ -58,7 +58,7 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("workspace.files.list", "workspace.files.read",
                     "workspace.files.search", "workspace.context.inject"),
     },
-    "isycode.tui.TUIApp._authorize_remote_read": {
+    "isycode.tui_app_remote.RemoteMixin._authorize_remote_read": {
         "owner": "remote_catalog",
         "actions": ("catalog.external.read", "gateway.files.read", "mcp.discover"),
     },
@@ -158,8 +158,8 @@ KNOWN_EFFECT_CALLSITES = (
     ("session.create", "ChatSessionStore.create", "", "UNWIRED"),
     ("session.create", "ChatSessionStore.rename", "", "UNWIRED"),
     ("session.create", "ChatSessionStore.fork", "", "UNWIRED"),
-    ("desktop.file_picker", "TUIApp._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
-    ("desktop.file_picker", "TUIApp._provision_broker", "", "BLOCKED_BY_DESIGN"),
+    ("desktop.file_picker", "RemoteMixin._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
+    ("desktop.file_picker", "RemoteMixin._provision_broker", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "TUIApp._register_builtin_plugins._readme_cmd", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_directory", "", "BLOCKED_BY_DESIGN"),
