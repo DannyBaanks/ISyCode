@@ -118,7 +118,8 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
             widget = app.query_one("#idle-board")
             board = plain_text(widget)
             assert "LSPs" in board and "MCPs" in board and "Skills" in board
-            assert "#####" in board and ".--." in board
+            assert "ISYCODE" in board
+            assert any("\u2800" <= char <= "\u28ff" for char in board)
             assert "╱" not in board
             assert "|##|" not in board
             assert not list(app.query("#open-idle-art"))
@@ -127,15 +128,14 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
                 [(cell_len(line), line[:70]) for line in board.splitlines()
                  if cell_len(line) > widget.content_size.width],
             )
-            assert not any("\u2800" <= char <= "\u28ff" for char in board)
             await pilot.resize_terminal(80, 24)
             await pilot.pause()
             narrow = plain_text(widget)
-            assert "#####" in narrow or "ISYCODE" in narrow
+            assert "ISYCODE" in narrow
             assert "LSPs" in narrow
             assert "╱" not in narrow
             assert all(cell_len(line) <= widget.content_size.width for line in narrow.splitlines())
-            assert not any("\u2800" <= char <= "\u28ff" for char in narrow)
+            assert any("\u2800" <= char <= "\u28ff" for char in narrow)
             app._open_provider_menu()
             assert app._menu_title == "Select provider"
             assert any(entry["kind"] == "section" and entry["label"] == "Popular"

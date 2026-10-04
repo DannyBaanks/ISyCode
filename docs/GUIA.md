@@ -11,10 +11,11 @@ isycode cli
 
 `isycode` abre la TUI. `isycode cli` abre el navegador de acciones.
 
-Al iniciar la TUI aparece un paisaje nocturno dibujado con caracteres alrededor
-del logo `ISYCODE`. Se centra y recorta simétricamente según el ancho real del
-chat; no requiere que el terminal soporte imágenes. Tras el primer mensaje, la
-pantalla de inicio queda en el historial y se desplaza hacia arriba con el chat.
+Al iniciar la TUI aparece un paisaje nocturno de puntos de color: luna, montañas,
+cabaña, lago y el nombre `ISYCODE` en el cielo. Se centra y recorta simétricamente
+según el ancho real del chat; no requiere que el terminal soporte imágenes. Tras
+el primer mensaje, la pantalla de inicio queda en el historial y se desplaza hacia
+arriba con el chat.
 
 **Multi Harness** en la barra inferior, en ⚙ Settings o con `/harness` abre
 tarjetas por herramienta: versión, ajustes revisados y acciones disponibles.
