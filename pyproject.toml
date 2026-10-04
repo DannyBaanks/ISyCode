@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+vision-probe = ["Pillow>=10,<13"]
 # Native Claude provider (Anthropic Messages API).
 anthropic = ["anthropic>=1.10,<2"]
 

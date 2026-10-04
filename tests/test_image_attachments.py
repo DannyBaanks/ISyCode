@@ -5,13 +5,16 @@ from isycode.anthropic_provider import to_anthropic
 
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=")
 
-def test_image_is_real_payload_and_requires_verified_capability():
+def test_image_is_real_payload_and_unknown_support_can_be_tried(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
     images = ImageAttachments()
     label = images.capture("image/png", PNG)
     assert label == "[IMAGE#1]"
     messages = [{"role": "user", "content": "Explain " + label}]
-    with pytest.raises(ValueError, match="verified image"):
-        images.prepare(messages, "nvidia", "nvidia/nemotron-3-ultra-550b-a55b")
+    assert images.prepare(messages, "nvidia", "unknown")[0]["content"][-1]["type"] == "image_url"
+    record_image_capability("test", "text-only", {"inputModalities": ["text"]})
+    with pytest.raises(ValueError, match="no image support"):
+        images.prepare(messages, "test", "text-only")
     record_image_capability("test", "vision", {"inputModalities": ["text", "image"]})
     result = images.prepare(messages, "test", "vision")
     url = result[0]["content"][-1]["image_url"]["url"]

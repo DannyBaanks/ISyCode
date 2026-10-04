@@ -12,14 +12,14 @@ def record_image_capability(provider, model, entry):
         _CAPABILITIES[(provider, model)] = "image" in modalities
 
 def accepts_images(provider, model):
-    if (provider, model) in _CAPABILITIES:
-        return _CAPABILITIES[(provider, model)]
-    if provider == "openai" and model == "gpt-6-luna":
-        return True
-    if provider == "anthropic":
-        from isycode.anthropic_provider import ADAPTIVE_THINKING_MODELS
-        return model in ADAPTIVE_THINKING_MODELS
-    return False
+    from isycode.capability_observations import observed
+    learned = observed(provider, model, "images")
+    return learned if learned is not None else _CAPABILITIES.get((provider, model))
+
+
+def record_image_result(provider, model, supported):
+    from isycode.capability_observations import record
+    return record(provider, model, "images", supported)
 
 class ImageAttachments:
     def __init__(self):
@@ -54,8 +54,8 @@ class ImageAttachments:
             copied = dict(message)
             text = copied.get("content")
             if copied.get("role") == "user" and isinstance(text, str) and re.search(r"\[IMAGE#\d+\]", text):
-                if not accepts_images(provider, model):
-                    raise ValueError("This model has no verified image support; choose a vision model or remove the image")
+                if accepts_images(provider, model) is False:
+                    raise ValueError("This provider/model reports no image support; choose another model or remove the image")
                 copied["content"] = self.content(text)
             result.append(copied)
         return result

@@ -16,7 +16,7 @@ def test_thinking_preview_full_and_hidden_states_are_local_to_focus(tmp_path, mo
             assert not str(block.border_subtitle)
             block.set_text('First line\nSecond line\nThird line\nFourth line')
             assert plain_text(block._body) == 'First line\nSecond line'
-            assert 'expand' in str(block.border_subtitle)
+            assert not str(block.border_subtitle)
             app.query_one('#prompt-input').focus()
             await pilot.press('space')
             assert plain_text(block._body) == 'First line\nSecond line'

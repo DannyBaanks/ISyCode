@@ -92,6 +92,7 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
 KNOWN_EFFECT_CALLSITES = (
+    ("web.fetch", "WebFetchOwner.execute", "web_fetch", "COVERED"),
     ("session.create", "IterationOwner._persist", "chat_sessions", "COVERED"),
     ("session.resume", "IterationOwner.inspect", "chat_sessions", "COVERED"),
     ("provider.request", "run_iteration.complete", "provider_network", "COVERED"),

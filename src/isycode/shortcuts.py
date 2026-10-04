@@ -15,6 +15,7 @@ class Shortcut:
 
 
 APP_SHORTCUTS: tuple[Shortcut, ...] = (
+    Shortcut("ctrl+s", "toggle_shell_box", "ShellBox", "Switch IdeaBox and sandbox processes", True),
     Shortcut("alt+plus,alt+equals,alt+period", "increase_reasoning", "Effort +", "Increase supported reasoning effort", True),
     Shortcut("alt+minus,alt+comma", "decrease_reasoning", "Effort -", "Decrease supported reasoning effort", True),
     Shortcut("ctrl+f", "find_console", "Find", "Search rendered console output", True),

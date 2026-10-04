@@ -51,9 +51,11 @@ def available_tools(root: Path, authority: WorkspaceAuthority) -> list[dict]:
                              str(root) in grants.get(action, {}).get("path_prefixes", []))
                 for action in ("workspace.files.list", "workspace.files.read",
                                "workspace.files.search"))
-    if not reads:
-        return []
-    tools = list(CHAT_WORKSPACE_TOOLS)
+    tools = list(CHAT_WORKSPACE_TOOLS) if reads else []
+    web_grant = grants.get("web.fetch", {})
+    if web_grant.get("enabled") and web_grant.get("network_hosts"):
+        from isycode.web_fetch import WEB_FETCH_TOOL
+        tools.append(WEB_FETCH_TOOL)
     if (git_executable() and (root / ".git").is_dir()
             and all(displayed_on(action, grants.get(action, {}))
                     for action in ("git.status", "git.diff"))):
@@ -83,6 +85,11 @@ def _dispatch(root: Path, authority: WorkspaceAuthority, call: dict, log: TextIO
         arguments = None
     if not isinstance(arguments, dict):
         return call_id, json.dumps({"error": "tool arguments must be a JSON object"})
+    if name == "webfetch":
+        from isycode.web_fetch import WebFetchOwner
+        if set(arguments) != {"url"}:
+            return call_id, json.dumps({"error": "webfetch requires one URL"})
+        return call_id, json.dumps(WebFetchOwner(root, authority).execute(arguments["url"]), ensure_ascii=False)
     if name in TOOL_ACTIONS:
         outcome = LocalWorkspaceReadOwner(root, authority).execute(TOOL_ACTIONS[name], arguments)
     elif name == "git_status":

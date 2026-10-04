@@ -55,9 +55,8 @@ def test_scroll_indicator_uses_same_stroke_in_both_directions(tmp_path, monkeypa
                 bar._direction = direction
                 rows = [line.strip() for line in bar.render().plain.splitlines() if line.strip()]
                 patterns.append(rows)
-                assert all(set(line) == {"─"} for line in rows)
-            assert patterns[0] == ["───", "─", "─"]
-            assert patterns[1] == ["─", "─", "───"]
+                assert rows == ["▲", "━━━", "▼"]
+            assert patterns[0] == patterns[1]
             bar._settle()
-            assert [line.strip() for line in bar.render().plain.splitlines() if line.strip()] == ["─"]
+            assert [line.strip() for line in bar.render().plain.splitlines() if line.strip()] == patterns[0]
     asyncio.run(scenario())

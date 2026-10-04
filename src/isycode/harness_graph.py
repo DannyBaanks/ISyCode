@@ -83,7 +83,7 @@ SEED_OPTIONS: dict[str, SemanticOption] = {
     "approval_mode": _o("approval_mode", "Approval mode", "Foreign approval enum.", "enum", "non_transferable", "absent"),
     "sandbox_policy": _o("sandbox_policy", "Sandbox policy", "Foreign sandbox or network policy.", "enum", "non_transferable", "absent"),
     "auto_accept_web_search": _o("auto_accept_web_search", "Auto-accept web search", "Foreign approval switch for web search.", "bool", "non_transferable", "absent"),
-    "web_fetch": _o("web_fetch", "Web fetch", "Fetch one HTTP(S) page.", "text", "gap", "absent"),
+    "web_fetch": _o("web_fetch", "Web fetch", "Fetch one authorized public HTTPS page.", "text", "display_only", "src/isycode/web_fetch.py:WebFetchOwner.execute"),
     "web_search": _o("web_search", "Web search", "Run a web query.", "text", "gap", "absent"),
     "run_everything_streak": _o("run_everything_streak", "Run-everything streak", "Foreign prompt counter.", "text", "non_transferable", "absent"),
     "ui_auto_dark_theme": _o("ui_auto_dark_theme", "Auto dark theme", "Foreign automatic dark-mode setting.", "text", "gap", "absent"),

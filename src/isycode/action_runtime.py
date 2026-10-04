@@ -242,6 +242,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
                                 "WorkspaceConfigBoundary"}),
     "provider_auth": frozenset({"ProviderAuthBoundary"}),
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
+    "web_fetch": frozenset({"RemoteReadBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
     "chat_sessions": frozenset({"SessionStoreBoundary"}),
@@ -279,6 +280,7 @@ OWNER_ACTIONS = {
     CONFIG_OWNER_ID: CONFIG_ACTIONS,
     "provider_auth": frozenset({"provider.authenticate"}),
     "provider_network": frozenset({"provider.request"}),
+    "web_fetch": frozenset({"web.fetch"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
     "chat_sessions": frozenset({"session.create", "session.resume"}),
@@ -851,7 +853,7 @@ class RemoteReadSystembility:
             return SystembilityResult(self.name, True,
                                       "local listener is checked by the Mobile Host boundary")
         if request.action_id not in {"gateway.files.read", "gateway.semantic.read",
-                                     "mcp.discover", "catalog.external.read"}:
+                                     "mcp.discover", "catalog.external.read", "web.fetch"}:
             if request.action_id == "mcp.invoke":
                 return SystembilityResult(self.name, True, "MCP invocation is checked by its dedicated boundary")
             return SystembilityResult(self.name, False, "no remote read execution owner is registered")

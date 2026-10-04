@@ -23,5 +23,13 @@ def test_consecutive_same_tools_group_as_tree_with_distinct_operation_colors(tmp
             assert groups[0].leaves[0][0].title.startswith("├─ ")
             assert groups[0].leaves[1][0].title.startswith("└─ ")
             assert "Completed" in groups[0].leaves[0][0].title
+            assert all(leaf._title.collapsed_symbol == "" and leaf._title.expanded_symbol == "" for leaf, _ in groups[0].leaves)
+            for single in groups[1:]:
+                leaf = single.leaves[0][0]
+                assert not leaf._title.display
+                assert not leaf.collapsed
+                assert "└─" not in leaf.title
+                single.collapsed = False
+            assert "file1.py" in groups[0].leaves[1][0].title
             assert len({operation_color(n) for n in ("workspace_read", "workspace_grep", "workspace_run", "workspace_write")}) == 4
     asyncio.run(scenario())

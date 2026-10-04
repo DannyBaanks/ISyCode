@@ -84,3 +84,23 @@ def test_presence_button_lists_names_only_after_confirmation(tmp_path, monkeypat
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_real_button_message_pump_can_cancel_modal(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def run():
+        app=TUIApp()
+        async with app.run_test(size=(140,40)) as pilot:
+            await pilot.pause()
+            await app._show_chat_sessions()
+            await pilot.pause()
+            await asyncio.wait_for(pilot.click('#work-bridge'), 3)
+            await pilot.pause()
+            assert app.screen.id=='bridge-presence'
+            await asyncio.wait_for(pilot.press('escape'), 3)
+            await pilot.pause()
+            assert app.screen.id!='bridge-presence'
+            await pilot.click('#work-hide')
+            await pilot.pause()
+            assert not app.query_one('#work-list').display
+    asyncio.run(run())

@@ -6,6 +6,7 @@ COLORS = {
     "workspace_run": "#f0a878", "workspace_delete": "#f08080",
     "workspace_move": "#e8a5c2", "delegate_task": "#74cbd3",
     "update_tasks": "#c7b8d4", "git_status": "#8fb8e8", "git_diff": "#8fb8e8",
+    "webfetch": "#74cbd3",
     "git_commit": "#8fb8e8",
 }
 

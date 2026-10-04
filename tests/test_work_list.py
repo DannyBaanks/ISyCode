@@ -126,9 +126,15 @@ def test_session_toolbar_text_remains_visible_and_all_controls_fit(tmp_path, mon
 def test_sessions_filters_and_details_use_real_selected_row(tmp_path, monkeypatch):
     from isycode.work_list import WorkList
     configure(tmp_path, monkeypatch)
+    # Patch before mount: its timer captures the bound callback at startup.
+    monkeypatch.setattr(TUIApp, "_paint_work_status", lambda self: None)
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(160, 48)) as pilot:
+            # This component fixture supplies its own rows, independently of
+            # the application's periodic owner-backed session refresh.
+            monkeypatch.setattr(app, '_paint_work_status', lambda: None)
+            await pilot.pause()
             board = app.query_one(WorkList)
             board.display = True
             board.show_rows([
@@ -150,6 +156,8 @@ def test_sessions_filters_and_details_use_real_selected_row(tmp_path, monkeypatc
 def test_sessions_first_click_previews_second_opens_and_arrows_select(tmp_path, monkeypatch):
     from isycode.work_list import WorkList
     configure(tmp_path, monkeypatch)
+    # Patch before mount: its timer captures the bound callback at startup.
+    monkeypatch.setattr(TUIApp, "_paint_work_status", lambda self: None)
     opened = []
     async def resume(self, session_id):
         opened.append(session_id)
@@ -157,6 +165,10 @@ def test_sessions_first_click_previews_second_opens_and_arrows_select(tmp_path, 
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(160, 48)) as pilot:
+            # This component fixture supplies its own rows, independently of
+            # the application's periodic owner-backed session refresh.
+            monkeypatch.setattr(app, '_paint_work_status', lambda: None)
+            await pilot.pause()
             board = app.query_one(WorkList)
             board.display = True
             board.show_rows([
@@ -177,5 +189,110 @@ def test_sessions_first_click_previews_second_opens_and_arrows_select(tmp_path, 
             assert opened == ["a"]
             await pilot.press("enter")
             await pilot.pause()
+            await pilot.pause()
             assert opened == ["a", "b"]
+    asyncio.run(scenario())
+
+
+def test_deferred_resize_uses_latest_selected_row(tmp_path,monkeypatch):
+    from isycode.work_list import WorkList
+    configure(tmp_path,monkeypatch)
+    async def scenario():
+        app=TUIApp()
+        async with app.run_test(size=(160,48)) as pilot:
+            # This component fixture supplies its own rows, independently of
+            # the application's periodic owner-backed session refresh.
+            monkeypatch.setattr(app, '_paint_work_status', lambda: None)
+            await pilot.pause()
+            await pilot.pause()
+            board=app.query_one(WorkList)
+            board.display=True
+            await pilot.pause()
+            board._selected_row={'title':'old','detail':'old detail'}
+            board.on_resize()
+            board._selected_row={'title':'latest','detail':'latest detail'}
+            await pilot.pause()
+            assert 'latest detail' in str(board.query_one('#work-details').render())
+    asyncio.run(scenario())
+
+
+def test_session_model_precedes_long_title_and_delete_click_does_not_open(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    # Patch before mount: its timer captures the bound callback at startup.
+    monkeypatch.setattr(TUIApp, "_paint_work_status", lambda self: None)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            # This component fixture supplies its own rows, independently of
+            # the application's periodic owner-backed session refresh.
+            monkeypatch.setattr(app, '_paint_work_status', lambda: None)
+            await pilot.pause()
+            await pilot.pause()
+            board = app.query_one('#work-list')
+            board.display = True
+            await pilot.pause()
+            board.show_rows([{'id': 'saved-session', 'title': 'Long prompt ' * 40,
+                             'model': 'z-ai/glm-5.3', 'provider': 'nvidia', 'status': 'idle'}])
+            await pilot.pause()
+            listing = board.query_one('#work-conversations')
+            text = listing.get_option_at_index(1).prompt
+            assert text.plain.index('GLM 5.3') < text.plain.index('Long prompt')
+            assert text.plain.endswith('[×]')
+            calls = []
+            async def delete(sid, **kwargs):
+                calls.append(sid)
+            app._delete_chat_session = delete
+            points = []
+            for y in range(listing.size.height):
+                for x in range(listing.size.width):
+                    style = app.screen.get_style_at(listing.region.x + x, listing.region.y + y)
+                    if style.meta.get('delete_session') == 'saved-session':
+                        points.append((x, y))
+            assert points, (listing.region, text.plain)
+            await pilot.click('#work-conversations', offset=points[0])
+            await pilot.pause()
+            assert calls == ['saved-session']
+            assert app._active_chat_session_id != 'saved-session'
+            listing.highlighted = 1
+            listing.focus()
+            await pilot.press('ctrl+d')
+            await pilot.pause()
+            assert calls == ['saved-session', 'saved-session']
+            app.query_one('#prompt-input').focus()
+            await pilot.press('ctrl+d')
+            assert calls == ['saved-session', 'saved-session']
+    asyncio.run(scenario())
+
+
+def test_delete_confirmation_removes_only_selected_session_without_recurring_grant(tmp_path, monkeypatch):
+    root = configure(tmp_path, monkeypatch)
+    UserDefaultsStore().update(new_workspace='recurring')
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            owner = app._chat_session_owner
+            _, first = owner.record(None, 'user', 'Keep me')
+            _, second = owner.record(None, 'user', 'Delete me')
+            app._active_chat_session_id = first
+            policy = WorkspaceAuthority(root).policy()
+            confirmations = []
+            async def confirm(screen):
+                confirmations.append(screen.title_text)
+                return False
+            app._await_screen = confirm
+            await app._delete_chat_session(second, allow_once=True)
+            assert owner.store.load(second) is not None
+            async def yes(screen):
+                confirmations.append(screen.title_text)
+                return True
+            app._await_screen = yes
+            await app._delete_chat_session(second, allow_once=True)
+            await pilot.pause()
+            with pytest.raises(FileNotFoundError):
+                owner.store.load(second)
+            assert owner.store.load(first) is not None
+            assert app._active_chat_session_id == first
+            assert WorkspaceAuthority(root).policy() == policy
+            assert confirmations == ['Delete me', 'Delete me']
     asyncio.run(scenario())

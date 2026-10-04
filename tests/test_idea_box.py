@@ -104,6 +104,6 @@ def test_resume_shows_idea_box_and_new_conversation_clears_it():
 
     resumed, cleared = asyncio.run(scenario())
     assert "resume next step" in resumed
-    assert "Waiting for the agent" in cleared
+    assert "Ctrl+Shift+Enter" in cleared
     child_names = {tool["function"]["name"] for tool in CHAT_WORKSPACE_TOOLS}
     assert IDEA_BOX_TOOL_NAME not in child_names

@@ -1,0 +1,11 @@
+{
+  "result": {
+    "url": "https://example.com/",
+    "http_status": 200,
+    "content_type": "text/html",
+    "content": "Example Domain\nThis domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.",
+    "truncated": false,
+    "untrusted": true
+  },
+  "journal": "PASS"
+}

@@ -1,6 +1,11 @@
 # Iteration Window — bounded vertical slice
 
-## Current result
+Update: the wrapper instruction was corrected after the embedded agent reported
+its tools live inside functions.exec. A real authorized read and cross-provider
+handoff now passed. See tools-catalog-2026-10-03.md and its immutable evidence.
+The failure evidence below remains valid for the earlier revision.
+
+## Historical result at d725e7a
 
 The protocol and minimal UI are implemented. Real cross-provider completion is
 NOT_DEMONSTRATED: ChatGPT subscription returns text resembling a tool call

@@ -34,7 +34,7 @@ from isycode.decision_view import verified_receipt_line
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.session_owner import ChatSessionOwner
-from isycode.work_list import WorkList, age_label, clock_label, fit_heading, preview_line
+from isycode.work_list import SessionMessageScreen, WorkList, age_label, clock_label, fit_heading, preview_line
 from isycode.bridge_presence import BridgePresenceOwner
 from isycode.harness_graph import (
     CATALOG_IDS, SEED_OPTIONS, copyable_default_model, gap_status, present_by_semantic,
@@ -318,6 +318,77 @@ class IdeaBox(Static):
         self.app._open_idea_note()
 
 
+class ShellBox(IdeaBox):
+    def on_click(self, event):
+        self.action_expand()
+
+    def action_expand(self):
+        self.app._open_shell_box()
+
+
+class ShellProcessesScreen(ModalScreen):
+    """Inspect session-owned sandbox jobs without entering a host shell."""
+    CSS = """
+    ShellProcessesScreen { align: center middle; background: #000000 60%; }
+    #shell-card { width: 90%; height: 85%; border: round #514d5a; padding: 1 2; background: #1e1f22; }
+    #shell-processes { height: 8; }
+    #shell-output { height: 1fr; scrollbar-size-vertical: 3; }
+    #shell-text { height: auto; }
+    #shell-actions { height: 3; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close", show=False)]
+
+    def compose(self):
+        with Vertical(id="shell-card"):
+            yield Static("ShellBox · sandbox processes · session lifetime")
+            yield OptionList(id="shell-processes")
+            with ChatArea(id="shell-output"):
+                yield Static("Select a process to inspect its output.", id="shell-text", markup=False)
+            with Horizontal(id="shell-actions"):
+                yield Button("Stop selected", id="shell-stop", variant="warning")
+                yield Button("Close", id="shell-close")
+
+    def on_mount(self):
+        self._selected_job = None
+        self._known_jobs = ()
+        self.set_interval(0.5, self.refresh_jobs)
+        self.refresh_jobs()
+
+    def refresh_jobs(self):
+        jobs = self.app._shell_jobs
+        ids = tuple(jobs)
+        options = self.query_one("#shell-processes", OptionList)
+        if ids != self._known_jobs:
+            options.clear_options()
+            for job_id in ids:
+                options.add_option(Option(job_id, id=job_id))
+            self._known_jobs = ids
+        for index, job_id in enumerate(ids):
+            job = jobs[job_id]
+            options.replace_option_prompt_at_index(index, f"{job_id} · {job['status']} · {job['command']}")
+        if self._selected_job in jobs:
+            job = jobs[self._selected_job]
+            self.query_one("#shell-text", Static).update(job["output"] or "No output yet.")
+            self.query_one("#shell-stop", Button).disabled = job["task"].done()
+
+    def on_option_list_option_highlighted(self, event):
+        if event.option_list.id == "shell-processes":
+            self._selected_job = event.option.id
+            self.refresh_jobs()
+
+    def on_button_pressed(self, event):
+        if event.button.id == "shell-close":
+            self.dismiss()
+        elif event.button.id == "shell-stop" and self._selected_job:
+            job = self.app._shell_jobs[self._selected_job]
+            if not job["task"].done():
+                job["task"].cancel()
+                job["status"] = "stopping"
+
+    def action_close(self):
+        self.dismiss()
+
+
 class ActivityStatus(Static):
     """Repaint the cat after this widget receives its final resized geometry."""
 
@@ -479,8 +550,26 @@ class ExpandableBox(Collapsible):
             self._set_marquee_title(self._marquee_base_title)
         self._paint_expand_hint()
 
+    def on_descendant_focus(self, event) -> None:
+        self._paint_expand_hint()
+        if hasattr(self, "_paint_preview"):
+            self._paint_preview()
+
+    def on_descendant_blur(self, event) -> None:
+        self.call_after_refresh(self._paint_expand_hint)
+        if hasattr(self, "_paint_preview"):
+            self.call_after_refresh(self._paint_preview)
+
+    def on_focus(self) -> None:
+        self._paint_expand_hint()
+        if hasattr(self, "_paint_preview"):
+            self._paint_preview()
+
+    def on_blur(self) -> None:
+        self.on_focus()
+
     def _paint_expand_hint(self) -> None:
-        self.border_subtitle = Text("Enter / Space " + ("expand" if self.collapsed else "collapse"), style=MUTED)
+        self.border_subtitle = Text("Enter / Space " + ("expand" if self.collapsed else "collapse"), style=MUTED) if self.has_focus or self.has_focus_within else ""
 
     def action_toggle_box(self) -> None:
         self.collapsed = not self.collapsed
@@ -588,14 +677,21 @@ class ToolActivityGroup(ExpandableBox):
         self._paint_branches()
 
     async def add_leaf(self, leaf: ExpandableBox, label: str) -> None:
+        if len(self.leaves) == 1:
+            self.leaves[0][0].collapsed = True
         self.leaves.append((leaf, label))
+        self.title = f"{self.operation} · {len(self.leaves)} calls"
         await self.query_one(self.Contents).mount(leaf)
         self._paint_branches()
 
     def _paint_branches(self) -> None:
         for index, (leaf, label) in enumerate(self.leaves):
             prefix = "└─ " if index == len(self.leaves) - 1 else "├─ "
-            leaf.title = prefix + label
+            multiple = len(self.leaves) > 1
+            leaf.title = prefix + label if multiple else label
+            leaf._title.display = multiple
+            if not multiple:
+                leaf.collapsed = False
 
     def finish_leaf(self, leaf: ExpandableBox, label: str) -> None:
         self.leaves = [(item, label if item is leaf else old) for item, old in self.leaves]
@@ -677,7 +773,7 @@ class ThoughtBlock(Collapsible):
             self.title = self._base_title
         self._body.set_selectable_content(text, text.plain)
         self.border_subtitle = (Text("Enter / Space " + ("collapse" if self._expanded and not self.collapsed else "expand"), style=MUTED)
-                                if more else "")
+                                if more and (self.has_focus or self.has_focus_within) else "")
 
     def _watch_collapsed(self, collapsed: bool) -> None:
         super()._watch_collapsed(collapsed)
@@ -745,32 +841,19 @@ from textual.scrollbar import ScrollBar
 
 
 class QuietScrollBar(ScrollBar):
-    """Three quiet direction strokes, retaining native wheel/drag controls."""
+    """Persistent position thumb with quiet arrows and native drag controls."""
 
     def render(self):
-        previous = getattr(self, "_last_position", self.position)
-        if self.position != previous:
-            self._direction = -1 if self.position < previous else 1
-            self._last_position = self.position
-            timer = getattr(self, "_settle_timer", None)
-            if timer is not None:
-                timer.stop()
-            self._settle_timer = self.set_timer(0.45, self._settle)
-        else:
-            self._last_position = self.position
-        direction = getattr(self, "_direction", 0)
-        strokes = ["───", " ─ ", " ─ "] if direction < 0 else (
-            [" ─ ", " ─ ", "───"] if direction > 0 else ["   ", " ─ ", "   "])
         height = self.size.height
-        rows = ["   "] * max(0, height)
-        start = max(0, (height - 3) // 2)
-        for offset, stroke in enumerate(strokes):
-            if start + offset < height:
-                rows[start + offset] = stroke
+        maximum = max(0, self.window_virtual_size - self.window_size)
+        ratio = min(1.0, max(0.0, self.position / maximum)) if maximum else 0.0
+        thumb = 1 + round(ratio * max(0, height - 3)) if height >= 3 else 0
         result = Text()
-        for index, row in enumerate(rows):
-            action = "scroll_up" if index < start else (
-                "scroll_down" if index >= start + 3 else "grab")
+        for index in range(height):
+            row = " ▲ " if index == 0 and height >= 3 else (
+                " ▼ " if index == height - 1 and height >= 3 else (
+                    "━━━" if index == thumb else "   "))
+            action = "grab" if index == thumb else ("scroll_up" if index < thumb else "scroll_down")
             result.append(row, style=Style(color="#9aa3ad", meta={"@mouse.down": action}))
             if index < height - 1:
                 result.append("\n")
@@ -966,8 +1049,49 @@ class CommandOutputCard(VerticalScroll):
             self.action_toggle_output()
 
 
+class QueuedTitle(BoxTitle):
+    BINDINGS = [Binding("space", "toggle_collapsible", "Expand", show=False),
+                Binding("enter", "send_queued", "Steer", show=False),
+                Binding("escape", "undo_queued", "Undo queue", show=False, priority=True)]
+
+    async def _on_click(self, event):
+        if self.app._queued_messages and self.app._selected_queued_message is None:
+            self.app._select_queued_message(0)
+        await super()._on_click(event)
+
+    def action_send_queued(self):
+        self.app._promote_queued_message()
+
+    def action_undo_queued(self):
+        self.app._undo_queued_message()
+
+
+class QueuedBox(ExpandableBox):
+    BINDINGS = [Binding("space", "toggle_box", "Expand", show=False),
+                Binding("enter", "send_queued", "Steer", show=False),
+                Binding("escape", "undo_queued", "Undo queue", show=False, priority=True)]
+
+    def __init__(self, **kwargs):
+        super().__init__(OptionList(id="queued-options"), title="Queued", collapsed=True, **kwargs)
+        self._title = QueuedTitle(label="Queued", collapsed_symbol="▶", expanded_symbol="▼", collapsed=True)
+
+    def on_click(self, event):
+        if self.app._queued_messages and self.app._selected_queued_message is None:
+            self.app._select_queued_message(0)
+        super().on_click(event)
+
+    def _paint_expand_hint(self):
+        self.border_subtitle = Text("Enter: steer · Space: expand · Esc: undo", style=MUTED) if self.has_focus or self.has_focus_within else ""
+
+    def action_send_queued(self):
+        self.app._promote_queued_message()
+
+    def action_undo_queued(self):
+        self.app._undo_queued_message()
+
+
 class PromptArea(TextArea):
-    """Enter sends or queues; Ctrl+Enter steers an active turn."""
+    """Enter sends or queues; selected queue entries can be promoted explicitly."""
 
     BINDINGS = [
         Binding("enter", "submit_prompt", "Send", priority=True),
@@ -976,7 +1100,6 @@ class PromptArea(TextArea):
         Binding("tab", "slash_complete", show=False, priority=True),
         Binding("ctrl+v", "paste_clipboard", "Paste clipboard", show=False, priority=True),
         Binding("ctrl+p", "review_pastes", "Review pasted text", show=False, priority=True),
-        Binding("ctrl+enter", "submit_steering", "Steer", show=False, priority=True),
         Binding("ctrl+shift+enter", "capture_idea", "Capture idea", show=False, priority=True),
         Binding("ctrl+a", "select_all", "Select all", show=False, priority=True),
         Binding("shift+enter", "insert_line_break", "New line", show=False, priority=True),
@@ -1057,13 +1180,6 @@ class PromptArea(TextArea):
         if cast(TUIApp, self.app)._complete_slash(): return
         self.post_message(self.Submitted(self, self.text))
 
-    def action_submit_steering(self) -> None:
-        app = cast(TUIApp, self.app)
-        text = self.text
-        if app._chat_turn_task is not None and not app._chat_turn_task.done():
-            text = "/steer " + text
-        self.post_message(self.Submitted(self, text))
-
     def action_insert_line_break(self) -> None:
         self.insert("\n")
 
@@ -1125,7 +1241,7 @@ class QueuedMessagesScreen(ModalScreen):
 
     def compose(self):
         with Vertical(id="queue-card"):
-            yield Static(Text("Message queue · Enter queues · Ctrl+Enter steers", style=CYAN))
+            yield Static(Text("Message queue · Select queued + empty Send steers · Esc restores draft", style=CYAN))
             with VerticalScroll(id="queue-scroll"):
                 if not self.messages:
                     yield Static("No pending messages.")
@@ -1145,6 +1261,7 @@ class QueuedMessagesScreen(ModalScreen):
             text = self.messages[int(event.button.id.rsplit("-", 1)[1])]
             if text in self.host._queued_messages:
                 self.host._queued_messages.remove(text)
+                self.host._paint_queued_messages()
             event.button.disabled = True
             event.button.label = "Removed"
 
@@ -1871,7 +1988,7 @@ class GrantProviderNetworkScreen(ModalScreen[bool]):
         with Vertical(id="provider-network-card"):
             yield Static("Turn off this option?" if self.revoke else "Turn on this option?",
                          id="provider-network-title")
-            yield Static(copy, id="provider-network-copy")
+            yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy")
             with Horizontal(id="provider-network-actions"):
                 yield Button("Cancel", id="provider-network-cancel")
                 yield Button("Turn off" if self.revoke else "Turn on", id="provider-network-confirm",
@@ -2561,6 +2678,8 @@ class ModelsScreen(ModalScreen):
         super().__init__()
         self.entries = entries
         self.choices: dict[str, dict] = {}
+        self.expanded_providers: set[str] = set()
+        self.search_query = ""
 
     def compose(self) -> ComposeResult:
         from isycode.model_presentation import model_display_name
@@ -2574,17 +2693,17 @@ class ModelsScreen(ModalScreen):
         with Vertical(id="models-card"):
             yield Static(Text.assemble(("Models\n", "bold #c7b8d4"),
                                       ("Expand a provider · select a model · choose reasoning", MUTED)), id="models-title")
-            yield Input(placeholder="Find a model or provider…", id="models-search")
+            yield Input(value=self.search_query, placeholder="Find a model or provider…", id="models-search")
             with VerticalScroll(id="models-scroll"):
                 for index, entry in enumerate(self.entries):
                     if entry["kind"] == "model_list":
                         key = f"model-catalog-{index}"
                         self.choices[key] = entry
-                        yield Button("Load account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
+                        yield Button("Refresh account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
                                      id=key, classes="model-choice")
                 for provider, entries in groups.items():
                     with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
-                                     collapsed=True, classes="model-group"):
+                                     collapsed=provider not in self.expanded_providers, classes="model-group", id="model-provider-" + provider):
                         for entry in entries:
                             model = entry["value"].split("|", 1)[1]
                             key = f"model-choice-{len(self.choices)}"
@@ -2598,9 +2717,24 @@ class ModelsScreen(ModalScreen):
             yield Static("\n".join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
             yield Button("Close", id="models-close")
 
+    def on_collapsible_expanded(self, event: Collapsible.Expanded) -> None:
+        group_id = event.collapsible.id or ""
+        if group_id.startswith("model-provider-"):
+            name = group_id.removeprefix("model-provider-")
+            self.expanded_providers.add(name)
+            attempted = getattr(self.app, "_account_models_attempted", set())
+            if name not in attempted:
+                self.app._account_models_attempted = attempted | {name}
+                self.app._account_models_loading = True
+                self.app.run_worker(self.app._load_account_models(name), group="provider-models")
+
+    def on_collapsible_collapsed(self, event: Collapsible.Collapsed) -> None:
+        self.expanded_providers.discard((event.collapsible.id or "").removeprefix("model-provider-"))
+
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id != "models-search":
             return
+        self.search_query = event.value
         query = event.value.casefold().strip()
         for group in self.query(".model-group"):
             matches = 0
@@ -3323,10 +3457,19 @@ class TUIApp(App):
     Static.console-search-current { border-left: tall #fbbf24; padding-left: 1; background: #45404c; }
     .external-review { border: round #514d5a; background: #303136; padding: 1; margin: 1 0; }
     #main { height: 1fr; layers: base overlay; }
+    #queued-row { display: none; height: auto; margin: 0 1; }
+    .queue-spacer { width: 20%; height: 1; }
+    #queue-stack { width: 60%; height: auto; }
+    #queued-box { height: auto; padding: 0 1; background: #1e1f22; }
+    #queued-options { height: auto; max-height: 8; border: none; padding: 0; }
+    #queue-notice { display: none; height: auto; }
+    #queue-warning { width: 1fr; height: auto; color: #fbbf24; }
+    #queue-steer-help { width: 5; min-width: 5; height: 1; min-height: 1; border: none; padding: 0; }
     #idea-box-row {
         width: 1fr; height: auto; max-height: 4;
         align-horizontal: center; margin: 0 1; background: transparent;
     }
+    #shell-box { display: none; width: 60%; height: auto; max-height: 4; padding: 0 1; border: round #514d5a; background: #1e1f22; }
     #idea-box {
         width: 60%; height: auto; max-height: 4; padding: 0 1;
         border: round #514d5a; border-bottom: none;
@@ -3361,6 +3504,8 @@ class TUIApp(App):
     .tool-activity { height: auto; padding: 0; margin: 1 0; border-left: solid #397e90; background: #17191f; }
     .tool-activity CollapsibleTitle { color: #9aa3ad; }
     .tool-activity-body { height: auto; padding: 0 1; }
+    .tool-activity-leaf { margin: 0; padding: 0; border: none; }
+    .tool-activity-leaf > Contents { padding: 0; }
     Footer { background: $surface; color: #6c757d; }
     /* One-row session actions must override Button's tall focus/active borders. */
     #work-list Button, #work-list Button:hover, #work-list Button:focus, #work-list Button.-active {
@@ -3453,8 +3598,15 @@ class TUIApp(App):
         self._chat_turn_task: asyncio.Task | None = None
         self._pending_steering: list[str] = []
         self._queued_messages: list[str] = []
+        self._selected_queued_message: str | None = None
+        self._active_chat_provider: tuple[str, str] | None = None
+        self._steering_try_active = False
+        self._steering_restore_positions: dict[str, list[int]] = {}
         self._idea_backlog: list[str] = []
         from isycode.image_attachments import ImageAttachments
+        self._shell_jobs = {}
+        self._shell_mode = False
+        self._command_run_lock = asyncio.Lock()
         self._image_attachments = ImageAttachments()
         self._agent_tasks: list[dict[str, str]] = []
         self._tasks_collapsed = False
@@ -3564,12 +3716,21 @@ class TUIApp(App):
                 yield OptionList(id="slash-suggestions")
                 yield TasksPanel("", id="agent-tasks")
                 with Vertical(id="composer"):
+                    with Horizontal(id="queued-row"):
+                        yield Static("", classes="queue-spacer")
+                        with Vertical(id="queue-stack"):
+                            yield QueuedBox(id="queued-box")
+                            with Horizontal(id="queue-notice"):
+                                yield Static("", id="queue-warning")
+                                yield Button("[?]", id="queue-steer-help")
+                        yield Static("", classes="queue-spacer")
                     with Horizontal(id="idea-box-row"):
                         yield ActivityStatus("Chat ready", id="activity-status")
-                        yield IdeaBox("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
+                        yield IdeaBox("Idea box\nCapture an idea · Ctrl+Shift+Enter", id="idea-box", markup=False)
+                        yield ShellBox("ShellBox · no processes", id="shell-box", markup=False)
                         yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
-                    yield Static("Enter send / queue · Ctrl+Enter steer · Ctrl+J newline · Ctrl+P attachments · /queue", id="composer-hint")
+                    yield Static("Enter send / queue · select queued + empty Send: steer · Esc: undo queue · Ctrl+J newline", id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button("Sidebar", id="sidebar-button")
                         yield Button("Sessions", id="sessions-button")
@@ -3649,6 +3810,11 @@ class TUIApp(App):
         if self._draft_timer is not None:
             self._draft_timer.stop()
         self._save_draft()
+        tasks = [job["task"] for job in self._shell_jobs.values() if not job["task"].done()]
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         set_saved_secret_reader(None)
         if self._mcp_local is not None:
             await self._mcp_local.stop_all()
@@ -4416,8 +4582,13 @@ class TUIApp(App):
             await self._refresh_work_list()
         elif button_id == "work-hide":
             self._show_chat_again()
+        elif button_id == "queue-steer-help":
+            from isycode.reasoning_options import steering_models
+            choices = steering_models()
+            body = "Providers/models with catalog-confirmed steer:\n\n" + ("\n".join(self._model_display_label(provider, model) for provider, model in choices) or "No loaded catalog confirms steer yet. Unknown metadata is not treated as support.")
+            self.push_screen(SessionMessageScreen(body))
         elif button_id == "work-bridge":
-            await self._show_bridge_presence()
+            self.run_worker(self._show_bridge_presence(), exclusive=True, group="bridge-presence")
         elif button_id == "providers-button":
             self._open_provider_menu()
         elif button_id == "role-button":
@@ -4553,7 +4724,107 @@ class TUIApp(App):
         self._update_slash_suggestions(force=True)
         self.query_one(PromptArea).focus()
 
+    def _paint_queued_messages(self):
+        if not self.is_mounted:
+            return
+        if self._selected_queued_message not in self._queued_messages:
+            self._selected_queued_message = None
+        base = self.screen_stack[0]
+        base.query_one("#queued-row").display = bool(self._queued_messages)
+        box = base.query_one("#queued-box", QueuedBox)
+        selected = self._selected_queued_message
+        preview = selected or (self._queued_messages[0] if self._queued_messages else "")
+        box.title = f"Queued · {len(self._queued_messages)}" + (" · selected" if selected else "") + "     " + _fit_cells(" ".join(preview.split()), max(8, box.content_size.width - 25))
+        listing = base.query_one("#queued-options", OptionList)
+        listing.clear_options()
+        listing.add_options([Option(_fit_cells(" ".join(text.split()), 80), id=str(index)) for index, text in enumerate(self._queued_messages)])
+
+    def _select_queued_message(self, index):
+        if 0 <= index < len(self._queued_messages):
+            self._selected_queued_message = self._queued_messages[index]
+            self._paint_queued_messages()
+
+    def _steering_target(self):
+        if self._active_chat_provider is not None:
+            return self._active_chat_provider
+        provider = selected_provider_name()
+        return provider, (selected_model_name() or provider_default_model(provider) or PRESETS.get(provider, {}).get("default_model") or DEFAULT_MODEL)
+
+    def _queue_steer_warning(self):
+        from isycode.reasoning_options import steering_support
+        provider, model = self._steering_target()
+        support = steering_support(provider, model)
+        label = self._model_display_label(provider, model)
+        message = label + (" no permite steer" if support is False else " · soporte steer sin confirmar")
+        self.screen_stack[0].query_one("#queue-warning", Static).update(Text(message, style=YELLOW))
+        self.screen_stack[0].query_one("#queue-notice").display = True
+
+    def _promote_queued_message(self):
+        from isycode.reasoning_options import steering_support
+        selected = self._selected_queued_message
+        if selected is None or selected not in self._queued_messages:
+            return
+        prompt = self.screen_stack[0].query_one("#prompt-input", PromptArea)
+        if prompt.text.strip():
+            self.notify("Keep the draft; Send must be empty to steer a selected queued message", severity="warning")
+            return
+        if self._chat_turn_task is None or self._chat_turn_task.done():
+            self._undo_queued_message()
+            return
+        provider, model = self._steering_target()
+        if steering_support(provider, model) is False:
+            self._queue_steer_warning()
+            return
+        if self._steering_try_active:
+            self.notify("A steer attempt is still pending; this message stays queued")
+            return
+        previous = len(self._pending_steering)
+        position = self._queued_messages.index(selected)
+        self._accept_prompt(prompt, "/steer " + selected)
+        if len(self._pending_steering) > previous:
+            self._steering_restore_positions.setdefault(selected, []).append(position)
+            self._queued_messages.remove(selected)
+            self._selected_queued_message = None
+            self.screen_stack[0].query_one("#queue-notice").display = False
+            self._paint_queued_messages()
+
+    def _return_steering_to_queue(self, instructions, *, unsupported=False):
+        from isycode.reasoning_options import record_steering_result
+        for instruction in instructions:
+            positions = self._steering_restore_positions.get(instruction, [])
+            position = positions.pop(0) if positions else len(self._queued_messages)
+            self._queued_messages.insert(min(position, len(self._queued_messages)), instruction)
+        self._steering_try_active = False
+        if unsupported:
+            record_steering_result(*self._steering_target(), False)
+        self._paint_queued_messages()
+        self._queue_steer_warning()
+        if not unsupported:
+            self.screen_stack[0].query_one("#queue-warning", Static).update(Text("Steer sin respuesta confirmada · mensaje devuelto a queued", style=YELLOW))
+        self._append("Steer no soportado por provider · mensaje devuelto a queued; continuando el turno original." if unsupported else "Steer no confirmado · devuelto a queued.", YELLOW)
+
+    def _undo_queued_message(self):
+        selected = self._selected_queued_message
+        if selected is None or selected not in self._queued_messages:
+            return
+        prompt = self.screen_stack[0].query_one("#prompt-input", PromptArea)
+        if prompt.text:
+            self.notify("Draft kept; queued message stays pending", severity="warning")
+            return
+        self._queued_messages.remove(selected)
+        self._selected_queued_message = None
+        prompt.load_text(selected)
+        self._paint_queued_messages()
+        prompt.focus()
+
+    def on_session_option_list_delete_requested(self, event) -> None:
+        event.stop()
+        self.run_worker(self._delete_chat_session(event.session_id, allow_once=True), group="session-delete", exclusive=True)
+
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if event.option_list.id == "queued-options":
+            self._select_queued_message(event.option_index)
+            return
         if event.option_list.id == 'slash-suggestions':
             self._complete_slash(event.option_index)
             return
@@ -6029,6 +6300,11 @@ class TUIApp(App):
                     entries.append(self._capability_entry("Local code help", "lsp",
                         displayed_on("lsp.start", grant, sandbox in grant.get("executables", [])),
                         "Read-only local symbols; each request is reviewed before its protected process starts."))
+            web_hosts = grants.get("web.fetch", {}).get("network_hosts", [])
+            for host in web_hosts:
+                self._append_network_grant_entry(entries, grants, "web.fetch", "Read public web pages", "https://" + host, "Read-only HTTPS; no credentials, private hosts or redirects. Each new host asks first.")
+            if not web_hosts:
+                entries.append(self._entry("Web pages · asks for each new host", "info", "", "The webfetch tool requests a separate bounded host grant before reading a public HTTPS page."))
             external_catalog_url = os.environ.get("OPENISY_API_URL", "").strip()
             if external_catalog_url:
                 self._append_network_grant_entry(
@@ -6145,7 +6421,7 @@ class TUIApp(App):
             value = json.loads(payload)
             action_id, label, url = value["action_id"], value["label"], value["url"]
             if action_id not in {"gateway.files.read", "gateway.semantic.read",
-                                 "mcp.discover", "catalog.external.read"}:
+                                 "mcp.discover", "catalog.external.read", "web.fetch"}:
                 raise ValueError("unsupported network action")
             parsed = urlparse(url)
             host = (parsed.hostname or "").casefold().rstrip(".")
@@ -6889,6 +7165,13 @@ class TUIApp(App):
         self._render_menu("security_journal", "Security · Action journal (read-only)", entries)
 
     def _render_menu(self, mode: str, title: str, entries: list[dict[str, str]]) -> None:
+        if mode == "branch" and title == "Models":
+            name = selected_provider_name()
+            attempted = getattr(self, "_account_models_attempted", set())
+            if name not in attempted:
+                self._account_models_attempted = attempted | {name}
+                self._account_models_loading = True
+                self.run_worker(self._load_account_models(name), exclusive=True, group="provider-models")
         self._menu_mode = mode
         self._menu_title = title
         self._menu_entries = entries
@@ -7397,7 +7680,7 @@ class TUIApp(App):
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
             self._render_menu("model_account", "Models · account catalog", [
                 self._entry("Loading models from the selected provider…", "info")])
-            self.run_worker(self._load_account_models(), exclusive=True, group="provider-models")
+            self.run_worker(self._load_account_models(value), exclusive=True, group="provider-models")
             return
         if kind == "role_agent":
             role = next((item for item in ISYCODE_AGENTS + ISYCODE_SUBAGENTS
@@ -7671,7 +7954,26 @@ class TUIApp(App):
                 models.append(self._entry(
                     f"{preset['label']}  ·  {model}{'  ◂ current' if selected else ''}",
                     "model", f"{name}|{model}"))
-            return models
+            for name, catalog in getattr(self, "_account_model_catalogs", {}).items():
+                models = [row for row in models if row["kind"] != "model" or row["value"].split("|", 1)[0] != name]
+                models.extend(catalog)
+            if getattr(self, "_account_models_loading", False):
+                models.append(self._entry("Loading account catalog…", "info"))
+            elif getattr(self, "_account_model_status", ""):
+                models.append(self._entry(self._account_model_status, "info"))
+            from isycode.capability_observations import observed
+            unavailable = []
+            visible = []
+            for row in models:
+                if row["kind"] == "model":
+                    name, model_id = row["value"].split("|", 1)
+                    if observed(name, model_id, "chat_available") is False:
+                        unavailable.append(row)
+                        continue
+                visible.append(row)
+            if unavailable:
+                visible.append(self._entry(f"{len(unavailable)} unavailable in tested endpoint · retained in capability results", "info", "", "".join(row["value"] + "\n" for row in unavailable)))
+            return visible
         if key == "mcp":
             snap = self._mcp_snapshot
             entries = [self._entry(
@@ -7761,9 +8063,9 @@ class TUIApp(App):
             return self._command_entries + [self._entry("Keyboard shortcuts", "shortcuts")]
         return []
 
-    async def _load_account_models(self) -> None:
-        """Load the active provider's model IDs only after explicit selection."""
-        name = selected_provider_name()
+    async def _load_account_models(self, name: str | None = None) -> None:
+        """Opening Models requests the active catalog through its existing owner."""
+        name = name or selected_provider_name()
         try:
             provider = Provider(
                 name=name, model=provider_default_model(name),
@@ -7809,8 +8111,14 @@ class TUIApp(App):
             rows = [self._entry(
                 f"Model catalog unavailable ({type(error).__name__}); current selection is unchanged.",
                 "info")]
-        if self._menu_mode == "model_account":
-            self._render_menu("model_account", "Models · account catalog", rows)
+        if models_available := [row for row in rows if row["kind"] == "model"]:
+            catalogs = getattr(self, "_account_model_catalogs", {})
+            catalogs[name] = models_available
+            self._account_model_catalogs = catalogs
+        self._account_models_loading = False
+        self._account_model_status = rows[0]["label"] if not models_available else "Account catalog loaded · choose a concrete model"
+        if self._menu_mode == "model_account" or (self._menu_mode == "branch" and self._menu_title == "Models"):
+            self._render_menu("branch", "Models", self._branch_entries("models"))
 
     def _role_button_label(self) -> str:
         if not self._active_role:
@@ -8777,7 +9085,7 @@ class TUIApp(App):
                 "usage": self._usage.to_state()}
 
     def _open_idea_note(self) -> None:
-        self.push_screen(IdeaNoteScreen(self._idea_box or "Waiting for the agent to leave a note."))
+        self.push_screen(IdeaNoteScreen(self._idea_box or "Capture an idea · Ctrl+Shift+Enter"))
 
     def _paint_idea_box(self) -> None:
         if not self.is_mounted:
@@ -8785,12 +9093,12 @@ class TUIApp(App):
         for screen in self.screen_stack:
             if isinstance(screen, IdeaNoteScreen) and screen.is_mounted:
                 screen.query_one("#idea-note-content", Static).update(
-                    Text(self._idea_box or "Waiting for the agent to leave a note."))
+                    Text(self._idea_box or "Capture an idea · Ctrl+Shift+Enter"))
         try:
             box = self.screen_stack[0].query_one("#idea-box", Static)
         except NoMatches:
             return
-        body = self._idea_box or "Waiting for the agent to leave a note."
+        body = self._idea_box or "Capture an idea · Ctrl+Shift+Enter"
         busy = self._loop_task is not None and not self._loop_task.done()
         label = "Idea box · ● Thinking…" if busy else "Idea box"
         heading = Text(label, style="bold #c7b8d4")
@@ -8872,6 +9180,7 @@ class TUIApp(App):
             raw_text = prompt.pasted_text.expand(raw_text)
         text = raw_text.strip()
         if not text:
+            self._promote_queued_message()
             return
         try:
             self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), provider_default_model(selected_provider_name()))
@@ -8886,19 +9195,29 @@ class TUIApp(App):
             prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
             if text == "/queue clear":
                 self._queued_messages.clear()
+                self._paint_queued_messages()
                 self.notify("Pending messages cleared")
             else:
                 self.push_screen(QueuedMessagesScreen(self))
             return
         if self._loop_task and not self._loop_task.done():
             if self._chat_turn_task is not None and not self._chat_turn_task.done() and text.startswith("/steer "):
+                from isycode.reasoning_options import steering_support
+                provider, model = self._steering_target()
+                if steering_support(provider, model) is False:
+                    self._queue_steer_warning()
+                    return
                 instruction = text.removeprefix("/steer ").strip()
+                if self._steering_try_active:
+                    self.notify("Steer attempt pending; draft kept")
+                    return
                 if len(self._pending_steering) >= 8:
                     self._append("Steering queue is full; this draft is kept.", YELLOW)
                     return
                 self._pending_steering.append(instruction)
+                self._steering_try_active = True
                 prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
-                self._mount_user_turn("Steer · " + instruction)
+                self._mount_user_turn("Steer attempt · " + instruction)
                 self._append("Steering queued · current tool effects remain; pending calls will be skipped.", CYAN)
                 request = self._chat_request_task
                 if request is not None and not request.done():
@@ -8909,6 +9228,7 @@ class TUIApp(App):
                     self.notify("Message queue is full; draft kept", severity="warning")
                     return
                 self._queued_messages.append(text)
+                self._paint_queued_messages()
                 prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
                 self._append(f"Queued · {len(self._queued_messages)} pending · " + _fit_cells(" ".join(text.split()), 70) + " · /queue reviews", CYAN)
                 return
@@ -8962,6 +9282,7 @@ class TUIApp(App):
             self.notify("Queue paused · " + str(exc), severity="warning")
             return
         self._queued_messages.pop(0)
+        self._paint_queued_messages()
         prompt = self.query_one("#prompt-input", PromptArea)
         current_draft = prompt.text
         self._accept_prompt(prompt, text)
@@ -9424,6 +9745,8 @@ class TUIApp(App):
                     for item in iterations:
                         self._work_rows.append({"id": "iteration:" + item["iteration_session_id"],
                             "title": item["title"], "session_kind": "iterative",
+                            "model": item["participants"][0]["model"] if item["participants"] else "",
+                            "provider": item["participants"][0]["provider"] if item["participants"] else "",
                             "workspace": self._workspace_root.name,
                             "status": "generating" if item["status"] == "RUNNING" else "waiting" if item["status"] == "WAITING_FOR_HUMAN" else "idle",
                             "age": age_label(item["created_at"]),
@@ -9583,7 +9906,7 @@ class TUIApp(App):
         self._append(f"  Conversation reopened · {session.title} · {len(session.messages)} messages", GREEN)
         await self._refresh_work_list()
 
-    async def _delete_chat_session(self, session_id: str) -> None:
+    async def _delete_chat_session(self, session_id: str, *, allow_once: bool = False) -> None:
         owner = self._chat_session_owner
         if owner is None:
             return
@@ -9593,7 +9916,7 @@ class TUIApp(App):
             return
         authority = WorkspaceAuthority(self._workspace_root)
         grant = authority.effective_policy().get("grants", {}).get("session.delete", {})
-        if not grant.get("enabled") or session_id not in grant.get("targets", []):
+        if not allow_once and (not grant.get("enabled") or session_id not in grant.get("targets", [])):
             self._append("  Enable Delete current conversation in Settings → Authority first.", YELLOW)
             return
         if not await self._await_screen(DeleteSessionScreen(session.title)):
@@ -9603,11 +9926,14 @@ class TUIApp(App):
                                 {"session_id": session_id, "title": session.title[:80]},
                                 execution_owner="session_delete")
         approval = self._action_approvals.issue(request, ttl_seconds=30)
+        if not grant.get("enabled") or session_id not in grant.get("targets", []):
+            authority = OneShotActionAuthority(authority, request)
         delete_owner = SessionDeleteOwner(self._workspace_root, authority, owner.store, self._action_approvals)
         result = delete_owner.delete(session_id, session.title, approval)
         self._append(f"  Conversation deletion · {result.decision} · {result.reason[:160]}", MUTED)
-        if result.decision == "ALLOW" and self._active_chat_session_id == session_id:
-            self._clear_open_conversation()
+        if result.decision == "ALLOW":
+            if self._active_chat_session_id == session_id:
+                self._clear_open_conversation()
             self.run_worker(self._refresh_work_list(), group="work-list")
 
     def _persist_chat_message(self, role: str, content: str, *, sent_at: str | None = None) -> None:
@@ -9713,14 +10039,16 @@ class TUIApp(App):
             arguments = json.loads(function.get("arguments") or "{}")
         except (ValueError, TypeError):
             arguments = {}
-        if isinstance(arguments, dict) and isinstance(arguments.get("path"), str):
-            label += " · " + sanitize_historical_text(arguments["path"])[:80]
+        if isinstance(arguments, dict):
+            detail = " · ".join(sanitize_historical_text(str(arguments[key]))[:80] for key in ("path", "query", "pattern", "url") if isinstance(arguments.get(key), str))
+            if detail:
+                label += " · " + detail
         started_at = _time.monotonic()
         self._dismiss_idle()
         notes = Text()
         body = SelectableText(Text(""), selection_text="", classes="tool-activity-body")
         card = Collapsible(body, title=f"{label} · Running", collapsed=True,
-                           classes="tool-activity-leaf")
+                           collapsed_symbol="", expanded_symbol="", classes="tool-activity-leaf")
         chat = self.query_one(ChatArea)
         preceding = [child for child in chat.children if child is not chat._tail
                      and not child.has_class("tool-receipt")]
@@ -9769,6 +10097,21 @@ class TUIApp(App):
         tool_call_id = call.get("id") if isinstance(call, dict) else ""
         if not isinstance(tool_call_id, str) or not tool_call_id:
             tool_call_id = "call_" + uuid.uuid4().hex[:16]
+        if name == "webfetch":
+            from isycode.web_fetch import WebFetchOwner, validate_url
+            try:
+                arguments = json.loads(raw_arguments)
+                if not isinstance(arguments, dict) or set(arguments) != {"url"}:
+                    raise ValueError("webfetch requires one URL")
+                url, host = validate_url(arguments["url"])
+                authority = WorkspaceAuthority(self._workspace_root)
+                grant = authority.policy().get("grants", {}).get("web.fetch", {})
+                if not grant.get("enabled") or host not in grant.get("network_hosts", []):
+                    await self._change_network_action_grant(json.dumps({"action_id": "web.fetch", "label": "Read public web pages", "url": url}), True)
+                result = await asyncio.to_thread(WebFetchOwner(self._workspace_root, authority).execute, url)
+            except (ValueError, TypeError):
+                result = {"error": "webfetch requires a public HTTPS URL without credentials, query or fragment", "decision": "DENY"}
+            return tool_call_id, json.dumps(result, ensure_ascii=False)
         if name == "delegate_task":
             try:
                 arguments = json.loads(raw_arguments)
@@ -9941,6 +10284,17 @@ class TUIApp(App):
                                             self._action_approvals)
         return self._mcp_local
 
+    def _child_model_choices(self):
+        from isycode.providers import child_model_choices
+        choices = child_model_choices()
+        for rows in getattr(self, "_account_model_catalogs", {}).values():
+            for row in rows:
+                provider, model = row["value"].split("|", 1)
+                item = {"provider": provider, "model": model}
+                if item not in choices:
+                    choices.append(item)
+        return choices
+
     def _iteration_owner(self):
         from isycode.iteration import IterationOwner
         return IterationOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
@@ -9975,7 +10329,7 @@ class TUIApp(App):
                 sid = objective.removeprefix("retry ").strip()
             else:
                 participants = []
-                choices = child_model_choices()
+                choices = self._child_model_choices()
                 for role in ("PROPOSER", "REVIEWER", "FINAL HUMAN_HANDOFF"):
                     selected = await self._await_screen(SubagentModelScreen("Iteration · " + role + " · " + objective, choices))
                     if selected is None:
@@ -10023,7 +10377,7 @@ class TUIApp(App):
             return {"status": "denied", "error": "Use /subagent <task>, up to 8000 characters"}
         if self._subagent_running:
             return {"status": "denied", "error": "A child is already running; nested delegation is disabled"}
-        models = child_model_choices()
+        models = self._child_model_choices()
         if not models:
             return {"status": "denied", "error": "No configured provider model is available"}
         self._subagent_running = True
@@ -10035,7 +10389,7 @@ class TUIApp(App):
             selected = await self._await_screen(SubagentModelScreen(task, models, error=previous_error))
             if selected is None:
                 return {"status": "cancelled"}
-            if selected not in models or selected not in child_model_choices():
+            if selected not in models or selected not in self._child_model_choices():
                 return {"status": "denied", "error": "Selected model is no longer registered"}
             identity = {"provider": selected["provider"], "model": selected["model"]}
             self._child_title = self._model_display_label(selected['provider'], selected['model'])
@@ -10053,6 +10407,9 @@ class TUIApp(App):
                 tools = json.loads(json.dumps(CHAT_WORKSPACE_TOOLS))
                 if self._workspace_write_tool_enabled() or self._additional_folder_access(write=True):
                     tools += json.loads(json.dumps([EDIT_TOOL, WRITE_TOOL]))
+            if PRESETS[provider.name].get("supports_tools"):
+                from isycode.web_fetch import WEB_FETCH_TOOL
+                tools.append(WEB_FETCH_TOOL)
             context = [{"role": "system", "content": (
                 f"You are an ISyCode child agent. Work only on the assigned task. Main workspace: {self._workspace_root}. "
                 "Use only the tools supplied here. File tools accept registered folder aliases; never ../ across roots. "
@@ -10394,6 +10751,19 @@ class TUIApp(App):
             return False
         return displayed_on("workspace.command.run", grant, sandbox in grant.get("executables", []))
 
+    def action_toggle_shell_box(self):
+        self._shell_mode = not self._shell_mode
+        self.query_one("#idea-box", IdeaBox).display = not self._shell_mode
+        self.query_one("#shell-box", ShellBox).display = self._shell_mode
+        self._paint_shell_box()
+
+    def _paint_shell_box(self):
+        active = sum(job["status"] in {"queued", "running", "stopping"} for job in self._shell_jobs.values())
+        self.query_one("#shell-box", ShellBox).update(f"ShellBox · {active} active · {len(self._shell_jobs)} total\nEnter / Space: processes · Ctrl+S: IdeaBox")
+
+    def _open_shell_box(self):
+        self.push_screen(ShellProcessesScreen())
+
     async def _run_workspace_command(self, arguments: dict) -> str:
         """Show one exact command, run it in the sandbox only if approved, return its result."""
         if not self._command_tool_enabled():
@@ -10405,6 +10775,11 @@ class TUIApp(App):
             self._append(f"  Command denied · workspace.command.run · {reason}", YELLOW)
             return json.dumps({"error": "sandboxed commands are not enabled for this workspace",
                                "reason": reason})
+        background = arguments.get("background", False)
+        if type(background) is not bool:
+            return json.dumps({"error": "background must be a boolean"})
+        if background and len(self._shell_jobs) >= 64:
+            return json.dumps({"error": "session process history limit reached; start a new session"})
         owner = CommandRunOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
                                 self._action_approvals)
         try:
@@ -10434,8 +10809,42 @@ class TUIApp(App):
         def show_output(chunk):
             card.append_output(chunk)
             chat.follow_tail()
+        if background:
+            job_id = "process-" + str(len(self._shell_jobs) + 1)
+            job = {"command": shown, "status": "queued", "output": "", "task": None}
+            async def execute_job():
+                try:
+                    async with self._command_run_lock:
+                        job["status"] = "running"
+                        self._paint_shell_box()
+                        def output(chunk):
+                            job["output"] = (job["output"] + chunk)[-262144:]
+                            card.append_output(chunk)
+                        outcome = await owner.run(preview, approval, on_output=output)
+                    job["status"] = outcome.decision
+                    job["output"] = outcome.text if outcome.decision == "ALLOW" else outcome.reason
+                    if outcome.decision == "ALLOW":
+                        result = json.loads(outcome.text)
+                        job["status"] = "timeout" if result["timed_out"] else "exit " + str(result["exit_code"])
+                        job["output"] = result["output"]
+                    card.finish(job["status"], output=job["output"], receipt=outcome.receipt.receipt_id if outcome.receipt else "")
+                except asyncio.CancelledError:
+                    job["status"] = "cancelled"
+                    card.finish("Cancelled")
+                except Exception as exc:
+                    job["status"] = "failed"
+                    job["output"] = type(exc).__name__
+                    card.finish("Failed")
+                finally:
+                    self._paint_shell_box()
+            job["task"] = asyncio.create_task(execute_job())
+            self._shell_jobs[job_id] = job
+            self._paint_shell_box()
+            return json.dumps({"process_id": job_id, "status": "queued", "background": True,
+                               "inspect": "Ctrl+S → ShellBox → Enter", "timeout_s": preview.timeout_s})
         try:
-            outcome = await owner.run(preview, approval, on_output=show_output)
+            async with self._command_run_lock:
+                outcome = await owner.run(preview, approval, on_output=show_output)
         except asyncio.CancelledError:
             card.finish("Cancelled")
             raise
@@ -10740,6 +11149,8 @@ class TUIApp(App):
                           else list(CHAT_WORKSPACE_TOOLS) if tools_active else [])
             if provider_supports_tools:
                 # These tools can only open a human prompt; they grant nothing by themselves.
+                from isycode.web_fetch import WEB_FETCH_TOOL
+                chat_tools.append(WEB_FETCH_TOOL)
                 chat_tools.append(CONTEXT_ACCESS_TOOL)
                 chat_tools.append(ASK_USER_TOOL)
                 chat_tools.append(IDEA_BOX_TOOL)
@@ -10906,6 +11317,7 @@ class TUIApp(App):
                 model=provider_default_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
 
+            self._active_chat_provider = (provider.name, provider.model)
             messages = self._image_attachments.prepare(messages, provider.name, provider.model)
 
             def _content_line() -> None:
@@ -10976,6 +11388,7 @@ class TUIApp(App):
                                                max_tokens=request_material["max_tokens"],
                                                on_chunk=on_chunk, tools=chat_tools)
 
+            steer_trial = None
             try:
                 if provider_supports_tools and self._idea_nudge_timer is None:
                     self._idea_nudge_timer = self.set_interval(
@@ -10985,17 +11398,40 @@ class TUIApp(App):
                     step_content.clear()
                     step_reason.clear()
                     if self._pending_steering:
+                        steer_trial = {"messages": list(messages), "history": list(self._history), "instructions": list(self._pending_steering)}
                         for instruction in self._pending_steering:
                             messages.append({"role": "user", "content": self._image_attachments.content(instruction)})
                             self._history.append({"role": "user", "content": instruction})
                         self._pending_steering.clear()
-                        self._append("Steering applied · continuing with your updated instruction.", CYAN)
+                        self._append("Trying steering · original turn retained until response.", CYAN)
                     self._apply_idea_nudge(messages, chat_tools)
                     request_material["messages"] = messages
                     self._chat_request_task = asyncio.create_task(owner.execute(
                         provider, request_material, send_provider_request))
                     try:
+                        if steer_trial is not None:
+                            done_requests, _ = await asyncio.wait([self._chat_request_task], timeout=30)
+                            if not done_requests and not step_content and not step_reason:
+                                self._chat_request_task.cancel()
+                                await asyncio.gather(self._chat_request_task, return_exceptions=True)
+                                messages[:] = steer_trial["messages"]
+                                self._history[:] = steer_trial["history"]
+                                self._return_steering_to_queue(steer_trial["instructions"])
+                                steer_trial = None
+                                continue
                         response, provider_result = await self._chat_request_task
+                    except (ProviderError, StreamError) as exc:
+                        if steer_trial is not None:
+                            from isycode.provider_errors import classify_provider_error
+                            unsupported = classify_provider_error(exc)["error_kind"] == "STEER"
+                            if not step_content:
+                                messages[:] = steer_trial["messages"]
+                                self._history[:] = steer_trial["history"]
+                                self._return_steering_to_queue(steer_trial["instructions"], unsupported=unsupported)
+                                steer_trial = None
+                                if unsupported:
+                                    continue
+                        raise
                     except asyncio.CancelledError:
                         if self._pending_steering and not asyncio.current_task().cancelling():
                             finish_step()
@@ -11005,11 +11441,33 @@ class TUIApp(App):
                             continue
                         raise
                     if provider_result.decision != "ALLOW" or not isinstance(response, dict):
+                        if steer_trial is not None:
+                            messages[:] = steer_trial["messages"]
+                            self._history[:] = steer_trial["history"]
+                            self._return_steering_to_queue(steer_trial["instructions"])
+                            steer_trial = None
                         self._append(
                             f"  Provider request {provider_result.decision} · "
                             f"{provider_result.reason[:240] or 'request was not completed'}; "
                             "no further request was sent.", YELLOW)
                         return
+                    if steer_trial is not None and not step_content and not response.get("text") and not response.get("tool_calls"):
+                        messages[:] = steer_trial["messages"]
+                        self._history[:] = steer_trial["history"]
+                        self._return_steering_to_queue(steer_trial["instructions"])
+                        steer_trial = None
+                        continue
+                    if steer_trial is not None:
+                        from isycode.reasoning_options import record_steering_result
+                        record_steering_result(provider.name, provider.model, True)
+                        for instruction in steer_trial["instructions"]:
+                            self._persist_chat_message("user", instruction)
+                            positions = self._steering_restore_positions.get(instruction, [])
+                            if positions:
+                                positions.pop(0)
+                        steer_trial = None
+                        self._steering_try_active = False
+                        self._append("Steering accepted · continuing the turn.", CYAN)
                     if not step_content and isinstance(response.get("text"), str):
                         on_chunk("content", response["text"])
                     finish_step()
@@ -11122,6 +11580,11 @@ class TUIApp(App):
                     "  (the provider ended the response during reasoning; its endpoint may have "
                     "reached its own output or context limit)", YELLOW)
         except ProviderError as e:
+            if "[IMAGE#" in text:
+                from isycode.provider_errors import classify_provider_error
+                if classify_provider_error(e)["error_kind"] == "IMAGES":
+                    from isycode.image_attachments import record_image_result
+                    record_image_result(provider.name, provider.model, False)
             if self._history and self._history[-1] == {"role": "user", "content": text}:
                 self._history.pop()
             self._append(f"  {self._provider_failure(e, 'Chat')}", RED)
@@ -11131,6 +11594,9 @@ class TUIApp(App):
             self._append(
                 f"  Chat failed ({type(e).__name__}). The request was not completed.", RED)
         finally:
+            if locals().get("steer_trial") is not None:
+                self._history[:] = steer_trial["history"]
+                self._return_steering_to_queue(steer_trial["instructions"])
             if not completed:
                 if self._history and self._history[-1] == {"role": "user", "content": text}:
                     self._history.pop()
@@ -11140,6 +11606,7 @@ class TUIApp(App):
                     prompt.load_text(original_prompt)
                 self._append("  Prompt kept · /retry prepares it for review. Any completed tool effects "
                              "remain; inspect them before sending again.", YELLOW)
+            self._steering_try_active = False
             if self._pending_steering:
                 pending = "\n".join(self._pending_steering)
                 self._pending_steering.clear()

@@ -69,3 +69,23 @@ def test_friendly_model_stays_visible_and_startup_does_not_repeat_path(tmp_path,
             app._paint_idea_box()
             assert "GLM 5.3 / Default · NVIDIA NIM" in plain_text(app.query_one('#idea-box'))
     asyncio.run(scenario())
+
+
+def test_scroll_thumb_tracks_position_and_remains_after_settle(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            bar = app.query_one('#chat').vertical_scrollbar
+            bar.window_virtual_size = 1000
+            bar.window_size = 20
+            bar.position = 0
+            top = bar.render().plain.splitlines()
+            bar.position = 980
+            bottom = bar.render().plain.splitlines()
+            assert top.index('━━━') < bottom.index('━━━')
+            assert top[0] == ' ▲ ' and bottom[-1] == ' ▼ '
+            bar._settle()
+            assert bar.render().plain.splitlines() == bottom
+    asyncio.run(scenario())

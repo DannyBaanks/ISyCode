@@ -34,6 +34,7 @@ _ENTRIES = [
     ("workspace.files.read_sensitive", "Files", "Read sensitive files", "sensitive", True),
     ("provider.authenticate", "Accounts", "Connect/disconnect ChatGPT subscription", "credential", True),
     ("provider.request", "Network", "Send prompts to the selected model provider", "network", False),
+    ("web.fetch", "Network", "Read a public HTTPS page", "network-read", False),
     ("catalog.external.read", "Network", "Read an external integration catalog", "network-read", False),
     ("gateway.semantic.read", "Network", "Use ISyCo semantic analysis", "network-read", True),
     ("gateway.files.read", "Network", "Read files through ISyCo Gateway", "network-read", False),

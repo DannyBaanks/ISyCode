@@ -4,6 +4,8 @@ from rich.cells import cell_len
 from rich.text import Text
 from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
+from textual.message import Message
+from rich.style import Style
 from textual.binding import Binding
 from textual.widgets import Button, OptionList, Static
 from textual.widgets.option_list import Option
@@ -71,6 +73,13 @@ def preview_line(text: str | None) -> str:
 
 class SessionOptionList(OptionList):
     """First click previews; a subsequent click on that row opens it."""
+    BINDINGS = [Binding("ctrl+d", "delete_session", "Delete session", show=False)]
+
+    class DeleteRequested(Message):
+        def __init__(self, session_id):
+            super().__init__()
+            self.session_id = session_id
+
     _preview_click_id = None
 
     async def _on_click(self, event):
@@ -82,6 +91,10 @@ class SessionOptionList(OptionList):
         option = self.get_option_at_index(index)
         if option.disabled:
             return
+        if event.style.meta.get("delete_session") == option.id:
+            self._preview_click_id = None
+            self.post_message(self.DeleteRequested(option.id))
+            return
         self.focus()
         self.highlighted = index
         if self._preview_click_id == option.id:
@@ -89,6 +102,15 @@ class SessionOptionList(OptionList):
             self.action_select()
         else:
             self._preview_click_id = option.id
+
+    def action_delete_session(self):
+        if self.highlighted is None:
+            return
+        option = self.get_option_at_index(self.highlighted)
+        if option.disabled or option.id in {None, "memory"} or str(option.id).startswith(("iteration:", "child")):
+            return
+        self._preview_click_id = None
+        self.post_message(self.DeleteRequested(option.id))
 
     def action_cursor_down(self):
         self._preview_click_id = None
@@ -181,7 +203,9 @@ class WorkList(Vertical):
             yield Button("Needs input", id="work-filter-waiting")
             yield Button("Idle", id="work-filter-idle")
         with Horizontal(id="work-body"):
-            yield SessionOptionList(id="work-conversations")
+            listing = SessionOptionList(id="work-conversations")
+            listing.tooltip = "↑/↓ select · Enter open · Ctrl+D delete selected conversation"
+            yield listing
             yield SessionDetails("Select a conversation to inspect it.", id="work-details", markup=False)
         yield Static("Bridge presence off", id="work-presence", markup=False)
 
@@ -190,10 +214,15 @@ class WorkList(Vertical):
             return
         self.query_one("#work-details").display = self.content_size.width >= 85
         if getattr(self, "_selected_row", None):
-            self.call_after_refresh(self._render_detail, self._selected_row)
+            self.call_after_refresh(self._refresh_selected_detail)
+        if hasattr(self, "_rows"):
+            self.call_after_refresh(self._refresh_rows)
         compact = self.content_size.width < 62
         self.query_one("#work-new", Button).label = "+ New" if compact else "+ New conversation"
         self.query_one("#work-bridge", Button).label = "Bridge" if compact else "Bridge presence…"
+
+    def _refresh_rows(self):
+        self.show_rows(self._rows, heading=self._heading)
 
     def show_rows(self, rows, *, heading: str = ""):
         self._rows = list(rows)
@@ -220,12 +249,20 @@ class WorkList(Vertical):
                 age = row.get("age") or ""
                 line = Text()
                 line.append("↻ Iterative · " if row.get("session_kind") == "iterative" else "◇ ", style="#77d8b0" if row.get("session_kind") == "iterative" else "#8fbc8f")
+                if row.get("model"):
+                    from isycode.model_presentation import model_display_name
+                    line.append(model_display_name(row["model"]) + " · ", style="bold #77d8b0")
                 line.append(row.get("title") or "Untitled", style="bold #f4f1ea" if row.get("current") else "")
                 line.append(f"  ·  {row.get('workspace') or ''}", style="#9aa3ad")
                 if age:
                     line.append(f"    {age}", style="#6d7580")
                 preview = row.get("preview") or ""
 
+                if row["id"] != "memory" and row.get("session_kind") != "iterative":
+                    width = max(8, listing.content_size.width - 2)
+                    line.truncate(width - 5, overflow="ellipsis")
+                    line.append(" " * max(1, width - 4 - cell_len(line.plain)))
+                    line.append("[×]", style=Style(color="#f87171", bold=True, meta={"delete_session": row["id"]}))
                 listing.add_option(Option(line, id=row["id"]))
         if highlight is not None and listing.option_count:
             listing.highlighted = min(highlight, listing.option_count - 1)
@@ -238,6 +275,11 @@ class WorkList(Vertical):
             return
         self._selected_row = row
         self._render_detail(row)
+
+    def _refresh_selected_detail(self):
+        row = getattr(self, "_selected_row", None)
+        if row is not None:
+            self._render_detail(row)
 
     def _render_detail(self, row):
         detail = Text(style="#e0e0e0")

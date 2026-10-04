@@ -1,0 +1,11 @@
+chatgpt/auto · working · step 1
+{"provider": "chatgpt", "text_chars": 0, "tool_names": ["read_iteration"]}
+chatgpt/auto · tool · read_iteration
+chatgpt/auto · working · step 2
+{"provider": "chatgpt", "text_chars": 55, "tool_names": []}
+nvidia/nvidia/nemotron-3-ultra-550b-a55b · working · step 1
+{"provider": "nvidia", "text_chars": 0, "tool_names": ["read_iteration"]}
+nvidia/nvidia/nemotron-3-ultra-550b-a55b · tool · read_iteration
+nvidia/nvidia/nemotron-3-ultra-550b-a55b · working · step 2
+{"provider": "nvidia", "text_chars": 735, "tool_names": []}
+{"status": "WAITING_FOR_HUMAN", "head": 4, "error": null}

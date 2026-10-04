@@ -254,6 +254,9 @@ def test_text_stream_and_transcript_boundaries(tmp_path):
     assert "system-imported" not in thread["baseInstructions"] + thread["developerInstructions"]
     assert len(turn["input"]) == 1 and turn["input"][0]["type"] == "text"
     assert json.loads(turn["input"][0]["text"]) == {"messages": MESSAGES}
+    assert "functions.exec" in thread["developerInstructions"]
+    assert "Do not print tool-call JSON" in thread["developerInstructions"]
+    assert "Never execute built-in shell" in thread["developerInstructions"]
     assert thread["dynamicTools"][0] == {"type": "function", "name": "workspace_read",
         "description": TOOLS[0]["function"]["description"], "inputSchema": TOOLS[0]["function"]["parameters"]}
 

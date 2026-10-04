@@ -57,7 +57,7 @@ def test_default_model_copy_guard_requires_exact_preset_and_safe_model_id():
 
 
 def test_reviewed_seed_has_separate_web_nodes_and_expected_targets():
-    assert SEED_OPTIONS["web_fetch"].isycode_target == "absent"
+    assert SEED_OPTIONS["web_fetch"].isycode_target == "src/isycode/web_fetch.py:WebFetchOwner.execute"
     assert SEED_OPTIONS["web_search"].isycode_target == "absent"
     assert SEED_OPTIONS["default_model"].isycode_target == "src/isycode/providers.py:save_provider_selection"
     assert SEED_OPTIONS["reasoning_effort"].isycode_target == "src/isycode/providers.py:Provider.reasoning_effort"
