@@ -75,13 +75,13 @@ def test_multi_harness_snapshot_uses_owner_count_and_catalog_order(tmp_path, mon
     async def fake_probe_catalog(*, timeout=3.0):
         return probes
 
-    monkeypatch.setattr("isycode.tui.probe_catalog", fake_probe_catalog)
+    monkeypatch.setattr("isycode.tui_app_sessions.probe_catalog", fake_probe_catalog)
     monkeypatch.setattr(
-        "isycode.tui.unlock_dotfolder",
+        "isycode.tui_app_sessions.unlock_dotfolder",
         lambda result: root if result.harness_id == "grok" and result.answered else None,
     )
     monkeypatch.setattr(
-        "isycode.tui.read_harness_root",
+        "isycode.tui_app_sessions.read_harness_root",
         lambda harness_id, path, automatic=True: ([
             HarnessSetting(
                 harness_id=harness_id,
@@ -121,29 +121,34 @@ def test_multi_harness_snapshot_uses_owner_count_and_catalog_order(tmp_path, mon
 
 
 def test_multi_harness_tui_keeps_processes_outside_tuiapp_and_lists_sessions_via_owner():
-    source = SOURCE.read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
+    session_source = SOURCE.with_name("tui_app_sessions.py").read_text(encoding="utf-8")
+    session_module = ast.parse(session_source)
+    mixin = next(node for node in session_module.body
+                 if isinstance(node, ast.ClassDef) and node.name == "SessionMixin")
+    methods = {node.name: node for node in mixin.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-    snapshot = ast.get_source_segment(source, methods["_multi_harness_snapshot"])
+    snapshot = ast.get_source_segment(session_source, methods["_multi_harness_snapshot"])
     assert "owner.list_conversations" in snapshot
     assert "ChatSessionStore" not in snapshot
     assert "list_sessions" not in snapshot
 
+    app_source = SOURCE.read_text(encoding="utf-8")
+    app_module = ast.parse(app_source)
+    app = next(node for node in app_module.body
+               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
     forbidden_names = {"create_subprocess_exec", "Popen", "check_call", "check_output"}
     forbidden_subprocess_attrs = {"Popen", "run", "call", "check_call", "check_output"}
-    for node in ast.walk(app):
-        if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Name):
-                assert node.func.id not in forbidden_names
-            elif isinstance(node.func, ast.Attribute):
-                receiver = ast.get_source_segment(source, node.func.value) or ""
-                assert not (
-                    receiver in {"subprocess", "asyncio"}
-                    and node.func.attr in forbidden_subprocess_attrs | {"create_subprocess_exec"}
-                )
+    for source, klass in ((app_source, app), (session_source, mixin)):
+        for node in ast.walk(klass):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    assert node.func.id not in forbidden_names
+                elif isinstance(node.func, ast.Attribute):
+                    receiver = ast.get_source_segment(source, node.func.value) or ""
+                    assert not (
+                        receiver in {"subprocess", "asyncio"}
+                        and node.func.attr in forbidden_subprocess_attrs | {"create_subprocess_exec"}
+                    )
 
 
 def test_multi_harness_picked_root_unlocks_only_selected_harness(tmp_path, monkeypatch):
@@ -159,12 +164,12 @@ def test_multi_harness_picked_root_unlocks_only_selected_harness(tmp_path, monke
     async def fake_probe_catalog(*, timeout=3.0):
         return probes
 
-    monkeypatch.setattr("isycode.tui.probe_catalog", fake_probe_catalog)
-    monkeypatch.setattr("isycode.tui.unlock_dotfolder", lambda result: None)
+    monkeypatch.setattr("isycode.tui_app_sessions.probe_catalog", fake_probe_catalog)
+    monkeypatch.setattr("isycode.tui_app_sessions.unlock_dotfolder", lambda result: None)
     store = SimpleNamespace(roots=lambda: {"opencode": picked})
     monkeypatch.setattr(app, "_harness_store", lambda: store)
     monkeypatch.setattr(
-        "isycode.tui.read_harness_root",
+        "isycode.tui_app_sessions.read_harness_root",
         lambda harness_id, path, automatic=True: ([HarnessSetting(
             harness_id=harness_id,
             relative_path="opencode.jsonc",
@@ -192,8 +197,8 @@ def test_multi_harness_choose_folder_validates_confirms_and_saves(tmp_path, monk
     picked.mkdir()
     saved = []
     app = TUIApp()
-    monkeypatch.setattr("isycode.tui.choose_harness_folder", lambda *args, **kwargs: asyncio.sleep(0, result=picked))
-    monkeypatch.setattr("isycode.tui.validate_picked_root", lambda candidate: candidate.resolve())
+    monkeypatch.setattr("isycode.tui_app_sessions.choose_harness_folder", lambda *args, **kwargs: asyncio.sleep(0, result=picked))
+    monkeypatch.setattr("isycode.tui_app_sessions.validate_picked_root", lambda candidate: candidate.resolve())
     monkeypatch.setattr(app, "_await_screen", lambda screen: asyncio.sleep(0, result=isinstance(screen, HarnessFolderConfirmScreen)))
     monkeypatch.setattr(app, "_harness_store", lambda: SimpleNamespace(set_root=lambda harness_id, path: saved.append((harness_id, path))))
     monkeypatch.setattr(app, "_set_activity", lambda *args, **kwargs: None)
@@ -286,7 +291,7 @@ def test_multi_harness_copy_confirms_then_calls_narrow_helper(tmp_path, monkeypa
         lambda screen: asyncio.sleep(0, result=isinstance(screen, HarnessModelConfirmScreen)),
     )
     monkeypatch.setattr(
-        "isycode.tui.copy_default_model_selection",
+        "isycode.tui_app_sessions.copy_default_model_selection",
         lambda provider, model: copied.append((provider, model)) or (provider, model),
     )
     monkeypatch.setattr(app, "_set_activity", lambda *args, **kwargs: None)
@@ -345,7 +350,7 @@ def test_harness_transcript_confirm_reads_after_confirm_and_passes_inert_message
         app, "_await_screen",
         lambda screen: asyncio.sleep(0, result=isinstance(screen, HarnessTranscriptConfirmScreen)),
     )
-    monkeypatch.setattr("isycode.tui.read_transcript", lambda root, relative: copy)
+    monkeypatch.setattr("isycode.tui_app_sessions.read_transcript", lambda root, relative: copy)
 
     async def apply(harness_id, transcript):
         seen.append((harness_id, transcript))
@@ -424,11 +429,11 @@ def test_harness_transcript_persists_same_session_with_state_none_and_keeps_not_
 
 
 def test_harness_transcript_import_never_reuses_session_state_or_chat_execution_paths():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = SOURCE.with_name("tui_app_sessions.py").read_text(encoding="utf-8")
     module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
+    mixin = next(node for node in module.body
+                 if isinstance(node, ast.ClassDef) and node.name == "SessionMixin")
+    methods = {node.name: node for node in mixin.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
     segment = ast.get_source_segment(source, methods["_apply_harness_transcript"])
     assert "owner.record(" in segment

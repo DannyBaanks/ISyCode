@@ -3,6 +3,23 @@ from pathlib import Path
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
+SESSIONS = SOURCE.with_name("tui_app_sessions.py")
+
+
+def _tui_methods() -> tuple[dict[str, str], dict[str, ast.AST]]:
+    """Methods of TUIApp plus mixins that now own part of the class."""
+    sources: dict[str, str] = {}
+    methods: dict[str, ast.AST] = {}
+    for path, class_name in ((SOURCE, "TUIApp"), (SESSIONS, "SessionMixin")):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        klass = next(node for node in module.body
+                     if isinstance(node, ast.ClassDef) and node.name == class_name)
+        for node in klass.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods[node.name] = node
+                sources[node.name] = source
+    return sources, methods
 
 
 def _method_calls(method: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
@@ -46,40 +63,34 @@ def test_secure_tui_adapter_controls_have_no_unmediated_effect_calls():
 
 
 def test_secure_tui_persists_chat_sessions_only_through_the_owner():
-    source = SOURCE.read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    sources, methods = _tui_methods()
 
     store_methods = {"create", "append", "save", "load", "list_sessions", "import_json"}
     for name in ("_startup_workspace", "_persist_chat_message", "_show_chat_sessions",
                  "_refresh_work_list", "_resume_chat_session"):
+        source = sources[name]
         assert "ChatSessionStore" not in _method_calls(methods[name]), name
         for node in ast.walk(methods[name]):
             if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                     and node.func.attr in store_methods):
                 receiver = ast.get_source_segment(source, node.func.value) or ""
                 assert "session" not in receiver.casefold(), (name, receiver)
-    persist = ast.get_source_segment(source, methods["_persist_chat_message"])
+    persist = ast.get_source_segment(sources["_persist_chat_message"], methods["_persist_chat_message"])
     assert persist.index("_sessions_enabled()") < persist.index("owner.record(")
-    shown = ast.get_source_segment(source, methods["_show_chat_sessions"])
+    shown = ast.get_source_segment(sources["_show_chat_sessions"], methods["_show_chat_sessions"])
     assert "_refresh_work_list" in shown
-    assert "owner.list_conversations" in ast.get_source_segment(source, methods["_refresh_work_list"])
-    assert "owner.resume" in ast.get_source_segment(source, methods["_resume_chat_session"])
+    assert "owner.list_conversations" in ast.get_source_segment(
+        sources["_refresh_work_list"], methods["_refresh_work_list"])
+    assert "owner.resume" in ast.get_source_segment(
+        sources["_resume_chat_session"], methods["_resume_chat_session"])
 
 
 def test_secure_tui_session_delete_requires_confirmation_and_separate_authority():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    sources, methods = _tui_methods()
 
     delete_calls = _method_calls(methods["_delete_chat_session"])
     assert "set_grant" not in delete_calls
-    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), methods["_delete_chat_session"])
+    source = ast.get_source_segment(sources["_delete_chat_session"], methods["_delete_chat_session"])
     assert source.index("await self._await_screen") < source.index("self._action_approvals.issue")
     assert "SessionDeleteOwner" in source
 

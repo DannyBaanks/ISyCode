@@ -148,12 +148,16 @@ def test_mode_screen_defaults_to_security_on_escape_and_offers_classic(tmp_path)
 def test_tui_checks_use_effective_grants_and_writes_use_explicit_ones():
     import ast
 
-    source = (Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py").read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: ast.get_source_segment(source, node) for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    root = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    methods = {}
+    for path, class_name in ((root / "tui.py", "TUIApp"), (root / "tui_app_sessions.py", "SessionMixin")):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        klass = next(node for node in module.body
+                     if isinstance(node, ast.ClassDef) and node.name == class_name)
+        for node in klass.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods[node.name] = ast.get_source_segment(source, node)
     for name in ("_workspace_chat_tools_enabled", "_workspace_write_tool_enabled",
                  "_sessions_enabled", "_initialize_workspace", "_open_authority_menu"):
         assert "effective_policy()" in methods[name], name
