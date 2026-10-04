@@ -55,10 +55,13 @@ def test_secure_tui_adapter_controls_have_no_unmediated_effect_calls():
     forbidden = {"start", "rotate_pairing_code", "hello", "heartbeat", "goodbye",
                  "peek", "claim", "release", "send", "wake"}
 
+    menu_handlers = [name for name in methods
+                     if name == "_select_menu_entry" or name.startswith("_menu_")]
     for method_name in ("_start_mobile_host", "_set_bridge_enabled", "_enable_bridge",
-                        "_bridge_tick", "_select_menu_entry"):
+                        "_bridge_tick", *menu_handlers):
         assert not (_method_calls(methods[method_name]) & forbidden), method_name
-    assert "_add_named_credential" not in _method_calls(methods["_select_menu_entry"])
+    for method_name in menu_handlers:
+        assert "_add_named_credential" not in _method_calls(methods[method_name]), method_name
 
 
 def test_secure_tui_persists_chat_sessions_only_through_the_owner():
@@ -200,11 +203,11 @@ def test_tui_uses_narrow_owner_for_context_picker_and_keeps_other_pickers_blocke
         assert not (calls & {"choose_context_file", "choose_workspace_file",
                              "choose_workspace_directory", "create_subprocess_exec"})
 
-    # The README command is nested under plugin registration.
-    nested = [node for node in ast.walk(methods["_register_builtin_plugins"])
+    menu_tree = ast.parse((SOURCE.parent / "tui_app_menu.py").read_text(encoding="utf-8"))
+    readme = [node for node in menu_tree.body
               if isinstance(node, ast.AsyncFunctionDef) and node.name == "_readme_cmd"]
-    assert len(nested) == 1
-    assert not (_method_calls(nested[0]) & {"choose_workspace_file", "create_subprocess_exec"})
+    assert len(readme) == 1
+    assert not (_method_calls(readme[0]) & {"choose_workspace_file", "create_subprocess_exec"})
 
 
 def test_tui_copies_workspace_paths_only_through_the_clipboard_owner():

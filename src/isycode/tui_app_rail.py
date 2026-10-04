@@ -536,3 +536,27 @@ class RailMixin:
         files = self.query_one("#show-files", Button)
         overview.set_class(not show_files, "rail-lit")
         files.set_class(show_files, "rail-lit")
+
+    def _menu_branch(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("branch:" + value.casefold(), value, self._branch_entries(value))
+        return
+
+    def _menu_files(self, entry: dict[str, str | bool]) -> None:
+        self._set_rail_view("files")
+        self.query_one("#workspace-tree", Tree).focus()
+        self._close_menu()
+        return
+
+    def _menu_overview(self, entry: dict[str, str | bool]) -> None:
+        self._set_rail_view("overview")
+        self.query_one("#skills-tree", Tree).focus()
+        self._close_menu()
+        return
+
+    def _menu_refresh(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self.run_worker(self._refresh_openisy(), exclusive=False)
+        self.run_worker(self._check_gateway_mcp_async(), exclusive=False, group="gateway-mcp")
+        return

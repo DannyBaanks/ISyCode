@@ -160,7 +160,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("session.create", "ChatSessionStore.fork", "", "UNWIRED"),
     ("desktop.file_picker", "RemoteMixin._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "RemoteMixin._provision_broker", "", "BLOCKED_BY_DESIGN"),
-    ("desktop.file_picker", "TUIApp._register_builtin_plugins._readme_cmd", "", "BLOCKED_BY_DESIGN"),
+    ("desktop.file_picker", "tui_app_menu._readme_cmd", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_directory", "", "BLOCKED_BY_DESIGN"),
     ("clipboard.paste", "ClipboardOwner.paste", "clipboard", "COVERED"),
@@ -333,9 +333,10 @@ def _is_screen_class(node: ast.ClassDef) -> bool:
 def _issues_from_trees(trees: list[ast.AST]) -> list[dict[str, Any]]:
     """Walk TUIApp, its mixins, and screens those methods construct.
 
-    Screen classes may live in another module. A source string passed to
-    ``secure_tui_direct_api_bypasses`` stays one tree, which is what the
-    single-file audits construct.
+    Screen classes may live in another module. Module-level functions in the
+    same trees stay in the walk: the built-in slash commands are functions,
+    not methods. A source string passed to ``secure_tui_direct_api_bypasses``
+    stays one tree, which is what the single-file audits construct.
     """
     classes: dict[str, ast.ClassDef] = {}
     screens: dict[str, ast.ClassDef] = {}
@@ -356,6 +357,10 @@ def _issues_from_trees(trees: list[ast.AST]) -> list[dict[str, Any]]:
         base_class = classes.get(base_name)
         if base_class is not None and base_class is not app:
             reachable_nodes.append((base_name, base_class))
+    for tree in trees:
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                reachable_nodes.append((node.name, node))
     reachable_screens: set[str] = set()
     cursor = 0
     while cursor < len(reachable_nodes):

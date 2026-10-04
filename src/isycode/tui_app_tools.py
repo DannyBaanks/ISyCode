@@ -591,3 +591,20 @@ class ToolMixin:
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
         self._append(f"  MCP ALLOW · {server}.{tool} · receipt {outcome.receipt.receipt_id}", GREEN)
         return outcome.text
+
+    def _menu_skill_use(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._select_skill(value)
+        self._render_menu("branch", "Skills", self._branch_entries("skills"))
+        return
+
+    def _menu_skill_clear(self, entry: dict[str, str | bool]) -> None:
+        self._active_skills.clear()
+        self._render_menu("branch", "Skills", self._branch_entries("skills"))
+        return
+
+    def _menu_mcp_preset(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._add_mcp_preset(value)
+        self._render_menu("branch", "MCP", self._branch_entries("mcp"))
+        return

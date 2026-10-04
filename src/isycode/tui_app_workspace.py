@@ -526,3 +526,87 @@ class WorkspaceMixin:
                      f"{outcome.reason[:180]}", YELLOW)
         return json.dumps({"error": "change was not written", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
+
+    def _menu_folders_open(self, entry: dict[str, str | bool]) -> None:
+        self._open_workspace_folders_menu()
+        return
+
+    def _menu_folder_add(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self.run_worker(self._add_workspace_folder(), group='folders')
+        return
+
+    def _menu_folder_browse(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._close_menu()
+        self.run_worker(self._browse_workspace_folder(value), group='files')
+        return
+
+    def _menu_folder_remove(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        try:
+            self._folder_store().remove(value)
+            if self._file_browser_alias == value:
+                self._file_browser_alias = 'main'
+                self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
+        except (OSError, ValueError) as exc:
+            self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
+        self._open_workspace_folders_menu()
+        return
+
+    def _menu_folder_auto_on(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._close_menu()
+        self.run_worker(self._set_folder_auto_edit(value, kind == 'folder_auto_on'), group='folders')
+        return
+
+    def _menu_workspace_config_init(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self.run_worker(self._initialize_workspace_config(), exclusive=True,
+                        group="workspace-config")
+        return
+
+    def _menu_workspace_config_preferences(self, entry: dict[str, str | bool]) -> None:
+        self._open_workspace_config_menu()
+        return
+
+    def _menu_workspace_config_migrate(self, entry: dict[str, str | bool]) -> None:
+        self.run_worker(self._open_workspace_migration_menu(), exclusive=True,
+                        group="workspace-config")
+        return
+
+    def _menu_workspace_config_migrate_item(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self.run_worker(self._copy_workspace_command(value), exclusive=True,
+                        group="workspace-config")
+        return
+
+    def _menu_workspace_pref_role(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self.run_worker(self._change_workspace_preference(kind), exclusive=True,
+                        group="workspace-config")
+        return
+
+    def _menu_context_inject(self, entry: dict[str, str | bool]) -> None:
+        self.run_worker(self._inject_agent_context(), exclusive=True, group="context-inject")
+        return
+
+    def _menu_context_project(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self.run_worker(self._load_project_context(), exclusive=True, group="context-inject")
+        return
+
+    def _menu_context_clear(self, entry: dict[str, str | bool]) -> None:
+        self._agent_context = None
+        self.query_one("#context-button", Button).label = "Context"
+        self._set_activity("Injected AGENTS.md context removed", MUTED)
+        self._open_context_menu()
+        return
+
+    def _menu_context_info(self, entry: dict[str, str | bool]) -> None:
+        self._open_context_menu()
+        return
+
+    def _menu_context_menu(self, entry: dict[str, str | bool]) -> None:
+        self._open_context_menu()
+        return

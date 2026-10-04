@@ -1616,7 +1616,7 @@
     },
     {
       "action": "desktop.file_picker",
-      "callsite": "TUIApp._register_builtin_plugins._readme_cmd",
+      "callsite": "tui_app_menu._readme_cmd",
       "owner": null,
       "status": "BLOCKED_BY_DESIGN"
     },

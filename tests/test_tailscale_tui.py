@@ -101,12 +101,14 @@ def test_serve_failure_reports_owner_validation_reason_without_command_output():
 def test_tui_does_not_run_tailscale_or_package_commands_directly():
     source = _surface_text()
     methods = _app_methods()
-    for name in ("on_mount", "_open_settings_menu", "_refresh_private_access",
-                 "_select_menu_entry"):
+    names = ["on_mount", "_open_settings_menu", "_refresh_private_access",
+             "_select_menu_entry"]
+    names.extend(name for name in methods if name.startswith("_menu_"))
+    for name in names:
         calls = _calls(methods[name])
-        assert "Popen" not in calls
-        assert "subprocess" not in calls
-        assert "runner" not in calls
+        assert "Popen" not in calls, name
+        assert "subprocess" not in calls, name
+        assert "runner" not in calls, name
     assert "shell=True" not in source
 
 

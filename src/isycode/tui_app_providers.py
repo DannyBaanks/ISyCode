@@ -53,6 +53,11 @@ from isycode.tui_theme import (
     CYAN,
 )
 from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.shortcuts import APP_SHORTCUTS
+from textual.widgets import Button
+from isycode.tui_widgets import ExpandableBox
+from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
+from isycode.user_defaults import UserDefaultsStore
 
 
 class ProviderMixin:
@@ -612,3 +617,240 @@ class ProviderMixin:
             self._append(f"  Model: {e}", YELLOW)
         except Exception as e:
             self._append(f"  Model: configuration error ({type(e).__name__}).", RED)
+
+    def _menu_provider_unwired(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._blocked_notice(
+            "No transport",
+            f"{value} is on the list. ISyCode has no transport for it yet, so nothing was contacted.")
+        return
+
+    def _menu_provider(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        if value in {"openai", "chatgpt"}:
+            self._open_auth_methods()
+            return
+        if value == "xai":
+            self._open_xai_auth_methods()
+            return
+        self._select_provider(value)
+        return
+
+    def _menu_xai_api_key(self, entry: dict[str, str | bool]) -> None:
+        from isycode.grok_session import set_xai_auth_mode
+        set_xai_auth_mode("api_key")
+        self._select_provider("xai")
+        return
+
+    def _menu_xai_session(self, entry: dict[str, str | bool]) -> None:
+        self._close_menu()
+        self.run_worker(self._use_grok_sign_in(), group="provider-login", exclusive=True)
+        return
+
+    def _menu_xai_device(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._close_menu()
+        self.run_worker(self._connect_xai_login("device" if kind == "xai_device" else "browser"),
+                        group="provider-login", exclusive=True)
+        return
+
+    def _menu_auth_api_key(self, entry: dict[str, str | bool]) -> None:
+        self._select_provider("openai")
+        return
+
+    def _menu_auth_browser(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._close_menu()
+        self.run_worker(self._connect_chatgpt("browser" if kind == "auth_browser" else "device", logout=kind == "auth_logout"), group="provider-login", exclusive=True)
+        return
+
+    def _menu_auth_saved(self, entry: dict[str, str | bool]) -> None:
+        self._select_provider("chatgpt")
+        return
+
+    def _menu_providers_open(self, entry: dict[str, str | bool]) -> None:
+        self._open_provider_menu()
+        return
+
+    def _menu_roles_open(self, entry: dict[str, str | bool]) -> None:
+        self._open_role_menu()
+        return
+
+    def _menu_sounds_toggle(self, entry: dict[str, str | bool]) -> None:
+        enabled = not self._notification_sounds
+        try:
+            UserDefaultsStore().update(notification_sounds=enabled)
+        except (OSError, ValueError):
+            self.notify("Sound preference could not be saved", severity="warning")
+            return
+        self._notification_sounds = enabled
+        if enabled:
+            self._play_notification_sound("question")
+        self._open_settings_menu()
+        return
+
+    def _menu_marquee_toggle(self, entry: dict[str, str | bool]) -> None:
+        enabled = not self._compact_marquee_default
+        try:
+            UserDefaultsStore().update(compact_marquee=enabled)
+        except (OSError, ValueError):
+            self._set_activity("Compact text scroll preference could not be saved", YELLOW)
+            return
+        self._compact_marquee_default = enabled
+        for box in self.query(ExpandableBox):
+            if box._marquee_enabled != enabled:
+                box.toggle_marquee()
+        self._open_settings_menu()
+        return
+
+    def _menu_reasoning_open(self, entry: dict[str, str | bool]) -> None:
+        self._open_reasoning_menu()
+        return
+
+    def _menu_reasoning_select(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        from isycode.reasoning_options import select_reasoning
+        name, model, level = value.split("|", 2)
+        select_reasoning(name, model, level)
+        self._paint_idea_box()
+        self._close_menu()
+        self.run_worker(self._check_model(), exclusive=False)
+        return
+
+    def _menu_model(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        provider_name, model_name = value.split("|", 1)
+        self._select_provider(provider_name, model_name)
+        if not self.query_one("#key-entry", Vertical).display:
+            self._open_reasoning_menu(provider_name, model_name)
+        return
+
+    def _menu_model_list(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("model_account", "Models · account catalog", [
+            self._entry("Loading models from the selected provider…", "info")])
+        self.run_worker(self._load_account_models(value), exclusive=True, group="provider-models")
+        return
+
+    def _menu_role_agent(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        role = next((item for item in ISYCODE_AGENTS + ISYCODE_SUBAGENTS
+                     if item["name"] == value), {})
+        self._active_role = {
+            "name": value,
+            "kind": self._menu_mode.split(":", 1)[-1],
+            "description": entry.get("detail", ""),
+            "engine": role.get("engine", "ISyCode selected provider and model"),
+        }
+        self.query_one("#role-button", Button).label = self._role_button_label()
+        self._set_activity(
+            f"Role selected · {value} · {self._active_role['engine']}", GREEN)
+        self._close_menu()
+        return
+
+    def _menu_role_motor(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        role = next((item for item in ISYCO_MOTORS if item["name"] == value), {})
+        self._active_role = {
+            "name": value,
+            "kind": "ISyCo motor",
+            "description": entry.get("detail", ""),
+            "engine": role.get("engine", ""),
+        }
+        self.query_one("#role-button", Button).label = self._role_button_label()
+        self._set_activity(
+            f"ISyCode role loaded · {value}; role guidance does not grant permissions", GREEN)
+        self._append(f"  {value} role motor loaded into the ISyCode role context.", GREEN)
+        self._append(f"  Workflow: {role.get('engine', '')}", CYAN)
+        if role.get("owns"):
+            scopes = [scope.removeprefix("isycode.").replace(".", " ").replace("_", " ")
+                      for scope in role["owns"]]
+            self._append("  Scope: " + ", ".join(scopes), MUTED)
+        if role.get("rule"):
+            self._append("  Guardrail: " + role["rule"], YELLOW)
+        if role.get("verdicts"):
+            self._append("  Verdicts: " + ", ".join(role["verdicts"]), MUTED)
+        self._append("  CLI operations:", CYAN)
+        for command in role.get("commands", []):
+            self._append(f"    {command}", MUTED)
+        self._append(
+            "  The workflow is loaded; no CLI operation has run from this chat.", YELLOW)
+        self._close_menu()
+        return
+
+    def _menu_shortcuts(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        shortcuts = [(f"{item.key.upper():<14} {item.description}", "info")
+                     for item in APP_SHORTCUTS]
+        shortcuts.extend([
+            ("ENTER          Send message / activate highlighted item", "info"),
+            ("CTRL+ENTER     Alternate send shortcut", "info"),
+            ("SHIFT+ENTER    Insert a newline in the composer", "info"),
+            ("ESCAPE         Close popup / cancel current operation", "info"),
+            ("Session list   Type to search; arrows select; Enter resumes", "info"),
+        ])
+        rows = [self._entry(label, kind) for label, kind in shortcuts]
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("shortcuts", "Commands & shortcuts", rows)
+        return
+
+    def _menu_named_credentials(self, entry: dict[str, str | bool]) -> None:
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._open_credentials_menu()
+        return
+
+    def _menu_credential_add(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._open_key_entry(value)
+        return
+
+    def _menu_credential_use_grant(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._close_menu()
+        self.run_worker(self._grant_key_use(value), exclusive=True, group="credentials")
+        return
+
+    def _menu_credential_revoke(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._close_menu()
+        self.run_worker(self._revoke_key_flow(value), exclusive=True, group="credentials")
+        return
+
+    def _menu_credential_info(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        item = next((record for record in CredentialVault().list_metadata()
+                     if record["id"] == value), None)
+        if item:
+            state = "revoked" if item["revoked"] else "active"
+            self._append(
+                f"  {item['name']} · {item['service']} · {state}. API key value remains hidden.",
+                MUTED)
+            self._append(f"  Purpose: {item['purpose']}", MUTED)
+        return
+
+    def _menu_clear_role(self, entry: dict[str, str | bool]) -> None:
+        self._active_role = None
+        self.query_one("#role-button", Button).label = "Role"
+        self._set_activity("Role guidance cleared", MUTED)
+        self._close_menu()
+        return
+
+    def _menu_oauth_info(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        self._blocked_notice(
+            "No authorization flow",
+            f"{value}: {entry.get('detail', '')}\n"
+            "ISyCode does not yet have an authorization flow for this provider; "
+            "no credential was stored or used.")
+        self._close_menu()
+        return
+
+    def _menu_openisy_provider(self, entry: dict[str, str | bool]) -> None:
+        self._blocked_notice(
+            "Account not connected",
+            f"{entry['label']}\n"
+            "This account is discovered but is not connected to ISyCode inference. "
+            "Use ISyCode credential settings when an API key is supported.")
+        self._close_menu()
+        return

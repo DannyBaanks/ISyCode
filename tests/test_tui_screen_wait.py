@@ -41,19 +41,21 @@ def test_await_screen_works_outside_a_textual_worker():
 
 def test_tui_app_never_calls_push_screen_wait():
     calls = set()
-    plugins = ""
     for path in (SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))):
-        source = path.read_text(encoding="utf-8")
-        module = ast.parse(source)
+        module = ast.parse(path.read_text(encoding="utf-8"))
         for node in module.body:
-            if not isinstance(node, ast.ClassDef):
-                continue
-            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
-                continue
-            calls.update(item.func.attr for item in ast.walk(node)
-                         if isinstance(item, ast.Call) and isinstance(item.func, ast.Attribute))
-            if node.name == "TUIApp":
-                plugins = ast.get_source_segment(source, next(
-                    item for item in node.body if getattr(item, "name", "") == "_register_builtin_plugins"))
+            targets = []
+            if isinstance(node, ast.ClassDef) and (
+                    node.name == "TUIApp" or node.name.endswith("Mixin")):
+                targets.append(node)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                targets.append(node)
+            for target in targets:
+                for item in ast.walk(target):
+                    if not isinstance(item, ast.Call):
+                        continue
+                    if isinstance(item.func, ast.Attribute):
+                        calls.add(item.func.attr)
+                    elif isinstance(item.func, ast.Name):
+                        calls.add(item.func.id)
     assert "push_screen_wait" not in calls
-    assert "push_screen_wait" not in plugins
