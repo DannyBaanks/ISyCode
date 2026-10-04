@@ -1931,14 +1931,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 9619,
+      "line": 9645,
       "callable": "isycode.tui.TUIApp._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui.py",
-      "line": 9719,
+      "line": 9745,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -1966,7 +1966,7 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 8320,
+      "line": 8346,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
@@ -2045,14 +2045,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 9719,
+      "line": 9745,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 8320,
+      "line": 8346,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"

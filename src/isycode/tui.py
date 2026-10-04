@@ -759,8 +759,8 @@ class QuietScrollBar(ScrollBar):
         else:
             self._last_position = self.position
         direction = getattr(self, "_direction", 0)
-        strokes = ["---", " - ", " - "] if direction < 0 else (
-            [" - ", " - ", "___"] if direction > 0 else ["   ", " - ", "   "])
+        strokes = ["───", " ─ ", " ─ "] if direction < 0 else (
+            [" ─ ", " ─ ", "───"] if direction > 0 else ["   ", " ─ ", "   "])
         height = self.size.height
         rows = ["   "] * max(0, height)
         start = max(0, (height - 3) // 2)
@@ -3268,7 +3268,7 @@ class TUIApp(App):
     #workspace-layout { height: 1fr; width: 100%; }
     #main { height: 100%; width: 1fr; min-width: 0; }
     #side-panel {
-        width: 38; height: 100%; background: #17191f;
+        display: none; width: 38; height: 100%; background: #17191f;
         border: round #414650; padding: 1 1;
     }
     .panel-title { color: #c7b8d4; text-style: bold; padding: 0 0 1 0; }
@@ -3541,9 +3541,9 @@ class TUIApp(App):
         self._search_query = ""
         self._search_mode = False
         self._rail_view = "overview"
-        self._rail_visible = True
+        self._rail_visible = False
         self._rail_auto_hidden = False
-        self._rail_visibility_override: bool | None = None
+        self._rail_visibility_override: bool | None = False
         self._rail_width = 38
         self._rail_compact_width = 28
         self._work_rows: list[dict[str, Any]] = []
@@ -6984,7 +6984,11 @@ class TUIApp(App):
                 if entry.get("kind") == "info"
                 else "No extra summary is available. Press Enter or double-click to open."
             )
-        panel = self.query_one("#action-detail", Static)
+        try:
+            panel = self.screen_stack[0].query_one("#action-detail", Static)
+        except (NoMatches, NoScreen, IndexError):
+            # A queued highlight may arrive after the menu unmounts at shutdown.
+            return
         panel.display = bool(detail)
         panel.update(Text(str(detail)))
 
@@ -7002,6 +7006,28 @@ class TUIApp(App):
     def _model_picker_result(self, entry: dict | None) -> None:
         if entry is not None:
             self._select_menu_entry(entry)
+
+    def _step_reasoning(self, direction: int) -> None:
+        from isycode.reasoning_options import reasoning_levels, effective_reasoning, select_reasoning
+        name = selected_provider_name()
+        model = selected_model_name() or provider_default_model(name) or PRESETS.get(name, {}).get("default_model") or DEFAULT_MODEL
+        order = {"none": 0, "off": 0, "minimal": 1, "on": 1, "low": 2, "medium": 3, "high": 4, "xhigh": 5, "max": 6}
+        levels = tuple(sorted(reasoning_levels(name, model), key=order.__getitem__))
+        if not levels:
+            self.notify("This model does not expose adjustable reasoning levels", severity="warning")
+            return
+        current = effective_reasoning(name, model, PRESETS.get(name, {}).get("reasoning_effort"))
+        index = levels.index(current) if current in levels else (-1 if direction > 0 else len(levels))
+        selected = levels[max(0, min(len(levels) - 1, index + direction))]
+        select_reasoning(name, model, selected)
+        self._paint_idea_box()
+        self.notify("Reasoning · " + selected.capitalize() + (" · next request" if self._loop_task and not self._loop_task.done() else ""))
+
+    def action_increase_reasoning(self) -> None:
+        self._step_reasoning(1)
+
+    def action_decrease_reasoning(self) -> None:
+        self._step_reasoning(-1)
 
     def _open_reasoning_menu(self, name: str | None = None, model: str | None = None) -> None:
         from isycode.reasoning_options import reasoning_levels
@@ -8827,7 +8853,7 @@ class TUIApp(App):
                 screen.query_one("#idea-note-content", Static).update(
                     Text(self._idea_box or "Waiting for the agent to leave a note."))
         try:
-            box = self.query_one("#idea-box", Static)
+            box = self.screen_stack[0].query_one("#idea-box", Static)
         except NoMatches:
             return
         body = self._idea_box or "Waiting for the agent to leave a note."

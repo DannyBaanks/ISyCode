@@ -2,7 +2,9 @@
 from datetime import datetime, timezone
 from rich.cells import cell_len
 from rich.text import Text
-from textual.containers import Vertical, Horizontal
+from textual.containers import Vertical, Horizontal, VerticalScroll
+from textual.screen import ModalScreen
+from textual.binding import Binding
 from textual.widgets import Button, OptionList, Static
 from textual.widgets.option_list import Option
 
@@ -97,6 +99,60 @@ class SessionOptionList(OptionList):
         super().action_cursor_up()
 
 
+class SessionMessageScreen(ModalScreen):
+    CSS = """
+    SessionMessageScreen { align: center middle; background: #000000 58%; }
+    #session-message-card { width: 90%; max-width: 110; height: 80%; padding: 1 2; border: round #514d5a; background: #242529; }
+    #session-message-scroll { height: 1fr; margin: 1 0; }
+    #session-message-content { height: auto; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, message):
+        super().__init__()
+        self.message = message
+
+    def compose(self):
+        with Vertical(id="session-message-card"):
+            yield Static(Text("Session · full last message", style="bold #d7a9ff"))
+            with VerticalScroll(id="session-message-scroll"):
+                yield Static(Text(self.message), id="session-message-content")
+            yield Button("Close · Esc", id="session-message-close")
+
+    def on_mount(self):
+        self.query_one("#session-message-scroll").focus()
+
+    def action_close(self):
+        self.dismiss()
+
+    def on_button_pressed(self, event):
+        if event.button.id == "session-message-close":
+            self.dismiss()
+
+
+class SessionDetails(Static):
+    can_focus = True
+    BINDINGS = [Binding("enter,space", "expand_message", "Full message", show=False)]
+
+    def on_click(self, event):
+        self.focus()
+
+    def action_expand_message(self):
+        message = getattr(self, "full_message", "")
+        if message:
+            self.app.push_screen(SessionMessageScreen(message))
+
+
+def quoted_preview(text, console, width, max_lines):
+    width, max_lines = max(3, width), max(1, max_lines)
+    lines = Text("“" + " ".join(text.split()) + "”").wrap(console, width, overflow="fold")
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        lines[-1].truncate(width - 2, overflow="crop")
+        lines[-1].append("…”")
+    return Text("\n").join(lines)
+
+
 class WorkList(Vertical):
     DEFAULT_CSS = """
     WorkList { height: 1fr; display: none; padding: 1 2 0 2; background: #1e1f22; }
@@ -126,13 +182,15 @@ class WorkList(Vertical):
             yield Button("Idle", id="work-filter-idle")
         with Horizontal(id="work-body"):
             yield SessionOptionList(id="work-conversations")
-            yield Static("Select a conversation to inspect it.", id="work-details", markup=False)
+            yield SessionDetails("Select a conversation to inspect it.", id="work-details", markup=False)
         yield Static("Bridge presence off", id="work-presence", markup=False)
 
     def on_resize(self):
         if not self.is_mounted:
             return
         self.query_one("#work-details").display = self.content_size.width >= 85
+        if getattr(self, "_selected_row", None):
+            self.call_after_refresh(self._render_detail, self._selected_row)
         compact = self.content_size.width < 62
         self.query_one("#work-new", Button).label = "+ New" if compact else "+ New conversation"
         self.query_one("#work-bridge", Button).label = "Bridge" if compact else "Bridge presence…"
@@ -145,7 +203,8 @@ class WorkList(Vertical):
         self.query_one("#work-heading", Static).update(heading)
         listing = self.query_one("#work-conversations", OptionList)
         highlight = listing.highlighted
-        listing._preview_click_id = None
+        if listing._preview_click_id not in {row["id"] for row in rows}:
+            listing._preview_click_id = None
         listing.clear_options()
         grouped: dict[str, list] = {"generating": [], "waiting": [], "idle": []}
         for row in rows:
@@ -177,15 +236,19 @@ class WorkList(Vertical):
         row = next((item for item in getattr(self, "_rows", []) if item["id"] == event.option.id), None)
         if row is None:
             return
-        detail = Text(row.get("title") or "Untitled", style="bold #d7a9ff")
+        self._selected_row = row
+        self._render_detail(row)
+
+    def _render_detail(self, row):
+        detail = Text(style="#e0e0e0")
+        detail.append(row.get("title") or "Untitled", style="bold #d7a9ff")
         status = row.get("status", "idle")
         detail.append("\n" + {"generating": "Working", "waiting": "Needs input", "idle": "Idle"}.get(status, status), style="#77d8b0")
         detail.append("\n\nWorkspace\n", style="#9aa3ad")
         detail.append(str(row.get("workspace") or "Unknown"), style="#e0e0e0")
         detail.append("\n\nUpdated\n", style="#9aa3ad")
         detail.append(str(row.get("age") or "Unknown"))
-        detail.append("\n\nLast message\n", style="#9aa3ad")
-        detail.append(str(row.get("detail") or row.get("preview") or "No message preview"))
+
         if row.get("model"):
             from isycode.model_presentation import model_display_name
             detail.append("\n\nModel\n", style="#9aa3ad")
@@ -193,7 +256,15 @@ class WorkList(Vertical):
             from isycode.providers import PRESETS
             provider = row.get("provider") or ""
             detail.append(" · " + PRESETS.get(provider, {}).get("label", provider or "Unknown provider"), style="#d7a9ff")
-        self.query_one("#work-details", Static).update(detail)
+        panel = self.query_one("#work-details", SessionDetails)
+        panel.full_message = str(row.get("detail") or row.get("preview") or "")
+        width = max(3, panel.content_size.width)
+        overhead = len(detail.wrap(self.app.console, width)) + 5
+        budget = max(1, panel.content_size.height - overhead)
+        detail.append("\n\nLast message\n", style="#9aa3ad")
+        detail.append(quoted_preview(panel.full_message or "No message preview", self.app.console, width, budget))
+        detail.append("\nEnter / Space: full message", style="#77d8b0")
+        panel.update(detail)
 
     def on_button_pressed(self, event):
         if event.button.id and event.button.id.startswith("work-filter-"):

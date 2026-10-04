@@ -38,3 +38,17 @@ Verificación del ajuste final de navegación: 27 passed en 14.87s (`test_work_l
 Corrección posterior: Enter/Space en Thinking recorre título de una línea → vista previa de hasta dos líneas → texto completo → título de una línea. Textos cortos alternan entre título y contenido completo. El triángulo conserva ocultar/mostrar y la cinta opcional sigue separada.
 
 Regresión Thinking verificada: 29 passed en 22.65s (`test_focused_box_expansion`, `test_chat_sequence`, `test_action_coverage`).
+
+## Atajos y preview de Sessions (actualización final)
+
+Alt+`+` (también Alt+`=` o Alt+`.`) sube effort; Alt+`-` (también Alt+`,`) baja. Recorren únicamente niveles verificados para el modelo, en orden de esfuerzo, sin dar vuelta al alcanzar el límite. El encabezado Modelo / Reasoning · Provider se actualiza inmediatamente. Una petición que ya está en curso conserva su configuración; la próxima usa la selección nueva. Si no hay niveles publicados/conocidos, se informa y no se inventan opciones.
+
+Sessions limita el último mensaje entre comillas y termina con … cuando no cabe. Click en los detalles para enfocar; Enter/Space abre el mensaje íntegro en una ventana con scroll; Esc vuelve. Enter sobre la lista sigue abriendo la sesión. El preview se ajusta al ancho y alto disponibles; el contenido íntegro se conserva. Las actualizaciones periódicas conservan el primer clic mientras la fila continúe disponible.
+
+El sidebar arranca oculto; Ctrl+B o Sidebar lo abre. El indicador de scroll usa el mismo carácter ─ en ambas direcciones: ensancha el trazo superior al subir y el inferior al bajar; en reposo solo muestra el central.
+
+Verificación final del frente: **50 passed en 28.32s**. Incluye effort/encabezado en vivo/límites, mensaje completo, compositor, sidebar, Sessions, layout, modelos y cobertura Authority. La suite amplia previa terminó con 1300 passed, 6 skipped y dos fallos de expectativas del layout anterior (sidebar visible y ancho fijo del texto de overflow). Ambas pruebas se adaptaron al nuevo arranque y pasaron en la verificación final. Además se corrigió un evento tardío de menú durante desmontaje, detectado al repetir las pruebas específicas. No se atribuye a esta actualización una ejecución completa posterior de toda la suite.
+
+Registros preservados:
+- `docs/handoff/effort-preview-2026-10-03-tests.log` SHA-256 `bd2e3484eb6924b2f87c39ad7313273b51c78d828d8e1dce7a71512c5082b509`
+- `docs/handoff/effort-preview-2026-10-03-before-test-adjustments.log` SHA-256 `b1575c242554cd883ef3b7cd59c0f79c0561a7ff1d8eac41c542b10c2340583d`

@@ -92,6 +92,8 @@ def test_install_commands_are_shown_and_nothing_is_launched(tmp_path, monkeypatc
         app = TUIApp()
         async with app.run_test(size=(140, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_sidebar()
+            await pilot.pause()
             app.query_one("#rail-lsp").collapsed = False
             await pilot.pause()
             await pilot.click("#lsp-install-hint")

@@ -23,7 +23,7 @@ def test_prompt_grows_to_five_content_rows_then_scrolls_and_shrinks(tmp_path, mo
             assert prompt.max_scroll_y > 0
             assert prompt.scroll_y > 0
             assert not prompt.region.overlaps(app.query_one('#idea-box').region)
-            prompt.load_text('word ' * 100)
+            prompt.load_text('word ' * max(100, (prompt.content_size.width * 7) // 5))
             await pilot.pause()
             assert prompt.content_size.height == 5
             assert prompt.max_scroll_y > 0
