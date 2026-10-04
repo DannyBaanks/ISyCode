@@ -98,9 +98,12 @@ class IdleBoard(Static):
     def on_mount(self) -> None:
         self.styles.height = "auto"
         self._painted_width = 0
+        self._painted_rows = 0
 
     def on_resize(self, event) -> None:
-        if event.size.width and self.content_size.width != self._painted_width:
+        width = self.content_size.width
+        rows = self.app._landscape_row_budget()
+        if width and (width, rows) != (self._painted_width, self._painted_rows):
             self.app._paint_idle()
 
 

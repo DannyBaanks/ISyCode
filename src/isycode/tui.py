@@ -94,7 +94,7 @@ from isycode.prompt_expansion import (
 )
 from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
 from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
-from isycode.startup_art import render_landscape
+from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
 from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME, validate_question
 from isycode.idea_box import (
     IDEA_BOX_TOOL, IDEA_BOX_TOOL_NAME, IDEA_NUDGE_PREFIX, IDEA_NUDGE_SECONDS,
@@ -4231,8 +4231,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, App):
         if not board.is_mounted or board.has_class("startup-archived"):
             return
         width = board.content_size.width or self._idle_content_width()
+        rows = self._landscape_row_budget()
         board._painted_width = width
-        board.update(self._idle_board_text(width))
+        board._painted_rows = rows
+        board.update(self._idle_board_text(width, rows))
 
     def _idle_content_width(self) -> int:
         chat_width = self.query_one(ChatArea).content_size.width
@@ -4244,11 +4246,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, App):
         rail_width = rail.region.width if rail.display else 0
         return max(24, self.size.width - rail_width - 8)
 
-    def _idle_board_text(self, measured_width: int | None = None) -> Text:
+    def _landscape_row_budget(self) -> int:
+        """Rows for the village so the model line and columns stay on screen."""
+        chat_h = self.query_one(ChatArea).content_size.height
+        if chat_h <= 0:
+            return 16
+        return max(8, min(MAX_SCENE_ROWS, chat_h - 11))
+
+    def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
         """Cell-accurate landscape, model, and integration columns."""
         width = measured_width or self._idle_content_width()
         body = Text()
-        body.append(render_landscape(width))
+        body.append(render_landscape(width, max_rows))
         body.append("\n")
         model = self._model_line or "Checking the configured model"
         body.append("◇ ", style=ACCENT)
