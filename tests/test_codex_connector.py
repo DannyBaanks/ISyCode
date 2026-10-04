@@ -395,3 +395,18 @@ def test_official_published_reasoning_summary_and_usage_are_reported():
             assert response["text"]=="Hello world"
     asyncio.run(run())
     assert chunks==[("reasoning","Checking the request."),("content","Hello "),("content","world")]
+
+
+def test_inline_image_is_actual_user_input_not_json_text(tmp_path):
+    connection = connector(tmp_path)
+    url = "data:image/png;base64,aGVsbG8="
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Explain [IMAGE#1]"}, {"type": "image_url", "image_url": {"url": url}}]}]
+    async def run():
+        async with connection:
+            await connection.complete("m1", messages, None, None, effort="low")
+    asyncio.run(run())
+    turn = next(r["params"] for r in requests(connection) if r.get("method") == "turn/start")
+    assert turn["input"][1] == {"type": "image", "url": url}
+    assert url not in turn["input"][0]["text"]
+    assert turn["effort"] == "low"
+    assert turn["environments"] == []

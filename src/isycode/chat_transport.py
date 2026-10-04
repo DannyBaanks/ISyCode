@@ -23,7 +23,8 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         from isycode.codex_connector import CodexConnector
         identity = provider.connector_identity
         async with CodexConnector(identity['executable'], Path(identity['home'])) as connector:
-            return await connector.complete(provider.model, messages, tools, on_chunk)
+            return await connector.complete(provider.model, messages, tools, on_chunk,
+                                            effort=provider.reasoning_effort)
     if uses_anthropic(provider):
         from isycode.anthropic_provider import anthropic_stream_complete
 
@@ -31,13 +32,16 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
             provider.api_key, provider.model, messages, max_tokens=max_tokens,
             effort=provider.reasoning_effort, on_chunk=on_chunk, tools=tools,
             base_url=provider.base_url, timeout_s=None)
+    from isycode.reasoning_options import thinking_options
+    thinking = thinking_options(provider.name, provider.model, provider.reasoning_effort)
+    extra = {"chat_template_kwargs": thinking} if thinking is not None else {}
     return await async_stream_complete(
         provider.base_url, provider.api_key, provider.model, messages, max_tokens=max_tokens,
         token_limit_field=provider.token_limit_field,
-        reasoning_effort=provider.reasoning_effort,
+        reasoning_effort=None if thinking is not None else provider.reasoning_effort,
         temperature_supported=provider.temperature_supported,
         timeout_s=None,
-        on_chunk=on_chunk, tools=tools, include_usage=provider.name == "openai")
+        on_chunk=on_chunk, tools=tools, include_usage=provider.name == "openai", **extra)
 
 
 def assistant_turn(response: dict) -> dict:

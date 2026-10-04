@@ -35,11 +35,13 @@ def test_model_steps_and_owned_tools_stay_in_display_order(tmp_path, monkeypatch
             for child in app.query_one(ChatArea).children:
                 if isinstance(child, ThoughtBlock):
                     rows.append(plain_text(child._body))
+                elif child.has_class('tool-activity'):
+                    rows.append(str(child.title))
                 elif isinstance(child, Static):
                     rows.append(app._render_searchable_text(child))
             positions = [next(i for i, row in enumerate(rows) if text in row) for text in (
-                'Reasoning 1', 'Explanation 1.', 'read first.py',
-                'Reasoning 2', 'Explanation 2.', 'read second.py',
+                'Reasoning 1', 'Explanation 1.', 'workspace_read · first.py',
+                'Reasoning 2', 'Explanation 2.', 'workspace_read · second.py',
                 'Reasoning 3', 'Explanation 3.')]
             assert positions == sorted(set(positions))
             assert len(app.query(ThoughtBlock)) == 3
@@ -113,10 +115,11 @@ def test_returned_text_without_stream_callbacks_precedes_its_tool(tmp_path, monk
             await pilot.pause()
             await app._run_chat('Read the file.')
             await pilot.pause()
-            rows = [app._render_searchable_text(w) for w in app.query_one(ChatArea).children
-                    if isinstance(w, Static)]
+            rows = [str(w.title) if w.has_class('tool-activity') else app._render_searchable_text(w)
+                    for w in app.query_one(ChatArea).children
+                    if isinstance(w, Static) or w.has_class('tool-activity')]
             positions = [next(i for i, row in enumerate(rows) if text in row)
-                         for text in ('Checking first.py.', 'read first.py', 'Finished.')]
+                         for text in ('Checking first.py.', 'workspace_read · first.py', 'Finished.')]
             assert positions == sorted(set(positions))
             assert app._history[-1]['content'] == 'Checking first.py.\n\nFinished.'
             assert not app.query(ThoughtBlock)
@@ -167,7 +170,7 @@ def test_reasoning_growth_and_collapse_keep_tail_visible(tmp_path, monkeypatch, 
             await pilot.pause()
             chat = app.query_one(ChatArea)
             try:
-                assert chat.max_scroll_y > 0
+                assert len(plain_text(app.query_one(ThoughtBlock)._body).splitlines()) == 2
                 assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
             finally:
                 continue_stream.set()

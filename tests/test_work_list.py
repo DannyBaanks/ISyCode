@@ -93,3 +93,89 @@ def test_sessions_panel_switches_here_and_blocks_during_generation(tmp_path, mon
             assert 'sent_at' not in json.dumps(app._history)
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("size", [(80, 24), (120, 40), (160, 48)])
+def test_session_toolbar_text_remains_visible_and_all_controls_fit(tmp_path, monkeypatch, size):
+    from textual.widgets import Button
+    from isycode.tui import SidePanel
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=size) as pilot:
+            await pilot.pause()
+            if not app.query_one(SidePanel).display:
+                app.action_toggle_sidebar()
+            await app._show_chat_sessions()
+            await pilot.pause()
+            board = app.query_one("#work-list")
+            buttons = [board.query_one("#" + name, Button) for name in ("work-new", "work-refresh", "work-bridge", "work-hide")]
+            for button in buttons:
+                button.focus()
+                await pilot.hover(button)
+                await pilot.pause()
+                assert button.content_size.height == 1
+                assert button.styles.border_top[0] == ""
+                assert button.styles.border_bottom[0] == ""
+                assert board.region.contains_region(button.region)
+                assert str(button.label).strip()
+            assert all(not left.region.overlaps(right.region) for left, right in zip(buttons, buttons[1:]))
+    asyncio.run(scenario())
+
+
+def test_sessions_filters_and_details_use_real_selected_row(tmp_path, monkeypatch):
+    from isycode.work_list import WorkList
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(160, 48)) as pilot:
+            board = app.query_one(WorkList)
+            board.display = True
+            board.show_rows([
+                {"id": "a", "title": "Read", "status": "idle", "model": "z-ai/glm-5.3", "provider": "nvidia", "detail": "Full last message", "workspace": "Project"},
+                {"id": "b", "title": "Run", "status": "generating"},
+            ])
+            listing = board.query_one("#work-conversations")
+            listing.highlighted = next(index for index, option in enumerate(listing._options) if option.id == "a")
+            await pilot.pause()
+            text = str(board.query_one("#work-details").render())
+            assert "GLM 5.3" in text and "Full last message" in text
+            await pilot.click("#work-filter-generating")
+            await pilot.pause()
+            assert listing.option_count == 2
+            assert listing.get_option_at_index(1).id == "b"
+    asyncio.run(scenario())
+
+
+def test_sessions_first_click_previews_second_opens_and_arrows_select(tmp_path, monkeypatch):
+    from isycode.work_list import WorkList
+    configure(tmp_path, monkeypatch)
+    opened = []
+    async def resume(self, session_id):
+        opened.append(session_id)
+    monkeypatch.setattr(TUIApp, "_resume_chat_session", resume)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(160, 48)) as pilot:
+            board = app.query_one(WorkList)
+            board.display = True
+            board.show_rows([
+                {"id": "a", "title": "First", "status": "idle", "detail": "First details"},
+                {"id": "b", "title": "Second", "status": "idle", "detail": "Second details"},
+            ])
+            await pilot.pause()
+            await pilot.click("#work-conversations", offset=(2, 1))
+            await pilot.pause()
+            assert opened == []
+            assert "First details" in str(board.query_one("#work-details").render())
+            await pilot.click("#work-conversations", offset=(2, 1))
+            await pilot.pause()
+            assert opened == ["a"]
+            await pilot.press("down")
+            await pilot.pause()
+            assert "Second details" in str(board.query_one("#work-details").render())
+            assert opened == ["a"]
+            await pilot.press("enter")
+            await pilot.pause()
+            assert opened == ["a", "b"]
+    asyncio.run(scenario())

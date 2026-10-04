@@ -467,9 +467,8 @@ class Provider:
         self.supports_tools = bool(preset.get("supports_tools", False))
         self.api_key = "" if preset.get("api") == "codex" else (api_key if api_key is not None else load_provider_key(self.name))
         self.token_limit_field = preset.get("token_limit_field", "max_tokens")
-        self.reasoning_effort = (os.environ.get("ISYCODE_REASONING_EFFORT")
-                                 or os.environ.get("ISYMOTRON_REASONING_EFFORT")
-                                 or preset.get("reasoning_effort"))
+        from isycode.reasoning_options import effective_reasoning
+        self.reasoning_effort = effective_reasoning(self.name, self.model, preset.get("reasoning_effort"))
         self.temperature_supported = not (
             self.name == "openai" and self.reasoning_effort not in (None, "none")
         )
@@ -515,6 +514,12 @@ class Provider:
             raise ProviderError("provider model catalog is unavailable", transport=True) from exc
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
             raise ProviderError("provider returned an invalid model catalog")
+        from isycode.reasoning_options import record_catalog
+        for item in payload["data"]:
+            if isinstance(item, dict) and isinstance(item.get("id"), str):
+                record_catalog(self.name, item["id"], item)
+                from isycode.image_attachments import record_image_capability
+                record_image_capability(self.name, item["id"], item)
         return sorted(item["id"] for item in payload["data"]
                       if isinstance(item, dict) and isinstance(item.get("id"), str))
 

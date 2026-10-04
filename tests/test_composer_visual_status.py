@@ -47,3 +47,25 @@ def test_status_flanks_idea_box_and_animation_stops(tmp_path, monkeypatch, size)
             bar._settle()
             assert bar._direction == 0
     asyncio.run(scenario())
+
+
+def test_friendly_model_stays_visible_and_startup_does_not_repeat_path(tmp_path, monkeypatch):
+    check_model = TUIApp._check_model
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setenv("NVIDIA_NIM_API_KEY", "test-not-real")
+    monkeypatch.setenv("ISYCODE_PROVIDER", "nvidia")
+    monkeypatch.setenv("ISYCODE_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(180, 40)) as pilot:
+            await pilot.pause()
+            app._paint_idea_box()
+            label = "Nemotron 3 Ultra 550b a55b / Default · NVIDIA NIM"
+            assert "Idea box     " + label in plain_text(app.query_one('#idea-box'))
+            assert str(app._workspace_root) not in app._idle_board_text().plain
+            await check_model(app)
+            assert label in app._model_line
+            monkeypatch.setenv("ISYCODE_MODEL", "z-ai/glm-5.3")
+            app._paint_idea_box()
+            assert "GLM 5.3 / Default · NVIDIA NIM" in plain_text(app.query_one('#idea-box'))
+    asyncio.run(scenario())

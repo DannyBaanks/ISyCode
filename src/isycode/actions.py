@@ -85,6 +85,7 @@ _ENTRIES = [
     ("session.delete", "Sessions", "Delete a persistent conversation", "destructive", True),
     # Only from a user gesture (selection, Ctrl+C, Copy path); that gesture is the
     # human-presence proof, and the model has no tool that can trigger it.
+    ("clipboard.paste", "Desktop", "Paste an image or text from the clipboard", "external", False),
     ("clipboard.copy", "Desktop", "Copy selected text or a path to the clipboard", "external", False),
     ("desktop.file_picker", "Desktop", "Open the native file picker", "process", True),
     ("tailscale.inspect", "Private access", "Inspect local Tailscale status", "read", False),

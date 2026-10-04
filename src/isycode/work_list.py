@@ -67,12 +67,45 @@ def preview_line(text: str | None) -> str:
     return clean[:72]
 
 
+class SessionOptionList(OptionList):
+    """First click previews; a subsequent click on that row opens it."""
+    _preview_click_id = None
+
+    async def _on_click(self, event):
+        event.stop()
+        event.prevent_default()
+        index = event.style.meta.get("option")
+        if index is None or not 0 <= index < self.option_count:
+            return
+        option = self.get_option_at_index(index)
+        if option.disabled:
+            return
+        self.focus()
+        self.highlighted = index
+        if self._preview_click_id == option.id:
+            self._preview_click_id = None
+            self.action_select()
+        else:
+            self._preview_click_id = option.id
+
+    def action_cursor_down(self):
+        self._preview_click_id = None
+        super().action_cursor_down()
+
+    def action_cursor_up(self):
+        self._preview_click_id = None
+        super().action_cursor_up()
+
+
 class WorkList(Vertical):
     DEFAULT_CSS = """
     WorkList { height: 1fr; display: none; padding: 1 2 0 2; background: #1e1f22; }
     WorkList Horizontal { height: 1; }
-    WorkList Button { height: 1; min-height: 1; border: none; background: transparent; color: #8fbc8f; padding: 0 1; }
-    WorkList Button:hover, WorkList Button:focus { background: transparent; color: #f4f1ea; text-style: bold; }
+    WorkList Button { width: auto; min-width: 0; height: 1; min-height: 1; border: none; border-top: none; border-bottom: none; background: transparent; background-tint: transparent; color: #77d8b0; padding: 0 1; margin: 0; }
+    WorkList Button:hover, WorkList Button:focus, WorkList Button.-active { border: none; border-top: none; border-bottom: none; tint: transparent; background-tint: transparent; background: #30303c; color: #f4f1ea; text-style: bold; }
+    #work-body { height: 1fr; }
+    #work-details { width: 35%; height: 1fr; border-left: solid #514d5a; padding: 0 2; overflow-y: auto; }
+    #work-conversations { width: 1fr; }
     #work-heading { height: 1; color: #9aa3ad; }
     #work-conversations { height: 1fr; border: none; background: transparent; padding: 0; }
     #work-conversations > .option-list--option-highlighted { background: #2a2b30; color: #f4f1ea; }
@@ -86,13 +119,33 @@ class WorkList(Vertical):
             yield Button("Refresh", id="work-refresh")
             yield Button("Bridge presence…", id="work-bridge")
             yield Button("Hide", id="work-hide")
-        yield OptionList(id="work-conversations")
+        with Horizontal(id="work-filters"):
+            yield Button("All", id="work-filter-all")
+            yield Button("Working", id="work-filter-generating")
+            yield Button("Needs input", id="work-filter-waiting")
+            yield Button("Idle", id="work-filter-idle")
+        with Horizontal(id="work-body"):
+            yield SessionOptionList(id="work-conversations")
+            yield Static("Select a conversation to inspect it.", id="work-details", markup=False)
         yield Static("Bridge presence off", id="work-presence", markup=False)
 
+    def on_resize(self):
+        if not self.is_mounted:
+            return
+        self.query_one("#work-details").display = self.content_size.width >= 85
+        compact = self.content_size.width < 62
+        self.query_one("#work-new", Button).label = "+ New" if compact else "+ New conversation"
+        self.query_one("#work-bridge", Button).label = "Bridge" if compact else "Bridge presence…"
+
     def show_rows(self, rows, *, heading: str = ""):
+        self._rows = list(rows)
+        self._heading = heading
+        selected_filter = getattr(self, "_filter", "all")
+        rows = [row for row in self._rows if selected_filter == "all" or row.get("status", "idle") == selected_filter]
         self.query_one("#work-heading", Static).update(heading)
         listing = self.query_one("#work-conversations", OptionList)
         highlight = listing.highlighted
+        listing._preview_click_id = None
         listing.clear_options()
         grouped: dict[str, list] = {"generating": [], "waiting": [], "idle": []}
         for row in rows:
@@ -113,8 +166,37 @@ class WorkList(Vertical):
                 if age:
                     line.append(f"    {age}", style="#6d7580")
                 preview = row.get("preview") or ""
-                if preview:
-                    line.append(f"\n   {preview}", style="#6d7580")
+
                 listing.add_option(Option(line, id=row["id"]))
         if highlight is not None and listing.option_count:
             listing.highlighted = min(highlight, listing.option_count - 1)
+
+    def on_option_list_option_highlighted(self, event):
+        if event.option_list.id != "work-conversations":
+            return
+        row = next((item for item in getattr(self, "_rows", []) if item["id"] == event.option.id), None)
+        if row is None:
+            return
+        detail = Text(row.get("title") or "Untitled", style="bold #d7a9ff")
+        status = row.get("status", "idle")
+        detail.append("\n" + {"generating": "Working", "waiting": "Needs input", "idle": "Idle"}.get(status, status), style="#77d8b0")
+        detail.append("\n\nWorkspace\n", style="#9aa3ad")
+        detail.append(str(row.get("workspace") or "Unknown"), style="#e0e0e0")
+        detail.append("\n\nUpdated\n", style="#9aa3ad")
+        detail.append(str(row.get("age") or "Unknown"))
+        detail.append("\n\nLast message\n", style="#9aa3ad")
+        detail.append(str(row.get("detail") or row.get("preview") or "No message preview"))
+        if row.get("model"):
+            from isycode.model_presentation import model_display_name
+            detail.append("\n\nModel\n", style="#9aa3ad")
+            detail.append(model_display_name(row["model"]), style="#77d8b0")
+            from isycode.providers import PRESETS
+            provider = row.get("provider") or ""
+            detail.append(" · " + PRESETS.get(provider, {}).get("label", provider or "Unknown provider"), style="#d7a9ff")
+        self.query_one("#work-details", Static).update(detail)
+
+    def on_button_pressed(self, event):
+        if event.button.id and event.button.id.startswith("work-filter-"):
+            event.stop()
+            self._filter = event.button.id.removeprefix("work-filter-")
+            self.show_rows(self._rows, heading=self._heading)

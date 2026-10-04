@@ -27,6 +27,7 @@ class ChatSession:
     created_at: float
     updated_at: float
     state: dict[str, Any] = field(default_factory=dict)
+    title_manual: bool = False
 
 
 class ChatSessionStore:
@@ -90,6 +91,7 @@ class ChatSessionStore:
             "created_at": session.created_at,
             "updated_at": session.updated_at,
             "state": state,
+            "title_manual": session.title_manual,
         }, ensure_ascii=False, allow_nan=False)
         fd, temporary = tempfile.mkstemp(prefix=f".{session.session_id}-", dir=self.root)
         try:
@@ -147,7 +149,8 @@ class ChatSessionStore:
             self._validate_sent_at(message)
         return ChatSession(session_id, payload["title"], messages,
                            float(payload["created_at"]), float(payload["updated_at"]),
-                           self.validate_state(payload.get("state", {})))
+                           self.validate_state(payload.get("state", {})),
+                           payload.get("title_manual") is True)
 
     def list_sessions(self) -> list[ChatSession]:
         sessions = []
@@ -175,6 +178,7 @@ class ChatSessionStore:
             raise ChatSessionError("session title must contain 1–80 printable characters")
         session = self.load(session_id)
         session.title = cleaned
+        session.title_manual = True
         self.save(session)
         return session
 

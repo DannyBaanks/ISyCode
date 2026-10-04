@@ -161,7 +161,7 @@ class ChatSessionOwner:
     def manage(self, operation: str, session_id: str | None,
                data: str = "") -> tuple[ActionOutcome, str | None]:
         """Bounded, journaled lifecycle changes; imported data never grants authority."""
-        if operation not in {"rename", "fork", "import", "state"} or not isinstance(data, str):
+        if operation not in {"rename", "auto_title", "fork", "import", "state"} or not isinstance(data, str):
             return ActionOutcome("Session unchanged.", "DENY", None, "unsupported session operation"), None
         parent = None
         if operation != "import" and not (operation == "state" and session_id is None):
@@ -175,13 +175,21 @@ class ChatSessionOwner:
                 clean = json.dumps(state, sort_keys=True)
             except (ValueError, TypeError):
                 return ActionOutcome("Session unchanged.", "ERROR", None, "invalid session state"), None
-        target = session_id if operation in {"rename", "state"} and session_id else uuid.uuid4().hex
+        target = session_id if operation in {"rename", "auto_title", "state"} and session_id else uuid.uuid4().hex
         if operation == "import":
             try:
                 imported = self.store.parse_import(data, session_id=target)
                 clean = self.store.serialize(imported)
             except (ValueError, TypeError):
                 return ActionOutcome("Session unchanged.", "ERROR", None, "invalid session import"), None
+        if operation == "auto_title":
+            count = sum(message.get("role") == "user" for message in parent.messages)
+            if parent.title_manual or not 1 <= count <= 5:
+                return ActionOutcome("Title unchanged.", "DENY", None,
+                                     "automatic titles require the first five user messages and no manual title"), None
+            clean = " ".join(clean.split())
+            if not clean or len(clean) > 80 or not clean.isprintable():
+                return ActionOutcome("Title unchanged.", "DENY", None, "title must contain 1–80 characters"), None
         request = ActionRequest("session.create", self.root, target, {
             "operation": operation, "session_id": target,
             "content_sha256": _sha(clean), "size": len(clean.encode("utf-8")),
@@ -191,7 +199,14 @@ class ChatSessionOwner:
         if denied is not None:
             return ActionOutcome("Session unchanged.", "DENY", None, denied), None
         try:
-            if operation == "rename":
+            if operation == "auto_title":
+                # Recheck live state immediately before applying a proposed title.
+                session = self.store.load(target)
+                if session.title_manual or not 1 <= sum(m.get("role") == "user" for m in session.messages) <= 5:
+                    return ActionOutcome("Title unchanged.", "DENY", None, "title window closed"), None
+                session.title = clean
+                self.store.save(session)
+            elif operation == "rename":
                 session = self.store.rename(target, clean)
             elif operation == "state":
                 now = time.time()

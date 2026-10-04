@@ -12,7 +12,7 @@ def test_subscription_uses_official_connector_never_api_key_transport(tmp_path,m
         def __init__(self,*args,**kwargs): called.append('created')
         async def __aenter__(self): return self
         async def __aexit__(self,*args): called.append('closed')
-        async def complete(self,model,messages,tools,on_chunk): return {'text':'subscription answer','tool_calls':[]}
+        async def complete(self,model,messages,tools,on_chunk,*,effort=None): return {'text':'subscription answer','tool_calls':[]}
     async def forbidden(*args,**kwargs): raise AssertionError('Subscription fell back to API-key billing')
     monkeypatch.setattr('isycode.codex_connector.CodexConnector',Peer)
     monkeypatch.setattr('isycode.chat_transport.async_stream_complete',forbidden)

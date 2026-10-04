@@ -80,7 +80,20 @@ def to_anthropic(messages: list[dict[str, Any]]) -> tuple[str, list[dict[str, An
                                     "name": function.get("name", ""), "input": arguments})
             converted.append({"role": "assistant", "content": content})
         elif role in {"user", "system"}:
-            converted.append({"role": role, "content": str(message.get("content") or "")})
+            content = message.get("content") or ""
+            if isinstance(content, list):
+                blocks = []
+                for block in content:
+                    if block.get("type") == "text":
+                        blocks.append({"type": "text", "text": block["text"]})
+                    elif block.get("type") == "image_url":
+                        import re
+                        match = re.fullmatch(r"data:(image/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)", block["image_url"]["url"])
+                        if not match:
+                            raise ValueError("Only attached inline images are supported")
+                        blocks.append({"type": "image", "source": {"type": "base64", "media_type": match[1], "data": match[2]}})
+                content = blocks
+            converted.append({"role": role, "content": content})
     return "\n\n".join(part for part in system_parts if part), converted
 
 

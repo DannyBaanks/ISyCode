@@ -300,7 +300,7 @@ OWNER_ACTIONS = {
     "workspace_git": GIT_ACTIONS,
     "workspace_publish": frozenset({"git.push"}),
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
-    "clipboard": frozenset({"clipboard.copy"}),
+    "clipboard": frozenset({"clipboard.copy", "clipboard.paste"}),
     "bridge_presence": frozenset({"bridge.agents"}),
 }
 
@@ -753,6 +753,9 @@ class ClipboardSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id == "clipboard.paste":
+            valid = (request.target == "clipboard" and request.parameters == {"source": "user_paste", "max_bytes": 8 * 1024 * 1024})
+            return SystembilityResult(self.name, valid, "bounded user-initiated clipboard read" if valid else "clipboard paste shape is invalid")
         if request.action_id != "clipboard.copy":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
@@ -929,7 +932,7 @@ class SessionStoreSystembility:
                      and re.fullmatch(r"[0-9a-f]{64}", params["content_sha256"]) is not None
                      and type(size) is int and 0 <= size <= 1_000_000)
             valid = valid and isinstance(state_digest, str) and re.fullmatch(r"[0-9a-f]{64}", state_digest) is not None
-            if params.get("operation") in {"rename", "fork", "import", "state"}:
+            if params.get("operation") in {"rename", "auto_title", "fork", "import", "state"}:
                 source = params.get("source_id")
                 valid = (set(params) == {"operation", "session_id", "content_sha256", "size", "source_id"}
                          and valid_id and request.target == session_id
@@ -940,7 +943,7 @@ class SessionStoreSystembility:
                          and (source in {"", session_id} if params["operation"] == "state"
                               else source == "" if params["operation"] == "import"
                               else re.fullmatch(r"[0-9a-f]{32}", source) is not None)
-                         and (source == session_id if params["operation"] == "rename" else True))
+                         and (source == session_id if params["operation"] in {"rename", "auto_title"} else True))
             return SystembilityResult(self.name, valid,
                                       "one bounded message bound to one local transcript")
         if params.get("operation") == "list":

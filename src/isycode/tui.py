@@ -359,6 +359,141 @@ def switch_rows(rows: list[Text]) -> Text:
     return Text("\n").join(rows)
 
 
+from textual.widgets._collapsible import CollapsibleTitle
+
+
+def _semantic_box_title(title: str) -> Text:
+    result = Text()
+    for index, part in enumerate(str(title).split(" · ")):
+        if index:
+            result.append(" · ", style=MUTED)
+        lowered = part.casefold()
+        if lowered in {"ready", "completed", "exit 0", "allow"}:
+            color = GREEN
+        elif any(word in lowered for word in ("denied", "failed", "error", "exit 1")):
+            color = RED
+        elif any(word in lowered for word in ("running", "checking", "missing", "unavailable", "rejected", "cancelled")):
+            color = YELLOW
+        elif index == 0:
+            from isycode.operation_style import operation_color
+            color = operation_color(part) or ("bold #c7b8d4" if "thinking" in lowered or "thought" in lowered else TEXT)
+        else:
+            color = MUTED
+        result.append(part, style=color)
+    return result
+
+
+class BoxTitle(CollapsibleTitle):
+    BINDINGS = [Binding("enter,space", "toggle_collapsible", "Expand / collapse", show=False)]
+
+    def action_toggle_collapsible(self) -> None:
+        if isinstance(self.parent, ExpandableBox):
+            self.parent.action_toggle_box()
+
+    async def _on_click(self, event) -> None:
+        event.stop()
+        self.focus()
+        parent = self.parent
+        if isinstance(parent, ThoughtBlock) and parent.collapsed and event.x >= 3:
+            parent.toggle_marquee()
+        else:
+            self.post_message(self.Toggle())
+
+
+class ExpandableBox(Collapsible):
+    """Local keyboard expansion, shared by chat cards and sidebar sections."""
+
+    can_focus = True
+    BINDINGS = [Binding("enter,space", "toggle_box", "Expand / collapse", show=False)]
+    DEFAULT_CSS = """
+    ExpandableBox { border-bottom: solid #414650; border-subtitle-align: right; }
+    ExpandableBox:focus-within { border-bottom: solid #bb8cff; }
+    """
+
+    def __init__(self, *children, **kwargs) -> None:
+        self._marquee_internal = False
+        self._marquee_base_title = kwargs.get("title", "")
+        self._marquee_enabled = False
+        self._marquee_offset = 0
+        self._marquee_direction = 1
+        self._marquee_timer = None
+        super().__init__(*children, **kwargs)
+        self._title = BoxTitle(label=_semantic_box_title(self.title), collapsed_symbol=self._title.collapsed_symbol,
+                               expanded_symbol=self._title.expanded_symbol, collapsed=self.collapsed)
+
+    def on_mount(self) -> None:
+        self._marquee_enabled = bool(getattr(self.app, "_compact_marquee_default", False))
+        self._marquee_timer = self.set_interval(0.18, self._marquee_tick)
+
+    def _watch_title(self, title: str) -> None:
+        if not getattr(self, "_marquee_internal", False):
+            self._marquee_base_title = title
+        self._title.label = _semantic_box_title(title)
+
+    def _compact_preview(self) -> str:
+        if hasattr(self, "_full_text"):
+            return " ".join(self._full_text.split())
+        return " ".join(" ".join(plain_text(widget).split()) for widget in self.query(Static)
+                        if not isinstance(widget, CollapsibleTitle))
+
+    def toggle_marquee(self) -> None:
+        self._marquee_enabled = not self._marquee_enabled
+        self._marquee_offset = 0
+        self._marquee_direction = 1
+        if not self._marquee_enabled:
+            if hasattr(self, "_paint_preview"):
+                self._paint_preview()
+            else:
+                self._set_marquee_title(self._marquee_base_title)
+        self._marquee_tick()
+
+    def _set_marquee_title(self, title: str) -> None:
+        self._marquee_internal = True
+        try:
+            self.title = title
+        finally:
+            self._marquee_internal = False
+
+    def _marquee_tick(self) -> None:
+        if not self._marquee_enabled or not self.collapsed or getattr(self, "_streaming", False):
+            return
+        preview = self._compact_preview()
+        base = getattr(self, "_base_title", self._marquee_base_title)
+        budget = self.content_size.width - cell_len(base) - 9
+        if not preview or budget < 1 or "Running" in base:
+            return
+        maximum = max(0, len(preview) - budget)
+        self._marquee_offset = min(maximum, max(0, self._marquee_offset))
+        shown = _fit_cells(preview[self._marquee_offset:], budget)
+        self._set_marquee_title(base + "     " + shown)
+        if maximum:
+            if self._marquee_offset >= maximum:
+                self._marquee_direction = -1
+            elif self._marquee_offset == 0:
+                self._marquee_direction = 1
+            self._marquee_offset += self._marquee_direction
+
+    def _watch_collapsed(self, collapsed: bool) -> None:
+        super()._watch_collapsed(collapsed)
+        if not collapsed and not hasattr(self, "_full_text"):
+            self._set_marquee_title(self._marquee_base_title)
+        self._paint_expand_hint()
+
+    def _paint_expand_hint(self) -> None:
+        self.border_subtitle = Text("Enter / Space " + ("expand" if self.collapsed else "collapse"), style=MUTED)
+
+    def action_toggle_box(self) -> None:
+        self.collapsed = not self.collapsed
+
+    def on_click(self, event) -> None:
+        if not isinstance(event.widget, (Button, Input, TextArea)):
+            self.focus()
+
+
+# Keep native Collapsible composition and messages; unify our existing boxes.
+Collapsible = ExpandableBox
+
+
 class SidePanel(Vertical):
     """Right rail for live integration status and the authorized file browser."""
 
@@ -443,6 +578,31 @@ def _elapsed_label(seconds: float) -> str:
     return f"{secs}s"
 
 
+class ToolActivityGroup(ExpandableBox):
+    """Consecutive identical operations form one parent with retained branches."""
+
+    def __init__(self, operation: str, leaf: ExpandableBox, label: str):
+        self.operation = operation
+        self.leaves = [(leaf, label)]
+        super().__init__(leaf, title=label + " · Running", collapsed=True, classes="tool-activity")
+        self._paint_branches()
+
+    async def add_leaf(self, leaf: ExpandableBox, label: str) -> None:
+        self.leaves.append((leaf, label))
+        await self.query_one(self.Contents).mount(leaf)
+        self._paint_branches()
+
+    def _paint_branches(self) -> None:
+        for index, (leaf, label) in enumerate(self.leaves):
+            prefix = "└─ " if index == len(self.leaves) - 1 else "├─ "
+            leaf.title = prefix + label
+
+    def finish_leaf(self, leaf: ExpandableBox, label: str) -> None:
+        self.leaves = [(item, label if item is leaf else old) for item, old in self.leaves]
+        self._paint_branches()
+        self.title = label if len(self.leaves) == 1 else f"{self.operation} · {len(self.leaves)} calls"
+
+
 class ThoughtBlock(Collapsible):
     """A reasoning block: streams live, then collapses to 'thought for Xs'.
 
@@ -455,12 +615,17 @@ class ThoughtBlock(Collapsible):
 
     can_focus = True
     BINDINGS = [
+        Binding("enter,space", "toggle_box", "Expand thinking", show=False),
         Binding("ctrl+a", "select_thought_all", "Select thinking", show=False, priority=True),
         Binding("ctrl+c", "copy_thought_selection", "Copy", show=False, priority=True),
     ]
 
     def __init__(self, title: str = "thinking...", **kwargs) -> None:
+        self._full_text = ""
+        self._base_title = title
+        self._expanded = False
         body = SelectableText(Text("", style=MUTED))
+        self._body = body
         super().__init__(body, title=title, collapsed=False, **kwargs)
         self._body = body
         self._streaming = True
@@ -468,6 +633,7 @@ class ThoughtBlock(Collapsible):
         self._elapsed_timer = None
 
     def on_mount(self) -> None:
+        super().on_mount()
         self._started_at = _time.monotonic()
         self._update_elapsed_title()
         self._elapsed_timer = self.set_interval(1, self._update_elapsed_title)
@@ -475,7 +641,8 @@ class ThoughtBlock(Collapsible):
     def _update_elapsed_title(self) -> None:
         if self._streaming:
             elapsed = _elapsed_label(_time.monotonic() - self._started_at)
-            self.title = f"thinking · {elapsed}"
+            self._base_title = f"thinking · {elapsed}"
+            self._paint_preview()
 
     def scroll_visible(self, *args, **kwargs):
         # Collapsible schedules this on its initial expansion. During a live
@@ -486,9 +653,47 @@ class ThoughtBlock(Collapsible):
 
     def set_text(self, text: str) -> None:
         """Thread-safe entry: replace the reasoning body."""
-        self._body.set_selectable_content(Text(text, style=MUTED), text)
+        self._full_text = text
+        self._paint_preview()
 
-    def on_click(self) -> None:
+    def _paint_preview(self) -> None:
+        if not hasattr(self, "_body"):
+            return
+        text = Text(self._full_text, style=MUTED)
+        width = self._body.content_size.width or max(1, self.content_size.width - 6)
+        if self.is_mounted:
+            lines = text.wrap(self.app.console, max(1, width))
+        else:
+            lines = text.split("\n")
+        more = len(lines) > 2
+        if not self._expanded and more:
+            text = Text("\n").join(lines[:2])
+        if self.collapsed:
+            preview = " ".join(self._full_text.split())
+            budget = max(1, self.content_size.width - cell_len(self._base_title) - 9)
+            self.title = self._base_title + ("     " + _fit_cells(preview, budget) if preview else "")
+        else:
+            self.title = self._base_title
+        self._body.set_selectable_content(text, text.plain)
+        self.border_subtitle = (Text("Enter / Space " + ("collapse" if self._expanded and not self.collapsed else "expand"), style=MUTED)
+                                if more else "")
+
+    def _watch_collapsed(self, collapsed: bool) -> None:
+        super()._watch_collapsed(collapsed)
+        self._paint_preview()
+
+    def action_toggle_box(self) -> None:
+        if self.collapsed:
+            self._expanded = True
+            self.collapsed = False
+        else:
+            self._expanded = not self._expanded
+        self._paint_preview()
+
+    def on_resize(self) -> None:
+        self._paint_preview()
+
+    def on_click(self, event) -> None:
         self.focus()
 
     def action_select_thought_all(self) -> None:
@@ -499,12 +704,13 @@ class ThoughtBlock(Collapsible):
 
     def collapse_to(self, seconds: float) -> None:
         """Collapse with the elapsed-time title."""
-        self.title = f"thought for {_elapsed_label(seconds)}"
+        self._base_title = f"thought for {_elapsed_label(seconds)}"
         self._streaming = False
         if self._elapsed_timer is not None:
             self._elapsed_timer.stop()
             self._elapsed_timer = None
         self.collapsed = True
+        self._paint_preview()
 
 
 def static_content(widget: Static):
@@ -755,14 +961,17 @@ class CommandOutputCard(VerticalScroll):
 
 
 class PromptArea(TextArea):
-    """Enter sends; Shift+Enter adds a line; Ctrl+Enter remains an alias."""
+    """Enter sends or queues; Ctrl+Enter steers an active turn."""
 
     BINDINGS = [
         Binding("enter", "submit_prompt", "Send", priority=True),
         Binding("up", "slash_up", show=False, priority=True),
         Binding("down", "slash_down", show=False, priority=True),
         Binding("tab", "slash_complete", show=False, priority=True),
-        Binding("ctrl+enter", "submit_prompt", "Send", show=False, priority=True),
+        Binding("ctrl+v", "paste_clipboard", "Paste clipboard", show=False, priority=True),
+        Binding("ctrl+p", "review_pastes", "Review pasted text", show=False, priority=True),
+        Binding("ctrl+enter", "submit_steering", "Steer", show=False, priority=True),
+        Binding("ctrl+shift+enter", "capture_idea", "Capture idea", show=False, priority=True),
         Binding("ctrl+a", "select_all", "Select all", show=False, priority=True),
         Binding("shift+enter", "insert_line_break", "New line", show=False, priority=True),
         Binding("ctrl+j", "insert_line_break", "New line", show=False, priority=True),
@@ -776,6 +985,40 @@ class PromptArea(TextArea):
             super().__init__()
             self.prompt = prompt
             self.value = value
+
+    async def _on_paste(self, event) -> None:
+        if self.read_only:
+            return
+        from isycode.pasted_text import PastedText
+        if not hasattr(self, "pasted_text"):
+            self.pasted_text = PastedText()
+        label = self.pasted_text.capture(event.text)
+        event.stop()
+        if result := self._replace_via_keyboard(label, *self.selection):
+            self.move_cursor(result.end_location)
+            self.focus()
+
+    def action_capture_idea(self):
+        store = getattr(self, "pasted_text", None)
+        text = store.expand(self.text) if store else self.text
+        if text.strip():
+            self.app._idea_backlog.append(text)
+            self.load_text("")
+            self.app.notify(f"Idea captured · {len(self.app._idea_backlog)} pending · /ideas reviews")
+
+    def action_paste_clipboard(self):
+        self.app.run_worker(self.app._request_clipboard_paste(self), group="clipboard-user")
+
+    def action_review_pastes(self) -> None:
+        store = getattr(self, "pasted_text", None)
+        active = [(label, text) for label, text in (store.items.items() if store else ()) if label in self.text]
+        import hashlib
+        active.extend((label, f"Image · {mime} · {len(data):,} bytes\nSHA-256: {hashlib.sha256(data).hexdigest()}\nSession-local attachment; removing this label prevents its transmission.")
+                      for label, (mime, data) in self.app._image_attachments.items.items() if label in self.text)
+        if active:
+            self.app.push_screen(PastedTextScreen(self, active))
+        else:
+            self.app.notify("No compacted text in this draft.")
 
     def action_slash_up(self) -> None:
         app = cast(TUIApp, self.app)
@@ -808,11 +1051,133 @@ class PromptArea(TextArea):
         if cast(TUIApp, self.app)._complete_slash(): return
         self.post_message(self.Submitted(self, self.text))
 
+    def action_submit_steering(self) -> None:
+        app = cast(TUIApp, self.app)
+        text = self.text
+        if app._chat_turn_task is not None and not app._chat_turn_task.done():
+            text = "/steer " + text
+        self.post_message(self.Submitted(self, text))
+
     def action_insert_line_break(self) -> None:
         self.insert("\n")
 
     def action_escape_to_app(self) -> None:
         cast(TUIApp, self.app).action_escape_to_chat()
+
+
+class PastedTextScreen(ModalScreen):
+    """Review exactly what readable paste references will send."""
+    CSS = """
+    PastedTextScreen { align: center middle; background: #000000 58%; }
+    #paste-review-card { width: 90%; height: 80%; border: round #514d5a; padding: 1 2; background: #242529; }
+    #paste-review-scroll { height: 1fr; }
+    .paste-full-text { height: auto; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, prompt, items):
+        super().__init__()
+        self.prompt, self.items = prompt, items
+
+    def compose(self):
+        with Vertical(id="paste-review-card"):
+            yield Static(Text("Attachments · review before sending", style=CYAN))
+            with VerticalScroll(id="paste-review-scroll"):
+                for index, (label, text) in enumerate(self.items):
+                    with Collapsible(title=f"{label} · {len(text)} characters", collapsed=False):
+                        yield Static(Text(text), classes="paste-full-text")
+                        yield Button("Remove from draft", id=f"paste-remove-{index}")
+            yield Button("Close · Esc", id="paste-review-close")
+
+    def action_close(self):
+        self.dismiss()
+
+    def on_button_pressed(self, event):
+        if event.button.id == "paste-review-close":
+            self.dismiss()
+        elif event.button.id and event.button.id.startswith("paste-remove-"):
+            index = int(event.button.id.rsplit("-", 1)[1])
+            label, _ = self.items[index]
+            self.prompt.load_text(self.prompt.text.replace(label, ""))
+            event.button.disabled = True
+            event.button.label = "Removed"
+
+
+class QueuedMessagesScreen(ModalScreen):
+    CSS = """
+    QueuedMessagesScreen { align: center middle; background: #000000 58%; }
+    #queue-card { width: 90%; height: 75%; padding: 1 2; border: round #514d5a; background: #242529; }
+    #queue-scroll { height: 1fr; }
+    .queue-message { height: auto; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, app):
+        super().__init__()
+        self.host = app
+        self.messages = list(app._queued_messages)
+
+    def compose(self):
+        with Vertical(id="queue-card"):
+            yield Static(Text("Message queue · Enter queues · Ctrl+Enter steers", style=CYAN))
+            with VerticalScroll(id="queue-scroll"):
+                if not self.messages:
+                    yield Static("No pending messages.")
+                for index, text in enumerate(self.messages):
+                    with Collapsible(title=f"{index + 1} · " + _fit_cells(" ".join(text.split()), 60), collapsed=True):
+                        yield Static(Text(text), classes="queue-message")
+                        yield Button("Remove pending message", id=f"queue-remove-{index}")
+            yield Button("Close · Esc", id="queue-close")
+
+    def action_close(self):
+        self.dismiss()
+
+    def on_button_pressed(self, event):
+        if event.button.id == "queue-close":
+            self.dismiss()
+        elif event.button.id and event.button.id.startswith("queue-remove-"):
+            text = self.messages[int(event.button.id.rsplit("-", 1)[1])]
+            if text in self.host._queued_messages:
+                self.host._queued_messages.remove(text)
+            event.button.disabled = True
+            event.button.label = "Removed"
+
+
+class IdeaBacklogScreen(QueuedMessagesScreen):
+    def __init__(self, app):
+        super().__init__(app)
+        self.messages = list(app._idea_backlog)
+
+    def compose(self):
+        with Vertical(id="queue-card"):
+            yield Static(Text("Idea backlog · captured ideas are not instructions", style=CYAN))
+            with VerticalScroll(id="queue-scroll"):
+                for index, text in enumerate(self.messages):
+                    with Collapsible(title=_fit_cells(" ".join(text.split()), 60), collapsed=True):
+                        yield Static(Text(text), classes="queue-message")
+                        yield Button("Promote to message queue", id=f"idea-promote-{index}")
+                        yield Button("Discard idea", id=f"idea-discard-{index}")
+                if not self.messages:
+                    yield Static("No captured ideas.")
+            yield Button("Close · Esc", id="queue-close")
+
+    def on_button_pressed(self, event):
+        button_id = event.button.id or ""
+        if button_id == "queue-close":
+            self.dismiss()
+        elif button_id.startswith(("idea-promote-", "idea-discard-")):
+            text = self.messages[int(button_id.rsplit("-", 1)[1])]
+            if text not in self.host._idea_backlog:
+                return
+            if button_id.startswith("idea-promote-"):
+                if len(self.host._queued_messages) >= 8:
+                    self.host.notify("Message queue is full", severity="warning")
+                    return
+                self.host._queued_messages.append(text)
+                self.host.notify("Idea promoted · queued for the next turn")
+            self.host._idea_backlog.remove(text)
+            event.button.disabled = True
+            event.button.label = "Processed"
 
 
 class ReviewConsentScreen(ModalScreen[bool]):
@@ -836,7 +1201,7 @@ ReviewConsentScreen { align: center middle; background: #000000 58%; }
 
     def compose(self) -> ComposeResult:
         with Vertical(id="review-consent"):
-            yield Static("External model review · OpenAI API · gpt-6-luna", id="review-consent-title")
+            yield Static("External model review · GPT 6 Luna · OpenAI API", id="review-consent-title")
             yield Static("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled.", id="review-consent-warning")
             with VerticalScroll(id="review-consent-artifact"):
                 yield Static(Text(self.artifact))
@@ -854,7 +1219,14 @@ ReviewConsentScreen { align: center middle; background: #000000 58%; }
 class TasksPanel(Static):
     """The agent's plan; a click folds it to one line or opens it again."""
 
+    can_focus = True
+    BINDINGS = [Binding("enter,space", "toggle_tasks", "Expand tasks", show=False)]
+
+    def action_toggle_tasks(self) -> None:
+        self.app.action_toggle_tasks()
+
     def on_click(self) -> None:
+        self.focus()
         self.app.action_toggle_tasks()
 
 
@@ -2160,8 +2532,123 @@ class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class ModelsScreen(ModalScreen):
+    """Searchable provider accordions; model IDs belong only in this selector."""
+
+    DEFAULT_CSS = """
+    ModelsScreen { align: center middle; background: #000000 58%; }
+    #models-card { width: 110; max-width: 96%; height: 85%; padding: 1 2; background: #17191f; border: round #514d5a; }
+    #models-title { height: 2; }
+    #models-search { height: 3; margin-bottom: 1; }
+    #models-scroll { height: 1fr; }
+    .model-group { height: auto; background: transparent; }
+    .model-group > Contents { padding: 0 1; }
+    .model-choice { width: 100%; height: auto; min-height: 1; border: none; background: transparent; text-align: left; padding: 0 1; margin: 0; }
+    .model-choice:focus { background: #30303c; }
+    .model-choice:hover { background: #242630; }
+    #models-status { height: auto; color: #9aa3ad; margin: 1 0; }
+    #models-close { height: 3; width: 16; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, entries: list[dict]) -> None:
+        super().__init__()
+        self.entries = entries
+        self.choices: dict[str, dict] = {}
+
+    def compose(self) -> ComposeResult:
+        from isycode.model_presentation import model_display_name
+        groups: dict[str, list[dict]] = {}
+        for entry in self.entries:
+            if entry["kind"] == "model":
+                provider, model = entry["value"].split("|", 1)
+                groups.setdefault(provider, [])
+                if not any(item["value"] == entry["value"] for item in groups[provider]):
+                    groups[provider].append(entry)
+        with Vertical(id="models-card"):
+            yield Static(Text.assemble(("Models\n", "bold #c7b8d4"),
+                                      ("Expand a provider · select a model · choose reasoning", MUTED)), id="models-title")
+            yield Input(placeholder="Find a model or provider…", id="models-search")
+            with VerticalScroll(id="models-scroll"):
+                for index, entry in enumerate(self.entries):
+                    if entry["kind"] == "model_list":
+                        key = f"model-catalog-{index}"
+                        self.choices[key] = entry
+                        yield Button("Load account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
+                                     id=key, classes="model-choice")
+                for provider, entries in groups.items():
+                    with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
+                                     collapsed=True, classes="model-group"):
+                        for entry in entries:
+                            model = entry["value"].split("|", 1)[1]
+                            key = f"model-choice-{len(self.choices)}"
+                            self.choices[key] = entry
+                            label = Text(model_display_name(model), style=TEXT)
+                            label.append(" / " + model, style=MUTED)
+                            if provider == selected_provider_name() and model == selected_model_name():
+                                label.append(" · current", style=GREEN)
+                            yield Button(label, id=key, classes="model-choice")
+            notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
+            yield Static("\n".join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
+            yield Button("Close", id="models-close")
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id != "models-search":
+            return
+        query = event.value.casefold().strip()
+        for group in self.query(".model-group"):
+            matches = 0
+            for button in group.query(Button):
+                entry = self.choices[button.id]
+                provider, model = entry["value"].split("|", 1)
+                label = PRESETS.get(provider, {}).get("label", provider)
+                button.display = not query or query in f"{label} {model}".casefold()
+                matches += bool(button.display)
+            group.display = bool(matches)
+            if query and matches:
+                group.collapsed = False
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        if event.button.id == "models-close":
+            self.dismiss(None)
+        elif event.button.id in self.choices:
+            self.dismiss(self.choices[event.button.id])
+
+    def action_close(self) -> None:
+        self.dismiss(None)
+
+
+class HarnessComposeScreen(ModalScreen[bool]):
+    CSS = """
+    HarnessComposeScreen { align: center middle; background: #000000 58%; }
+    #compose-card { width: 90%; height: 80%; padding: 1 2; border: round #6c557e; background: #24232b; }
+    #compose-scroll { height: 1fr; }
+    #compose-body { height: auto; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, brief):
+        super().__init__()
+        self.brief = brief
+
+    def compose(self):
+        with Vertical(id="compose-card"):
+            yield Static(Text("Repair Compose · review proposal", style=CYAN))
+            with VerticalScroll(id="compose-scroll"):
+                yield Static(Text(self.brief), id="compose-body")
+            yield Button("Copy reviewed Compose", id="compose-copy")
+            yield Button("Back · Esc", id="compose-close")
+
+    def on_button_pressed(self, event):
+        self.dismiss(event.button.id == "compose-copy")
+
+    def action_close(self):
+        self.dismiss(False)
+
+
 class MultiHarnessScreen(ModalScreen[str | None]):
-    """Read-only view of allowlisted settings from the thirteen harnesses."""
+    """Inspect harness evidence and prepare explicit repair proposals."""
 
     CSS = """
     MultiHarnessScreen { align: center middle; background: #000000 58%; }
@@ -2217,6 +2704,10 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                             yield transcript_button
                 with Collapsible(title=self._gap_title(), collapsed=True, id="harness-gap-panel"):
                     yield Static(self._render_gaps(), id="harness-gap-content")
+                    for row in self._gap_rows():
+                        with Collapsible(title=row["title"], collapsed=True):
+                            yield Static(Text(SEED_OPTIONS[row["semantic_id"]].meaning))
+                            yield Button("Prepare repair Compose", id=f"harness-compose-{row['semantic_id']}")
             yield Button("Close", id="harness-close")
 
     def _render_summary(self) -> Text:
@@ -2224,7 +2715,7 @@ class MultiHarnessScreen(ModalScreen[str | None]):
         summary = Text()
         if checking:
             summary.append(f"{checking} checking…", style="#f6c77b")
-        summary.append("Expand a harness to inspect it · no settings are changed here.", style="#9097a7")
+        summary.append("Inspect a harness · Gap map prepares repair proposals for review.", style="#9097a7")
         return summary
 
     def _section_title(self, harness_id: str) -> str:
@@ -2264,7 +2755,7 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     def _gap_title(self) -> str:
         rows = self._gap_rows()
         actionable = sum(row["status"] == "ADD" for row in rows)
-        return f"Gap map  ·  {actionable} to consider  ·  read-only"
+        return f"Gap map  ·  {actionable} to consider  ·  repair Compose"
 
     def _render_gaps(self) -> Text:
         content = Text()
@@ -2385,7 +2876,11 @@ class MultiHarnessScreen(ModalScreen[str | None]):
             self.query_one("#harness-gap-content", Static).update(self._render_gaps())
             self.query_one("#harness-gap-panel", Collapsible).title = self._gap_title()
             for harness_id in CATALOG_IDS:
-                self.query_one(f"#harness-fold-{harness_id}", Collapsible).title = self._section_title(harness_id)
+                fold = self.query_one(f"#harness-fold-{harness_id}", Collapsible)
+                fold.title = self._section_title(harness_id)
+                section = next((item for item in self.sections if item["harness_id"] == harness_id), {})
+                fold.query_one("CollapsibleTitle").styles.color = (
+                    YELLOW if section.get("checking") else GREEN if section.get("unlocked") else MUTED)
                 self.query_one(f"#harness-section-text-{harness_id}", Static).update(
                     self._render_harness(harness_id))
                 self.query_one("#" + self._copy_button_id(harness_id), Button).display = (
@@ -2396,6 +2891,10 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "harness-close":
             self.dismiss(None)
+        elif event.button.id and event.button.id.startswith("harness-compose-"):
+            semantic_id = event.button.id.removeprefix("harness-compose-")
+            if semantic_id in SEED_OPTIONS:
+                self.dismiss("compose:" + semantic_id)
         elif event.button.id and event.button.id.startswith("harness-pick-"):
             harness_id = event.button.id.removeprefix("harness-pick-")
             if harness_id in CATALOG_IDS:
@@ -2837,7 +3336,7 @@ class TUIApp(App):
     #slash-suggestions > .option-list--option-highlighted { background: #5c4077; color: #f0f0f2; }
     #composer { height: auto; }
     #prompt-input {
-        height: 3; background: #242529; color: #e0e0e0;
+        height: auto; min-height: 3; max-height: 7; background: #242529; color: #e0e0e0;
         border: round #484650; margin: 0 1;
     }
     #prompt-input:focus { border: round #9aa3ad; background: #292630; }
@@ -2857,6 +3356,14 @@ class TUIApp(App):
     .tool-activity CollapsibleTitle { color: #9aa3ad; }
     .tool-activity-body { height: auto; padding: 0 1; }
     Footer { background: $surface; color: #6c757d; }
+    /* One-row session actions must override Button's tall focus/active borders. */
+    #work-list Button, #work-list Button:hover, #work-list Button:focus, #work-list Button.-active {
+        width: auto; min-width: 0; height: 1; min-height: 1; padding: 0 1; margin: 0;
+        border: none !important; border-top: none !important; border-bottom: none !important;
+        background-tint: transparent; tint: transparent; text-style: none;
+        background: transparent; color: #77d8b0;
+    }
+    #work-list Button:hover, #work-list Button:focus { background: #30303c; color: #f4f1ea; text-style: bold; }
     #command-bar {
         height: 1; padding: 0 1; background: $surface;
     }
@@ -2881,17 +3388,17 @@ class TUIApp(App):
     }
     #action-card {
         width: 110; max-width: 96%; height: 85%; padding: 1 2;
-        background: #292a2e; border: round #514d5a;
+        background: #17191f; border: round #514d5a;
     }
     #action-title { height: 2; color: #bb8cff; text-style: bold; }
     #action-search { height: 3; margin-bottom: 1; }
-    #action-list { height: 1fr; background: #292a2e; border: none; padding: 0 1; }
+    #action-list { height: 1fr; background: transparent; border: none; padding: 0 1; }
     #action-detail {
         height: auto; min-height: 3; max-height: 8; margin-top: 1; padding: 0 1;
         color: #b8b9c1; border-left: tall #9b5de5;
     }
     #action-list > .option-list--option-highlighted {
-        background: #424348; color: #f0f0f2;
+        background: #30303c; color: #f0f0f2;
     }
     #action-card.provider-menu #action-list > .option-list--option-highlighted {
         background: #c47a45; color: #1a120c;
@@ -2938,6 +3445,11 @@ class TUIApp(App):
         # Model-written notes replacing history that no longer fits the budget.
         self._conversation_summary = ""
         self._chat_turn_task: asyncio.Task | None = None
+        self._pending_steering: list[str] = []
+        self._queued_messages: list[str] = []
+        self._idea_backlog: list[str] = []
+        from isycode.image_attachments import ImageAttachments
+        self._image_attachments = ImageAttachments()
         self._agent_tasks: list[dict[str, str]] = []
         self._tasks_collapsed = False
         self._mcp_local: LocalMCPOwner | None = None
@@ -3001,6 +3513,12 @@ class TUIApp(App):
         self._bridge_enabled = False
         self._agent_context: dict[str, str] | None = None
         self._retry_prompt: str | None = None
+        try:
+            self._compact_marquee_default = UserDefaultsStore().load().get("compact_marquee", False)
+            self._notification_sounds = UserDefaultsStore().load().get("notification_sounds", True)
+        except (OSError, ValueError):
+            self._compact_marquee_default = False
+            self._notification_sounds = True
         self._provider_env_override = bool(os.environ.get("ISYCODE_PROVIDER"))
         self._model_env_override = bool(os.environ.get("ISYCODE_MODEL"))
         self._draft_text = initial_prompt
@@ -3045,7 +3563,7 @@ class TUIApp(App):
                         yield IdeaBox("Idea box\nWaiting for the agent to leave a note.", id="idea-box", markup=False)
                         yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
-                    yield Static("Enter send · Ctrl+J newline · ↑ history · Esc back", id="composer-hint")
+                    yield Static("Enter send / queue · Ctrl+Enter steer · Ctrl+J newline · Ctrl+P attachments · /queue", id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button("Sidebar", id="sidebar-button")
                         yield Button("Sessions", id="sessions-button")
@@ -4335,9 +4853,13 @@ class TUIApp(App):
     def _open_settings_menu(self) -> None:
         entries = [
             self._entry("Providers & models", "providers_open", ""),
+            self._entry("Reasoning level", "reasoning_open", ""),
+            self._entry("Notification sounds · " + ("on" if self._notification_sounds else "off"), "sounds_toggle", "", "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
             self._entry("Choose role", "roles_open", ""),
             self._entry("Context", "context_menu", ""),
             self._entry("My defaults · all workspaces", "user_defaults", ""),
+            self._entry("Compact text scroll · " + ("on" if self._compact_marquee_default else "off"),
+                        "marquee_toggle", ""),
         ]
         if self._workspace_identity.workspace_root_source == "isyroot":
             entries.extend([
@@ -4350,7 +4872,7 @@ class TUIApp(App):
             ])
         entries.extend([
             self._entry("Authority & Security", "authority_open", ""),
-            self._entry("Multi Harness · read-only settings map", "harness_open", ""),
+            self._entry("Multi Harness · settings & repair Compose", "harness_open", ""),
             self._entry("Named API keys", "named_credentials", ""),
             self._entry("Action journal · verify / inspect", "security_journal", ""),
             self._entry("Choose context file (.md / .txt)", "context_inject", ""),
@@ -4361,8 +4883,47 @@ class TUIApp(App):
             self._entry("Integrations · MCP, LSP, Gateway & remote access", "integrations_open", "",
                         "Optional connections and remote access. Permissions remain separate."),
         ])
+        groups = {
+            "Conversation": (CYAN, {
+                "providers_open": "Choose the provider and model used for this conversation.",
+                "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
+                "roles_open": "Choose instructions for how the agent should work.",
+                "clear_role": "Remove the selected role from this conversation.",
+                "context_menu": "Review the context available to the agent.",
+                "context_inject": "Choose a Markdown or text file to add to the conversation.",
+            }),
+            "Preferences": ("#c7b8d4", {
+                "user_defaults": "Personal defaults shared across your workspaces.",
+                "workspace_config_init": "Create workspace preferences after reviewing the proposed files.",
+                "workspace_config_preferences": "Preferences for this workspace; permissions are separate.",
+                "workspace_config_migrate": "Review and copy legacy commands; preserve their originals.",
+                "shortcuts": "Browse commands and keyboard shortcuts.",
+                "sounds_toggle": "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled.",
+                "marquee_toggle": "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it.",
+            }),
+            "Permissions": (YELLOW, {
+                "authority_open": "Inspect or change workspace permissions and approval settings.",
+                "named_credentials": "Manage named API credentials and their allowed uses.",
+                "security_journal": "Inspect recorded actions and verify their receipts.",
+                "folders_open": "Review workspace folders and per-folder automatic edit settings.",
+            }),
+            "Connections": (CYAN, {
+                "harness_open": "Inspect other harness settings; copying requires a separate confirmation.",
+                "integrations_open": "Manage MCP, LSP, Gateway and remote connections with separate permissions.",
+                "files": "Browse workspace files.",
+            }),
+        }
+        ordered = []
+        for category, (color, descriptions) in groups.items():
+            for entry in entries:
+                if entry["kind"] in descriptions:
+                    entry["category"] = category
+                    entry["color"] = color
+                    entry["detail"] = descriptions[entry["kind"]]
+                    ordered.append(entry)
+        ordered.extend(entry for entry in entries if entry not in ordered)
         self._menu_stack = []
-        self._render_menu("settings", "Settings", entries)
+        self._render_menu("settings", "Settings", ordered)
 
     def _open_workspace_config_menu(self) -> None:
         if self._workspace_identity.workspace_root_source != "isyroot":
@@ -4593,7 +5154,8 @@ class TUIApp(App):
             defaults = {"new_workspace": "ask", "default_role": None}
         provider_name = selected_provider_name()
         provider = PRESETS.get(provider_name, {})
-        model_name = selected_model_name() or provider.get("default_model", "provider default")
+        from isycode.model_presentation import model_display_name
+        model_name = model_display_name(selected_model_name() or provider.get("default_model", "provider default"))
         entries = [
             self._entry("These personal defaults follow you between workspaces.", "info"),
             self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
@@ -6324,6 +6886,16 @@ class TUIApp(App):
         self._menu_mode = mode
         self._menu_title = title
         self._menu_entries = entries
+        if (mode == "branch" and title == "Models") or mode == "model_account":
+            existing = next((screen for screen in self.screen_stack if isinstance(screen, ModelsScreen)), None)
+            if existing is not None:
+                existing.entries = entries
+                existing.choices = {}
+                existing.refresh(recompose=True)
+            else:
+                self.query_one("#action-menu", Vertical).display = False
+                self.push_screen(ModelsScreen(entries), self._model_picker_result)
+            return
         card = self.query_one("#action-card", Vertical)
         if mode == "providers":
             card.add_class("provider-menu")
@@ -6331,7 +6903,10 @@ class TUIApp(App):
             card.remove_class("provider-menu")
         menu = self.query_one("#action-menu", Vertical)
         menu.display = True
-        self.query_one("#action-title", Static).update(title)
+        heading = Text(title, style="bold #c7b8d4")
+        if mode == "settings":
+            heading.append("\nConversation · Preferences · Permissions · Connections", style=MUTED)
+        self.query_one("#action-title", Static).update(heading)
         search = self.query_one("#action-search", Input)
         search.display = True
         search.value = ""
@@ -6368,7 +6943,10 @@ class TUIApp(App):
         options = self.query_one("#action-list", OptionList)
         options.clear_options()
         for entry in self._menu_filtered:
-            if "enabled" in entry:
+            if entry.get("category"):
+                label = Text(entry["category"].ljust(14) + "  ", style=entry["color"])
+                label.append(entry["label"], style=TEXT)
+            elif "enabled" in entry:
                 label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
             elif entry.get("kind") == "section":
                 label = Text(entry["label"], style="bold #c7b8d4")
@@ -6414,6 +6992,29 @@ class TUIApp(App):
         self._menu_stack = []
         self._menu_mode = ""
         self.query_one("#prompt-input", PromptArea).focus()
+
+    def _model_picker_result(self, entry: dict | None) -> None:
+        if entry is not None:
+            self._select_menu_entry(entry)
+
+    def _open_reasoning_menu(self, name: str | None = None, model: str | None = None) -> None:
+        from isycode.reasoning_options import reasoning_levels
+        name = name or selected_provider_name()
+        model = model or (selected_model_name() or provider_default_model(name)
+                          or PRESETS.get(name, {}).get("default_model") or DEFAULT_MODEL)
+        levels = reasoning_levels(name, model)
+        detail = ("Use the provider's default reasoning behavior." if levels else
+                  "This provider/model does not publish supported levels in the loaded catalog. Keep its default.")
+        entries = [self._entry("Default · provider decides", "reasoning_select", f"{name}|{model}|default", detail)]
+        descriptions = {"off": "Disable thinking for this model.", "on": "Enable thinking for this model.",
+                        "none": "No reasoning effort. Supported by this chat/tool transport.",
+                        "low": "Lower reasoning effort.", "medium": "Medium reasoning effort.",
+                        "high": "Higher reasoning effort.", "xhigh": "Extra high reasoning effort.",
+                        "max": "Maximum reasoning effort.", "minimal": "Minimal reasoning effort."}
+        entries.extend(self._entry(level.capitalize(), "reasoning_select", f"{name}|{model}|{level}",
+                                   descriptions[level]) for level in levels)
+        from isycode.model_presentation import model_display_name
+        self._render_menu("reasoning", "Reasoning · " + model_display_name(model), entries)
 
     def _select_menu_entry(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
@@ -6718,9 +7319,47 @@ class TUIApp(App):
         if kind == "roles_open":
             self._open_role_menu()
             return
+        if kind == "sounds_toggle":
+            enabled = not self._notification_sounds
+            try:
+                UserDefaultsStore().update(notification_sounds=enabled)
+            except (OSError, ValueError):
+                self.notify("Sound preference could not be saved", severity="warning")
+                return
+            self._notification_sounds = enabled
+            if enabled:
+                self._play_notification_sound("question")
+            self._open_settings_menu()
+            return
+        if kind == "marquee_toggle":
+            enabled = not self._compact_marquee_default
+            try:
+                UserDefaultsStore().update(compact_marquee=enabled)
+            except (OSError, ValueError):
+                self._set_activity("Compact text scroll preference could not be saved", YELLOW)
+                return
+            self._compact_marquee_default = enabled
+            for box in self.query(ExpandableBox):
+                if box._marquee_enabled != enabled:
+                    box.toggle_marquee()
+            self._open_settings_menu()
+            return
+        if kind == "reasoning_open":
+            self._open_reasoning_menu()
+            return
+        if kind == "reasoning_select":
+            from isycode.reasoning_options import select_reasoning
+            name, model, level = value.split("|", 2)
+            select_reasoning(name, model, level)
+            self._paint_idea_box()
+            self._close_menu()
+            self.run_worker(self._check_model(), exclusive=False)
+            return
         if kind == "model":
             provider_name, model_name = value.split("|", 1)
             self._select_provider(provider_name, model_name)
+            if not self.query_one("#key-entry", Vertical).display:
+                self._open_reasoning_menu(provider_name, model_name)
             return
         if kind == "model_list":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
@@ -7182,8 +7821,9 @@ class TUIApp(App):
                 MUTED)
         if current != name:
             self._clear_pending_plan()
+        self._paint_idea_box()
         if provider.configured():
-            self._append(f"  Selected for this session · {provider.label} · {provider.model}", GREEN)
+            self._append("  Selected for this session · " + self._model_display_label(name, provider.model), GREEN)
             self._close_menu()
             return
         if saved_secret_exists(name):
@@ -7404,15 +8044,11 @@ class TUIApp(App):
         return max(24, self.size.width - rail_width - 8)
 
     def _idle_board_text(self, measured_width: int | None = None) -> Text:
-        """Cell-accurate landscape, path, model, and integration columns."""
+        """Cell-accurate landscape, model, and integration columns."""
         width = measured_width or self._idle_content_width()
         body = Text()
-        identity = getattr(self, "_workspace_identity", None)
-        launch = identity.launch_dir if identity else Path.cwd().resolve()
-        path = _fit_cells(str(launch), max(8, width))
         body.append(render_landscape(width))
         body.append("\n")
-        body.append(path + "\n", style=MUTED)
         model = self._model_line or "Checking the configured model"
         body.append("◇ ", style=ACCENT)
         body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
@@ -7598,20 +8234,14 @@ class TUIApp(App):
     @staticmethod
     def _provider_failure(error: ProviderError, operation: str) -> str:
         """Translate provider failures without rendering URLs or response bodies."""
-        status = error.status
-        if status in {401, 403}:
-            detail = "provider authentication failed; check the configured key"
-        elif status == 429:
-            detail = "provider rate limit or API quota reached; check API billing or retry later"
-        elif status is not None and status >= 500:
-            detail = f"provider returned HTTP {status}; retry later"
-        elif error.transport:
-            detail = "provider connection failed or timed out; check connectivity"
-        elif status is not None:
-            detail = f"provider rejected the request (HTTP {status})"
-        else:
-            detail = "provider could not complete the request"
-        return f"{operation} failed: {detail}."
+        from isycode.provider_errors import classify_provider_error
+        detail = classify_provider_error(error)
+        suffix = f" · HTTP {detail['http_status']}" if detail["http_status"] else ""
+        if detail["provider_code"]:
+            suffix += " · " + detail["provider_code"]
+        if detail["retry_after_s"] is not None:
+            suffix += f" · retry after {detail['retry_after_s']:g}s"
+        return f"{operation} failed · {detail['error_kind']}: {detail['provider_hint']}{suffix}."
 
     async def _check_gateway_async(self) -> None:
         """Show reachability without implying that the remote root is mounted."""
@@ -7693,6 +8323,14 @@ class TUIApp(App):
             return False, failed or authority.reason
         return True, "authorized"
 
+    @staticmethod
+    def _model_display_label(name: str, model: str) -> str:
+        from isycode.model_presentation import model_display_name
+        from isycode.reasoning_options import reasoning_label
+        preset = PRESETS.get(name, {})
+        effort = reasoning_label(name, model, preset.get("reasoning_effort"))
+        return f"{model_display_name(model)} / {effort.capitalize()} · {preset.get('label', name)}"
+
     async def _check_model(self) -> None:
         """Eager model check: is the configured provider ready?"""
         try:
@@ -7701,7 +8339,7 @@ class TUIApp(App):
                 name=provider_name,
                 model=provider_default_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
-            ready = f"{provider.model} via {provider.label}"
+            ready = self._model_display_label(provider.name, provider.model)
             if provider.configured():
                 self._model_line = ready + "  ·  ready"
                 self._model_line_style = GREEN
@@ -7709,6 +8347,7 @@ class TUIApp(App):
                 self._model_line = f"{provider.label} needs {provider.key_env}"
                 self._model_line_style = YELLOW
             self._paint_idle()
+            self._paint_idea_box()
             if not self._idle_mounted():
                 self._append("  Model: " + self._model_line, self._model_line_style)
         except ConfigurationError as e:
@@ -7753,7 +8392,7 @@ class TUIApp(App):
 
         async def _subagent_cmd(app: "TUIApp", arg: str) -> None:
             result = await app._run_subagent(arg.strip())
-            app._append(f"  Subagent · {result.get('provider', '')} · {result.get('model', '')} · {result['status']}", CYAN)
+            app._append(f"  Subagent · {app._model_display_label(result.get('provider', ''), result.get('model', ''))} · {result['status']}", CYAN)
             if result.get("text"):
                 app.query_one(ChatArea).mount(SelectableText(
                     RichMarkdown(result["text"], code_theme="monokai"),
@@ -7832,7 +8471,7 @@ class TUIApp(App):
                      or PRESETS.get(provider, {}).get("default_model") or DEFAULT_MODEL)
             role = app._active_role
             app._append(f"  Workspace · {app._workspace_root}", MUTED)
-            app._append(f"  Provider · {provider} · model {model}", MUTED)
+            app._append("  Model · " + app._model_display_label(provider, model), MUTED)
             app._append(
                 f"  Chat role · {role['name']} ({role['kind']})" if role
                 else "  Chat role · default", MUTED)
@@ -8052,7 +8691,7 @@ class TUIApp(App):
                 app._clear_pending_plan()
             if provider.configured():
                 app._append(
-                    f"  Active for this session: {provider.label} · {provider.model}",
+                    "  Active for this session: " + app._model_display_label(name, provider.model),
                     GREEN)
             else:
                 app._append(
@@ -8105,6 +8744,7 @@ class TUIApp(App):
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
                 PluginCommand("models", "recent and available models", _models_cmd),
+                PluginCommand("model", "choose model and reasoning", _models_cmd),
                 PluginCommand("skills", "bundled workflow guidance: list, use <name>, clear", _skills_cmd),
                 PluginCommand("git", "show git branch and changed files", _git_cmd),
                 PluginCommand("diff", "show the git diff (optional path, --staged)", _diff_cmd),
@@ -8152,7 +8792,7 @@ class TUIApp(App):
     def _track_composer_draft(self, event: TextArea.Changed) -> None:
         if event.text_area.id != "prompt-input":
             return
-        self._draft_text = event.text_area.text
+        self._draft_text = getattr(event.text_area, "pasted_text", None).expand(event.text_area.text) if hasattr(event.text_area, "pasted_text") else event.text_area.text
         if self._draft_timer is not None:
             self._draft_timer.stop()
         self._draft_timer = self.set_timer(1.0, self._save_draft)
@@ -8186,8 +8826,28 @@ class TUIApp(App):
             return
         body = self._idea_box or "Waiting for the agent to leave a note."
         busy = self._loop_task is not None and not self._loop_task.done()
-        label = "Idea box · ● Thinking…\n" if busy else "Idea box\n"
-        box.update(Text.assemble((label, "bold #c7b8d4"), (body, TEXT)))
+        label = "Idea box · ● Thinking…" if busy else "Idea box"
+        heading = Text(label, style="bold #c7b8d4")
+        try:
+            name = selected_provider_name()
+            model = (selected_model_name() or provider_default_model(name)
+                     or PRESETS.get(name, {}).get("default_model") or DEFAULT_MODEL)
+            from isycode.model_presentation import model_display_name
+            from isycode.reasoning_options import reasoning_label
+            preset = PRESETS.get(name, {})
+            suffix = f" / {reasoning_label(name, model, preset.get('reasoning_effort')).capitalize()} · {preset.get('label', name)}"
+            available = box.content_size.width - cell_len(label) - 5
+            model_name = model_display_name(model)
+            if box.content_size.width and available > cell_len(suffix):
+                model_name = _fit_cells(model_name, available - cell_len(suffix))
+            heading.append("     " + model_name + suffix, style=CYAN)
+        except (ConfigurationError, ProviderError):
+            pass
+        if box.content_size.width:
+            heading.truncate(box.content_size.width, overflow="ellipsis")
+        heading.append("\n")
+        heading.append(body, style=TEXT)
+        box.update(heading)
 
     def _navigate_prompt_history(self, delta: int, current: str) -> str | None:
         if not self._prompt_history or (self._prompt_history_idx == -1 and delta > 0):
@@ -8242,12 +8902,54 @@ class TUIApp(App):
             self._set_activity("Draft not saved · private state unavailable", YELLOW)
 
     def _accept_prompt(self, prompt, raw_text: str) -> None:
+        if isinstance(prompt, PromptArea) and hasattr(prompt, "pasted_text"):
+            raw_text = prompt.pasted_text.expand(raw_text)
         text = raw_text.strip()
         if not text:
             return
+        try:
+            self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), provider_default_model(selected_provider_name()))
+        except ValueError as exc:
+            self.notify(str(exc), severity="warning")
+            return
+        if text == "/ideas":
+            prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+            self.push_screen(IdeaBacklogScreen(self))
+            return
+        if text in {"/queue", "/queue clear"}:
+            prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+            if text == "/queue clear":
+                self._queued_messages.clear()
+                self.notify("Pending messages cleared")
+            else:
+                self.push_screen(QueuedMessagesScreen(self))
+            return
         if self._loop_task and not self._loop_task.done():
+            if self._chat_turn_task is not None and not self._chat_turn_task.done() and text.startswith("/steer "):
+                instruction = text.removeprefix("/steer ").strip()
+                if len(self._pending_steering) >= 8:
+                    self._append("Steering queue is full; this draft is kept.", YELLOW)
+                    return
+                self._pending_steering.append(instruction)
+                prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+                self._mount_user_turn("Steer · " + instruction)
+                self._append("Steering queued · current tool effects remain; pending calls will be skipped.", CYAN)
+                request = self._chat_request_task
+                if request is not None and not request.done():
+                    request.cancel()
+                return
+            if not text.startswith("/"):
+                if len(self._queued_messages) >= 8:
+                    self.notify("Message queue is full; draft kept", severity="warning")
+                    return
+                self._queued_messages.append(text)
+                prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+                self._append(f"Queued · {len(self._queued_messages)} pending · " + _fit_cells(" ".join(text.split()), 70) + " · /queue reviews", CYAN)
+                return
             self._append("  Still working. Your message remains in the composer; send it again when ready.", YELLOW)
             return
+        if text.startswith("/steer "):
+            text = text.removeprefix("/steer ").strip()
         if isinstance(prompt, PromptArea):
             prompt.load_text("")
         else:
@@ -8280,10 +8982,48 @@ class TUIApp(App):
         self._paint_idea_box()
         task.add_done_callback(self._operation_finished)
 
+    def _send_next_queued_message(self):
+        if self._loop_task is not None or not self._queued_messages:
+            return
+        if len(self.screen_stack) > 1:
+            self.set_timer(0.25, self._send_next_queued_message)
+            return
+        text = self._queued_messages[0]
+        try:
+            self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), provider_default_model(selected_provider_name()))
+        except ValueError as exc:
+            self.notify("Queue paused · " + str(exc), severity="warning")
+            return
+        self._queued_messages.pop(0)
+        prompt = self.query_one("#prompt-input", PromptArea)
+        current_draft = prompt.text
+        self._accept_prompt(prompt, text)
+        if current_draft and not prompt.text:
+            prompt.load_text(current_draft)
+
+    def _play_notification_sound(self, kind: str) -> None:
+        from isycode.notification_sounds import PATTERNS
+        if not getattr(self, "_notification_sounds", True) or self.is_headless:
+            return
+        now = _time.monotonic()
+        if now - getattr(self, "_last_notification_sound", 0) < 0.9:
+            return
+        self._last_notification_sound = now
+        self.bell()
+        for delay in PATTERNS.get(kind, PATTERNS["info"])[1:]:
+            self.set_timer(delay, lambda: self.bell() if self._notification_sounds else None)
+
+    def notify(self, message, *, title="", severity="information", timeout=None):
+        self._play_notification_sound({"warning": "warning", "error": "error"}.get(severity, "info"))
+        return super().notify(message, title=title, severity=severity, timeout=timeout)
+
     def _operation_finished(self, task: asyncio.Task) -> None:
         if self._loop_task is not task:
             return
         self._loop_task = None
+        if self._queued_messages and not task.cancelled() and task.exception() is None and self._retry_prompt is None:
+            self.call_after_refresh(self._send_next_queued_message)
+        self._play_notification_sound("warning" if task.cancelled() else "error" if task.exception() is not None else "done")
         timer = getattr(self, "_activity_timer", None)
         if timer is not None:
             timer.stop()
@@ -8296,6 +9036,8 @@ class TUIApp(App):
         else:
             self._set_activity("Chat ready", MUTED)
         self._paint_idea_box()
+        if self._idea_backlog:
+            self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")
 
     async def _await_screen(self, screen):
         """Show a modal screen and wait for its result from a worker or a plain task.
@@ -8305,6 +9047,10 @@ class TUIApp(App):
         Resolve after the next refresh because Screen.dismiss invokes its callback
         before the previous screen has been restored.
         """
+        if isinstance(screen, AgentQuestionScreen):
+            self._play_notification_sound("question")
+        elif isinstance(screen, ApprovalScreen):
+            self._play_notification_sound("approval")
         future = asyncio.get_running_loop().create_future()
 
         def finished(result) -> None:
@@ -8372,6 +9118,9 @@ class TUIApp(App):
             "workspace": self._workspace_root.name,
             "title": session.title,
             "preview": preview_line(last.get("content") if isinstance(last, dict) else ""),
+            "detail": str(last.get("content", "")) if isinstance(last, dict) else "",
+            "model": str(session.state.get("model") or ""),
+            "provider": str(session.state.get("provider") or ""),
             "age": age_label(sent or session.updated_at),
             "status": "idle",
         }
@@ -8380,6 +9129,7 @@ class TUIApp(App):
         self.query_one("#chat").display = False
         self.query_one("#work-list", WorkList).display = True
         await self._refresh_work_list()
+        self.query_one("#work-conversations", OptionList).focus()
 
     def _harness_store(self) -> HarnessStore:
         return HarnessStore()
@@ -8420,7 +9170,9 @@ class TUIApp(App):
             return False
         self._provider_env_override = True
         self._model_env_override = True
-        self._set_activity(f"Model selection saved · {provider} · {model}", GREEN)
+        if self.screen_stack:
+            self._paint_idea_box()
+        self._set_activity("Model selection saved · " + self._model_display_label(provider, model), GREEN)
         return True
 
     async def _import_harness_transcript(
@@ -8609,6 +9361,14 @@ class TUIApp(App):
                 await asyncio.gather(loader, return_exceptions=True)
             if selected is None:
                 return
+            if selected.startswith("compose:"):
+                from isycode.harness_graph import repair_compose
+                semantic_id = selected.removeprefix("compose:")
+                row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
+                brief = repair_compose(semantic_id, row["harnesses"])
+                if await self._await_screen(HarnessComposeScreen(brief)):
+                    await self._request_clipboard_copy(brief, "selection")
+                continue
             if selected.startswith("copy:"):
                 harness_id = selected.removeprefix("copy:")
                 identity = screen.copyable_models.get(harness_id)
@@ -8971,9 +9731,17 @@ class TUIApp(App):
         notes = Text()
         body = SelectableText(Text(""), selection_text="", classes="tool-activity-body")
         card = Collapsible(body, title=f"{label} · Running", collapsed=True,
-                           classes="tool-activity")
+                           classes="tool-activity-leaf")
         chat = self.query_one(ChatArea)
-        await chat.mount(card)
+        preceding = [child for child in chat.children if child is not chat._tail
+                     and not child.has_class("tool-receipt")]
+        previous = preceding[-1] if preceding else None
+        if isinstance(previous, ToolActivityGroup) and previous.operation == name:
+            group = previous
+            await group.add_leaf(card, label + " · Running")
+        else:
+            group = ToolActivityGroup(name, card, label)
+            await chat.mount(group)
         chat.follow_tail()
         token = _tool_display_context.set((self, body, notes))
         state = "Failed"
@@ -9001,7 +9769,7 @@ class TUIApp(App):
             elapsed = _elapsed_label(_time.monotonic() - started_at)
             self._append(f"Tool duration · {label} · {elapsed}", MUTED)
             _tool_display_context.reset(token)
-            card.title = f"{label} · {state} · {elapsed}"
+            group.finish_leaf(card, f"{label} · {state} · {elapsed}")
             chat.follow_tail()
 
     async def _dispatch_chat_tool_impl(self, call: dict) -> tuple[str, str]:
@@ -9031,7 +9799,7 @@ class TUIApp(App):
                 and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
                                  DELETE_TOOL_NAME, MOVE_TOOL_NAME,
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
-                                 ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME}):
+                                 ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  Tool denied · unregistered tool name", YELLOW)
             return tool_call_id, json.dumps(outcome)
@@ -9080,6 +9848,14 @@ class TUIApp(App):
             else:
                 answer = {"status": "cancelled"}
             return tool_call_id, json.dumps(answer, ensure_ascii=False)
+        if name == "update_session_title":
+            if not isinstance(arguments, dict) or set(arguments) != {"title"} or not isinstance(arguments["title"], str):
+                return tool_call_id, json.dumps({"status": "denied", "error": "one title string is required"})
+            if self._chat_session_owner is None or not self._active_chat_session_id or not self._sessions_enabled():
+                return tool_call_id, json.dumps({"status": "unavailable"})
+            outcome, _ = self._chat_session_owner.manage("auto_title", self._active_chat_session_id, arguments["title"])
+            self._paint_work_status()
+            return tool_call_id, json.dumps({"status": outcome.decision, "reason": outcome.reason})
         if name == IDEA_BOX_TOOL_NAME:
             try:
                 self._idea_box = validate_idea_box(arguments)
@@ -9177,6 +9953,16 @@ class TUIApp(App):
         return self._mcp_local
 
     async def _run_subagent(self, task: str) -> dict:
+        previous_error = None
+        while True:
+            result = await self._run_subagent_attempt(task, previous_error)
+            if result.get("status") != "error" or result.get("error_kind") == "AUTHORITY":
+                if previous_error and result.get("status") == "cancelled":
+                    result["previous_error"] = previous_error
+                return result
+            previous_error = result
+
+    async def _run_subagent_attempt(self, task: str, previous_error=None) -> dict:
         from isycode.providers import child_model_choices
         from isycode.subagents import run_child
         from isycode.subagent_screen import SubagentModelScreen
@@ -9193,13 +9979,13 @@ class TUIApp(App):
         card = None
         identity = {}
         try:
-            selected = await self._await_screen(SubagentModelScreen(task, models))
+            selected = await self._await_screen(SubagentModelScreen(task, models, error=previous_error))
             if selected is None:
                 return {"status": "cancelled"}
             if selected not in models or selected not in child_model_choices():
                 return {"status": "denied", "error": "Selected model is no longer registered"}
             identity = {"provider": selected["provider"], "model": selected["model"]}
-            self._child_title = f"{selected['provider']} · {selected['model']}"
+            self._child_title = self._model_display_label(selected['provider'], selected['model'])
             # A main provider endpoint override must never receive another provider's key.
             endpoint = (os.environ.get("ISYCODE_BASE_URL") or os.environ.get("ISYMOTRON_BASE_URL")
                         if selected["provider"] == selected_provider_name() else None)
@@ -9207,7 +9993,7 @@ class TUIApp(App):
                                 base_url=endpoint or PRESETS[selected["provider"]]["base_url"],
                                 api_key=load_provider_key(selected["provider"]) or None)
             if not provider.configured():
-                return {**identity, "status": "denied", "error": "Selected provider is not configured"}
+                return {**identity, "status": "error", "error_kind": "APIKEY", "phase": "configuration", "provider_hint": "Selected provider credentials are not configured", "error": "Selected provider is not configured"}
             tools = []
             read_enabled = self._workspace_chat_tools_enabled() or self._additional_folder_access()
             if read_enabled and PRESETS[provider.name].get("supports_tools"):
@@ -9223,14 +10009,16 @@ class TUIApp(App):
                 "Report completed work, errors and remaining work truthfully.") }]
             folders = [{"alias": "main", "path": str(self._workspace_root)}] + self._folder_store().list()
             context[0]["content"] += " Registered folder metadata: " + json.dumps(folders)
+            if previous_error and self._tool_history:
+                context.append({"role": "system", "content": tool_history_context(self._tool_history)})
             if self._active_skills:
                 from isycode.skill_catalog import guidance
                 context.append({"role": "system", "content": guidance(self._active_skills)})
-            card = Static(Text(f"Subagent · {provider.name} · {provider.model} · starting", style=CYAN))
+            card = Static(Text(f"Subagent · {self._model_display_label(provider.name, provider.model)} · starting", style=CYAN))
             chat = self.query_one(ChatArea)
             chat.mount(card); chat.follow_tail()
             def status(value):
-                card.update(Text(f"Subagent · {provider.name} · {provider.model} · {value}", style=CYAN))
+                card.update(Text(f"Subagent · {self._model_display_label(provider.name, provider.model)} · {value}", style=CYAN))
                 chat.follow_tail()
             owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
             async def complete(messages):
@@ -9263,7 +10051,7 @@ class TUIApp(App):
                 shown = reply.strip()[:4000]
                 chat = self.query_one(ChatArea)
                 chat.mount(SelectableText(Text(
-                    f"Subagent · {identity.get('provider', '')} · {identity.get('model', '')}\n{shown}"),
+                    f"Subagent · {self._model_display_label(identity.get('provider', ''), identity.get('model', ''))}\n{shown}"),
                     selection_text=shown))
                 chat.follow_tail()
             return result
@@ -9272,10 +10060,13 @@ class TUIApp(App):
                 card.update(Text("Subagent · cancelled; completed effects remain in the action journal", style=YELLOW))
             raise
         except (OSError, ValueError, ProviderError, ConfigurationError, StreamError) as exc:
+            from isycode.provider_errors import classify_provider_error
+            detail = classify_provider_error(exc)
             if card is not None:
-                card.update(Text(f"Subagent · stopped ({type(exc).__name__}); inspect completed actions", style=YELLOW))
-            return {**identity, "status": "blocked" if isinstance(exc, PermissionError) else "error",
-                    "error": f"Child stopped ({type(exc).__name__}); inspect provider setup, grants and action journal"}
+                card.update(Text("Subagent · " + detail["provider_hint"], style=YELLOW))
+            self._play_notification_sound("error")
+            return {**identity, **detail, "status": "blocked" if isinstance(exc, PermissionError) else "error",
+                    "error": detail["provider_hint"]}
         finally:
             self._subagent_running = False
             self._child_task = ""
@@ -9399,6 +10190,30 @@ class TUIApp(App):
         text = get_selected() if callable(get_selected) else None
         if text:
             self._copy_through_owner(text, "selection")
+
+    async def _request_clipboard_paste(self, prompt):
+        authority = WorkspaceAuthority(self._workspace_root)
+        grant = authority.effective_policy().get("grants", {}).get("clipboard.paste", {})
+        if not displayed_on("clipboard.paste", grant, CLIPBOARD_TARGET in grant.get("targets", ())):
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    "Allow pasting from the clipboard?", "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes.", "Allow paste")):
+                return
+            authority.set_grant("clipboard.paste", enabled=True, targets=[CLIPBOARD_TARGET])
+        owner = ClipboardOwner(self._workspace_root, authority)
+        outcome, mime, data = await asyncio.to_thread(owner.paste)
+        if outcome.decision != "ALLOW":
+            self.notify(outcome.reason, severity="warning")
+            return
+        try:
+            if mime.startswith("image/"):
+                prompt.insert(self._image_attachments.capture(mime, data))
+                self.notify("Image attached · Ctrl+P reviews attachments")
+            else:
+                from textual.events import Paste
+                await prompt._on_paste(Paste(data.decode("utf-8")))
+        except (ValueError, UnicodeError):
+            self.notify("Clipboard content could not be attached", severity="warning")
+        prompt.focus()
 
     async def _request_clipboard_copy(self, text: str, source: str) -> None:
         authority = WorkspaceAuthority(self._workspace_root)
@@ -9875,6 +10690,11 @@ class TUIApp(App):
                 chat_tools.append(CONTEXT_ACCESS_TOOL)
                 chat_tools.append(ASK_USER_TOOL)
                 chat_tools.append(IDEA_BOX_TOOL)
+                if self._sessions_enabled():
+                    chat_tools.append({"type": "function", "function": {
+                        "name": "update_session_title",
+                        "description": "During the first five user messages, refine the conversation title to reflect the actual task instead of greetings. Manual titles are preserved. This changes only the title, never session identity or grants.",
+                        "parameters": {"type": "object", "properties": {"title": {"type": "string", "maxLength": 80}}, "required": ["title"], "additionalProperties": False}}})
             if write_active and self._file_action_enabled("workspace.files.delete"):
                 chat_tools = chat_tools + [DELETE_TOOL]
             if write_active and self._file_action_enabled("workspace.files.move"):
@@ -9946,6 +10766,7 @@ class TUIApp(App):
                    if provider_supports_tools else "")
                 + "Results distinguish approval_mode=reviewed from delegated; delegated edits were not individually reviewed. "
                 + "Commands, deletes, moves and commits still ask; never claim an action ran without a verified result. "
+                + "For the first five user messages, call update_session_title when available to refine the title around the concrete task. A greeting is not the task; preserve manual titles. "
                 + "For work with three or more steps, keep update_tasks current so the user sees the plan. "
                 + ("Keep update_idea_box current with what you are doing, what is done, and the next concrete step. "
                    if provider_supports_tools else "")
@@ -10032,6 +10853,8 @@ class TUIApp(App):
                 model=provider_default_model(provider_name),
                 api_key=load_provider_key(provider_name) or None)
 
+            messages = self._image_attachments.prepare(messages, provider.name, provider.model)
+
             def _content_line() -> None:
                 nonlocal assistant_sent_at
                 if not step_content:
@@ -10108,11 +10931,26 @@ class TUIApp(App):
                     holder["widget"] = None
                     step_content.clear()
                     step_reason.clear()
+                    if self._pending_steering:
+                        for instruction in self._pending_steering:
+                            messages.append({"role": "user", "content": self._image_attachments.content(instruction)})
+                            self._history.append({"role": "user", "content": instruction})
+                        self._pending_steering.clear()
+                        self._append("Steering applied · continuing with your updated instruction.", CYAN)
                     self._apply_idea_nudge(messages, chat_tools)
                     request_material["messages"] = messages
                     self._chat_request_task = asyncio.create_task(owner.execute(
                         provider, request_material, send_provider_request))
-                    response, provider_result = await self._chat_request_task
+                    try:
+                        response, provider_result = await self._chat_request_task
+                    except asyncio.CancelledError:
+                        if self._pending_steering and not asyncio.current_task().cancelling():
+                            finish_step()
+                            if step_content:
+                                messages.append({"role": "assistant", "content": "".join(step_content)})
+                            self._append("Provider stream interrupted for steering; partial output is retained on screen.", YELLOW)
+                            continue
+                        raise
                     if provider_result.decision != "ALLOW" or not isinstance(response, dict):
                         self._append(
                             f"  Provider request {provider_result.decision} · "
@@ -10124,9 +10962,16 @@ class TUIApp(App):
                     finish_step()
                     calls = response.get("tool_calls", [])
                     if not calls:
+                        if self._pending_steering:
+                            messages.append(assistant_turn(response))
+                            continue
                         break
                     messages.append(assistant_turn(response))
                     for call in calls:
+                        if self._pending_steering:
+                            messages.append({"role": "tool", "tool_call_id": call.get("id") or "skipped",
+                                             "content": json.dumps({"status": "skipped", "reason": "User steered the task before this call started; no effect."})})
+                            continue
                         call_function = call.get("function") if isinstance(call, dict) else None
                         is_idea_box = (isinstance(call_function, dict)
                                        and call_function.get("name") == IDEA_BOX_TOOL_NAME)
@@ -10242,6 +11087,12 @@ class TUIApp(App):
                     prompt.load_text(original_prompt)
                 self._append("  Prompt kept · /retry prepares it for review. Any completed tool effects "
                              "remain; inspect them before sending again.", YELLOW)
+            if self._pending_steering:
+                pending = "\n".join(self._pending_steering)
+                self._pending_steering.clear()
+                prompt = self.query_one("#prompt-input", PromptArea)
+                prompt.load_text(pending + ("\n" + prompt.text if prompt.text else ""))
+                self._append("Unapplied steering kept in the composer for review.", YELLOW)
             self._chat_request_task = None
             self._chat_turn_task = None
             if self._idea_nudge_timer is not None:
@@ -10327,7 +11178,8 @@ class TUIApp(App):
             runtime = self._runtime_factory(self._workspace_root)
             outcome = await runtime.plan(intent, on_chunk=on_chunk)
             plan = outcome.plan
-            self._append(f"  Model: {outcome.model} via {outcome.provider_label}", MUTED)
+            from isycode.model_presentation import model_display_name
+            self._append(f"  Model: {model_display_name(outcome.model)} · {outcome.provider_label}", MUTED)
             self._append(f"  Host: {outcome.host_name}", MUTED)
 
             if plan.verdict() == "PLANNED":

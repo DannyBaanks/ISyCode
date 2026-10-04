@@ -159,6 +159,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("desktop.file_picker", "TUIApp._register_builtin_plugins._readme_cmd", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_directory", "", "BLOCKED_BY_DESIGN"),
+    ("clipboard.paste", "ClipboardOwner.paste", "clipboard", "COVERED"),
     ("clipboard.copy", "ClipboardOwner.copy", "clipboard", "COVERED"),
     ("bridge.agents", "BridgePresenceOwner.read", "bridge_presence", "COVERED"),
 )

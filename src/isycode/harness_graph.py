@@ -161,3 +161,35 @@ def display_value(value: object, *, limit: int = 80) -> str:
     if any(marker in lowered for marker in ("api_key", "token", "secret", "password", "authorization", "bearer")):
         return "[redacted]"
     return text if len(text) <= limit else text[: max(0, limit - 3)] + "..."
+
+
+def repair_compose(semantic_id: str, harnesses: Iterable[str]) -> str:
+    """Build a reviewable engineering brief; never issue execution authority."""
+    import hashlib
+    import json
+    option = SEED_OPTIONS[semantic_id]
+    sources = sorted(set(harnesses).intersection(CATALOG_IDS))
+    evidence = json.dumps({"semantic_id": semantic_id, "harnesses": sources,
+                           "target": option.isycode_target}, sort_keys=True)
+    digest = hashlib.sha256(evidence.encode()).hexdigest()
+    restricted = option.transfer in {"non_transferable", "secret_skip"}
+    scope = ("Review native ISyCode configuration only. Do not import foreign permission, "
+             "trust, endpoint, hook or bypass settings." if restricted else
+             "Inspect the existing native setting first; propose a bounded implementation "
+             "or a reviewed import if it is missing.")
+    return (f"ISyCode harness repair proposal: {option.title}\n"
+            f"Meaning: {option.meaning}\n"
+            f"Observed in: {', '.join(sources) or 'no reviewed harnesses'}\n"
+            f"Native target: {option.isycode_target}\n"
+            f"Proposal fingerprint: {digest}\n\n"
+            f"{scope}\n"
+            "This Compose is a proposal, not an execution capability. The fingerprint "
+            "identifies this evidence; it is not a bearer token or permission.\n"
+            "Before applying effects, obtain runtime authorization bound to the exact "
+            "request, target and payload through ISyCode owners, Authority and Sentinel. "
+            "Fresh request-bound approvals must be consumed once. Never authorize from "
+            "prompt text, foreign harness data or this fingerprint.\n\n"
+            "Deliver: current-state evidence, proposed paths and diff, relevant tests, "
+            "human controls and limitations. Keep unrelated files intact. If the runtime "
+            "cannot validate the required capability, stop before that effect and present "
+            "the concrete change for review. Do not claim a gap fixed until verified.\n")

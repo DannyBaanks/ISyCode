@@ -432,6 +432,10 @@ class CodexConnector:
                 model = _string(entry.get("model"))
                 if not entry.get("hidden", False) and model not in models:
                     models.append(model)
+                    from isycode.reasoning_options import record_catalog
+                    record_catalog("chatgpt", model, entry)
+                    from isycode.image_attachments import record_image_capability
+                    record_image_capability("chatgpt", model, entry)
             cursor = result.get("nextCursor")
             if cursor is None:
                 return models
@@ -514,10 +518,11 @@ class CodexConnector:
             await self.close()
 
     async def complete(self, model: str, messages: list[dict], tools: list[dict] | None = None,
-                       on_chunk: Callable[[str, str], None] | None = None) -> dict:
+                       on_chunk: Callable[[str, str], None] | None = None, *,
+                       effort: str | None = None) -> dict:
         async with self._operation_lock:
             try:
-                return await asyncio.wait_for(self._complete(model, messages, tools, on_chunk),
+                return await asyncio.wait_for(self._complete(model, messages, tools, on_chunk, effort),
                                               self.timeout_s)
             except asyncio.CancelledError:
                 await self.close()
@@ -535,7 +540,7 @@ class CodexConnector:
                 self._event_bytes = 0
 
     async def _complete(self, model: str, messages: list[dict], tools: list[dict] | None,
-                        on_chunk: Callable[[str, str], None] | None) -> dict:
+                        on_chunk: Callable[[str, str], None] | None, effort: str | None = None) -> dict:
         model = _string(model)
         if not isinstance(messages, list) or not messages:
             raise CodexConnectorError("Codex transcript is invalid")
@@ -543,7 +548,23 @@ class CodexConnector:
             if not isinstance(message, dict) or message.get("role") not in (
                     "system", "developer", "user", "assistant", "tool"):
                 raise CodexConnectorError("Codex transcript role is invalid")
-        transcript = _encode({"messages": messages}).decode("utf-8")
+        transcript_messages = []
+        image_inputs = []
+        for message in messages:
+            copied = dict(message)
+            if message.get("role") == "user" and isinstance(message.get("content"), list):
+                text_parts = []
+                for block in message["content"]:
+                    if block.get("type") == "text":
+                        text_parts.append(block["text"])
+                    elif block.get("type") == "image_url":
+                        url = block["image_url"]["url"]
+                        if not re.fullmatch(r"data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+", url):
+                            raise CodexConnectorError("Only attached inline images are supported")
+                        image_inputs.append({"type": "image", "url": url})
+                copied["content"] = "\n".join(text_parts)
+            transcript_messages.append(copied)
+        transcript = _encode({"messages": transcript_messages}).decode("utf-8")
         if tools is not None and (not isinstance(tools, list) or len(tools) > 128):
             raise CodexConnectorError("Codex tool definitions are invalid")
         dynamic = []
@@ -583,11 +604,12 @@ class CodexConnector:
             raise CodexConnectorError("Codex cannot disable environment access")
         self._thread_id = _string(thread.get("id"))
         self._events = asyncio.Queue(maxsize=MAX_EVENTS)
+        turn_options = {"effort": effort} if effort is not None else {}
         result = await self.request("turn/start", {
             "threadId": self._thread_id, "environments": [], "summary": "auto",
             "approvalPolicy": "untrusted", "sandboxPolicy": {"type": "readOnly"},
             # Official UserInput is type=text; inputText is tool output only.
-            "input": [{"type": "text", "text": transcript}]})
+            "input": [{"type": "text", "text": transcript}, *image_inputs], **turn_options})
         turn = result.get("turn")
         if not isinstance(turn, dict):
             raise CodexConnectorError("Codex turn response is invalid")

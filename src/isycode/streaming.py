@@ -31,9 +31,11 @@ class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 class StreamError(Exception):
-    def __init__(self, message: str, status: int | None = None):
+    def __init__(self, message: str, status: int | None = None, *, provider_code: str | None = None, retry_after: float | None = None):
         super().__init__(message)
         self.status = status
+        self.provider_code = provider_code
+        self.retry_after = retry_after
         self.transport = status is None
 
 
@@ -101,6 +103,7 @@ def stream_complete(
     temperature_supported: bool = True,
     timeout_s: float | None = DEFAULT_STREAM_TIMEOUT_S,
     on_chunk: Callable[[str, str], None] | None = None,
+    chat_template_kwargs: dict | None = None,
 ) -> dict:
     """Stream a chat completion. Returns collected result.
 
@@ -119,6 +122,8 @@ def stream_complete(
         body["temperature"] = temperature
     if reasoning_effort is not None:
         body["reasoning_effort"] = reasoning_effort
+    if chat_template_kwargs is not None:
+        body["chat_template_kwargs"] = chat_template_kwargs
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/chat/completions",
         data=json.dumps(body).encode(),
@@ -141,7 +146,9 @@ def stream_complete(
             urllib.request.ProxyHandler({}), _RejectRedirectHandler).open(
             req, timeout=timeout_s)
     except urllib.error.HTTPError as e:
-        raise StreamError(f"HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
+        from isycode.provider_errors import error_signals
+        code, retry = error_signals(e.read(65536), {"retry-after": e.headers.get("Retry-After", "")})
+        raise StreamError(f"provider returned HTTP {e.code}", status=e.code, provider_code=code, retry_after=retry) from e
     except (urllib.error.URLError, OSError) as e:
         raise StreamError(f"stream unreachable: {e}")
     try:
@@ -198,6 +205,7 @@ async def async_stream_complete(
     on_chunk: Callable[[str, str], None] | None = None,
     tools: list[dict] | None = None,
     include_usage: bool = False,
+    chat_template_kwargs: dict | None = None,
 ) -> dict:
     """Stream a completion over an asyncio-owned socket that its task can cancel."""
     parsed = urlparse(base_url)
@@ -224,6 +232,8 @@ async def async_stream_complete(
         body["temperature"] = 0.2
     if reasoning_effort is not None:
         body["reasoning_effort"] = reasoning_effort
+    if chat_template_kwargs is not None:
+        body["chat_template_kwargs"] = chat_template_kwargs
     payload = json.dumps(body).encode("utf-8")
     host = parsed.hostname.encode("idna").decode("ascii")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
@@ -298,7 +308,9 @@ async def async_stream_complete(
         if "error" in event:
             # Providers may fail after sending HTTP 200. Never echo their body:
             # it can contain credentials or private request/transcript data.
-            raise StreamError("provider reported a streaming API error")
+            from isycode.provider_errors import error_signals
+            code, _ = error_signals(json.dumps(event))
+            raise StreamError("provider reported a streaming API error", provider_code=code)
         choices = event.get("choices") or []
         if not choices:
             if isinstance(event.get("usage"), dict):
@@ -382,7 +394,21 @@ async def async_stream_complete(
                 key, value = header_line.decode("latin-1").split(":", 1)
                 headers[key.strip().casefold()] = value.strip()
         if status != 200:
-            raise StreamError(f"provider returned HTTP {status}", status=status)
+            from isycode.provider_errors import error_signals
+            error_body = b""
+            try:
+                async with asyncio.timeout(3):
+                    if "chunked" in headers.get("transfer-encoding", "").casefold():
+                        size = int((await reader.readline()).split(b";", 1)[0].strip(), 16)
+                        error_body = await reader.readexactly(min(size, 65536))
+                    elif "content-length" in headers:
+                        error_body = await reader.readexactly(min(max(0, int(headers["content-length"])), 65536))
+                    else:
+                        error_body = await reader.read(65536)
+            except (ValueError, OSError, asyncio.TimeoutError, asyncio.IncompleteReadError):
+                pass
+            code, retry = error_signals(error_body, headers)
+            raise StreamError(f"provider returned HTTP {status}", status=status, provider_code=code, retry_after=retry)
 
         async def read_chunked() -> None:
             while True:
