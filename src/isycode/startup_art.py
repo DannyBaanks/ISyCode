@@ -1,10 +1,10 @@
-"""Startup landscape from the bundled night-village raster.
+"""Startup village drawn at the size the chat shows.
 
-The picture is the original village: lighthouse, moon, bridge, and mill.
-Each cell is a half-block with its own upper and lower color. The renderer
-keeps the picture's proportions and stops at MAX_SCENE_ROWS so the village
-stays on screen. A very narrow terminal falls back to the text title.
-Nothing outside this package is read.
+The picture is a night village in the style of the lighthouse scene:
+tower, moon, beam, mill wheel, bridge, and warm windows. It is stored
+at one pixel per half-cell, so a wide terminal centers it and does not
+scale it up. A shorter or narrower chat shrinks it. Width under 42
+falls back to the text title. Nothing outside this package is read.
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ from isycode.terminal_art import load_raster, render_half_blocks
 
 
 RASTER_PATH = Path(__file__).resolve().parent / "assets" / "isycode_landscape.rgbz"
-# Taller than this, the village covers the model line and the chat stops scrolling.
-MAX_SCENE_ROWS = 30
+# The drawing is 36 half-block rows. Taller than this, it would be scaled up.
+MAX_SCENE_ROWS = 36
 _TITLE_STYLE = "bold #e94560"
 
 
@@ -29,7 +29,7 @@ def source_size() -> tuple[int, int]:
 
 
 def render_landscape(width: int, max_rows: int | None = None) -> Text:
-    """Fit the whole village inside the chat. Never wrap a row."""
+    """Center the village. Never grow it, and never wrap a row."""
     width = max(1, int(width))
     if width < 42:
         title = "*  ISYCODE  *"
@@ -40,10 +40,10 @@ def render_landscape(width: int, max_rows: int | None = None) -> Text:
         )
 
     source_w, source_h = source_size()
-    natural = max(1, round(width * source_h / (2 * source_w)))
-    limit = MAX_SCENE_ROWS if max_rows is None else max(1, int(max_rows))
-    rows = min(natural, limit)
-    lines = render_half_blocks(RASTER_PATH, width, rows)
+    native_rows = max(1, source_h // 2)
+    limit = native_rows if max_rows is None else max(1, min(native_rows, int(max_rows)))
+    columns = min(width, source_w)
+    lines = render_half_blocks(RASTER_PATH, columns, limit)
     result = Text()
     for index, line in enumerate(lines):
         gap = width - cell_len(line.plain)

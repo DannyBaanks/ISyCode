@@ -1,26 +1,28 @@
-"""The startup village fills the chat width without image support."""
+"""The startup village is a fixed drawing, centered, and never scaled up."""
 
 from rich.cells import cell_len
 
-from isycode.startup_art import RASTER_PATH, render_landscape, source_size
+from isycode.startup_art import MAX_SCENE_ROWS, RASTER_PATH, render_landscape, source_size
 from isycode.terminal_art import decode_raster
 
 
 def test_checked_in_village_is_the_lighthouse_picture():
-    assert source_size() == (1152, 768)
+    assert MAX_SCENE_ROWS == 36
+    assert source_size() == (108, 72)
     width, height, rgb = decode_raster(RASTER_PATH.read_bytes())
-    assert (width, height) == (1152, 768)
+    assert (width, height) == (108, 72)
+    assert height // 2 == MAX_SCENE_ROWS
 
     def pixel(x, y):
         start = (y * width + x) * 3
         return tuple(rgb[start:start + 3])
 
-    lamp = pixel(558, 84)
-    glow = pixel(546, 74)
-    sky = pixel(40, 30)
-    assert min(lamp) > 240
+    assert pixel(54, 19) == (255, 255, 255)
+    assert min(pixel(93, 9)) > 220
+    assert max(pixel(4, 4)) < 40
+    glow = pixel(20, 51)
     assert glow[0] > glow[2] + 40
-    assert max(sky) < 80
+    assert max(pixel(60, 70)) < 40
 
 
 def test_landscape_keeps_the_whole_village_on_screen():
@@ -35,12 +37,13 @@ def test_landscape_keeps_the_whole_village_on_screen():
     assert all(cell_len(line) == 90 for line in fitted_lines)
     assert all(line.startswith("▀") for line in fitted_lines)
 
-    capped = render_landscape(180).plain.splitlines()
-    assert len(capped) <= 30
-    assert all(cell_len(line) == 180 for line in capped)
-    assert capped[0].startswith(" ")
-    assert "▀" in capped[len(capped) // 2]
-    assert "╱" not in "\n".join(capped)
+    wide = render_landscape(180).plain.splitlines()
+    assert len(wide) == 36
+    assert all(cell_len(line) == 180 for line in wide)
+    assert wide[0].startswith(" " * 36)
+    middle = wide[len(wide) // 2]
+    assert middle.count("▀") == 108
+    assert "╱" not in "\n".join(wide)
 
     short = render_landscape(160, max_rows=12).plain.splitlines()
     assert len(short) <= 12

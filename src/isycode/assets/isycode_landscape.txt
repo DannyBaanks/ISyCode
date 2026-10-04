@@ -1,1 +1,1 @@
-The startup picture is isycode_landscape.rgbz.
+The startup picture is a 108x72 night village in isycode_landscape.rgbz.
