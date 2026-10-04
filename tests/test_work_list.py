@@ -1,4 +1,8 @@
-"""The local work list is not a multi-agent supervisor."""
+"""The local work list is not a multi-agent supervisor.
+
+Each conversation keeps its own turn. The list does not spawn another
+authority owner or a foreign agent.
+"""
 import asyncio
 import json
 from datetime import datetime
@@ -77,13 +81,18 @@ def test_sessions_panel_switches_here_and_blocks_during_generation(tmp_path, mon
             stop = asyncio.Event()
             task = asyncio.create_task(stop.wait()); app._loop_task = task
             try:
-                await app._resume_chat_session(second)
-                assert app._active_chat_session_id == first
-                app._start_new_conversation()
-                assert app._active_chat_session_id == first
                 assert app._conversation_status() == 'generating'
+                await app._resume_chat_session(second)
+                assert app._active_chat_session_id == second
+                assert app._lanes[first].loop_task is task
+                assert not task.done() and not task.cancelled()
+                app._start_new_conversation()
+                assert app._active_chat_session_id not in {first, second, None}
+                assert app._lanes[first].loop_task is task
+                assert not task.done()
             finally:
-                task.cancel(); await asyncio.gather(task, return_exceptions=True); app._loop_task = None
+                app._lanes[first].loop_task = None
+                task.cancel(); await asyncio.gather(task, return_exceptions=True)
             await app._resume_chat_session(second)
             assert app._active_chat_session_id == second
             app._start_new_conversation()

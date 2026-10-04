@@ -13,7 +13,6 @@ from textual.screen import ModalScreen
 from textual.widgets.option_list import Option
 from rich.text import Text
 import time as _time
-from typing import cast
 from isycode.tui_theme import _fit_cells, CYAN
 from isycode.tui_widgets import Collapsible, ChatArea
 from isycode.tui_screens_approval import DeleteSessionScreen
@@ -537,7 +536,7 @@ class ConsoleSearchScreen(ModalScreen[None]):
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "console-search-input":
-            cast(TUIApp, self.app)._search_console(event.value, self)
+            self.app._search_console(event.value, self)
 
     def update_results(self, index: int, total: int, snippet: str) -> None:
         if total:
@@ -552,7 +551,7 @@ class ConsoleSearchScreen(ModalScreen[None]):
             self.query_one("#console-search-snippet", Static).update("")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        app = cast(TUIApp, self.app)
+        app = self.app
         if event.button.id == "console-search-next":
             app._move_console_search(1)
         elif event.button.id == "console-search-previous":
@@ -561,11 +560,11 @@ class ConsoleSearchScreen(ModalScreen[None]):
             self.action_close_search()
 
     def action_next_match(self) -> None:
-        cast(TUIApp, self.app)._move_console_search(1)
+        self.app._move_console_search(1)
 
     def action_previous_match(self) -> None:
-        cast(TUIApp, self.app)._move_console_search(-1)
+        self.app._move_console_search(-1)
 
     def action_close_search(self) -> None:
-        cast(TUIApp, self.app)._clear_console_search()
+        self.app._clear_console_search()
         self.dismiss(None)

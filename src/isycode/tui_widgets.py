@@ -297,7 +297,7 @@ class SidePanel(Vertical):
         with Horizontal(id="rail-tabs"):
             yield Button("Overview", id="show-overview")
             yield Button("Files", id="show-files")
-        with VerticalScroll(id="overview-view"):
+        with QuietVerticalScroll(id="overview-view"):
             with Vertical(id="rail-card"):
                 with Collapsible(title="MCPs", id="rail-mcp"):
                     yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
@@ -527,13 +527,8 @@ class QuietScrollBar(ScrollBar):
         self.refresh()
 
 
-class ChatArea(VerticalScroll):
-    """Chat with a layout-aware tail anchor that user scrolling can release."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._tail = Static("", classes="chat-tail")
-        self._tail.styles.height = 1
+class QuietVerticalScroll(VerticalScroll):
+    """Vertical scroller that shows the chat's quiet thumb only when content is taller."""
 
     @property
     def vertical_scrollbar(self):
@@ -543,6 +538,15 @@ class ChatArea(VerticalScroll):
             bar.display = False
             self.app._start_widget(self, bar)
         return self._vertical_scrollbar
+
+
+class ChatArea(QuietVerticalScroll):
+    """Chat with a layout-aware tail anchor that user scrolling can release."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tail = Static("", classes="chat-tail")
+        self._tail.styles.height = 1
 
     def compose(self):
         yield self._tail

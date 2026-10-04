@@ -366,7 +366,7 @@ La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia
 
 | Atajo | Acción |
 | --- | --- |
-| `Enter` / `Shift+Enter` | Enviar / nueva línea. `Ctrl+J` y `Alt+Enter` también parten la línea. `Ctrl+Enter` no envía |
+| `Enter` | Enviar. `Shift+Enter`, `Ctrl+J` y `Alt+Enter` insertan una nueva línea. `Ctrl+Enter` no envía |
 | `Enter` durante un turno | Encola el mensaje (máximo 8). Envío vacío sobre la cola: steer |
 | `Esc` | Detener el turno; si no hay operación, volver o cerrar. En la cola, devuelve el texto sin pisar el borrador |
 | `Ctrl+S` | Idea Box / ShellBox de procesos ya aprobados en sandbox |

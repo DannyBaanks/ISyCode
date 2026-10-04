@@ -381,17 +381,26 @@ class DeleteSessionScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, title: str) -> None:
+    def __init__(self, title: str, *, kind: str = "conversation") -> None:
         super().__init__()
         self.title_text = title
+        self.kind = kind if kind == "iteration" else "conversation"
 
     def compose(self) -> ComposeResult:
+        if self.kind == "iteration":
+            heading = "Delete this iteration?"
+            button = "Delete iteration · y"
+            detail = "This permanently removes this one iteration ledger."
+        else:
+            heading = "Delete this conversation?"
+            button = "Delete conversation · y"
+            detail = "This permanently removes this one transcript."
         with Vertical(id="delete-session-card"):
-            yield Static("Delete this conversation?", id="delete-session-title")
-            yield Static(f"{self.title_text}\n\nThis permanently removes this one transcript. A one-use, session-bound approval will be checked before deletion.", id="delete-session-copy")
+            yield Static(heading, id="delete-session-title")
+            yield Static(f"{self.title_text}\n\n{detail} A one-use, session-bound approval will be checked before deletion.", id="delete-session-copy")
             with Horizontal(id="delete-session-actions"):
                 yield Button("Keep · n", id="delete-session-cancel")
-                yield Button("Delete conversation · y", id="delete-session-confirm", variant="error")
+                yield Button(button, id="delete-session-confirm", variant="error")
 
     def on_mount(self) -> None:
         self.query_one("#delete-session-cancel", Button).focus()

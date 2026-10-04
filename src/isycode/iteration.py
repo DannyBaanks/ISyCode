@@ -1,8 +1,10 @@
-"""Sequential iteration state. Content stays in a private append-only ledger.
+"""Sequential iteration state. Content stays in a private ledger.
 
 Existing session grants authorize storage; opaque references additionally bind
 reads to an active participant attempt. No provider or workspace privileges are
 created here. The ledger is canonical; metadata is replayed, never overwritten.
+Lines are append-only. Removing a session does not rewrite them: SessionDeleteOwner
+unlinks that one ledger after session.delete is allowed.
 """
 from __future__ import annotations
 
@@ -203,6 +205,34 @@ class IterationOwner:
             raise IterationDenied('unsafe directory')
         return [self.inspect(path.stem) for path in sorted(self.directory.glob('*.jsonl'))[:50]]
 
+    def unlink_ledger(self, sid):
+        """Remove one private ledger. Caller must already have passed session.delete."""
+        identifier(sid)
+        directory = self.directory
+        if directory.is_symlink() or not directory.is_dir():
+            raise IterationDenied('unsafe private directory')
+        dir_flags = os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0) | getattr(os, 'O_NOFOLLOW', 0)
+        dir_fd = os.open(directory, dir_flags)
+        try:
+            info = os.fstat(dir_fd)
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+                raise IterationDenied('directory is not private')
+            fd = os.open(sid + '.jsonl', os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0), dir_fd=dir_fd)
+            try:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError as exc:
+                    raise IterationDenied('iteration is in use') from exc
+                st = os.fstat(fd)
+                if (not stat.S_ISREG(st.st_mode) or st.st_nlink != 1
+                        or st.st_uid != os.getuid() or st.st_mode & 0o077):
+                    raise IterationDenied('unsafe artifact')
+                os.unlink(sid + '.jsonl', dir_fd=dir_fd)
+            finally:
+                os.close(fd)
+        finally:
+            os.close(dir_fd)
+
     def _content(self, text):
         if not isinstance(text, str) or not text.strip() or len(text.encode()) > self.MAX_CONTENT:
             raise IterationDenied('invalid or oversized content')
@@ -301,6 +331,21 @@ class IterationOwner:
     def rename(self, sid, title):
         with self._locked(sid) as (fd, rows):
             return self._persist(fd, rows, sid, {'kind': 'renamed', 'title': self._content(title)})
+
+
+class IterationLedger:
+    """Adapter so SessionDeleteOwner can remove one iteration ledger."""
+
+    def __init__(self, owner: IterationOwner):
+        self._owner = owner
+        self.error = None
+
+    def delete(self, session_id: str) -> None:
+        try:
+            self._owner.unlink_ledger(session_id)
+        except IterationDenied as exc:
+            self.error = str(exc)
+            raise
 
 
 READ_TOOL = {'type': 'function', 'function': {'name': 'read_iteration',

@@ -12,6 +12,7 @@ from typing import Any
 from rich.cells import cell_len
 from isycode.config import ConfigurationError
 from isycode.chat_sessions import ChatSessionStore
+from isycode.session_owner import MAX_MESSAGE_BYTES
 from isycode.work_list import (
     WorkList,
     age_label,
@@ -85,10 +86,19 @@ from isycode.tui_theme import (
     CYAN,
     _fit_cells,
 )
+from isycode.conversation_lane import (
+    ConversationLane,
+    conversation_lane_context,
+    lane_property,
+    LANE_FIELDS,
+    open_lane,
+    rekey_lane,
+)
 from isycode.tui_widgets import (
     Collapsible,
     ChatArea,
     SelectableText,
+    ThoughtBlock,
 )
 from isycode.tui_composer import (
     QueuedBox,
@@ -116,7 +126,7 @@ class SessionMixin:
     """Chat sessions, the queue, the idea box, and harness import."""
 
     def _paint_queued_messages(self):
-        if not self.is_mounted:
+        if not self._lane_on_screen() or not self.is_mounted:
             return
         if self._selected_queued_message not in self._queued_messages:
             self._selected_queued_message = None
@@ -189,9 +199,10 @@ class SessionMixin:
         if unsupported:
             record_steering_result(*self._steering_target(), False)
         self._paint_queued_messages()
-        self._queue_steer_warning()
-        if not unsupported:
-            self.screen_stack[0].query_one("#queue-warning", Static).update(Text("Steer sin respuesta confirmada · mensaje devuelto a queued", style=YELLOW))
+        if self._lane_on_screen():
+            self._queue_steer_warning()
+            if not unsupported:
+                self.screen_stack[0].query_one("#queue-warning", Static).update(Text("Steer sin respuesta confirmada · mensaje devuelto a queued", style=YELLOW))
         self._append("Steer no soportado por provider · mensaje devuelto a queued; continuando el turno original." if unsupported else "Steer no confirmado · devuelto a queued.", YELLOW)
 
     def _undo_queued_message(self):
@@ -210,7 +221,12 @@ class SessionMixin:
 
     def on_session_option_list_delete_requested(self, event) -> None:
         event.stop()
-        self.run_worker(self._delete_chat_session(event.session_id, allow_once=True), group="session-delete", exclusive=True)
+        session_id = str(event.session_id)
+        if session_id.startswith("iteration:"):
+            self.run_worker(self._delete_iteration_session(session_id.removeprefix("iteration:")),
+                            group="session-delete", exclusive=True)
+            return
+        self.run_worker(self._delete_chat_session(session_id, allow_once=True), group="session-delete", exclusive=True)
 
     def _session_state(self) -> dict:
         return {"provider": selected_provider_name(), "model": resolved_chat_model(),
@@ -227,7 +243,7 @@ class SessionMixin:
         self.push_screen(IdeaNoteScreen(self._idea_box or "Capture an idea · Ctrl+Shift+Enter"))
 
     def _paint_idea_box(self) -> None:
-        if not self.is_mounted:
+        if not self._lane_on_screen() or not self.is_mounted:
             return
         for screen in self.screen_stack:
             if isinstance(screen, IdeaNoteScreen) and screen.is_mounted:
@@ -604,7 +620,12 @@ class SessionMixin:
             for row in self._work_rows:
                 row["current"] = row["id"] == (self._active_chat_session_id or "memory")
                 if row.get("session_kind") != "iterative":
-                    row["status"] = self._conversation_status() if row["current"] else "idle"
+                    if row["current"]:
+                        row["status"] = self._conversation_status()
+                    else:
+                        other = self._lanes.get(row["id"])
+                        live = other is not None and other.loop_task is not None and not other.loop_task.done()
+                        row["status"] = "generating" if live else "idle"
             rows = list(self._work_rows)
             if self._subagent_running:
                 rows.append({"id": "child", "workspace": self._workspace_root.name,
@@ -681,6 +702,7 @@ class SessionMixin:
 
     def _clear_open_conversation(self) -> None:
         """Drop the open chat. Does not create or delete a saved session."""
+        lane = self._foreground_lane()
         self.query_one("#prompt-input", PromptArea).load_text("")
         self._draft_text = ""
         self._retry_prompt = None
@@ -696,16 +718,30 @@ class SessionMixin:
         self._show_agent_tasks([])
         self._active_chat_session_id = None
         self._session_save_warned = False
+        lane.lines.clear()
+        lane.partial = ""
+        lane.partial_reason = ""
+        lane.stream_widget = None
+        lane.stream_block = None
         self.query_one(ChatArea).remove_children()
         self._show_chat_again()
         self._mount_idle_board()
 
     def _start_new_conversation(self) -> None:
-        if self._loop_task and self._loop_task is not asyncio.current_task() and not self._loop_task.done():
-            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+        current = self._foreground_lane()
+        busy = current.loop_task is not None and current.loop_task is not asyncio.current_task() and not current.loop_task.done()
+        if not busy and not current.history and not current.lines and not current.session_id:
+            self._show_chat_again()
+            self._append("  New conversation.", MUTED)
+            if self._sessions_enabled() and self._chat_session_owner is not None:
+                outcome, sid = self._chat_session_owner.manage(
+                    "state", None, json.dumps(self._session_state()))
+                if outcome.decision == "ALLOW":
+                    self._active_chat_session_id = sid
+            self.run_worker(self._refresh_work_list(), group="work-list")
             return
-        self._save_draft()
-        self._clear_open_conversation()
+        self._capture_running_session()
+        self._show_lane(open_lane(self, None))
         self._append("  New conversation.", MUTED)
         if self._sessions_enabled() and self._chat_session_owner is not None:
             outcome, sid = self._chat_session_owner.manage("state", None, json.dumps(self._session_state()))
@@ -726,35 +762,49 @@ class SessionMixin:
         if owner is None or not self._sessions_enabled():
             self._append("  Saving conversations is off; nothing was resumed.", MUTED)
             return
-        if self._loop_task and self._loop_task is not asyncio.current_task() and not self._loop_task.done():
-            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+        current_id = self._active_chat_session_id or self._foreground_key
+        if session_id == current_id:
+            self._show_chat_again()
             return
-        if self._active_chat_session_id != session_id:
-            self._save_draft()
+        existing = self._lanes.get(session_id)
+        if existing is not None and (
+            (existing.loop_task is not None and not existing.loop_task.done())
+            or existing.lines or existing.history
+        ):
+            self._capture_running_session()
+            self._show_lane(existing)
+            await self._refresh_work_list()
+            return
+        self._capture_running_session()
         outcome, session = await asyncio.to_thread(owner.resume, session_id)
         if outcome.decision != "ALLOW" or session is None:
             self._append(f"  Conversation not resumed · {outcome.reason[:180]}", YELLOW)
             return
-        self._show_chat_again()
-        self._history = [{"role": message["role"], "content": message["content"]}
-                         for message in session.messages]
-        self._conversation_summary = ""
-        self._active_chat_session_id = session.session_id
-        self._session_save_warned = False
-        state = session.state
-        self._tool_history = state.get("tool_history", [])
-        self._conversation_summary = state.get("conversation_summary", "")
-        self._idea_box = state.get("idea_box", "")
-        self._paint_idea_box()
-        self._usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
-        self._throughput = ThroughputMeter()
+        lane = open_lane(self, session.session_id)
+        lane.history = [{"role": message["role"], "content": message["content"]}
+                        for message in session.messages]
+        lane.session_save_warned = False
+        state = session.state if isinstance(session.state, dict) else {}
+        lane.tool_history = list(state.get("tool_history", []))
+        lane.conversation_summary = state.get("conversation_summary", "")
+        lane.idea_box = state.get("idea_box", "")
+        lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        lane.throughput = ThroughputMeter()
         if "usage" not in state and session.messages:
-            self._usage.record(None)
-        self._refresh_usage()
-        self._retry_prompt = None
-        prompt = self.query_one("#prompt-input", PromptArea)
-        prompt.load_text(state.get("draft", ""))
-        self._draft_text = state.get("draft", "")
+            lane.usage.record(None)
+        lane.retry_prompt = None
+        lane.draft_text = state.get("draft", "")
+        lane.partial = ""
+        lane.partial_reason = ""
+        lane.stream_widget = None
+        lane.stream_block = None
+        lane.lines = []
+        for message in session.messages:
+            if message["role"] == "user":
+                lane.lines.append(("user", message["content"], message.get("sent_at")))
+            elif message["role"] == "assistant":
+                lane.lines.append(("assistant", message["content"], message.get("sent_at")))
+        self._show_lane(lane)
         if state.get("provider") and not self._provider_env_override:
             os.environ["ISYCODE_PROVIDER"] = state["provider"]
         if state.get("model") and not self._model_env_override and not self._provider_env_override:
@@ -772,31 +822,6 @@ class SessionMixin:
         self.query_one("#context-button", Button).label = "Context"
         if state.get("context_path"):
             await self._load_project_context()
-        chat = self.query_one(ChatArea)
-        chat.remove_children()
-        for message in session.messages:
-            if message["role"] == "user":
-                self._mount_user_turn(message["content"], message.get("sent_at"))
-            else:
-                if clock_label(message.get("sent_at")):
-                    chat.mount(Static(Text(clock_label(message["sent_at"]), style=MUTED), classes="message-clock"))
-                chat.mount(SelectableText(
-                    RichMarkdown(message["content"], code_theme="monokai"),
-                    selection_text=message["content"]))
-        chat.follow_tail()
-        if self._tool_history:
-            history_text = "Earlier tool notes. They may be stale. No tool was run again.\n\n" + "\n\n".join(
-                f"{index}. {event['name']}\n"
-                f"Arguments: {event['arguments']}\n"
-                f"Result:\n{event['result']}"
-                for index, event in enumerate(self._tool_history, start=1)
-            )
-            chat.mount(Collapsible(
-                Static(Text(history_text, style=MUTED)),
-                title=f"Earlier tools · {len(self._tool_history)} · not run again",
-                collapsed=True,
-                classes="tool-history",
-            ))
         self._append(f"  Conversation reopened · {session.title} · {len(session.messages)} messages", GREEN)
         await self._refresh_work_list()
 
@@ -827,7 +852,44 @@ class SessionMixin:
         self._append(f"  Conversation deletion · {result.decision} · {result.reason[:160]}", MUTED)
         if result.decision == "ALLOW":
             if self._active_chat_session_id == session_id:
+                lane = self._foreground_lane()
+                task = lane.chat_turn_task if lane.chat_turn_task is not None and not lane.chat_turn_task.done() else lane.loop_task
+                lane.loop_task = None
+                lane.chat_turn_task = None
+                lane.chat_request_task = None
+                if task is not None and not task.done():
+                    task.cancel()
                 self._clear_open_conversation()
+            else:
+                self._drop_background_lane(session_id)
+            self.run_worker(self._refresh_work_list(), group="work-list")
+
+    async def _delete_iteration_session(self, session_id: str) -> None:
+        """Remove one iteration ledger after the same one-use session.delete gate."""
+        from isycode.iteration import IterationLedger
+        row = next((item for item in getattr(self, "_work_rows", [])
+                    if item.get("id") == "iteration:" + session_id), None)
+        title = str((row or {}).get("title") or "Iteration")
+        if not await self._await_screen(DeleteSessionScreen(title, kind="iteration")):
+            self._append("  Iteration kept.", MUTED)
+            return
+        authority = WorkspaceAuthority(self._workspace_root)
+        grant = authority.effective_policy().get("grants", {}).get("session.delete", {})
+        shown = title[:80]
+        request = ActionRequest("session.delete", self._workspace_root, session_id,
+                                {"session_id": session_id, "title": shown},
+                                execution_owner="session_delete")
+        approval = self._action_approvals.issue(request, ttl_seconds=30)
+        if not grant.get("enabled") or session_id not in grant.get("targets", []):
+            authority = OneShotActionAuthority(authority, request)
+        ledger = IterationLedger(self._iteration_owner())
+        delete_owner = SessionDeleteOwner(
+            self._workspace_root, authority, ledger, self._action_approvals)
+        result = delete_owner.delete(session_id, shown, approval)
+        reason = ledger.error or result.reason
+        self._append(f"  Iteration deletion · {result.decision} · {reason[:160]}",
+                     GREEN if result.decision == "ALLOW" else YELLOW)
+        if result.decision == "ALLOW":
             self.run_worker(self._refresh_work_list(), group="work-list")
 
     def _persist_chat_message(self, role: str, content: str, *, sent_at: str | None = None) -> None:
@@ -893,3 +955,358 @@ class SessionMixin:
                 self._append(f"  Session unchanged · {outcome.reason[:180]}", YELLOW)
             return
         self._append("  /sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete", MUTED)
+
+    def _install_conversation_lanes(self) -> None:
+        if getattr(self, "_lanes", None):
+            return
+        self._lanes = {"memory": ConversationLane("memory")}
+        self._foreground_key = "memory"
+
+    def _foreground_lane(self):
+        lane = self._lanes.get(self._foreground_key)
+        if lane is None:
+            lane = ConversationLane(self._foreground_key)
+            self._lanes[self._foreground_key] = lane
+        return lane
+
+    def _active_lane(self):
+        pinned = conversation_lane_context.get()
+        if pinned is not None:
+            return pinned
+        return self._foreground_lane()
+
+    def _lane_on_screen(self) -> bool:
+        if not getattr(self, "_lanes", None):
+            return True
+        return self._active_lane().key == self._foreground_key
+
+    @property
+    def _active_chat_session_id(self):
+        if not getattr(self, "_lanes", None):
+            return None
+        return self._active_lane().session_id
+
+    @_active_chat_session_id.setter
+    def _active_chat_session_id(self, value) -> None:
+        if not getattr(self, "_lanes", None):
+            return
+        rekey_lane(self, self._active_lane(), value)
+
+    def _pin_task(self, coroutine, lane=None):
+        lane = lane or self._foreground_lane()
+        token = conversation_lane_context.set(lane)
+        try:
+            return asyncio.create_task(coroutine)
+        finally:
+            conversation_lane_context.reset(token)
+
+    def _start_background_turn(self, lane, text: str) -> None:
+        task = self._pin_task(self._run_chat(text), lane)
+        lane.loop_task = task
+        lane.activity_message = "Chat · working"
+        lane.activity_color = CYAN
+        task.add_done_callback(self._operation_finished)
+
+    def _copy_composer_draft(self) -> None:
+        try:
+            prompt = self.query_one("#prompt-input", PromptArea)
+        except (NoMatches, NoScreen):
+            return
+        text = prompt.text
+        pasted = getattr(prompt, "pasted_text", None)
+        if pasted is not None:
+            text = pasted.expand(text)
+        self._foreground_lane().draft_text = text
+
+    def _ensure_lane_session(self) -> None:
+        if self._active_chat_session_id or not self._sessions_enabled() or self._chat_session_owner is None:
+            return
+        try:
+            outcome, sid = self._chat_session_owner.manage(
+                "state", None, json.dumps(self._session_state()))
+        except (OSError, ValueError):
+            return
+        if getattr(outcome, "decision", None) == "ALLOW" and sid:
+            self._active_chat_session_id = sid
+            if getattr(self, "is_running", False):
+                self.run_worker(self._refresh_work_list(), group="work-list")
+
+    def _capture_running_session(self) -> None:
+        self._copy_composer_draft()
+        lane = self._foreground_lane()
+        if lane.loop_task is not None and not lane.loop_task.done():
+            self._ensure_lane_session()
+        self._save_draft()
+
+    def _show_lane(self, lane) -> None:
+        current = self._foreground_lane()
+        if current is not lane:
+            self._copy_composer_draft()
+            current.stream_widget = None
+            current.stream_block = None
+            self._foreground_key = lane.key
+        self._show_chat_again()
+        self._repaint_conversation()
+        try:
+            prompt = self.query_one("#prompt-input", PromptArea)
+            prompt.load_text(lane.draft_text or "")
+        except (NoMatches, NoScreen):
+            pass
+        self._paint_idea_box()
+        self._refresh_usage()
+        self._paint_queued_messages()
+        self._show_agent_tasks(list(lane.agent_tasks))
+        self._sync_visible_activity(lane)
+
+    def _sync_visible_activity(self, lane) -> None:
+        live = lane.loop_task is not None and not lane.loop_task.done()
+        if live:
+            self._activity_label = lane.activity_message or "Chat · working"
+            self._activity_frame = getattr(self, "_activity_frame", 0)
+            if getattr(self, "_activity_timer", None) is None:
+                self._activity_timer = self.set_interval(0.12, self._animate_activity)
+            self._animate_activity()
+            return
+        timer = getattr(self, "_activity_timer", None)
+        if timer is not None:
+            timer.stop()
+            self._activity_timer = None
+        if getattr(self, "_idea_nudge_timer", None) is not None:
+            self._idea_nudge_timer.stop()
+            self._idea_nudge_timer = None
+        self._set_activity(lane.activity_message or "Chat ready", lane.activity_color or MUTED)
+
+    def _repaint_conversation(self) -> None:
+        try:
+            chat = self.query_one(ChatArea)
+        except (NoMatches, NoScreen):
+            return
+        chat.remove_children()
+        lane = self._foreground_lane()
+        if not lane.lines and not lane.partial and not lane.partial_reason and not lane.tool_history:
+            self._mount_idle_board()
+            return
+        for kind, text, extra in list(lane.lines):
+            if kind == "user":
+                if clock_label(extra):
+                    chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
+                chat.mount(SelectableText(Text(text, style=TEXT), selection_text=text, classes="user-turn"))
+            elif kind == "assistant":
+                if clock_label(extra):
+                    chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
+                chat.mount(SelectableText(
+                    RichMarkdown(text or "", code_theme="monokai"), selection_text=text or ""))
+            elif kind == "note":
+                chat.mount(SelectableText(Text(text, style=extra or TEXT), selection_text=text))
+        if lane.tool_history:
+            history_text = (
+                "Earlier tool notes. They may be stale. No tool was run again.\n\n"
+                + "\n\n".join(
+                    f"{index}. {event.get('name', '')}\n"
+                    f"Arguments: {event.get('arguments', '')}\n"
+                    f"Result:\n{event.get('result', '')}"
+                    for index, event in enumerate(lane.tool_history, start=1)
+                )
+            )
+            chat.mount(Collapsible(
+                Static(Text(history_text, style=MUTED)),
+                title=f"Earlier tools · {len(lane.tool_history)} · not run again",
+                collapsed=True,
+                classes="tool-history",
+            ))
+        if lane.partial_reason:
+            block = ThoughtBlock()
+            block.set_text(lane.partial_reason)
+            chat.mount(block)
+            lane.stream_block = block
+        else:
+            lane.stream_block = None
+        if lane.partial:
+            widget = SelectableText(
+                RichMarkdown(lane.partial, code_theme="monokai"), selection_text=lane.partial)
+            chat.mount(widget)
+            lane.stream_widget = widget
+        else:
+            lane.stream_widget = None
+        chat.follow_tail()
+
+    def _drop_background_lane(self, session_id: str) -> None:
+        lane = self._lanes.get(session_id)
+        if lane is None or lane.key == self._foreground_key:
+            return
+        task = lane.chat_turn_task if lane.chat_turn_task is not None and not lane.chat_turn_task.done() else lane.loop_task
+        lane.loop_task = None
+        lane.chat_turn_task = None
+        lane.chat_request_task = None
+        if task is not None and not task.done():
+            task.cancel()
+        self._lanes.pop(lane.key, None)
+
+    def _session_message_rows(self, sessions) -> list[dict]:
+        rows = []
+        seen = set()
+        for session in sessions:
+            rows.append({"id": session.session_id, "title": session.title or session.session_id,
+                         "session": session})
+            seen.add(session.session_id)
+        for key, lane in self._lanes.items():
+            ident = lane.session_id or key
+            if ident in seen:
+                continue
+            quiet = (lane.session_id is None and not lane.history and not lane.lines
+                     and (lane.loop_task is None or lane.loop_task.done()))
+            if quiet:
+                continue
+            rows.append({"id": ident, "title": ident, "session": None})
+            seen.add(ident)
+        return rows
+
+    def _match_session_message(self, rows: list[dict], argument: str):
+        hits = []
+        for row in rows:
+            labels = []
+            title = " ".join(str(row["title"]).split())
+            ident = str(row["id"])
+            if title:
+                labels.append(title)
+            if ident and ident.casefold() != title.casefold():
+                labels.append(ident)
+            for label in labels:
+                head, tail = argument[:len(label)], argument[len(label):]
+                if head.casefold() != label.casefold():
+                    continue
+                if tail and not tail[0].isspace():
+                    continue
+                hits.append((len(label), row, tail.strip()))
+        if not hits:
+            return None, "", []
+        best = max(item[0] for item in hits)
+        chosen = [item for item in hits if item[0] == best]
+        ids = {item[1]["id"] for item in chosen}
+        if len(ids) != 1:
+            return None, "", [item[1] for item in chosen]
+        return chosen[0][1], chosen[0][2], []
+
+    def _restore_message_draft(self, text: str) -> None:
+        try:
+            prompt = self.query_one("#prompt-input", PromptArea)
+        except (NoMatches, NoScreen):
+            return
+        if not prompt.text.strip():
+            prompt.load_text(text)
+
+    def _list_message_targets(self, rows: list[dict], heading: str) -> None:
+        self._append(heading, YELLOW)
+        current = self._active_chat_session_id or self._foreground_key
+        if not rows:
+            self._append("  No other conversation is open.", MUTED)
+            return
+        for row in rows:
+            mark = " · on screen" if row["id"] == current else ""
+            self._append(f"  {row['title']} · {row['id']}{mark}", MUTED)
+        self._append("  /msg <name or id> <message>", MUTED)
+
+    def _adopt_saved_conversation(self, session):
+        lane = open_lane(self, session.session_id)
+        live = lane.loop_task is not None and not lane.loop_task.done()
+        if live or lane.history or lane.lines:
+            return lane
+        lane.history = [{"role": message["role"], "content": message["content"]}
+                        for message in session.messages
+                        if message.get("role") in {"user", "assistant"}]
+        state = session.state if isinstance(session.state, dict) else {}
+        lane.tool_history = list(state.get("tool_history", []))
+        lane.conversation_summary = state.get("conversation_summary", "") or ""
+        lane.idea_box = state.get("idea_box", "") or ""
+        lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        lane.throughput = ThroughputMeter()
+        lane.retry_prompt = None
+        lane.draft_text = state.get("draft", "") or ""
+        lane.partial = ""
+        lane.partial_reason = ""
+        lane.stream_widget = None
+        lane.stream_block = None
+        lane.lines = []
+        for message in session.messages:
+            if message.get("role") == "user":
+                lane.lines.append(("user", message.get("content", ""), message.get("sent_at")))
+            elif message.get("role") == "assistant":
+                lane.lines.append(("assistant", message.get("content", ""), message.get("sent_at")))
+        return lane
+
+    def _post_user_text(self, lane, text: str) -> str:
+        live = lane.loop_task is not None and not lane.loop_task.done()
+        if live:
+            if len(lane.queued_messages) >= 8:
+                return "full"
+            lane.queued_messages.append(text)
+            if lane.key == self._foreground_key:
+                self._paint_queued_messages()
+            return "queued"
+        self._start_background_turn(lane, text)
+        return "started"
+
+    async def _deliver_session_message(self, raw: str) -> None:
+        """Put the user's words on another conversation and let that one answer."""
+        argument = raw.removeprefix("/msg").strip()
+        sessions = []
+        owner = self._chat_session_owner
+        if owner is not None and self._sessions_enabled():
+            try:
+                outcome, sessions = await asyncio.to_thread(owner.list_conversations)
+            except (OSError, ValueError):
+                outcome, sessions = None, []
+            if outcome is not None and outcome.decision != "ALLOW":
+                sessions = []
+                if not argument:
+                    self._append(f"  Conversations unavailable · {outcome.reason[:160]}", YELLOW)
+        rows = self._session_message_rows(sessions)
+        if not argument:
+            self._list_message_targets(rows, "  Name the conversation, then the message.")
+            return
+        row, body, ambiguous = self._match_session_message(rows, argument)
+        if ambiguous:
+            self._restore_message_draft(raw)
+            self._list_message_targets(ambiguous, "  Several conversations match. Use the id.")
+            return
+        if row is None:
+            self._restore_message_draft(raw)
+            self._list_message_targets(rows, "  No conversation matched that name.")
+            return
+        current = self._active_chat_session_id or self._foreground_key
+        if row["id"] == current or row["id"] == self._foreground_key:
+            self._restore_message_draft(raw)
+            self._append("  That conversation is on screen. Type the message here.", YELLOW)
+            return
+        if not body:
+            self._restore_message_draft(raw)
+            self._append("  Write the message after the name. /msg <name or id> <message>", YELLOW)
+            return
+        if len(body.encode("utf-8")) > MAX_MESSAGE_BYTES:
+            self._restore_message_draft(raw)
+            self._append("  That message is too large.", YELLOW)
+            return
+        session = row.get("session")
+        lane = self._lanes.get(row["id"])
+        if session is not None:
+            lane = self._adopt_saved_conversation(session)
+        if lane is None:
+            self._restore_message_draft(raw)
+            self._append("  That conversation is not open.", YELLOW)
+            return
+        status = self._post_user_text(lane, body)
+        title = row["title"]
+        if status == "full":
+            self._restore_message_draft(raw)
+            self._append(f"  {title} already has 8 messages waiting. Draft kept.", YELLOW)
+            return
+        if status == "queued":
+            self._append(f"  Queued for {title}. It answers after the current reply.", CYAN)
+        else:
+            self._append(f"  Sent to {title}. It answers there as your message.", GREEN)
+        if getattr(self, "is_running", False):
+            self.run_worker(self._refresh_work_list(), group="work-list")
+
+
+for _attr, _field in LANE_FIELDS:
+    setattr(SessionMixin, _attr, lane_property(_field))

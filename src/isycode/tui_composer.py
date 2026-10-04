@@ -8,7 +8,6 @@ from textual.binding import Binding
 from textual.message import Message
 from textual.widgets import OptionList, Static, TextArea
 from rich.text import Text
-from typing import cast
 from isycode.tui_widgets import BoxTitle, ExpandableBox, activate_on_second_click
 from isycode.tui_theme import MUTED
 from isycode.tui_screens_sessions import PastedTextScreen
@@ -140,7 +139,7 @@ class PromptArea(TextArea):
             self.app.notify("No compacted text in this draft.")
 
     def action_slash_up(self) -> None:
-        app = cast(TUIApp, self.app)
+        app = self.app
         if app._move_slash(-1):
             return
         if self.cursor_location[0] == 0:
@@ -152,7 +151,7 @@ class PromptArea(TextArea):
         self.action_cursor_up()
 
     def action_slash_down(self) -> None:
-        app = cast(TUIApp, self.app)
+        app = self.app
         if app._move_slash(1):
             return
         if self.cursor_location[0] == len(self.document.lines) - 1:
@@ -164,17 +163,17 @@ class PromptArea(TextArea):
         self.action_cursor_down()
 
     def action_slash_complete(self) -> None:
-        if not cast(TUIApp, self.app)._complete_slash(): self.screen.focus_next()
+        if not self.app._complete_slash(): self.screen.focus_next()
 
     def action_submit_prompt(self) -> None:
-        if cast(TUIApp, self.app)._complete_slash(): return
+        if self.app._complete_slash(): return
         self.post_message(self.Submitted(self, self.text))
 
     def action_insert_line_break(self) -> None:
         self.insert("\n")
 
     def action_escape_to_app(self) -> None:
-        cast(TUIApp, self.app).action_escape_to_chat()
+        self.app.action_escape_to_chat()
 
 
 class TasksPanel(Static):

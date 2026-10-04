@@ -1831,21 +1831,21 @@
     },
     {
       "file": "isycode/iteration.py",
-      "line": 195,
+      "line": 197,
       "callable": "isycode.iteration.IterationOwner.list_sessions",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/iteration.py",
-      "line": 61,
+      "line": 63,
       "callable": "isycode.iteration.IterationOwner._authorize",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/iteration.py",
-      "line": 65,
+      "line": 67,
       "callable": "isycode.iteration.IterationOwner._authorize",
       "action": "session.create",
       "owner": "chat_sessions"
@@ -2013,8 +2013,15 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 819,
+      "line": 844,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
+      "action": "session.delete",
+      "owner": "session_delete"
+    },
+    {
+      "file": "isycode/tui_app_sessions.py",
+      "line": 879,
+      "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"
     },

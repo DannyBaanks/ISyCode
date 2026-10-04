@@ -108,7 +108,7 @@ class SessionOptionList(OptionList):
         if self.highlighted is None:
             return
         option = self.get_option_at_index(self.highlighted)
-        if option.disabled or option.id in {None, "memory"} or str(option.id).startswith(("iteration:", "child")):
+        if option.disabled or option.id in {None, "memory", "child"}:
             return
         self._preview_click_id = None
         self.post_message(self.DeleteRequested(option.id))
@@ -198,6 +198,8 @@ class WorkList(Vertical):
     #work-details { width: 35%; height: 1fr; border-left: solid #514d5a; padding: 0 2; overflow-y: auto; }
     #work-conversations { width: 1fr; }
     #work-heading { height: 1; color: #9aa3ad; }
+    #work-filters { margin-top: 1; }
+
     #work-conversations { height: 1fr; border: none; background: transparent; padding: 0; }
     #work-conversations > .option-list--option-highlighted { background: #2a2b30; color: #f4f1ea; }
     #work-presence { height: 1; color: #6d7580; overflow-x: hidden; text-overflow: ellipsis; }
@@ -211,7 +213,7 @@ class WorkList(Vertical):
             yield Button("Bridge presence…", id="work-bridge")
             yield Button("Hide", id="work-hide")
         with Horizontal(id="work-filters"):
-            yield Button("All", id="work-filter-all")
+            yield Button("All", id="work-filter-all", classes="filter-on")
             yield Button("Working", id="work-filter-generating")
             yield Button("Needs input", id="work-filter-waiting")
             yield Button("Idle", id="work-filter-idle")
@@ -274,7 +276,7 @@ class WorkList(Vertical):
                     line.append(f"    {age}", style="#6d7580")
                 preview = row.get("preview") or ""
 
-                if row["id"] != "memory" and row.get("session_kind") != "iterative":
+                if row["id"] not in {"memory", "child"}:
                     width = max(8, listing.content_size.width - 2)
                     line.truncate(width - 5, overflow="ellipsis")
                     line.append(" " * max(1, width - 4 - cell_len(line.plain)))
@@ -332,4 +334,22 @@ class WorkList(Vertical):
         if event.button.id and event.button.id.startswith("work-filter-"):
             event.stop()
             self._filter = event.button.id.removeprefix("work-filter-")
+            self._paint_filter_active()
             self.show_rows(self._rows, heading=self._heading)
+
+    def _paint_filter_active(self):
+        active = getattr(self, "_filter", "all")
+        for button_id, name in (
+            ("work-filter-all", "all"),
+            ("work-filter-generating", "generating"),
+            ("work-filter-waiting", "waiting"),
+            ("work-filter-idle", "idle"),
+        ):
+            try:
+                button = self.query_one(f"#{button_id}", Button)
+            except Exception:
+                continue
+            if name == active:
+                button.add_class("filter-on")
+            else:
+                button.remove_class("filter-on")

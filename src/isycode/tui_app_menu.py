@@ -318,6 +318,9 @@ async def _usage_cmd(app: "TUIApp", arg: str) -> None:
 async def _sessions_cmd(app: "TUIApp", arg: str) -> None:
     await app._manage_sessions(arg)
 
+async def _msg_cmd(app: "TUIApp", arg: str) -> None:
+    await app._deliver_session_message("/msg" if not arg.strip() else "/msg " + arg.strip())
+
 async def _harness_cmd(app: "TUIApp", arg: str) -> None:
     del arg
     await app._show_multi_harness()
@@ -480,6 +483,7 @@ class MenuMixin:
                 PluginCommand("help", "list commands", _help_cmd),
                 PluginCommand("session", "show current workspace, provider, and chat role", _session_cmd),
                 PluginCommand("sessions", "list/new/resume/search/rename/fork/export/import conversations", _sessions_cmd),
+                PluginCommand("msg", "send your words to another conversation; it answers them as your message", _msg_cmd),
                 PluginCommand("harness", "open the read-only Multi Harness settings map", _harness_cmd),
                 PluginCommand("retry", "prepare interrupted prompt for review; never auto-replays tools", _retry_cmd),
                 PluginCommand("doctor", "local configuration and dependencies; no network requests", _doctor_cmd),

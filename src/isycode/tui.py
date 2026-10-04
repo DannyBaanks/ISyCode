@@ -231,6 +231,7 @@ from isycode.tui_widgets import (
     ThoughtBlock,
     _CHILD_ANCHOR,
     QuietScrollBar,
+    QuietVerticalScroll,
     ChatArea,
     SelectableText,
     CommandOutputCard,
@@ -383,6 +384,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     #rail-tabs { height: 3; border: round #414650; align: center middle; margin-bottom: 1; }
     #rail-tabs Button { width: 1fr; }
     #overview-view, #files-view { height: 1fr; }
+    #overview-view {
+        scrollbar-size-vertical: 3; scrollbar-background: transparent;
+    }
     #skills-tree {
         height: auto; max-height: 8; min-height: 1; background: transparent;
         overflow-x: hidden; text-wrap: nowrap;
@@ -466,6 +470,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         background: transparent; color: #77d8b0;
     }
     #work-list Button:hover, #work-list Button:focus { background: #30303c; color: #f4f1ea; text-style: bold; }
+    #work-list Button.filter-on { background: #2d2440; color: #c9a7ff; text-style: bold; }
     #command-bar {
         height: 1; padding: 0 1; background: $surface;
     }
@@ -530,6 +535,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         initial_prompt: str = "",
     ):
         super().__init__()
+        # Lanes exist before the per-conversation assignments below, which are properties.
+        self._install_conversation_lanes()
         self._runtime_factory = runtime_factory
         self._workspace_factory = workspace_factory
         self._openisy_client_factory = openisy_client_factory
@@ -683,7 +690,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield ShellBox("ShellBox · no processes", id="shell-box", markup=False)
                         yield Static("", id="usage-status")
                     yield PromptArea(id="prompt-input")
-                    yield Static("Enter send/queue · empty Enter steers · Esc restores queue · Ctrl+J newline", id="composer-hint")
+                    yield Static("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar", id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button("Sidebar", id="sidebar-button")
                         yield Button("Sessions", id="sessions-button")
@@ -1548,6 +1555,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             total, bool(self._usage.unknown_requests), compact_context_label(self._history))
 
     def _refresh_usage(self) -> None:
+        if not self._lane_on_screen():
+            return
         self.query_one("#usage-status", Static).update(Text(self._usage_status_text(), style=MUTED))
 
     async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int | None = None,
@@ -1981,15 +1990,25 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     def _append(self, text: str, color: str = TEXT, *, startup: bool = False) -> None:
         """Append output, releasing the welcome pause only on the first message."""
-        if not startup:
+        lane = self._active_lane()
+        on_screen = self._lane_on_screen()
+        if not startup and on_screen:
             self._dismiss_idle()
         context = _tool_display_context.get()
         if context is not None and context[0] is self:
             _, body, notes = context
-            if notes.plain:
-                notes.append("\n")
-            notes.append(text, style=color)
-            body.set_selectable_content(notes.copy(), notes.plain)
+            if on_screen and getattr(body, "is_mounted", False):
+                if notes.plain:
+                    notes.append("\n")
+                notes.append(text, style=color)
+                body.set_selectable_content(notes.copy(), notes.plain)
+                return
+            if not startup:
+                lane.lines.append(("note", text, color))
+            return
+        if not startup:
+            lane.lines.append(("note", text, color))
+        if not on_screen:
             return
         chat = self.query_one(ChatArea)
         chat.mount(SelectableText(Text(text, style=color), selection_text=text))
@@ -1997,6 +2016,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     def _mount_user_turn(self, text: str, sent_at: str | None = None) -> None:
         """Paint one user message as a rounded card and leave the idle board."""
+        self._active_lane().lines.append(("user", text, sent_at))
+        if not self._lane_on_screen():
+            return
         self._dismiss_idle()
         chat = self.query_one(ChatArea)
         if clock_label(sent_at):
@@ -2079,8 +2101,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         body = Text()
         body.append(render_landscape(width, max_rows))
         body.append("\n")
+        checking = not self._model_line
         model = self._model_line or "Checking the configured model"
-        body.append("◇ ", style=ACCENT)
+        body.append("◇ ", style=MUTED if checking else ACCENT)
         body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
         columns = [
             self._idle_column("LSPs", self._idle_lsp_rows()),
@@ -2411,6 +2434,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             else:
                 self.push_screen(QueuedMessagesScreen(self))
             return
+        if text == "/msg" or text.startswith("/msg "):
+            prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+            self.run_worker(self._deliver_session_message(text), group="session-message", exit_on_error=False)
+            return
         if self._loop_task and not self._loop_task.done():
             if self._chat_turn_task is not None and not self._chat_turn_task.done() and text.startswith("/steer "):
                 from isycode.reasoning_options import steering_support
@@ -2473,8 +2500,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._activity_label = label
         self._activity_frame = 0
         self._set_activity(label, CYAN)
+        timer = getattr(self, "_activity_timer", None)
+        if timer is not None:
+            timer.stop()
         self._activity_timer = self.set_interval(0.12, self._animate_activity)
-        task = asyncio.create_task(coroutine)
+        task = self._pin_task(coroutine)
         self._loop_task = task
         self._animate_activity()
         self._paint_idea_box()
@@ -2497,26 +2527,53 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         return super().notify(message, title=title, severity=severity, timeout=timeout)
 
     def _operation_finished(self, task: asyncio.Task) -> None:
-        if self._loop_task is not task:
+        lane = next((item for item in self._lanes.values() if item.loop_task is task), None)
+        if lane is None:
             return
-        self._loop_task = None
-        if self._queued_messages and not task.cancelled() and task.exception() is None and self._retry_prompt is None:
-            self.call_after_refresh(self._send_next_queued_message)
-        self._play_notification_sound("warning" if task.cancelled() else "error" if task.exception() is not None else "done")
-        timer = getattr(self, "_activity_timer", None)
-        if timer is not None:
-            timer.stop()
-        if task.cancelled():
-            self._set_activity("Interrupted", YELLOW)
-        elif task.exception() is not None:
-            self._set_activity(f"Failed · {type(task.exception()).__name__}", RED)
-        elif self._last_plan is not None:
-            self._set_activity("Plan ready · review it in Overview", YELLOW)
-        else:
-            self._set_activity("Chat ready", MUTED)
-        self._paint_idea_box()
-        if self._idea_backlog:
-            self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")
+        lane.loop_task = None
+        cancelled = task.cancelled()
+        failed = None if cancelled else task.exception()
+        foreground = lane.key == self._foreground_key
+        followed = False
+        if lane.queued_messages and not cancelled and failed is None and lane.retry_prompt is None:
+            if foreground:
+                self.call_after_refresh(self._send_next_queued_message)
+            else:
+                nxt = lane.queued_messages.pop(0)
+                self._start_background_turn(lane, nxt)
+                followed = True
+        if foreground:
+            self._play_notification_sound(
+                "warning" if cancelled else "error" if failed is not None else "done")
+            timer = getattr(self, "_activity_timer", None)
+            if timer is not None:
+                timer.stop()
+                self._activity_timer = None
+            if cancelled:
+                self._set_activity("Interrupted", YELLOW)
+            elif failed is not None:
+                self._set_activity(f"Failed · {type(failed).__name__}", RED)
+            elif self._last_plan is not None:
+                self._set_activity("Plan ready · review it in Overview", YELLOW)
+            else:
+                self._set_activity("Chat ready", MUTED)
+            self._paint_idea_box()
+            if self._idea_backlog:
+                self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")
+            return
+        if not followed:
+            if cancelled:
+                lane.activity_message = "Interrupted"
+                lane.activity_color = YELLOW
+            elif failed is not None:
+                lane.activity_message = f"Failed · {type(failed).__name__}"
+                lane.activity_color = RED
+            else:
+                lane.activity_message = "Chat ready"
+                lane.activity_color = MUTED
+        if not cancelled and not followed:
+            self.notify("A conversation failed" if failed is not None else "A conversation finished")
+        self.run_worker(self._refresh_work_list(), group="work-list")
 
     async def _await_screen(self, screen):
         """Show a modal screen and wait for its result from a worker or a plain task.
@@ -2561,6 +2618,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                                getattr(self, "_activity_color", MUTED))
 
     def _set_activity(self, message: str, color: str = MUTED) -> None:
+        lane = self._active_lane()
+        lane.activity_message = message
+        lane.activity_color = color
+        if not self._lane_on_screen():
+            return
         self._activity_message = message
         self._activity_color = color
         if self.is_mounted:
@@ -2781,7 +2843,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._append(f"  Context loaded · {relative_path} · owned read; no permissions changed.", MUTED)
         else:
             self._append(f"  Context not loaded · {outcome.reason[:160]}", YELLOW)
-        self.query_one("#context-button", Button).label = self._context_button_label()
+        if self._lane_on_screen():
+            self.query_one("#context-button", Button).label = self._context_button_label()
         return self._agent_context is not None
 
     # ── /plan (IsyMotron plugin) ─────────────────────────────────
@@ -2789,14 +2852,17 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     async def _run_plan(self, intent: str) -> None:
         """Delegate planning to IsyMotron runtime and render its proposal."""
         self._clear_pending_plan()
-        block, chat = self._mount_thought()
+        block = None
+        if self._lane_on_screen():
+            block, _chat = self._mount_thought()
         reason_buf: list[str] = []
         t0 = _time.monotonic()
         try:
             def on_chunk(kind: str, chunk: str) -> None:
                 if kind == "reasoning":
                     reason_buf.append(chunk)
-                    self.call_from_thread(block.set_text, "".join(reason_buf))
+                    if block is not None and block.is_mounted and self._lane_on_screen():
+                        self.call_from_thread(block.set_text, "".join(reason_buf))
 
             runtime = self._runtime_factory(self._workspace_root)
             outcome = await runtime.plan(intent, on_chunk=on_chunk)
@@ -2819,9 +2885,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 if plan.completion and plan.completion.prompt_tokens is not None and plan.completion.completion_tokens is not None:
                     self._append(f"  Tokens: {plan.completion.prompt_tokens + plan.completion.completion_tokens}", MUTED)
                 self._clear_pending_plan()
-                review = self.query_one("#review-plan", Button)
-                review.disabled = True
-                review.label = "Execution unavailable in Secure"
+                if self._lane_on_screen():
+                    review = self.query_one("#review-plan", Button)
+                    review.disabled = True
+                    review.label = "Execution unavailable in Secure"
                 self._append(
                     f"\n  {outcome.origin} proposal is ready for inspection; it cannot be run through IsyMotron.",
                     YELLOW)
@@ -2838,7 +2905,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._append(
                 f"\n  Planning failed ({type(e).__name__}). No executable plan was retained.", RED)
         finally:
-            block.collapse_to(_time.monotonic() - t0)
+            if block is not None and block.is_mounted and self._lane_on_screen():
+                block.collapse_to(_time.monotonic() - t0)
 
     # ── Contextual demo-plan approval ────────────────────────────
 

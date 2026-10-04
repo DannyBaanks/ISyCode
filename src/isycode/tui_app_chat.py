@@ -177,8 +177,14 @@ class ChatMixin:
 
     async def _run_chat(self, text: str) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
-        self._dismiss_idle()
+        self._ensure_lane_session()
         original_prompt = text
+        if self._lane_on_screen():
+            self._dismiss_idle()
+        else:
+            sent_at = self._pending_user_sent_at or datetime.now().astimezone().isoformat(timespec="seconds")
+            self._pending_user_sent_at = sent_at
+            self._mount_user_turn(original_prompt, sent_at)
         completed = False
         self._chat_turn_task = asyncio.current_task()
         block = None
@@ -363,7 +369,6 @@ class ChatMixin:
 
         async def _consume_chat_stream() -> None:
             nonlocal completed, messages, provider, steer_trial, thought_started
-            chat = self.query_one(ChatArea)
             reason_buf: list[str] = []
             content_buf: list[str] = []
             step_reason: list[str] = []
@@ -397,40 +402,71 @@ class ChatMixin:
                 nonlocal assistant_sent_at
                 if not step_content:
                     return
+                lane = self._active_lane()
+                content = "".join(step_content)
+                lane.partial = "".join(content_buf)
+                if not self._lane_on_screen():
+                    lane.stream_widget = None
+                    holder["widget"] = None
+                    return
+                chat_now = self.query_one(ChatArea)
                 w = holder["widget"]
+                if w is not None and not w.is_mounted:
+                    holder["widget"] = None
+                    w = None
+                if w is None:
+                    live = lane.stream_widget
+                    if live is not None and live.is_mounted:
+                        w = live
+                        holder["widget"] = w
                 if w is None:
                     assistant_sent_at = assistant_sent_at or datetime.now().astimezone().isoformat(timespec="seconds")
                     clock = clock_label(assistant_sent_at)
                     if clock:
-                        chat.mount(Static(Text(clock, style=MUTED), classes="message-clock"))
+                        chat_now.mount(Static(Text(clock, style=MUTED), classes="message-clock"))
                     w = SelectableText(RichMarkdown("", code_theme="monokai"),
                                        selection_text="")
                     holder["widget"] = w
-                    chat.mount(w)
-                content = "".join(step_content)
+                    lane.stream_widget = w
+                    chat_now.mount(w)
                 w.set_selectable_content(
                     RichMarkdown(content, code_theme="monokai"), content)
-                chat.follow_tail()
+                chat_now.follow_tail()
 
             def finish_step() -> None:
                 nonlocal block
-                if block is not None:
-                    block.collapse_to(_time.monotonic() - thought_started)
-                    block = None
-                    chat.follow_tail()
+                current = block
+                if current is not None and current.is_mounted and self._lane_on_screen():
+                    current.collapse_to(_time.monotonic() - thought_started)
+                    self.query_one(ChatArea).follow_tail()
+                block = None
+                lane = self._active_lane()
+                lane.stream_block = None
+                lane.partial_reason = ""
 
             def on_chunk(kind: str, chunk: str) -> None:
                 nonlocal block, thought_started
                 if not chunk:
                     return
+                lane = self._active_lane()
                 if kind == "reasoning":
-                    if block is None:
-                        block, _ = self._mount_thought()
-                        thought_started = _time.monotonic()
+                    if block is None or not getattr(block, "is_mounted", False):
+                        if self._lane_on_screen():
+                            block, _ = self._mount_thought()
+                            thought_started = _time.monotonic()
+                            lane.stream_block = block
+                        else:
+                            block = None
                     reason_buf.append(chunk)
                     step_reason.append(chunk)
-                    block.set_text("".join(step_reason))
-                    chat.follow_tail()
+                    lane.partial_reason = "".join(step_reason)
+                    if not self._lane_on_screen():
+                        lane.stream_block = None
+                        block = None
+                        return
+                    if block is not None and block.is_mounted:
+                        block.set_text(lane.partial_reason)
+                        self.query_one(ChatArea).follow_tail()
                 elif kind == "content":
                     if not step_content and content_buf:
                         content_buf.append("\n\n")
@@ -463,7 +499,7 @@ class ChatMixin:
 
             steer_trial = None
             try:
-                if provider_supports_tools and self._idea_nudge_timer is None:
+                if provider_supports_tools and self._idea_nudge_timer is None and self._lane_on_screen():
                     self._idea_nudge_timer = self.set_interval(
                         IDEA_NUDGE_SECONDS, self._mark_idea_nudge_due)
                 while True:
@@ -656,6 +692,10 @@ class ChatMixin:
                 self._persist_chat_message("user", text, sent_at=user_sent)
                 self._history.append({"role": "assistant", "content": full})
                 self._persist_chat_message("assistant", full, sent_at=assistant_sent_at)
+                done_lane = self._active_lane()
+                done_lane.partial = ""
+                done_lane.partial_reason = ""
+                done_lane.lines.append(("assistant", full, assistant_sent_at))
                 completed = True
                 self._retry_prompt = None
             elif reason_buf:
@@ -666,6 +706,7 @@ class ChatMixin:
 
         def _close_chat_turn() -> None:
             # The trial lives on the turn. locals() in this function would not see it.
+            on_screen = self._lane_on_screen()
             if steer_trial is not None:
                 self._history[:] = steer_trial["history"]
                 self._return_steering_to_queue(steer_trial["instructions"])
@@ -673,26 +714,36 @@ class ChatMixin:
                 if self._history and self._history[-1] == {"role": "user", "content": text}:
                     self._history.pop()
                 self._retry_prompt = original_prompt
-                prompt = self.query_one("#prompt-input", PromptArea)
-                if not prompt.text:
-                    prompt.load_text(original_prompt)
+                if on_screen:
+                    prompt = self.query_one("#prompt-input", PromptArea)
+                    if not prompt.text:
+                        prompt.load_text(original_prompt)
+                else:
+                    parked = self._active_lane()
+                    if not parked.draft_text:
+                        parked.draft_text = original_prompt
                 self._append("  Prompt kept · /retry prepares it for review. Any completed tool effects "
                              "remain; inspect them before sending again.", YELLOW)
             self._steering_try_active = False
             if self._pending_steering:
                 pending = "\n".join(self._pending_steering)
                 self._pending_steering.clear()
-                prompt = self.query_one("#prompt-input", PromptArea)
-                prompt.load_text(pending + ("\n" + prompt.text if prompt.text else ""))
+                if on_screen:
+                    prompt = self.query_one("#prompt-input", PromptArea)
+                    prompt.load_text(pending + ("\n" + prompt.text if prompt.text else ""))
+                else:
+                    parked = self._active_lane()
+                    extra = parked.draft_text
+                    parked.draft_text = pending + ("\n" + extra if extra else "")
                 self._append("Unapplied steering kept in the composer for review.", YELLOW)
             self._chat_request_task = None
             self._chat_turn_task = None
-            if self._idea_nudge_timer is not None:
+            if on_screen and self._idea_nudge_timer is not None:
                 self._idea_nudge_timer.stop()
                 self._idea_nudge_timer = None
             self._idea_nudge_due = False
             self._save_draft()
-            if block is not None:
+            if block is not None and getattr(block, "is_mounted", False) and on_screen:
                 block.collapse_to(_time.monotonic() - thought_started)
                 self.query_one(ChatArea).follow_tail()
 

@@ -215,3 +215,48 @@ def test_coordinator_cancel_leaves_valid_aborted_artifact(setup):
         assert state['status']=='ABORTED' and state['head_seq']==1
         assert state['receipts'][-1]['error_kind']=='CANCELLED'
     asyncio.run(scenario())
+
+
+def test_delete_removes_one_ledger_only_after_the_session_gate(setup):
+    import fcntl
+    import os
+    from isycode.action_runtime import SessionDeleteOwner
+    from isycode.approvals import ActionApprovalStore
+    from isycode.iteration import IterationLedger
+    from isycode.security import ActionRequest
+    from isycode.workspace_authority import OneShotActionAuthority
+    owner, authority, sid = setup
+    kept = owner.create_iteration('Keep me', [dict(provider='nvidia', model='x', role='A'),
+                                              dict(provider='openai', model='y', role='B')])
+    ledger = IterationLedger(owner)
+    approvals = ActionApprovalStore()
+    denied = SessionDeleteOwner(owner.root, authority, ledger, approvals).delete(sid, 'A test', None)
+    assert denied.decision != 'ALLOW'
+    assert (owner.directory / (sid + '.jsonl')).is_file()
+    fd = os.open(owner.directory / (sid + '.jsonl'), os.O_RDONLY)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        with pytest.raises(IterationDenied, match='in use'):
+            owner.unlink_ledger(sid)
+    finally:
+        os.close(fd)
+    assert (owner.directory / (sid + '.jsonl')).is_file()
+    request = ActionRequest('session.delete', owner.root, sid,
+                            {'session_id': sid, 'title': 'A test'},
+                            execution_owner='session_delete')
+    approval = approvals.issue(request)
+    allowed = SessionDeleteOwner(
+        owner.root, OneShotActionAuthority(authority, request), ledger, approvals
+    ).delete(sid, 'A test', approval)
+    assert allowed.decision == 'ALLOW', allowed.reason
+    assert not (owner.directory / (sid + '.jsonl')).exists()
+    assert owner.inspect(kept)['title'] == 'Keep me'
+    outside = owner.directory.parent / 'secret-outside'
+    outside.write_text('keep')
+    link = owner.directory / (kept + '.jsonl')
+    link.unlink()
+    link.symlink_to(outside)
+    with pytest.raises(OSError):
+        owner.unlink_ledger(kept)
+    assert outside.read_text() == 'keep'
+    assert link.is_symlink()

@@ -1,6 +1,7 @@
 import asyncio
 import json
 
+import pytest
 from test_daily_tui import configure
 from isycode.tui import TUIApp, PromptArea
 from isycode.iteration import IterationOwner
@@ -61,4 +62,66 @@ def test_iteration_three_model_ui_and_sessions_marker(tmp_path, monkeypatch):
             assert row['id']=='iteration:'+states[0]['iteration_session_id']
             await app._resume_chat_session(row['id'])
             assert app._iteration_owner().inspect(states[0]['iteration_session_id'])['head_seq']==4
+    asyncio.run(scenario())
+
+
+def test_iterative_row_can_be_deleted(tmp_path, monkeypatch):
+    root = configure(tmp_path, monkeypatch)
+    authority = WorkspaceAuthority(root)
+    authority.set_grant('session.create', enabled=True)
+    authority.set_grant('session.resume', enabled=True)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            monkeypatch.setattr(app, '_sessions_enabled', lambda: True)
+            owner = app._iteration_owner()
+            people = [dict(provider='nvidia', model='fixture-a', role='A'),
+                      dict(provider='openai', model='fixture-b', role='B')]
+            sid = owner.create_iteration('Erase me', people)
+            kept = owner.create_iteration('Keep me', people)
+            board = app.query_one('#work-list')
+            board.display = True
+            await pilot.pause()
+            await app._refresh_work_list()
+            await pilot.pause()
+            listing = board.query_one('#work-conversations')
+            index = next(i for i in range(listing.option_count)
+                         if listing.get_option_at_index(i).id == 'iteration:' + sid)
+            option = listing.get_option_at_index(index)
+            assert option.prompt.plain.endswith('[×]')
+            from rich.style import Style
+            assert any(isinstance(span.style, Style)
+                       and span.style.meta.get('delete_session') == 'iteration:' + sid
+                       for span in option.prompt.spans)
+            seen = []
+
+            async def decline(screen):
+                seen.append(screen.title_text)
+                return False
+
+            app._await_screen = decline
+            listing.highlighted = index
+            listing.focus()
+            await pilot.press('ctrl+d')
+            await pilot.pause()
+            assert seen == ['Erase me']
+            assert owner.inspect(sid)['title'] == 'Erase me'
+
+            async def accept(screen):
+                seen.append((screen.kind, screen.title_text))
+                return True
+
+            app._await_screen = accept
+            await app._delete_iteration_session(sid)
+            await pilot.pause()
+            await app._refresh_work_list()
+            assert seen[-1] == ('iteration', 'Erase me')
+            with pytest.raises(FileNotFoundError):
+                owner.inspect(sid)
+            assert owner.inspect(kept)['title'] == 'Keep me'
+            ids = {row['id'] for row in app._work_rows}
+            assert 'iteration:' + sid not in ids
+            assert 'iteration:' + kept in ids
     asyncio.run(scenario())

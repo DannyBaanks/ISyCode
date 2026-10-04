@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 from textual.widgets import Static
-from isycode.tui import TUIApp, QuietScrollBar, plain_text
+from isycode.tui import SidePanel, TUIApp, QuietScrollBar, QuietVerticalScroll, plain_text
 from test_daily_tui import configure
 
 
@@ -97,4 +97,44 @@ def test_scroll_thumb_tracks_position_and_remains_after_settle(tmp_path, monkeyp
             assert top[0] == ' ▲ ' and bottom[-1] == ' ▼ '
             bar._settle()
             assert bar.render().plain.splitlines() == bottom
+    asyncio.run(scenario())
+
+
+def test_overview_rail_shows_the_chat_scrollbar_only_when_it_grows(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(140, 60)) as pilot:
+            await pilot.pause()
+            if not app.query_one(SidePanel).display:
+                app.action_toggle_sidebar()
+                await pilot.pause()
+            overview = app.query_one('#overview-view')
+            assert isinstance(overview, QuietVerticalScroll)
+            assert overview.styles.scrollbar_size_vertical == 3
+            assert overview.show_vertical_scrollbar == (
+                overview.virtual_size.height > overview.size.height)
+            probe = Static('line\n' * 80, id='rail-grow-probe')
+            await overview.mount(probe)
+            await pilot.pause()
+            assert overview.virtual_size.height > overview.size.height
+            assert overview.show_vertical_scrollbar
+            bar = overview.vertical_scrollbar
+            assert isinstance(bar, QuietScrollBar)
+            assert bar.display
+            lines = bar.render().plain.splitlines()
+            assert lines[0] == ' ▲ ' and lines[-1] == ' ▼ '
+            top = lines.index('━━━')
+            overview.scroll_end(animate=False)
+            await pilot.pause()
+            moved = bar.render().plain.splitlines()
+            assert moved.index('━━━') > top
+            assert moved[0] == ' ▲ ' and moved[-1] == ' ▼ '
+            await probe.remove()
+            await pilot.pause()
+            assert overview.show_vertical_scrollbar == (
+                overview.virtual_size.height > overview.size.height)
+            assert isinstance(app.query_one('#chat').vertical_scrollbar, QuietScrollBar)
+
     asyncio.run(scenario())

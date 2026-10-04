@@ -62,23 +62,27 @@ class ToolMixin:
             if detail:
                 label += " · " + detail
         started_at = _time.monotonic()
-        self._dismiss_idle()
         notes = Text()
         body = SelectableText(Text(""), selection_text="", classes="tool-activity-body")
         card = Collapsible(body, title=f"{label} · Running", collapsed=True,
                            collapsed_symbol="", expanded_symbol="", classes="tool-activity-leaf")
-        chat = self.query_one(ChatArea)
-        preceding = [child for child in chat.children if child is not chat._tail
-                     and not child.has_class("tool-receipt")]
-        previous = preceding[-1] if preceding else None
-        if isinstance(previous, ToolActivityGroup) and previous.operation == name:
-            group = previous
-            await group.add_leaf(card, label + " · Running")
-        else:
-            group = ToolActivityGroup(name, card, label)
-            await chat.mount(group)
-        chat.follow_tail()
-        token = _tool_display_context.set((self, body, notes))
+        group = None
+        chat = None
+        token = None
+        if self._lane_on_screen():
+            self._dismiss_idle()
+            chat = self.query_one(ChatArea)
+            preceding = [child for child in chat.children if child is not chat._tail
+                         and not child.has_class("tool-receipt")]
+            previous = preceding[-1] if preceding else None
+            if isinstance(previous, ToolActivityGroup) and previous.operation == name:
+                group = previous
+                await group.add_leaf(card, label + " · Running")
+            else:
+                group = ToolActivityGroup(name, card, label)
+                await chat.mount(group)
+            chat.follow_tail()
+            token = _tool_display_context.set((self, body, notes))
         state = "Failed"
         try:
             result = await self._dispatch_chat_tool_impl(call)
@@ -103,9 +107,11 @@ class ToolMixin:
         finally:
             elapsed = _elapsed_label(_time.monotonic() - started_at)
             self._append(f"Tool duration · {label} · {elapsed}", MUTED)
-            _tool_display_context.reset(token)
-            group.finish_leaf(card, f"{label} · {state} · {elapsed}")
-            chat.follow_tail()
+            if token is not None:
+                _tool_display_context.reset(token)
+            if group is not None and card.is_mounted and self._lane_on_screen():
+                group.finish_leaf(card, f"{label} · {state} · {elapsed}")
+                self.query_one(ChatArea).follow_tail()
 
     async def _dispatch_chat_tool_impl(self, call: dict) -> tuple[str, str]:
         """Route one provider function call through the canonical local read owner."""
@@ -477,8 +483,8 @@ class ToolMixin:
 
     def _show_agent_tasks(self, tasks: list[dict[str, str]]) -> None:
         """Replace the on-screen task list; an empty or all-done list collapses after a turn."""
-        self._agent_tasks = tasks
-        if not self.is_mounted:
+        self._agent_tasks = list(tasks)
+        if not self._lane_on_screen() or not self.is_mounted:
             return
         panel = self.query_one("#agent-tasks", Static)
         panel.display = bool(tasks)

@@ -785,7 +785,6 @@ class ProviderMixin:
                      for item in APP_SHORTCUTS]
         shortcuts.extend([
             ("ENTER          Send message / activate highlighted item", "info"),
-            ("CTRL+ENTER     Alternate send shortcut", "info"),
             ("SHIFT+ENTER    Insert a newline in the composer", "info"),
             ("ESCAPE         Close popup / cancel current operation", "info"),
             ("Session list   Type to search; arrows select; Enter resumes", "info"),
