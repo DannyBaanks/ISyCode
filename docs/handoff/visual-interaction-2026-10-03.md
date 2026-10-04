@@ -34,3 +34,7 @@ Verificación completa final: **1296 passed, 6 skipped, 8 warnings en 219.73s**.
 Sessions: primer clic previsualiza, segundo clic en la misma fila abre. Flechas seleccionan y actualizan detalles; Enter abre. Al abrir Sessions se enfoca la lista.
 
 Verificación del ajuste final de navegación: 27 passed en 14.87s (`test_work_list` y `test_action_coverage`).
+
+Corrección posterior: Enter/Space en Thinking recorre título de una línea → vista previa de hasta dos líneas → texto completo → título de una línea. Textos cortos alternan entre título y contenido completo. El triángulo conserva ocultar/mostrar y la cinta opcional sigue separada.
+
+Regresión Thinking verificada: 29 passed en 22.65s (`test_focused_box_expansion`, `test_chat_sequence`, `test_action_coverage`).

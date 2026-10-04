@@ -26,6 +26,9 @@ def test_thinking_preview_full_and_hidden_states_are_local_to_focus(tmp_path, mo
             assert 'Fourth line' in plain_text(block._body)
             assert 'collapse' in str(block.border_subtitle)
             await pilot.press('space')
+            assert block.collapsed
+            await pilot.press('space')
+            assert not block.collapsed
             assert plain_text(block._body) == 'First line\nSecond line'
             block.collapse_to(6)
             await pilot.pause()
@@ -35,6 +38,8 @@ def test_thinking_preview_full_and_hidden_states_are_local_to_focus(tmp_path, mo
             await pilot.press('enter')
             await pilot.pause()
             assert not block.collapsed
+            assert plain_text(block._body) == 'First line\nSecond line'
+            await pilot.press('enter')
             assert 'Fourth line' in plain_text(block._body)
             rail = app.query_one('#rail-lsp')
             initial = rail.collapsed
@@ -74,4 +79,30 @@ def test_completed_marquee_is_optional_bounces_and_setting_is_saved(tmp_path, mo
             from isycode.user_defaults import UserDefaultsStore
             assert UserDefaultsStore().load()['compact_marquee'] is True
             assert block._marquee_enabled
+    asyncio.run(scenario())
+
+
+def test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            block, _ = app._mount_thought()
+            await pilot.pause()
+            block.set_text("One\nTwo\nThree\nFour")
+            block.collapse_to(6)
+            block.query_one(BoxTitle).focus()
+            for key in ("space", "enter"):
+                await pilot.press(key)
+                await pilot.pause()
+                assert not block.collapsed and not block._expanded
+                assert plain_text(block._body) == "One\nTwo"
+                await pilot.press(key)
+                await pilot.pause()
+                assert not block.collapsed and block._expanded
+                assert "Four" in plain_text(block._body)
+                await pilot.press(key)
+                await pilot.pause()
+                assert block.collapsed and not block._expanded
+                assert "thought for 6s     One Two Three Four" in str(block.title)
     asyncio.run(scenario())

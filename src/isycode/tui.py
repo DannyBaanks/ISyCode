@@ -666,6 +666,7 @@ class ThoughtBlock(Collapsible):
         else:
             lines = text.split("\n")
         more = len(lines) > 2
+        self._preview_more = more
         if not self._expanded and more:
             text = Text("\n").join(lines[:2])
         if self.collapsed:
@@ -683,11 +684,15 @@ class ThoughtBlock(Collapsible):
         self._paint_preview()
 
     def action_toggle_box(self) -> None:
+        # Cycle through every view: title -> preview -> full -> title.
         if self.collapsed:
-            self._expanded = True
+            self._expanded = False
             self.collapsed = False
+        elif self._expanded or not getattr(self, "_preview_more", False):
+            self._expanded = False
+            self.collapsed = True
         else:
-            self._expanded = not self._expanded
+            self._expanded = True
         self._paint_preview()
 
     def on_resize(self) -> None:
@@ -709,6 +714,7 @@ class ThoughtBlock(Collapsible):
         if self._elapsed_timer is not None:
             self._elapsed_timer.stop()
             self._elapsed_timer = None
+        self._expanded = False
         self.collapsed = True
         self._paint_preview()
 
