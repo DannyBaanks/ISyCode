@@ -1,6 +1,6 @@
-"""The chat turn. The loop moves whole; it is not rewritten here.
+"""The chat turn. Prepare, stream, and close are nested in _run_chat.
 
-Moved verbatim from tui.py. TUIApp inherits this mixin.
+The phases keep the same statements. TUIApp inherits this mixin.
 """
 from __future__ import annotations
 
@@ -183,7 +183,16 @@ class ChatMixin:
         self._chat_turn_task = asyncio.current_task()
         block = None
         t0 = _time.monotonic()
-        try:
+        # None until the stream stores a trial. Absence used to skip the restore; None does too.
+        steer_trial = None
+        if False:
+            # Bind names the phases share. This does not run, so a read before
+            # the real assignment still raises UnboundLocalError.
+            chat_tools = command_active = messages = notes = None
+            provider = provider_supports_tools = thought_started = tools_active = None
+
+        async def _prepare_chat_tools() -> None:
+            nonlocal chat_tools, command_active, messages, notes, provider_supports_tools, text, tools_active
             if self._agent_context and self._agent_context.get("path") == "AGENTS.md":
                 await self._load_project_context()
             text = await self._expand_mentions(text)
@@ -351,6 +360,9 @@ class ChatMixin:
                         "END USER-INJECTED AGENT CONTEXT"
                     ),
                 })
+
+        async def _consume_chat_stream() -> None:
+            nonlocal completed, messages, provider, steer_trial, thought_started
             chat = self.query_one(ChatArea)
             reason_buf: list[str] = []
             content_buf: list[str] = []
@@ -651,22 +663,10 @@ class ChatMixin:
                 self._append(
                     "  (the provider ended the response during reasoning; its endpoint may have "
                     "reached its own output or context limit)", YELLOW)
-        except ProviderError as e:
-            if "[IMAGE#" in text:
-                from isycode.provider_errors import classify_provider_error
-                if classify_provider_error(e)["error_kind"] == "IMAGES":
-                    from isycode.image_attachments import record_image_result
-                    record_image_result(provider.name, provider.model, False)
-            if self._history and self._history[-1] == {"role": "user", "content": text}:
-                self._history.pop()
-            self._append(f"  {self._provider_failure(e, 'Chat')}", RED)
-        except Exception as e:
-            if self._history and self._history[-1] == {"role": "user", "content": text}:
-                self._history.pop()
-            self._append(
-                f"  Chat failed ({type(e).__name__}). The request was not completed.", RED)
-        finally:
-            if locals().get("steer_trial") is not None:
+
+        def _close_chat_turn() -> None:
+            # The trial lives on the turn. locals() in this function would not see it.
+            if steer_trial is not None:
                 self._history[:] = steer_trial["history"]
                 self._return_steering_to_queue(steer_trial["instructions"])
             if not completed:
@@ -695,6 +695,26 @@ class ChatMixin:
             if block is not None:
                 block.collapse_to(_time.monotonic() - thought_started)
                 self.query_one(ChatArea).follow_tail()
+
+        try:
+            await _prepare_chat_tools()
+            await _consume_chat_stream()
+        except ProviderError as e:
+            if "[IMAGE#" in text:
+                from isycode.provider_errors import classify_provider_error
+                if classify_provider_error(e)["error_kind"] == "IMAGES":
+                    from isycode.image_attachments import record_image_result
+                    record_image_result(provider.name, provider.model, False)
+            if self._history and self._history[-1] == {"role": "user", "content": text}:
+                self._history.pop()
+            self._append(f"  {self._provider_failure(e, 'Chat')}", RED)
+        except Exception as e:
+            if self._history and self._history[-1] == {"role": "user", "content": text}:
+                self._history.pop()
+            self._append(
+                f"  Chat failed ({type(e).__name__}). The request was not completed.", RED)
+        finally:
+            _close_chat_turn()
 
     def _prepare_retry(self) -> None:
         """Prepare a draft; never replay provider requests or tool effects automatically."""
