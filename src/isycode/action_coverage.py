@@ -325,32 +325,37 @@ def owner_coverage_report() -> dict[str, Any]:
     }
 
 
-def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, Any]]:
-    """Find direct calls from TUIApp and screens it actually constructs.
+def _is_screen_class(node: ast.ClassDef) -> bool:
+    return any(_ast_name(base.value if isinstance(base, ast.Subscript) else base)
+               .endswith(("Screen", "ModalScreen")) for base in node.bases)
 
-    Low-level Mobile/Bridge/session APIs are intentionally present for isolated
-    adapters and tests. They count as a Secure bypass only if a TUI entrypoint
-    can reach them without going through a registered owner.
+
+def _issues_from_trees(trees: list[ast.AST]) -> list[dict[str, Any]]:
+    """Walk TUIApp, its mixins, and screens those methods construct.
+
+    Screen classes may live in another module. A source string passed to
+    ``secure_tui_direct_api_bypasses`` stays one tree, which is what the
+    single-file audits construct.
     """
-    source_path = Path(__file__).resolve().parent / "tui.py"
-    try:
-        contents = (source_path.read_text(encoding="utf-8") if source is None else source)
-        tree = ast.parse(contents, filename=str(source_path))
-    except (OSError, UnicodeError, SyntaxError, TypeError) as exc:
-        return [{"callsite": str(source_path), "reason": f"TUI source unavailable ({type(exc).__name__})"}]
-    app = next((node for node in tree.body
-                if isinstance(node, ast.ClassDef) and node.name == "TUIApp"), None)
+    classes: dict[str, ast.ClassDef] = {}
+    screens: dict[str, ast.ClassDef] = {}
+    for tree in trees:
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            classes[node.name] = node
+            if _is_screen_class(node):
+                screens[node.name] = node
+    app = classes.get("TUIApp")
     if app is None:
         return [{"callsite": "TUIApp", "reason": "Secure entrypoint class is missing"}]
 
-    screens = {}
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        if any(_ast_name(base.value if isinstance(base, ast.Subscript) else base)
-               .endswith(("Screen", "ModalScreen")) for base in node.bases):
-            screens[node.name] = node
     reachable_nodes: list[tuple[str, ast.AST]] = [("TUIApp", app)]
+    for base in app.bases:
+        base_name = _ast_name(base.value if isinstance(base, ast.Subscript) else base)
+        base_class = classes.get(base_name)
+        if base_class is not None and base_class is not app:
+            reachable_nodes.append((base_name, base_class))
     reachable_screens: set[str] = set()
     cursor = 0
     while cursor < len(reachable_nodes):
@@ -416,6 +421,36 @@ def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, 
                     "reason": "direct effect API call is reachable from a Secure TUI surface",
                 })
     return sorted(issues, key=lambda item: item["callsite"])
+
+
+def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, Any]]:
+    """Find direct calls from TUIApp and screens it actually constructs.
+
+    Low-level Mobile/Bridge/session APIs are intentionally present for isolated
+    adapters and tests. They count as a Secure bypass only if a TUI entrypoint
+    can reach them without going through a registered owner.
+
+    With no source string, the walk includes ``tui.py`` and the ``tui_*.py``
+    modules the app was split into. A source string is parsed alone so the
+    single-file audits keep their contract.
+    """
+    source_path = Path(__file__).resolve().parent / "tui.py"
+    try:
+        if source is None:
+            package = source_path.parent
+            paths = [source_path, *sorted(package.glob("tui_*.py"))]
+            trees = [ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+                     for path in paths]
+        else:
+            trees = [ast.parse(source, filename=str(source_path))]
+    except (OSError, UnicodeError, SyntaxError, TypeError) as exc:
+        return [{"callsite": str(source_path), "reason": f"TUI source unavailable ({type(exc).__name__})"}]
+    return _issues_from_trees(trees)
+
+
+def secure_tui_direct_api_bypasses_from_sources(sources: list[str]) -> list[dict[str, Any]]:
+    """Audit several source strings as one TUI entrypoint."""
+    return _issues_from_trees([ast.parse(source) for source in sources])
 
 
 def _looks_like_sensitive_receiver(receiver: str) -> bool:

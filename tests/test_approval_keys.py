@@ -9,7 +9,7 @@ from textual.app import App
 from isycode.command_runner import CommandPreview
 from isycode.security import ActionRequest
 
-SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
+SURFACE = Path(__file__).resolve().parents[1] / "src" / "isycode"
 
 
 def _screens(tmp_path):
@@ -44,9 +44,12 @@ def test_keys_decide_every_approval_screen(tmp_path, keys, expected):
 
 
 def test_every_boolean_approval_screen_uses_the_shared_keys():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    bases = {node.name: [ast.unparse(base) for base in node.bases]
-             for node in module.body if isinstance(node, ast.ClassDef)}
+    bases = {}
+    for path in sorted(SURFACE.glob("tui*.py")):
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            if isinstance(node, ast.ClassDef):
+                bases[node.name] = [ast.unparse(base) for base in node.bases]
     approvals = [name for name in ("WriteApprovalScreen", "CommandApprovalScreen",
                                    "CommitApprovalScreen", "LocalMCPConfirmScreen",
                                    "MCPInvocationConfirmScreen", "TailscaleConfirmScreen",

@@ -90,6 +90,24 @@ class TUIApp:
                for item in issues)
 
 
+def test_secure_tui_direct_api_audit_follows_screens_defined_in_another_module():
+    app = '''
+class TUIApp:
+    def action_open(self):
+        self.push_screen(OuterScreen())
+'''
+    screen = '''
+class ModalScreen: pass
+class OuterScreen(ModalScreen):
+    def on_mount(self):
+        self.bridge_client.heartbeat()
+'''
+
+    issues = action_coverage.secure_tui_direct_api_bypasses_from_sources([app, screen])
+
+    assert any(item["callsite"].endswith("self.bridge_client.heartbeat") for item in issues)
+
+
 def test_secure_tui_direct_api_audit_fails_closed_for_unparseable_source():
     issues = action_coverage.secure_tui_direct_api_bypasses("class TUIApp(:")
 
