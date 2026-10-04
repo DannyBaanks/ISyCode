@@ -60,6 +60,8 @@ Si el modelo todavía está respondiendo, **Enter** en un mensaje normal lo deja
 
 **Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Enter o Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
 
+Seleccionar texto con el ratón lo copia si en Authority está activo *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. El 2026-10-04, en este escritorio con X11 y `xclip`, la copia devolvió `ALLOW` y la lectura de vuelta coincidió. El journal guarda el tamaño, no el texto.
+
 La Idea Box ocupa el 60% del ancho, encima del prompt. Mientras hay un turno, el gato de la izquierda camina; al terminar vuelve a dormir y la frase de estado queda en su última fila, sin tapar el dibujo. La barra lateral usa secciones plegables en cajas separadas.
 
 Las respuestas del asistente y de Roundtrip se muestran con parser Markdown de terminal: `#`/`##` crean encabezados, `**texto**` se resalta en negritas, las listas conservan su estructura, los acentos graves simples marcan código en línea y los bloques con tres acentos graves reciben resaltado de sintaxis. **Esc** cancela la respuesta activa y descarta su salida parcial; si no hay generación activa, vuelve/cierra el menú o enfoca el composer sin borrar el borrador.

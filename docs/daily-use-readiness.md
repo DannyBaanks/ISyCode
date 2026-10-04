@@ -83,8 +83,10 @@ its concrete model id is NOT_DEMONSTRATED. Evidence:
 
 Classic includes bounded workspace read/edit, saved-key/session access, Git review,
 reviewed commits and exact-executable sandboxed commands when Bubblewrap/seccomp
-are available. Every command, edit, delete/move and commit still requires its own
-approval. Security begins with grants off; use individual grants or the reviewed
+are available. Until the folder is trusted for quiet Classic, each edit and each
+sandboxed command still asks. After that trust, recoverable edits and sandboxed
+commands stop asking one by one; commit, secrets, authority, undo and MCP still
+ask. Security begins with grants off; use individual grants or the reviewed
 coding-tool bundle. No mode enables a free shell or offers an unsandboxed fallback.
 
 1. Use `/context` or Context → Load workspace AGENTS.md to load project guidance.
@@ -197,17 +199,22 @@ suite run.
 
 ## Still outstanding
 
-- The user chose offline validation. A real provider turn with tool calls,
-  authentication failures and quota behavior remains unverified in this environment.
-- Gateway public-origin and approved semantic-query witnesses remain separate
-  remote milestones. No Gateway write or Bridge daemon was started.
+- Gateway live semantic operation, with a local grant, remote scope and matching
+  workspace id: NOT_DEMONSTRATED. No Gateway write or Bridge daemon was started.
+- Tailscale tailnet connectivity, Mobile Host remote sessions/streaming/approvals,
+  Windows paths, a live local MCP server and native Claude remain NOT_DEMONSTRATED.
+  Their owners and offline tests stay in place.
+- The 2026-10-04 clipboard witness is this X11 desktop and `xclip` only
+  (`docs/evidence/clipboard-witness-2026-10-04.json`). Wayland and Windows clipboard
+  tools were not run.
 - Multi-hour performance/memory validation and interactive terminal/accessibility
   review remain release acceptance work; the recorded local soak is one bounded
   scenario, not a broad performance claim.
-- MCP remote transports/OAuth, additional LSP features, Mobile Host runtime
-  sessions, Bridge and L1 remain optional follow-up integrations.
-- Verified monetary cost estimates, automatic retry policies and portable file/clipboard
-  transfer UI remain future work. Existing ownership/security gates stay in force.
+- MCP remote transports/OAuth, additional LSP features, product Bridge inside
+  Secure and OpenISy L0/L1 remain follow-up integrations. Web search does not exist;
+  webfetch reads one public HTTPS page and does not search.
+- Verified monetary cost estimates and automatic retry policies remain future work.
+  Existing ownership/security gates stay in force.
 
 ## Verification record (2026-09-30)
 

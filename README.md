@@ -339,7 +339,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - Diagnósticos tras editar: servidor LSP simulado, no Pyright.
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
 - MCP local: servidor MCP simulado.
-- Portapapeles: herramienta de copia simulada en las pruebas; falta confirmarlo en el escritorio real (Wayland/X11).
+- Portapapeles: las pruebas unitarias siguen usando una herramienta simulada. El 2026-10-04, en este escritorio X11, `ClipboardOwner.copy` pasó por el grant y por `xclip`: decisión ALLOW, la lectura de vuelta coincidió y el portapapeles anterior se restauró. Evidencia: `docs/evidence/clipboard-witness-2026-10-04.json`. El journal guarda tamaño y digest, no el texto.
 - Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
 
 **Parcial o pendiente:**
@@ -391,7 +391,7 @@ Lo poquito que queda, en orden:
 2. **Rail de IsySentinel:** que el panel lateral muestre en vivo qué decidió Sentinel (ALLOW/DENY) y qué permisos están activos, junto a MCP/LSP.
 3. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
 4. **Ediciones tolerantes a espacios:** que `workspace_edit` encuentre el fragmento aunque cambien espacios o sangría, mostrando siempre el diff exacto antes de aprobar.
-5. **Validar en real** lo que sigue en doble de prueba: portapapeles en el escritorio, MCP local, Claude nativo y Windows. El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
+5. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
 6. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
