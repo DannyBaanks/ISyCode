@@ -71,11 +71,13 @@ CONNECT tunnels on Python 3.10+. `NO_PROXY` is
 respected for local endpoints. Cancellation closes the proxy connection, and
 plaintext received after CONNECT headers is rejected before TLS.
 
-A real minimal OpenAI request was attempted on 2026-09-30 after the user configured
+A real minimal OpenAI API-key request was attempted on 2026-09-30 after the user configured
 a key and allowed `api.openai.com`. It reached the endpoint, which returned HTTP
-429 (`insufficient_quota`, `credit_balance_exhausted`). No successful live chat or
-live coding workflow is claimed. ChatGPT subscription login is a separate
-integration from API-key billing and is not implemented by this increment.
+429 (`insufficient_quota`, `credit_balance_exhausted`). That attempt is not a successful
+API-key chat. On 2026-10-04 a separate ChatGPT subscription roundtrip did complete
+(NVIDIA → subscription → NVIDIA, `head_seq=4`). The subscription participant was `auto`;
+its concrete model id is NOT_DEMONSTRATED. Evidence:
+`docs/handoff/tools-catalog-2026-10-03.md`. Subscription login is not API-key billing.
 
 ## Work on code
 

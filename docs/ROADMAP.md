@@ -8,6 +8,16 @@ Estado de este documento: **plan de trabajo**, no declaración de que las integr
 
 **Estrategia de producto (2026-09-28):** primero cerrar **ISyCode Secure**, con capacidades pequeñas, tipadas y deny-by-default. Después abrir una línea **ISyCode Full** para ampliar los permisos que el usuario concede. Full no es una omisión de Sentinel ni una elevación implícita: mantiene Workspace Authority, owners, approvals para efectos sensibles, límites y recibos; agrega adapters/acciones una por una. No se porta ni se copia la implementación de otra CLI.
 
+**Sonda Pi (2026-10-03):** el CLI local `pi` 1.0.0 se probó sin abrir su TUI ni llamar al modelo. Lo que conviene adaptar, y lo que no se copia, está en M17. No sustituye ISySentinel. El diseño previo de imágenes y catálogo por capacidad sigue en [docs/pi-inspired-capabilities.md](pi-inspired-capabilities.md); M17 no lo reemplaza.
+
+**Sonda Hermes (2026-10-03):** Hermes Agent v0.21.5+4712.gb9f6ab2 en este host, 1520 commits detrás de upstream. Se probaron subcomandos de solo lectura; no se corrió `update`, `pause`, `-z` ni `security audit`. Lo adaptable está en M18. No sustituye ISySentinel ni reabre lo que M17 ya cubre (cola, compact, skills perezosas, exposición de tools).
+
+**Sonda documental Copilot CLI (2026-10-03):** revisé la ayuda local de Copilot CLI 1.0.91 y la guía oficial. M19 registra patrones de interfaz e integraciones que vale la pena evaluar; no es una prueba de integraciones vivas ni una propuesta de copiar su implementación. ISySentinel y los execution owners siguen siendo la frontera de ISyCode.
+
+**Sonda viva Crush (2026-10-03):** Crush v0.96.1 corre en este host; se auditó desde dentro de una sesión real y se barren sus subcomandos con config/datos aislados y providers deshabilitados. Lo medido y lo adaptable está en M20; no sustituye ISySentinel. Evidencia cruda y SHA-256 en [product/crush-live-audit-2026-10-03.md](product/crush-live-audit-2026-10-03.md).
+
+**Sonda viva Qwen Code (2026-10-03):** Qwen Code 0.24.7 corre en este host y se auditó desde dentro de una sesión real: barrido del CLI (11 subcomandos vivos + `auth` marcado **(removed)**), probe headless acotado con exit 0 y un fail-closed medido con mensaje accionable, y las tools internas ejercidas en vivo (cron con caducidad, monitor con presupuesto de eventos, subagente en background, skills, memoria). Lo medido y lo adaptable está en M21; no sustituye ISySentinel ni reabre lo que M17–M20 ya cubren (hooks tipados, CLI `--json` de solo lectura, transparencia de config, jobs de fondo).
+
 
 **Incremento de uso diario (2026-09-30):** implementados recuperación sin replay automático, sesiones con borradores/metadatos portables y gestión mediante owners, contexto AGENTS.md con recibo, diagnóstico local, `/check` explícito y pruebas headless del flujo leer/editar/test/diff. [Evidencia y pendientes](daily-use-readiness.md): esto no cierra todo M16 ni acredita un proveedor real, Gateway, accesibilidad o estabilidad durante horas. El [soak local del 2026-10-01](long-session-soak-2026-10-01.md) pasó 75 ciclos con herramientas reales y dos reinicios en unos 11 minutos, con proveedor simulado; encontró y corrigió una carrera al arrancar comandos cortos.
 
@@ -552,6 +562,160 @@ Reglas de frontera:
 - [x] Witnesses offline de habilitar, verificar y deshabilitar conservan otras rutas; smoke temporal de Settings mostró la opción de instalación sin crear `.isyroot`.
 - [ ] Verificar login/instalación en un equipo opt-in y acceso desde otro dispositivo del tailnet; confirmar rechazo desde fuera del tailnet y scopes independientes del Gateway. Estado actual: **NOT_DEMONSTRATED**; no se ejecutaron cambios reales en el equipo.
 
+### M17 — Superficies de Pi medidas, adaptadas (no es un port)
+
+**Estado (2026-10-03):** sonda de CLI hecha. Nada de esta lista está implementado por haber corrido Pi. No bloquea el checklist de release ni M16. Cualquier efecto nuevo sigue exigiendo owner, Authority, Sentinel, aprobación cuando aplique y recibo. No se copia el código ni la marca de Pi.
+
+**Qué se ejecutó.** Binario `/home/danny/.pi/agent/bin/pi`, paquete `@earendil-works/pi-coding-agent` 1.0.0. Settings de esta instalación: `theme=dark`, `tuiMode=regular`, sin paquetes (`pi list`). `pi mcp list` no tiene servidores. No se corrió `install`, `update`, `config`, `login` ni `print-api-key` / `print-bearer-token`.
+
+| Probe | Resultado medido |
+|---|---|
+| `--version`, `--help`, ayudas de `install`/`remove`/`update`/`list`/`config`/`auth`/`mcp` | Responden. Subcomandos reales: paquetes, auth, MCP. |
+| `--list-models` | 546 filas, 8 providers: openrouter 399, huggingface 76, radius 28, nvidia 19, openai-codex 9, github-copilot 6, meta 5, xai 4. Búsqueda inexistente: texto `No models matching` y exit 0. |
+| `--not-a-real-flag` | stderr `Unknown option`, exit 1. |
+| `auth check` sin provider | Error, no imprime secreto. |
+| `auth check --provider nvidia --json --no-refresh` | `status=ready`, `authType=api_key`. Sin valor de clave. |
+| `--mode json --no-session --offline` sin prompt | Una línea `{"type":"session","version":3,...}` y exit 0. |
+| `-p --no-session --offline` sin prompt | Exit 0 y stdout vacío. |
+| `-p --offline` con un prompt | No falla cerrado: 12 s sin stdout ni stderr; cortado por timeout (124). `--offline` solo declara cortar red de arranque. |
+| `--export` de una sesión existente | HTML con doctype. El archivo de prueba se borró. No se citó el contenido. |
+| `--mode rpc --no-session --offline --no-tools` | `get_state` success. Claves: `autoCompactionEnabled`, `followUpMode`, `isCompacting`, `isStreaming`, `messageCount`, `model`, `pendingMessageCount`, `sessionId`, `steeringMode`, `thinkingLevel`. Modelo por defecto de esta instalación: `openai-codex` / `gpt-6.1-sol`, thinking `medium`. Cerrar stdin termina con exit 0. No hay comando `shutdown`. |
+
+**No probado, y no se afirma:** TUI interactiva, compaction real contra un provider, codemode ejecutando tools, login MCP, themes, ni extensiones cargadas. Esta instalación no tiene paquetes Pi.
+
+**Ya existe en ISyCode; no reabrirlo como hueco.** `isycode -p` / `--json` usa los mismos owners que la TUI y, sin persona presente, solo ofrece tools de lectura que no piden aprobación. `isycode doctor` no llama a la red. `/compact` resume por `ProviderNetworkOwner`, pero hoy ignora el argumento. Fork crea otra conversación, no un árbol en el mismo archivo. `@path` y los comandos de `~/.config/isycode/commands` / `.isycode-commands` solo cambian texto y leen con grant. Las skills empaquetadas van con hash y sin scripts. El lector de harness Pi cuenta jsonl y omite `auth.json`; no importa el transcript.
+
+**No copiar.**
+
+- El project trust de Pi no es sandbox: su propia documentación dice que las tools corren con los permisos del proceso. `.isyroot` sigue siendo solo frontera, no un grant, y no se reemplaza por un "confiar en la carpeta".
+- Extensiones in-process, `pi install` de npm/git que ejecuta código, y `/share` que sube la sesión.
+- Un `--offline` que cuelga la llamada al modelo en silencio.
+- Codemode como atajo. Pi documenta que el script corre en QuickJS sin filesystem ni red, pero las tools sí salen, y un fallo no deshace las llamadas ya hechas.
+
+**Trabajo, en este orden:**
+
+- [ ] Cola visible, no envío silencioso. Pi separa steering (entra tras el turno actual) de follow-up (entra cuando el agente termina) y, al abortar, devuelve la cola al editor. ISyCode hoy conserva el borrador y no lo encola: conservarlo. Si se añade cola, tiene que verse y poder cancelarse. No es autoridad.
+- [ ] `/compact [instrucciones]` sin borrar el transcript. El resumen es una entrada nueva; el original queda. La llamada de resumen pasa por el mismo owner que el chat. Auto-compact queda apagado hasta que el usuario lo active. No copiar el umbral silencioso de Pi como default.
+- [ ] Árbol de sesión en el archivo privado: la rama activa es lo que ve el modelo; dejar una rama puede adjuntar un resumen, que también es una llamada aprobada. Cambiar de rama no repite efectos ni revive approvals. El fork actual puede seguir existiendo como copia separada.
+- [ ] Un contrato de eventos del bucle (`turn`, tool, cola, `agent_end` distinto de `agent_settled`) compartido por TUI, `isycode -p --json` y Mobile Host. Stdout reservado a records; diagnóstico en stderr. No añadir un RPC que ejecute tools fuera de owners.
+- [ ] Perfil de invocación que solo resta tools (`--tools` / `--no-tools` o equivalente de sesión). Nunca amplía grants. El headless read-only ya es el caso estrecho; generalizarlo y mostrarlo.
+- [ ] Thinking level visible y separado del id de modelo, limitado a lo que el modelo acepta. No es un grant.
+- [ ] Skills perezosas: anunciar nombre y descripción; cargar el Markdown solo al pedirlas. Descubrir skills de usuario como texto, con límite de tamaño, sin ejecutar scripts del skill. No adoptar `allowed-tools` de Agent Skills como pre-aprobación.
+- [ ] Exposición `direct` / `deferred` / `hidden` para tools ya concedidas, para no meter todo el catálogo MCP en el prompt. `deferred` no significa invocable sin approval. Medir tokens antes/después. El flag medido en Pi es `pi mcp add --exposure`.
+- [ ] Export HTML local para revisar una sesión, con aviso de que puede contener argumentos de tools. Sin upload.
+- [ ] Flag offline que rechace la llamada al provider con error visible. No imitar el cuelgue medido de Pi.
+- [ ] Catálogo por tipo (chat / imagen / clasificador). Que el modelo de chat acepte imágenes no habilita un owner de generación. Esa entrega sigue en `docs/pi-inspired-capabilities.md`.
+- [ ] Codemode, paquetes ejecutables, modelos virtuales y `/share` quedan fuera de M17. Si más adelante hay un script que llama tools, cada call es un `ActionRequest` y el recibo debe decir qué sí ocurrió antes de un fallo.
+
+**Criterios de aceptación:**
+
+- Ningún ítem de M17 hace que una tool aparezca como ejecutable solo porque Pi la tiene o porque el catálogo la lista.
+- Un prompt con offline no cuelga: error visible y exit distinto de 0.
+- Compactar o cambiar de rama no borra mensajes ni reejecuta un paso que ya tiene recibo.
+- `isycode -p --json` y la TUI pueden reconstruir el mismo turno desde el contrato de eventos, sin un segundo runtime.
+- Un perfil `--no-tools` no puede ser ensanchado por una skill, un MCP descubierto o un paquete.
+
+**No incluye:** portar extensiones TypeScript, el sandbox QuickJS, el visor público de sesiones, ni tratar el trust de carpeta como seguridad.
+
+### M18 — Superficies de Hermes medidas, adaptadas (no es un port)
+
+**Estado (2026-10-03):** sonda de CLI hecha. Nada de esta lista está implementado por haber corrido Hermes. No bloquea el checklist de release, M16 ni M17. Cualquier efecto nuevo sigue exigiendo owner, Authority, Sentinel, aprobación cuando aplique y recibo. No se copia el código ni la marca de Hermes. Esta instalación no es HEAD: `hermes --version` dijo 1520 commits detrás.
+
+**Qué se ejecutó.** Binario `/home/danny/.local/bin/hermes`, install git en `~/.hermes/hermes-agent`, Python 3.14.7. No se escribió `config.yaml`, no se arrancó gateway/dashboard/desktop, no se mandó `update` ni `pause`.
+
+| Probe | Resultado medido |
+|---|---|
+| `--version`, `--help`, `status --all`, `doctor`, `config check` | Responden. Modelo persistido de esta instalación: `glm-5.1` / Ollama Cloud. El override de una sesión no es el default. xAI OAuth logueado. Gateway systemd instalado y parado. |
+| `skills list` | 64 filas con status `enabled`. |
+| `tools list` | En cli: web, browser, terminal, file, code_execution, vision, image_gen, tts, skills, todo, memory, session_search, clarify, delegation, cronjob y computer_use enabled. Kanban, video, stt y x_search disabled. |
+| `profile list` | Solo `default`. Gateway de ese perfil: stopped. |
+| `memory status` | Inyección built-in on. Sin provider externo. `USER.md` existe. `MEMORY.md` aún no. |
+| `cron list`, `mcp list`, `fallback list`, `hooks list` | Vacíos. |
+| `sessions stats` | 22 sesiones, 2038 mensajes, 14.1 MB. FTS presente (`messages_fts`). |
+| `insights` | 30 días: 22 sesiones, ~$7.47 estimado, 7 incluidas por suscripción, 10 sin precio. |
+| `prompt-size` | Corrido con cwd ISyCo, no ISyCode. Aviso real: `AGENTS.md` 49701 chars truncado a 49152. System prompt 68687 B. Schemas de 25 tools: 44941 B. Índice de `claude-code`: ~70 B; su `SKILL.md` en disco: 35175 B. |
+| `curator status` | Enabled, 0 runs, archiva a los 30 días sin uso, no auto-borra, no toca bundled. 1 skill agent-created. |
+| `kanban stats` | Todos los estados en 0. `errors.log` igual muestra ticks de dispatch limitados por memoria: el dispatcher ha corrido; el tablero no tiene tareas. |
+| `checkpoints status` | 0 B. |
+| `approvals suggest` | Sin candidatos en 90 días. No aplicó nada. |
+| `approvals test -- rm -rf ./build` | `ask-approval`, exit 2, regla `recursive delete`. No ejecutó ni persistió. |
+| `verify --detect-only --json` sobre ISyCode | Receta Python: `pip install -e .`, test `pytest`. No corrió pytest ni escribió manifiesto. |
+| `isycode doctor --json` | Comparación, no es Hermes. `network_tested: false`. Reporta `textual` 8.2.8, igual que `pyproject.toml`. La prosa de M16 que fija Textual en 1.0.0 no describe este launcher. |
+
+**No probado, y no se afirma:** TUI/desktop, `hermes -z`, `hermes pause`/`resume`, `hermes security audit`, failover real, un cron que entregue, un kanban con tareas, ni que una feature de la docs upstream exista en este binario si el CLI local no la mostró.
+
+**Ya existe en ISyCode; no reabrirlo como hueco.** `isycode doctor` ya es local y declara que no probó la red. El vault no imprime secretos. `Esc` cancela el stream. M17 ya cubre cola visible, `/compact` sin borrar el transcript, skills perezosas y exposición `deferred`. La medición de `prompt-size` apoya esos ítems de M17; no los duplica. Roundtrip ya es el segundo modelo, con gate; Mixture-of-Agents no lo sustituye.
+
+**No copiar.**
+
+- El gateway de 21 mensajerías, pets, skins, computer-use y el proxy OpenAI no entran a Secure. Un mensajero, si alguna vez existe, es cliente de Mobile Host. No es autoridad.
+- `/yolo`, importar allowlists ajenas como grants, y shell hooks libres. El consentimiento de primer uso de Hermes no basta: en ISyCode un hook sería una acción tipada o no existe.
+- Worktree como frontera de seguridad. El roadmap Classic ya lo rechazó. La disciplina de no borrar trabajo sucio ya es política de ISyCo, no una feature nueva.
+- Auto-update, y escribir un manifiesto (`.hermes/environment.json` o equivalente) dentro del checkout del usuario.
+- Tratar una skill, una memoria o un perfil como permiso.
+
+**Trabajo, en este orden:**
+
+- [ ] Presupuesto de contexto visible: bloques estable / contexto / volátil, y truncado con nombre de archivo y tope. Truncado no es un corte silencioso. Sirve para medir M17; no inyecta más contexto.
+- [ ] Veredicto dry-run de un comando: ALLOW / ASK / DENY, código de salida, regla que matcheó, sin ejecutar y sin persistir. El caso medido es exit 2 para borrado recursivo.
+- [ ] Propuestas de allowlist minadas del historial. Nunca se aplican solas. El usuario las acepta una a una como grants. Sin interruptor global de bypass.
+- [ ] Costo en tres cubos: estimado, incluido en suscripción, desconocido. Desconocido no se pinta como $0. Encaja en el presupuesto pendiente de M11.
+- [ ] Receta de proyecto detectada y mostrada. Ejecutarla solo con el owner de comando que ya exista y su grant. No escribir la receta dentro del repo.
+- [ ] Sentinel de pausa de despacho nuevo (Mobile, Bridge, programado). No inventa otro camino de cancelación: el turno en vuelo sigue el contrato que ya existe. `hermes pause` no se ejecutó en esta sonda.
+- [ ] Si hay procedimientos escritos por el agente: almacén distinto de la memoria de usuario, con tope, procedencia y curator que archiva y no auto-borra. Las skills empaquetadas no se tocan. Una skill no es un grant. Una escritura de memoria pendiente necesita aprobación. No reconstruye la autoridad de skills de OpenISy.
+- [ ] Delegación: el hijo devuelve un resumen; el padre verifica; el hijo no concede permisos ni cierra trabajo. No añadir un segundo tablero si Bridge puede expresar la dependencia. El kanban de este host estaba vacío: no es witness de multi-agente.
+- [ ] Cadena de fallback vacía hasta que el usuario la cree. Pool de credenciales con agotamiento visible y sin imprimir el secreto. No hay failover demostrado en esta sonda; `fallback list` estaba vacío.
+- [ ] Extender `isycode doctor`, no crear otro. Conservar `network_tested: false` salvo `/check`. Añadir aviso de update sin actualizar. Un audit de supply-chain, si se añade, es otro comando y pide red explícita. `hermes security audit` no se corrió.
+- [ ] Recibo de uso en el headless aunque la corrida falle, sin secretos. `isycode -p` ya existe (M17). `hermes -z` no se ejecutó.
+- [ ] Búsqueda de sesiones como lectura del almacén, no como resumen del modelo. La auditoría competitiva ya pide buscar; aquí solo se fija la forma. FTS de Hermes se vio en `doctor` (`messages_fts`), no se hizo una consulta de contenido.
+
+**Criterios de aceptación:**
+
+- Ningún ítem de M18 hace que una tool aparezca como ejecutable solo porque Hermes la tiene.
+- Un dry-run no escribe ni ejecuta. Su exit code es parte del contrato.
+- El truncado nombra archivo y tope, y no se presenta como contexto completo.
+- Un costo desconocido no se renderiza como cero.
+- Una receta detectada no se ejecuta y no se escribe en el checkout.
+- Una skill o una memoria no puede cambiar grants.
+- La pausa bloquea despacho nuevo y no marca como terminado un paso en vuelo sin recibo.
+
+**No incluye:** portar el gateway de mensajería, el merge LLM del curator, computer-use, pets, skins, ni el proxy OpenAI.
+
+### M19 — Patrones e integraciones de Copilot CLI evaluados (no es un port)
+
+**Estado (2026-10-03):** propuesta de evaluación basada en la ayuda local de Copilot CLI 1.0.91 y en la [guía oficial de uso](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-copilot-cli). Solo se consultó documentación/help: no se ejecutó una sesión Copilot contra un workspace, no se conectó un MCP ni se probó GitHub en vivo. M19 no habilita capacidades, no cambia gates ni bloquea M16/release.
+
+**Patrones observados que pueden mejorar ISyCode:**
+
+| Superficie de Copilot CLI | Qué conviene evaluar en ISyCode | Situación / frontera |
+|---|---|---|
+| Comandos `/`, ayuda y selector de agentes | Mantener un punto de descubrimiento rápido para comandos, roles y estado disponible. | La paleta `/` y `isycode cli` ya cubren parte; mejorar búsqueda/consistencia, no crear otro router. |
+| MCP, skills, plugins y hooks | Un ciclo visible por integración: descubierta → configurada → conectada → autorizada → utilizable, con estado real y origen. | M3/M14/M16; listar o cargar instrucciones no concede grants. Código de plugin/hook requiere owner y revisión propios; no ejecutar al descubrirlo. |
+| GitHub MCP preconfigurado | Explorar lectura opt-in de repos, issues, pull requests y checks desde el flujo diario. | Es un adapter remoto distinto de Git local; crear issue/comentar/merge/publicar son efectos separados, cada uno con alcance y confirmación remota/local apropiados. |
+| Agentes especializados, skills e instrucciones del repo | Mostrar quién ejecuta una tarea y qué contexto especializado recibió; permitir instrucciones reutilizables con procedencia visible. | Reutilizar M6A y el catálogo existente. Un agente, `AGENTS.md`, skill o perfil es contexto no confiable, nunca autoridad ni permiso heredado. |
+| Plan mode y aprobación de herramientas | Separar plan de ejecución y mantener visible el efecto exacto antes de cruzar una frontera. | `/plan` ya existe; evaluar un flujo plan-only dentro de la misma sesión. El plan no emite approvals ni ejecuta acciones. No copiar aprobaciones amplias por tipo de comando para toda la sesión. |
+| Archivos/imágenes adjuntos y referencias `@` | Reducir fricción al añadir contexto que el usuario elige explícitamente. | `@ruta` ya cubre adjuntos de texto. Imágenes/PDF solo se considerarían con soporte explícito del provider, lectura autorizada, límites y aviso de envío remoto. |
+| Teclas para encolar, detener, buscar historial y gestionar contexto | Favorecer control del turno sin perder el borrador y enseñar estado/costo/contexto. | La cola está en M6A/M17; contexto, compactación y uso ya tienen trabajo relacionado en M17/M18. No duplicar ni activar compactación automática por defecto. |
+
+**Trabajo candidato, sin duplicar lo existente:**
+
+- [ ] Mapear cada patrón a **ya existe / falta UX / falta adapter / fuera de alcance**, enlazando los hitos M3, M6A, M14, M16 y M17; no convertir el inventario de Copilot en backlog automático.
+- [ ] Diseñar un primer flujo GitHub MCP opt-in, preferentemente de lectura (issues, PRs y checks), con configuración explícita, estado de conexión real, scopes visibles y errores accionables. No arrancar servidores ni hacer llamadas de red al descubrirlos.
+- [ ] Separar visual y técnicamente las credenciales/scopes de GitHub de los grants locales. Cualquier escritura remota (issue, comentario, review, merge o publicación) requiere acción catalogada, owner, decisión local y validación remota aplicable; no hereda el permiso de lectura.
+- [ ] Evaluar perfiles de agentes y skills como metadatos/instrucciones con origen y alcance visibles; conservar la selección humana y la frontera de M6A. Nunca importar listas de tools/allowlists como grants.
+- [ ] Revisar consistencia de paleta `/`, ayuda contextual, plan/review y teclas de control frente a los patrones observados; conservar el rechazo por defecto, cancelación verificable y borrador recuperable de ISyCode.
+- [ ] Dejar plugins ejecutables, hooks arbitrarios, `/allow-all`, trust persistente sin alcance, acceso de red implícito y automatización que publique cambios fuera de alcance hasta que exista un diseño específico con owners y gates.
+
+**Criterios de aceptación si se implementa algún candidato:**
+
+- Descubrimiento nunca arranca un proceso, llama a la red ni otorga permiso; la UI distingue configurado, conectado, autorizado y utilizable.
+- Un issue/PR/check leído no se confunde con permiso para escribirlo; operaciones externas tienen request y receipt verificables y sus pruebas de doble se distinguen de pruebas vivas.
+- Un plan, rol, skill, perfil, plugin o hook no puede añadir grants ni evitar IsySentinel.
+- Archivos multimodales no salen del workspace/provider sin selección, grant de lectura y solicitud explícita de envío; provider sin soporte falla con explicación visible.
+- Colas/cancelación no descartan el borrador ni presentan un efecto incierto como completado.
+
+**No incluye:** portar comandos, código, TUI, agentes, plugins ni distribución de GitHub Copilot; habilitar un MCP de GitHub por defecto; conceder permisos amplios para emular la experiencia de aprobación de otra CLI.
+
 ### M19 — Lenguaje visual de tarjetas y auditorías pendientes
 
 **Origen (2026-10-03):** referencias visuales compartidas por Danny: cajas con
@@ -596,6 +760,120 @@ por la presencia de otra CLI. Deny explícito prevalece en todos los casos.
 expansión por teclado, búsqueda, estado final y foco de rechazo. La vista previa
 usa datos de demostración y no acredita comandos ni servicios reales.
 
+### M20 — Superficies de Crush medidas, adaptadas (no es un port)
+
+**Estado (2026-10-03):** sonda viva hecha: esta auditoría se corrió **dentro de una sesión Crush real** y el CLI se barrió con config/datos aislados (`CRUSH_GLOBAL_CONFIG`/`CRUSH_GLOBAL_DATA` + `--data-dir`, providers deshabilitados). Nada de esta lista está implementado por haber corrido Crush. No bloquea el checklist de release, M16 ni M17–M19. Cualquier efecto nuevo sigue exigiendo owner, Authority, Sentinel, aprobación cuando aplique y recibo. No se copia el código ni la marca de Charm/Crush. Evidencia y probes: [product/crush-live-audit-2026-10-03.md](product/crush-live-audit-2026-10-03.md). Nota de numeración: hoy existen dos secciones "M19" sin commitar (Copilot CLI y tarjetas visuales); esta sección usa M20 para no colisionar y ese duplicado sigue pendiente de renombrar.
+
+**Qué se ejecutó.** Binario `/home/danny/.local/node-v24.21.0-linux-x64/bin/crush`, npm `@charmland/crush`, `crush version v0.96.1`. Barrido aislado de los 12 subcomandos + `session list/last/show/rename/delete --json`, `completion` de 4 shells, flag inválido, `projects --json`, y `crush run` con providers deshabilitados. Desde la sesión real: LSP semántico, trabajos de fondo con ID/salida/kill, `question`, `todos`, `crush_info`, `crush_logs`, `jq` embebido, MCP (2 servers), skills con carga diferida. No se corrió `login`/`logout` (mutan credenciales), `update-providers` remoto ni la TUI.
+
+| Probe | Resultado medido |
+|---|---|
+| `--version`, `--help`, ayudas de 12 subcomandos + 5 de sesión | Responden, exit 0. `run` expone `--model`, `--reasoning-effort`, `--session`, `--continue`, `--quiet`, `--small-model`. |
+| `dirs` con config aislada | Imprime solo rutas aisladas + `/etc/crush`, exit 0: transparencia de qué config vive dónde. |
+| `models` con `disable_default_providers` | Fail-closed exit 1: `default providers are disabled and there are no custom providers`. Sin fallback. |
+| `session list/last/show --json`, `stats`, `logs` | Mismo fail-closed exit 1: requieren providers inicializados; no degradan a parcial. |
+| `crush run` con providers deshabilitados | Fail-closed exit 1 inmediato. **No cuelga** (contraste con el `pi --offline` de M17). |
+| `--not-a-real-flag` | `Unknown flag`, exit 1. |
+| `completion bash\|fish\|zsh\|powershell` | Scripts de 16093/9601/7712/10792 bytes, exit 0. |
+| `models gemini-3.8-flash` (config real) | 8 coincidencias `provider/model` en 8 providers, exit 0. |
+| En sesión: `lsp_definition`/`lsp_references` | Resuelven símbolo con archivo:línea y referencias con columna. |
+| En sesión: `lsp_call_hierarchy` | Timeout (context deadline) en este host: NOT_DEMONSTRATED. |
+| En sesión: background jobs | ID `00C`, `job_output` con wait, `job_kill` termina `010` al instante. |
+
+**No probado, y no se afirma:** TUI interactiva, llamada real a un modelo, `crush server` sirviendo, hooks ejecutándose en vivo, `stats` con datos reales, login/logout, auto-discovery de modelos locales, ni el workspace compartido con dos clientes.
+
+**Ya existe en ISyCode; no reabrirlo como hueco.** `ask_user` tipado y acotado (`src/isycode/agent_questions.py`; la respuesta es conversación, no autoridad). TasksPanel (`src/isycode/tui.py:745`). `isycode doctor` local con `network_tested:false`. LSP real con búsqueda de símbolos y diagnósticos post-edición (`src/isycode/lsp.py`). Ciclo de comandos con timeout/cancel/kill de grupo (`src/isycode/command_runner.py`). Headless `isycode -p --json` con exit codes. Sesiones con owners/export/import/fork. MCP local con aprobaciones. Skills empaquetadas con hash. Config con owner y precedencia. Checkpoints/undo. Uso/presupuesto (`src/isycode/usage.py`). M17 ya cubre cola, compact, árbol de sesión, contrato de eventos, skills perezosas, exposición de tools y offline; M18 ya cubre presupuesto de contexto, dry-run, costos, doctor extendido y búsqueda de sesiones; la nota fx de M19 ya reserva referencias paginadas.
+
+**No copiar.**
+
+- `--yolo` o cualquier interruptor global que silencie permisos.
+- `crushrc`: config en Bash que se ejecuta completa al cargar (la doc de Crush lo declara trusted code). En ISyCode la config sigue declarativa y versionada.
+- Auto-update de providers y login de plataformas (hyper/copilot/openai) como dependencia del producto.
+- MCP sessionless (pierde notificaciones list-changed) y workspace compartido implícito por cwd sin identidad propia.
+- Heredar el formato de hooks de Claude Code (envelope shallow-merge): ISyCode define su contrato tipado propio.
+
+**Trabajo, en este orden:**
+
+- [ ] Slot `small` tipado para trabajo barato (resúmenes, títulos, compact). Medido: hoy el compact reusa el modelo seleccionado (`src/isycode/tui.py:9569–9577`); Crush separa `large`/`small` y usa `small` para auto-summarize. Mismo `ProviderNetworkOwner`, receipts separados anotando el modelo, sin grants nuevos.
+- [ ] Superficie CLI de solo lectura con `--json`: `sessions list|last|show|rename|delete`, `models`, `stats` (uso agregado por proyecto) y `dirs` (archivos de config descubiertos y precedencia, sin secretos), vía los owners existentes (`session_owner`, providers, `usage`); `completion bash|zsh|fish`. Ningún comando ejecuta efectos; rename/delete de sesión pasan por `session_owner` con recibo. Complementa el apunte fx de M19 (inspección/resume/fork siguen en M7/M16).
+- [ ] Extender el owner LSP local con references, call hierarchy (in/out) y rename tipado con preview, diff y undo (los checkpoints ya existen). El Gateway ya da references/callers/callees read-only remotas; el hueco medido es local + rename. La paginación de referencias ya está reservada en M19: no duplicarla.
+- [ ] Hooks tipados pre-ejecución: registro explícito del usuario, entrada (tool, input) y veredicto ALLOW/DENY/REWRITE con contexto; deny-wins, halt sticky, agregación en orden de registro. Un hook es una acción tipada aprobada, nunca código libre ni formato heredado, y no puede aprobar lo que Sentinel niega.
+- [ ] Transparencia de configuración estilo `crush dirs`: comando local que lista la config descubierta (cwd→arriba + globales), la precedencia aplicada y qué se sobreescribe, sin secretos. Apoya el ítem C pendiente de M16. La config ejecutable queda explícitamente fuera.
+- [ ] Señales de sesión compartida en Mobile Host (M13): `busy` (turno en vuelo) y `attached` (clientes observando) en el selector de sesiones, con regla first-wins documentada para flags de sesión. Reusa heartbeat/SSE existentes; el cliente adjunto nunca gana autoridad. No es el multi-client sync completo de Crush.
+
+**Criterios de aceptación:**
+
+- Ningún ítem de M20 vuelve ejecutable una tool solo porque Crush la tiene o porque el catálogo la lista.
+- El slot `small` pasa por el mismo owner de red; su consumo se reporta separado y anotado con el modelo usado.
+- Ningún comando `--json` ejecuta efectos; rename/delete de sesión dejan recibo vía `session_owner`.
+- Un rename LSP muestra preview, es reversible con checkpoint y no bypassa Sentinel; call hierarchy degrada a búsqueda con aviso cuando el server no lo soporta.
+- Un hook no puede aprobar lo que Sentinel niega; deny-wins y halt sticky quedan probados con tests de agregación.
+- El comando de transparencia no imprime secretos; la config ejecutable no se introduce ni como experimento.
+- `busy`/`attached` no amplían scopes del Mobile Host; first-wins documentado y probado.
+
+**No incluye:** portar crushrc, el formato de hooks, la TUI ni el workspace compartido completo; `--yolo`; auto-update de providers; login de plataformas.
+
+### M21 — Superficies de Qwen Code medidas, adaptadas (no es un port)
+
+**Estado (2026-10-03):** sonda viva hecha: esta auditoría corrió **dentro de una sesión de Qwen Code real** (v0.24.7), así que además del barrido del CLI se ejercieron en vivo tools internas (cron, monitor, subagente en background, skills, memoria). Nada de esta lista está implementado por haber corrido Qwen. No bloquea el checklist de release ni M16–M20. Cualquier efecto nuevo sigue exigiendo owner, Authority, Sentinel, aprobación cuando aplique y recibo. No se copia el código ni la marca. Nota de numeración: M20 quedó tomado por la sonda Crush publicada mientras esta corría; esta sección usa M21 y el duplicado "M19" (Copilot CLI vs. tarjetas visuales) sigue pendiente de renombrar.
+
+**Qué se ejecutó.** Binario `/home/danny/.local/node-v24.21.0-linux-x64/bin/qwen` (npm `@qwen-code/qwen-code`), `qwen --version` → 0.24.7. `~/.qwen/`: `extensions/` (0 instaladas), `extension-store/`, `installation_id`, `output-language.md`, `projects/`, `sessions/`, `settings.json` (claves medidas: `env`, `model`, `modelProviders`, `permissions`, `providerMetadata`, `security`, `ui`), `skills/`, `tip_history.json`, `tmp/`, `usage/`, `usage_record.jsonl`. `qwen mcp list` → sin servidores. `qwen sessions ps` muestra la sesión del auditor con nombre, kind, PID y directorio reales.
+
+| Probe | Resultado medido |
+|---|---|
+| `qwen --help` | 11 subcomandos vivos: `batch`, `board`, `channel`, `extensions`, `hooks`, `mcp`, `review`, `sandbox`, `serve`, `sessions`, `update`; `auth` figura como **(removed)** — deprecar sin romper el muscle memory. Flags: `--approval-mode {plan,default,auto-edit,auto,yolo}`, `--worktree <slug>\|#PR>`, `--max-session-turns`, `--max-wall-time` (acepta `90`/`30s`/`5m`/`1.5h`; abort exit 55), `--max-tool-calls` (0 = sin tools; abort exit 55), `--max-subagent-depth` (cap 100), `--output-format {text,json,stream-json}`, `--input-format {text,stream-json}`, `--json-fd`/`--json-file` (dual output), `--json-schema`, `--input-file`, `-c/--continue`, `-r/--resume`, `--session-id`, `--fork-session`, `--safe-mode`, `--bare`, `--channel {VSCode,ACP,SDK,CI,desktop,daemon}`, `--experimental-lsp`, `--screen-reader`, `--fallback-model` (máx 3, para 429/503/529), `--auth-type {openai,openai-responses,anthropic,qwen-oauth,gemini,vertex-ai}`, `--chat-recording` (off = sin historial ni `--continue`/`--resume`). |
+| `qwen board --help` / `board show` | Tablero compartido por CLI: `show/task/claim/done/ask/answer/decline/prune` con `--board <name>`, `--as <actor>`, `--json`. `board show` sin `--board` pide el nombre: no adivina. |
+| `qwen sessions --help` / `list` / `ps` | `sessions list` (ID, fecha, título del primer mensaje, branch), `sessions ps` (procesos vivos con PID y cwd), `sessions controllers` = gestión de tokens que pueden conducir sesiones. |
+| `qwen extensions --help` / `list` | `install` (git/path/archivo/npm scoped/marketplace claude), `uninstall`, `list`, `update`, `disable/enable`, `link`, `new`, `settings`, `sources` (marketplaces). `list` → "No extensions installed". |
+| `qwen mcp --help` / `list` | `add/remove/list/reconnect/approve/reject`: un servidor descubierto queda **pendiente** hasta `approve/reject` explícito. `list` → "No MCP servers configured". |
+| `qwen serve --help` | Daemon HTTP: `--port 4170`; loopback sin auth vs token obligatorio fuera de loopback; `--require-auth` endurece también loopback (fail-fast sin secreto configurado); `--max-sessions 32`; `--max-pending-prompts-per-session 5` (más allá → 503); `--workspace` repetible (runtimes aislados por workspace); `--memory-project-scope {git-root,workspace}`; `--enable-session-shell` (off por defecto; "conectar" ≠ "ejecutar shell"); `--profile hosted-harness` con capability digest. |
+| `qwen sandbox` / `--verify` | Reporta `Tool execution sandbox: none` con instrucción de configurar; `--verify` falla cerrado: "No confined command was run: tools.executionSandbox is not configured". No finge confinamiento. |
+| `qwen review --help` + helpers | Pipeline no interactivo: `run`, `fetch-pr`/`fetch-diff`, `plan-diff` (particiona el diff en chunks con presupuesto de rondas), `base-tree` (merge base en worktree hermano), `scratch-tree` (worktree desechable del agente revisor), `test-delta` (re-corre los tests fallidos contra la base: fallas propias del PR vs preexistentes), `fix-delta` (`--snapshot`/`--since`; "Never writes the user's index or the stash"), `ab-drive` (mismo script de arranque/espera/sentinel contra PR y base, mismos bytes, confounds nombrados), `mock-provider` (endpoints OpenAI/Anthropic falsos que graban cada request como JSONL), `drive`, `emit-workflow`, `load-rules` (lee `.qwen/review-rules.md`, `.github/copilot-instructions.md`, `AGENTS.md`, `QWEN.md`), exit codes documentados (0 ok; 4 presupuesto/round cap; 5 reverse-audit convergió; 6/7 remotos). Medido: `parse-args "--fix…"` no llega al handler (posicional con guion; exige `--stdin` — trampa documentada); `meta` contra un repo sin remotes: "no git remotes found" y falla cerrado. |
+| `qwen -p` headless acotado | `--channel CI --max-tool-calls 0 --max-wall-time 60s --output-format text -p "…"` → exit 0, respuesta exacta. El mismo comando con `--bare` se niega: "No auth type is selected. Please configure an auth type…" — fail-closed con mensaje accionable, sin hang (consistente con que `--bare` solo honora inputs explícitos del CLI; la sesión interactiva del mismo host sí está autenticada). Trampa metodológica medida: `… \| tail` devuelve el exit de `tail`; el exit real solo se mide sin pipe. |
+| Tools internas (en vivo, desde la sesión del auditor) | `cron_create` → `cron_list` (lista el job con su prompt completo) → `cron_delete`: ciclo completo. Contrato del tool: cron de 5 campos en hora local; one-shot auto-delete; session-only por defecto (nada en disco); durable solo opt-in bajo `~/.qwen/tmp/<hash>/scheduled_tasks.json`; recurring auto-expira a 7 días; dispara solo con REPL idle (nunca a mitad de turno); jitter anti-`:00`. `monitor`: 4 eventos de un comando corto llegaron como notificaciones + notificación terminal con exit code; auto-stop por `max_events` o silencio (idle timeout). Subagente `general-purpose` lanzado en background con resultado por notificación (docs públicas; en vuelo al cierre de esta sección — se entrega aparte, no reabre M21). 23 skills en sesión (15 bundled + 8 de usuario); el paquete bundled trae 18 en disco (`batch-api`, `coordinate`, `zvec-grep-install` no expuestos en esta sesión). Memoria persistente por instalación: archivos con frontmatter (name/description/type/category/keywords/usage_scenarios) + índice `MEMORY.md` por directorio. |
+| Ledger de uso | `~/.qwen/usage/token-usage-2026-10.jsonl` + `~/.qwen/usage_record.jsonl`: requests, inputTokens/outputTokens/cachedTokens/thoughtsTokens, `totalLatencyMs`, contadores por tool y por skill, líneas añadidas/quitadas. Local, mensual, sin secretos. |
+
+**No probado, y no se afirma:** la TUI interactiva (el auditor corre dentro de una sesión, no abrió una segunda), `qwen serve` en vivo, `board` con tareas reales, `channel` (Telegram/Discord), `batch` (Batch API), `qwen update`, hooks en acción (el subcomando CLI `qwen hooks` imprime vacío; la gestión real es `/hooks` interactivo), `--worktree` ejecutado (medido del help; el árbol de ISyCo está sucio y compartido con otros agentes — no se creó worktree), LSP, browser-use/computer-use (sin entorno aquí), plan mode, Goals, workflows, `--json-schema` en una corrida real, y la autenticación de ningún proveedor desde el CLI de pruebas.
+
+**Ya existe en ISyCode o ya está pedido; no reabrirlo como hueco.** Presupuesto de costo/tokens: M11/M16-F. Sesiones/resume/fork: M7/M16; el árbol de sesión en el mismo archivo ya lo pidió M17. Skills perezosas: M17/M18. Doctor: M18 ("extender, no crear otro"). CLI `--json` de solo lectura, transparencia de config (`dirs`), hooks tipados, jobs de fondo con ID/kill y `busy`/`attached`: M20 (Crush) ya los pidió — M21 no los repite. Segundo modelo con gate: Roundtrip M11-B. Fallback chain: M18 ya la pidió; lo medido aquí solo agrega el tope (3) y la causa (429/503/529). Board/kanban: M18 ya rechazó el segundo tablero; Bridge expresa la dependencia. Accesibilidad: pendiente en M16-K. Stats de uso: M20 pidió `stats --json`; el ledger medido aquí le da la forma de persistencia.
+
+**No copiar.**
+
+- `--yolo`/`-y` y `--approval-mode auto|yolo` como autoridad. El clasificador LLM que "aprueba lo seguro y bloquea lo riesgoso" es una Systembility de opinión; en ISyCode el Sentinel agrega y decide. Un interruptor global que aprueba todo no entra.
+- `qwen extensions install` ejecutando código del paquete (npm/git/marketplace) al instalar. Instalar capacidad externa es acción tipada con owner y revisión, no un paso de discovery.
+- Hooks como scripts shell arbitrarios por evento de sesión (M18/M20 ya lo fijaron: hook = acción tipada o no existe).
+- Telemetría con prompts (deprecated incluso dentro de qwen; migrada a settings). Ni se evalúa.
+- El board como segunda autoridad de trabajo (M18). Si algo, es vista del Bridge.
+- Loopback "auth-free" como default de daemon: `serve` lo permite en loopback sin token y su propio `--require-auth` es el endurecimiento; para Mobile Host ya hay PIN de un uso + credencial de una hora + receipt, y el default acá sería el modo endurecido, no el laxo.
+
+**Trabajo, en este orden (candidatos; sin duplicar M17–M20):**
+
+- [ ] Presupuesto de corrida con exit code propio. Medido: `--max-tool-calls`, `--max-wall-time`, `--max-session-turns` abortan con exit 55, distinto de éxito y de error del modelo, y el help documenta la semántica. ISyCode: presupuesto headless no solo en tokens (M16-F/M11) sino en llamadas/tiempo/pasos por corrida, con exit code propio en el recibo y la lista de lo que quedó pendiente. Sin nueva autoridad.
+- [ ] Salida headless con schema. `--json-schema` registra una tool sintética `structured_output` y cierra la sesión en la primera salida válida. ISyCode: modo headless con contrato de salida validable localmente; una salida que viola el schema se reporta como inválida, no se maquilla. Es la salida, no un recibo.
+- [ ] Doble canal de salida. `--json-fd`/`--json-file`: la TUI renderiza en stdout mientras los eventos JSON van a otro fd o archivo; `--input-file` es el inverso (JSONL de comandos que un proceso externo escribe y la TUI procesa). ISyCode: el contrato de eventos de M17 puede montarse con un canal humano y un canal máquina reconstruibles entre sí; evaluar `--input-file` solo como transporte del contrato ya diseñado, no como segunda API.
+- [ ] Review como pipeline verificable. Lo medido en `qwen review` que M17–M20 no pidieron: `test-delta` (fallas propias del PR vs preexistentes, re-corriendo contra `base-tree`), `ab-drive` (mismo script contra dos árboles, mismos bytes, confounds nombrados), `scratch-tree` (probes de un revisor sin tocar el árbol compartido), `mock-provider` (endpoints falsos que graban cada request — la forma honesta de separar dobles de pruebas vivas) y exit codes de terminación (0/4/5/6/7). Aplica al gate de verificación y al fix-audit de ISyCode con los owners existentes.
+- [ ] Gate approve/reject para MCP pendiente. Medido: `qwen mcp approve|reject` — un servidor descubierto queda pendiente hasta aprobación explícita y `list` lo distingue. ISyCode M3: el discovery ya no autoriza; falta el approve explícito con recibo. Approve = discovery confirmado, nunca grant.
+- [ ] Sandbox honesto + `sentinel verify` de runtime. Medido: `qwen sandbox` reporta el estado real ("none" + cómo configurar) y `--verify` intenta el confinamiento y falla cerrado con razón. ISyCode: un verify que inyecte probes nombrados (symlink escape, traversal, socket, root protegido) y reporte ALLOW/DENY medidos por corrida; la auditoría AST de M15 dice que no hay bypass — el verify lo demuestra, y un entorno sin sandbox se reporta como tal, nunca se presume.
+- [ ] Programación efímera con caducidad. Medido en el contrato de cron interno: session-only por defecto (cero disco), durable solo opt-in, one-shot auto-delete, recurring auto-expira a 7 días, dispara solo con REPL idle, jitter anti-`:00`. Si ISyCode añade programación (el Bridge ya tiene scheduler), ese es el default medible: efímero primero, persistencia opt-in, caducidad sola, nunca pisa un turno en vuelo.
+- [ ] Monitor con presupuesto de eventos. Medido: streaming línea a línea como notificaciones, auto-stop por `max_events` o por silencio, y notificación terminal con exit code. ISyCode: para builds/soaks del Activity de M16-I, el auto-stop por presupuesto de eventos y el exit code terminal son los dos detalles que evitan monitores huérfanos.
+- [ ] Modos de arranque diagnósticos. `--safe-mode` apaga toda customización (context files, hooks, extensions, skills, MCP) y `--bare` solo honora flags explícitos; medido: sin settings el headless falla cerrado nombrando exactamente qué falta configurar. ISyCode: poder arrancar sin nada configurable para aislar fallas, y que `doctor` lo reporte como modo activo (M18 ya pidió extender doctor; este es su caso de uso).
+- [ ] Worktree por corrida con pregunta de salida. `--worktree <slug>|#PR|auto` crea el worktree y al salir pregunta keep/remove; remove se niega con cambios sin commit (medido del help; no ejecutado aquí). M18 rechazó worktree **como sandbox** — esto es distinto: aislamiento de un árbol sucio compartido entre agentes (el problema real de ISyCo hoy), con limpieza explícita al salir. Solo con owners existentes; nunca frontera de seguridad.
+- [ ] Credenciales que conducen sesiones como superficie de gate. Medido: `sessions controllers` administra tokens que pueden dirigir sesiones; `serve` separa "conectar" (`--require-auth`) de "ejecutar" (`--enable-session-shell`, off por defecto). ISyCode: el equivalente ya existe como pairing de Mobile Host (M13: PIN de un uso + credencial de una hora + receipt); lo evaluable es la separación explícita conectar/conducir y la revocación listada por token.
+- [ ] Ledger de uso como fuente del `stats` pedido en M20. Medido: jsonl mensual append-only con tokens/latencia por tool y por skill, sin secretos. Apoya el `stats --json` de M20 sin nueva autoridad; los campos `cachedTokens`/`thoughtsTokens` son la forma de no pintar como $0 lo que el provider cobró distinto.
+
+**Criterios de aceptación:**
+
+- Ningún ítem de M21 vuelve ejecutable una tool solo porque Qwen la tiene o porque el catálogo la lista.
+- El presupuesto aborta con exit propio y recibo de lo pendiente; nunca se marca terminado un paso sin recibo.
+- Una salida que viola el schema se reporta como inválida; el headless no la maquilla como resultado.
+- Un MCP approved sigue sin grant local: approve es discovery confirmado, no authority.
+- `sentinel verify` produce un reporte reproducible con probes nombrados y estados medidos; un entorno sin sandbox se reporta como "none", no se presume.
+- Lo programado por defecto es efímero y caduca solo; persistir es opt-in y nunca interrumpe un turno en vuelo.
+- Safe-mode/bare arranca sin leer customizaciones y lo declara; el fail-closed nombra qué falta configurar.
+- Un worktree se crea y se destruye con pregunta explícita; remove no procede con cambios sin commit.
+
+**No incluye:** portar el daemon `serve`, los channels de mensajería, el Batch API, el sistema de extensiones ejecutables, hooks shell, `/yolo`, el board como segunda autoridad, ni el clasificador LLM como decisión.
+
 ## 5. Orden y puertas de dependencia
 
 ```text
@@ -614,9 +892,14 @@ M0 contrato/ADR/startup
   → M13 Mobile Host substrate (sesiones requieren adapters y gates M15/M6)
   → M14 Gateway/LSP/broker (Gateway requiere gates local/remoto; Docker usa execution owner tipado)
   → M16 daily-driver product completion + release witnesses
+  → M17 superficies Pi adaptadas (paralelo a M16; no lo bloquea; efectos solo con owners ya existentes)
+  → M18 superficies Hermes adaptadas (paralelo a M16/M17; no los bloquea; no porta gateway ni skills como autoridad)
+  → M19 patrones Copilot CLI evaluados (paralelo a M16–M18; no los bloquea; no habilita integraciones por sí solo)
+  → M20 superficies Crush medidas (paralelo a M16–M19; no los bloquea; hooks tipados exigen M15/M6)
+  → M21 superficies Qwen Code medidas (paralelo a M16–M20; no los bloquea; presupuesto/salida estructurada/verify solo con owners ya existentes)
 ```
 
-M15 es prerequisite de toda acción con efectos: M6 no habilita escrituras hasta conectar Authority, Sentinel y execution owners. M14 puede avanzar en la interfaz read-only, pero sus llamadas remotas necesitan ambos gates (ISySentinel local y Gateway HTTP Sentinel remoto). No se implementa delete/shell como atajo para completar una demo. M8/M9 son extras; no retrasan el valor single-agent de M1–M7.
+M15 es prerequisite de toda acción con efectos: M6 no habilita escrituras hasta conectar Authority, Sentinel y execution owners. M14 puede avanzar en la interfaz read-only, pero sus llamadas remotas necesitan ambos gates (ISySentinel local y Gateway HTTP Sentinel remoto). No se implementa delete/shell como atajo para completar una demo. M8/M9 son extras; no retrasan el valor single-agent de M1–M7. M17–M21 son inspiración evaluada; no retrasan M16 ni el release.
 
 ## 6. Pruebas de producto y calidad
 
@@ -652,6 +935,10 @@ Cada milestone trae pruebas unitarias y de integración para su contrato; no se 
 | Gateway caído induce fallback a filesystem/shell | No fallback; DENY de mutación | Witness degradado M5/M6 |
 | L1 `ACTIVE` se confunde con permiso de uso | Presentar estados separados y grant independiente | Witness L1 M9 |
 | IsyVM Layer A se toma por sandbox de seguridad | Reutilizar solo referencias UI; IsyMotron gobierna authority | Revisión de frontera M0/M5 |
+| Copiar Pi (trust de carpeta, extensiones in-process, `/share`, offline que cuelga) como si fuera el modelo de ISyCode | M17 adapta superficies medidas; no porta runtime ni debilita Sentinel | Sonda 2026-10-03; ningún ítem M17 sin owner |
+| Copiar Hermes (gateway de chats, `/yolo`, shell hooks, worktree como sandbox, auto-update, skill como permiso) | M18 adapta sondas medidas; dry-run y curator no conceden | Sonda 2026-10-03; ningún ítem M18 sin owner |
+| Confundir GitHub MCP, perfiles o hooks de Copilot con autoridad local | M19 mantiene separado discovery, contexto, grants locales y efectos remotos | Guía oficial/help 2026-10-03; ningún adapter implícito |
+| Copiar de Qwen Code el `--yolo`/clasificador LLM como autoridad, extensiones que ejecutan código al instalar, hooks shell o el board como segunda autoridad | M21 adapta superficies medidas; approve = discovery, no grant; presupuesto con recibo, no abort silencioso | Sonda 2026-10-03; ningún ítem M21 sin owner |
 
 ## 8. Fuera de alcance de la primera versión
 
@@ -661,6 +948,9 @@ Cada milestone trae pruebas unitarias y de integración para su contrato; no se 
 - Exponer reasoning interno del modelo como característica de producto por defecto.
 - Activar capacidades por confianza en un provider, por una skill o por presencia de un MCP.
 - Prometer seguridad de una sandbox IsyVM Layer A.
+- Portar el gateway de mensajería, `/yolo`, shell hooks o worktree-como-sandbox de Hermes. Esas superficies, si se adaptan, viven en M18 y no en la primera versión.
+- Portar la TUI, runtime, plugins o política de permisos de Copilot CLI; GitHub MCP, hooks o perfiles tampoco se activan por defecto. M19 solo propone evaluar patrones bajo owners y gates de ISyCode.
+- Portar el daemon `serve`, los channels de mensajería, el Batch API, las extensiones ejecutables o los hooks de Qwen Code; `--yolo` y el clasificador LLM como autoridad tampoco entran. M21 solo evalúa patrones bajo owners y gates de ISyCode.
 
 ## 9. Checklist de release inicial
 

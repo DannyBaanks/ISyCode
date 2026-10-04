@@ -5,7 +5,7 @@
 > **Estado:** en desarrollo. Esta página separa lo que ya se ejecutó de verdad de lo que está implementado y probado solo con dobles de prueba. Mira [Qué está probado](#qué-está-probado).
 
 
-**Novedades (2026-10-01):** agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
+**Novedades (2026-10-04):** el modelo guardado sobrevive al reinicio, también como clave de visión; `.netrc`, `.npmrc` y `.pypirc` no se leen ni se copian al log de comandos; Ctrl+S abre ShellBox; la cola puede hacer steer y devolver el texto si falla; Sessions borra con confirmación. Lo anterior (2026-10-01): agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
 
 **Uso diario (2026-09-30):** recuperación manual con `/retry`, borradores y sesiones versionadas, `/context` para AGENTS.md, diagnóstico local `isycode doctor` y `/doctor`, y verificación explícita del proveedor con `/check`. Consulta [la guía y sus límites de verificación](docs/daily-use-readiness.md).
 
@@ -366,8 +366,10 @@ La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia
 
 | Atajo | Acción |
 | --- | --- |
-| `Enter` / `Shift+Enter` | Enviar / nueva línea |
-| `Esc` | Detener el turno del agente; si no hay operación, volver o cerrar menú |
+| `Enter` / `Shift+Enter` | Enviar / nueva línea. `Ctrl+J` y `Alt+Enter` también parten la línea. `Ctrl+Enter` no envía |
+| `Enter` durante un turno | Encola el mensaje (máximo 8). Envío vacío sobre la cola: steer |
+| `Esc` | Detener el turno; si no hay operación, volver o cerrar. En la cola, devuelve el texto sin pisar el borrador |
+| `Ctrl+S` | Idea Box / ShellBox de procesos ya aprobados en sandbox |
 | `/` o `Ctrl+P` | Navegación semántica |
 | `Ctrl+F` | Buscar en la consola |
 | `Ctrl+B` | Mostrar u ocultar el panel lateral |
@@ -385,11 +387,11 @@ El engranaje **Settings** incluye el mapa completo.
 
 Lo poquito que queda, en orden:
 
-1. **Solo modelos activos de NVIDIA:** filtrar del selector los modelos deprecados. Falta ver qué campos devuelve de verdad `/v1/models` de NVIDIA para no adivinar.
+1. **Catálogo NVIDIA:** el 2026-10-03, en la cuenta y el endpoint de chat probados, 55 IDs respondieron HTTP 404 y el selector los oculta sin borrarlos. Eso no es un campo oficial de deprecación y no se transfiere a otros endpoints. Nueve quedaron NOT_DEMONSTRATED. Evidencia: `docs/evidence/tools-catalog-2026-10-03/`.
 2. **Rail de IsySentinel:** que el panel lateral muestre en vivo qué decidió Sentinel (ALLOW/DENY) y qué permisos están activos, junto a MCP/LSP.
 3. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
 4. **Ediciones tolerantes a espacios:** que `workspace_edit` encuentre el fragmento aunque cambien espacios o sangría, mostrando siempre el diff exacto antes de aprobar.
-5. **Validar en real** lo que hoy solo tiene dobles de prueba: portapapeles en escritorio, sandbox de comandos, MCP local, Claude nativo y Windows.
+5. **Validar en real** lo que sigue en doble de prueba: portapapeles en el escritorio, MCP local, Claude nativo y Windows. El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
 6. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
