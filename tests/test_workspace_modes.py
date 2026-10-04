@@ -150,7 +150,10 @@ def test_tui_checks_use_effective_grants_and_writes_use_explicit_ones():
 
     root = Path(__file__).resolve().parents[1] / "src" / "isycode"
     methods = {}
-    for path, class_name in ((root / "tui.py", "TUIApp"), (root / "tui_app_sessions.py", "SessionMixin")):
+    for path, class_name in (
+            (root / "tui.py", "TUIApp"),
+            (root / "tui_app_sessions.py", "SessionMixin"),
+            (root / "tui_app_authority.py", "AuthorityMixin")):
         source = path.read_text(encoding="utf-8")
         module = ast.parse(source)
         klass = next(node for node in module.body

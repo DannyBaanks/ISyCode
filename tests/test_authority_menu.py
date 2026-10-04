@@ -48,7 +48,7 @@ def test_authority_menu_opens_with_every_integration_state(tmp_path, monkeypatch
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-not-real")
     UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
-    monkeypatch.setattr("isycode.tui.sandbox_executable", lambda: "/usr/bin/bwrap")
+    monkeypatch.setattr("isycode.tui_app_authority.sandbox_executable", lambda: "/usr/bin/bwrap")
 
     async def workspace_startup(self):
         # This test inspects the authority menu, not optional startup catalog or

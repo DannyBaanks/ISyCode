@@ -4,6 +4,7 @@ from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
 SESSIONS = SOURCE.with_name("tui_app_sessions.py")
+AUTHORITY = SOURCE.with_name("tui_app_authority.py")
 
 
 def _tui_methods() -> tuple[dict[str, str], dict[str, ast.AST]]:
@@ -96,10 +97,10 @@ def test_secure_tui_session_delete_requires_confirmation_and_separate_authority(
 
 
 def test_authority_settings_gates_session_deletion_with_its_own_permission():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = AUTHORITY.read_text(encoding="utf-8")
     module = ast.parse(source)
     app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+               if isinstance(node, ast.ClassDef) and node.name == "AuthorityMixin")
     method = next(node for node in app.body
                   if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
     menu_source = ast.get_source_segment(source, method)
@@ -128,16 +129,21 @@ def test_authority_settings_never_presents_an_explicit_deny_as_granted():
 
 
 def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-    source = SOURCE.read_text(encoding="utf-8")
+    methods = {}
+    sources = {}
+    for path, class_name in ((SOURCE, "TUIApp"), (AUTHORITY, "AuthorityMixin")):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        app = next(node for node in module.body
+                   if isinstance(node, ast.ClassDef) and node.name == class_name)
+        for node in app.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods[node.name] = node
+                sources[node.name] = source
     for name in ("_open_authority_menu", "_append_network_grant_entry",
                  "_open_tailscale_permissions", "_initialize_workspace",
                  "_workspace_chat_tools_enabled"):
-        segment = ast.get_source_segment(source, methods[name])
+        segment = ast.get_source_segment(sources[name], methods[name])
         # Raw `enabled` flags must never decide an ON label on their own.
         assert '.get("enabled")' not in segment, name
         assert 'get("enabled", False)' not in segment, name
@@ -158,12 +164,12 @@ def test_authority_capability_indicator_uses_clear_green_and_red_states():
 
 
 def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    module = ast.parse(AUTHORITY.read_text(encoding="utf-8"))
     app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+               if isinstance(node, ast.ClassDef) and node.name == "AuthorityMixin")
     method = next(node for node in app.body
                   if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
-    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), method)
+    source = ast.get_source_segment(AUTHORITY.read_text(encoding="utf-8"), method)
 
     assert "Read and search workspace files" in source
     assert "Connect to the selected AI model" in source
@@ -175,7 +181,7 @@ def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels(
 
 
 def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = AUTHORITY.read_text(encoding="utf-8")
 
     assert '"Systembilities: {checks}\\n"' in source
     assert '"Request: {digest[:12]}… · Authority: {authority}\\n"' in source

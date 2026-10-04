@@ -101,13 +101,18 @@ def test_untrusted_classic_still_asks_and_trust_is_not_a_tool(project):
     assert (root / "app.py").read_text(encoding="utf-8") == "x = 1\n"
     banned = ("trust", "set_mode", "effect_ledger", "user_reset")
     assert not any(any(word in action_id for word in banned) for action_id in ACTION_BY_ID)
-    source = Path(__file__).resolve().parents[1].joinpath("src", "isycode", "tui.py").read_text(
-        encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: ast.get_source_segment(source, node) for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    root = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    methods = {}
+    for path, class_name in (
+            (root / "tui.py", "TUIApp"),
+            (root / "tui_app_authority.py", "AuthorityMixin")):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        app = next(node for node in module.body
+                   if isinstance(node, ast.ClassDef) and node.name == class_name)
+        for node in app.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods[node.name] = ast.get_source_segment(source, node)
     writers = [name for name, body in methods.items() if "trust.accept(" in body]
     assert writers == ["_offer_quiet_trust"]
     assert "CommitApprovalScreen" in methods["_git_tool"]
