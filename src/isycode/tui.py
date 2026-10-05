@@ -431,9 +431,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
-    #activity-status { width: 18%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
-    #idea-box { width: 57%; }
-    #usage-status { width: 25%; height: 3; padding: 0 1; content-align: right top; color: #9aa3ad; overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis; }
+    /* 20/60/20 is an invariant, not a taste: the idea box must stay 60% of the
+       composer and centred on it, and #queued-row mirrors it with a 20% spacer
+       and a 60% #queue-stack. Changing one column moves all three boxes. */
+    #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
+    #usage-status { width: 20%; height: 3; padding: 0 1; content-align: right top; color: #9aa3ad; overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
@@ -1560,17 +1562,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         total = self._usage.input_tokens + self._usage.output_tokens
         context = compact_context_label(self._history, provider_limit_tokens=limit,
                                         reported_tokens=reported)
-        text = self._throughput.widget_text(total, bool(self._usage.unknown_requests), context)
-        if limit is None:
-            return text
-        from isycode.context_meter import context_snapshot
-        snapshot = context_snapshot(self._history, provider_limit_tokens=limit,
-                                    reported_tokens=reported)
-        percent = int(snapshot["percent"] or 0)
-        width = 6
-        filled = round(percent * width / 100)
-        bar = f"{'█' * filled}{'░' * (width - filled)} {percent}%"
-        return f"{self._throughput.widget_text(total, bool(self._usage.unknown_requests), bar).replace(chr(10), ' · ')} · {context}"
+        # #usage-status is 20% of the composer row and three cells tall: one row
+        # for the rate, one for the tokens, one for the context window. Flattening
+        # the three into a single line needs a wider column, and that width has to
+        # come from the idea box, which then stops matching the prompt and the
+        # queued box. The percentage already rides inside the context label.
+        return self._throughput.widget_text(total, bool(self._usage.unknown_requests), context)
 
     def _refresh_usage(self) -> None:
         if not self._lane_on_screen():
@@ -2544,9 +2541,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         for delay in PATTERNS.get(kind, PATTERNS["info"])[1:]:
             self.set_timer(delay, lambda: self.bell() if self._notification_sounds else None)
 
-    def notify(self, message, *, title="", severity="information", timeout=None):
+    def notify(self, message, *, title="", severity="information", timeout=None,
+               markup=True):
         self._play_notification_sound({"warning": "warning", "error": "error"}.get(severity, "info"))
-        return super().notify(message, title=title, severity=severity, timeout=timeout)
+        return super().notify(message, title=title, severity=severity, timeout=timeout,
+                              markup=markup)
 
     def _operation_finished(self, task: asyncio.Task) -> None:
         lane = next((item for item in self._lanes.values() if item.loop_task is task), None)

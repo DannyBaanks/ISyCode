@@ -191,11 +191,12 @@ class ChatMixin:
         t0 = _time.monotonic()
         # None until the stream stores a trial. Absence used to skip the restore; None does too.
         steer_trial = None
-        if False:
-            # Bind names the phases share. This does not run, so a read before
-            # the real assignment still raises UnboundLocalError.
-            chat_tools = command_active = messages = notes = None
-            provider = provider_supports_tools = thought_started = tools_active = None
+        # Bind the names shared across the prepare/stream/close phases so each
+        # ``nonlocal`` declaration below resolves to an enclosing cell. Initialising
+        # to None also makes a read before the real assignment raise a clear
+        # TypeError instead of UnboundLocalError masking the original fault.
+        chat_tools = command_active = messages = notes = None
+        provider = provider_supports_tools = thought_started = tools_active = None
 
         async def _prepare_chat_tools() -> None:
             nonlocal chat_tools, command_active, messages, notes, provider_supports_tools, text, tools_active
@@ -763,8 +764,10 @@ class ChatMixin:
             if "[IMAGE#" in text:
                 from isycode.provider_errors import classify_provider_error
                 if classify_provider_error(e)["error_kind"] == "IMAGES":
-                    from isycode.image_attachments import record_image_result
-                    record_image_result(provider.name, provider.model, False)
+                    resolved_provider = getattr(provider, "name", None)
+                    if resolved_provider is not None:
+                        from isycode.image_attachments import record_image_result
+                        record_image_result(provider.name, provider.model, False)
             if self._history and self._history[-1] == {"role": "user", "content": text}:
                 self._history.pop()
             self._append(f"  {self._provider_failure(e, 'Chat')}", RED)

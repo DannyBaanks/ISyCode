@@ -47,7 +47,7 @@ def test_terminal_paste_review_remove_and_lossless_send(tmp_path, monkeypatch):
             await pilot.pause()
             assert len(prompt.text) < 40
             assert app._draft_text == payload
-            await pilot.press("ctrl+p")
+            await pilot.press("ctrl+shift+p")
             await pilot.pause()
             assert isinstance(app.screen, PastedTextScreen)
             assert app.screen.items[0][1] == payload

@@ -88,7 +88,9 @@ class PromptArea(TextArea):
         Binding("down", "slash_down", show=False, priority=True),
         Binding("tab", "slash_complete", show=False, priority=True),
         Binding("ctrl+v", "paste_clipboard", "Paste clipboard", show=False, priority=True),
-        Binding("ctrl+p", "review_pastes", "Review pasted text", show=False, priority=True),
+        # ctrl+p belongs to the app-wide command palette (see APP_SHORTCUTS
+        # and the composer hint). A focused composer must not shadow it.
+        Binding("ctrl+shift+p", "review_pastes", "Review pasted text", show=False, priority=True),
         Binding("ctrl+shift+enter", "capture_idea", "Capture idea", show=False, priority=True),
         Binding("ctrl+a", "select_all", "Select all", show=False, priority=True),
         Binding("shift+enter", "insert_line_break", "New line", show=False, priority=True),
