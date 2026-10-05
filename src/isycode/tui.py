@@ -930,6 +930,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self._rail_visible = True
             rail.display = self._rail_visible
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._update_model_button_visibility)
         self.call_after_refresh(self._paint_idle)
 
     async def _initialize_workspace(self) -> None:

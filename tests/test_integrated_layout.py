@@ -29,7 +29,11 @@ def test_composer_and_idea_note_fit_beside_sidebar(tmp_path, monkeypatch, capsys
             assert box.region.bottom == prompt.region.y
             settings = app.query_one('#settings-button')
             assert composer.region.contains_region(settings.region)
-            assert len([b for b in app.query('#command-bar Button') if b.display]) == 4
+            # With the rail open below 100 columns the model button yields so
+            # the bar stays inside the composer; the model shows in the idea
+            # box title instead.
+            expected_buttons = 4 if size[0] < 100 else 5
+            assert len([b for b in app.query('#command-bar Button') if b.display]) == expected_buttons
             app._idea_box = 'Reading the parser; next: verify the fix.'
             app._paint_idea_box()
             assert 'Reading the parser' in plain_text(box)

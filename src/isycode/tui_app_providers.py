@@ -56,7 +56,7 @@ from isycode.tui_theme import (
 from isycode.tui_screens_approval import TailscaleConfirmScreen
 from isycode.shortcuts import APP_SHORTCUTS
 from textual.widgets import Button
-from isycode.tui_widgets import ExpandableBox
+from isycode.tui_widgets import ExpandableBox, SidePanel
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
 from isycode.user_defaults import UserDefaultsStore
 
@@ -410,7 +410,8 @@ class ProviderMixin:
             name = selected_provider_name()
             model = resolved_chat_model(name)
             from isycode.model_presentation import model_display_name
-            return f"{model_display_name(model)} ▾"
+            from isycode.tui_theme import _fit_cells
+            return f"{_fit_cells(model_display_name(model), 8)} ▾"
         except (ConfigurationError, ProviderError):
             return "Model ▾"
 
@@ -421,6 +422,18 @@ class ProviderMixin:
             self.query_one("#model-button", Button).label = self._model_button_label()
         except NoMatches:
             return
+        self._update_model_button_visibility()
+
+    def _update_model_button_visibility(self) -> None:
+        """Keep the bar inside the composer: with the rail open below 100
+        columns there is no room for every button, and the model already
+        shows in the idea box title."""
+        try:
+            button = self.query_one("#model-button", Button)
+            rail = self.query_one(SidePanel)
+        except NoMatches:
+            return
+        button.display = not (bool(rail.display) and self.size.width < 100)
 
     def _select_provider(self, name: str, model: str | None = None) -> None:
         current = selected_provider_name()

@@ -513,6 +513,7 @@ class RailMixin:
         self._rail_visibility_override = self._rail_visible
         self.query_one(SidePanel).display = self._rail_visible
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._update_model_button_visibility)
 
     def action_focus_files(self) -> None:
         self._set_rail_view("files")
