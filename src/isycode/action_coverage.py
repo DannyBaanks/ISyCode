@@ -538,8 +538,19 @@ def discover_action_request_constructors() -> list[dict[str, Any]]:
     for source_path in sorted(package.rglob("*.py")):
         relative = source_path.relative_to(package.parent).as_posix()
         try:
-            tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=relative)
-        except (OSError, UnicodeError, SyntaxError):
+            source = source_path.read_text(encoding="utf-8")
+        except UnicodeError:
+            discovered.append({"file": relative, "line": 0,
+                               "action": None, "owner": None,
+                               "parse_error": True})
+            continue
+        # An unreadable file must not silently become an empty inventory
+        # entry: this snapshot is security evidence, so a transient read
+        # failure has to surface instead of being recorded as a parse
+        # error that could later be committed.
+        try:
+            tree = ast.parse(source, filename=relative)
+        except SyntaxError:
             discovered.append({"file": relative, "line": 0,
                                "action": None, "owner": None,
                                "parse_error": True})
@@ -594,8 +605,16 @@ def _defined_callables() -> frozenset[str]:
 
     for source_path in package.rglob("*.py"):
         try:
-            tree = ast.parse(source_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, SyntaxError):
+            source = source_path.read_text(encoding="utf-8")
+        except UnicodeError:
+            continue
+        # Dropping an unreadable file would make its real callsites look
+        # stale (this set is lru_cache'd, so one transient error would
+        # poison every later check in the process). A file that cannot be
+        # read must fail loudly.
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
             continue
         module = source_path.relative_to(package.parent).with_suffix("").as_posix().replace("/", ".")
         short_module = module.removeprefix("isycode.")
