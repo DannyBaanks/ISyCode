@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import asyncio
+from textual.css.query import NoMatches
 from isycode.config import (
     ConfigurationError,
     isymotron_provider_available,
@@ -404,6 +405,23 @@ class ProviderMixin:
         name = self._active_role["name"]
         return f"Role: {name[:12]}"
 
+    def _model_button_label(self) -> str:
+        try:
+            name = selected_provider_name()
+            model = resolved_chat_model(name)
+            from isycode.model_presentation import model_display_name
+            return f"{model_display_name(model)} ▾"
+        except (ConfigurationError, ProviderError):
+            return "Model ▾"
+
+    def _refresh_model_button(self) -> None:
+        if not self.is_mounted:
+            return
+        try:
+            self.query_one("#model-button", Button).label = self._model_button_label()
+        except NoMatches:
+            return
+
     def _select_provider(self, name: str, model: str | None = None) -> None:
         current = selected_provider_name()
         try:
@@ -435,6 +453,7 @@ class ProviderMixin:
         if current != name:
             self._clear_pending_plan()
         self._paint_idea_box()
+        self._refresh_model_button()
         if provider.configured():
             self._append("  Selected for this session · " + self._model_display_label(name, provider.model), GREEN)
             self._close_menu()

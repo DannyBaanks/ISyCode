@@ -80,8 +80,8 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 
 ## M-UX3 — Visibilidad y feedback (mejoras)  ⬜ PENDIENTE
 
-### T-UX3.1 Modelo actual inline en el composer
-- [ ] `[model ▾]` en la fila del prompt; click/atajo abre el selector rápido (reutilizar `_menu` de providers).
+### T-UX3.1 Modelo actual inline en el composer  ✅ HECHO
+- [x] `#model-button` con el modelo actual en la command bar (`GPT 5.6 Sol ▾`); click abre el selector de providers existente; refresco en `on_mount` y tras `_select_provider`. Tests en `tests/test_model_button.py`.
 
 ### T-UX3.2 Pantalla dedicada de búsqueda cross-session
 - [ ] UI sobre `/sessions search` (ya existe); `Ctrl+Shift+F` (verificar colisiones — precedente: bug ctrl+p).

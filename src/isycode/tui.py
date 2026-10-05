@@ -707,6 +707,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield Button("Role", id="role-button")
                         yield Button("Context", id="context-button")
                         yield Button("Inject context", id="inject-context-button")
+                        yield Button("Model ▾", id="model-button")
                         yield BarSpacer(id="bar-spacer")
                         yield Button("⚙", id="settings-button")
             yield SidePanel(id="side-panel")
@@ -734,6 +735,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.set_interval(1.0, self._paint_work_status)
         prompt = self.query_one("#prompt-input", PromptArea)
         self.query_one("#role-button", Button).label = self._role_button_label()
+        self._refresh_model_button()
         if self._initial_prompt:
             prompt.load_text(self._initial_prompt)
         prompt.focus()
@@ -984,6 +986,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         elif button_id == "work-bridge":
             self.run_worker(self._show_bridge_presence(), exclusive=True, group="bridge-presence")
         elif button_id == "providers-button":
+            self._open_provider_menu()
+        elif button_id == "model-button":
             self._open_provider_menu()
         elif button_id == "role-button":
             self._open_role_menu()
