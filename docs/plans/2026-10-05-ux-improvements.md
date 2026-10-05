@@ -83,8 +83,8 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 ### T-UX3.1 Modelo actual inline en el composer  ✅ HECHO
 - [x] `#model-button` con el modelo actual en la command bar (`GPT 5.6 Sol ▾`); click abre el selector de providers existente; refresco en `on_mount` y tras `_select_provider`. Tests en `tests/test_model_button.py`.
 
-### T-UX3.2 Pantalla dedicada de búsqueda cross-session
-- [ ] UI sobre `/sessions search` (ya existe); `Ctrl+Shift+F` (verificar colisiones — precedente: bug ctrl+p).
+### T-UX3.2 Pantalla dedicada de búsqueda cross-session  ✅ HECHO
+- [x] `SessionSearchScreen` (título + transcript, filtro en vivo, Enter/Esc) alimentada por el owner con autoridad; `Ctrl+Shift+F` registrado en `APP_SHORTCUTS` sin colisiones (solo `ctrl+shift+p`/`ctrl+shift+enter` existían, en el composer). Tests en `tests/test_session_search_screen.py` (6).
 
 ---
 

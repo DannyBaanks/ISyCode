@@ -501,6 +501,78 @@ class SessionTitleScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
+class SessionSearchScreen(ModalScreen[str | None]):
+    """Cross-session search over titles and transcripts; Enter resumes.
+
+    The session list is supplied by the caller through the authority-checked
+    owner path. This screen only filters and reports a choice.
+    """
+
+    CSS = """
+    SessionSearchScreen { align: center middle; background: #000000 58%; }
+    #session-search-card { width: 84; max-width: 92%; height: 70%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #session-search-title { height: 2; color: #bb8cff; text-style: bold; }
+    #session-search-input { height: 3; margin-bottom: 1; }
+    #session-search-list { height: 1fr; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close")]
+
+    def __init__(self, sessions) -> None:
+        super().__init__()
+        self.sessions = list(sessions)
+        self.visible_sessions = list(sessions)
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="session-search-card"):
+            yield Static("Search all conversations", id="session-search-title")
+            yield Input(placeholder="Type terms found in any title or message…",
+                        id="session-search-input")
+            yield OptionList(*self._options(self.visible_sessions), id="session-search-list")
+
+    @staticmethod
+    def _options(sessions) -> list[Option]:
+        options = [Option(
+            f"{item.title}  ·  {_time.strftime('%b %d %H:%M', _time.localtime(item.updated_at))}",
+            id=item.session_id) for item in sessions]
+        return options or [Option("No matching conversations", id="empty", disabled=True)]
+
+    @staticmethod
+    def _matches(session, terms: list[str]) -> bool:
+        haystack = (session.title + " " + " ".join(
+            str(message.get("content", "")) for message in session.messages)).casefold()
+        return all(term in haystack for term in terms)
+
+    def _refilter(self, query: str) -> None:
+        terms = query.casefold().split()
+        self.visible_sessions = ([item for item in self.sessions
+                                  if self._matches(item, terms)] if terms else list(self.sessions))
+        listing = self.query_one("#session-search-list", OptionList)
+        listing.clear_options()
+        listing.add_options(self._options(self.visible_sessions))
+
+    def on_mount(self) -> None:
+        self.query_one("#session-search-input", Input).focus()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "session-search-input":
+            self._refilter(event.value)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "session-search-input":
+            return
+        if len(self.visible_sessions) == 1:
+            self.dismiss(self.visible_sessions[0].session_id)
+        else:
+            self.query_one("#session-search-list", OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if event.option.id not in {None, "empty"}:
+            self.dismiss(str(event.option.id))
+
+    def action_close(self) -> None:
+        self.dismiss(None)
+
+
 class ConsoleSearchScreen(ModalScreen[None]):
     """Search the rendered transcript and navigate matching console output."""
 

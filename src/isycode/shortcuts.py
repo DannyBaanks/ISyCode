@@ -19,6 +19,7 @@ APP_SHORTCUTS: tuple[Shortcut, ...] = (
     Shortcut("alt+plus,alt+equals,alt+period", "increase_reasoning", "Effort +", "Increase supported reasoning effort", True),
     Shortcut("alt+minus,alt+comma", "decrease_reasoning", "Effort -", "Decrease supported reasoning effort", True),
     Shortcut("ctrl+f", "find_console", "Find", "Search rendered console output", True),
+    Shortcut("ctrl+shift+f", "open_session_search", "Find in sessions", "Search every saved conversation's titles and transcripts", True),
     Shortcut("ctrl+p", "toggle_commands_menu", "Commands", "Open the semantic command palette"),
     Shortcut("ctrl+b", "toggle_sidebar", "Toggle sidebar", "Show or hide the workspace rail"),
     Shortcut("ctrl+l", "focus_input", "Focus composer", "Move focus to the chat composer"),

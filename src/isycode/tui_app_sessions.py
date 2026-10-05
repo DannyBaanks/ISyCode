@@ -120,6 +120,7 @@ from isycode.tui_screens_harness import (
 from isycode.tui_screens_sessions import (
     IdeaNoteScreen,
     AgentQuestionScreen,
+    SessionSearchScreen,
 )
 
 
@@ -348,6 +349,25 @@ class SessionMixin:
             "age": age_label(sent or session.updated_at),
             "status": "idle",
         }
+
+    def action_open_session_search(self) -> None:
+        """Cross-session search (Ctrl+Shift+F); resumes the chosen conversation."""
+        owner = self._chat_session_owner
+        if owner is None or not self._sessions_enabled():
+            self.notify("Saving conversations is off · turn it on in Settings → Authority.",
+                        severity="warning")
+            return
+        outcome, sessions = owner.list_conversations()
+        if outcome.decision != "ALLOW":
+            self.notify("Conversations unavailable · " + outcome.reason[:120],
+                        severity="warning")
+            return
+        self.push_screen(SessionSearchScreen(sessions), self._session_search_result)
+
+    def _session_search_result(self, session_id: str | None) -> None:
+        if session_id:
+            self.run_worker(self._resume_chat_session(session_id),
+                            exclusive=True, group="session-resume")
 
     async def _show_chat_sessions(self) -> None:
         self.query_one("#chat").display = False

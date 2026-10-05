@@ -296,6 +296,7 @@ from isycode.tui_screens_sessions import (
     AgentQuestionScreen,
     BridgePresenceScreen,
     ChatSessionsScreen,
+    SessionSearchScreen,
     SessionTitleScreen,
     ConsoleSearchScreen,
 )
