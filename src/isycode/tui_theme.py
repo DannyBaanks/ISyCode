@@ -73,16 +73,22 @@ def status_phrase(text: str) -> str:
 
 
 def switch_row(on: bool | None, name: str, note: str = "", *, inactive: bool = False) -> Text:
-    """A colored mark and a name. The row itself stays unfilled."""
+    """A colored mark and a name. The row itself stays unfilled.
+
+    ON and OFF use distinct glyphs (✓ / ✗), not just green/red, so the state
+    survives a monochrome terminal and red-green colour blindness. The rail
+    deliberately carries no "ON"/"OFF" text (see test_side_panel), so the glyph
+    is the only non-colour cue. ``inactive`` (○) and ``None`` (···) stay distinct.
+    """
     row = Text()
     if inactive:
         row.append("○ ", style=MUTED)
     elif on is None:
         row.append("··· ", style=f"bold {YELLOW}")
     elif on:
-        row.append("● ", style=f"bold {GREEN}")
+        row.append("✓ ", style=f"bold {GREEN}")
     else:
-        row.append("● ", style=f"bold {RED}")
+        row.append("✗ ", style=f"bold {RED}")
     row.append(name, style=f"bold {TEXT}")
     if note:
         row.append(f"\n  {note}", style=MUTED)

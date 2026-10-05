@@ -22,6 +22,46 @@ def test_switch_rows_are_green_when_on_and_red_when_off():
     assert "ON" not in on.plain and "OFF" not in off.plain
 
 
+def test_switch_row_states_are_distinguishable_without_color():
+    marks = {
+        "on": switch_row(True, "x").plain.split(" ")[0],
+        "off": switch_row(False, "x").plain.split(" ")[0],
+        "checking": switch_row(None, "x").plain.split(" ")[0],
+        "inactive": switch_row(False, "x", inactive=True).plain.split(" ")[0],
+    }
+    # Every state carries a distinct leading mark, so a monochrome terminal or a
+    # red-green colour-blind user can still tell ON from OFF (the rail shows no
+    # "ON"/"OFF" text by design).
+    assert len(set(marks.values())) == 4
+    assert marks["on"] != marks["off"]
+
+
+def _luminance(hex_color):
+    hex_color = hex_color.lstrip("#")
+    channels = []
+    for i in (0, 2, 4):
+        c = int(hex_color[i:i + 2], 16) / 255
+        channels.append(c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
+    r, g, b = channels
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(fg, bg):
+    la, lb = _luminance(fg), _luminance(bg)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_palette_meets_wcag_aa_for_its_actual_uses():
+    from isycode.tui_theme import ACCENT, BG, GREEN, MUTED, RED, TEXT, YELLOW
+    # Body text must clear WCAG AA (4.5:1).
+    for color in (TEXT, MUTED):
+        assert _contrast(color, BG) >= 4.5, f"{color} on {BG} below 4.5:1"
+    # Status/brand marks are large or non-text UI components: AA needs 3:1.
+    for color in (GREEN, RED, YELLOW, ACCENT):
+        assert _contrast(color, BG) >= 3.0, f"{color} on {BG} below 3:1"
+
+
 def test_mcp_snapshot_counts_healthy_services():
     snapshot = CatalogSnapshot(True, [{"name": "files", "status": "connected"},
                                       {"name": "web", "status": "connected", "has_error": True}],
