@@ -9,6 +9,7 @@ import asyncio
 import json
 import shlex
 import urllib.request
+from typing import TYPE_CHECKING
 from textual.widgets import Button, Static
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, TEXT, YELLOW
 from isycode.tui_widgets import ChatArea, ExpandableBox, SelectableText
@@ -28,6 +29,9 @@ from isycode.user_defaults import UserDefaultsStore
 from isycode.prompt_expansion import WORKSPACE_COMMANDS_DIR, load_user_commands
 from isycode.workspace_authority import WorkspaceAuthority
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
 
 async def _plan_cmd(app: "TUIApp", arg: str) -> None:
     if not arg.strip():

@@ -12,7 +12,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, TypeGuard
 from urllib.parse import urlsplit
 
 from isycode.actions import ACTION_BY_ID
@@ -547,7 +547,7 @@ class WorkspaceConfigBoundary:
         return SystembilityResult(self.name, True, "internal config path is within the workspace boundary")
 
 
-def command_argv_valid(argv: object) -> bool:
+def command_argv_valid(argv: object) -> TypeGuard[tuple[str, ...]]:
     """A bounded, NUL-free argv tuple; no shell ever interprets it."""
     return (isinstance(argv, tuple) and 1 <= len(argv) <= COMMAND_MAX_ARGS
             and all(isinstance(item, str) and "\x00" not in item
@@ -555,7 +555,7 @@ def command_argv_valid(argv: object) -> bool:
             and bool(argv[0]) and sum(len(item) for item in argv) <= COMMAND_MAX_ARGV_CHARS)
 
 
-def command_relative_path_valid(value: object, *, allow_root: bool = False) -> bool:
+def command_relative_path_valid(value: object, *, allow_root: bool = False) -> TypeGuard[str]:
     """A workspace-relative POSIX path with no traversal or sensitive part."""
     if not isinstance(value, str) or not value or len(value) > 1024 or "\x00" in value:
         return False
@@ -2145,10 +2145,10 @@ class ProviderNetworkOwner:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return None, ActionOutcome("Provider request denied.", "DENY", None,
                                        reason or authority.reason)
+        from isycode import egress
         try:
-            from isycode.egress import EgressDenied, review_destination
-            review_destination(url)
-        except EgressDenied as exc:
+            egress.review_destination(url)
+        except egress.EgressDenied as exc:
             return None, ActionOutcome("Provider request denied.", "DENY", None, str(exc))
         response = await send()
         try:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 from collections import defaultdict
+from collections.abc import Sequence
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -330,7 +331,7 @@ def _is_screen_class(node: ast.ClassDef) -> bool:
                .endswith(("Screen", "ModalScreen")) for base in node.bases)
 
 
-def _issues_from_trees(trees: list[ast.AST]) -> list[dict[str, Any]]:
+def _issues_from_trees(trees: Sequence[ast.Module]) -> list[dict[str, Any]]:
     """Walk TUIApp, its mixins, and screens those methods construct.
 
     Screen classes may live in another module. Module-level functions in the
