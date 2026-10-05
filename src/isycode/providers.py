@@ -78,6 +78,11 @@ PRESETS: dict[str, dict[str, Any]] = {
                  "label": "OpenCode Zen", "default_model": "gpt-5-nano"},
     "opencode-go": {"base_url": "https://opencode.ai/zen/go/v1", "key_env": "OPENCODE_API_KEY",
                     "label": "OpenCode Go", "default_model": "glm-5.3"},
+    # ChatGPT Web via the local codex-web-http bridge: no API key (the bridge
+    # drives an authenticated ChatGPT browser session); chat-only transport.
+    "isyco-web": {"base_url": "http://127.0.0.1:8792/v1", "key_env": "ISYCO_WEB_API_KEY",
+                  "label": "ISyCo Web (ChatGPT)", "key_required": False,
+                  "default_model": "chatgpt-web/gpt-5.6-sol"},
     "mistral": {"base_url": "https://api.mistral.ai/v1", "key_env": "MISTRAL_API_KEY",
                 "label": "Mistral", "default_model": "mistral-small-latest",
                 "supports_tools": True},
@@ -108,6 +113,7 @@ PROVIDER_SCREEN: tuple[tuple[str, str, str, str], ...] = (
     ("popular", "anthropic", "Anthropic", "Claude models via API key"),
     ("popular", "opencode", "OpenCode Zen", "OpenCode catalog, OpenAI-compatible"),
     ("popular", "opencode-go", "OpenCode Go", "OpenCode Go endpoint"),
+    ("popular", "isyco-web", "ISyCo Web (ChatGPT)", "ChatGPT Web via the local bridge on 127.0.0.1:8792"),
     ("popular", "xai", "xAI Grok", "API key or Grok sign-in"),
     ("popular", "google", "Google AI Studio", "Gemini, OpenAI-compatible endpoint"),
     ("popular", "openrouter", "OpenRouter", "One key, many models"),
