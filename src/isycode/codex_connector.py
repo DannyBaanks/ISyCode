@@ -440,6 +440,8 @@ class CodexConnector:
                     models.append(model)
                     from isycode.reasoning_options import record_catalog
                     record_catalog("chatgpt", model, entry)
+                    from isycode.providers import record_model_metadata
+                    record_model_metadata("chatgpt", model, entry)
                     from isycode.image_attachments import record_image_capability
                     record_image_capability("chatgpt", model, entry)
             cursor = result.get("nextCursor")

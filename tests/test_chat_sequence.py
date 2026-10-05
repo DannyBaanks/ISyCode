@@ -208,3 +208,29 @@ def test_fast_reasoning_round_preserves_history_position(tmp_path, monkeypatch, 
             assert chat.scroll_y == before
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_fast_consecutive_reasoning_chunks_share_one_visible_block(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+
+    async def complete(provider, messages, **kwargs):
+        kwargs['on_chunk']('reasoning', 'First thought. ')
+        kwargs['on_chunk']('reasoning', 'Second thought.')
+        kwargs['on_chunk']('content', 'Answer.')
+        return {'text': 'Answer.', 'tool_calls': []}
+
+    monkeypatch.setattr('isycode.tui.provider_complete', complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await app._run_chat('Think quickly.')
+            await pilot.pause()
+            blocks = list(app.query(ThoughtBlock))
+            assert len(blocks) == 1
+            assert plain_text(blocks[0]._body) == 'First thought. Second thought.'
+            assert blocks[0].collapsed
+
+    with capsys.disabled():
+        asyncio.run(scenario())

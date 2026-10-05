@@ -2,7 +2,8 @@ import pytest
 
 from isycode.config import load_api_key
 from isycode.providers import (
-    PRESETS, Provider, model_slot, save_model_slot,
+    PRESETS, Provider, model_context_limit, model_slot, record_model_metadata,
+    save_model_slot, save_provider_selection,
 )
 
 
@@ -62,3 +63,13 @@ def test_small_model_slot_is_typed_private_metadata(monkeypatch, tmp_path):
         save_model_slot("admin", "openai", "gpt-5.6-mini")
     with pytest.raises(ValueError):
         save_model_slot("small", "missing-provider", "x")
+
+
+def test_live_model_context_window_survives_model_selection_without_accepting_bad_metadata(monkeypatch, tmp_path):
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    record_model_metadata("openai", "gpt-example", {"context_length": 200_000})
+    assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")
+    save_provider_selection("openai", "gpt-example")
+    assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")
+    record_model_metadata("openai", "gpt-example", {"context_length": True})
+    assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")

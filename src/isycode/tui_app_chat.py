@@ -404,19 +404,16 @@ class ChatMixin:
                     return
                 lane = self._active_lane()
                 content = "".join(step_content)
-                lane.partial = "".join(content_buf)
+                lane.partial = "".join(step_content)
                 if not self._lane_on_screen():
                     lane.stream_widget = None
                     holder["widget"] = None
                     return
                 chat_now = self.query_one(ChatArea)
                 w = holder["widget"]
-                if w is not None and not w.is_mounted:
-                    holder["widget"] = None
-                    w = None
                 if w is None:
                     live = lane.stream_widget
-                    if live is not None and live.is_mounted:
+                    if live is not None:
                         w = live
                         holder["widget"] = w
                 if w is None:
@@ -436,7 +433,7 @@ class ChatMixin:
             def finish_step() -> None:
                 nonlocal block
                 current = block
-                if current is not None and current.is_mounted and self._lane_on_screen():
+                if current is not None and self._lane_on_screen():
                     current.collapse_to(_time.monotonic() - thought_started)
                     self.query_one(ChatArea).follow_tail()
                 block = None
@@ -450,7 +447,7 @@ class ChatMixin:
                     return
                 lane = self._active_lane()
                 if kind == "reasoning":
-                    if block is None or not getattr(block, "is_mounted", False):
+                    if block is None:
                         if self._lane_on_screen():
                             block, _ = self._mount_thought()
                             thought_started = _time.monotonic()
@@ -464,7 +461,7 @@ class ChatMixin:
                         lane.stream_block = None
                         block = None
                         return
-                    if block is not None and block.is_mounted:
+                    if block is not None:
                         block.set_text(lane.partial_reason)
                         self.query_one(ChatArea).follow_tail()
                 elif kind == "content":
@@ -597,6 +594,14 @@ class ChatMixin:
                             messages.append(assistant_turn(response))
                             continue
                         break
+                    lane = self._active_lane()
+                    if step_reason:
+                        lane.lines.append(("reasoning", "".join(step_reason),
+                                           _time.monotonic() - thought_started))
+                    if step_content:
+                        lane.lines.append(("assistant", "".join(step_content), assistant_sent_at))
+                    lane.partial = ""
+                    lane.stream_widget = None
                     messages.append(assistant_turn(response))
                     for call in calls:
                         if self._pending_steering:
@@ -695,7 +700,11 @@ class ChatMixin:
                 done_lane = self._active_lane()
                 done_lane.partial = ""
                 done_lane.partial_reason = ""
-                done_lane.lines.append(("assistant", full, assistant_sent_at))
+                if step_reason:
+                    done_lane.lines.append(("reasoning", "".join(step_reason),
+                                            _time.monotonic() - thought_started))
+                done_lane.lines.append(("assistant", "".join(step_content).strip() or full,
+                                        assistant_sent_at))
                 completed = True
                 self._retry_prompt = None
             elif reason_buf:

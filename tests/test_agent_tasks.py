@@ -42,6 +42,9 @@ def test_panel_shows_and_hides_with_the_list():
     class Host(App):
         _show_agent_tasks = TUIApp._show_agent_tasks
 
+        def _lane_on_screen(self):
+            return True
+
         def compose(self):
             yield Static("", id="agent-tasks")
 
@@ -103,6 +106,9 @@ def test_click_and_ctrl_t_toggle_the_panel():
         _show_agent_tasks = TUIApp._show_agent_tasks
         action_toggle_tasks = TUIApp.action_toggle_tasks
         BINDINGS = [("ctrl+t", "toggle_tasks")]
+
+        def _lane_on_screen(self):
+            return True
 
         def compose(self):
             from isycode.tui import TasksPanel

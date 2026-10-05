@@ -153,6 +153,7 @@ from textual.widget import Widget
 from textual.widgets import (
     Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select, Checkbox,
 )
+from textual.widgets import Collapsible as TextualCollapsible
 from textual.widgets.option_list import Option
 from rich.console import Console
 from rich.text import Text
@@ -430,8 +431,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
-    #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
-    #usage-status { width: 20%; height: 3; padding: 0 1; content-align: right top; color: #9aa3ad; overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis; }
+    #activity-status { width: 18%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
+    #idea-box { width: 57%; }
+    #usage-status { width: 25%; height: 3; padding: 0 1; content-align: right top; color: #9aa3ad; overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
@@ -544,6 +546,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._initial_prompt = initial_prompt
         self._openisy_refresh_generation = 0
         self._history: list[dict] = []
+        self._last_context_input_tokens = None
         self._tool_history: list[dict] = []
         self._idea_box = ""
         self._idea_nudge_due = False
@@ -1550,9 +1553,24 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     def _usage_status_text(self) -> str:
         from isycode.context_meter import compact_context_label
+        from isycode.providers import model_context_limit, resolved_chat_model, selected_provider_name
+        provider, model = selected_provider_name(), resolved_chat_model()
+        limit, _source = model_context_limit(provider, model)
+        reported = getattr(self, "_last_context_input_tokens", None)
         total = self._usage.input_tokens + self._usage.output_tokens
-        return self._throughput.widget_text(
-            total, bool(self._usage.unknown_requests), compact_context_label(self._history))
+        context = compact_context_label(self._history, provider_limit_tokens=limit,
+                                        reported_tokens=reported)
+        text = self._throughput.widget_text(total, bool(self._usage.unknown_requests), context)
+        if limit is None:
+            return text
+        from isycode.context_meter import context_snapshot
+        snapshot = context_snapshot(self._history, provider_limit_tokens=limit,
+                                    reported_tokens=reported)
+        percent = int(snapshot["percent"] or 0)
+        width = 6
+        filled = round(percent * width / 100)
+        bar = f"{'█' * filled}{'░' * (width - filled)} {percent}%"
+        return f"{self._throughput.widget_text(total, bool(self._usage.unknown_requests), bar).replace(chr(10), ' · ')} · {context}"
 
     def _refresh_usage(self) -> None:
         if not self._lane_on_screen():
@@ -1577,6 +1595,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             raise
         elapsed = _time.monotonic() - started
         usage = response.get("usage") if isinstance(response, dict) else None
+        if isinstance(usage, dict):
+            input_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
+            if type(input_tokens) is int and 0 <= input_tokens <= 10**12:
+                self._last_context_input_tokens = input_tokens
         self._usage.record(usage)
         self._throughput.note(usage, elapsed)
         self._throughput.measuring = False
@@ -2264,7 +2286,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             chat = self.query_one(ChatArea)
             chat.pause_tail()
             for parent in widget.ancestors:
-                if isinstance(parent, Collapsible):
+                if isinstance(parent, TextualCollapsible):
                     parent.collapsed = False
             chat.call_after_refresh(chat.scroll_to_widget, widget, top=True, animate=False)
 

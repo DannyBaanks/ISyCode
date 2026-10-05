@@ -4,7 +4,7 @@ import json
 import os
 
 from rich.cells import cell_len
-from textual.widgets import Button, Collapsible, Static
+from textual.widgets import Button, Collapsible as TextualCollapsible, Static
 
 from isycode.tui import Banner, ChatArea, SidePanel, TUIApp, TailscaleConfirmScreen
 from test_daily_tui import configure
@@ -94,7 +94,7 @@ def test_owned_read_keeps_receipt_in_expandable_detail(tmp_path, monkeypatch, ca
                 'name': 'workspace_read', 'arguments': json.dumps({'path': 'file.py'})}})
             await pilot.pause()
             assert 'value = 1' in result
-            detail = app.query_one('.tool-receipt', Collapsible)
+            detail = app.query_one('.tool-receipt', TextualCollapsible)
             assert detail.collapsed
             assert not any('rcpt_' in app._render_searchable_text(row)
                            for row in app.query_one(ChatArea).children if isinstance(row, Static))

@@ -26,6 +26,7 @@ class ConversationLane:
         self.tool_history: list = []
         self.conversation_summary = ""
         self.usage = UsageLedger()
+        self.last_context_input_tokens = None
         self.throughput = ThroughputMeter()
         self.queued_messages: list = []
         self.pending_steering: list = []
@@ -58,6 +59,7 @@ LANE_FIELDS = (
     ("_tool_history", "tool_history"),
     ("_conversation_summary", "conversation_summary"),
     ("_usage", "usage"),
+    ("_last_context_input_tokens", "last_context_input_tokens"),
     ("_throughput", "throughput"),
     ("_queued_messages", "queued_messages"),
     ("_pending_steering", "pending_steering"),

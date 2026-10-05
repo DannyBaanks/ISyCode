@@ -319,6 +319,9 @@ def owner_coverage_report() -> dict[str, Any]:
         "secure_closed": (
             not direct_api_bypasses and not conflicts and not mismatches
             and not unclassified_effectful_actions(rows) and not unresolved_dynamic
+            and not any(item["status"] in {"UNWIRED", "BYPASS_RISK",
+                                           "NOT_DEMONSTRATED", "PLANNED"}
+                        for item in callsites)
             and all(action in EXPLICIT_DENY_ACTIONS for action in unowned_effectful)
             and set(ACTION_BY_ID) == (set(EXPLICIT_DENY_ACTIONS)
                                       | set(NON_AUTHORITY_ACTIONS) | set(owners_by_action))

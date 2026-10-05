@@ -153,6 +153,9 @@ def test_sessions_filters_and_details_use_real_selected_row(tmp_path, monkeypatc
             listing = board.query_one("#work-conversations")
             listing.highlighted = next(index for index, option in enumerate(listing._options) if option.id == "a")
             await pilot.pause()
+            # Selection and the details panel's resize refresh are separate
+            # Textual messages; let both settle before inspecting the preview.
+            await pilot.pause()
             text = str(board.query_one("#work-details").render())
             assert "GLM 5.3" in text and "Full last message" in text
             await pilot.click("#work-filter-generating")

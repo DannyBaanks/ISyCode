@@ -31,6 +31,7 @@ from isycode.harness_probe import (
 )
 from isycode.harness_readers import read_harness_root
 from isycode.harness_readers.transcript import (
+    TranscriptCopy,
     read_transcript,
     transcript_candidates,
 )
@@ -789,6 +790,7 @@ class SessionMixin:
         lane.conversation_summary = state.get("conversation_summary", "")
         lane.idea_box = state.get("idea_box", "")
         lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        self._show_lane(lane)
         lane.throughput = ThroughputMeter()
         if "usage" not in state and session.messages:
             lane.usage.record(None)
@@ -1045,6 +1047,7 @@ class SessionMixin:
             current.stream_widget = None
             current.stream_block = None
             self._foreground_key = lane.key
+            lane.last_context_input_tokens = None
         self._show_chat_again()
         self._repaint_conversation()
         try:
@@ -1096,6 +1099,11 @@ class SessionMixin:
                     chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
                 chat.mount(SelectableText(
                     RichMarkdown(text or "", code_theme="monokai"), selection_text=text or ""))
+            elif kind == "reasoning":
+                block = ThoughtBlock()
+                block.set_text(text)
+                block.collapse_to(float(extra or 0))
+                chat.mount(block)
             elif kind == "note":
                 chat.mount(SelectableText(Text(text, style=extra or TEXT), selection_text=text))
         if lane.tool_history:
@@ -1219,6 +1227,7 @@ class SessionMixin:
         lane.conversation_summary = state.get("conversation_summary", "") or ""
         lane.idea_box = state.get("idea_box", "") or ""
         lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        self._show_lane(lane)
         lane.throughput = ThroughputMeter()
         lane.retry_prompt = None
         lane.draft_text = state.get("draft", "") or ""

@@ -12,7 +12,8 @@ import isycode.security as security_module
 def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     report = action_coverage.owner_coverage_report()
 
-    assert report["secure_closed"] is True
+    assert report["secure_closed"] is False
+    assert len(report["effectful_callsites_without_mediation"]) == 11
     assert "mobile.host.start" not in report["unowned_effectful_actions"]
     assert "oauth.authorize" in report["unowned_effectful_actions"]
     assert "credentials.add" not in report["unowned_effectful_actions"]

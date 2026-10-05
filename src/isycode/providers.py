@@ -201,22 +201,73 @@ def _load_preferences() -> dict[str, Any]:
     try:
         info = path.lstat()
     except FileNotFoundError:
-        return {"version": 1, "provider": "", "models": {}, "slots": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}, "model_metadata": {}}
     if not stat.S_ISREG(info.st_mode) or info.st_size > 64 * 1024:
-        return {"version": 1, "provider": "", "models": {}, "slots": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}, "model_metadata": {}}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
-        return {"version": 1, "provider": "", "models": {}, "slots": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}, "model_metadata": {}}
     if (not isinstance(data, dict) or data.get("version") != 1
             or not isinstance(data.get("provider"), str)
             or not isinstance(data.get("models"), dict)):
-        return {"version": 1, "provider": "", "models": {}, "slots": {}}
+        return {"version": 1, "provider": "", "models": {}, "slots": {}, "model_metadata": {}}
     slots = data.get("slots", {})
     if not isinstance(slots, dict):
         slots = {}
     data["slots"] = slots
+    metadata = data.get("model_metadata", {})
+    data["model_metadata"] = metadata if isinstance(metadata, dict) else {}
     return data
+
+
+def model_context_limit(provider: str, model: str) -> tuple[int | None, str]:
+    """Return a validated model window and whether it came from a live catalog or user config."""
+    provider_rows = _load_preferences()["model_metadata"].get(provider, {})
+    entry = provider_rows.get(model) if isinstance(provider_rows, dict) else None
+    if isinstance(entry, dict):
+        limit = entry.get("context_window")
+        if type(limit) is int and 0 < limit <= 10**9:
+            source = entry.get("context_source")
+            return limit, source if source in {"live-catalog", "user-config"} else "live-catalog"
+    return None, "unknown"
+
+
+def record_model_metadata(provider: str, model: str, entry: dict[str, Any]) -> None:
+    """Persist bounded public model metadata outside the workspace; never store credentials."""
+    if provider not in PRESETS or not isinstance(model, str) or not model or len(model) > 256:
+        return
+    raw = entry.get("context_length", entry.get("contextWindow", entry.get("context_window")))
+    if type(raw) is not int or not 0 < raw <= 10**9:
+        return
+    data = _load_preferences()
+    models = data["model_metadata"].setdefault(provider, {})
+    if not isinstance(models, dict):
+        models = {}
+        data["model_metadata"][provider] = models
+    if model not in models and sum(len(rows) for rows in data["model_metadata"].values()
+                                   if isinstance(rows, dict)) >= 512:
+        return
+    models[model] = {"context_window": raw, "context_source": "live-catalog"}
+    _write_preferences(data)
+
+
+def _write_preferences(data: dict[str, Any]) -> None:
+    path = _preferences_path()
+    temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(temporary, flags, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(data, stream, ensure_ascii=False, sort_keys=True)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        if os.name == "posix":
+            path.chmod(0o600)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 def recent_models() -> list[dict[str, str]]:
@@ -269,22 +320,9 @@ def save_provider_selection(name: str, model: str) -> None:
     identity = {"provider": provider, "model": selected_model}
     recent = [identity] + [item for item in recent_models() if item != identity]
     data = {"version": 1, "provider": provider, "models": models,
-            "recent_models": recent[:12], "slots": data.get("slots", {})}
-    path = _preferences_path()
-    temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(temporary, flags, 0o600)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            json.dump(data, stream, ensure_ascii=False, sort_keys=True)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        if os.name == "posix":
-            path.chmod(0o600)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+            "recent_models": recent[:12], "slots": data.get("slots", {}),
+            "model_metadata": data.get("model_metadata", {})}
+    _write_preferences(data)
 
 
 def model_slot(slot: str) -> dict[str, str] | None:
@@ -314,21 +352,7 @@ def save_model_slot(slot: str, provider: str, model: str) -> None:
     slots = dict(data.get("slots", {}))
     slots[slot] = {"provider": provider, "model": model}
     data["slots"] = slots
-    path = _preferences_path()
-    temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(temporary, flags, 0o600)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            json.dump(data, stream, ensure_ascii=False, sort_keys=True)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        if os.name == "posix":
-            path.chmod(0o600)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+    _write_preferences(data)
 
 
 class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -543,9 +567,11 @@ class Provider:
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
             raise ProviderError("provider returned an invalid model catalog")
         from isycode.reasoning_options import record_catalog
+        from isycode.providers import record_model_metadata
         for item in payload["data"]:
             if isinstance(item, dict) and isinstance(item.get("id"), str):
                 record_catalog(self.name, item["id"], item)
+                record_model_metadata(self.name, item["id"], item)
                 from isycode.image_attachments import record_image_capability
                 record_image_capability(self.name, item["id"], item)
         return sorted(item["id"] for item in payload["data"]
@@ -560,5 +586,6 @@ class Provider:
 
 __all__ = ["DEFAULT_MODEL", "FEATURED_MODELS", "PRESETS", "PROVIDER_SCREEN",
            "Provider", "ProviderError", "featured_models",
-           "load_provider_key", "provider_credential_state",
+           "load_provider_key", "model_context_limit", "provider_credential_state",
+           "record_model_metadata",
            "save_provider_selection", "selected_model_name", "selected_provider_name"]

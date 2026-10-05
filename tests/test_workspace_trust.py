@@ -105,7 +105,8 @@ def test_untrusted_classic_still_asks_and_trust_is_not_a_tool(project):
     methods = {}
     for path, class_name in (
             (root / "tui.py", "TUIApp"),
-            (root / "tui_app_authority.py", "AuthorityMixin")):
+            (root / "tui_app_authority.py", "AuthorityMixin"),
+            (root / "tui_app_workspace.py", "WorkspaceMixin")):
         source = path.read_text(encoding="utf-8")
         module = ast.parse(source)
         app = next(node for node in module.body
