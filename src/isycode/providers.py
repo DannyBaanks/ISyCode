@@ -82,7 +82,7 @@ PRESETS: dict[str, dict[str, Any]] = {
     # drives an authenticated ChatGPT browser session); chat-only transport.
     "isyco-web": {"base_url": "http://127.0.0.1:8792/v1", "key_env": "ISYCO_WEB_API_KEY",
                   "label": "ISyCo Web (ChatGPT)", "key_required": False,
-                  "default_model": "chatgpt-web/gpt-5.6-sol"},
+                  "default_model": "chatgpt-web/gpt-5.6-sol", "supports_tools": True},
     "mistral": {"base_url": "https://api.mistral.ai/v1", "key_env": "MISTRAL_API_KEY",
                 "label": "Mistral", "default_model": "mistral-small-latest",
                 "supports_tools": True},
