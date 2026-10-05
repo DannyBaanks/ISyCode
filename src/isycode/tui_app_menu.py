@@ -399,6 +399,7 @@ MENU_DISPATCH: dict[str, str] = {
     "providers_open": "_menu_providers_open",
     "roles_open": "_menu_roles_open",
     "sounds_toggle": "_menu_sounds_toggle",
+    "contrast_toggle": "_menu_contrast_toggle",
     "marquee_toggle": "_menu_marquee_toggle",
     "reasoning_open": "_menu_reasoning_open",
     "reasoning_select": "_menu_reasoning_select",

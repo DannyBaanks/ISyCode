@@ -66,6 +66,7 @@ EXPECTED = {
     "providers_open",
     "roles_open",
     "sounds_toggle",
+    "contrast_toggle",
     "marquee_toggle",
     "reasoning_open",
     "reasoning_select",

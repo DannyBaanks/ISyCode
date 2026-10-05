@@ -689,6 +689,18 @@ class ProviderMixin:
         self._open_settings_menu()
         return
 
+    def _menu_contrast_toggle(self, entry: dict[str, str | bool]) -> None:
+        enabled = not self._high_contrast
+        try:
+            UserDefaultsStore().update(high_contrast=enabled)
+        except (OSError, ValueError):
+            self.notify("High contrast preference could not be saved", severity="warning")
+            return
+        self._high_contrast = enabled
+        self._apply_high_contrast(enabled)
+        self._open_settings_menu()
+        return
+
     def _menu_marquee_toggle(self, entry: dict[str, str | bool]) -> None:
         enabled = not self._compact_marquee_default
         try:

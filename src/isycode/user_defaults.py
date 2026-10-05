@@ -49,7 +49,8 @@ class UserDefaultsStore:
             return {"version": self.VERSION, "new_workspace": "ask",
                     "new_workspace_mode": "ask", "default_role": None,
                     "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
-                    "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True}
+                    "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
+                    "high_contrast": False}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
         if os.name == "posix" and metadata.st_mode & 0o077:
@@ -89,6 +90,9 @@ class UserDefaultsStore:
         marquee = data.get("compact_marquee", False)
         if type(marquee) is not bool:
             raise ValueError("ISyCode compact marquee preference is invalid")
+        contrast = data.get("high_contrast", False)
+        if type(contrast) is not bool:
+            raise ValueError("ISyCode high contrast preference is invalid")
         steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
         tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
         budget = data.get("chat_token_budget", 0)
@@ -100,14 +104,20 @@ class UserDefaultsStore:
             raise ValueError("ISyCode answer length is invalid")
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
-                "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds}
+                "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds,
+                "high_contrast": contrast}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
                default_role: dict[str, str] | None | object = ...,
                agent_steps: int | None = None, answer_tokens: int | None = None,
-               chat_token_budget: int | None = None, compact_marquee: bool | None = None, notification_sounds: bool | None = None) -> None:
+               chat_token_budget: int | None = None, compact_marquee: bool | None = None,
+               notification_sounds: bool | None = None, high_contrast: bool | None = None) -> None:
         current = self.load()
+        if high_contrast is not None:
+            if type(high_contrast) is not bool:
+                raise ValueError("ISyCode high contrast preference is invalid")
+            current["high_contrast"] = high_contrast
         if notification_sounds is not None:
             if type(notification_sounds) is not bool:
                 raise ValueError("ISyCode notification sounds preference is invalid")

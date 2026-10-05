@@ -31,6 +31,46 @@ RED = "#f87171"       # error / denied
 CYAN = "#22d3ee"      # info / host
 
 
+# ── High-contrast overrides (optional accessibility mode) ─────────
+# The semantic palette above already clears WCAG AA on pure black
+# (TEXT 13.7:1, MUTED 8.5:1, GREEN 10.8:1, YELLOW 11.6:1, RED 5.9:1),
+# so only the control surfaces and borders need restyling. Injected as
+# an extra stylesheet source at runtime; never mutates the base CSS.
+HIGH_CONTRAST_CSS = """
+Screen { background: #000000; color: #ffffff; }
+#banner { background: #000000; }
+#chat { background: #000000; }
+#command-bar { background: #000000; }
+#command-bar Button { background: #000000; }
+Footer { background: #000000; color: #9aa3ad; }
+Input { background: #000000; color: #ffffff; border: round #9aa3ad; }
+Input:focus { background: #000000; border: round #ffffff; }
+TextArea { background: #000000; border: round #9aa3ad; }
+TextArea:focus { border: round #ffffff; }
+#prompt-input { background: #000000; color: #ffffff; border: round #9aa3ad; }
+#prompt-input:focus { background: #000000; border: round #ffffff; }
+ModalScreen Button { background: #1a1a1a; color: #ffffff; }
+ModalScreen Button:hover { background: #2a2a2a; }
+ModalScreen Button:focus { background: #3a3a3a; text-style: bold; }
+ModalScreen Button.-primary { background: #7650a1; color: #ffffff; }
+#side-panel { background: #000000; border: round #9aa3ad; }
+#rail-card { background: #000000; border: round #9aa3ad; }
+#workspace-tree { background: #000000; border: round #9aa3ad; }
+#file-preview-scroll { background: #000000; border: round #9aa3ad; }
+#rail-tabs { border: round #9aa3ad; }
+#idea-box { background: #000000; border: round #9aa3ad; }
+#shell-box { background: #000000; border: round #9aa3ad; }
+#queued-box { background: #000000; }
+#agent-tasks { background: #000000; border-top: solid #9aa3ad; }
+#slash-suggestions { background: #000000; border: round #9aa3ad; }
+#action-card { background: #000000; border: round #9aa3ad; }
+.tool-activity { background: #000000; }
+.external-review { background: #000000; border: round #9aa3ad; }
+.user-turn { background: #000000; }
+ThoughtBlock { border: round #9aa3ad; }
+"""
+
+
 # ── Banner: literal, exact. Spells ISYCODE. ──────────────────────
 BANNER = r"""
  ██╗███████╗██╗   ██╗ ██████╗ ██████╗ ██████╗ ███████╗

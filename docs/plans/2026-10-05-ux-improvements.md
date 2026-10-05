@@ -50,10 +50,10 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 - [x] Test que fija los ratios reales: body text (TEXT/MUTED) ≥4.5, UI/acentos ≥3.0.
 - [ ] (Opcional, no necesario hoy) subir ACCENT a ≥4.5 si algún día se usa para texto normal.
 
-### T-UX1.3 Modo alto contraste opcional  ⬜ PENDIENTE
-**Files:** `src/isycode/config.py` (`UserDefaultsStore`), `tui_theme.py`, Settings.
-- [ ] `high_contrast: bool` + paleta alternativa (BG `#000`, TEXT `#fff`, ≥7:1).
-- [ ] Entrada en Settings → Display + test de conmutación.
+### T-UX1.3 Modo alto contraste opcional  ✅ HECHO
+**Files:** `src/isycode/user_defaults.py` (`UserDefaultsStore`), `tui_theme.py`, `tui.py`, `tui_app_menu.py`, `tui_app_providers.py`, `tests/test_high_contrast.py`.
+- [x] `high_contrast: bool` + overrides CSS (BG `#000`, TEXT `#fff`; la paleta semántica ya cumplía AA sobre negro, solo se reestilizan superficies y bordes).
+- [x] Entrada en Settings ("High contrast display · on/off") con conmutación en vivo vía `stylesheet.add_source` + tests de conmutación, validación y contraste.
 
 ---
 
