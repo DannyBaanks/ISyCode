@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Check historical gate documents without confusing review with approval.
+"""Check gate documents without confusing review with approval.
 
-The legacy gate files use a small YAML-like dialect (artifact path followed by
-an indented sha256), not valid general YAML. Parse that dialect explicitly.
---require-approved is fail-closed: no independent approval mechanism has been
-established yet, so this checker cannot authorize a product release.
+The gate files use a small YAML-like dialect (artifact path followed by an
+indented sha256), not valid general YAML. Parse that dialect explicitly.
+
+A gate may be APROBADO only with an explicit reviewer acceptance block:
+``revision: aceptada`` plus a ``revisor`` identity different from ``autor``
+and a ``revision_fecha_utc`` stamp. The reviewer accepts the document at its
+declared sha_evaluado; any later code change needs fresh evidence. Without
+that block every state above EN_REVISION is rejected, keeping the checker
+fail-closed. --require-approved additionally demands every gate be APROBADO.
 """
 from __future__ import annotations
 
@@ -20,6 +25,7 @@ CASE_ID = re.compile(r"^G[0-9]+A?-[0-9]{2}$")
 RESULTS = {"PASS", "FAIL", "UNKNOWN", "SKIP", "EN_REVISION"}
 STATES = {"PENDIENTE", "EN_CURSO", "BLOQUEADO", "EN_REVISION", "APROBADO", "REABIERTO"}
 REQUIRED = ("hito", "puerta", "estado", "sha_evaluado", "casos")
+REVIEW_KEYS = {"revision", "revisor", "revision_fecha_utc", "revision_declaracion"}
 REQUIRED_BY_GATE = {
     gate: {f"{gate}-{number:02d}" for number in range(1, count + 1)}
     for gate, count in (("G0", 4), ("G1", 4), ("G2", 5), ("G3", 6),
@@ -35,6 +41,7 @@ def document_from_text(text: str) -> dict:
     case = None
     artifact = None
     artifact_indent = None
+    dependencies = None
     for raw in text.splitlines():
         if not raw.strip() or raw.lstrip().startswith("#"):
             continue
@@ -45,11 +52,21 @@ def document_from_text(text: str) -> dict:
             if ":" not in line:
                 raise ValueError("invalid root field")
             key, value = line.split(":", 1)
-            if key in REQUIRED or key in {"revision", "dependencias"}:
+            if key == "dependencias_estado":
+                dependencies = {}
+                document["dependencias_estado"] = dependencies
+                continue
+            dependencies = None
+            if key in REQUIRED or key in REVIEW_KEYS or key in {"autor", "dependencias"}:
                 if key in document:
                     raise ValueError(f"duplicate field {key}")
                 document[key] = value.strip()
             continue
+        if dependencies is not None and indent == 2 and ":" in line:
+            name, state = line.split(":", 1)
+            dependencies[name.strip()] = state.strip()
+            continue
+        dependencies = None
         match = re.fullmatch(r"-\s+id:\s*(\S+)", line)
         if indent == 2 and match:
             case = {"id": match.group(1), "artefactos": []}
@@ -117,6 +134,16 @@ def validate_document(document: dict, *, required_ids: set[str] | None = None,
     if required_ids and required_ids - seen:
         errors.append("omitted required tests: " + ", ".join(sorted(required_ids - seen)))
     if state == "APROBADO":
+        if document.get("revision") != "aceptada":
+            errors.append("APROBADO needs revision: aceptada (independent reviewer acceptance)")
+        reviewer = str(document.get("revisor", "")).strip()
+        author = str(document.get("autor", "")).strip()
+        if not reviewer:
+            errors.append("APROBADO needs a revisor identity")
+        elif author and reviewer.casefold() == author.casefold():
+            errors.append("revisor must be different from autor")
+        if not str(document.get("revision_fecha_utc", "")).strip():
+            errors.append("APROBADO needs revision_fecha_utc")
         for name, claimed in (document.get("dependencias_estado") or {}).items():
             if (dependency_states or {}).get(name, claimed) != "APROBADO":
                 errors.append(f"false dependency approval: {name}")
@@ -162,13 +189,21 @@ def validate_tree(root: Path, *, require_approved: bool = False) -> list[str]:
     if not files:
         return ["missing gate.yaml evidence files"]
     errors = []
+    documents: list[tuple[Path, dict]] = []
     for path in files:
         try:
-            document = document_from_text(path.read_text(encoding="utf-8"))
+            documents.append((path, document_from_text(path.read_text(encoding="utf-8"))))
         except (OSError, ValueError) as exc:
             errors.append(f"{path}: {exc}")
-            continue
-        found = validate_document(document, required_ids=REQUIRED_BY_GATE.get(str(document.get("puerta", ""))))
+    dependency_states: dict[str, str] = {}
+    for _, document in documents:
+        gate = str(document.get("puerta", ""))
+        state = str(document.get("estado", ""))
+        if gate and dependency_states.get(gate) != "APROBADO":
+            dependency_states[gate] = state
+    for path, document in documents:
+        found = validate_document(document, required_ids=REQUIRED_BY_GATE.get(str(document.get("puerta", ""))),
+                                  dependency_states=dependency_states)
         if document.get("puerta") not in REQUIRED_BY_GATE:
             found.append("unknown gate")
         if document.get("sha_evaluado") != path.parent.name:
@@ -184,12 +219,9 @@ def validate_tree(root: Path, *, require_approved: bool = False) -> list[str]:
         for case in document.get("casos", []):
             found.extend(_artifact_errors(root, path.parent, case,
                          strict=require_approved or case.get("resultado") == "PASS"))
-        if document.get("estado") == "APROBADO":
-            found.append("APROBADO is rejected until independent reviewer acceptance is implemented")
         if require_approved:
             if document.get("estado") != "APROBADO":
                 found.append(f"release blocked: gate is {document.get('estado')}, not APROBADO")
-            found.append("release blocked: independent revision acceptance is not established")
         errors.extend(f"{path}: {error}" for error in found)
     return errors
 
@@ -205,6 +237,23 @@ def self_test() -> list[str]:
         failures.append("omitted required test accepted")
     if validate_document(base):
         failures.append("review record rejected")
+    approved = {**base, "estado": "APROBADO", "autor": "agent session x",
+                "revision": "aceptada", "revisor": "danny",
+                "revision_fecha_utc": "2026-10-05T00:00:00Z"}
+    if validate_document(approved):
+        failures.append(f"valid acceptance rejected: {validate_document(approved)}")
+    bad_acceptances = [
+        {**base, "estado": "APROBADO"},
+        {**approved, "revision": "ausente"},
+        {**approved, "revisor": "agent session x"},
+        {**approved, "revisor": ""},
+        {**approved, "revision_fecha_utc": ""},
+        {**approved, "casos": [{**base["casos"][0], "resultado": "FAIL"}]},
+        {**approved, "dependencias_estado": {"G0": "APROBADO"}},
+    ]
+    for fixture in bad_acceptances:
+        if not validate_document(fixture, dependency_states={"G0": "EN_REVISION"}):
+            failures.append(f"invalid acceptance accepted: {fixture}")
     return failures
 
 

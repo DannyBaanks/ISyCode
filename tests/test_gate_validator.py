@@ -118,7 +118,19 @@ def test_foreign_folder_sha_omitted_case_and_self_approval_are_rejected(tmp_path
     gate.write_text(gate.read_text().replace("id: G6-05", "id: G6-99"))
     assert any("omitted required tests" in error for error in _validator().validate_tree(tmp_path))
     _write_gate(tmp_path, state="APROBADO")
-    assert any("APROBADO is rejected" in error for error in _validator().validate_tree(tmp_path))
+    assert any("revision: aceptada" in error for error in _validator().validate_tree(tmp_path))
+
+
+def test_self_approval_is_rejected_and_independent_acceptance_passes(tmp_path):
+    validator = _validator()
+    gate = _write_gate(tmp_path, state="APROBADO")
+    text = gate.read_text()
+    acceptance = ("autor: agent session x\nrevision: aceptada\nrevisor: danny\n"
+                  "revision_fecha_utc: 2026-10-05T00:00:00Z\n")
+    gate.write_text(text.replace("revision: ausente\n", acceptance))
+    assert validator.validate_tree(tmp_path) == []
+    gate.write_text(gate.read_text().replace("revisor: danny", "revisor: agent session x"))
+    assert any("revisor must be different" in error for error in validator.validate_tree(tmp_path))
 
 
 def test_cli_accepts_the_explicit_release_check():
