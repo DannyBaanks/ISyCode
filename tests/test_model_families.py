@@ -164,3 +164,20 @@ async def test_models_screen_renders_family_variants(tmp_path, monkeypatch):
         rendered = str(app.screen.query_one("#models-scroll").content) if hasattr(app.screen.query_one("#models-scroll"), "content") else ""
         labels = [str(button.label) for button in app.screen.query(".model-choice")]
         assert any("glm-5.3-flash" in label for label in labels), labels
+
+
+@pytest.mark.asyncio
+async def test_models_screen_click_after_immediate_open_does_not_crash(tmp_path, monkeypatch):
+    from test_daily_tui import configure
+    configure(tmp_path, monkeypatch)
+    from isycode.tui import TUIApp, ModelsScreen
+
+    app = TUIApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        entries = app._branch_entries("models")
+        app._render_menu("model_account", "Models · account catalog", entries)
+        await pilot.pause()
+        await pilot.click("#models-search")
+        await pilot.pause()
+        assert isinstance(app.screen, ModelsScreen)

@@ -1784,6 +1784,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
 
 
+    def _push_models_screen(self, entries: list[dict[str, str]]) -> None:
+        self.push_screen(ModelsScreen(entries), self._model_picker_result)
+
     def _render_menu(self, mode: str, title: str, entries: list[dict[str, str]]) -> None:
         if mode == "branch" and title == "Models":
             name = selected_provider_name()
@@ -1803,7 +1806,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 existing.refresh(recompose=True)
             else:
                 self.query_one("#action-menu", Vertical).display = False
-                self.push_screen(ModelsScreen(entries), self._model_picker_result)
+                # Defer the push out of the worker context: a click landing
+                # while the screen is still mounting hits an Input with no
+                # parent and crashes Textual's selection offset math.
+                self.call_after_refresh(self._push_models_screen, entries)
             return
         card = self.query_one("#action-card", Vertical)
         if mode == "providers":
