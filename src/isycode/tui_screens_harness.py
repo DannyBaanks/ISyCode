@@ -167,12 +167,24 @@ class ModelsScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         from isycode.model_presentation import model_display_name
         groups: dict[str, list[dict]] = {}
+        families: dict[str, list[dict]] = {}
         for entry in self.entries:
+            if entry["kind"] == "model_family":
+                provider, family = entry["value"].split("|", 1)
+                variants = getattr(self.app, "_account_family_variants", {}).get(
+                    (provider, family), [])
+                families.setdefault(provider, []).extend(variants)
+                continue
             if entry["kind"] == "model":
                 provider, model = entry["value"].split("|", 1)
                 groups.setdefault(provider, [])
                 if not any(item["value"] == entry["value"] for item in groups[provider]):
                     groups[provider].append(entry)
+        for provider, variants in families.items():
+            bucket = groups.setdefault(provider, [])
+            for entry in variants:
+                if not any(item["value"] == entry["value"] for item in bucket):
+                    bucket.append(entry)
         with Vertical(id="models-card"):
             yield Static(Text.assemble(("Models\n", "bold #c7b8d4"),
                                       ("Expand a provider · select a model · choose reasoning", MUTED)), id="models-title")

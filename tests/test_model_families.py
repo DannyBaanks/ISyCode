@@ -142,3 +142,25 @@ async def test_picker_shows_catalog_models_with_tool_marker(tmp_path, monkeypatc
         assert any("no tools" in row["label"] or "tool_call=yes" in (row["detail"] or "")
                    for row in catalog)
         assert all("preset" not in row["label"] for row in catalog)
+
+
+@pytest.mark.asyncio
+async def test_models_screen_renders_family_variants(tmp_path, monkeypatch):
+    from test_daily_tui import configure
+    configure(tmp_path, monkeypatch)
+    from isycode.tui import TUIApp, ModelsScreen
+
+    catalog = ["glm-5.3", "glm-5.3-flash", "glm-5.2-flash"]
+    monkeypatch.setattr("isycode.providers.Provider.models", lambda self: list(catalog))
+    app = TUIApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        await app._load_account_models("openai")
+        entries = app._branch_entries("models")
+        assert any(row["kind"] == "model_family" for row in entries)
+        screen = ModelsScreen(entries)
+        await app.push_screen(screen)
+        await pilot.pause()
+        rendered = str(app.screen.query_one("#models-scroll").content) if hasattr(app.screen.query_one("#models-scroll"), "content") else ""
+        labels = [str(button.label) for button in app.screen.query(".model-choice")]
+        assert any("glm-5.3-flash" in label for label in labels), labels

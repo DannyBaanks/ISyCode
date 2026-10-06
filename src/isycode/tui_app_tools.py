@@ -53,6 +53,9 @@ class ToolMixin:
         if name == IDEA_BOX_TOOL_NAME:
             return await self._dispatch_chat_tool_impl(call)
         label = name if isinstance(name, str) and name else "unknown tool"
+        from isycode.operation_style import operation_icon
+        from isycode.tui_theme import ascii_only
+        label = f"{operation_icon(label, ascii_only=ascii_only())} {label}"
         try:
             arguments = json.loads(function.get("arguments") or "{}")
         except (ValueError, TypeError):

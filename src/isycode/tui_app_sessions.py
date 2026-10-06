@@ -169,7 +169,9 @@ def _tool_note_line(index: int, event: dict) -> str:
     if not summary:
         single_line = " ".join(result_text.split())
         summary = f"{len(result_text)} chars" if len(single_line) > 100 else (single_line or "no output")
-    head = f"{index}. {name}"
+    from isycode.operation_style import operation_icon
+    from isycode.tui_theme import ascii_only
+    head = f"{index}. {operation_icon(name, ascii_only=ascii_only())} {name}"
     return f"{head} · {target} · {summary}" if target else f"{head} · {summary}"
 
 
