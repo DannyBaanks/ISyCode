@@ -94,15 +94,12 @@ def test_owned_read_keeps_receipt_in_expandable_detail(tmp_path, monkeypatch, ca
                 'name': 'workspace_read', 'arguments': json.dumps({'path': 'file.py'})}})
             await pilot.pause()
             assert 'value = 1' in result
-            detail = app.query_one('.tool-receipt', TextualCollapsible)
-            assert detail.collapsed
-            assert not any('rcpt_' in app._render_searchable_text(row)
-                           for row in app.query_one(ChatArea).children if isinstance(row, Static))
-            from unittest.mock import Mock
-            app._search_console('rcpt_', Mock())
+            assert not app.query('.tool-receipt')
+            leaf = next(row for row in app.query_one(ChatArea).query(TextualCollapsible)
+                        if 'workspace_read' in str(row.title))
+            leaf.collapsed = False
             await pilot.pause()
-            assert not detail.collapsed
-            assert any('rcpt_' in app._render_searchable_text(row) for row in detail.query(Static))
+            assert any('rcpt_' in app._render_searchable_text(row) for row in leaf.query(Static))
 
     with capsys.disabled():
         asyncio.run(scenario())

@@ -271,13 +271,10 @@ class ToolMixin:
             reason = result.reason or result.decision
             self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", YELLOW)
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
-        # The outcome stays visible; its journal receipt is available on demand.
+        # The outcome and its receipt live inside the tool's own card; no
+        # separate box per call.
         self._append(f"  ✓ {alias} · {summary[:160]} · completed", TEXT)
-        chat = self.query_one(ChatArea)
-        chat.mount(Collapsible(Static(Text(
-            self._receipt_text(result, summary), style=MUTED)),
-            title="Action receipt", collapsed=True, classes="tool-receipt"))
-        chat.follow_tail()
+        self._append(self._receipt_text(result, summary), MUTED)
         return tool_call_id, result.text
 
     def _receipt_text(self, result, summary: str) -> str:
