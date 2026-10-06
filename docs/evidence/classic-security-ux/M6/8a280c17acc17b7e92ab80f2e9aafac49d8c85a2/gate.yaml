@@ -1,0 +1,86 @@
+hito: M6
+puerta: G6
+estado: EN_REVISION
+sha_evaluado: 8a280c17acc17b7e92ab80f2e9aafac49d8c85a2
+fecha_utc: 2026-10-06T06:15:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; cancelación y retry reconciliado medidos con fixtures locales; sin cambio de permisos del producto
+dependencias: G4, G5
+dependencias_estado:
+  G4: APROBADO
+  G5: APROBADO
+casos:
+  - id: G6-01
+    prueba: tests/test_turn_control.py::test_g6_01_cancel_during_stream_closes_the_socket tests/test_turn_control.py::test_g6_01_cancel_during_staging_kills_child_and_grandchild tests/test_turn_control.py::test_g6_01_cancel_during_promotion_stops_later_files
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: cancelar durante stream, staging, promoción, hijo y nieto no deja procesos del trabajo; verificar desde fuera del sandbox
+    observado: >
+      Pasó. Cancelar el stream cierra el socket (servidor local lo confirma)
+      con CancelledError propagado; cancelar durante staging mata hijo y
+      nieto (verificado fuera del sandbox por árbol de procesos); cancelar
+      durante la promoción detiene los archivos siguientes sin efecto parcial
+      silencioso.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 8010aa7c889c7a98fd7d94a25b9e0753c7b7e1fc27b156db467d11f5a0a85233
+      - tests/test_turn_control.py
+        sha256: 323021cabb6ed53d031bb5ef4208881d72bd7006a7c6bd8570d6d9e9710d4100
+  - id: G6-02
+    prueba: tests/test_turn_control.py::test_g6_02_lost_publish_response_is_not_a_second_publish tests/test_turn_control.py::test_g6_02_a_committed_promotion_is_not_charged_twice
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: perder respuesta después del efecto y reintentar/reabrir produce un solo efecto o bloqueo UNCERTAIN, nunca duplicación silenciosa
+    observado: >
+      Pasó. Recibo de publish no persistido => NOT_VERIFIABLE; el reintento
+      con un owner reiniciado devuelve UNCERTAIN ("lost") y el transporte se
+      llamó exactamente una vez. Promoción con crash tras commit: al reabrir,
+      reconcile marca committed y NO carga el churn dos veces (saldo idéntico).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 8010aa7c889c7a98fd7d94a25b9e0753c7b7e1fc27b156db467d11f5a0a85233
+  - id: G6-03
+    prueba: tests/test_turn_control.py::test_g6_03_restart_keeps_an_open_reservation_and_one_charge
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: kill del owner y restart conservan reserva/recibo y reconciliación; no descuentan saldo ni repiten publicación dos veces
+    observado: >
+      Pasó. Reserva abierta sobrevive al restart del owner y se reconcilia en
+      una sola carga; el efecto no se repite (OperationJournal persistente con
+      lock de escritor único, ver test_two_contenders_one_writer en el mismo archivo).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 8010aa7c889c7a98fd7d94a25b9e0753c7b7e1fc27b156db467d11f5a0a85233
+  - id: G6-04
+    prueba: tests/test_turn_control.py::test_g6_04_truncated_tool_calls_are_not_executable tests/test_turn_control.py::test_g6_04_retry_keeps_the_new_draft_and_transcript_order
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: streams truncados/tool calls incompletos no ejecutan; retry preserva borrador nuevo y orden del transcript
+    observado: >
+      Pasó. Tool calls con arguments truncados (JSON incompleto del stream)
+      no son ejecutables (tool_arguments_complete) y no producen efecto; el
+      retry preserva el borrador nuevo y el orden del transcript.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 8010aa7c889c7a98fd7d94a25b9e0753c7b7e1fc27b156db467d11f5a0a85233
+  - id: G6-05
+    prueba: tests/test_turn_control.py::test_g6_05_backoff_is_bounded_cancellable_and_does_not_change_authority tests/test_turn_control.py::test_g6_05_python_310_tasks_have_no_cancelling_attribute
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: backoff acotado con jitter y cancelación, sin tormenta de reintentos; fallos de provider no cambian autoridad
+    observado: >
+      Pasó. El backoff es acotado con jitter, cancelable en mitad de la espera
+      y sin tormenta; los fallos del provider no alteran grants ni modo de la
+      autoridad (evaluación antes y después idéntica).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 8010aa7c889c7a98fd7d94a25b9e0753c7b7e1fc27b156db467d11f5a0a85233
+      - src/isycode/turn_control.py
+        sha256: 27e4dbe7133159600f08b38e3eea8e09dc05be7e9349ed4990a27981a5d10dca
+sin_evidencia_real:
+  - kill -9 del proceso real de la app en mitad de una publicación viva (los crashes son inyectados por fixtures registrados; el patrón OS-level queda para M9 dogfood)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1455 passed, 1 skipped, 11 deselected; 292.64s (corrida en el mismo código; delta posterior es solo docs)
+riesgos_residuales: la verificación fuera del sandbox usa el árbol de procesos del host de prueba; en otro init/reaper el mecanismo podría diferir (mismo backend bwrap)
+rollback_ensayado: no aplica cambio de producto; tests herméticos
+revision: ausente
