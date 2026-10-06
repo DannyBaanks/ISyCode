@@ -275,10 +275,31 @@ class ToolMixin:
         self._append(f"  ✓ {alias} · {summary[:160]} · completed", TEXT)
         chat = self.query_one(ChatArea)
         chat.mount(Collapsible(Static(Text(
-            f"Receipt · {result.receipt.receipt_id}\nOwned read completed · journal verification available in Settings",
-            style=MUTED)), title="Action receipt", collapsed=True, classes="tool-receipt"))
+            self._receipt_text(result, summary), style=MUTED)),
+            title="Action receipt", collapsed=True, classes="tool-receipt"))
         chat.follow_tail()
         return tool_call_id, result.text
+
+    def _receipt_text(self, result, summary: str) -> str:
+        """Compact receipt: decision, safe path, budget and recovery, never content."""
+        from isycode.chat_sessions import ChatSessionStore
+        budget = "unavailable"
+        try:
+            from isycode.effect_ledger import EffectLedger, MAX_CHURN_BYTES
+            status = EffectLedger(self._workspace_root).status()
+            remaining = max(0, MAX_CHURN_BYTES - status["churn_bytes"])
+            budget = (f"churn {status['churn_bytes']} B used · {remaining} B remaining · "
+                      f"{status['unique_paths']} paths · {status['delete_ops']} deletes")
+        except Exception:
+            pass
+        lines = [
+            f"Decision · {result.decision}",
+            f"Receipt · {result.receipt.receipt_id}",
+            f"Scope · {ChatSessionStore._sanitize_text(summary[:160])}",
+            f"Budget · {budget}",
+            "Recovery · /undo restores the last applied change; journal verification in Settings",
+        ]
+        return "\n".join(lines)
 
     def _child_model_choices(self):
         from isycode.providers import child_model_choices
