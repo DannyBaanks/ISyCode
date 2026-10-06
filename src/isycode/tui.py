@@ -637,6 +637,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._bridge_enabled = False
         self._agent_context: dict[str, str] | None = None
         self._retry_prompt: str | None = None
+        self._session_auto_edits: set[str] = set()
+        self._batch_decisions: dict[str, str] = {}
         try:
             self._compact_marquee_default = UserDefaultsStore().load().get("compact_marquee", False)
             self._notification_sounds = UserDefaultsStore().load().get("notification_sounds", True)

@@ -37,7 +37,7 @@ from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME
 from isycode.idea_box import IDEA_BOX_TOOL, IDEA_BOX_TOOL_NAME, IDEA_NUDGE_SECONDS
 from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
 from isycode.command_runner import COMMAND_TOOL
-from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME
+from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from textual.widgets import Static
 from rich.text import Text
@@ -174,6 +174,75 @@ class ChatMixin:
             else:
                 self._append(f"  @{path} not attached · {outcome.reason[:160]}", YELLOW)
         return attach_files(text, files)
+
+    async def _review_write_batch(self, calls: list[dict]) -> dict[str, str]:
+        """One-screen review for >=2 write/edit calls with distinct paths.
+
+        Returns {call_id: digest} for approved calls and {call_id: "reject"}
+        for a reject-all. Anything ineligible (bad args, same path twice,
+        quiet Classic, already-delegated folder, preview failure, fewer than
+        two candidates) stays out of the map and follows the per-call flow.
+        The approval binds to the previewed digest: drift re-opens the modal.
+        """
+        candidates: list[tuple[str, object]] = []
+        seen_paths: set[str] = set()
+        for call in calls:
+            function = call.get("function") if isinstance(call, dict) else None
+            name = function.get("name") if isinstance(function, dict) else None
+            call_id = call.get("id") if isinstance(call, dict) else None
+            if name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME} or not isinstance(call_id, str) or not call_id:
+                continue
+            try:
+                arguments = json.loads(function.get("arguments", "{}") or "{}")
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(arguments, dict):
+                continue
+            path = arguments.get("path")
+            if not isinstance(path, str) or path in seen_paths:
+                continue
+            alias = arguments.get("folder", "main")
+            if not isinstance(alias, str):
+                continue
+            try:
+                root = self._folder_store().resolve(alias, write=True)
+                owner = WorkspaceWriteOwner(root, WorkspaceAuthority(root), self._action_approvals)
+                if name == EDIT_TOOL_NAME:
+                    preview = await asyncio.to_thread(
+                        owner.preview_edit, path, arguments.get("old_text"),
+                        arguments.get("new_text"), arguments.get("replace_all", False))
+                else:
+                    content = arguments.get("content")
+                    if not isinstance(content, str):
+                        continue
+                    preview = await asyncio.to_thread(owner.preview, path, content)
+            except (OSError, ValueError, TypeError):
+                continue
+            if self._request_is_quiet(preview.request):
+                continue
+            try:
+                if self._session_trust_active(alias) or self._folder_store().auto_edit_allowed(alias):
+                    continue
+            except (OSError, ValueError):
+                continue
+            seen_paths.add(path)
+            candidates.append((call_id, preview))
+            if len(candidates) >= 8:
+                break
+        if len(candidates) < 2:
+            return {}
+        from isycode.tui_screens_approval import BatchApprovalScreen
+        previews = [preview for _, preview in candidates]
+        self._append(f"  Tool batch · {len(previews)} proposed writes · one review for all", CYAN)
+        choice = await self._await_screen(BatchApprovalScreen(previews))
+        if choice == "all":
+            self._append(f"  ✓ Batch approved · {len(previews)} one-use approvals, "
+                         "one per file", MUTED)
+            return {call_id: preview.request.digest for call_id, preview in candidates}
+        if choice == "reject":
+            self._append(f"  ✗ Batch rejected · {len(previews)} files unchanged", MUTED)
+            return {call_id: "reject" for call_id, _ in candidates}
+        return {}
 
     async def _run_chat(self, text: str) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
@@ -604,6 +673,7 @@ class ChatMixin:
                     lane.partial = ""
                     lane.stream_widget = None
                     messages.append(assistant_turn(response))
+                    self._batch_decisions = await self._review_write_batch(calls)
                     for call in calls:
                         if self._pending_steering:
                             messages.append({"role": "tool", "tool_call_id": call.get("id") or "skipped",

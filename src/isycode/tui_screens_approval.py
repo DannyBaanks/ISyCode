@@ -186,11 +186,12 @@ class WriteApprovalScreen(ApprovalScreen):
     BINDINGS = [Binding("escape", "reject", "Reject")]
 
     def __init__(self, preview: WritePreview, *, replaces_whole_file: bool = False,
-                 allow_automatic_edits: bool = True) -> None:
+                 allow_automatic_edits: bool = True, allow_session_trust: bool = False) -> None:
         super().__init__()
         self.preview = preview
         self.replaces_whole_file = replaces_whole_file
         self.allow_automatic_edits = allow_automatic_edits
+        self.allow_session_trust = allow_session_trust
 
     def compose(self) -> ComposeResult:
         lines = self.preview.diff.splitlines()
@@ -221,6 +222,9 @@ class WriteApprovalScreen(ApprovalScreen):
             with Horizontal(id="write-approval-actions"):
                 yield Button("Reject · n", id="write-approval-reject")
                 yield Button("Apply change · y", id="write-approval-apply", variant="warning")
+                if self.allow_session_trust and self.preview.kind == "write" and not self.preview.is_undo:
+                    yield Button("Trust folder this session · s", id="write-approval-session",
+                                 variant="primary")
                 if self.allow_automatic_edits and self.preview.kind == "write" and not self.preview.is_undo:
                     yield Button("Always allow…", id="write-approval-always", variant="error")
 
@@ -230,11 +234,70 @@ class WriteApprovalScreen(ApprovalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "write-approval-always":
             self.dismiss("always")
+        elif event.button.id == "write-approval-session":
+            self.dismiss("session")
         else:
             self.dismiss(event.button.id == "write-approval-apply")
 
     def action_reject(self) -> None:
         self.dismiss(False)
+
+
+class BatchApprovalScreen(ModalScreen[str]):
+    """One gesture for N proposed writes; every write keeps its own one-use digest.
+
+    Dismisses with "all" (apply every listed change), "each" (fall back to the
+    per-file review flow) or "reject" (nothing is written).
+    """
+
+    CSS = """
+    BatchApprovalScreen { align: center middle; background: #000000 58%; }
+    #batch-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #batch-approval-title { height: 2; color: #bb8cff; text-style: bold; }
+    #batch-approval-summary { height: auto; margin-bottom: 1; }
+    #batch-approval-diffs { height: 1fr; border: none; background: #202126; }
+    #batch-approval-actions { height: 3; dock: bottom; align-horizontal: right; }
+    #batch-approval-actions Button { margin-left: 1; width: 1fr; min-width: 0; padding: 0 1; }
+    """
+    BINDINGS = [Binding("escape", "reject", "Reject all")]
+
+    def __init__(self, previews: list[WritePreview]) -> None:
+        super().__init__()
+        self.previews = list(previews)
+
+    def compose(self) -> ComposeResult:
+        added = removed = 0
+        for preview in self.previews:
+            lines = preview.diff.splitlines()
+            added += sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
+            removed += sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
+        with Vertical(id="batch-approval-card"):
+            yield Static(f"Review {len(self.previews)} proposed changes in one go",
+                         id="batch-approval-title")
+            yield Static(
+                f"Total +{added} / -{removed} lines across {len(self.previews)} files. "
+                "Approving here issues one single-use, digest-bound approval per change — "
+                "no lasting permission is created, and a file that changes before it is "
+                "applied is refused.", id="batch-approval-summary", markup=False)
+            with VerticalScroll(id="batch-approval-diffs"):
+                for preview in self.previews:
+                    yield Static(Text(f"── {preview.path} ──", style="bold #c7b8d4"), markup=False)
+                    yield Static(Syntax(preview.diff, "diff", theme="monokai", word_wrap=True))
+            with Horizontal(id="batch-approval-actions"):
+                yield Button("Reject all · n", id="batch-approval-reject")
+                yield Button("Review each · e", id="batch-approval-each")
+                yield Button(f"Approve all {len(self.previews)} · a",
+                             id="batch-approval-all", variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#batch-approval-reject", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss({"batch-approval-all": "all",
+                      "batch-approval-each": "each"}.get(event.button.id, "reject"))
+
+    def action_reject(self) -> None:
+        self.dismiss("reject")
 
 
 class CommandApprovalScreen(ApprovalScreen):

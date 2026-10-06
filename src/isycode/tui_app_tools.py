@@ -230,7 +230,17 @@ class ToolMixin:
         except (OSError, ValueError) as exc:
             return tool_call_id, json.dumps({'error': str(exc)[:180]})
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
-            return tool_call_id, await self._dispatch_write_tool(arguments, edit=name == EDIT_TOOL_NAME, root=root, folder_alias=alias)
+            batch_decision = self._batch_decisions.pop(tool_call_id, None)
+            if batch_decision == "reject":
+                self._append("  ✗ Batch rejected · nothing was written", MUTED)
+                return tool_call_id, json.dumps({"status": "rejected_by_user",
+                                                 "approved_by_user": False,
+                                                 "path": arguments.get("path")})
+            if batch_decision:
+                self._set_activity(f"Applying batch-approved write · {arguments.get('path')}")
+            return tool_call_id, await self._dispatch_write_tool(
+                arguments, edit=name == EDIT_TOOL_NAME, root=root, folder_alias=alias,
+                batch_digest=batch_decision or None)
         if name in {DELETE_TOOL_NAME, MOVE_TOOL_NAME}:
             return tool_call_id, await self._dispatch_file_change(name, arguments)
         if name == COMMAND_TOOL_NAME:

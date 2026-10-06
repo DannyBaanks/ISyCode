@@ -57,24 +57,27 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 
 ---
 
-## M-UX2 — Reducir fatiga de aprobaciones (CRÍTICO, sensible a seguridad)  ⬜ PENDIENTE
+## M-UX2 — Reducir fatiga de aprobaciones (CRÍTICO, sensible a seguridad)  ✅ HECHO
 
-### T-UX2.1 Batch approval (N digests de un solo uso, un gesto)
-**Files:** `approvals.py`, `tui_screens_approval.py`, `workspace_write.py`.
-- [ ] Agrupar requests relacionados (mismo archivo/tarea) en una pantalla que lista cada diff.
-- [ ] "Approve group" emite N approvals de un solo uso (cada una ligada a su digest); sin grant persistente.
-- [ ] "Review each" → flujo y/n actual. "Reject all" → deniega.
-- [ ] Tests: cada digest se consume una vez; replay falla; journal registra cada aprobación.
+> Desbloqueado por la aprobación de G0–G3 (roadmap §5) el 2026-10-06. M15 intacto: cada escritura sigue consumiendo su propio token digest-bound de un solo uso, emitido por la app en el momento de aplicar.
 
-### T-UX2.2 Session trust (grant que expira por sesión)
-**Files:** `workspace_authority.py`.
-- [ ] Scope "session" que expira al cerrar la TUI (no persiste a `policy_path`).
-- [ ] Botón "Trust for session" en aprobación de writes; journal lo marca.
-- [ ] Tests: no sobrevive reinicio; no se escribe en disco; respeta el límite de Authority.
+### T-UX2.1 Batch approval (N digests de un solo uso, un gesto)  ✅ HECHO
+**Files:** `tui_screens_approval.py` (`BatchApprovalScreen`), `tui_app_chat.py` (`_review_write_batch`), `tui_app_tools.py`, `tui_app_workspace.py`.
+- [x] ≥2 writes/edits con paths distintos en un turno → una pantalla con todos los diffs (cap 8; mismo-path o preview fallido cae al flujo actual).
+- [x] "Approve all" marca call-ids; cada write emite su token fresco digest-bound al aplicar. **El batch solo vale para el digest previeweado: cualquier drift reabre el modal individual.**
+- [x] "Review each" → flujo y/n actual. "Reject all" → deniega todo sin modales.
+- [x] Tests: replay falla (`test_single_use_tokens_still_replay_fail`), receipts distintos por archivo, reject-all no escribe nada, drift reabre review.
 
-### T-UX2.3 Feedback de progreso en operaciones multi-paso
-**Files:** `tui_composer.py` / `tui_widgets.py`.
-- [ ] Indicador (n/total + barra) durante batch writes; reutilizar elapsed timer; no bloquear render.
+### T-UX2.2 Session trust (grant que expira por sesión)  ✅ HECHO
+**Files:** `tui_screens_approval.py` (botón), `tui_app_workspace.py` (`_session_trust_active`), `tui.py` (estado en memoria).
+- [x] `_session_auto_edits: set[str]` solo en memoria; muere con el proceso. Nada se escribe en `policy_path` ni en `folder_store`.
+- [x] Botón "Trust folder this session · s" en `WriteApprovalScreen`, solo cuando `auto_edit_available` (Classic en ambos roots, rechequeo vivo).
+- [x] Cambiar a Security **suspende** la confianza al instante (rechequeo de política en cada write); volver a Classic la restaura dentro de la misma sesión.
+- [x] Cada write reporta `approval_mode: "session-trust"` con receipt propio.
+- [x] Tests: no persiste, no sobrevive a nueva instancia, Security nunca ofrece el botón, suspensión por cambio de modo.
+
+### T-UX2.3 Feedback de progreso en operaciones multi-paso  ✅ HECHO
+- [x] Actividad "Applying batch-approved write · path" por archivo + líneas de transcripción "Tool batch · N proposed writes", "Batch approved/rejected", duración por herramienta (existente). Tests en `tests/test_batch_and_session_trust.py` (10).
 
 ---
 

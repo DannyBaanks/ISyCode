@@ -430,8 +430,19 @@ class WorkspaceMixin:
         return json.dumps({"error": "change was not applied", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
 
+    def _session_trust_active(self, folder_alias: str) -> bool:
+        """In-memory, per-run trust. Classic-only, re-checked live: switching a
+        workspace to Security suspends it without persisting anything."""
+        if folder_alias not in self._session_auto_edits:
+            return False
+        try:
+            return self._folder_store().auto_edit_available(folder_alias)
+        except (OSError, ValueError):
+            return False
+
     async def _dispatch_write_tool(self, arguments: dict, *, edit: bool = False,
-                                   root: Path | None = None, folder_alias: str = 'main') -> str:
+                                   root: Path | None = None, folder_alias: str = 'main',
+                                   batch_digest: str | None = None) -> str:
         """Preview a proposed change, show its diff, and apply only if the user approves."""
         path = arguments.get("path")
         root = root or self._workspace_root
@@ -468,8 +479,22 @@ class WorkspaceMixin:
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
         quiet = self._request_is_quiet(preview.request)
+        # A batch gesture applies only to the exact previewed digest; any drift
+        # since the batch screen falls back to an individual review.
+        batch_approved = batch_digest is not None and batch_digest == preview.request.digest
+        session_trusted = self._session_trust_active(folder_alias)
         if quiet:
             self._append(f"  Tool · quiet Classic · {'replace whole file' if replaces else 'edit'} · "
+                         f"{preview.path}", CYAN)
+            delegated = False
+            choice = True
+        elif batch_approved:
+            self._append(f"  Tool · batch-approved · {'replace whole file' if replaces else 'edit'} · "
+                         f"{preview.path}", CYAN)
+            delegated = False
+            choice = True
+        elif session_trusted:
+            self._append(f"  Tool · session trust · {'replace whole file' if replaces else 'edit'} · "
                          f"{preview.path}", CYAN)
             delegated = False
             choice = True
@@ -482,10 +507,17 @@ class WorkspaceMixin:
                 return json.dumps({'error': f'Folder approval settings unavailable: {str(exc)[:120]}'})
             choice = True if delegated else await self._await_screen(
                 WriteApprovalScreen(preview, replaces_whole_file=replaces,
-                    allow_automatic_edits=self._folder_store().auto_edit_available(folder_alias)))
+                    allow_automatic_edits=self._folder_store().auto_edit_available(folder_alias),
+                    allow_session_trust=self._folder_store().auto_edit_available(folder_alias)))
         if choice == 'always':
             delegated = await self._set_folder_auto_edit(folder_alias, True)
             choice = delegated
+        if choice == 'session':
+            self._session_auto_edits.add(folder_alias)
+            session_trusted = True
+            self._append(f"  Trust granted for this session only · folder {folder_alias} · "
+                         "writes apply without asking until ISyCode closes; nothing is saved", MUTED)
+            choice = True
         if not choice:
             self._append(f"  ✗ You rejected · {preview.path} · nothing was written", MUTED)
             return json.dumps({"status": "rejected_by_user", "approved_by_user": False,
@@ -497,13 +529,18 @@ class WorkspaceMixin:
                 raise ValueError('Folder or write access changed during review')
             if delegated and not self._folder_store().auto_edit_allowed(folder_alias):
                 raise ValueError('Automatic edit approval was revoked')
+            if session_trusted and not self._session_trust_active(folder_alias):
+                raise ValueError('Session trust was suspended by a mode change')
         except (OSError, ValueError) as exc:
             return json.dumps({'error': str(exc)[:180]})
         if quiet:
             self._append(f"  ✓ Quiet Classic · {folder_alias} · {preview.path}", MUTED)
             approval = None
         else:
-            self._append(f"  ✓ {'User-enabled automatic edits' if delegated else 'You approved'} · {folder_alias} · {preview.path}", MUTED)
+            label = ('Batch-approved' if batch_approved else
+                     'Session trust' if session_trusted else
+                     'User-enabled automatic edits' if delegated else 'You approved')
+            self._append(f"  ✓ {label} · {folder_alias} · {preview.path}", MUTED)
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
@@ -511,6 +548,10 @@ class WorkspaceMixin:
                          f"receipt {outcome.receipt.receipt_id}", GREEN)
             if quiet:
                 approval_mode, approved_by_user = "quiet-profile", False
+            elif batch_approved:
+                approval_mode, approved_by_user = "batch", True
+            elif session_trusted:
+                approval_mode, approved_by_user = "session-trust", True
             elif delegated:
                 approval_mode, approved_by_user = "delegated", False
             else:
