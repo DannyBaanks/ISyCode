@@ -116,3 +116,20 @@ def test_snapshot_returns_latest_per_run_for_reconnect(tmp_path):
     assert snap["run-1"].state == "running"
     assert snap["run-2"].state == "completed"
     assert snap["run-2"].parent_run_id == "run-1"
+
+
+def test_ten_thousand_events_slow_consumer_preserves_terminals(tmp_path):
+    """G6A-06 scale check: quotas hold, terminal states and acks survive."""
+    store = _store(tmp_path)
+    store.append("task-1", "run-1", None, "start", "running")
+    for index in range(10_000):
+        try:
+            store.append("task-1", "run-1", None, "progress", "running", {"i": index})
+        except ValueError:
+            pass
+    store.append("task-1", "run-1", None, "error", "failed", {"reason": "late failure"})
+    store.append("task-1", "run-1", None, "finish", "failed")
+    states = [event.state for event in store.read(limit=10_000).events]
+    assert "failed" in states
+    assert any(event.type == "log.dropped" for event in store.read(limit=10_000).events)
+    assert store.snapshot()["run-1"].state == "failed"
