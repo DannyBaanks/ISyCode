@@ -110,3 +110,25 @@ def test_earlier_tools_preview_is_bounded():
     assert len(preview) < 700
     assert "more chars in history" in preview
     assert _bounded_note("short", 600) == "short"
+
+
+def test_tool_note_line_renders_semantic_summaries():
+    from isycode.tui_app_sessions import _tool_note_line
+    assert _tool_note_line(1, {"name": "workspace_list",
+                               "arguments": '{"path":"."}',
+                               "result": '{"entries":[1,2,3]}'}) == "1. workspace_list · . · 3 entries"
+    assert _tool_note_line(2, {"name": "workspace_grep",
+                               "arguments": '{"path":"AGENTS.md","query":"ISyCo"}',
+                               "result": '{"files_scanned":1,"matches":[1,2]}'}) == \
+        "2. workspace_grep · AGENTS.md · ISyCo · 2 matches in 1 files"
+    assert _tool_note_line(6, {"name": "git_status", "arguments": "{}",
+                               "result": '{"branch":"master","changes":[1,2,3]}'}) == \
+        "6. git_status · 3 changes on master"
+    assert _tool_note_line(7, {"name": "update_session_title",
+                               "arguments": '{"title":"x"}',
+                                   "result": '{"status":"ALLOW"}'}) == "7. update_session_title · allow"
+    line = _tool_note_line(1, {"name": "workspace_read",
+                               "arguments": '{"path":"big.json"}',
+                               "result": '{"text":"' + "x" * 9000 + '"}'})
+    assert line == "1. workspace_read · big.json · 9000 chars"
+    assert "{" not in line

@@ -132,6 +132,47 @@ def _bounded_note(value: object, limit: int) -> str:
     return text[:limit].rstrip() + f"\n… ({len(text) - limit} more chars in history, not shown)"
 
 
+def _tool_note_line(index: int, event: dict) -> str:
+    """One semantic line per earlier tool; raw JSON never renders."""
+    name = str(event.get("name", "tool"))
+    target = ""
+    try:
+        arguments = json.loads(str(event.get("arguments", "") or "{}"))
+        if isinstance(arguments, dict):
+            target = " · ".join(str(arguments[key])[:80] for key in ("path", "query", "pattern", "to")
+                                if isinstance(arguments.get(key), str))
+    except ValueError:
+        target = ""
+    result_text = str(event.get("result", "") or "")
+    summary = ""
+    try:
+        material = json.loads(result_text)
+    except ValueError:
+        material = None
+    if isinstance(material, dict):
+        if isinstance(material.get("entries"), list):
+            summary = f"{len(material['entries'])} entries"
+        elif isinstance(material.get("matches"), list):
+            scanned = material.get("files_scanned") or material.get("directories_scanned")
+            summary = f"{len(material['matches'])} matches" + (
+                f" in {scanned} files" if scanned else "")
+        elif isinstance(material.get("changes"), list):
+            summary = f"{len(material['changes'])} changes on {material.get('branch', '?')}"
+        elif isinstance(material.get("text"), str):
+            summary = f"{len(material['text'])} chars"
+        elif isinstance(material.get("output"), str):
+            summary = f"output {len(material['output'])} chars"
+        elif isinstance(material.get("status"), str):
+            summary = str(material["status"]).lower()
+        elif material.get("error"):
+            summary = "error"
+    if not summary:
+        single_line = " ".join(result_text.split())
+        summary = f"{len(result_text)} chars" if len(single_line) > 100 else (single_line or "no output")
+    head = f"{index}. {name}"
+    return f"{head} · {target} · {summary}" if target else f"{head} · {summary}"
+
+
 class SessionMixin:
     """Chat sessions, the queue, the idea box, and harness import."""
 
@@ -1137,10 +1178,8 @@ class SessionMixin:
         if lane.tool_history:
             history_text = (
                 "Earlier tool notes. They may be stale. No tool was run again.\n\n"
-                + "\n\n".join(
-                    f"{index}. {event.get('name', '')}\n"
-                    f"Arguments: {_bounded_note(event.get('arguments', ''), 300)}\n"
-                    f"Result:\n{_bounded_note(event.get('result', ''), 600)}"
+                + "\n".join(
+                    _tool_note_line(index, event)
                     for index, event in enumerate(lane.tool_history, start=1)
                 )
             )
