@@ -1,0 +1,21 @@
+{
+  "sha": "33b218df7869046124d93b8edc75cf1dd75240d4",
+  "flow": {
+    "approvals_shown": 1,
+    "approval_screens": [
+      {
+        "kind": "WriteApprovalScreen",
+        "latency_s": 0.162
+      }
+    ],
+    "total_s": 0.528,
+    "file_after": "value = 2",
+    "journal": "PASS"
+  },
+  "deny": {
+    "decision": "DENY",
+    "reason": "fresh request-bound approval is required",
+    "latency_s": 0.007,
+    "file_after": "value = 2"
+  }
+}

@@ -1,0 +1,300 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install bubblewrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
+      - name: Let bubblewrap configure its private loopback
+        run: |
+          # Ubuntu 24.04 denies CAP_NET_ADMIN inside an unprivileged user
+          # namespace, so bwrap dies with "loopback: Failed RTM_NEWADDR" before
+          # the command starts. This ephemeral runner may set up that namespace.
+          # The product sandbox still passes --unshare-all and does not share
+          # the host network.
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Install ISyCode and test runner
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+
+      - name: Run test suite
+        run: python -m pytest -q -m "not integration"
+
+  test-textual-current:
+    # Keep the selection-capable Textual pin verified on a second Python runtime.
+    name: Tests (Linux, Textual 8)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install bubblewrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
+      - name: Let bubblewrap configure its private loopback
+        run: |
+          # Same runner restriction as the Python 3.10 job. The sandbox argv
+          # is unchanged: no --share-net.
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install ISyCode with Textual 8 and test runner
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+          python -m pip install textual==8.2.8
+          python -c "import textual; print('textual', textual.__version__)"
+
+      - name: Run test suite
+        run: python -m pytest -q -m "not integration"
+
+  gate-evidence:
+    name: Gate evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Reject bad gate manifests
+        run: |
+          python scripts/validate_gates.py --self-test
+          python scripts/validate_gates.py
+
+  package:
+    name: Package (${{ matrix.target }})
+    needs: [test, test-textual-current, gate-evidence]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: windows-x86_64
+          - runner: ubuntu-22.04
+            target: linux-x86_64
+          - runner: macos-latest
+            target: macos-arm64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Install ISyCode and packager
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pyinstaller==6.22.3
+
+      - name: Verify tag matches package version
+        id: metadata
+        shell: bash
+        run: |
+          PACKAGE_VERSION="$(python -c "from importlib.metadata import version; print(version('isycode'))")"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            echo "Release tag $GITHUB_REF_NAME; package version $PACKAGE_VERSION"
+            [[ "$TAG_VERSION" == "$PACKAGE_VERSION" ]]
+          fi
+          echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Block release when gates lack reviewer approval
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: python scripts/validate_gates.py --require-approved
+
+      - name: Build standalone executable
+        shell: bash
+        run: |
+          EXTRA_ARGS=()
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            EXTRA_ARGS+=(--collect-all secretstorage --collect-all jeepney)
+          fi
+          python -m PyInstaller --clean --noconfirm --onefile \
+            --name isycode \
+            --paths src \
+            --collect-all rich \
+            --collect-all textual \
+            --collect-all keyring \
+            --copy-metadata isycode \
+            --copy-metadata keyring \
+            --collect-data isycode \
+            --copy-metadata rich \
+            --copy-metadata textual \
+            --copy-metadata pathspec \
+            --copy-metadata aiohttp \
+            "${EXTRA_ARGS[@]}" \
+            packaging/isycode_entry.py
+
+      - name: Smoke-check Windows executable
+        if: runner.os == 'Windows'
+        shell: bash
+        run: dist/isycode.exe --version
+
+      - name: Smoke-check Linux executable
+        if: runner.os == 'Linux'
+        shell: bash
+        run: dist/isycode --version
+
+      - name: Build Debian package and AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/isycode-deb/DEBIAN" "$RUNNER_TEMP/isycode-deb/usr/bin"
+          install -m 0755 dist/isycode "$RUNNER_TEMP/isycode-deb/usr/bin/isycode"
+          cat > "$RUNNER_TEMP/isycode-deb/DEBIAN/control" <<EOF
+          Package: isycode
+          Version: ${PACKAGE_VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libc6 (>= 2.35)
+          Maintainer: ISyCode contributors
+          Homepage: https://github.com/DannyBaanks/ISyCode
+          Description: Local-first secure terminal agent host
+           ISyCode is a terminal user interface for AI-assisted workspace tasks.
+          EOF
+          dpkg-deb --build --root-owner-group "$RUNNER_TEMP/isycode-deb" \
+            "dist/isycode-${PACKAGE_VERSION}-linux-x86_64.deb"
+          mkdir -p "$RUNNER_TEMP/isycode.AppDir/usr/bin"
+          install -m 0755 dist/isycode "$RUNNER_TEMP/isycode.AppDir/usr/bin/isycode"
+          cat > "$RUNNER_TEMP/isycode.AppDir/AppRun" <<'EOF'
+          #!/bin/sh
+          HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          exec "$HERE/usr/bin/isycode" "$@"
+          EOF
+          chmod 0755 "$RUNNER_TEMP/isycode.AppDir/AppRun"
+          cat > "$RUNNER_TEMP/isycode.AppDir/isycode.desktop" <<'EOF'
+          [Desktop Entry]
+          Name=ISyCode
+          Exec=isycode
+          Icon=isycode
+          Type=Application
+          Terminal=true
+          Categories=Development;
+          EOF
+          cp packaging/isycode.svg "$RUNNER_TEMP/isycode.AppDir/isycode.svg"
+          ln -s isycode.svg "$RUNNER_TEMP/isycode.AppDir/.DirIcon"
+          curl --fail --location --silent --show-error \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+            --output "$RUNNER_TEMP/appimagetool.AppImage"
+          echo "a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0  $RUNNER_TEMP/appimagetool.AppImage" | sha256sum --check --status
+          chmod 0755 "$RUNNER_TEMP/appimagetool.AppImage"
+          curl --fail --location --silent --show-error \
+            https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 \
+            --output "$RUNNER_TEMP/appimage-runtime-x86_64"
+          echo "156f4bdbde9c52d01814600013e0a273f0118dc2de98975f3c8c63427ec79074  $RUNNER_TEMP/appimage-runtime-x86_64" | sha256sum --check --status
+          chmod 0755 "$RUNNER_TEMP/appimage-runtime-x86_64"
+          "$RUNNER_TEMP/appimagetool.AppImage" --appimage-extract-and-run \
+            "$RUNNER_TEMP/isycode.AppDir" "dist/isycode-${PACKAGE_VERSION}-linux-x86_64.AppImage" \
+            --runtime-file "$RUNNER_TEMP/appimage-runtime-x86_64" --no-appstream
+          dpkg-deb --extract "dist/isycode-${PACKAGE_VERSION}-linux-x86_64.deb" "$RUNNER_TEMP/deb-smoke"
+          "$RUNNER_TEMP/deb-smoke/usr/bin/isycode" --version
+          APPIMAGE_EXTRACT_AND_RUN=1 "dist/isycode-${PACKAGE_VERSION}-linux-x86_64.AppImage" --version
+          cp dist/isycode "dist/isycode-${PACKAGE_VERSION}-linux-x86_64"
+
+      - name: Build macOS installer and archive
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/isycode-pkgroot/usr/local/bin"
+          install -m 0755 dist/isycode "$RUNNER_TEMP/isycode-pkgroot/usr/local/bin/isycode"
+          pkgbuild --root "$RUNNER_TEMP/isycode-pkgroot" \
+            --identifier com.isyco.isycode \
+            --version "$PACKAGE_VERSION" \
+            --ownership recommended \
+            --install-location / \
+            "dist/isycode-${PACKAGE_VERSION}-macos-arm64.pkg"
+          tar -C dist -czf "dist/isycode-${PACKAGE_VERSION}-macos-arm64.tar.gz" isycode
+          dist/isycode --version
+
+      - name: Name Windows executable
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: mv dist/isycode.exe "dist/isycode-${PACKAGE_VERSION}-windows-x86_64.exe"
+
+      - name: Upload platform packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: isycode-${{ matrix.target }}
+          path: dist/isycode-*
+          if-no-files-found: error
+          retention-days: 30
+
+  draft-release:
+    name: Create draft GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: isycode-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: release-assets
+        run: sha256sum isycode-* > SHA256SUMS
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release-assets/* --draft --generate-notes --title "ISyCode $RELEASE_TAG"
