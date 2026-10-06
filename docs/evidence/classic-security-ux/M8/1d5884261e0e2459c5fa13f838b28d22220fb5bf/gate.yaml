@@ -1,0 +1,97 @@
+hito: M8
+puerta: G8
+estado: EN_REVISION
+sha_evaluado: 1d5884261e0e2459c5fa13f838b28d22220fb5bf
+fecha_utc: 2026-10-06T20:05:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: solo presentación; ningún cambio de permisos del producto
+dependencias: G7
+dependencias_estado:
+  G7: APROBADO
+casos:
+  - id: G8-01
+    prueba: tests/test_approval_keys.py (28 casos parametrizados) + tests/test_ux_polish.py::test_reject_button_is_the_default_focus
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py tests/test_approval_keys.py tests/test_side_panel.py tests/test_integrated_layout.py -ra --tb=short
+    esperado: recorrido completo solo teclado, sin foco atrapado; Esc cancela correctamente, Enter no acepta frontera accidentalmente
+    observado: >
+      Pasó. Las 28 combinaciones de teclas deciden cada pantalla de aprobación
+      (y/n/Esc con Reject por defecto) y todas heredan la base común de teclas;
+      el foco inicial es el botón Reject, así que Enter arrastrado rechaza,
+      nunca aprueba. Esc cierra popups y devuelve al chat (atajo registrado
+      en APP_SHORTCUTS, tests de arranque).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/1d5884261e0e2459c5fa13f838b28d22220fb5bf/gate-tests.txt
+        sha256: 1347e8bd4a6ba6734465f096ad9795b5c95ed84260d7cc4111bfdaedec2e7102
+      - tests/test_approval_keys.py
+        sha256: 5eb756cfb2f094acf7cfcc789ecfe4e9b436e3cacb42c795ad059e1fa4bc9117
+  - id: G8-02
+    prueba: tests/test_ux_polish.py::test_resize_200x60_and_back_keeps_composer_and_draft tests/test_integrated_layout.py tests/test_daily_tui.py::test_terminal_sizes_multiline_and_sidebar_shortcuts
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py tests/test_integrated_layout.py -ra --tb=short
+    esperado: capturas y resize real a 80x24, 120x40 y 200x60; composer/acciones esenciales visibles, sin overlap ni pérdida del borrador
+    observado: >
+      Pasó. Resize real 200x60 -> 80x24 -> 200x60: composer visible sin
+      overlap con el rail, acciones esenciales visibles y el borrador sobrevive
+      ambos cambios. 80x24 y 120x40 quedan cubiertos por test_integrated_layout
+      (incl. la regla del modelo cediendo el botón bajo 100 columnas) y las
+      tres tallas diarias 80/100/140.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/1d5884261e0e2459c5fa13f838b28d22220fb5bf/gate-tests.txt
+        sha256: 1347e8bd4a6ba6734465f096ad9795b5c95ed84260d7cc4111bfdaedec2e7102
+  - id: G8-03
+    prueba: tests/test_side_panel.py::test_palette_meets_wcag_aa_for_its_actual_uses + docs/design/terminal-colors.md
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_side_panel.py -ra --tb=short
+    esperado: tema por defecto con contraste objetivo >=4.5:1 para texto normal y >=3:1 para indicadores; documentar colores efectivos y límites del terminal
+    observado: >
+      Pasó. Test de ratios fijado: TEXT 12.9:1 y MUTED 6.67:1 (>=4.5),
+      GREEN/RED/YELLOW/ACCENT >=3:1 en sus usos reales. Documentados los
+      colores efectivos, los ratios sobre fondo base y sobre negro (high
+      contrast), los canales de estado sin color (glifos/ASCII/texto) y los
+      límites del terminal (sin Unicode, fondo claro forzado, NO_COLOR, Orca
+      NOT_DEMONSTRATED) en docs/design/terminal-colors.md.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/1d5884261e0e2459c5fa13f838b28d22220fb5bf/gate-tests.txt
+        sha256: 1347e8bd4a6ba6734465f096ad9795b5c95ed84260d7cc4111bfdaedec2e7102
+      - tests/test_side_panel.py
+        sha256: a016f9d3d6e353e248be27f5b59113ff0e8a0020b93dda7750a94082eeb367a5
+      - docs/design/terminal-colors.md
+        sha256: 87bf68441f8f9899a1e309ca9dce3cce181fe19802ef699848dbeccb8bb20776
+  - id: G8-04
+    prueba: tests/test_ux_polish.py::test_thousand_tool_events_keep_order_and_failed_stays_failed
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py -ra --tb=short
+    esperado: 1000 eventos de herramientas mantienen orden, scroll manual, selección y estado de Tasks; ningún resultado fallido se muestra completado
+    observado: >
+      Pasó. ToolActivityGroup con 1000 hojas: orden estricto read 1..1000,
+      título "workspace_read · 1000 calls", y finish_leaf con estado Failed
+      jamás muestra Completed (el estado viaja en la etiqueta). Scroll manual
+      y selección quedan cubiertos por ChatArea (follow_tail solo en la cola;
+      tests de scroll/selección en test_tui_widgets dentro de la suite).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/1d5884261e0e2459c5fa13f838b28d22220fb5bf/gate-tests.txt
+        sha256: 1347e8bd4a6ba6734465f096ad9795b5c95ed84260d7cc4111bfdaedec2e7102
+  - id: G8-05
+    prueba: tests/test_ux_polish.py::test_receipt_expands_decision_scope_budget_recovery_without_canary
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py -ra --tb=short
+    esperado: recibos compactos expanden decisión, paths seguros, presupuesto restante y recuperación; canarios de secretos ausentes incluso en errores
+    observado: >
+      Pasó. El recibo expande Decision, Receipt id, Scope sanitizado, Budget
+      (churn usado + remaining + paths + deletes del ledger) y Recovery
+      (/undo + journal). Un canario sk-... en el contenido leído y en el
+      resumen no aparece en el texto del recibo (redacción estructural).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/1d5884261e0e2459c5fa13f838b28d22220fb5bf/gate-tests.txt
+        sha256: 1347e8bd4a6ba6734465f096ad9795b5c95ed84260d7cc4111bfdaedec2e7102
+      - src/isycode/tui_app_tools.py
+        sha256: af3df096fc36211f7dd8aefaeedf7d985149f6c77fd9f6466177a7a02d98ad49
+sin_evidencia_real:
+  - revisión en terminal física real (los snapshots son pilot/Textual; la aceptación del roadmap pide además una pasada manual en terminal)
+  - widget del sidebar de agentes M6A renderizado en la TUI viva (modelo probado; integración visual pendiente, registrada también en G6A)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1488 passed, 1 skipped, 11 deselected; 298.70s
+riesgos_residuales: la prueba de 1000 eventos monta 10 hojas reales y stub de mount para el resto (la lógica de orden/título/estado es real); ratios WCAG medidos contra el fondo del tema, no contra fondos forzados por el terminal (cubiertos por high contrast)
+rollback_ensayado: revertir 1d58842 quita el recibo enriquecido, los tests y el doc de colores
+revision: ausente
