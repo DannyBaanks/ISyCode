@@ -218,7 +218,8 @@ class WriteApprovalScreen(ApprovalScreen):
                  "unless you apply it. If the file changes before it is applied, the change is refused."),
                 id="write-approval-summary", markup=False)
             with VerticalScroll(id="write-approval-diff"):
-                yield Static(Syntax(self.preview.diff, "diff", theme="monokai", word_wrap=True))
+                from isycode.diff_view import side_by_side_table
+                yield Static(side_by_side_table(self.preview.diff, self.preview.path))
             with Horizontal(id="write-approval-actions"):
                 yield Button("Reject · n", id="write-approval-reject")
                 yield Button("Apply change · y", id="write-approval-apply", variant="warning")
@@ -280,9 +281,9 @@ class BatchApprovalScreen(ModalScreen[str]):
                 "no lasting permission is created, and a file that changes before it is "
                 "applied is refused.", id="batch-approval-summary", markup=False)
             with VerticalScroll(id="batch-approval-diffs"):
+                from isycode.diff_view import side_by_side_table
                 for preview in self.previews:
-                    yield Static(Text(f"── {preview.path} ──", style="bold #c7b8d4"), markup=False)
-                    yield Static(Syntax(preview.diff, "diff", theme="monokai", word_wrap=True))
+                    yield Static(side_by_side_table(preview.diff, preview.path))
             with Horizontal(id="batch-approval-actions"):
                 yield Button("Reject all · n", id="batch-approval-reject")
                 yield Button("Review each · e", id="batch-approval-each")
