@@ -755,6 +755,19 @@ class ProviderMixin:
         self._open_settings_menu()
         return
 
+    def _menu_ascii_toggle(self, entry: dict[str, str | bool]) -> None:
+        enabled = not self._ascii_only
+        try:
+            UserDefaultsStore().update(ascii_only=enabled)
+        except (OSError, ValueError):
+            self.notify("ASCII-only preference could not be saved", severity="warning")
+            return
+        self._ascii_only = enabled
+        from isycode.tui_theme import set_ascii_only
+        set_ascii_only(enabled)
+        self._open_settings_menu()
+        return
+
     def _menu_marquee_toggle(self, entry: dict[str, str | bool]) -> None:
         enabled = not self._compact_marquee_default
         try:

@@ -421,6 +421,7 @@ MENU_DISPATCH: dict[str, str] = {
     "roles_open": "_menu_roles_open",
     "sounds_toggle": "_menu_sounds_toggle",
     "contrast_toggle": "_menu_contrast_toggle",
+    "ascii_toggle": "_menu_ascii_toggle",
     "marquee_toggle": "_menu_marquee_toggle",
     "reasoning_open": "_menu_reasoning_open",
     "reasoning_select": "_menu_reasoning_select",

@@ -644,10 +644,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._compact_marquee_default = UserDefaultsStore().load().get("compact_marquee", False)
             self._notification_sounds = UserDefaultsStore().load().get("notification_sounds", True)
             self._high_contrast = UserDefaultsStore().load().get("high_contrast", False)
+            self._ascii_only = UserDefaultsStore().load().get("ascii_only", False)
         except (OSError, ValueError):
             self._compact_marquee_default = False
             self._notification_sounds = True
             self._high_contrast = False
+            self._ascii_only = False
+        from isycode.tui_theme import set_ascii_only
+        set_ascii_only(self._ascii_only)
         self._provider_env_override = bool(os.environ.get("ISYCODE_PROVIDER"))
         self._model_env_override = bool(os.environ.get("ISYCODE_MODEL"))
         self._draft_text = initial_prompt
@@ -1238,6 +1242,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry("Reasoning level", "reasoning_open", ""),
             self._entry("Notification sounds · " + ("on" if self._notification_sounds else "off"), "sounds_toggle", "", "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
             self._entry("High contrast display · " + ("on" if self._high_contrast else "off"), "contrast_toggle", "", "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."),
+            self._entry("ASCII-only display · " + ("on" if self._ascii_only else "off"), "ascii_toggle", "", "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
             self._entry("Choose role", "roles_open", ""),
             self._entry("Context", "context_menu", ""),
             self._entry("My defaults · all workspaces", "user_defaults", ""),
@@ -1283,6 +1288,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "shortcuts": "Browse commands and keyboard shortcuts.",
                 "sounds_toggle": "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled.",
                 "contrast_toggle": "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black.",
+                "ascii_toggle": "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode.",
                 "marquee_toggle": "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it.",
             }),
             "Permissions": (YELLOW, {

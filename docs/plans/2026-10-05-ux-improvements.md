@@ -107,10 +107,10 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 
 ---
 
-## M-UX5 — Polish y accesibilidad completa (bajo)  ⬜ PENDIENTE
-- [ ] Fallback ASCII-only (sin `✓✗●○`) para terminales sin Unicode.
-- [ ] Pruebas con lector de pantalla (Orca).
-- [ ] Documentar estados/atajos en `GUIA.md` (§10b del contrato raíz).
+## M-UX5 — Polish y accesibilidad completa (bajo)  ✅ HECHO (Orca: NOT_DEMONSTRATED)
+- [x] Fallback ASCII-only (sin `✓✗●○`): preferencia `ascii_only` + `set_ascii_only` en `tui_theme` (switch_row, capability label, banner) + toggle en Settings con efecto inmediato. Tests en `tests/test_ascii_only.py` (5).
+- [~] Pruebas con lector de pantalla (Orca): **NOT_DEMONSTRATED** — no hay Orca en este host y Textual no expone API de lector; los estados ya se transmiten como texto (M-UX1.1) y con ASCII-only como marcas literales `[x]`/`[ON]`, que es lo que un lector vocaliza. Pendiente una sesión manual con Orca.
+- [x] Estados/atajos documentados en `docs/GUIA.md` (sección "Atajos y estados nuevos (2026-10-06)").
 
 ---
 

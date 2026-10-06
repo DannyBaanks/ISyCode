@@ -125,6 +125,24 @@ migra mostrando el diff y conserva los originales. Todo comando es texto de
 prompt; cada acción solicitada sigue pasando por sus owners, Authority e
 IsySentinel.
 
+## Atajos y estados nuevos (2026-10-06)
+
+| Tecla o gesto | Qué hace |
+|---|---|
+| `Ctrl+P` | Paleta de comandos semántica. |
+| `Ctrl+Shift+F` | Busca en TODAS las conversaciones guardadas (título y mensajes). Enter abre la elegida. |
+| Botón `modelo ▾` (barra inferior) | Abre el selector de provider/modelo. |
+| Carpeta `▸ GLM · N models` | El catálogo de modelos se agrupa por familia (GLM, GPT, Qwen, DeepSeek…). Ábrela para ver las variantes. |
+| Pantalla `Review N proposed changes` | Cuando el modelo propone varios archivos de una vez, una sola pantalla los revisa todos. `Approve all` aplica cada archivo con su propia aprobación de un solo uso; si un archivo cambia antes de aplicarse, se reabre su revisión individual. |
+| `Trust folder this session · s` | En la revisión de un archivo: confía la carpeta solo hasta cerrar ISyCode. No se guarda nada; en modo Security no aparece. |
+| `Always allow…` | La versión persistente (se guarda en Workspace folders). |
+| Settings → `High contrast display` | Superficies negro puro y bordes claros (≥7:1 en el texto). Aplica al instante. |
+| Settings → `ASCII-only display` | Cambia ✓/✗/●/○ por `[x]`/`[ ]`/`[ON]`/`[OFF]` y el banner por texto plano, para terminales sin Unicode. |
+| `/help tour` | Tour guiado de ocho líneas dentro del chat. |
+| Primera corrida: `Quick Start` | Una pantalla deja el workspace listo (recurrente + Classic + confirmación de coding tools). `Custom setup` lleva paso a paso. |
+
+Regla de oro de las aprobaciones: ninguna aprobación crea un permiso duradero. Batch, session trust y quiet Classic emiten permisos de un solo uso ligados al contenido exacto; todo queda en el journal (Settings → Action journal).
+
 ## Regla de seguridad
 
 Descubrir un MCP o una skill no concede permiso para invocarlo. Files es de solo lectura, parte de `.isyroot` y requiere grants explícitos de ISyCode evaluados por IsySentinel. Una key no concede acceso a red; los catálogos/Gateway también requieren grants de host. La interfaz nunca debe convertir un plan del modelo en autoridad.

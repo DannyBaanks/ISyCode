@@ -10,11 +10,28 @@ from rich.cells import cell_len
 
 
 
+_ASCII_ONLY = False
+
+
+def set_ascii_only(enabled: bool) -> None:
+    """Switch state glyphs to plain ASCII for terminals without Unicode."""
+    global _ASCII_ONLY
+    _ASCII_ONLY = bool(enabled)
+
+
+def ascii_only() -> bool:
+    return _ASCII_ONLY
+
+
 def _authority_capability_label(label: str, enabled: bool) -> Text:
     """Render an understandable permission state without exposing policy internals."""
     rendered = Text(label + "  ")
-    rendered.append("● ON" if enabled else "● OFF",
-                    style="bold #00ff00" if enabled else "bold #ff0000")
+    if _ASCII_ONLY:
+        rendered.append("[ON]" if enabled else "[OFF]",
+                        style="bold #00ff00" if enabled else "bold #ff0000")
+    else:
+        rendered.append("● ON" if enabled else "● OFF",
+                        style="bold #00ff00" if enabled else "bold #ff0000")
     return rendered
 
 
@@ -85,6 +102,10 @@ BANNER = r"""
 def banner_text() -> Text:
     """Crush-style banner: bold letters with diagonal hatch."""
     t = Text()
+    if _ASCII_ONLY:
+        t.append("ISYCODE\n", style="bold #e94560")
+        t.append("  One AI. Many hosts. One capability fabric.", style="italic #6c757d")
+        return t
     for line in BANNER.strip("\n").split("\n"):
         t.append(line + "\n", style="bold #e94560")
     t.append("\n  One AI. Many hosts. One capability fabric.", style="italic #6c757d")
@@ -122,13 +143,13 @@ def switch_row(on: bool | None, name: str, note: str = "", *, inactive: bool = F
     """
     row = Text()
     if inactive:
-        row.append("○ ", style=MUTED)
+        row.append("[-] " if _ASCII_ONLY else "○ ", style=MUTED)
     elif on is None:
-        row.append("··· ", style=f"bold {YELLOW}")
+        row.append("... " if _ASCII_ONLY else "··· ", style=f"bold {YELLOW}")
     elif on:
-        row.append("✓ ", style=f"bold {GREEN}")
+        row.append("[x] " if _ASCII_ONLY else "✓ ", style=f"bold {GREEN}")
     else:
-        row.append("✗ ", style=f"bold {RED}")
+        row.append("[ ] " if _ASCII_ONLY else "✗ ", style=f"bold {RED}")
     row.append(name, style=f"bold {TEXT}")
     if note:
         row.append(f"\n  {note}", style=MUTED)
