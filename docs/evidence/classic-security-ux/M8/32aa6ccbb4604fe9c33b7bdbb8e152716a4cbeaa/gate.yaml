@@ -1,6 +1,6 @@
 hito: M8
 puerta: G8
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa
 fecha_utc: 2026-10-06T22:30:00Z
 autor: opencode session (fledge)
@@ -89,4 +89,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1497 passed, 1 skipped, 11 deselected; 302.82s
 riesgos_residuales: la prueba de 1000 eventos usa stub de mount para 990 hojas (lógica real de orden/estado); ratios WCAG contra el fondo del tema
 rollback_ensayado: revertir 32aa6cc devuelve el recibo a caja separada; el paquete 1d588426 queda en git history
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T21:42:22Z
+revision_declaracion: Re-aceptación tras renovación por regla 8 (recibo dentro de la tarjeta); casos, artefactos y hashes verificados con scripts/validate_gates.py
