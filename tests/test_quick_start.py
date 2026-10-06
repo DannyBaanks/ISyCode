@@ -132,3 +132,29 @@ async def test_help_tour_prints_the_tour(tmp_path, monkeypatch):
         text = "\n".join(line for kind, line, *_ in app._active_lane().lines)
         assert "Tour · the lay of the land" in text
         assert "Ctrl+Shift+F" in text
+
+
+@pytest.mark.asyncio
+async def test_banner_mode_chip_repaints_after_startup(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    from isycode.user_defaults import UserDefaultsStore
+    from isycode.tui_theme import plain_text
+    from isycode.tui import Banner
+    UserDefaultsStore().update(new_workspace="recurring", new_workspace_mode="classic")
+    app = TUIApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        for _ in range(40):
+            await pilot.pause(0.05)
+            if "Classic" in plain_text(app.query_one(Banner)):
+                break
+        assert "Classic" in plain_text(app.query_one(Banner))
+
+
+def test_quick_start_provider_ready_needs_a_configured_key(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr("isycode.tui.load_provider_key", lambda name: "")
+    from isycode.providers import Provider
+    provider = Provider(name="openai", model="gpt-6-luna", api_key=None)
+    assert provider.configured() is False

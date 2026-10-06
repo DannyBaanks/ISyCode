@@ -820,7 +820,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         preference = mode_preference = "ask"
                     if preference == "ask" and mode_preference == "ask":
                         try:
-                            provider_ready = bool(selected_provider_name())
+                            provider_ready = Provider(
+                                name=selected_provider_name(),
+                                model=resolved_chat_model(selected_provider_name()),
+                                api_key=load_provider_key(selected_provider_name()) or None,
+                            ).configured()
                         except (ConfigurationError, ProviderError):
                             provider_ready = False
                         start = await self._await_screen(
@@ -885,6 +889,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 if self._quick_start:
                     await self._enable_coding_toolkit(open_menu=False)
                     self._append_startup("  Quick Start done · type below to chat. /help tour shows the lay of the land.", GREEN)
+                self.query_one(Banner).set_compact(True)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
             self._update_workspace_identity_ui()

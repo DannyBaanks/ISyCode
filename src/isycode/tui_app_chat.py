@@ -734,10 +734,14 @@ class ChatMixin:
                     if self._history and self._history[-1] == {"role": "user", "content": text}:
                         self._history.pop()
                     return
-                self._append(
-                    (self._provider_failure(exc, "Chat") if exc.status is not None else
-                     "  The stream failed before an answer. Nothing was retried."),
-                    RED)
+                if exc.status is not None:
+                    self._append(f"  {self._provider_failure(exc, 'Chat')}", RED)
+                else:
+                    detail = str(exc).strip()[:120]
+                    self._append(
+                        "  The stream failed before an answer"
+                        + (f" ({detail})." if detail else ".")
+                        + " Nothing was retried.", RED)
                 if self._history and self._history[-1] == {"role": "user", "content": text}:
                     self._history.pop()
                 return
