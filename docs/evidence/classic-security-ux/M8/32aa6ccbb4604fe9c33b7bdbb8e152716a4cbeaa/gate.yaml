@@ -81,8 +81,8 @@ casos:
     artefactos:
       - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
         sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
-      - src/isycode/tui_app_tools.py
-        sha256: e322aa1010aa1a5f6c8357910789e9ab81f71b2fecaaaad09c931efbe37f6d31
+      - tests/test_visual_tui.py
+        sha256: e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5
 sin_evidencia_real:
   - revisión en terminal física real (los snapshots son pilot/Textual)
   - widget del sidebar de agentes M6A renderizado en la TUI viva

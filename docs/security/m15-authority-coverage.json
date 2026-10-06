@@ -2013,14 +2013,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 874,
+      "line": 917,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 909,
+      "line": 952,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"
