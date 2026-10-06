@@ -149,8 +149,8 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | M1 | Política común, CI de gates y primera separación TUI | M0 | APROBADO (G1, revisor Danny Baanks, evidencia 33b218df) | G1 |
 | M2 | Aislamiento real y staging de efectos | M1 | APROBADO (G2, revisor Danny Baanks, evidencia 33b218df) | G2 |
 | M3 | Ledger de presupuestos y recuperación durable | M2 | APROBADO (G3, revisor Danny Baanks, evidencia 33b218df) | G3 |
-| M4 | Confianza, perfiles Classic/Security y degradación | M3 | EN REVISIÓN | G4 |
-| M5 | Egress, secretos e integraciones acotadas | M3 | EN REVISIÓN | G5 |
+| M4 | Confianza, perfiles Classic/Security y degradación | M3 | APROBADO (G4, revisor Danny Baanks, evidencia 8a280c17) | G4 |
+| M5 | Egress, secretos e integraciones acotadas | M3 | APROBADO (G5, revisor Danny Baanks, evidencia 8a280c17) | G5 |
 | M6 | Bucle, cancelación y retry reconciliado | M4, M5 | EN REVISIÓN | G6 |
 | M6A | Agentes observables e instrucciones en cola | M6 | PENDIENTE | G6A |
 | M7 | Flujos cotidianos completos | M6A | PENDIENTE | G7 |

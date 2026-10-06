@@ -1,6 +1,6 @@
 hito: M4
 puerta: G4
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 8a280c17acc17b7e92ab80f2e9aafac49d8c85a2
 fecha_utc: 2026-10-06T01:30:00Z
 autor: opencode session (fledge)
@@ -84,4 +84,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1455 passed, 1 skipped, 11 deselected; 292.64s
 riesgos_residuales: G4-01 usa fake bwrap para los comandos; el bwrap real queda probado en G2 (test_staging real bubblewrap)
 rollback_ensayado: revertir 8a280c1 quita solo el test nuevo de G4-05; no cambia producto
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T05:59:51Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py
