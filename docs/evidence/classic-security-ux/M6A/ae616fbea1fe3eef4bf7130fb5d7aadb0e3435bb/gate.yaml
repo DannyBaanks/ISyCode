@@ -1,6 +1,6 @@
 hito: M6A
 puerta: G6A
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb
 fecha_utc: 2026-10-06T19:05:00Z
 autor: opencode session (fledge)
@@ -145,4 +145,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1479 passed, 1 skipped, 11 deselected; 296.11s
 riesgos_residuales: el event log es por workspace en el state dir; una rotación más allá de 2 generaciones perdería historia antigua (avisada por marcador, no pérdida silenciosa)
 rollback_ensayado: revertir hasta ae616fb quita los 4 módulos nuevos y sus tests; nada de producto previo cambia
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T19:13:37Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py

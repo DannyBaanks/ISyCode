@@ -152,7 +152,7 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | M4 | Confianza, perfiles Classic/Security y degradación | M3 | APROBADO (G4, revisor Danny Baanks, evidencia 8a280c17) | G4 |
 | M5 | Egress, secretos e integraciones acotadas | M3 | APROBADO (G5, revisor Danny Baanks, evidencia 8a280c17) | G5 |
 | M6 | Bucle, cancelación y retry reconciliado | M4, M5 | APROBADO (G6, revisor Danny Baanks, evidencia 8a280c17) | G6 |
-| M6A | Agentes observables e instrucciones en cola | M6 | PENDIENTE | G6A |
+| M6A | Agentes observables e instrucciones en cola | M6 | APROBADO (G6A, revisor Danny Baanks, evidencia ae616fbe) | G6A |
 | M7 | Flujos cotidianos completos | M6A | PENDIENTE | G7 |
 | M8 | Pulido visual, teclado y accesibilidad | M7 | PENDIENTE | G8 |
 | M9 | Matriz adversarial, dogfood y rendimiento | M8 | PENDIENTE | G9 |
