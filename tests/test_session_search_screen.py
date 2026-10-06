@@ -101,3 +101,12 @@ async def test_action_opens_screen_in_classic_recurring(tmp_path, monkeypatch):
         await pilot.pause()
         assert isinstance(app.screen, SessionSearchScreen)
         await pilot.press("escape")
+
+
+def test_earlier_tools_preview_is_bounded():
+    from isycode.tui_app_sessions import _bounded_note
+    big = "x" * 5000
+    preview = _bounded_note(big, 600)
+    assert len(preview) < 700
+    assert "more chars in history" in preview
+    assert _bounded_note("short", 600) == "short"

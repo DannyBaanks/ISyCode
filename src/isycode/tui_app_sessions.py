@@ -124,6 +124,14 @@ from isycode.tui_screens_sessions import (
 )
 
 
+def _bounded_note(value: object, limit: int) -> str:
+    """Preview of a stale tool note; the full result stays in tool_history."""
+    text = str(value if value is not None else "")
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + f"\n… ({len(text) - limit} more chars in history, not shown)"
+
+
 class SessionMixin:
     """Chat sessions, the queue, the idea box, and harness import."""
 
@@ -1131,8 +1139,8 @@ class SessionMixin:
                 "Earlier tool notes. They may be stale. No tool was run again.\n\n"
                 + "\n\n".join(
                     f"{index}. {event.get('name', '')}\n"
-                    f"Arguments: {event.get('arguments', '')}\n"
-                    f"Result:\n{event.get('result', '')}"
+                    f"Arguments: {_bounded_note(event.get('arguments', ''), 300)}\n"
+                    f"Result:\n{_bounded_note(event.get('result', ''), 600)}"
                     for index, event in enumerate(lane.tool_history, start=1)
                 )
             )
