@@ -58,12 +58,17 @@ casos:
     comando: nohup env -u ISYCODE_STATE_HOME python3 scripts/soak_g9.py /tmp/g9-soak.json &
     esperado: soak >=2 h y >=100 ciclos con 3 restarts: sin procesos huérfanos ni pérdida; RSS final <=baseline warm +25% y <=500 MiB en fixture declarado
     observado: >
-      EN CURSO al cerrar este manifiesto: soak lanzado (PID 714561) con probe
-      previo de 120s: 34 ciclos, 1 restart, 0 fallos, RSS 167.7 MiB. El
-      resultado final se anexará como artefacto nuevo al terminar (regla 8:
-      sin rerun no hay claim). Este caso NO se cuenta como PASS hoy.
-    resultado: EN_REVISION
+      COMPLETADO 2026-10-06 (~2h reales): 1585 ciclos de chat (turno completo
+      con provider simulado, write real por owner y undo), 3 restarts del
+      proceso, 0 fallos. Huérfanos: 0 al final (2 lecturas pgrep transitorias
+      durante ciclos de restart, verificadas como el propio hijo de relanzamiento
+      a mitad de su arranque; todas las muestras restantes y la final en 0).
+      RSS: baseline warm 167.7 MiB → máximo 173.9 MiB (+3.7%, ≤+25%) y final
+      167.8 MiB (≤500 MiB). Artefacto crudo: soak.json.
+    resultado: PASS
     artefactos:
+      - docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/soak.json
+        sha256: 069fcda80d803d7a7f6bb94f24e2f2cfc38cd8db688550f0676dfb52640396b5
       - scripts/soak_g9.py
         sha256: 1355f1ac9c2669c746666bd25b06438dc8c73c82daf37dd5d8df56270bbdde0f
   - id: G9-05
