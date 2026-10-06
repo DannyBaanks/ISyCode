@@ -1,6 +1,6 @@
 hito: M0
 puerta: G0
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 33b218df7869046124d93b8edc75cf1dd75240d4
 fecha_utc: 2026-10-05T23:59:00Z
 autor: opencode session (fledge), continuación de la auditoría ISyCode
@@ -88,4 +88,7 @@ sin_evidencia_real:
 regresion: la suite hermética de G0-02, exit 0
 riesgos_residuales: el sandbox monta el workspace escribible; esta medición no cambia ese hecho
 rollback_ensayado: no aplica; M0 no cambia código de producto
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T00:21:46Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py

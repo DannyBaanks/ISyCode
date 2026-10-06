@@ -1,6 +1,6 @@
 hito: M1
 puerta: G1
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 33b218df7869046124d93b8edc75cf1dd75240d4
 fecha_utc: 2026-10-05T23:59:00Z
 autor: opencode session (fledge), continuación de la auditoría ISyCode
@@ -8,7 +8,7 @@ entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2,
 perfil_y_politica: policy version 1; Classic sigue pidiendo aprobación por edición y por comando; este hito no abre autonomía
 dependencias: G0
 dependencias_estado:
-  G0: EN_REVISION
+  G0: APROBADO
 casos:
   - id: G1-01
     prueba: tests/test_gate_equivalence.py y tests/test_effect_policy.py
@@ -90,4 +90,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1430 passed, 1 skipped, 11 deselected; 279.73s
 riesgos_residuales: la versión de política no entra en el journal; el sandbox sigue montando el workspace escribible; Security no borra grants explícitos previos; enforce_admins apagado deja al owner como bypass posible
 rollback_ensayado: revertir hasta c040d21 quita solo el mecanismo de aceptación y sus tests; M1 no cambia grants guardados
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T00:21:46Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py

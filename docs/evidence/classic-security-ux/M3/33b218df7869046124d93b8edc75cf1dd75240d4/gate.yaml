@@ -1,6 +1,6 @@
 hito: M3
 puerta: G3
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 33b218df7869046124d93b8edc75cf1dd75240d4
 fecha_utc: 2026-10-05T23:59:00Z
 autor: opencode session (fledge), continuación de la auditoría ISyCode
@@ -8,7 +8,7 @@ entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2,
 perfil_y_politica: policy version 1; Classic sigue pidiendo aprobación por edición y por comando; este hito no abre autonomía
 dependencias: G2
 dependencias_estado:
-  G2: EN_REVISION
+  G2: APROBADO
 casos:
   - id: G3-01
     prueba: tests/test_effect_ledger.py::test_one_oversized_call_charges_nothing_and_split_calls_stop_at_the_cap tests/test_effect_ledger.py::test_eight_workers_share_one_cap
@@ -86,4 +86,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1430 passed, 1 skipped, 11 deselected; 279.73s
 riesgos_residuales: la reconciliación se probó con las semillas registradas en el test; semillas nuevas requieren nueva evidencia (regla 8)
 rollback_ensayado: los tests G3-04/G3-05 son el ensayo de recuperación; herméticos
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T00:21:46Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py
