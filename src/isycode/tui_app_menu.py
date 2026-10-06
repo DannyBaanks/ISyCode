@@ -123,7 +123,27 @@ async def _run_cmd(app: "TUIApp", arg: str) -> None:
         return
     await app._run_workspace_command({"argv": argv})
 
+_TOUR_LINES = (
+    "  Tour · the lay of the land",
+    "  1. The composer at the bottom is where you talk. Enter sends, Ctrl+J adds a newline.",
+    "  2. Ctrl+B opens the sidebar: overview, files, skills and providers live there.",
+    "  3. The command bar shows your model (▾) — click it to switch provider or model family.",
+    "  4. Ctrl+P opens the command palette; Ctrl+Shift+F searches every saved conversation.",
+    "  5. Edits, commands and commits ask before they run. Approving a batch applies each",
+    "     change with its own one-use approval; nothing becomes a lasting permission.",
+    "  6. “Trust folder this session” skips per-file questions until ISyCode closes.",
+    "     “Always allow…” is the persistent version in Settings → Workspace folders.",
+    "  7. Settings → Authority & Security holds every permission. The action journal",
+    "     (Settings → Action journal) records what happened, with receipts.",
+    "  8. /sessions saves and resumes conversations; /undo reverts the last applied change.",
+)
+
+
 async def _help_cmd(app: "TUIApp", arg: str) -> None:
+    if arg.strip() == "tour":
+        for line in _TOUR_LINES:
+            app._append(line, MUTED)
+        return
     for line in app._plugins.help_text():
         app._append(line, MUTED)
     custom = load_user_commands()
@@ -133,6 +153,7 @@ async def _help_cmd(app: "TUIApp", arg: str) -> None:
             app._append(f"    /{command.name} — {command.description}", MUTED)
     app._append(f"  Workspace commands live in {WORKSPACE_COMMANDS_DIR}/<name>.md; "
                 "@path attaches a workspace file to your message.", MUTED)
+    app._append("  New here? /help tour shows the lay of the land.", MUTED)
 
 async def _readme_cmd(app: "TUIApp", arg: str) -> None:
     del arg

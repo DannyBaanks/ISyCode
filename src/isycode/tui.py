@@ -260,6 +260,7 @@ from isycode.tui_screens_approval import (
 from isycode.tui_screens_grants import (
     WorkspaceSetupScreen,
     GlobalRecurringDefaultScreen,
+    QuickStartScreen,
     WorkspaceModeScreen,
     GrantWorkspaceReadScreen,
     GrantProviderNetworkScreen,
@@ -803,16 +804,32 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             setup_store = WorkspaceSetupStore()
             self._workspace_setup = setup_store
             recurring = self._workspace_identity.workspace_root_source == "isyroot"
+            self._quick_start = False
             if not recurring:
                 choice = setup_store.recurrent_choice(self._launch_dir)
                 if choice is None:
                     try:
-                        preference = UserDefaultsStore().load().get("new_workspace", "ask")
+                        defaults = UserDefaultsStore().load()
+                        preference = defaults.get("new_workspace", "ask")
+                        mode_preference = defaults.get("new_workspace_mode", "ask")
                     except (OSError, ValueError, json.JSONDecodeError):
-                        preference = "ask"
-                    choice = new_workspace_choice(self._launch_dir, None, preference)
-                    if choice is None:
-                        choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
+                        preference = mode_preference = "ask"
+                    if preference == "ask" and mode_preference == "ask":
+                        try:
+                            provider_ready = bool(selected_provider_name())
+                        except (ConfigurationError, ProviderError):
+                            provider_ready = False
+                        start = await self._await_screen(
+                            QuickStartScreen(self._launch_dir, provider_ready=provider_ready))
+                        if start == "quick":
+                            choice = True
+                            self._quick_start = True
+                        else:
+                            choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
+                    else:
+                        choice = new_workspace_choice(self._launch_dir, None, preference)
+                        if choice is None:
+                            choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
                     setup_store.choose_recurrent(self._launch_dir, choice)
                 elif choice:
                     # Re-create a marker if the user removed it after opting in.
@@ -846,18 +863,24 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             try:
                 authority = WorkspaceAuthority(self._workspace_root)
                 if authority.mode() is None:
-                    try:
-                        preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
-                    except (OSError, ValueError, json.JSONDecodeError):
-                        preferred = "ask"
-                    if preferred in {"classic", "security"}:
-                        chosen = preferred
-                        self._append_startup(f"  New workspace · using your default {preferred.title()} mode "
-                                     "· change it in Settings → Authority.", MUTED)
+                    if self._quick_start:
+                        chosen = "classic"
                     else:
-                        chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
+                        try:
+                            preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
+                        except (OSError, ValueError, json.JSONDecodeError):
+                            preferred = "ask"
+                        if preferred in {"classic", "security"}:
+                            chosen = preferred
+                            self._append_startup(f"  New workspace · using your default {preferred.title()} mode "
+                                         "· change it in Settings → Authority.", MUTED)
+                        else:
+                            chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
                     authority.set_mode(chosen)
                 await self._offer_quiet_trust(authority)
+                if self._quick_start:
+                    await self._enable_coding_toolkit(open_menu=False)
+                    self._append_startup("  Quick Start done · type below to chat. /help tour shows the lay of the land.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
             self._update_workspace_identity_ui()

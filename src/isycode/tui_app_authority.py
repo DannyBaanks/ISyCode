@@ -722,7 +722,7 @@ class AuthorityMixin:
                            "check Python files after edits"))
         return grants
 
-    async def _enable_coding_toolkit(self) -> None:
+    async def _enable_coding_toolkit(self, *, open_menu: bool = True) -> None:
         grants = self._coding_toolkit_grants()
         labels = list(dict.fromkeys(label for _, _, label in grants))
         missing = []
@@ -737,7 +737,8 @@ class AuthorityMixin:
                                                  if missing else ""))
         if not await self._await_screen(TailscaleConfirmScreen(
                 "Turn on all coding tools?", body, "Turn on coding tools")):
-            self._open_authority_menu()
+            if open_menu:
+                self._open_authority_menu()
             return
         try:
             authority = WorkspaceAuthority(self._workspace_root)
@@ -747,7 +748,8 @@ class AuthorityMixin:
                          "and commits follow their approval settings.", GREEN)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append(f"  Coding tools could not be saved ({type(exc).__name__}).", RED)
-        self._open_authority_menu()
+        if open_menu:
+            self._open_authority_menu()
 
     async def _change_workspace_read_grant(self, enabled: bool) -> None:
         accepted = await self._await_screen(

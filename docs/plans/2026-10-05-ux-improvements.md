@@ -98,11 +98,12 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 
 ---
 
-## M-UX4 — Onboarding progresivo (retención)  ⬜ PENDIENTE
-**Files:** `workspace_setup.py`, `workspace_trust.py`, `tui.py`.
-- [ ] Quick Start: provider en env → recurrente + Classic → "Turn on all coding tools" → chat (<2 min).
-- [ ] Custom Setup: wizard 4 pasos. Tour opcional (`/help tour`).
-- [ ] Tests: quick start no concede nada fuera de Classic; trust screen sigue en Security.
+## M-UX4 — Onboarding progresivo (retención)  ✅ HECHO
+**Files:** `tui_screens_grants.py` (`QuickStartScreen`), `tui.py` (`_startup_workspace`), `tui_app_authority.py`, `tui_app_menu.py` (`/help tour`).
+- [x] Quick Start: primera corrida sin prefs guardadas → una pantalla → recurrente + Classic → confirmación explícita "Turn on all coding tools" (la misma de Settings, sin saltársela) → chat. Grants ⊆ CLASSIC_ACTIONS ∪ toolkit (test).
+- [x] Custom Setup: la cadena paso a paso existente (recurrencia → Classic/Security → trust) tras elegir "Custom setup" o Esc.
+- [x] `/help tour`: tour estático de 8 líneas (composer, sidebar, modelo ▾, batch/trust, Authority, journal).
+- [x] Tests en `tests/test_quick_start.py` (5): quick no concede nada fuera de Classic+toolkit; custom mantiene la cadena; prefs guardadas saltan Quick Start; tour imprime. Tests de arranque previos actualizados a la cadena nueva.
 
 ---
 

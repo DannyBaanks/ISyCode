@@ -109,6 +109,58 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class QuickStartScreen(ModalScreen[str]):
+    """First-run fork: guided Quick Start or the step-by-step Custom setup.
+
+    Dismisses with "quick" or "custom". Quick Start still asks its own
+    explicit confirmations later (coding tools, trust); it only skips
+    re-asking the mode and recurrence questions it already answered.
+    """
+
+    CSS = """
+    QuickStartScreen { align: center middle; background: #000000 58%; }
+    #quick-start-card { width: 84; max-width: 94%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #quick-start-title { height: 2; color: #bb8cff; text-style: bold; }
+    #quick-start-copy { height: auto; margin-bottom: 1; }
+    #quick-start-options { height: 4; }
+    """
+    BINDINGS = [Binding("escape", "custom", "Custom setup")]
+
+    def __init__(self, root: Path, *, provider_ready: bool) -> None:
+        super().__init__()
+        self.root = root
+        self.provider_ready = provider_ready
+
+    def compose(self) -> ComposeResult:
+        provider_line = ("Your provider key is already in the environment, so chat works right away."
+                         if self.provider_ready else
+                         "No provider key detected yet; you can add one later in Settings → Providers.")
+        with Vertical(id="quick-start-card"):
+            yield Static("Welcome to ISyCode · how do you want to start?",
+                         id="quick-start-title")
+            yield Static(
+                f"{self.root}\n\n{provider_line}\n\n"
+                "Quick Start: this folder becomes a recurring workspace in Classic mode — "
+                "read/search, edit proposals and chat are ready. One more confirmation can turn on "
+                "all coding tools, and edits, commands and commits still ask until you approve them.\n"
+                "Custom setup: choose recurrence, Classic or Security, and each tool step by step.\n\n"
+                "Both paths keep IsySentinel and the action journal on everything.",
+                id="quick-start-copy")
+            yield OptionList(
+                Option("Quick Start · ready in under a minute", id="quick"),
+                Option("Custom setup · choose each step", id="custom"),
+                id="quick-start-options")
+
+    def on_mount(self) -> None:
+        self.query_one("#quick-start-options", OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        self.dismiss("quick" if event.option.id == "quick" else "custom")
+
+    def action_custom(self) -> None:
+        self.dismiss("custom")
+
+
 class WorkspaceModeScreen(ModalScreen[str]):
     """Choose how a new workspace starts: Classic (ready to use) or Security."""
 
