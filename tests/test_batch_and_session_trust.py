@@ -186,6 +186,7 @@ async def test_session_trust_never_shows_in_security_mode(tmp_path, monkeypatch)
     configure(tmp_path, monkeypatch)
     app = TUIApp()
     async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
         root = app._workspace_root
         WorkspaceAuthority(root).set_mode("security")
         from isycode.workspace_write import WorkspaceWriteOwner
