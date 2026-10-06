@@ -113,3 +113,32 @@ async def test_catalog_denial_adds_actionable_grant_entry(tmp_path, monkeypatch)
         grant = [row for row in app._menu_entries if row["kind"] == "provider_catalog_grant"]
         assert grant and grant[0]["value"] == "openai"
         assert any("deny" in row["label"] for row in app._menu_entries if row["kind"] == "info")
+
+
+def test_vendored_modelsdev_catalog_validates_and_maps():
+    from isycode.model_catalog import catalog_models, load_catalog, source_provenance
+    load_catalog.cache_clear()
+    nvidia = catalog_models("nvidia")
+    assert nvidia and all(isinstance(entry["id"], str) for entry in nvidia)
+    assert any(entry["tool_call"] for entry in nvidia)
+    assert any(entry["id"] == "glm-5.3" for entry in catalog_models("zai"))
+    assert catalog_models("ollama") == []
+    assert source_provenance()["source"] == "https://models.dev/api.json"
+    assert len(source_provenance()["source_sha256"]) == 64
+
+
+@pytest.mark.asyncio
+async def test_picker_shows_catalog_models_with_tool_marker(tmp_path, monkeypatch):
+    from test_daily_tui import configure
+    configure(tmp_path, monkeypatch)
+    from isycode.tui import TUIApp
+
+    app = TUIApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        entries = app._branch_entries("models")
+        catalog = [row for row in entries if row["kind"] == "model" and "· catalog" in row["label"]]
+        assert catalog, "models.dev entries must appear without a live catalog"
+        assert any("no tools" in row["label"] or "tool_call=yes" in (row["detail"] or "")
+                   for row in catalog)
+        assert all("preset" not in row["label"] for row in catalog)

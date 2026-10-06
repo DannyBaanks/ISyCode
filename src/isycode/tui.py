@@ -1952,11 +1952,24 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     "model", f"{name}|{model}",
                     "Hardcoded preset model, not verified against this account; "
                     "load the account catalog for the provider's real list."))
-            for name, catalog in getattr(self, "_account_model_catalogs", {}).items():
+            live_catalogs = getattr(self, "_account_model_catalogs", {})
+            for name, catalog in live_catalogs.items():
                 models = [row for row in models
                           if row["kind"] not in {"model", "model_family"}
                           or row["value"].split("|", 1)[0] != name]
                 models.extend(catalog)
+            from isycode.model_catalog import catalog_models
+            for name in PRESETS:
+                if name in live_catalogs:
+                    continue
+                for entry in catalog_models(name):
+                    marker = "" if entry["tool_call"] else "  ⚠ no tools"
+                    models.append(self._entry(
+                        f"{PRESETS[name]['label']}  ·  {entry['id']}{marker}  · catalog",
+                        "model", f"{name}|{entry['id']}",
+                        f"models.dev snapshot (offline; not verified against this account). "
+                        f"reasoning={'yes' if entry['reasoning'] else 'no'} · "
+                        f"context={entry['context'] or '?'} · tool_call={'yes' if entry['tool_call'] else 'NO — chat needs tools'}"))
             if getattr(self, "_account_models_loading", False):
                 models.append(self._entry("Loading account catalog…", "info"))
             elif getattr(self, "_account_model_status", ""):
