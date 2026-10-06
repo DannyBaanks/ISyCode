@@ -215,6 +215,29 @@ def test_budget_scope_secrets_authority_and_missing_sandbox_stay_gated(project, 
     assert (root / "app.py").read_text(encoding="utf-8") == "x = 3\n"
 
 
+def test_missing_sandbox_keeps_typed_paths_and_explains_without_bypass(project, monkeypatch):
+    """G4-05: no sandbox -> commands off with an honest reason; typed reads/writes stay."""
+    authority, root = project
+    _trust(authority)
+    monkeypatch.setattr("isycode.command_runner.sandbox_executable", lambda: None)
+    with pytest.raises(ValueError) as excinfo:
+        CommandRunOwner(root, authority, ActionApprovalStore()).prepare(["echo", "nope"])
+    message = str(excinfo.value)
+    assert "commands stay disabled" in message
+    assert "no unsandboxed fallback" in message
+    for bypass_hint in ("--no-sandbox", "disable sandbox", "run unsandboxed", "SANDOX", "without sandbox run"):
+        assert bypass_hint not in message
+    approvals = ActionApprovalStore()
+    outcome = LocalWorkspaceReadOwner(root, authority).execute(
+        "workspace.files.read", {"path": "app.py"})
+    assert outcome.decision == "ALLOW"
+    writer = WorkspaceWriteOwner(root, authority, approvals)
+    preview = writer.preview("app.py", "x = 7\n")
+    assert not modal_required(authority, preview.request)
+    assert writer.apply(preview, None).decision == "ALLOW"
+    assert (root / "app.py").read_text(encoding="utf-8") == "x = 7\n"
+
+
 def test_security_has_no_effects_and_revocation_is_immediate(project):
     authority, root = project
     _trust(authority)
