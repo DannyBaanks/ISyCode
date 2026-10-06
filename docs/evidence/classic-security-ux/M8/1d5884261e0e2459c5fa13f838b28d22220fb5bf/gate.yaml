@@ -1,6 +1,6 @@
 hito: M8
 puerta: G8
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 1d5884261e0e2459c5fa13f838b28d22220fb5bf
 fecha_utc: 2026-10-06T20:05:00Z
 autor: opencode session (fledge)
@@ -94,4 +94,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1488 passed, 1 skipped, 11 deselected; 298.70s
 riesgos_residuales: la prueba de 1000 eventos monta 10 hojas reales y stub de mount para el resto (la lógica de orden/título/estado es real); ratios WCAG medidos contra el fondo del tema, no contra fondos forzados por el terminal (cubiertos por high contrast)
 rollback_ensayado: revertir 1d58842 quita el recibo enriquecido, los tests y el doc de colores
-revision: ausente
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T20:30:37Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py
