@@ -21,6 +21,24 @@ from isycode.action_runtime import (
     TOOL_ACTIONS,
 )
 from isycode.chat_transport import assistant_turn
+
+
+def _transport_reason(exc: BaseException) -> str:
+    """Bounded transport category for the UI; provider bodies never echo."""
+    import re
+    message = str(exc).casefold()
+    for pattern, label in (
+            (r"reset", "connection reset by the provider"),
+            (r"refused", "connection refused"),
+            (r"timed? ?out|timeout", "connection timed out"),
+            (r"dns|name or service|getaddrinfo", "DNS lookup failed"),
+            (r"tls|ssl|certificate", "TLS handshake failed"),
+            (r"eof|closed|disconnect", "connection closed mid-stream"),
+            (r"unreachable|network", "provider unreachable"),
+    ):
+        if re.search(pattern, message):
+            return label
+    return "transport error before the first answer"
 from isycode.agent_loop import split_history, summary_messages, summary_system_message
 from isycode.prompt_expansion import (
     MAX_MENTIONS,
@@ -737,11 +755,9 @@ class ChatMixin:
                 if exc.status is not None:
                     self._append(f"  {self._provider_failure(exc, 'Chat')}", RED)
                 else:
-                    detail = str(exc).strip()[:120]
                     self._append(
-                        "  The stream failed before an answer"
-                        + (f" ({detail})." if detail else ".")
-                        + " Nothing was retried.", RED)
+                        f"  The stream failed before an answer ({_transport_reason(exc)}). "
+                        "Nothing was retried.", RED)
                 if self._history and self._history[-1] == {"role": "user", "content": text}:
                     self._history.pop()
                 return
