@@ -1,0 +1,87 @@
+hito: M7
+puerta: G7
+estado: EN_REVISION
+sha_evaluado: 0eaa4eb2d7c517d9ce08744a580a1244f9cf8ec1
+fecha_utc: 2026-10-06T19:40:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; flujos cotidianos medidos sobre los owners ya aprobados (G1-G6); mocks etiquetados, sin provider vivo
+dependencias: M6A
+dependencias_estado:
+  G6A: APROBADO
+casos:
+  - id: G7-01
+    prueba: tests/test_everyday_flows.py::test_g7_01_dirty_repo_diagnose_edit_test_diff_undo
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_everyday_flows.py -ra --tb=short
+    esperado: fixture repo sucio: diagnosticar fallo, editar 3 archivos, ejecutar tests, revisar diff y undo; preservar trabajo inicial y cero modales ordinarios en Classic
+    observado: >
+      Pasó. Repo sucio (cambios humanos sin commitear + untracked): lectura del
+      fallo, 3 ediciones ALLOW con apply(preview, None), comando en sandbox
+      (fake bwrap, etiquetado), diff por GitOwner, undo del último cambio.
+      El trabajo humano inicial (app.py modificado y scratch.txt) quedó byte a
+      byte; spy sobre ActionApprovalStore.issue: issued == [] (cero aprobaciones
+      y, con trust, cero modal_required).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M7/0eaa4eb2d7c517d9ce08744a580a1244f9cf8ec1/gate-tests.txt
+        sha256: d3fa2d1ad97b0ae802ece39d47bb5daa917d85a0f8f1f7240ce203ea95994b37
+      - tests/test_everyday_flows.py
+        sha256: edcd77a377ee861f0308b3a34ea774282276eb685d782e264bb189a726b15be5
+  - id: G7-02
+    prueba: tests/test_everyday_flows.py::test_g7_02_budgeted_move_delete_recoverable_cascade_blocked
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_everyday_flows.py -ra --tb=short
+    esperado: mover/borrar dentro de presupuesto y provocar cascada excesiva; primero recuperable, segundo bloqueado antes de promoción
+    observado: >
+      Pasó. Move dentro de presupuesto ALLOW y undo lo restaura byte a byte;
+      cascada (4 KiB sobre el cap fijado a 4) DENY y el archivo nunca aparece.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M7/0eaa4eb2d7c517d9ce08744a580a1244f9cf8ec1/gate-tests.txt
+        sha256: d3fa2d1ad97b0ae802ece39d47bb5daa917d85a0f8f1f7240ce203ea95994b37
+  - id: G7-03
+    prueba: tests/test_everyday_flows.py::test_g7_03_security_partial_grants_explain_exact_enable
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_everyday_flows.py -ra --tb=short
+    esperado: repetir workflow en Security con grants parciales; sin permiso no ejecutar y explicar acción habilitable exacta
+    observado: >
+      Pasó. Security sin grants: write DENY, cero archivos creados y
+      available_tools sin write/edit (la superficie habilitable es visible,
+      no un ready falso). Grant parcial de write: sin aprobación fresca sigue
+      DENY; con aprobación request-bound ALLOW solo ese archivo.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M7/0eaa4eb2d7c517d9ce08744a580a1244f9cf8ec1/gate-tests.txt
+        sha256: d3fa2d1ad97b0ae802ece39d47bb5daa917d85a0f8f1f7240ce203ea95994b37
+  - id: G7-04
+    prueba: tests/test_everyday_flows.py::test_g7_04_commit_selects_authorized_keeps_human_staged_no_hooks
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_everyday_flows.py -ra --tb=short
+    esperado: diff/commit selecciona solo archivos autorizados, mantiene cambios staged ajenos y no ejecuta hooks fuera de contención
+    observado: >
+      Pasó. Hook pre-commit envenenado presente: nunca corre (--no-verify y
+      config hostil rechazada). Commit de ["util.py"] solo: el HEAD contiene
+      util.py y no scratch.txt; el archivo staged por el humano (scratch.txt)
+      sigue staged y byte a byte intacto tras el commit.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M7/0eaa4eb2d7c517d9ce08744a580a1244f9cf8ec1/gate-tests.txt
+        sha256: d3fa2d1ad97b0ae802ece39d47bb5daa917d85a0f8f1f7240ce203ea95994b37
+  - id: G7-05
+    prueba: tests/test_everyday_flows.py::test_g7_05_missing_capabilities_are_honest_not_a_fake_ready
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_everyday_flows.py -ra --tb=short
+    esperado: tools disabled, LSP ausente, MCP caído y provider sin tool support producen diagnóstico honesto y no falso «listo»
+    observado: >
+      Pasó. Grants de lectura/listado/búsqueda apagados: available_tools no las
+      ofrece (superficie honesta). Sin sandbox: prepare lanza "commands stay
+      disabled ... no unsandboxed fallback". LSP ausente y MCP caído quedan
+      reportados como no configurados/no conectados en el rail (snapshots con
+      estado explícito, verificados en la suite: test_side_panel).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M7/0eaa4eb2d7c517d9ce08744a580a1244f9cf8ec1/gate-tests.txt
+        sha256: d3fa2d1ad97b0ae802ece39d47bb5daa917d85a0f8f1f7240ce203ea95994b37
+sin_evidencia_real:
+  - transcripción TUI completa del flujo con hashes inicial/final capturados en sesión interactiva (los flujos se midieron a nivel owner; la transcripción TUI es dogfood M9)
+  - provider vivo etiquetado (los comandos usan fake bwrap; el bwrap real queda probado en G2)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1484 passed, 1 skipped, 11 deselected; 305.27s
+riesgos_residuales: G7-01 usa fake bwrap para el paso de tests (marcado en el manifiesto); el resto corre owners reales
+rollback_ensayado: revertir 0eaa4eb quita solo el archivo de tests nuevo
+revision: ausente
