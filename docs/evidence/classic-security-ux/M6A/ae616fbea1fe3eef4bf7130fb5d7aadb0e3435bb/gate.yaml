@@ -1,0 +1,148 @@
+hito: M6A
+puerta: G6A
+estado: EN_REVISION
+sha_evaluado: ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb
+fecha_utc: 2026-10-06T19:05:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; subsistema nuevo de eventos/cola observacional — nada aquí autoriza efectos, approvals ni red
+dependencias: G6
+dependencias_estado:
+  G6: APROBADO
+casos:
+  - id: G6A-01
+    prueba: tests/test_agent_panel.py::test_eight_agents_one_hundred_events_each_never_mix
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_agent_events.py tests/test_instruction_queue.py tests/test_agent_panel.py tests/test_agent_polling.py -ra --tb=short
+    esperado: 8 agentes concurrentes publican 100 eventos cada uno; sidebar muestra todos, relación padre/hijo, estados correctos y detalle expandible sin mezclar runs
+    observado: >
+      Pasó. 8 runs x 100 eventos en el log durable; AgentPanelModel muestra el
+      árbol completo (1 raíz + 7 hijos), estados exactos (1 completed, 3 running,
+      4 failed), goal propio por run, y detail() acotado contiene solo eventos
+      del run pedido (cero mezcla, verificado por run_id en cada evento).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+      - src/isycode/agent_panel.py
+        sha256: f95ae1f7b2a8b174f20a5a65957ea7a4305fcc6d0c8596f46dc40f62e4779109
+      - tests/test_agent_panel.py
+        sha256: 6222a49bc287418fd2f68ddf952e7d2ea8a6f9dec4dc18e80204f81e4ae09af5
+  - id: G6A-02
+    prueba: tests/test_instruction_queue.py (lifecycle/replay/crash) y tests/test_agent_events.py::test_cursor_read_reports_gaps_duplicates_and_corruption
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_agent_events.py tests/test_instruction_queue.py tests/test_agent_panel.py tests/test_agent_polling.py -ra --tb=short
+    esperado: duplicar, desordenar, perder conexión y reiniciar entre persistencia/acuse/aplicación no pierde instrucciones aceptadas ni las aplica dos veces; huecos y rechazos son visibles
+    observado: >
+      Pasó. Aplicación idempotente con boundary registrada (re-apply devuelve el
+      mismo registro sin duplicar); crash entre received y applied se redirige
+      al reabrir; duplicados se marcan "duplicate" (también cruzando el cursor),
+      líneas corruptas degradan sin tumbar el store, y los huecos de secuencia
+      se reportan como gaps visibles.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+      - src/isycode/instruction_queue.py
+        sha256: 0bc6307d0bac669a99eeefabecaf16aef63378c96321254495b89b44c4eb43ed
+      - tests/test_instruction_queue.py
+        sha256: 7e5100b803a0f4e48921b73af81006397c9c740703254b218a5dc9fead7d4ab9
+  - id: G6A-03
+    prueba: tests/test_instruction_queue.py::test_ack_lifecycle_and_idempotent_reapply + evidencia G6-04 (streams truncados, ya APROBADO en G6)
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_instruction_queue.py -ra --tb=short
+    esperado: corrección durante stream JSON parcial no ejecuta JSON inválido ni fusiona argumentos; se aplica una vez en primera frontera soportada y se registra esa frontera
+    observado: >
+      Pasó la mitad de cola: la corrección se aplica una sola vez en la frontera
+      nombrada y la frontera queda registrada en el log durable. La mitad de
+      stream (JSON truncado nunca ejecuta) quedó probada y aprobada en G6-04
+      (test_turn_control, paquete G6 aceptado); el subsistema nuevo no inserta
+      instrucciones dentro de argumentos: el contenido va como texto sanitizado
+      y la aplicación ocurre en frontera, nunca mid-call.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+  - id: G6A-04
+    prueba: tests/test_agent_panel.py::test_distinct_actions_have_distinct_effects + evidencia G6-01 (limpieza de descendientes, ya APROBADO en G6)
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_agent_panel.py -ra --tb=short
+    esperado: enviar siguiente-turno, corrección y stop produce comportamientos distintos; stop durante herramienta larga limpia descendientes sin esperar al siguiente evento
+    observado: >
+      Pasó la distinción: next_turn queda pending sin tocar el trabajo activo,
+      correct se aplica en frontera before-next-model-call, cancel se aplica en
+      frontera immediate y el run queda cancelled con el message_id registrado.
+      La limpieza de descendientes del stop (hijo y nieto) quedó probada y
+      aprobada en G6-01 (test_turn_control); aquí queda el canal prioritario.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+  - id: G6A-05
+    prueba: tests/test_instruction_queue.py::test_revocation_while_queued_blocks_the_effect tests/test_instruction_queue.py::test_closed_run_rejects_and_never_migrates_silently
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_instruction_queue.py -ra --tb=short
+    esperado: revocar permiso mientras un mensaje espera impide el efecto; ruta a otro workspace/hijo no autorizado falla; efecto externo incierto no se reenvía automáticamente
+    observado: >
+      Pasó. authority_check se evalúa en el momento de aplicar: revocación
+      mientras el mensaje espera convierte el ack en rejected con la razón;
+      un run cerrado rechaza en submit y en apply, y el mensaje conserva su
+      run destino original (nunca migrado en silencio). El efecto externo
+      incierto queda en UNCERTAIN según G6-02/G6-03 (ya aprobados).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+      - src/isycode/instruction_queue.py
+        sha256: 0bc6307d0bac669a99eeefabecaf16aef63378c96321254495b89b44c4eb43ed
+  - id: G6A-06
+    prueba: tests/test_agent_events.py::test_canary_is_redacted_before_persistence tests/test_agent_events.py::test_ten_thousand_events_slow_consumer_preserves_terminals
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_agent_events.py -ra --tb=short
+    esperado: canarios de secretos no aparecen en JSONL/sidebar; carga de 10 000 eventos con consumidor lento respeta cuotas, conserva terminales/acuses y deja la UI cancelable
+    observado: >
+      Pasó. El canario sk-... queda redactado recursivamente ANTES de escribir
+      el JSONL (ni una ocurrencia en disco ni en lecturas). 10 000 eventos:
+      la cuota por run solo descarta progreso ruidoso, siempre con marcador
+      log.dropped; start, error y finish sobreviven y el snapshot conserva el
+      estado terminal failed. La lectura es paginada por cursor (el consumidor
+      lento no bloquea cancelaciones: las lecturas son cortas y acotadas).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+      - src/isycode/agent_events.py
+        sha256: cbbc6dabec88fc58ab21e22163706e82770cae091c3c749b0cc2dd9b28a98b0f
+      - tests/test_agent_events.py
+        sha256: 60c6e577f69989b95f53a4e14b3a6c90c91b627d92b37e9837219682b9b45cd8
+  - id: G6A-07
+    prueba: tests/test_agent_polling.py::test_g6a07_event_display_and_ack_latency_p95
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_agent_polling.py -ra --tb=short
+    esperado: en entorno local fijado en M0, 100 muestras: display de evento p95 <=1 s y acuse received de cola p95 <=1 s con bus operativo
+    observado: >
+      Pasó. 100 muestras de append->visible (store + poll) y 100 de
+      submit->received (persistencia + acuse): ambos p95 <= 1.0 s en este host
+      (el test aserta el presupuesto; valores reales muy por debajo).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+      - tests/test_agent_polling.py
+        sha256: 0e1d98e9ed16ff14c40d4a0ff7d53c6dbc47987982365406d56832a41bd265eb
+  - id: G6A-08
+    prueba: tests/test_agent_polling.py::test_polling_respects_interval_and_visible_backoff tests/test_agent_polling.py::test_reconnect_rebuilds_and_reports
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_agent_polling.py -ra --tb=short
+    esperado: fallback polling medido cumple intervalo configurado + latencia de transporte medida; UI muestra antigüedad, pending y reconexión; backoff e intervalo efectivo nunca se ocultan
+    observado: >
+      Pasó. PollingCursor respeta el intervalo base (1s), aplica backoff visible
+      1s->2s->4s al estar inactivo (report.last_interval lo expone), vuelve a la
+      base al llegar datos, y reconnect() reconstruye por snapshot+deltas con
+      report de reconexiones y edad consultable (age_s).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6A/ae616fbea1fe3eef4bf7130fb5d7aadb0e3435bb/gate-tests.txt
+        sha256: a898e5383b3661e58f4ff5cc73dca2a1a26cfb4fd70a842e338ab9b8f25041eb
+      - src/isycode/agent_polling.py
+        sha256: 3783e6f49ca493413841aed22009fbe6bc56bb3c2987740276317804a3e90c64
+sin_evidencia_real:
+  - widget Textual del sidebar renderizando el árbol en la TUI viva (el modelo está probado; la integración visual queda para M8)
+  - adapter de provider con interrupción mid-generation real (el roadmap exige ensayarlo por separado; hoy el canal de stop es el prioritario probado)
+  - trazas de un provider sin interrupción vs con interrupción (mismo motivo)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1479 passed, 1 skipped, 11 deselected; 296.11s
+riesgos_residuales: el event log es por workspace en el state dir; una rotación más allá de 2 generaciones perdería historia antigua (avisada por marcador, no pérdida silenciosa)
+rollback_ensayado: revertir hasta ae616fb quita los 4 módulos nuevos y sus tests; nada de producto previo cambia
+revision: ausente
