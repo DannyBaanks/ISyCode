@@ -86,6 +86,13 @@ El plan del agente de planificación anterior mezcla gaps reales con afirmacione
 ### T-UX3.2 Pantalla dedicada de búsqueda cross-session  ✅ HECHO
 - [x] `SessionSearchScreen` (título + transcript, filtro en vivo, Enter/Esc) alimentada por el owner con autoridad; `Ctrl+Shift+F` registrado en `APP_SHORTCUTS` sin colisiones (solo `ctrl+shift+p`/`ctrl+shift+enter` existían, en el composer). Tests en `tests/test_session_search_screen.py` (6).
 
+### T-UX3.3 Selector de modelos agrupado por familia  ⬜ PENDIENTE (idea de Danny, 2026-10-06)
+**Problema:** el selector muestra una lista plana de ~100 modelos por provider.
+**Diseño:** dos niveles jerárquicos — el provider expone **familias** como padres (GLM, GPT, Qwen, DeepSeek…); cada familia se abre como subcarpeta/pestaña y dentro aparecen sus variantes (5.2, 5.3, 5.3-Flash, 5.2-Flash…). Semánticamente: provider → familia (hijo) → variante (nieto).
+- [ ] Derivar la familia desde el id del modelo (`model_presentation.model_display_name` ya normaliza marcas: glm→GLM, gpt→GPT, llama→Llama, qwen→Qwen, deepseek→DeepSeek, kimi→Kimi, nemotron→Nemotron); familia = primer token de marca reconocido, resto = "Otros".
+- [ ] Selector rápido de dos pasos: familia → variante, reutilizando `_menu`/PreviewOptionList (mismo patrón que providers → models, sin pantalla nueva).
+- [ ] Tests: agrupación correcta con ids reales (glm-5.3-flash → GLM; gpt-6-luna → GPT), fallback "Otros", y que elegir variante llega a `_select_provider` con el id intacto.
+
 ---
 
 ## M-UX4 — Onboarding progresivo (retención)  ⬜ PENDIENTE
