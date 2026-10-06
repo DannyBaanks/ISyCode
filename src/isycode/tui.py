@@ -1907,7 +1907,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     f"{preset['label']}  ·  {model}{'  ◂ current' if selected else ''}",
                     "model", f"{name}|{model}"))
             for name, catalog in getattr(self, "_account_model_catalogs", {}).items():
-                models = [row for row in models if row["kind"] != "model" or row["value"].split("|", 1)[0] != name]
+                models = [row for row in models
+                          if row["kind"] not in {"model", "model_family"}
+                          or row["value"].split("|", 1)[0] != name]
                 models.extend(catalog)
             if getattr(self, "_account_models_loading", False):
                 models.append(self._entry("Loading account catalog…", "info"))

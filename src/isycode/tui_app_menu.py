@@ -405,6 +405,7 @@ MENU_DISPATCH: dict[str, str] = {
     "reasoning_select": "_menu_reasoning_select",
     "model": "_menu_model",
     "model_list": "_menu_model_list",
+    "model_family": "_menu_model_family",
     "role_agent": "_menu_role_agent",
     "role_motor": "_menu_role_motor",
     "shortcuts": "_menu_shortcuts",

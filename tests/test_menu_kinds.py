@@ -72,6 +72,7 @@ EXPECTED = {
     "reasoning_select",
     "model",
     "model_list",
+    "model_family",
     "role_agent",
     "role_motor",
     "shortcuts",

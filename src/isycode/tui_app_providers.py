@@ -379,9 +379,31 @@ class ProviderMixin:
                                 f"★ {label} · not in this account's catalog", "info", "",
                                 f"{provider.label} did not list a model matching {label}; it may "
                                 "not be offered here yet."))
-                    rows += [self._entry(
-                        f"{model_id}{'  ◂ current' if model_id == provider.model else ''}",
-                        "model", f"{name}|{model_id}") for model_id in models]
+                    from isycode.model_presentation import model_family, OTHER_FAMILY
+                    families: dict[str, list[str]] = {}
+                    for model_id in models:
+                        families.setdefault(model_family(model_id), []).append(model_id)
+                    family_variants = getattr(self, "_account_family_variants", {})
+                    ordered = [family for family in families if family != OTHER_FAMILY]
+                    if OTHER_FAMILY in families:
+                        ordered.append(OTHER_FAMILY)
+                    for family in ordered:
+                        ids = families[family]
+                        if len(ids) == 1:
+                            model_id = ids[0]
+                            rows.append(self._entry(
+                                f"{model_id}{'  ◂ current' if model_id == provider.model else ''}",
+                                "model", f"{name}|{model_id}"))
+                            continue
+                        variants = [self._entry(
+                            f"{model_id}{'  ◂ current' if model_id == provider.model else ''}",
+                            "model", f"{name}|{model_id}") for model_id in ids]
+                        family_variants[(name, family)] = variants
+                        rows.append(self._entry(
+                            f"▸ {family} · {len(ids)} models",
+                            "model_family", f"{name}|{family}",
+                            "Open this family's variants."))
+                    self._account_family_variants = family_variants
         except ProviderError as error:
             rows = [self._entry(self._provider_failure(error, "Model catalog"), "info")]
         except ConfigurationError:
@@ -390,7 +412,7 @@ class ProviderMixin:
             rows = [self._entry(
                 f"Model catalog unavailable ({type(error).__name__}); current selection is unchanged.",
                 "info")]
-        if models_available := [row for row in rows if row["kind"] == "model"]:
+        if models_available := [row for row in rows if row["kind"] in {"model", "model_family"}]:
             catalogs = getattr(self, "_account_model_catalogs", {})
             catalogs[name] = models_available
             self._account_model_catalogs = catalogs
@@ -767,6 +789,25 @@ class ProviderMixin:
         self._select_provider(provider_name, model_name)
         if not self.query_one("#key-entry", Vertical).display:
             self._open_reasoning_menu(provider_name, model_name)
+        return
+
+    def _menu_model_family(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        provider_name, family = value.split("|", 1)
+        variants = list(getattr(self, "_account_family_variants", {}).get(
+            (provider_name, family), []))
+        from isycode.capability_observations import observed
+        unavailable = [row for row in variants
+                       if observed(row["value"].split("|", 1)[0],
+                                   row["value"].split("|", 1)[1], "chat_available") is False]
+        visible = [row for row in variants if row not in unavailable]
+        if unavailable:
+            visible.append(self._entry(
+                f"{len(unavailable)} unavailable in tested endpoint · retained in capability results",
+                "info", "", "".join(row["value"] + "\n" for row in unavailable)))
+        visible.append(self._entry("Back", "settings_back", ""))
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("branch", f"Models · {family}", visible)
         return
 
     def _menu_model_list(self, entry: dict[str, str | bool]) -> None:
