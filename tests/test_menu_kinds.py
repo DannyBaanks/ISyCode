@@ -74,6 +74,7 @@ EXPECTED = {
     "model",
     "model_list",
     "model_family",
+    "provider_catalog_grant",
     "role_agent",
     "role_motor",
     "shortcuts",

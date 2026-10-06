@@ -77,3 +77,39 @@ async def test_variant_selection_reaches_select_provider_with_intact_id(tmp_path
         row = next(row for row in app._menu_entries if row["kind"] == "model")
         app._menu_model(row)
         assert chosen == [("openai", "glm-5.3-flash")]
+
+
+@pytest.mark.asyncio
+async def test_presets_are_labeled_and_catalog_deny_offers_grant(tmp_path, monkeypatch):
+    from test_daily_tui import configure
+    configure(tmp_path, monkeypatch)
+    from isycode.tui import TUIApp
+
+    app = TUIApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        entries = app._branch_entries("models")
+        presets = [row for row in entries if row["kind"] == "model" and "preset" in row["label"]]
+        assert presets, "preset models must be visibly labeled"
+        assert all("preset" in (row.get("detail") or "") for row in presets)
+
+
+@pytest.mark.asyncio
+async def test_catalog_denial_adds_actionable_grant_entry(tmp_path, monkeypatch):
+    from test_daily_tui import configure
+    configure(tmp_path, monkeypatch)
+    from isycode.action_runtime import ActionOutcome
+    from isycode.tui import TUIApp
+
+    async def denied_execute(self, provider, payload, transport):
+        return None, ActionOutcome("Denied.", "DENY", None, "host not granted")
+
+    monkeypatch.setattr("isycode.action_runtime.ProviderNetworkOwner.execute", denied_execute)
+    app = TUIApp()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        app._menu_mode = "model_account"
+        await app._load_account_models("openai")
+        grant = [row for row in app._menu_entries if row["kind"] == "provider_catalog_grant"]
+        assert grant and grant[0]["value"] == "openai"
+        assert any("deny" in row["label"] for row in app._menu_entries if row["kind"] == "info")

@@ -1929,8 +1929,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 f"Load account models · {active_provider}", "model_list", active_provider,
                 "Makes a read-only catalog request only after you select this item.")]
             from isycode.providers import recent_models
-            models.extend(self._entry(f"Recent · {item['provider']} · {item['model']}",
-                "model", f"{item['provider']}|{item['model']}") for item in recent_models())
+            models.extend(self._entry(f"Recent · {item['provider']} · {item['model']}  · recent",
+                "model", f"{item['provider']}|{item['model']}",
+                "Previously selected model; not verified against this account.")
+                for item in recent_models())
+            denied = getattr(self, "_account_model_denied", None)
+            if denied:
+                models.append(self._entry(
+                    f"Grant network access to {PRESETS.get(denied, {}).get('label', denied)} "
+                    "and load its real catalog",
+                    "provider_catalog_grant", denied,
+                    "The live catalog request was denied; this asks once, saves the host grant "
+                    "for this workspace, and reloads the provider's real models."))
             for name, preset in PRESETS.items():
                 model = resolved_chat_model(name)
                 selected = name == active_provider and (not current or model == current)
@@ -1938,8 +1948,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     model = current
                     selected = True
                 models.append(self._entry(
-                    f"{preset['label']}  ·  {model}{'  ◂ current' if selected else ''}",
-                    "model", f"{name}|{model}"))
+                    f"{preset['label']}  ·  {model}{'  ◂ current' if selected else ''}  · preset",
+                    "model", f"{name}|{model}",
+                    "Hardcoded preset model, not verified against this account; "
+                    "load the account catalog for the provider's real list."))
             for name, catalog in getattr(self, "_account_model_catalogs", {}).items():
                 models = [row for row in models
                           if row["kind"] not in {"model", "model_family"}

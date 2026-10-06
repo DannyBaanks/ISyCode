@@ -428,6 +428,7 @@ MENU_DISPATCH: dict[str, str] = {
     "model": "_menu_model",
     "model_list": "_menu_model_list",
     "model_family": "_menu_model_family",
+    "provider_catalog_grant": "_menu_provider_catalog_grant",
     "role_agent": "_menu_role_agent",
     "role_motor": "_menu_role_motor",
     "shortcuts": "_menu_shortcuts",

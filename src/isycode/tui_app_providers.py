@@ -360,6 +360,7 @@ class ProviderMixin:
                               "model": provider.model},
                     lambda: asyncio.to_thread(provider.models))
                 if result.decision != "ALLOW" or not isinstance(models, list):
+                    self._account_model_denied = name
                     rows = [self._entry(
                         f"Provider model request {result.decision.lower()}.", "info", "",
                         result.reason or "Grant this provider host in Settings → Authority & Security.")]
@@ -802,6 +803,19 @@ class ProviderMixin:
         self._select_provider(provider_name, model_name)
         if not self.query_one("#key-entry", Vertical).display:
             self._open_reasoning_menu(provider_name, model_name)
+        return
+
+    def _menu_provider_catalog_grant(self, entry: dict[str, str | bool]) -> None:
+        name = entry["value"]
+        self._select_provider(name)
+        self.run_worker(self._grant_and_reload_catalog(name), exclusive=True,
+                        group="provider-catalog-grant")
+        return
+
+    async def _grant_and_reload_catalog(self, name: str) -> None:
+        await self._change_provider_network_grant(True)
+        self.run_worker(self._load_account_models(name), exclusive=True,
+                        group="provider-models")
         return
 
     def _menu_model_family(self, entry: dict[str, str | bool]) -> None:
