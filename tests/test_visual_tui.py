@@ -319,3 +319,27 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_external_stylesheet_is_loaded(tmp_path, monkeypatch, capsys):
+    """Verify that the external .tcss stylesheet is loaded and applied."""
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            # Check that a rule from the external stylesheet is applied
+            # The #banner should have height: 1 from the stylesheet
+            banner = app.query_one("#banner")
+            assert banner.styles.height.value == 1
+            # The #side-panel should have the correct background from stylesheet
+            side_panel = app.query_one("#side-panel")
+            assert side_panel.styles.background is not None
+            # Verify CSS_PATH is set on the app class
+            assert TUIApp.CSS_PATH == "isycode.tcss"
+            # Verify inline CSS is empty (moved to external file)
+            assert TUIApp.CSS == ""
+
+    with capsys.disabled():
+        asyncio.run(scenario())

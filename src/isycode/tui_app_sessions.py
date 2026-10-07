@@ -125,7 +125,7 @@ from isycode.tui_screens_sessions import (
 class SessionMixin:
     """Chat sessions, the queue, the idea box, and harness import."""
 
-    def _paint_queued_messages(self):
+    def _paint_queued_messages(self) -> None:
         if not self._lane_on_screen() or not self.is_mounted:
             return
         if self._selected_queued_message not in self._queued_messages:
@@ -140,18 +140,18 @@ class SessionMixin:
         listing.clear_options()
         listing.add_options([Option(_fit_cells(" ".join(text.split()), 80), id=str(index)) for index, text in enumerate(self._queued_messages)])
 
-    def _select_queued_message(self, index):
+    def _select_queued_message(self, index: int) -> None:
         if 0 <= index < len(self._queued_messages):
             self._selected_queued_message = self._queued_messages[index]
             self._paint_queued_messages()
 
-    def _steering_target(self):
+    def _steering_target(self) -> tuple[str, str]:
         if self._active_chat_provider is not None:
             return self._active_chat_provider
         provider = selected_provider_name()
         return provider, resolved_chat_model(provider)
 
-    def _queue_steer_warning(self):
+    def _queue_steer_warning(self) -> None:
         from isycode.reasoning_options import steering_support
         provider, model = self._steering_target()
         support = steering_support(provider, model)
@@ -160,7 +160,7 @@ class SessionMixin:
         self.screen_stack[0].query_one("#queue-warning", Static).update(Text(message, style=YELLOW))
         self.screen_stack[0].query_one("#queue-notice").display = True
 
-    def _promote_queued_message(self):
+    def _promote_queued_message(self) -> None:
         from isycode.reasoning_options import steering_support
         selected = self._selected_queued_message
         if selected is None or selected not in self._queued_messages:
@@ -189,7 +189,7 @@ class SessionMixin:
             self.screen_stack[0].query_one("#queue-notice").display = False
             self._paint_queued_messages()
 
-    def _return_steering_to_queue(self, instructions, *, unsupported=False):
+    def _return_steering_to_queue(self, instructions: list[str], *, unsupported: bool = False) -> None:
         from isycode.reasoning_options import record_steering_result
         for instruction in instructions:
             positions = self._steering_restore_positions.get(instruction, [])
@@ -205,7 +205,7 @@ class SessionMixin:
                 self.screen_stack[0].query_one("#queue-warning", Static).update(Text("Steer sin respuesta confirmada · mensaje devuelto a queued", style=YELLOW))
         self._append("Steer no soportado por provider · mensaje devuelto a queued; continuando el turno original." if unsupported else "Steer no confirmado · devuelto a queued.", YELLOW)
 
-    def _undo_queued_message(self):
+    def _undo_queued_message(self) -> None:
         selected = self._selected_queued_message
         if selected is None or selected not in self._queued_messages:
             return
@@ -298,7 +298,7 @@ class SessionMixin:
         messages.insert(1, {"role": "system", "content": idea_nudge(self._idea_box)})
         self._idea_nudge_due = False
 
-    def _send_next_queued_message(self):
+    def _send_next_queued_message(self) -> None:
         if self._loop_task is not None or not self._queued_messages:
             return
         if len(self.screen_stack) > 1:
@@ -962,14 +962,14 @@ class SessionMixin:
         self._lanes = {"memory": ConversationLane("memory")}
         self._foreground_key = "memory"
 
-    def _foreground_lane(self):
+    def _foreground_lane(self) -> ConversationLane:
         lane = self._lanes.get(self._foreground_key)
         if lane is None:
             lane = ConversationLane(self._foreground_key)
             self._lanes[self._foreground_key] = lane
         return lane
 
-    def _active_lane(self):
+    def _active_lane(self) -> ConversationLane:
         pinned = conversation_lane_context.get()
         if pinned is not None:
             return pinned
