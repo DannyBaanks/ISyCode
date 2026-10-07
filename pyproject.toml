@@ -20,6 +20,8 @@ dependencies = [
 vision-probe = ["Pillow>=10,<13"]
 # Native Claude provider (Anthropic Messages API).
 anthropic = ["anthropic>=1.10,<2"]
+# The hermetic suite: several TUI tests are async (pytest.mark.asyncio).
+test = ["pytest>=8", "pytest-asyncio>=1.0"]
 
 [project.scripts]
 isycode = "isycode.launcher:main"
