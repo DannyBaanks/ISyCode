@@ -1588,12 +1588,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         # push was pending; open the latest ones, exactly once.
         pending = getattr(self, "_models_screen_pending", None)
         self._models_screen_pending = None
-        self.push_screen(ModelsScreen(pending if pending is not None else entries),
+        self.push_screen(ModelsScreen(pending if pending is not None else entries,
+                                      provider_scope=getattr(self, "_models_scope", None)),
                          self._model_picker_result)
 
     def _render_menu(self, mode: str, title: str, entries: list[dict[str, str]]) -> None:
         if mode == "branch" and title == "Models":
-            name = selected_provider_name()
+            # A provider-scoped picker loads that provider's catalog, not the active one.
+            name = getattr(self, "_models_scope", None) or selected_provider_name()
             attempted = getattr(self, "_account_models_attempted", set())
             if name not in attempted:
                 self._account_models_attempted = attempted | {name}
@@ -1720,6 +1722,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#key-entry", Vertical).display = False
         self._menu_stack = []
         self._menu_mode = ""
+        self._models_scope = None
         self.query_one("#prompt-input", PromptArea).focus()
 
 
@@ -1774,6 +1777,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                           if row["kind"] not in {"model", "model_family"}
                           or row["value"].split("|", 1)[0] != name]
                 models.extend(catalog)
+            active_catalog = live_catalogs.get(active_provider)
+            active_model = current or resolved_chat_model(active_provider)
+            listed = {row["value"].split("|", 1)[1] for row in active_catalog or []
+                      if row["kind"] == "model"}
+            listed |= {variant["value"].split("|", 1)[1]
+                       for (provider, _), variants in getattr(self, "_account_family_variants", {}).items()
+                       if provider == active_provider for variant in variants}
+            if active_catalog and active_model not in listed:
+                # Never switch silently: the active model stays until the user picks another.
+                models.insert(0, self._entry(
+                    f"Current model {active_model} is not in the refreshed {PRESETS[active_provider]['label']} "
+                    "catalog · still selected · choose a replacement explicitly", "info"))
             from isycode.model_catalog import catalog_models
             for name in PRESETS:
                 if name in live_catalogs:

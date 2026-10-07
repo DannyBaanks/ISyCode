@@ -139,26 +139,40 @@ class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
 
 
 class ModelsScreen(ModalScreen):
-    """Searchable provider accordions; model IDs belong only in this selector."""
+    """Searchable provider accordions; model IDs belong only in this selector.
+
+    With ``provider_scope`` it lists only that provider's models (the step after
+    choosing a provider). The detail card shows the highlighted model's facts and
+    where each came from; nothing is selected until a model is pressed.
+    """
 
     DEFAULT_CSS = """
     ModelsScreen { align: center middle; background: #000000 58%; }
     #models-card { width: 110; max-width: 96%; height: 85%; padding: 1 2; background: #17191f; border: round #514d5a; }
     #models-title { height: 2; }
     #models-search { height: 3; margin-bottom: 1; }
-    #models-scroll { height: 1fr; }
+    #models-body { height: 1fr; }
+    #models-scroll { height: 1fr; width: 1fr; }
+    #model-detail-scroll { width: 46; height: 1fr; margin-left: 1; padding: 0 1; border-left: tall #2c2e36; }
+    #model-detail { height: auto; }
+    ModelsScreen.-narrow #models-body { layout: vertical; }
+    ModelsScreen.-narrow #model-detail-scroll { width: 100%; height: 12; margin-left: 0; border-left: none; border-top: tall #2c2e36; }
     .model-group { height: auto; background: transparent; }
     .model-group > Contents { padding: 0 1; }
-    .model-choice { width: 100%; height: auto; min-height: 1; border: none; background: transparent; text-align: left; padding: 0 1; margin: 0; }
+    .model-choice { width: 100%; height: auto; min-height: 1; border: none; background: transparent; text-align: left; content-align: left middle; padding: 0 1; margin: 0; }
     .model-choice:focus { background: #30303c; }
     .model-choice:hover { background: #242630; }
     #models-status { height: auto; color: #9aa3ad; margin: 1 0; }
     #models-close { height: 3; width: 16; }
     """
-    BINDINGS = [Binding("escape", "close", "Close")]
+    BINDINGS = [Binding("escape", "close", "Close"),
+                Binding("down", "focus_next", "Next", show=False),
+                Binding("up", "focus_previous", "Previous", show=False)]
+    NARROW_WIDTH = 100
 
-    def __init__(self, entries: list[dict]) -> None:
+    def __init__(self, entries: list[dict], provider_scope: str | None = None) -> None:
         super().__init__()
+        self.provider_scope = provider_scope
         self.entries = entries
         self.choices: dict[str, dict] = {}
         self.expanded_providers: set[str] = set()
@@ -185,32 +199,76 @@ class ModelsScreen(ModalScreen):
             for entry in variants:
                 if not any(item["value"] == entry["value"] for item in bucket):
                     bucket.append(entry)
+        scope = self.provider_scope
+        if scope:
+            groups = {scope: groups.get(scope, [])}
+            self.expanded_providers.add(scope)
+        heading = ("Models · " + PRESETS.get(scope, {}).get("label", scope)) if scope else "Models"
+        hint = ("Highlight a model to see its details · Enter selects · Esc back to providers"
+                if scope else "Expand a provider · select a model · choose reasoning")
         with Vertical(id="models-card"):
-            yield Static(Text.assemble(("Models\n", "bold #c7b8d4"),
-                                      ("Expand a provider · select a model · choose reasoning", MUTED)), id="models-title")
-            yield Input(value=self.search_query, placeholder="Find a model or provider…", id="models-search")
-            with VerticalScroll(id="models-scroll"):
-                for index, entry in enumerate(self.entries):
-                    if entry["kind"] == "model_list":
-                        key = f"model-catalog-{index}"
-                        self.choices[key] = entry
-                        yield Button("Refresh account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
-                                     id=key, classes="model-choice")
-                for provider, entries in groups.items():
-                    with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
-                                     collapsed=provider not in self.expanded_providers, classes="model-group", id="model-provider-" + provider):
-                        for entry in entries:
-                            model = entry["value"].split("|", 1)[1]
-                            key = f"model-choice-{len(self.choices)}"
+            yield Static(Text.assemble((heading + "\n", "bold #c7b8d4"), (hint, MUTED)), id="models-title")
+            yield Input(value=self.search_query, placeholder="Find a model, id or family…", id="models-search")
+            with Horizontal(id="models-body"):
+                with VerticalScroll(id="models-scroll"):
+                    for index, entry in enumerate(self.entries):
+                        if entry["kind"] == "model_list" and (not scope or entry["value"] == scope):
+                            key = f"model-catalog-{index}"
                             self.choices[key] = entry
-                            label = Text(model_display_name(model), style=TEXT)
-                            label.append(" / " + model, style=MUTED)
-                            if provider == selected_provider_name() and model == selected_model_name():
-                                label.append(" · current", style=GREEN)
-                            yield Button(label, id=key, classes="model-choice")
+                            yield Button("Refresh account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
+                                         id=key, classes="model-choice")
+                    for provider, entries in groups.items():
+                        with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
+                                         collapsed=provider not in self.expanded_providers, classes="model-group", id="model-provider-" + provider):
+                            for entry in entries:
+                                model = entry["value"].split("|", 1)[1]
+                                key = f"model-choice-{len(self.choices)}"
+                                self.choices[key] = entry
+                                label = Text(model_display_name(model), style=TEXT)
+                                label.append(" / " + model, style=MUTED)
+                                if provider == selected_provider_name() and model == selected_model_name():
+                                    label.append(" · current", style=GREEN)
+                                yield Button(label, id=key, classes="model-choice")
+                    if scope and not groups[scope]:
+                        yield Static("No models listed for this provider yet · refresh its account catalog.",
+                                     classes="model-empty")
+                with VerticalScroll(id="model-detail-scroll"):
+                    yield Static(Text("Highlight a model to see what ISyCode knows about it.", style=MUTED),
+                                 id="model-detail")
             notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
             yield Static("\n".join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
             yield Button("Close", id="models-close")
+
+    def on_mount(self) -> None:
+        self._apply_width(self.app.size.width)
+
+    def on_resize(self, event) -> None:
+        self._apply_width(event.size.width)
+
+    def _apply_width(self, width: int) -> None:
+        self.set_class(width < self.NARROW_WIDTH, "-narrow")
+
+    def on_descendant_focus(self, event) -> None:
+        widget = event.widget
+        entry = self.choices.get(getattr(widget, "id", None) or "")
+        if entry is not None and entry["kind"] == "model":
+            self.show_details(*entry["value"].split("|", 1))
+
+    def show_details(self, provider: str, model: str) -> None:
+        from isycode.model_card import model_facts
+        card = Text()
+        for fact in model_facts(provider, model):
+            card.append(fact.label + "\n", style="bold #c7b8d4")
+            card.append("  " + fact.value, style=TEXT)
+            card.append(f"  · {fact.source}\n", style=MUTED)
+        self.query_one("#model-detail", Static).update(card)
+
+    def _haystack(self, provider: str, model: str) -> str:
+        from isycode.model_card import catalog_entry
+        from isycode.model_presentation import model_display_name
+        label = PRESETS.get(provider, {}).get("label", provider)
+        family = (catalog_entry(provider, model) or {}).get("family") or ""
+        return f"{label} {provider} {model} {model_display_name(model)} {family}".casefold()
 
     def on_collapsible_expanded(self, event: Collapsible.Expanded) -> None:
         group_id = event.collapsible.id or ""
@@ -236,8 +294,7 @@ class ModelsScreen(ModalScreen):
             for button in group.query(Button):
                 entry = self.choices[button.id]
                 provider, model = entry["value"].split("|", 1)
-                label = PRESETS.get(provider, {}).get("label", provider)
-                button.display = not query or query in f"{label} {model}".casefold()
+                button.display = not query or query in self._haystack(provider, model)
                 matches += bool(button.display)
             group.display = bool(matches)
             if query and matches:
