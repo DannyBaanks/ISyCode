@@ -12,16 +12,22 @@ import isycode.security as security_module
 def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     report = action_coverage.owner_coverage_report()
 
-    assert report["secure_closed"] is False
-    assert len(report["effectful_callsites_without_mediation"]) == 11
+    # Closed by evidence, not by relabelling: every former UNWIRED primitive is
+    # either unreachable from the product or called only by its owner, and
+    # primitive_caller_violations keeps that true (see test_m15_closure.py).
+    assert report["secure_closed"] is True
+    assert report["effectful_callsites_without_mediation"] == []
+    assert report["primitive_caller_violations"] == []
     assert "mobile.host.start" not in report["unowned_effectful_actions"]
     assert "oauth.authorize" in report["unowned_effectful_actions"]
     assert "credentials.add" not in report["unowned_effectful_actions"]
     callsites = {item["callsite"]: item for item in report["callsites"]}
     assert callsites["MobileHostOwner.authorize_and_launch"]["status"] == "COVERED"
     assert callsites["MobileHostOwner.shutdown"]["status"] == "BLOCKED_BY_DESIGN"
-    assert callsites["BridgeClient.agents"]["status"] == "UNWIRED"
-    assert callsites["BridgeClient._run"]["status"] == "UNWIRED"
+    assert callsites["BridgeClient.agents"]["status"] == "BLOCKED_BY_DESIGN"
+    assert callsites["BridgeClient._run"]["status"] == "BLOCKED_BY_DESIGN"
+    assert callsites["ApiKeyStore.issue"] == {"action": "mobile.pair", "callsite": "ApiKeyStore.issue",
+                                              "owner": "mobile_host", "status": "COVERED"}
     assert callsites["WorkspaceMixin._inject_agent_context"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.read_config"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.commands"]["status"] == "COVERED"

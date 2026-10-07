@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from textual.binding import Binding
 from textual.widgets import Button, Input, OptionList, Static
-from isycode.chat_sessions import ChatSessionStore
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
@@ -336,7 +335,12 @@ class BridgePresenceScreen(ModalScreen[bool]):
 
 
 class ChatSessionsScreen(ModalScreen[str | None]):
-    """Search, resume, rename, fork, and remove saved conversations."""
+    """Search, resume, rename, fork, and remove saved conversations.
+
+    Every read and change goes through the ChatSessionOwner (Workspace
+    Authority, IsySentinel, journal); the screen never touches the store.
+    Not constructed by the TUI today: the Sessions button opens the WorkList.
+    """
 
     CSS = """
     ChatSessionsScreen { align: center middle; background: #000000 58%; }
@@ -349,10 +353,22 @@ class ChatSessionsScreen(ModalScreen[str | None]):
     """
     BINDINGS = [Binding("escape", "close", "Close")]
 
-    def __init__(self, session_store: ChatSessionStore) -> None:
+    def __init__(self, session_owner) -> None:
         super().__init__()
-        self.session_store = session_store
-        self.visible_sessions = session_store.list_sessions()
+        self.session_owner = session_owner
+        self.visible_sessions = self._sessions("")
+
+    def _sessions(self, query: str) -> list:
+        outcome, sessions = self.session_owner.list_conversations()
+        if outcome.decision != "ALLOW":
+            return []
+        terms = query.casefold().split()
+        if not terms:
+            return sessions
+        return [item for item in sessions
+                if all(term in (item.title + " " + " ".join(
+                    message["content"] for message in item.messages)).casefold()
+                    for term in terms)]
 
     def compose(self) -> ComposeResult:
         with Vertical(id="sessions-card"):
@@ -379,9 +395,7 @@ class ChatSessionsScreen(ModalScreen[str | None]):
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id != "sessions-search":
             return
-        self.visible_sessions = (self.session_store.search(event.value)
-                                 if event.value.strip()
-                                 else self.session_store.list_sessions())
+        self.visible_sessions = self._sessions(event.value)
         listing = self.query_one("#sessions-list", OptionList)
         listing.clear_options()
         listing.add_options(self._options(self.visible_sessions))
@@ -415,30 +429,27 @@ class ChatSessionsScreen(ModalScreen[str | None]):
             session_id = self._selected_session_id()
             if session_id is None:
                 return
-            try:
-                current = self.session_store.load(session_id)
-                title = await self.app.push_screen_wait(SessionTitleScreen(current.title))
-                if title:
-                    self.session_store.rename(session_id, title)
-                    self._refresh()
-            except (OSError, ValueError):
+            _, current = self.session_owner.resume(session_id)
+            if current is None:
                 return
+            title = await self.app.push_screen_wait(SessionTitleScreen(current.title))
+            if title:
+                outcome, _ = self.session_owner.manage("rename", session_id, title)
+                if outcome.decision == "ALLOW":
+                    self._refresh()
         elif event.button.id == "sessions-fork":
             session_id = self._selected_session_id()
             if session_id is None:
                 return
-            try:
-                child = self.session_store.fork(session_id)
-            except (OSError, ValueError):
-                return
-            self.dismiss(child.session_id)
+            outcome, child_id = self.session_owner.manage("fork", session_id)
+            if outcome.decision == "ALLOW" and child_id:
+                self.dismiss(child_id)
         elif event.button.id == "sessions-delete":
             session_id = self._selected_session_id()
             if session_id is None:
                 return
-            try:
-                session = self.session_store.load(session_id)
-            except (OSError, ValueError):
+            _, session = self.session_owner.resume(session_id)
+            if session is None:
                 return
             confirmed = await self.app.push_screen_wait(DeleteSessionScreen(session.title))
             if confirmed:
@@ -446,9 +457,7 @@ class ChatSessionsScreen(ModalScreen[str | None]):
 
     def _refresh(self) -> None:
         query = self.query_one("#sessions-search", Input).value
-        self.visible_sessions = (self.session_store.search(query)
-                                 if query.strip()
-                                 else self.session_store.list_sessions())
+        self.visible_sessions = self._sessions(query)
         listing = self.query_one("#sessions-list", OptionList)
         listing.clear_options()
         listing.add_options(self._options(self.visible_sessions))
