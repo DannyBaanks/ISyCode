@@ -5280,11 +5280,14 @@ class TUIApp(App):
             return
         if kind == 'folder_remove':
             try:
-                self._folder_store().remove(value)
+                revoked = self._folder_store().remove(value)
+                self._append(f"  Folder removed · {value} · "
+                             + (f"revoked {len(revoked)} permission(s) ISyCode had given it"
+                                if revoked else "its own permissions were left as they were"), GREEN)
                 if self._file_browser_alias == value:
                     self._file_browser_alias = 'main'
                     self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
-            except (OSError, ValueError) as exc:
+            except (OSError, ValueError, WorkspaceAuthorityError) as exc:
                 self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
             self._open_workspace_folders_menu()
             return

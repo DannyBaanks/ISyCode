@@ -83,7 +83,9 @@ class WorkspaceFolders:
             raise ValueError('Folder settings do not match this workspace')
         aliases, paths = set(), set()
         for item in data['folders']:
-            if (not isinstance(item, dict) or set(item) != {'alias', 'path', 'editable', 'auto_edit', 'identity', 'registration'}
+            keys = set(item) if isinstance(item, dict) else set()
+            if (not isinstance(item, dict) or keys - {'granted'} != {'alias', 'path', 'editable', 'auto_edit', 'identity', 'registration'}
+                    or ('granted' in keys and not self._valid_granted(item['granted'], item.get('editable')))
                     or not isinstance(item['alias'], str) or not ALIAS.fullmatch(item['alias'])
                     or not isinstance(item['registration'], str) or not re.fullmatch('[0-9a-f]{32}', item['registration'])
                     or item['alias'] == 'main' or item['alias'] in aliases
@@ -113,6 +115,20 @@ class WorkspaceFolders:
             os.replace(temporary, self.path)
         finally:
             temporary.unlink(missing_ok=True)
+
+    @staticmethod
+    def _valid_granted(granted, editable) -> bool:
+        allowed = set(READ_GRANTS) | ({'workspace.files.write'} if editable is True else set())
+        return (isinstance(granted, list) and len(granted) == len(set(granted))
+                and all(isinstance(action, str) and action in allowed for action in granted))
+
+    @staticmethod
+    def _granted_by_isycode(item: dict) -> list[str]:
+        """Grants this registration switched on. Entries saved before this was
+        recorded always set every read grant (and write when editable)."""
+        if 'granted' in item:
+            return list(item['granted'])
+        return list(READ_GRANTS) + (['workspace.files.write'] if item['editable'] else [])
 
     def list(self) -> list[dict]:
         return [dict(item) for item in self._load()['folders']]
@@ -163,18 +179,41 @@ class WorkspaceFolders:
         if any(item['alias'] == alias or item['path'] == str(root) for item in data['folders']):
             raise ValueError('Folder or alias is already registered')
         authority = WorkspaceAuthority(root)
+        existing = authority.policy()['grants']
+        granted = []
         for action in READ_GRANTS + (('workspace.files.write',) if editable else ()):
-            authority.set_grant(action, enabled=True, path_prefixes=[str(root)])
+            current = existing.get(action, {})
+            prefixes = set(current.get('path_prefixes', []))
+            if current.get('enabled') is True and str(root) in prefixes:
+                continue  # the user already granted this; removal must leave it alone
+            authority.set_grant(action, enabled=True, path_prefixes=sorted(prefixes | {str(root)}))
+            granted.append(action)
         data['folders'].append({'alias': alias, 'path': str(root), 'editable': editable,
-                                'auto_edit': False, 'identity': identity, 'registration': secrets.token_hex(16)})
+                                'auto_edit': False, 'identity': identity, 'registration': secrets.token_hex(16),
+                                'granted': granted})
         self._save(data)
 
-    def remove(self, alias: str) -> None:
+    def remove(self, alias: str) -> list[str]:
+        """Unregister a folder and revoke the grants its registration switched on.
+
+        Returns the revoked action ids. Grants the user had already given that
+        folder before it was attached are left untouched."""
         data = self._load()
-        if alias == 'main' or not any(item['alias'] == alias for item in data['folders']):
+        item = next((item for item in data['folders'] if item['alias'] == alias), None)
+        if alias == 'main' or item is None:
             raise ValueError('Additional folder alias is not registered')
-        data['folders'] = [item for item in data['folders'] if item['alias'] != alias]
+        revoked = []
+        root = Path(item['path'])
+        # Revoke even if the directory was replaced: grants are keyed by path, so a
+        # new folder at the same path would otherwise inherit them.
+        if root.is_dir() and not root.is_symlink():
+            authority = WorkspaceAuthority(root)
+            for action in self._granted_by_isycode(item):
+                authority.set_grant(action, enabled=False)
+                revoked.append(action)
+        data['folders'] = [entry for entry in data['folders'] if entry['alias'] != alias]
         self._save(data)
+        return revoked
 
     def auto_edit_allowed(self, alias: str = 'main') -> bool:
         data = self._load()
