@@ -89,6 +89,126 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
     "choose_context_file", "choose_workspace_file", "choose_workspace_directory",
 })
 
+# Low-level effect primitives and the only product functions allowed to call
+# them ("module.Class.function"). Any other call in src/isycode (including
+# constructing BridgeClient) is reported and keeps secure_closed false.
+PRIMITIVE_CALLERS: dict[tuple[str, str], frozenset[str]] = {
+    ("ApiKeyStore", "issue"): frozenset({"mobile_host.MobileHost._pair"}),
+    ("ApiKeyStore", "revoke"): frozenset({"mobile_host.MobileHost._pair"}),
+    ("ChatSessionStore", "rename"): frozenset({"session_owner.ChatSessionOwner.manage"}),
+    ("ChatSessionStore", "fork"): frozenset(),
+    ("ChatSessionStore", "create"): frozenset(),
+    ("BridgeClient", "__init__"): frozenset(),
+}
+# Modules that define a primitive; their own internal calls are not callers.
+_PRIMITIVE_HOME = {"ApiKeyStore": "mobile_host", "ChatSessionStore": "chat_sessions",
+                   "BridgeClient": "bridge"}
+
+
+def _guarded_bindings(trees: dict[str, ast.AST]) -> dict[str, set[str]]:
+    """Names and attributes that hold a guarded primitive, across the package.
+
+    A binding is anything assigned from ``Class(...)``, annotated as ``Class``
+    (parameters, attributes, return types of properties/functions), so
+    ``self.store.rename`` is recognised even when the name says nothing.
+    """
+    classes = set(_PRIMITIVE_HOME)
+    bound: dict[str, set[str]] = {name: set() for name in classes}
+
+    def class_of(node: ast.AST | None) -> str | None:
+        if node is None:
+            return None
+        if isinstance(node, ast.Call):
+            node = node.func
+        if isinstance(node, ast.Subscript):  # Optional[...] / X | None handled below
+            return class_of(node.slice)
+        if isinstance(node, ast.BinOp):
+            return class_of(node.left) or class_of(node.right)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            text = node.value.replace("|", " ").replace("None", " ").split()
+            return next((part for part in text if part in classes), None)
+        name = _ast_name(node).rsplit(".", 1)[-1]
+        return name if name in classes else None
+
+    def target_name(node: ast.AST) -> str:
+        return _ast_name(node).rsplit(".", 1)[-1]
+
+    for tree in trees.values():
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+                kind = class_of(node.value)
+                if kind:
+                    for target in node.targets:
+                        if target_name(target):
+                            bound[kind].add(target_name(target))
+            elif isinstance(node, ast.AnnAssign):
+                kind = class_of(node.annotation) or (
+                    class_of(node.value) if isinstance(node.value, ast.Call) else None)
+                if kind and target_name(node.target):
+                    bound[kind].add(target_name(node.target))
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                kind = class_of(node.returns)
+                if kind:
+                    bound[kind].add(node.name)
+                for arg in [*node.args.args, *node.args.kwonlyargs]:
+                    kind = class_of(arg.annotation)
+                    if kind:
+                        bound[kind].add(arg.arg)
+    return bound
+
+
+def primitive_caller_violations(package: Path | None = None) -> list[dict[str, Any]]:
+    """Calls to guarded primitives from anywhere but their allowed owners."""
+    package = package or Path(__file__).resolve().parent
+    trees: dict[str, ast.AST] = {}
+    violations: list[dict[str, Any]] = []
+    for path in sorted(package.rglob("*.py")):
+        module = path.relative_to(package).with_suffix("").as_posix().replace("/", ".")
+        if module == "action_coverage":
+            continue
+        try:
+            trees[module] = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        except (OSError, UnicodeError, SyntaxError) as exc:
+            violations.append({"callsite": module, "reason": f"source unavailable ({type(exc).__name__})"})
+    bound = _guarded_bindings(trees)
+
+    def holds(receiver: str, class_name: str) -> bool:
+        last = receiver.rsplit(".", 1)[-1]
+        return last in bound[class_name] or _receiver_matches_api(receiver, class_name)
+
+    for module, tree in trees.items():
+        def visit(node: ast.AST, scope: list[str]) -> None:
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                    visit(child, scope + [child.name])
+                    continue
+                if isinstance(child, ast.Call):
+                    check(child, scope)
+                visit(child, scope)
+
+        def check(call: ast.Call, scope: list[str]) -> None:
+            where = ".".join([module, *scope])
+            func = call.func
+            if isinstance(func, ast.Name) and func.id == "BridgeClient":
+                key = ("BridgeClient", "__init__")
+                if module == _PRIMITIVE_HOME["BridgeClient"]:
+                    return
+            elif isinstance(func, ast.Attribute):
+                receiver = _ast_name(func.value)
+                key = next(((class_name, method) for class_name, method in PRIMITIVE_CALLERS
+                            if method == func.attr and holds(receiver, class_name)), None)
+                if key is None or (module == _PRIMITIVE_HOME[key[0]] and receiver == "self"):
+                    return
+            else:
+                return
+            if where not in PRIMITIVE_CALLERS[key]:
+                violations.append({"callsite": f"{where}:{call.lineno}",
+                                   "reason": f"{key[0]}.{key[1]} called outside its owner"})
+
+        visit(tree, [])
+    return sorted(violations, key=lambda item: item["callsite"])
+
+
 # Audited effect-producing callsites. Status is explicit because there is no
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
@@ -138,17 +258,23 @@ KNOWN_EFFECT_CALLSITES = (
     ("mobile.host.stop", "MobileHostOwner.shutdown", "", "BLOCKED_BY_DESIGN"),
     ("mobile.pair", "MobileHostOwner.authorize_pair", "mobile_host", "COVERED"),
     ("mobile.pair.issue", "MobileHostOwner.issue_pairing_pin", "mobile_host", "COVERED"),
-    ("credentials.add", "ApiKeyStore.issue", "", "UNWIRED"),
-    ("credentials.revoke", "ApiKeyStore.revoke", "", "UNWIRED"),
+    # The pairing credential is minted only inside MobileHost._pair, after the
+    # mobile_host owner authorized mobile.pair (Authority + IsySentinel); revoke
+    # is that handler's rollback when the pairing receipt cannot be recorded.
+    # PRIMITIVE_CALLERS below fails secure_closed if any other caller appears.
+    ("mobile.pair", "ApiKeyStore.issue", "mobile_host", "COVERED"),
+    ("mobile.pair", "ApiKeyStore.revoke", "mobile_host", "COVERED"),
+    # No product module constructs BridgeClient (the Bridge is optional, opt-in
+    # coordination used by integration tests and external agents only).
     ("bridge.connect", "BridgeClient.hello", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.connect", "BridgeClient.heartbeat", "", "UNWIRED"),
-    ("bridge.connect", "BridgeClient.goodbye", "", "UNWIRED"),
-    ("bridge.connect", "BridgeClient.status", "", "UNWIRED"),
-    ("bridge.connect", "BridgeClient.agents", "", "UNWIRED"),
-    ("bridge.connect", "BridgeClient._run", "", "UNWIRED"),
+    ("bridge.connect", "BridgeClient.heartbeat", "", "BLOCKED_BY_DESIGN"),
+    ("bridge.connect", "BridgeClient.goodbye", "", "BLOCKED_BY_DESIGN"),
+    ("bridge.connect", "BridgeClient.status", "", "BLOCKED_BY_DESIGN"),
+    ("bridge.connect", "BridgeClient.agents", "", "BLOCKED_BY_DESIGN"),
+    ("bridge.connect", "BridgeClient._run", "", "BLOCKED_BY_DESIGN"),
     ("bridge.peek", "BridgeClient.peek", "", "BLOCKED_BY_DESIGN"),
     ("bridge.lease.claim", "BridgeClient.claim", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.lease.release", "BridgeClient.release", "", "UNWIRED"),
+    ("bridge.lease.release", "BridgeClient.release", "", "BLOCKED_BY_DESIGN"),
     ("bridge.send", "BridgeClient.send", "", "BLOCKED_BY_DESIGN"),
     ("credentials.add", "CredentialOwner.add", "credentials", "COVERED"),
     ("credentials.revoke", "CredentialOwner.revoke", "credentials", "COVERED"),
@@ -156,9 +282,11 @@ KNOWN_EFFECT_CALLSITES = (
     ("session.create", "ChatSessionOwner.record", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.list_conversations", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.resume", "chat_sessions", "COVERED"),
-    ("session.create", "ChatSessionStore.create", "", "UNWIRED"),
-    ("session.create", "ChatSessionStore.rename", "", "UNWIRED"),
-    ("session.create", "ChatSessionStore.fork", "", "UNWIRED"),
+    # Store primitives: rename is reached only through ChatSessionOwner.manage;
+    # create and fork have no product caller outside the store itself.
+    ("session.create", "ChatSessionStore.create", "", "BLOCKED_BY_DESIGN"),
+    ("session.create", "ChatSessionStore.rename", "chat_sessions", "COVERED"),
+    ("session.create", "ChatSessionStore.fork", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "RemoteMixin._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "RemoteMixin._provision_broker", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "tui_app_menu._readme_cmd", "", "BLOCKED_BY_DESIGN"),
@@ -248,6 +376,7 @@ def owner_coverage_report() -> dict[str, Any]:
                   "owner": owner or None, "status": status}
                  for action, callsite, owner, status in KNOWN_EFFECT_CALLSITES]
     direct_api_bypasses = secure_tui_direct_api_bypasses()
+    primitive_violations = primitive_caller_violations()
     stale_callsites = sorted(item["callsite"] for item in callsites
                              if item["status"] != "PLANNED"
                              and not _callsite_exists(item["callsite"]))
@@ -316,8 +445,9 @@ def owner_coverage_report() -> dict[str, Any]:
             and not unresolved_dynamic
             and all(row["classification"] not in {"UNCLASSIFIED", "CLASSIFICATION_CONFLICT", "AMBIGUOUS"}
                     for row in rows)),
+        "primitive_caller_violations": primitive_violations,
         "secure_closed": (
-            not direct_api_bypasses and not conflicts and not mismatches
+            not direct_api_bypasses and not primitive_violations and not conflicts and not mismatches
             and not unclassified_effectful_actions(rows) and not unresolved_dynamic
             and not any(item["status"] in {"UNWIRED", "BYPASS_RISK",
                                            "NOT_DEMONSTRATED", "PLANNED"}
@@ -524,6 +654,7 @@ def authority_coverage_snapshot() -> dict[str, Any]:
         "unclassified_actions": report["unclassified_actions"],
         "callsites": report["callsites"],
         "secure_tui_direct_api_bypasses": report["secure_tui_direct_api_bypasses"],
+        "primitive_caller_violations": report["primitive_caller_violations"],
         "stale_callsites": report["stale_callsites"],
         "request_constructors": report["request_constructors"],
         "dynamic_request_constructors": report["dynamic_request_constructors"],

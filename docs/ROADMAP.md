@@ -456,6 +456,13 @@ Reglas de frontera:
 
 **Corrección de alcance 2026-10-04:** `docs/security/m15-authority-coverage.json` separa la auditoría AST de bypasses TUI (`secure_tui_closed`) del cierre de todos los callsites de efecto (`secure_closed`). El snapshot actual mantiene `secure_tui_closed: true`, pero `secure_closed: false`: 11 callsites siguen `UNWIRED`. La clasificación owner/DENY del catálogo continúa completa; el cierre global de mediación de callsites queda NOT_DEMONSTRATED y no debe inferirse del resultado AST.
 
+**Corrección 2026-10-07 (cierre de `secure_closed`, por evidencia):** los 11 callsites `UNWIRED` se resolvieron así, sin cambiar solo la etiqueta:
+- `BridgeClient.*` (6): ningún módulo del producto construye `BridgeClient` → `BLOCKED_BY_DESIGN`, como `hello`/`peek`/`claim`/`send`.
+- `ApiKeyStore.issue/revoke` (2): solo se ejecutan en `MobileHost._pair` después de que `MobileHostOwner.authorize_pair` autorice `mobile.pair` (Authority + IsySentinel); `revoke` es el rollback cuando el recibo no se registra → `mobile.pair`, owner `mobile_host`, `COVERED`.
+- `ChatSessionStore.create/rename/fork` (3): `ChatSessionsScreen` (no construida por la TUI) los llamaba directo; ahora pasa por `ChatSessionOwner`. `rename` solo lo llama `ChatSessionOwner.manage` → `COVERED`; `create`/`fork` no tienen llamador de producto → `BLOCKED_BY_DESIGN`.
+
+`action_coverage.primitive_caller_violations` recorre todo `src/isycode` con inferencia de tipos simple (asignaciones, anotaciones, retornos) y vuelve a poner `secure_closed: false` si aparece cualquier otro llamador de esas primitivas o una construcción de `BridgeClient`. Evidencia en `tests/test_m15_closure.py`: un paquete falso con llamadores escondidos es detectado; con la lista de permitidos vacía el escáner ve exactamente los 3 llamadores revisados; el pairing real por HTTP no emite llave sin autorización y revoca la llave si el recibo falla; la pantalla de sesiones bifurca a través del owner y el journal. Control negativo: restaurar la `ChatSessionsScreen` anterior devuelve `secure_closed: false`. **M15 sigue abierto** por los testigos remotos del Gateway descritos arriba; `secure_closed` solo cubre la mediación local de callsites.
+
 **Objetivo:** hacer de ISySentinel la decisión de seguridad de ISyCode, con autoridad explícita por `.isyroot`, Systembilities de solo lectura y ejecución posterior por adapters. Mantener Gateway HTTP Sentinel como gate remoto independiente.
 
 - [x] Separar `Workspace Authority` (política explícita per-root) de `IsySentinel` (agregación pura de Systembilities); `.isyroot` solo fija el límite máximo.

@@ -12,7 +12,7 @@
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "secure_tui_closed": true,
-    "secure_closed": false
+    "secure_closed": true
   },
   "actions": [
     {
@@ -1477,16 +1477,16 @@
       "status": "COVERED"
     },
     {
-      "action": "credentials.add",
+      "action": "mobile.pair",
       "callsite": "ApiKeyStore.issue",
-      "owner": null,
-      "status": "UNWIRED"
+      "owner": "mobile_host",
+      "status": "COVERED"
     },
     {
-      "action": "credentials.revoke",
+      "action": "mobile.pair",
       "callsite": "ApiKeyStore.revoke",
-      "owner": null,
-      "status": "UNWIRED"
+      "owner": "mobile_host",
+      "status": "COVERED"
     },
     {
       "action": "bridge.connect",
@@ -1498,31 +1498,31 @@
       "action": "bridge.connect",
       "callsite": "BridgeClient.heartbeat",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "bridge.connect",
       "callsite": "BridgeClient.goodbye",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "bridge.connect",
       "callsite": "BridgeClient.status",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "bridge.connect",
       "callsite": "BridgeClient.agents",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "bridge.connect",
       "callsite": "BridgeClient._run",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "bridge.peek",
@@ -1540,7 +1540,7 @@
       "action": "bridge.lease.release",
       "callsite": "BridgeClient.release",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "bridge.send",
@@ -1588,19 +1588,19 @@
       "action": "session.create",
       "callsite": "ChatSessionStore.create",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "session.create",
       "callsite": "ChatSessionStore.rename",
-      "owner": null,
-      "status": "UNWIRED"
+      "owner": "chat_sessions",
+      "status": "COVERED"
     },
     {
       "action": "session.create",
       "callsite": "ChatSessionStore.fork",
       "owner": null,
-      "status": "UNWIRED"
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "desktop.file_picker",
@@ -1652,6 +1652,7 @@
     }
   ],
   "secure_tui_direct_api_bypasses": [],
+  "primitive_caller_violations": [],
   "stale_callsites": [],
   "request_constructors": [
     {
