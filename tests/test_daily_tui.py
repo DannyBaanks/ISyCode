@@ -64,6 +64,17 @@ def test_failed_turn_recovers_original_prompt_without_replaying(tmp_path, monkey
         raise ProviderError('private raw response', status=status)
 
     monkeypatch.setattr('isycode.tui.provider_complete', fail)
+    # ADR 0008: the failed step is re-sent automatically with a fixed delay per
+    # failure class and a small budget; after that the prompt is kept as before.
+    from isycode import continuity_recovery
+    waits = []
+
+    async def no_wait(delay):
+        waits.append(delay)
+
+    monkeypatch.setattr(continuity_recovery, 'wait_fixed', no_wait)
+    expected = continuity_recovery.POLICIES[
+        'NETWORK' if partial else 'RATE_LIMIT' if status == 429 else 'PROVIDER']
 
     async def scenario():
         app = TUIApp()
@@ -75,7 +86,8 @@ def test_failed_turn_recovers_original_prompt_without_replaying(tmp_path, monkey
             app.query_one(PromptArea).load_text('my newer draft')
             app._prepare_retry()
             assert app.query_one(PromptArea).text == 'my newer draft'
-            assert len(calls) == 1
+            assert len(calls) == 1 + expected.max_attempts
+            assert waits == [expected.delay_s] * expected.max_attempts  # fixed, never growing
     with capsys.disabled():
         asyncio.run(scenario())
 
