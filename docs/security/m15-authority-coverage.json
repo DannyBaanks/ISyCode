@@ -1557,63 +1557,63 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1868,
+      "line": 1870,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1657,
+      "line": 1659,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1721,
+      "line": 1723,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1791,
+      "line": 1793,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1877,
+      "line": 1879,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1928,
+      "line": 1930,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1936,
+      "line": 1938,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1996,
+      "line": 1998,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2062,
+      "line": 2064,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -1830,42 +1830,42 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 7018,
+      "line": 7043,
       "callable": "isycode.tui.TUIApp._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui.py",
-      "line": 7120,
+      "line": 7145,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 4824,
+      "line": 4835,
       "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/tui.py",
-      "line": 4876,
+      "line": 4887,
       "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/tui.py",
-      "line": 5035,
+      "line": 5046,
       "callable": "isycode.tui.TUIApp._open_lsp_server",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/tui.py",
-      "line": 6328,
+      "line": 6353,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
@@ -1916,7 +1916,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2062,
+      "line": 2064,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -1944,14 +1944,14 @@
     },
     {
       "file": "isycode/tui.py",
-      "line": 7120,
+      "line": 7145,
       "callable": "isycode.tui.TUIApp._workspace_request",
       "action": null,
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui.py",
-      "line": 6328,
+      "line": 6353,
       "callable": "isycode.tui.TUIApp._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"

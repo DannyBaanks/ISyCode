@@ -84,6 +84,7 @@ Actualización desde la terminal:
 | --- | --- |
 | **isycode actualizar** | Avanza un checkout limpio o prepara la instalación de usuario |
 | **isycode actualizar --check** | Consulta cambios sin instalar ni avanzar la rama |
+| **isycode actualizar --yes** | Acepta de antemano el stash o el merge que normalmente se te pregunta |
 
 El comando detecta el checkout desde el propio programa, así que puedes
 ejecutarlo desde cualquier carpeta. En una instalación de usuario sin checkout,
@@ -92,10 +93,15 @@ descarga el código oficial en `$XDG_DATA_HOME/isycode/source` (o
 `isycode`. No usa `sudo`. Si el comando ya pertenece a otra aplicación, lo
 conserva e indica la ruta del launcher de ISyCode.
 
-En un checkout de desarrollo, los archivos modificados o nuevos hacen que la
-actualización se detenga para protegerlos. Si la rama local y la remota
-divergieron, `--check` previsualiza si Git puede integrarlas sin conflictos; la
-actualización crea un merge commit y conserva ambas historias. Si el único
+Solo acepta el repositorio oficial `github.com/DannyBaanks/ISyCode`; un fork u
+otro repositorio con el mismo nombre se rechaza antes del fetch.
+
+Un avance rápido limpio se aplica directamente. Cualquier otra cosa te pregunta
+antes (`[s/N]`): si tienes archivos modificados o nuevos, guardarlos en un
+`git stash`, actualizar y volver a aplicarlos; si la rama local y la remota
+divergieron, crear un merge commit. Sin terminal (por ejemplo en un script) la
+respuesta es siempre no, salvo que pases `--yes`. `--check` previsualiza si Git
+puede integrar ambas historias sin conflictos. Si el único
 conflicto es `docs/security/m15-authority-coverage.json`, lo regenera desde el
 código integrado. Cualquier otro conflicto detiene la operación e informa las
 rutas sin dejar un merge pendiente. `--check` puede actualizar metadata de Git
@@ -274,8 +280,10 @@ Selecciónalo desde **Providers** o con `ISYCODE_PROVIDER` / `ISYCODE_MODEL`. Si
 | NVIDIA NIM | `NVIDIA_NIM_API_KEY` | Probado con una clave real |
 | Nebius | `NEBIUS_API_KEY` | Probado por el equipo |
 | Groq | `GROQ_API_KEY` | |
-| OpenRouter | `OPENROUTER_API_KEY` | |
-| Ollama, llama.cpp | opcional | Endpoints locales |
+| OpenRouter | `OPENROUTER_API_KEY` | Herramientas solo con `ISYCODE_TOOL_CALLS=1` |
+| Ollama, llama.cpp | opcional | Endpoints locales; herramientas solo con `ISYCODE_TOOL_CALLS=1` |
+
+En OpenRouter, Ollama y llama.cpp el soporte de herramientas depende del modelo, y un modelo sin él rechaza la petición entera. Por eso el agente solo conversa con ellos hasta que exportes `ISYCODE_TOOL_CALLS=1` con un modelo que sí las soporte (en llama.cpp, el servidor con `--jinja`).
 
 **Claude nativo:** el provider `anthropic` usa la API Messages con el modelo `claude-opus-5-5` por defecto, thinking adaptativo (su resumen aparece en el bloque de razonamiento) y effort `medium`. Los bloques de thinking se devuelven intactos dentro de un turno de herramientas; si ISyCode recorta contexto, la API descarta los bloques afectados en vez de fallar (`prefix_mismatch_behavior: drop_block`). Si Claude rechaza una petición, el servidor puede reintentarla en otro modelo (`fallbacks: "default"`). Una negativa o una llamada a herramienta cortada por longitud nunca se ejecuta.
 

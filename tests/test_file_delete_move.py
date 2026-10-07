@@ -157,3 +157,23 @@ def test_toolkit_button_grants_only_what_the_computer_supports(tmp_path, monkeyp
     assert {"workspace.files.read", "workspace.files.delete", "workspace.files.move"} <= actions
     assert "workspace.command.run" not in actions and "git.commit" not in actions
     assert "lsp.diagnostics" not in actions
+
+
+def test_journal_records_whether_the_user_or_a_setting_approved(workspace):
+    owner, authority, approvals, root = workspace
+    _grant(authority, root)
+    reviewed = owner.preview("a.py", "a = 1\n")
+    assert owner.apply(reviewed, approvals.issue(reviewed.request)).decision == "ALLOW"
+    automatic = owner.preview("b.py", "b = 1\n")
+    assert owner.apply(automatic, approvals.issue(automatic.request, mode="delegated")).decision == "ALLOW"
+    report = ActionAuditJournal(root).verify()
+    assert report.status == "PASS"
+    modes = [item["approval"] for item in report.recent
+             if item["kind"] == "decision" and item["action"] == "workspace.files.write"]
+    assert modes[-2:] == ["user", "delegated"]
+
+
+def test_unknown_approval_modes_are_refused():
+    with pytest.raises(ValueError):
+        ActionApprovalStore().issue(ActionRequest("workspace.files.write", Path("/"), "x", {}),
+                                    mode="model")

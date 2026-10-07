@@ -170,6 +170,9 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
             if outcome.decision != "ALLOW" or not isinstance(response, dict):
                 print(f"isycode: provider request {outcome.decision} · {outcome.reason[:240]}",
                       file=log)
+                if outcome.decision == "DENY" and "grant" in outcome.reason:
+                    print("isycode: allow it once in the TUI: Settings → Authority → "
+                          "“Connect to the selected AI model”.", file=log)
                 return EXIT_DENIED
             receipts.append(outcome.receipt.receipt_id)
             answer = response.get("text") or "".join(streamed)

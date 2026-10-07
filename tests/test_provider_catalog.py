@@ -26,3 +26,14 @@ def test_added_cloud_provider_preset_and_env_key(monkeypatch, tmp_path,
 def test_openrouter_does_not_advertise_model_agnostic_tool_support():
     provider = Provider(name="openrouter", model="example/model", api_key="test")
     assert provider.supports_tools is False
+
+
+def test_model_dependent_presets_send_tools_only_after_an_explicit_opt_in(monkeypatch):
+    from isycode.providers import provider_supports_tools
+
+    monkeypatch.delenv("ISYCODE_TOOL_CALLS", raising=False)
+    assert not provider_supports_tools("ollama") and not provider_supports_tools("openrouter")
+    monkeypatch.setenv("ISYCODE_TOOL_CALLS", "1")
+    assert provider_supports_tools("ollama") and provider_supports_tools("llamacpp")
+    assert Provider(name="openrouter", model="example/model", api_key="test").supports_tools
+    assert not provider_supports_tools("not-a-provider")

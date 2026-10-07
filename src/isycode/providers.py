@@ -191,6 +191,19 @@ def selected_model_name() -> str:
     return os.environ.get("ISYMOTRON_MODEL", "")
 
 
+def provider_supports_tools(name: str) -> bool:
+    """Whether tool definitions are sent to this provider.
+
+    Presets whose tool support depends on the model (OpenRouter, Ollama,
+    llama.cpp) stay off unless the user opts in with ISYCODE_TOOL_CALLS=1,
+    because a model without tool calling rejects the whole request.
+    """
+    preset = PRESETS.get(name, {})
+    if preset.get("supports_tools"):
+        return True
+    return bool(preset) and os.environ.get("ISYCODE_TOOL_CALLS", "").strip() == "1"
+
+
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
     if name == "chatgpt":
@@ -270,7 +283,7 @@ class Provider:
             self.base_url = CHATGPT_ENDPOINT
         self.key_env = preset["key_env"]
         self.key_required = preset.get("key_required", True)
-        self.supports_tools = bool(preset.get("supports_tools", False))
+        self.supports_tools = provider_supports_tools(self.name)
         self.api_key = "" if preset.get("api") == "codex" else (api_key if api_key is not None else load_provider_key(self.name))
         self.token_limit_field = preset.get("token_limit_field", "max_tokens")
         self.reasoning_effort = (os.environ.get("ISYCODE_REASONING_EFFORT")

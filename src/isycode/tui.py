@@ -156,7 +156,7 @@ except ModuleNotFoundError:
         """A planner rejection raised only when an optional runtime is present."""
 
 from isycode.providers import (
-    DEFAULT_MODEL, PRESETS, Provider, ProviderError, featured_models, load_provider_key,
+    DEFAULT_MODEL, PRESETS, Provider, ProviderError, featured_models, load_provider_key, provider_supports_tools,
     provider_credential_state, save_provider_selection, selected_model_name, selected_provider_name,
 )
 from isycode.streaming import (
@@ -637,7 +637,7 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GlobalRecurringDefaultScreen(ModalScreen[bool]):
+class GlobalRecurringDefaultScreen(ApprovalScreen):
     """Confirm a user-wide preference that creates .isyroot in future folders."""
 
     CSS = """
@@ -661,8 +661,8 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
                 "first, so unrelated projects never share one workspace by accident.",
                 id="global-recurring-copy")
             with Horizontal(id="global-recurring-actions"):
-                yield Button("Cancel", id="global-recurring-cancel")
-                yield Button("Use for new folders", id="global-recurring-confirm", variant="primary")
+                yield Button("Cancel · n", id="global-recurring-cancel")
+                yield Button("Use for new folders · y", id="global-recurring-confirm", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "global-recurring-confirm")
@@ -907,7 +907,7 @@ class LocalMCPConfirmScreen(ApprovalScreen):
         self.dismiss(False)
 
 
-class GrantWorkspaceReadScreen(ModalScreen[bool]):
+class GrantWorkspaceReadScreen(ApprovalScreen):
     """Explicitly grant only bounded, read-only workspace tools."""
 
     CSS = """
@@ -937,8 +937,8 @@ class GrantWorkspaceReadScreen(ModalScreen[bool]):
                     "folders outside this workspace. You will still be asked before sensitive actions.")
             yield Static(copy, id="workspace-read-copy")
             with Horizontal(id="workspace-read-actions"):
-                yield Button("Cancel", id="workspace-read-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on",
+                yield Button("Cancel · n", id="workspace-read-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y",
                              id="workspace-read-grant", variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -948,7 +948,7 @@ class GrantWorkspaceReadScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GrantProviderNetworkScreen(ModalScreen[bool]):
+class GrantProviderNetworkScreen(ApprovalScreen):
     """Confirm network authority for one provider endpoint host."""
 
     CSS = """
@@ -981,8 +981,8 @@ class GrantProviderNetworkScreen(ModalScreen[bool]):
                          id="provider-network-title")
             yield Static(copy, id="provider-network-copy")
             with Horizontal(id="provider-network-actions"):
-                yield Button("Cancel", id="provider-network-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on", id="provider-network-confirm",
+                yield Button("Cancel · n", id="provider-network-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="provider-network-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -992,7 +992,7 @@ class GrantProviderNetworkScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GrantMCPInvocationScreen(ModalScreen[bool]):
+class GrantMCPInvocationScreen(ApprovalScreen):
     """Grant the Gateway MCP server as a target; every call still needs approval."""
 
     CSS = """
@@ -1020,8 +1020,8 @@ class GrantMCPInvocationScreen(ModalScreen[bool]):
                          id="mcp-grant-title")
             yield Static(copy, id="mcp-grant-copy")
             with Horizontal(id="mcp-grant-actions"):
-                yield Button("Cancel", id="mcp-grant-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on", id="mcp-grant-confirm",
+                yield Button("Cancel · n", id="mcp-grant-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="mcp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -1246,7 +1246,7 @@ class GatewaySemanticConfirmScreen(ApprovalScreen):
         self.dismiss(False)
 
 
-class GrantLSPProcessScreen(ModalScreen[bool]):
+class GrantLSPProcessScreen(ApprovalScreen):
     """Consent to the fixed bubblewrap LSP owner and its exact executable."""
 
     CSS = """
@@ -1276,8 +1276,8 @@ class GrantLSPProcessScreen(ModalScreen[bool]):
                          id="lsp-grant-title")
             yield Static(copy, id="lsp-grant-copy")
             with Horizontal(id="lsp-grant-actions"):
-                yield Button("Cancel", id="lsp-grant-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on", id="lsp-grant-confirm",
+                yield Button("Cancel · n", id="lsp-grant-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="lsp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -1369,7 +1369,7 @@ class LSPConfirmScreen(ApprovalScreen):
         self.dismiss(False)
 
 
-class BrokerPreviewGrantScreen(ModalScreen[bool]):
+class BrokerPreviewGrantScreen(ApprovalScreen):
     """Ask before persisting the narrow permission to inspect a broker plan."""
 
     CSS = """
@@ -1395,8 +1395,8 @@ class BrokerPreviewGrantScreen(ModalScreen[bool]):
                 "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
                 id="broker-grant-copy")
             with Horizontal(id="broker-grant-actions"):
-                yield Button("Cancel", id="broker-grant-cancel")
-                yield Button("Grant preview", id="broker-grant-confirm", variant="primary")
+                yield Button("Cancel · n", id="broker-grant-cancel")
+                yield Button("Grant preview · y", id="broker-grant-confirm", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-grant-confirm")
@@ -3677,7 +3677,9 @@ class TUIApp(App):
                 self._workspace_config_warning = "; ".join(parsed.warnings)
             elif parsed is not None and parsed.error:
                 self._workspace_config_warning = f"ignored: {parsed.error}"
-            elif issue:
+            elif issue and "grant" not in issue:
+                # Without a read grant there is simply nothing to apply yet; saying
+                # so at every start reads like an error. Settings shows the reason.
                 self._workspace_config_warning = f"unavailable: {issue}"
         except (OSError, ValueError):
             self._workspace_config_warning = "unavailable: settings could not be read safely"
@@ -4419,22 +4421,31 @@ class TUIApp(App):
     async def _revoke_workspace_read(self) -> None:
         await self._change_workspace_read_grant(False)
 
-    async def _change_provider_network_grant(self, enabled: bool) -> None:
-        selected_name = selected_provider_name()
-        preset = PRESETS.get(selected_name)
+    @staticmethod
+    def _selected_provider_host() -> str | None:
+        """host[:port] of the selected provider endpoint, or None if unknown/invalid."""
+        preset = PRESETS.get(selected_provider_name())
         if preset is None:
-            self._append("  Selected provider is unknown; no network grant was changed.", RED)
-            self._open_authority_menu()
-            return
-        base_url = (os.environ.get("ISYCODE_BASE_URL")
-                    or os.environ.get("ISYMOTRON_BASE_URL")
-                    or preset["base_url"])
-        parsed = urlparse(base_url)
+            return None
+        parsed = urlparse(os.environ.get("ISYCODE_BASE_URL")
+                          or os.environ.get("ISYMOTRON_BASE_URL")
+                          or preset["base_url"])
         host = (parsed.hostname or "").casefold().rstrip(".")
         try:
             if parsed.port:
                 host += f":{parsed.port}"
         except ValueError:
+            return None
+        return host or None
+
+    async def _change_provider_network_grant(self, enabled: bool) -> None:
+        preset = PRESETS.get(selected_provider_name())
+        if preset is None:
+            self._append("  Selected provider is unknown; no network grant was changed.", RED)
+            self._open_authority_menu()
+            return
+        host = self._selected_provider_host()
+        if host is None:
             self._append("  Provider endpoint is invalid; no network grant was changed.", RED)
             self._open_authority_menu()
             return
@@ -5073,6 +5084,17 @@ class TUIApp(App):
                    for action in FILE_CHANGE_GRANTS]
         grants.append(("clipboard.copy", {"targets": [CLIPBOARD_TARGET]},
                        "copy selected text to the clipboard"))
+        # Without this the agent cannot even be asked: every tool above is useless.
+        host = self._selected_provider_host()
+        if host:
+            try:
+                current = WorkspaceAuthority(self._workspace_root).policy()["grants"].get(
+                    "provider.request", {})
+                hosts = set(current.get("network_hosts", [])) if current.get("enabled") else set()
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                hosts = set()
+            grants.append(("provider.request", {"network_hosts": sorted(hosts | {host})},
+                           f"connect to the selected AI model ({host})"))
         sandbox = sandbox_executable()
         if sandbox:
             grants.append(("workspace.command.run", {"executables": [sandbox]},
@@ -7285,7 +7307,7 @@ class TUIApp(App):
                 return {**identity, "status": "denied", "error": "Selected provider is not configured"}
             tools = []
             read_enabled = self._workspace_chat_tools_enabled() or self._additional_folder_access()
-            if read_enabled and PRESETS[provider.name].get("supports_tools"):
+            if read_enabled and provider_supports_tools(provider.name):
                 tools = json.loads(json.dumps(CHAT_WORKSPACE_TOOLS))
                 if self._workspace_write_tool_enabled() or self._additional_folder_access(write=True):
                     tools += json.loads(json.dumps([EDIT_TOOL, WRITE_TOOL]))
@@ -7712,7 +7734,8 @@ class TUIApp(App):
             self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
-        self._append(f"  Tool requested · {'replace whole file' if replaces else 'edit'} · "
+        verb = "create" if preview.created else "replace whole file" if replaces else "edit"
+        self._append(f"  Tool requested · {verb} · "
                      f"{preview.path} · review the diff", CYAN)
         try:
             delegated = self._folder_store().auto_edit_allowed(folder_alias)
@@ -7737,7 +7760,8 @@ class TUIApp(App):
         except (OSError, ValueError) as exc:
             return json.dumps({'error': str(exc)[:180]})
         self._append(f"  ✓ {'User-enabled automatic edits' if delegated else 'You approved'} · {folder_alias} · {preview.path}", MUTED)
-        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60,
+                                                mode="delegated" if delegated else "user")
         outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
@@ -7884,8 +7908,8 @@ class TUIApp(App):
             self._history.append({"role": "user", "content": text})
             workspace_tools_granted = self._workspace_chat_tools_enabled() or self._additional_folder_access()
             provider_name = selected_provider_name()
-            provider_supports_tools = bool(PRESETS.get(provider_name, {}).get("supports_tools", False))
-            tools_active = workspace_tools_granted and provider_supports_tools
+            supports_tools = provider_supports_tools(provider_name)
+            tools_active = workspace_tools_granted and supports_tools
             write_active = tools_active and (self._workspace_write_tool_enabled() or self._additional_folder_access(write=True))
             command_active = tools_active and self._command_tool_enabled()
             chat_tools = (CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active
@@ -7925,9 +7949,10 @@ class TUIApp(App):
                 tool_availability = (
                     "Settings → Authority & Security is where the user can explicitly grant bounded read-only access. "
                 )
-            elif not provider_supports_tools:
+            elif not supports_tools:
                 tool_availability = (
-                    "The selected provider preset does not advertise tool-call support; no action tool is sent. "
+                    "The selected provider preset does not advertise tool-call support; no action tool is sent "
+                    "(the user can opt in with ISYCODE_TOOL_CALLS=1 if this model supports tools). "
                 )
             else:
                 tool_availability = ""
@@ -8128,6 +8153,9 @@ class TUIApp(App):
                             f"  Provider request {provider_result.decision} · "
                             f"{provider_result.reason[:240] or 'request was not completed'}; "
                             "no further request was sent.", YELLOW)
+                        if provider_result.decision == "DENY" and "grant" in provider_result.reason:
+                            self._append("  To chat here: Settings → Authority → “Connect to the selected "
+                                         "AI model” (or “Turn on all coding tools…”).", MUTED)
                         return
                     if not step_content and isinstance(response.get("text"), str):
                         on_chunk("content", response["text"])

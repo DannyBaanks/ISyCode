@@ -13,14 +13,17 @@ SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
 
 
 def _screens(tmp_path):
-    from isycode.tui import CommandApprovalScreen, LocalMCPConfirmScreen, TailscaleConfirmScreen
+    from isycode.tui import (CommandApprovalScreen, GrantProviderNetworkScreen,
+                             GrantWorkspaceReadScreen, LocalMCPConfirmScreen, TailscaleConfirmScreen)
 
     request = ActionRequest("workspace.command.run", tmp_path, "/usr/bin/echo", {"argv": ["echo"]},
                             execution_owner="workspace_command")
     preview = CommandPreview(request, ("echo", "hi"), "/usr/bin/echo", ".", 120, ())
     return [lambda: CommandApprovalScreen(preview),
             lambda: TailscaleConfirmScreen("Allow?", "body", "Allow"),
-            lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once")]
+            lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once"),
+            lambda: GrantWorkspaceReadScreen(tmp_path),
+            lambda: GrantProviderNetworkScreen("OpenAI API", "api.openai.com")]
 
 
 @pytest.mark.parametrize("keys, expected", [("y", True), ("n", False), ("escape", False),
@@ -50,5 +53,8 @@ def test_every_boolean_approval_screen_uses_the_shared_keys():
     approvals = [name for name in ("WriteApprovalScreen", "CommandApprovalScreen",
                                    "CommitApprovalScreen", "LocalMCPConfirmScreen",
                                    "MCPInvocationConfirmScreen", "TailscaleConfirmScreen",
-                                   "DeleteSessionScreen")]
+                                   "DeleteSessionScreen", "GlobalRecurringDefaultScreen",
+                                   "GrantWorkspaceReadScreen", "GrantProviderNetworkScreen",
+                                   "GrantMCPInvocationScreen", "GrantLSPProcessScreen",
+                                   "BrokerPreviewGrantScreen")]
     assert all(bases[name] == ["ApprovalScreen"] for name in approvals)
