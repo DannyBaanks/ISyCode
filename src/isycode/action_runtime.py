@@ -947,6 +947,21 @@ class SessionStoreSystembility:
                                       "one bounded message bound to one local transcript")
         if params.get("operation") == "list":
             valid = params == {"operation": "list"} and request.target == "sessions"
+        elif params.get("operation") in {"divergence_detected", "divergence_forked",
+                                         "divergence_reloaded", "divergence_unsaved"}:
+            # Evidence that two continuities of one transcript diverged and what the
+            # user chose: ids and sha256 revisions only, never transcript content.
+            def revision(value) -> bool:
+                return isinstance(value, str) and (
+                    value == "" or re.fullmatch(r"[0-9a-f]{64}", value) is not None)
+            keys = {"operation", "session_id", "expected_revision", "current_revision"}
+            forked = params["operation"] == "divergence_forked"
+            valid = (set(params) == (keys | {"fork_id"} if forked else keys)
+                     and valid_id and request.target == session_id
+                     and revision(params.get("expected_revision"))
+                     and revision(params.get("current_revision"))
+                     and (not forked or (isinstance(params.get("fork_id"), str)
+                                         and re.fullmatch(r"[0-9a-f]{32}", params["fork_id"]) is not None)))
         else:
             valid = (set(params) == {"operation", "session_id"}
                      and params.get("operation") == "load"
@@ -1791,7 +1806,9 @@ class SessionDeleteOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id="session_delete")
 
     def delete(self, session_id: str, title: str,
-               approval: ActionApproval | None) -> ActionOutcome:
+               approval: ActionApproval | None, *, expected_revision: object = None) -> ActionOutcome:
+        """Delete one transcript; with ``expected_revision`` (the revision the user
+        reviewed) it refuses if another instance changed it since then."""
         try:
             request = ActionRequest("session.delete", self.root, session_id,
                                     {"session_id": session_id, "title": title[:80]},
@@ -1804,8 +1821,16 @@ class SessionDeleteOwner:
         if not decision.allowed:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return ActionOutcome("Session deletion denied.", "DENY", None, reason)
+        from isycode.chat_sessions import SessionDiverged
         try:
-            self.store.delete(session_id)
+            if expected_revision is None:  # other stores (iteration ledgers) have no revisions
+                self.store.delete(session_id)
+            else:
+                self.store.delete(session_id, expected_revision=expected_revision)
+        except SessionDiverged:
+            return ActionOutcome("Session not deleted.", "DENY", None,
+                                 "session_divergence_detected: the conversation changed in another "
+                                 "ISyCode window or process after you reviewed it")
         except (OSError, ValueError):
             return ActionOutcome("Session deletion failed.", "ERROR", None,
                                  "session store rejected the delete")

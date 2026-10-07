@@ -640,3 +640,49 @@ class ConsoleSearchScreen(ModalScreen[None]):
     def action_close_search(self) -> None:
         self.app._clear_console_search()
         self.dismiss(None)
+
+
+class SessionDivergedScreen(ModalScreen[str]):
+    """Another continuity changed this saved conversation: never pick a reality silently.
+
+    Returns "fork", "reload" or "unsaved". Esc means "unsaved": nothing is
+    written and the choice can be made later with /sessions diverged.
+    """
+
+    CSS = """
+    SessionDivergedScreen { align: center middle; background: #000000 58%; }
+    #diverged-card { width: 84; max-width: 95%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #diverged-heading { height: 2; color: #fbbf24; text-style: bold; }
+    #diverged-copy { height: auto; margin-bottom: 1; }
+    #diverged-actions { height: auto; }
+    #diverged-actions Button { width: 1fr; margin-bottom: 1; }
+    """
+    BINDINGS = [Binding("escape", "unsaved", "Continue without saving")]
+
+    def __init__(self, title: str) -> None:
+        super().__init__()
+        self.title_text = title
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="diverged-card"):
+            yield Static("Session changed elsewhere", id="diverged-heading")
+            yield Static(
+                f"“{self.title_text}” was changed by another ISyCode window or process after this "
+                "one opened it. Both are valid continuities of the same conversation; nothing was "
+                "merged and nothing of yours was written over it.", id="diverged-copy", markup=False)
+            with Vertical(id="diverged-actions"):
+                yield Button("Save mine as a new conversation (Fork: …) · the saved one stays as it is",
+                             id="diverged-fork", variant="primary")
+                yield Button("Open the saved version · what exists only in this window is discarded",
+                             id="diverged-reload")
+                yield Button("Continue without saving · Esc · nothing is written until you choose",
+                             id="diverged-unsaved")
+
+    def on_mount(self) -> None:
+        self.query_one("#diverged-fork", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id.removeprefix("diverged-"))
+
+    def action_unsaved(self) -> None:
+        self.dismiss("unsaved")

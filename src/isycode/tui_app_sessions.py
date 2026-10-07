@@ -109,6 +109,7 @@ from isycode.tui_screens_approval import (
     ApprovalScreen,
     ContextAccessScreen,
     DeleteSessionScreen,
+    TailscaleConfirmScreen,
 )
 from isycode.tui_screens_harness import (
     HarnessFolderConfirmScreen,
@@ -120,6 +121,7 @@ from isycode.tui_screens_harness import (
 from isycode.tui_screens_sessions import (
     IdeaNoteScreen,
     AgentQuestionScreen,
+    SessionDivergedScreen,
     SessionSearchScreen,
 )
 
@@ -852,7 +854,11 @@ class SessionMixin:
         if outcome.decision != "ALLOW" or session is None:
             self._append(f"  Conversation not resumed · {outcome.reason[:180]}", YELLOW)
             return
-        lane = open_lane(self, session.session_id)
+        await self._load_session_into_lane(open_lane(self, session.session_id), session)
+
+    async def _load_session_into_lane(self, lane, session) -> None:
+        """Replace a lane's transcript, notes and draft with exactly this saved session."""
+        lane.divergence_prompted = False
         lane.history = [{"role": message["role"], "content": message["content"]}
                         for message in session.messages]
         lane.session_save_warned = False
@@ -902,7 +908,8 @@ class SessionMixin:
         owner = self._chat_session_owner
         if owner is None:
             return
-        outcome, session = owner.resume(session_id)
+        # Review without re-basing: an open, diverged continuity must stay diverged.
+        outcome, session, reviewed = owner.review(session_id)
         if session is None:
             self._append(f"  Conversation unavailable · {outcome.reason[:160]}", YELLOW)
             return
@@ -921,7 +928,7 @@ class SessionMixin:
         if not grant.get("enabled") or session_id not in grant.get("targets", []):
             authority = OneShotActionAuthority(authority, request)
         delete_owner = SessionDeleteOwner(self._workspace_root, authority, owner.store, self._action_approvals)
-        result = delete_owner.delete(session_id, session.title, approval)
+        result = delete_owner.delete(session_id, session.title, approval, expected_revision=reviewed)
         self._append(f"  Conversation deletion · {result.decision} · {result.reason[:160]}", MUTED)
         if result.decision == "ALLOW":
             if self._active_chat_session_id == session_id:
@@ -970,9 +977,14 @@ class SessionMixin:
         owner = self._chat_session_owner
         if owner is None or not self._sessions_enabled():
             return
+        if self._session_is_diverged(self._active_chat_session_id):
+            return  # this window keeps the turn in memory; the saved one is not touched
         state = self._session_state()
         outcome, session_id = owner.record(
             self._active_chat_session_id, role, content, state=state, sent_at=sent_at)
+        if self._session_is_diverged(session_id):
+            self._session_diverged_found(session_id)
+            return
         if session_id is not None:
             self._active_chat_session_id = session_id
         if outcome.decision != "ALLOW" and not self._session_save_warned:
@@ -995,6 +1007,12 @@ class SessionMixin:
         sid = self._active_chat_session_id
         if operation == "resume":
             await self._resume_chat_session(data.strip())
+            return
+        if operation == "diverged":
+            if sid and owner.is_diverged(sid):
+                await self._resolve_session_divergence(sid)
+            else:
+                self._append("  This conversation has not diverged; it saves normally.", MUTED)
             return
         if operation == "search":
             outcome, sessions = owner.list_conversations()
@@ -1027,7 +1045,78 @@ class SessionMixin:
             else:
                 self._append(f"  Session unchanged · {outcome.reason[:180]}", YELLOW)
             return
-        self._append("  /sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete", MUTED)
+        self._append("  /sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete|diverged", MUTED)
+
+    def _session_is_diverged(self, session_id) -> bool:
+        check = getattr(self._chat_session_owner, "is_diverged", None)
+        return bool(session_id) and callable(check) and check(session_id)
+
+    def _session_diverged_found(self, session_id: str) -> None:
+        """Another continuity changed this saved conversation: ask once, then stay read-only."""
+        lane = self._lanes.get(session_id)
+        if lane is None or lane.divergence_prompted:
+            return
+        lane.divergence_prompted = True
+        self._append("  Session changed elsewhere · this window stopped saving to it; nothing was "
+                     "merged or overwritten.", YELLOW)
+        self.run_worker(self._resolve_session_divergence(session_id), group="session-divergence")
+
+    async def _resolve_session_divergence(self, session_id: str) -> None:
+        owner = self._chat_session_owner
+        lane = self._lanes.get(session_id)
+        if owner is None or lane is None or not owner.is_diverged(session_id):
+            return
+        lane.divergence_prompted = True
+        title = "this conversation"
+        _, saved, _ = owner.review(session_id)
+        if saved is not None:
+            title = saved.title
+        choice = await self._await_screen(SessionDivergedScreen(title))
+        busy = ((lane.loop_task is not None and not lane.loop_task.done())
+                or (lane.chat_turn_task is not None and not lane.chat_turn_task.done()))
+        if choice == "fork":
+            messages = [{"role": item["role"], "content": item["content"]}
+                        for item in lane.history
+                        if item.get("role") in {"user", "assistant"} and isinstance(item.get("content"), str)]
+            state = {key: value for key, value in self._session_state().items()} \
+                if self._foreground_lane() is lane else None
+            outcome, new_id = owner.save_continuity_as_new(session_id, messages, state, title)
+            if outcome.decision != "ALLOW" or not new_id:
+                self._append(f"  Not saved as a new conversation · {outcome.reason[:160]}", YELLOW)
+                lane.divergence_prompted = False
+                return
+            rekey_lane(self, lane, new_id)
+            lane.divergence_prompted = False
+            self._append(f"  Saved this window's continuity as a new conversation · {new_id[:8]} · "
+                         "the other one stays as it was.", GREEN)
+            await self._refresh_work_list()
+            return
+        if choice == "reload":
+            if busy:
+                self._append("  A turn is still running here; stop it (Esc) before opening the saved "
+                             "version.", YELLOW)
+                lane.divergence_prompted = False
+                return
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    "Discard what exists only in this window?",
+                    "Messages, draft and notes from this window that are not in the saved "
+                    "conversation will be lost. The saved version opens exactly as it is.",
+                    "Discard and open saved")):
+                lane.divergence_prompted = False
+                self._append("  Kept this window as it is · still not saving · /sessions diverged to "
+                             "choose again.", YELLOW)
+                owner.keep_unsaved(session_id)
+                return
+            outcome, saved = owner.reload_saved(session_id)
+            if outcome.decision != "ALLOW" or saved is None:
+                self._append(f"  Saved version not opened · {outcome.reason[:160]}", YELLOW)
+                return
+            await self._load_session_into_lane(lane, saved)
+            return
+        owner.keep_unsaved(session_id)
+        self._append("  Continuing without saving · this conversation is not written by this window "
+                     "until you choose · closing ISyCode discards what exists only here · "
+                     "/sessions diverged to choose again.", YELLOW)
 
     def _install_conversation_lanes(self) -> None:
         if getattr(self, "_lanes", None):

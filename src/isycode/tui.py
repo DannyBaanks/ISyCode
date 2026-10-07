@@ -2292,9 +2292,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if not self._sessions_enabled() or (not self._active_chat_session_id and not self._draft_text
                                             and not self._tool_history and not self._usage.requests):
             return
+        owner = self._chat_session_owner
+        if self._session_is_diverged(self._active_chat_session_id):
+            return  # read-only towards the saved conversation until the user chooses
         try:
             outcome, sid = self._chat_session_owner.manage(
                 "state", self._active_chat_session_id, json.dumps(self._session_state()))
+            if self._session_is_diverged(self._active_chat_session_id):
+                self._session_diverged_found(self._active_chat_session_id)
+                return
             if outcome.decision == "ALLOW":
                 self._active_chat_session_id = sid
                 if len(self._draft_text) > 16_000:
