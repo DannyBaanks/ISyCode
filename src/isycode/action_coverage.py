@@ -95,7 +95,7 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 PRIMITIVE_CALLERS: dict[tuple[str, str], frozenset[str]] = {
     ("ApiKeyStore", "issue"): frozenset({"mobile_host.MobileHost._pair"}),
     ("ApiKeyStore", "revoke"): frozenset({"mobile_host.MobileHost._pair"}),
-    ("ChatSessionStore", "rename"): frozenset({"session_owner.ChatSessionOwner.manage"}),
+    ("ChatSessionStore", "rename"): frozenset(),
     ("ChatSessionStore", "fork"): frozenset(),
     ("ChatSessionStore", "create"): frozenset(),
     ("BridgeClient", "__init__"): frozenset(),
@@ -282,10 +282,10 @@ KNOWN_EFFECT_CALLSITES = (
     ("session.create", "ChatSessionOwner.record", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.list_conversations", "chat_sessions", "COVERED"),
     ("session.resume", "ChatSessionOwner.resume", "chat_sessions", "COVERED"),
-    # Store primitives: rename is reached only through ChatSessionOwner.manage;
-    # create and fork have no product caller outside the store itself.
+    # Store primitives with no product caller outside the store: ChatSessionOwner
+    # writes through its guarded compare-and-write path instead (rename included).
     ("session.create", "ChatSessionStore.create", "", "BLOCKED_BY_DESIGN"),
-    ("session.create", "ChatSessionStore.rename", "chat_sessions", "COVERED"),
+    ("session.create", "ChatSessionStore.rename", "", "BLOCKED_BY_DESIGN"),
     ("session.create", "ChatSessionStore.fork", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "RemoteMixin._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "RemoteMixin._provision_broker", "", "BLOCKED_BY_DESIGN"),
