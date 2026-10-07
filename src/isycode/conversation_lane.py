@@ -39,6 +39,8 @@ class ConversationLane:
         self.steering_try_active = False
         self.pending_user_sent_at = None
         self.session_save_warned = False
+        # Set once the user was asked about a divergence of this saved conversation.
+        self.divergence_prompted = False
         self.agent_tasks: list = []
         self.active_chat_provider = None
         self.steering_restore_positions: dict = {}
@@ -72,6 +74,7 @@ LANE_FIELDS = (
     ("_steering_try_active", "steering_try_active"),
     ("_pending_user_sent_at", "pending_user_sent_at"),
     ("_session_save_warned", "session_save_warned"),
+    ("_divergence_prompted", "divergence_prompted"),
     ("_agent_tasks", "agent_tasks"),
     ("_active_chat_provider", "active_chat_provider"),
     ("_steering_restore_positions", "steering_restore_positions"),

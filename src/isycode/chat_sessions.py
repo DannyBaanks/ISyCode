@@ -1,14 +1,17 @@
 """Private, resumable chat transcripts separate from IsyMotron plan receipts."""
 from __future__ import annotations
 
+import hashlib
 import json
 import html
 import os
 import re
 import stat
 import tempfile
+import threading
 import time
 import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,6 +20,108 @@ from typing import Any
 
 class ChatSessionError(ValueError):
     """A chat transcript is malformed or cannot be stored safely."""
+
+
+class SessionDiverged(ChatSessionError):
+    """The transcript on disk is no longer the one this instance loaded or last wrote.
+
+    Another continuity (another ISyCode window or process) changed it. Nothing was
+    written; the caller must let the user choose instead of overwriting or merging.
+    """
+
+    def __init__(self, session_id: str, expected: str | None, current: str | None):
+        super().__init__("chat session changed elsewhere since it was loaded")
+        self.session_id = session_id
+        self.expected = expected
+        self.current = current
+
+
+# Anything other than this means "write only if the file still has exactly this
+# revision"; None as an expectation means "only if the file does not exist yet".
+UNCHECKED = object()
+
+
+def revision_of(payload: bytes | None) -> str | None:
+    """Fingerprint of the persisted bytes: the whole transcript, state included."""
+    return None if payload is None else hashlib.sha256(payload).hexdigest()
+
+
+class _DirectoryLock:
+    """One exclusive lock per session directory, held across check and write.
+
+    Threads in this process serialize on the RLock (and may re-enter it); other
+    processes block on the OS lock of ``.write.lock``. The kernel drops the OS
+    lock if the holder dies, so a crash cannot leave the directory locked.
+    Linux/macOS use flock; Windows uses msvcrt.locking (not demonstrated there).
+    """
+
+    _registry: dict[str, "_DirectoryLock"] = {}
+    _registry_guard = threading.Lock()
+
+    def __init__(self, path: Path):
+        self.path = path
+        self.rlock = threading.RLock()
+        self.depth = 0
+        self.descriptor: int | None = None
+
+    @classmethod
+    def for_directory(cls, root: Path) -> "_DirectoryLock":
+        path = root / ".write.lock"
+        with cls._registry_guard:
+            return cls._registry.setdefault(str(path), cls(path))
+
+    def _acquire_os(self) -> None:
+        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(self.path, flags, 0o600)
+        try:
+            info = os.fstat(descriptor)
+            if not stat.S_ISREG(info.st_mode):
+                raise ChatSessionError("session write lock is not a regular file")
+            try:
+                import fcntl
+            except ImportError:  # Windows
+                import msvcrt
+                while True:
+                    try:
+                        msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+                        break
+                    except OSError:  # LK_LOCK gives up after ~10 s; keep waiting
+                        continue
+            else:
+                fcntl.flock(descriptor, fcntl.LOCK_EX)
+        except BaseException:
+            os.close(descriptor)
+            raise
+        self.descriptor = descriptor
+
+    def _release_os(self) -> None:
+        descriptor, self.descriptor = self.descriptor, None
+        if descriptor is None:
+            return
+        try:
+            try:
+                import fcntl
+            except ImportError:  # Windows
+                import msvcrt
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(descriptor)
+
+    @contextmanager
+    def held(self):
+        with self.rlock:
+            if self.depth == 0:
+                self._acquire_os()
+            self.depth += 1
+            try:
+                yield
+            finally:
+                self.depth -= 1
+                if self.depth == 0:
+                    self._release_os()
 
 
 @dataclass
@@ -49,6 +154,11 @@ class ChatSessionStore:
         self.root = self.root.resolve(strict=True)
         if os.name == "posix":
             self.root.chmod(0o700)
+        self._lock = _DirectoryLock.for_directory(self.root)
+
+    def write_lock(self):
+        """Hold the directory's write lock; every mutation of a transcript runs inside it."""
+        return self._lock.held()
 
     def _path(self, session_id: str) -> Path:
         if not isinstance(session_id, str) or not self._SESSION_ID.fullmatch(session_id):
@@ -70,10 +180,25 @@ class ChatSessionStore:
     def create(self, first_prompt: str = "") -> ChatSession:
         now = time.time()
         session = ChatSession(uuid.uuid4().hex, self._auto_title(first_prompt), [], now, now)
-        self.save(session)
+        self.save(session, expected_revision=None)
         return session
 
-    def save(self, session: ChatSession) -> Path:
+    def save(self, session: ChatSession, *, expected_revision: object = UNCHECKED) -> Path:
+        """Atomically write a transcript under the directory lock.
+
+        With ``expected_revision`` the write happens only if the file on disk still
+        has exactly that revision (None: only if it does not exist); otherwise
+        SessionDiverged is raised and nothing is written.
+        """
+        with self.write_lock():
+            if expected_revision is not UNCHECKED:
+                current = self.revision(session.session_id)
+                if current != expected_revision:
+                    raise SessionDiverged(session.session_id, expected_revision, current)
+            path, self.last_revision = self._write(session)
+            return path
+
+    def _write(self, session: ChatSession) -> tuple[Path, str]:
         state = self.validate_state(session.state)
         for message in session.messages:
             if (not isinstance(message, dict)
@@ -93,46 +218,70 @@ class ChatSessionStore:
             "state": state,
             "title_manual": session.title_manual,
         }, ensure_ascii=False, allow_nan=False)
+        data = payload.encode("utf-8")
         fd, temporary = tempfile.mkstemp(prefix=f".{session.session_id}-", dir=self.root)
         try:
             if os.name == "posix":
                 os.fchmod(fd, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as stream:
-                stream.write(payload)
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, target)
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
-        return target
+        return target, revision_of(data)
 
     def append(self, session_id: str, role: str, content: str) -> ChatSession:
         if role not in {"user", "assistant"} or not isinstance(content, str):
             raise ChatSessionError("chat message is malformed")
-        session = self.load(session_id)
-        session.messages.append({"role": role, "content": content})
-        if session.title in {"New session", "Draft conversation"} and role == "user":
-            session.title = self._auto_title(content)
-        self.save(session)
+        with self.write_lock():
+            session = self.load(session_id)
+            session.messages.append({"role": role, "content": content})
+            if session.title in {"New session", "Draft conversation"} and role == "user":
+                session.title = self._auto_title(content)
+            self.save(session)
         return session
 
-    def load(self, session_id: str) -> ChatSession:
+    def _read_bytes(self, session_id: str) -> bytes | None:
+        """The exact persisted bytes, or None if the transcript does not exist."""
         path = self._path(session_id)
         # Opening a FIFO must not block before fstat can reject it. O_NONBLOCK
         # does not change regular-file reads and also closes the lstat/open race.
-        flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
-        if hasattr(os, "O_NOFOLLOW"):
-            flags |= os.O_NOFOLLOW
-        descriptor = os.open(path, flags)
-        with os.fdopen(descriptor, "r", encoding="utf-8") as stream:
-            info = os.fstat(stream.fileno())
-            if not stat.S_ISREG(info.st_mode):
+        flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            descriptor = os.open(path, flags)
+        except FileNotFoundError:
+            return None
+        with os.fdopen(descriptor, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise ChatSessionError("chat session is not a bounded regular file")
-            try:
-                payload = json.load(stream)
-            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-                raise ChatSessionError("chat session is not valid UTF-8 JSON") from exc
+            return stream.read()
+
+    def revision(self, session_id: str) -> str | None:
+        """Fingerprint of the transcript as it is on disk right now (None if absent)."""
+        return revision_of(self._read_bytes(session_id))
+
+    def snapshot(self, session_id: str) -> tuple[ChatSession, str]:
+        """Load a transcript together with the revision of exactly those bytes."""
+        with self.write_lock():
+            payload = self._read_bytes(session_id)
+            if payload is None:
+                raise FileNotFoundError(session_id)
+            return self._parse(session_id, payload), revision_of(payload)
+
+    def load(self, session_id: str) -> ChatSession:
+        raw = self._read_bytes(session_id)
+        if raw is None:
+            raise FileNotFoundError(str(self._path(session_id)))
+        return self._parse(session_id, raw)
+
+    def _parse(self, session_id: str, raw: bytes) -> ChatSession:
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise ChatSessionError("chat session is not valid UTF-8 JSON") from exc
         if (not isinstance(payload, dict) or type(payload.get("version")) is not int or payload.get("version") not in {1, 2}
                 or payload.get("session_id") != session_id
                 or not isinstance(payload.get("title"), str)
@@ -163,23 +312,34 @@ class ChatSessionStore:
                 continue
         return sorted(sessions, key=lambda item: item.updated_at, reverse=True)
 
-    def delete(self, session_id: str) -> None:
+    def delete(self, session_id: str, *, expected_revision: object = UNCHECKED) -> None:
         path = self._path(session_id)
-        info = path.lstat()
-        if not stat.S_ISREG(info.st_mode):
-            raise ChatSessionError("refusing to delete a non-regular chat session")
-        path.unlink()
+        with self.write_lock():
+            if expected_revision is not UNCHECKED:
+                current = self.revision(session_id)
+                if current != expected_revision:
+                    raise SessionDiverged(session_id, expected_revision, current)
+            info = path.lstat()
+            if not stat.S_ISREG(info.st_mode):
+                raise ChatSessionError("refusing to delete a non-regular chat session")
+            path.unlink()
 
-    def rename(self, session_id: str, title: str) -> ChatSession:
+    @staticmethod
+    def _clean_title(title: str) -> str:
         if not isinstance(title, str):
             raise ChatSessionError("session title must be text")
         cleaned = " ".join("".join(char if char.isprintable() else " " for char in title).split())
         if not cleaned or len(cleaned) > 80:
             raise ChatSessionError("session title must contain 1–80 printable characters")
-        session = self.load(session_id)
-        session.title = cleaned
-        session.title_manual = True
-        self.save(session)
+        return cleaned
+
+    def rename(self, session_id: str, title: str) -> ChatSession:
+        cleaned = self._clean_title(title)
+        with self.write_lock():
+            session = self.load(session_id)
+            session.title = cleaned
+            session.title_manual = True
+            self.save(session)
         return session
 
     def fork(self, session_id: str, *, through_message: int | None = None) -> ChatSession:
@@ -272,7 +432,7 @@ class ChatSessionStore:
 
     def import_json(self, serialized: str, *, session_id: str | None = None) -> ChatSession:
         imported = self.parse_import(serialized, session_id=session_id)
-        self.save(imported)
+        self.save(imported, expected_revision=None)
         return imported
 
     def parse_import(self, serialized: str, *, session_id: str | None = None) -> ChatSession:

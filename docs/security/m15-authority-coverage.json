@@ -1663,63 +1663,63 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2009,
+      "line": 2034,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1798,
+      "line": 1815,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1862,
+      "line": 1887,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1932,
+      "line": 1957,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2018,
+      "line": 2043,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2069,
+      "line": 2094,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2077,
+      "line": 2102,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2135,
+      "line": 2160,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2203,
+      "line": 2228,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -1908,29 +1908,36 @@
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 123,
+      "line": 249,
       "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 193,
+      "line": 336,
       "callable": "isycode.session_owner.ChatSessionOwner.manage",
       "action": "session.create",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 86,
+      "line": 128,
+      "callable": "isycode.session_owner.ChatSessionOwner._note",
+      "action": "session.resume",
+      "owner": "chat_sessions"
+    },
+    {
+      "file": "isycode/session_owner.py",
+      "line": 206,
       "callable": "isycode.session_owner.ChatSessionOwner.record",
       "action": "session.create",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 137,
-      "callable": "isycode.session_owner.ChatSessionOwner.resume",
+      "line": 278,
+      "callable": "isycode.session_owner.ChatSessionOwner._load",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
@@ -2013,14 +2020,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 917,
+      "line": 924,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 952,
+      "line": 964,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"
@@ -2092,7 +2099,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2203,
+      "line": 2228,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
