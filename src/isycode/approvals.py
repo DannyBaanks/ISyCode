@@ -10,11 +10,17 @@ from dataclasses import dataclass, field
 from isycode.security import ActionRequest
 
 
+APPROVAL_MODES = frozenset({"user", "delegated"})
+
+
 @dataclass(frozen=True)
 class ActionApproval:
     token: str = field(repr=False)
     request_digest: str
     expires_at: float
+    # Who said yes: "user" reviewed this exact request; "delegated" means a
+    # setting the user enabled (automatic file edits) approved it for them.
+    mode: str = "user"
 
 
 class ActionApprovalStore:
@@ -26,9 +32,12 @@ class ActionApprovalStore:
         self._tokens: dict[str, ActionApproval] = {}
         self._lock = threading.Lock()
 
-    def issue(self, request: ActionRequest, *, ttl_seconds: float = 60.0) -> ActionApproval:
+    def issue(self, request: ActionRequest, *, ttl_seconds: float = 60.0,
+              mode: str = "user") -> ActionApproval:
         if not isinstance(request, ActionRequest):
             raise TypeError("Approval requires an immutable ActionRequest.")
+        if mode not in APPROVAL_MODES:
+            raise ValueError("Approval mode must be 'user' or 'delegated'.")
         try:
             requested_lifetime = float(ttl_seconds)
         except (TypeError, ValueError, OverflowError) as exc:
@@ -37,7 +46,7 @@ class ActionApprovalStore:
             raise ValueError("Approval lifetime must be a finite number of seconds.")
         lifetime = max(1.0, min(requested_lifetime, 120.0))
         approval = ActionApproval(
-            secrets.token_urlsafe(32), request.digest, time.monotonic() + lifetime
+            secrets.token_urlsafe(32), request.digest, time.monotonic() + lifetime, mode
         )
         with self._lock:
             now = time.monotonic()

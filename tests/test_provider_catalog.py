@@ -53,6 +53,18 @@ def test_openrouter_does_not_advertise_model_agnostic_tool_support():
     assert provider.supports_tools is False
 
 
+def test_model_dependent_presets_send_tools_only_after_an_explicit_opt_in(monkeypatch):
+    from isycode.providers import provider_supports_tools
+
+    monkeypatch.delenv("ISYCODE_TOOL_CALLS", raising=False)
+    assert provider_supports_tools("ollama")  # the preset declares the protocol
+    assert not provider_supports_tools("openrouter") and not provider_supports_tools("cerebras")
+    monkeypatch.setenv("ISYCODE_TOOL_CALLS", "1")
+    assert provider_supports_tools("openrouter") and provider_supports_tools("cerebras")
+    assert Provider(name="openrouter", model="example/model", api_key="test").supports_tools
+    assert not provider_supports_tools("not-a-provider")
+
+
 def test_small_model_slot_is_typed_private_metadata(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     save_model_slot("small", "openai", "gpt-5.6-mini")

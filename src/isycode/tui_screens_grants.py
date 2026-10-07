@@ -12,6 +12,7 @@ from textual.screen import ModalScreen
 from textual.widgets.option_list import Option
 from pathlib import Path
 from isycode.workspace_setup import broad_workspace_reason
+from isycode.tui_screens_approval import ApprovalScreen
 
 
 
@@ -75,7 +76,7 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GlobalRecurringDefaultScreen(ModalScreen[bool]):
+class GlobalRecurringDefaultScreen(ApprovalScreen):
     """Confirm a user-wide preference that creates .isyroot in future folders."""
 
     CSS = """
@@ -99,8 +100,8 @@ class GlobalRecurringDefaultScreen(ModalScreen[bool]):
                 "first, so unrelated projects never share one workspace by accident.",
                 id="global-recurring-copy")
             with Horizontal(id="global-recurring-actions"):
-                yield Button("Cancel", id="global-recurring-cancel")
-                yield Button("Use for new folders", id="global-recurring-confirm", variant="primary")
+                yield Button("Cancel · n", id="global-recurring-cancel")
+                yield Button("Use for new folders · y", id="global-recurring-confirm", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "global-recurring-confirm")
@@ -204,7 +205,7 @@ class WorkspaceModeScreen(ModalScreen[str]):
         self.dismiss("security")
 
 
-class GrantWorkspaceReadScreen(ModalScreen[bool]):
+class GrantWorkspaceReadScreen(ApprovalScreen):
     """Explicitly grant only bounded, read-only workspace tools."""
 
     CSS = """
@@ -234,8 +235,8 @@ class GrantWorkspaceReadScreen(ModalScreen[bool]):
                     "folders outside this workspace. You will still be asked before sensitive actions.")
             yield Static(copy, id="workspace-read-copy")
             with Horizontal(id="workspace-read-actions"):
-                yield Button("Cancel", id="workspace-read-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on",
+                yield Button("Cancel · n", id="workspace-read-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y",
                              id="workspace-read-grant", variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -245,7 +246,7 @@ class GrantWorkspaceReadScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GrantProviderNetworkScreen(ModalScreen[bool]):
+class GrantProviderNetworkScreen(ApprovalScreen):
     """Confirm network authority for one provider endpoint host."""
 
     CSS = """
@@ -278,8 +279,8 @@ class GrantProviderNetworkScreen(ModalScreen[bool]):
                          id="provider-network-title")
             yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy")
             with Horizontal(id="provider-network-actions"):
-                yield Button("Cancel", id="provider-network-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on", id="provider-network-confirm",
+                yield Button("Cancel · n", id="provider-network-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="provider-network-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -289,7 +290,7 @@ class GrantProviderNetworkScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GrantMCPInvocationScreen(ModalScreen[bool]):
+class GrantMCPInvocationScreen(ApprovalScreen):
     """Grant the Gateway MCP server as a target; every call still needs approval."""
 
     CSS = """
@@ -317,8 +318,8 @@ class GrantMCPInvocationScreen(ModalScreen[bool]):
                          id="mcp-grant-title")
             yield Static(copy, id="mcp-grant-copy")
             with Horizontal(id="mcp-grant-actions"):
-                yield Button("Cancel", id="mcp-grant-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on", id="mcp-grant-confirm",
+                yield Button("Cancel · n", id="mcp-grant-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="mcp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -328,7 +329,7 @@ class GrantMCPInvocationScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class GrantLSPProcessScreen(ModalScreen[bool]):
+class GrantLSPProcessScreen(ApprovalScreen):
     """Consent to the fixed bubblewrap LSP owner and its exact executable."""
 
     CSS = """
@@ -358,8 +359,8 @@ class GrantLSPProcessScreen(ModalScreen[bool]):
                          id="lsp-grant-title")
             yield Static(copy, id="lsp-grant-copy")
             with Horizontal(id="lsp-grant-actions"):
-                yield Button("Cancel", id="lsp-grant-cancel")
-                yield Button("Turn off" if self.revoke else "Turn on", id="lsp-grant-confirm",
+                yield Button("Cancel · n", id="lsp-grant-cancel")
+                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="lsp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -369,7 +370,7 @@ class GrantLSPProcessScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class BrokerPreviewGrantScreen(ModalScreen[bool]):
+class BrokerPreviewGrantScreen(ApprovalScreen):
     """Ask before persisting the narrow permission to inspect a broker plan."""
 
     CSS = """
@@ -395,8 +396,8 @@ class BrokerPreviewGrantScreen(ModalScreen[bool]):
                 "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
                 id="broker-grant-copy")
             with Horizontal(id="broker-grant-actions"):
-                yield Button("Cancel", id="broker-grant-cancel")
-                yield Button("Grant preview", id="broker-grant-confirm", variant="primary")
+                yield Button("Cancel · n", id="broker-grant-cancel")
+                yield Button("Grant preview · y", id="broker-grant-confirm", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-grant-confirm")
