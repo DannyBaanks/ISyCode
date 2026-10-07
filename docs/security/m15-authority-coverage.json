@@ -2034,14 +2034,14 @@
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 82,
+      "line": 84,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 166,
+      "line": 168,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -2134,7 +2134,7 @@
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 166,
+      "line": 168,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
