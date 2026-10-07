@@ -309,3 +309,23 @@ def test_old_sessions_stay_readable_and_the_format_is_unchanged(tmp_path):
     written = json.loads(store._write(store.create("x"))[0].read_text())
     assert set(written) == {"version", "session_id", "title", "messages", "created_at",
                             "updated_at", "state", "title_manual"}
+
+
+def test_own_writes_after_review_do_not_block_delete_but_foreign_ones_do(workspace):
+    from isycode.action_runtime import SessionDeleteOwner
+    from isycode.approvals import ActionApprovalStore
+
+    owner, sid, spawn, root = workspace
+    owner.resume(sid)
+    _, _, reviewed = owner.review(sid)
+    owner.manage("state", sid, json.dumps({"draft": "my own draft save"}))  # same instance
+    expected = owner.base_revision(sid)
+    assert expected != reviewed
+    approvals = ActionApprovalStore()
+    authority = WorkspaceAuthority(root)
+    authority.set_grant("session.delete", enabled=True, targets=[sid])
+    request = ActionRequest("session.delete", root.resolve(), sid,
+                            {"session_id": sid, "title": "t"}, execution_owner="session_delete")
+    deleted = SessionDeleteOwner(root, authority, owner.store, approvals).delete(
+        sid, "t", approvals.issue(request), expected_revision=expected)
+    assert deleted.decision == "ALLOW"

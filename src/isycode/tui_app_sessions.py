@@ -928,7 +928,12 @@ class SessionMixin:
         if not grant.get("enabled") or session_id not in grant.get("targets", []):
             authority = OneShotActionAuthority(authority, request)
         delete_owner = SessionDeleteOwner(self._workspace_root, authority, owner.store, self._action_approvals)
-        result = delete_owner.delete(session_id, session.title, approval, expected_revision=reviewed)
+        # Writes this window made since the review (draft, notes) are not another
+        # continuity: when it tracks this conversation, its own base is the reference.
+        expected = reviewed
+        if not owner.is_diverged(session_id) and owner.base_revision(session_id):
+            expected = owner.base_revision(session_id)
+        result = delete_owner.delete(session_id, session.title, approval, expected_revision=expected)
         self._append(f"  Conversation deletion · {result.decision} · {result.reason[:160]}", MUTED)
         if result.decision == "ALLOW":
             if self._active_chat_session_id == session_id:
