@@ -5,6 +5,7 @@ The phases keep the same statements. TUIApp inherits this mixin.
 from __future__ import annotations
 
 import asyncio
+from isycode.asyncio_compat import cancel_requested
 import json
 import uuid
 from isycode.work_list import clock_label
@@ -638,7 +639,7 @@ class ChatMixin:
                             continue
                         raise
                     except asyncio.CancelledError:
-                        if self._pending_steering and not asyncio.current_task().cancelling():
+                        if self._pending_steering and not cancel_requested(asyncio.current_task()):
                             finish_step()
                             if step_content:
                                 messages.append({"role": "assistant", "content": "".join(step_content)})
