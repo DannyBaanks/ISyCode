@@ -30,6 +30,9 @@ isycode = "isycode.launcher:main"
 include = ["isycode*"]
 where = ["src"]
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [".", "src"]

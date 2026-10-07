@@ -316,7 +316,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     ENABLE_COMMAND_PALETTE = False
     ALLOW_SELECT = True
 
-    CSS_PATH = "isycode.tcss"
+    CSS_PATH = os.path.join(os.path.dirname(__file__), "isycode.tcss")
 
     BINDINGS = [Binding(
         item.key, item.action, item.label,

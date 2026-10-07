@@ -336,8 +336,8 @@ def test_external_stylesheet_is_loaded(tmp_path, monkeypatch, capsys):
             # The #side-panel should have the correct background from stylesheet
             side_panel = app.query_one("#side-panel")
             assert side_panel.styles.background is not None
-            # Verify CSS_PATH is set on the app class
-            assert TUIApp.CSS_PATH == "isycode.tcss"
+            # Verify CSS_PATH points to the external stylesheet (absolute or relative)
+            assert "isycode.tcss" in TUIApp.CSS_PATH
             # Verify inline CSS is empty (moved to external file)
             assert TUIApp.CSS == ""
 

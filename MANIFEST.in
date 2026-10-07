@@ -1,0 +1,3 @@
+include src/isycode/isycode.tcss
+recursive-include src/isycode/assets *
+recursive-include src/isycode/bundled_skills *
