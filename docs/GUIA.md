@@ -5,10 +5,28 @@
 Desde la carpeta del proyecto que quieres explorar:
 
 ```bash
-isyco cli
+isycode
+isycode cli
 ```
 
-Ramas disponibles en el navegador:
+`isycode` abre la TUI. `isycode cli` abre el navegador de acciones.
+
+Al iniciar la TUI aparece la imagen original del pueblo nocturno como header
+panorámico a todo el ancho disponible del chat, con un máximo de 36 filas.
+Conserva las proporciones del faro y la luna: en ventanas anchas se recorta la
+parte inferior, no se estira la imagen. Si falta altura se reduce para dejar
+visibles el compositor, el modelo y las columnas de estado. Usa bloques de
+medio carácter y color real; no necesita soporte de imágenes ni librerías de
+imagen en ejecución. Tras el primer mensaje queda en el historial y se desplaza
+hacia arriba con el chat.
+
+**Multi Harness** en la barra inferior, en ⚙ Settings o con `/harness` abre
+tarjetas por herramienta: versión, ajustes revisados y acciones disponibles.
+El mapa de diferencias está plegado al final. La vista es de solo lectura;
+**Esc** o **Close** la cierran. Al elegir una carpeta o copiar un modelo se
+muestra la confirmación correspondiente antes de guardar cambios.
+
+Ramas del navegador de acciones:
 
 ```text
 ISYCO CLI · COMMANDS BY INTENT
@@ -38,18 +56,28 @@ Agent / Workspace / Integrations
 
 Filtra por nombre o descripción en **Search actions…**. Usa ↑/↓ para moverte, ←/→ para plegar/desplegar ramas, Enter para inspeccionar una hoja y **Open selected** para abrirla. Esc limpia la búsqueda y luego cierra el navegador. `Browse files` abre el árbol limitado al workspace donde ejecutaste el comando. Ninguna hoja lanza una shell.
 
-Dentro del prompt de ISyCode, **Enter** envía el mensaje y **Shift+Enter** agrega una línea. **Ctrl+Enter** también envía.
+Dentro del prompt, **Enter** envía. **Shift+Enter**, **Ctrl+J** y **Alt+Enter** agregan una línea. **Ctrl+Enter** ya no envía.
+
+Si el modelo todavía está respondiendo, **Enter** en un mensaje normal lo deja en la cola (máximo 8). Con el envío vacío, **Enter** sobre el mensaje seleccionado de la cola intenta steer: si el proveedor no lo confirma, el texto vuelve a su sitio. **Esc** devuelve el texto de la cola al borrador y no pisa un borrador que ya tenías.
+
+**Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Enter o Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
+
+Seleccionar texto con el ratón lo copia si en Authority está activo *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. El 2026-10-04, en este escritorio con X11 y `xclip`, la copia devolvió `ALLOW` y la lectura de vuelta coincidió. El journal guarda el tamaño, no el texto.
+
+La Idea Box ocupa el 60% del ancho, encima del prompt. Mientras hay un turno, el gato de la izquierda camina; al terminar vuelve a dormir y la frase de estado queda en su última fila, sin tapar el dibujo. La barra lateral usa secciones plegables en cajas separadas.
 
 Las respuestas del asistente y de Roundtrip se muestran con parser Markdown de terminal: `#`/`##` crean encabezados, `**texto**` se resalta en negritas, las listas conservan su estructura, los acentos graves simples marcan código en línea y los bloques con tres acentos graves reciben resaltado de sintaxis. **Esc** cancela la respuesta activa y descarta su salida parcial; si no hay generación activa, vuelve/cierra el menú o enfoca el composer sin borrar el borrador.
 
 `/review <texto>` ofrece una revisión aislada con GPT-6 Luna vía OpenAI API. Antes de enviar, muestra exactamente el texto y pide confirmación. El revisor no tiene herramientas; la respuesta queda aparte. **Cancel review** o **Esc** interrumpe la conexión/stream y descarta cualquier salida parcial; no se reintenta ni se libera el único intento de la sesión. **Iterate with this review** prepara la respuesta como borrador para el modelo principal; todavía debes editarla o presionar Enter. El límite de salida es 1,200 tokens y solo se permite una revisión por sesión TUI. Si detecta un proxy configurado, ISyCode cancela el envío en lugar de saltárselo; aplica igual al chat cancelable.
 
-La barra inferior tiene **Sidebar**, **Sessions**, **Providers**, **Role**, **Context** y **⚙**. El engranaje reúne las opciones y todos los atajos. `Ctrl+F` busca texto en toda la salida del chat; usa Enter o los botones para recorrer coincidencias y **Esc** para cerrar. Al escribir `/` solo se abre una paleta con diez ramas: Skills, Models, MCP, LSP, Files, Roles, Providers, Session, Workspace y Commands. Elige una rama para ver su lista; puedes desplazarte y volver con **Esc**. En Models, `Load account models` consulta los IDs del provider activo solo después de elegirlo; seleccionar uno cambia el modelo de esta sesión.
+La barra inferior tiene **Sidebar**, **Sessions**, **Multi Harness** y **⚙**. Providers, Role y Context están en Settings. El engranaje reúne las opciones y todos los atajos. `Ctrl+F` busca texto en toda la salida del chat; usa Enter o los botones para recorrer coincidencias y **Esc** para cerrar. Al escribir `/` solo se abre una paleta con diez ramas: Skills, Models, MCP, LSP, Files, Roles, Providers, Session, Workspace y Commands. Elige una rama para ver su lista; puedes desplazarte y volver con **Esc**. Models pide el catálogo de la cuenta del provider activo al abrirse. Expandir otro provider pide el suyo sin cambiar el activo. El botón dice **Refresh account catalog**. Elegir un modelo lo guarda; al reiniciar se usa ese modelo, no el default del catálogo. Una imagen se acepta o se rechaza con las observaciones de ese modelo.
+
+**Sessions** abre la lista de conversaciones de este workspace. El primer clic previsualiza; el segundo abre. **[×]** o **Ctrl+D** piden confirmación antes de borrar. Cancelar deja la conversación. El prefijo de cada fila es el nombre del modelo.
 
 En **Context → Choose AGENTS.md…**, el selector de archivos de Linux te deja elegirlo sin escribir ruta. El archivo debe estar dentro del workspace y pasa por el grant `workspace.context.inject` de Workspace Authority e IsySentinel.
 `/readme` abre el selector nativo de Linux, deja escoger un README del workspace y lo previsualiza tras el grant de lectura y Sentinel.
 
-**Providers** selecciona los presets de ISyCode. NVIDIA NIM usa `nvidia/nemotron-3-ultra-550b-a55b`; OpenAI usa `gpt-6-luna`. ISyCode guarda provider/modelo (sin secretos) en su estado privado. Las claves nuevas se guardan en el keyring del sistema; las variables `ISYMOTRON_*` y el almacén antiguo siguen como compatibilidad. Una API key no concede acceso a red: autoriza el host desde Settings → Authority & Security antes de enviar prompts. OAuth descubierto desde un catálogo externo es metadata; ISyCode todavía no inicia ese flujo. **Role** separa agentes de chat de los ocho motores operativos de ISyCo. Cada motor operativo carga su flujo, alcance, comandos y reglas en el contexto del rol; el motor de lenguaje es el provider/modelo de ISyCode. La TUI no ejecuta esos comandos desde el chat ni concede autoridad al rol.
+**Providers** selecciona los presets de ISyCode. Si no hay un modelo guardado, NVIDIA NIM usa `nvidia/nemotron-3-ultra-550b-a55b` y OpenAI usa `gpt-6-luna`. ISyCode guarda provider/modelo (sin secretos) en su estado privado y ese guardado gana al default al volver a abrir. Las claves nuevas se guardan en el keyring del sistema; las variables `ISYMOTRON_*` y el almacén antiguo siguen como compatibilidad. Una API key no concede acceso a red: autoriza el host desde Settings → Authority & Security antes de enviar prompts. OAuth descubierto desde un catálogo externo es metadata; ISyCode todavía no inicia ese flujo. **Role** separa agentes de chat de los ocho motores operativos de ISyCo. Cada motor operativo carga su flujo, alcance, comandos y reglas en el contexto del rol; el motor de lenguaje es el provider/modelo de ISyCode. La TUI no ejecuta esos comandos desde el chat ni concede autoridad al rol.
 
 Mobile Host es el sustrato del motor de ISyCode Móvil y permanece apagado hasta que lo inicies desde **⚙ Settings → Mobile host status** con su grant y aprobación explícitos. Escucha solo en `127.0.0.1:8765` desde Secure. El PIN aparece localmente, dura cinco minutos y se usa una sola vez; al canjearlo, el host emite una credencial temporal, registra su receipt y conserva solo el hash. Settings → Private access puede proponer `/isycode` hacia este host mediante Tailscale Serve; debes revisar y aprobar esa ruta por separado. La ruta no activa Funnel ni reemplaza otros handlers. Los adapters aún no permiten sesiones remotas, streaming, cancelación ni approvals. El contrato está en `docs/mobile-host-v1.md`.
 
@@ -57,7 +85,7 @@ Si ISyCode está instalado desde otro checkout, define su ruta antes de abrir:
 
 ```bash
 export ISYCODE_ROOT="/ruta/a/ISyCode"
-isyco cli
+isycode
 ```
 
 La búsqueda de la ruta vecina por defecto corresponde a este layout de desarrollo; en otra instalación configura `ISYCODE_ROOT`.
@@ -97,15 +125,37 @@ migra mostrando el diff y conserva los originales. Todo comando es texto de
 prompt; cada acción solicitada sigue pasando por sus owners, Authority e
 IsySentinel.
 
+## Atajos y estados nuevos (2026-10-06)
+
+| Tecla o gesto | Qué hace |
+|---|---|
+| `Ctrl+P` | Paleta de comandos semántica. |
+| `Ctrl+Shift+F` | Busca en TODAS las conversaciones guardadas (título y mensajes). Enter abre la elegida. |
+| Botón `modelo ▾` (barra inferior) | Abre el selector de provider/modelo. |
+| Carpeta `▸ GLM · N models` | El catálogo de modelos se agrupa por familia (GLM, GPT, Qwen, DeepSeek…). Ábrela para ver las variantes. |
+| Pantalla `Review N proposed changes` | Cuando el modelo propone varios archivos de una vez, una sola pantalla los revisa todos. `Approve all` aplica cada archivo con su propia aprobación de un solo uso; si un archivo cambia antes de aplicarse, se reabre su revisión individual. |
+| `Trust folder this session · s` | En la revisión de un archivo: confía la carpeta solo hasta cerrar ISyCode. No se guarda nada; en modo Security no aparece. |
+| `Always allow…` | La versión persistente (se guarda en Workspace folders). |
+| Settings → `High contrast display` | Superficies negro puro y bordes claros (≥7:1 en el texto). Aplica al instante. |
+| Settings → `ASCII-only display` | Cambia ✓/✗/●/○ por `[x]`/`[ ]`/`[ON]`/`[OFF]` y el banner por texto plano, para terminales sin Unicode. |
+| `/help tour` | Tour guiado de ocho líneas dentro del chat. |
+| Primera corrida: `Quick Start` | Una pantalla deja el workspace listo (recurrente + Classic + confirmación de coding tools). `Custom setup` lleva paso a paso. |
+
+Regla de oro de las aprobaciones: ninguna aprobación crea un permiso duradero. Batch, session trust y quiet Classic emiten permisos de un solo uso ligados al contenido exacto; todo queda en el journal (Settings → Action journal).
+
 ## Regla de seguridad
 
 Descubrir un MCP o una skill no concede permiso para invocarlo. Files es de solo lectura, parte de `.isyroot` y requiere grants explícitos de ISyCode evaluados por IsySentinel. Una key no concede acceso a red; los catálogos/Gateway también requieren grants de host. La interfaz nunca debe convertir un plan del modelo en autoridad.
 
 ## Comandos observados
 
-### `isyco cli`
+### `isycode`
 
-Ejecutado desde el checkout de ISyCode; abre el navegador interactivo anterior. Salir con `q` o `Esc`.
+Abre la TUI en la carpeta actual.
+
+### `isycode cli`
+
+Abre el navegador de acciones por intención. Salir con `q` o `Esc`.
 
 ### `isyco --help`
 
@@ -135,8 +185,24 @@ Exits: passthrough del motor | 2 uso/gate | 3 motor pendiente.
 |---|---|---|
 | Árbol `Agent / Workspace / Integrations` | El navegador semántico inició. | Elige una acción y pulsa **Open selected**. |
 | `no encuentro el checkout de ISyCode` | La ruta vecina no existe en este layout. | Configura `ISYCODE_ROOT` con el checkout correcto. |
-| `isyco` muestra los roles | Es el CLI existente de motores OpenISy. | Usa `isyco cli` para abrir ISyCode; no reemplaces el ejecutable. |
+| `isyco` muestra los roles | Es el CLI de motores OpenISy, no ISyCode. | `isycode` abre la TUI. `isycode cli` abre el navegador. |
 | El chat informa que falta una API key | No hay credencial del provider seleccionado. | Configura su variable (`OPENAI_API_KEY`, `NEBIUS_API_KEY`, `NVIDIA_NIM_API_KEY`) antes de pedir chat o plan. |
+| La cola dice que el modelo no permite steer | El intento no se confirmó. | El texto vuelve a la cola. Esc lo recupera si el borrador está vacío. |
+| ShellBox dice que no hay sandbox | Falta bubblewrap, libseccomp o python3. | Los comandos siguen apagados. No hay ejecución sin sandbox. |
+| Una imagen se rechaza | El modelo guardado tiene una observación `images=false`. | Elige un modelo con visión o quita la imagen. El default del catálogo no decide. |
 | LSP muestra que no hay adapters | ISyCode todavía no tiene adapter LSP configurado. | No indica una falla del TUI; los MCP aparecen por separado. |
 
-Trampas frecuentes: ejecuta `isyco cli` desde el workspace correcto para que Files capture ese directorio; un MCP/skill visible sigue sin permiso de ejecución; y `isyco` sin `cli` continúa mostrando los motores por rol existentes.
+Trampas frecuentes: ejecuta `isycode` o `isycode cli` desde el workspace correcto para que Files capture ese directorio; un MCP/skill visible sigue sin permiso de ejecución; y `isyco` sin más argumentos sigue siendo el CLI de motores OpenISy.
+
+## Tarjetas de comandos
+
+Los comandos nuevos del chat muestran dos filas de salida en una tarjeta.
+El borde superior identifica el comando y el inferior muestra su estado.
+Pulsa Enter o Espacio con la tarjeta enfocada, o haz clic en su borde, para
+ver la salida retenida completa y el recibo. La búsqueda abre las tarjetas
+con coincidencias ocultas. Un aviso de límite significa que el owner no
+retuvo más salida; expandir no recupera esos bytes.
+
+La confirmación usa opciones grandes: Rechazar está enfocado inicialmente.
+Las tarjetas cambian la presentación; no conceden permisos ni ejecutan
+comandos por sí mismas.

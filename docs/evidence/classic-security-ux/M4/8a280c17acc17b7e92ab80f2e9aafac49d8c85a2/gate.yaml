@@ -1,0 +1,90 @@
+hito: M4
+puerta: G4
+estado: APROBADO
+sha_evaluado: 8a280c17acc17b7e92ab80f2e9aafac49d8c85a2
+fecha_utc: 2026-10-06T01:30:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; Classic tras trust humano; este hito no abre autonomía nueva, mide la existente
+dependencias: G3
+dependencias_estado:
+  G3: APROBADO
+casos:
+  - id: G4-01
+    prueba: tests/test_workspace_trust.py::test_ordinary_flow_has_zero_per_action_approvals
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: tras onboarding, 10 lecturas, 5 ediciones pequeñas y 3 tests aislados tienen 0 aprobaciones por acción en Classic
+    observado: >
+      Pasó. Con trust registrado, las 10 lecturas ALLOW, 5 ediciones ALLOW con
+      apply(preview, None) y 3 comandos en sandbox (fake bwrap) ALLOW sin una
+      sola aprobación emitida (spy sobre ActionApprovalStore.issue: issued == [])
+      y sin modal_required en ninguno de los 18 requests.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+      - tests/test_workspace_trust.py
+        sha256: 930feb2dc6467c2c9cbce2e00cc51234c6453cb8dac08683b77f445fdd45fe33
+  - id: G4-02
+    prueba: tests/test_workspace_trust.py::test_budget_scope_secrets_authority_and_missing_sandbox_stay_gated
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: exceder presupuesto, ampliar scope, leer secretos, cambiar autoridad o ejecutar sin backend bloquea o solicita frontera exacta; nunca aprobación genérica permanente
+    observado: >
+      Pasó. Churn sobre presupuesto DENY con razón acotada; lectura ../ y .env
+      DENY; request read_sensitive no evalúa ALLOW ni con approval; commit sin
+      aprobación fresca no evalúa; credentials.add no es quiet ni evalúa;
+      revocar write convierte el siguiente apply en DENY; sin sandbox, prepare
+      lanza "no unsandboxed fallback".
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+  - id: G4-03
+    prueba: tests/test_workspace_trust.py::test_security_has_no_effects_and_revocation_is_immediate
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: mismo flujo en Security sin grants produce cero efectos; grants parciales habilitan solo su alcance; revocación funciona inmediatamente
+    observado: >
+      Pasó. En Security, write y read DENY y el archivo no cambia; grant
+      parcial de read habilita solo read (write sigue DENY); available_tools
+      queda vacío; volver a Classic conserva el trust y el write vuelve a ALLOW.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+  - id: G4-04
+    prueba: tests/test_workspace_trust.py::test_reopen_keeps_trust_and_other_roots_do_not_inherit tests/test_workspace_trust.py::test_a_linked_trust_file_is_not_rewritten_into_trust
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: reabrir root confiable no repite onboarding; root distinto/importado y política inválida no heredan confianza
+    observado: >
+      Pasó. Reabrir el mismo root no repite onboarding; otro root no hereda;
+      un trust file enlazado no se reescribe en trust (la política inválida o
+      ambigua no crea confianza).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+  - id: G4-05
+    prueba: tests/test_workspace_trust.py::test_missing_sandbox_keeps_typed_paths_and_explains_without_bypass
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: ausencia de sandbox deja funcional el subconjunto demostrado y explica capacidades deshabilitadas sin sugerir bypass
+    observado: >
+      Pasó (test nuevo en este SHA, commit 8a280c1). Sin sandbox, prepare
+      falla con "commands stay disabled" y "no unsandboxed fallback" y el
+      mensaje no sugiere bypass; las lecturas y escrituras tipadas siguen
+      ALLOW bajo el mismo trust.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+      - tests/test_workspace_trust.py
+        sha256: 930feb2dc6467c2c9cbce2e00cc51234c6453cb8dac08683b77f445fdd45fe33
+sin_evidencia_real:
+  - conteo de modales con observación humana en una sesión interactiva real (el harness cuenta modales; la observación humana queda para dogfood de M9)
+  - «Turn on all tools» end-to-end con modales por acción (el toolkit se probó por separado en Quick Start; la regla del gate queda medida por G4-01)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1455 passed, 1 skipped, 11 deselected; 292.64s
+riesgos_residuales: G4-01 usa fake bwrap para los comandos; el bwrap real queda probado en G2 (test_staging real bubblewrap)
+rollback_ensayado: revertir 8a280c1 quita solo el test nuevo de G4-05; no cambia producto
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T05:59:51Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py

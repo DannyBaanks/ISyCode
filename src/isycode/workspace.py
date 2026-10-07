@@ -13,6 +13,7 @@ from isycode.authority import (
 )
 from isycode.config import find_isymotron_root
 from isycode.receipts import IsyMotronReceiptVerifier
+from isycode.sensitive_paths import is_sensitive_path_name
 
 
 class WorkspaceUnavailable(RuntimeError):
@@ -202,11 +203,7 @@ class IsyMotronWorkspace:
 
     @staticmethod
     def is_sensitive_name(name: str) -> bool:
-        lower = name.casefold()
-        return (lower in {".git", ".isycode", ".ssh", ".aws", ".gnupg"}
-                or lower == ".env" or lower.startswith(".env.")
-                or lower in {"id_rsa", "id_ed25519", "credentials", "secrets.json"}
-                or lower.endswith((".pem", ".key", ".p12", ".pfx")))
+        return is_sensitive_path_name(name)
 
     def list_directory(self, logical_path: str, *, show_ignored: bool = False) -> DirectoryListing:
         """List a directory through the host and apply gitignore rules locally."""

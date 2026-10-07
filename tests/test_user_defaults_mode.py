@@ -51,8 +51,8 @@ def _method(name):
 
 def test_startup_uses_the_default_only_for_a_workspace_without_a_mode():
     startup = _method("_startup_workspace")
-    assert startup.index("authority.mode() is None") < startup.index('get("new_workspace_mode", "ask")')
-    assert startup.index('get("new_workspace_mode", "ask")') < startup.index("WorkspaceModeScreen(")
+    assert startup.index("authority.mode() is None") < startup.index("WorkspaceModeScreen(")
+    assert startup.index("authority.mode() is None") < startup.index("authority.set_mode(chosen)")
 
 
 def test_choosing_classic_as_the_default_asks_first():

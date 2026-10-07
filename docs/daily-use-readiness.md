@@ -1,35 +1,46 @@
-# Daily-use readiness — updated 2026-10-01
+# Daily-use readiness — updated 2026-10-02
+
+## Audit follow-up (2026-10-02)
+
+Classic and Security retain the same owner/Sentinel/journal boundary. Explicit
+revocations win over Classic presets and configuration-action aliases. File
+previews are bound to their approved content and displayed diff. Provider keys
+remain isolated; malformed authority policies produce denied diagnostics rather
+than crashing doctor. Incomplete/truncated streams do not authorize tool calls,
+and transport errors never echo raw provider bodies into the chat. Each SSE
+frame has a 1 MiB protocol limit, distinct from conversation/generation limits.
+
+Offline tests cover these regressions; they do not establish live provider
+authentication, multi-hour memory behavior or remote integrations.
 
 ## Continuity, compatibility and reported consumption
 
-The package now pins Textual 1.0.0, validated with Python 3.10 and 3.12.
-Historical Textual 8.2.8 screenshots do not establish support for that version.
+El paquete fija Textual 8.2.8, la versión usada por CI en Linux con Python
+3.10 y 3.12. Permite seleccionar con el ratón las respuestas del chat; copiar
+la selección sigue pasando por el permiso del workspace y su ClipboardOwner.
 Chat shows model steps and tools in order and follows the bottom while preserving
 manual history/search navigation.
 
-New sessions retain up to 32 tool notes, each with at most 2,000 argument and
-4,000 result characters. At most 16,000 characters of recent notes are supplied
-as explicitly untrusted, potentially stale context on the next turn. Resume
-displays them without executing anything. Raw reasoning, grants and approvals
-are not saved. A pre-dispatch unverified attempt survives cancellation or a
-crash; a completed result replaces it. Inspect files and the journal before
-retrying an interrupted effect. Partial forks drop tool notes and summaries
-whose message boundaries cannot be determined. Old sessions cannot recover
-results they never stored. Ambiguous explicit secret assignments discard the
-whole note; this is conservative redaction, not proof that arbitrary prose
-contains no confidential data.
+New sessions retain complete tool notes without application-level count or
+character truncation. All notes are supplied as explicitly untrusted,
+potentially stale context on the next turn. Resume displays them without
+executing anything. Raw reasoning, grants and approvals are not saved. A
+pre-dispatch unverified attempt survives cancellation or a crash; a completed
+result replaces it. Inspect files and the journal before retrying an interrupted
+effect. Partial forks drop tool notes and summaries whose message boundaries
+cannot be determined. Old sessions cannot recover results they never stored.
+Ambiguous explicit secret assignments discard the whole note; redaction is
+conservative, not proof that arbitrary prose contains no confidential data.
 
-The status line and `/usage` report chat/compaction input/output tokens and
-requests. OpenAI requests streamed usage; Anthropic reports actual usage,
-including input cache reads/writes, and respects the requested output limit.
-Other providers may omit usage: reported totals then remain lower bounds.
-Settings → My defaults offers an optional per-session budget of 10,000, 50,000,
-100,000 or 500,000 tokens, off by default. It blocks subsequent requests when
-reported consumption reaches the budget or consumption is unknown, and reduces
-the next output limit to the known remainder. Input tokens and an in-flight
-request can exceed the budget; it is not a billing cap. Connection checks and
-external reviews are separate. Legacy sessions without usage are unknown;
-imported counters are historical data, not verified provider billing records.
+The status line and `/usage` report provider-reported chat input/output tokens
+and requests. OpenAI requests streamed usage; Anthropic reports usage including
+input cache reads/writes. Other providers may omit usage, so totals can be lower
+bounds. Legacy per-session token budget and output-limit preferences are ignored;
+ISyCode does not impose a local generation cap or automatic history compaction.
+The selected provider endpoint may enforce its own context/output limits and
+billing. `/compact` explicitly summarizes history only when requested.
+Connection checks and external reviews are separate. Legacy session usage is
+unknown; imported counters are historical data, not verified billing records.
 
 This is the current evidence for the local coding workflow. Older milestone
 checkboxes and the competitive inventory describe earlier revisions; they are
@@ -60,17 +71,23 @@ CONNECT tunnels on Python 3.10+. `NO_PROXY` is
 respected for local endpoints. Cancellation closes the proxy connection, and
 plaintext received after CONNECT headers is rejected before TLS.
 
-A real minimal OpenAI request was attempted on 2026-09-30 after the user configured
+A real minimal OpenAI API-key request was attempted on 2026-09-30 after the user configured
 a key and allowed `api.openai.com`. It reached the endpoint, which returned HTTP
-429 (`insufficient_quota`, `credit_balance_exhausted`). No successful live chat or
-live coding workflow is claimed. ChatGPT subscription login is a separate
-integration from API-key billing and is not implemented by this increment.
+429 (`insufficient_quota`, `credit_balance_exhausted`). That attempt is not a successful
+API-key chat. On 2026-10-04 a separate ChatGPT subscription roundtrip did complete
+(NVIDIA → subscription → NVIDIA, `head_seq=4`). The subscription participant was `auto`;
+its concrete model id is NOT_DEMONSTRATED. Evidence:
+`docs/handoff/tools-catalog-2026-10-03.md`. Subscription login is not API-key billing.
 
 ## Work on code
 
-Classic includes bounded workspace read/edit, saved-key access and saved-session
-permissions for a recurring project. Security requires explicit grants.
-Commands require a separate executable grant and approval in either mode.
+Classic includes bounded workspace read/edit, saved-key/session access, Git review,
+reviewed commits and exact-executable sandboxed commands when Bubblewrap/seccomp
+are available. Until the folder is trusted for quiet Classic, each edit and each
+sandboxed command still asks. After that trust, recoverable edits and sandboxed
+commands stop asking one by one; commit, secrets, authority, undo and MCP still
+ask. Security begins with grants off; use individual grants or the reviewed
+coding-tool bundle. No mode enables a free shell or offers an unsandboxed fallback.
 
 1. Use `/context` or Context → Load workspace AGENTS.md to load project guidance.
    Reads are owned and journaled. Only the root AGENTS.md is supported here; an
@@ -101,8 +118,7 @@ still load; new sessions/export use v2.
 
 Drafts are saved after one second of inactivity and flushed on ordinary exit,
 through the session owner. Persistence requires both session permissions and a
-recurring workspace. At most 16,000 characters are retained on disk; longer text
-remains in the composer and the UI reports the limit. An abrupt crash before the
+recurring workspace. Draft text is retained without automatic truncation. An abrupt crash before the
 debounce save can lose the latest keystrokes. Common secret patterns are redacted;
 redaction is not a guarantee that arbitrary confidential prose is safe to share.
 
@@ -121,7 +137,7 @@ Commands:
 | `/sessions delete` | Delete only the current conversation after its separate scoped grant and confirmation |
 
 Export is displayed inside the TUI; it does not silently write a file or access
-the clipboard. Review exported content before sharing. Import accepts bounded
+the clipboard. Review exported content before sharing. Import accepts validated
 v1/v2 transcripts, strips extra message fields, and rejects credential/grant/state
 fields it does not support. Deletion permission is granted from Settings →
 Authority for the current conversation and is distinct from permission to save.
@@ -183,17 +199,22 @@ suite run.
 
 ## Still outstanding
 
-- The user chose offline validation. A real provider turn with tool calls,
-  authentication failures and quota behavior remains unverified in this environment.
-- Gateway public-origin and approved semantic-query witnesses remain separate
-  remote milestones. No Gateway write or Bridge daemon was started.
+- Gateway live semantic operation, with a local grant, remote scope and matching
+  workspace id: NOT_DEMONSTRATED. No Gateway write or Bridge daemon was started.
+- Tailscale tailnet connectivity, Mobile Host remote sessions/streaming/approvals,
+  Windows paths, a live local MCP server and native Claude remain NOT_DEMONSTRATED.
+  Their owners and offline tests stay in place.
+- The 2026-10-04 clipboard witness is this X11 desktop and `xclip` only
+  (`docs/evidence/clipboard-witness-2026-10-04.json`). Wayland and Windows clipboard
+  tools were not run.
 - Multi-hour performance/memory validation and interactive terminal/accessibility
   review remain release acceptance work; the recorded local soak is one bounded
   scenario, not a broad performance claim.
-- MCP remote transports/OAuth, additional LSP features, Mobile Host runtime
-  sessions, Bridge and L1 remain optional follow-up integrations.
-- Verified monetary cost estimates, automatic retry policies and portable file/clipboard
-  transfer UI remain future work. Existing ownership/security gates stay in force.
+- MCP remote transports/OAuth, additional LSP features, product Bridge inside
+  Secure and OpenISy L0/L1 remain follow-up integrations. Web search does not exist;
+  webfetch reads one public HTTPS page and does not search.
+- Verified monetary cost estimates and automatic retry policies remain future work.
+  Existing ownership/security gates stay in force.
 
 ## Verification record (2026-09-30)
 
@@ -234,3 +255,14 @@ Cancel and visible pinned buttons. Provider replies in the coding fixture were
 simulated; files, approvals, journals, sandbox command and Git diff were real.
 Independent review found no remaining critical/important blockers after fixing
 private-state access and stale registration confirmations.
+
+
+## Classic coding defaults (2026-10-02)
+
+Classic now supports the common daily loop without a setup grant per tool: read/edit,
+Git status/diff/approved commits and Bubblewrap/seccomp commands when available.
+Per-action previews and approvals, IsySentinel and the journal remain mandatory;
+explicitly disabled grants still override the preset. Security remains opt-in by
+capability and offers the same tools through individual grants or the bundled
+coding-tool setup. The local Python 3.12 run passed 1,053 tests with 7 skips; compileall and the focused
+security/mode regression set (101 tests) also passed.

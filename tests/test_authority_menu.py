@@ -48,7 +48,7 @@ def test_authority_menu_opens_with_every_integration_state(tmp_path, monkeypatch
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-not-real")
     UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
-    monkeypatch.setattr("isycode.tui.sandbox_executable", lambda: "/usr/bin/bwrap")
+    monkeypatch.setattr("isycode.tui_app_authority.sandbox_executable", lambda: "/usr/bin/bwrap")
 
     async def workspace_startup(self):
         # This test inspects the authority menu, not optional startup catalog or
@@ -119,6 +119,36 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
     assert not any(label.startswith("Delete current conversation") for label in labels)
 
 
+def test_option_list_pilot_click_previews_then_opens():
+    from textual.app import App
+
+    opened = []
+
+    class Host(App):
+        CSS = "PreviewOptionList { border: none; padding: 0; height: 1fr; }"
+
+        def compose(self):
+            yield PreviewOptionList("Alpha", "Beta", id="choices")
+
+        def on_option_list_option_selected(self, event):
+            opened.append(event.option_index)
+
+    async def scenario():
+        async with Host().run_test(size=(40, 8)) as pilot:
+            listing = pilot.app.query_one(PreviewOptionList)
+            await pilot.click(listing, offset=(2, 0))
+            await pilot.pause()
+            assert opened == [] and listing.highlighted == 0
+            await pilot.click(listing, offset=(6, 0))
+            await pilot.pause()
+            assert opened == [0]
+            await pilot.click(listing, offset=(2, 1), times=2)
+            await pilot.pause()
+            assert opened == [0, 1] and listing.highlighted == 1
+
+    asyncio.run(scenario())
+
+
 def test_option_list_click_previews_and_double_click_selects():
     # Exercise the click handler's contract without constructing Textual's
     # version-specific component/style registry.
@@ -141,3 +171,25 @@ def test_option_list_click_previews_and_double_click_selects():
         assert selected == [0]
 
     asyncio.run(scenario())
+
+    selected = []
+    options = SimpleNamespace(
+        _options=[SimpleNamespace(disabled=False), SimpleNamespace(disabled=False)],
+        highlighted=None,
+        action_select=lambda: selected.append(options.highlighted),
+    )
+
+    async def repeat():
+        click = SimpleNamespace(style=SimpleNamespace(meta={"option": 0}), chain=1)
+        await PreviewOptionList._on_click(options, click)
+        assert selected == []
+        await PreviewOptionList._on_click(options, SimpleNamespace(
+            style=SimpleNamespace(meta={"option": 1}), chain=1,
+        ))
+        assert options.highlighted == 1 and selected == []
+        await PreviewOptionList._on_click(options, SimpleNamespace(
+            style=SimpleNamespace(meta={"option": 1}), chain=1,
+        ))
+        assert selected == [1]
+
+    asyncio.run(repeat())

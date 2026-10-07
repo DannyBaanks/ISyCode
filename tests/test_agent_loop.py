@@ -64,14 +64,32 @@ def test_compaction_elides_oldest_tool_results_but_keeps_every_call_answered():
     assert compact_turn(compacted, budget=100_000)[1] == 0
 
 
-def test_limits_come_from_my_defaults_and_reject_unknown_values(tmp_path):
+def test_summary_instructions_are_bounded_context_not_transcript_commands():
+    from isycode.agent_loop import summary_messages
+
+    messages = summary_messages(
+        [{"role": "user", "content": "Keep the exact failing command."}],
+        instructions="Focus on unresolved tests and exact paths.",
+    )
+    assert "Focus on unresolved tests and exact paths." in messages[0]["content"]
+    assert "user-provided compaction preference" in messages[0]["content"]
+    assert "Keep the exact failing command." in messages[1]["content"]
+
+    with pytest.raises(ValueError):
+        summary_messages([], instructions="x" * 4001)
+
+
+def test_legacy_limits_remain_readable_without_imposing_automatic_caps(tmp_path):
     store = UserDefaultsStore(tmp_path)
     limits = AgentLimits.from_defaults(store.load())
-    assert limits == AgentLimits(0, 8192) and limits.step_allowed(10_000)
+    assert limits == AgentLimits(0, None) and limits.step_allowed(10_000)
     store.update(agent_steps=50, answer_tokens=16384)
     limits = AgentLimits.from_defaults(store.load())
-    assert limits == AgentLimits(50, 16384)
-    assert limits.step_allowed(49) and not limits.step_allowed(50)
+    assert limits == AgentLimits(0, None)
+    assert limits.step_allowed(50)
+    # Explicit AgentLimits remains usable by callers choosing a bounded loop.
+    assert AgentLimits(50, 16384).step_allowed(49)
+    assert not AgentLimits(50, 16384).step_allowed(50)
     for bad in ({"agent_steps": 7}, {"answer_tokens": 999}, {"agent_steps": True}):
         with pytest.raises(ValueError):
             store.update(**bad)
@@ -83,20 +101,28 @@ def test_limits_come_from_my_defaults_and_reject_unknown_values(tmp_path):
 
 
 def _methods():
-    source = (Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py").read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    return {node.name: ast.get_source_segment(source, node) for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    package = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    found = {}
+    for path in (package / "tui.py", *sorted(package.glob("tui_app_*.py"))):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    found[item.name] = ast.get_source_segment(source, item)
+    return found
 
 
-def test_chat_turn_uses_limits_compaction_and_can_be_stopped_as_a_whole():
+def test_chat_turn_has_no_automatic_caps_and_can_be_stopped_as_a_whole():
     methods = _methods()
     chat = methods["_run_chat"]
-    assert "limits.step_allowed(tool_round)" in chat and "self._chat_request_limit(limits.answer_tokens)" in chat
+    assert "limits.step_allowed(tool_round)" not in chat
     assert "max_tool_calls" not in chat and "per-response" not in chat
-    assert "self._history[-20:]" not in chat and "compact_turn(messages)" in chat
+    assert "self._history[-20:]" not in chat and "compact_turn(messages)" not in chat
     assert "self._chat_turn_task = asyncio.current_task()" in chat
     assert "self._chat_turn_task.cancel()" in methods["action_escape_to_chat"]
     # Summaries go through the same provider owner as any other model call.

@@ -47,6 +47,10 @@ def test_destructive_tool_unusable_until_registered_and_granted():
         assert not cand.usable, "fresh candidate must not be usable"
         assert store.validate(cand).passed
         assert store.test(cand).passed
+        from isycode.command_runner import sandbox_executable
+        if sandbox_executable() is None:
+            import pytest
+            pytest.skip("verified Bubblewrap/seccomp sandbox unavailable")
         assert store.probe(cand, {"path": "/tmp/x"}).passed
         assert set(cand.gates_passed) == {"V", "T", "P"}
 
@@ -102,9 +106,20 @@ def test_bad_manifest_rejected():
         except ValueError:
             pass
         bad3 = dict(DESTRUCTIVE_MANIFEST)
-        bad3["entry"] = "../evil.py"
-        cand = store.create(bad3, DESTRUCTIVE_SOURCE)
-        assert not store.validate(cand).passed, "path escape must fail gate V"
+        bad3["entry"] = "../../evil.py"
+        try:
+            store.create(bad3, DESTRUCTIVE_SOURCE)
+            assert False, "path escape must be rejected before any write"
+        except ValueError:
+            pass
+        assert not (tmp / "evil.py").exists()
+        bad_id = dict(DESTRUCTIVE_MANIFEST)
+        bad_id["id"] = "../../escape"
+        try:
+            store.create(bad_id, DESTRUCTIVE_SOURCE)
+            assert False, "tool id path traversal must be rejected"
+        except ValueError:
+            pass
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -124,3 +139,13 @@ def test_broken_tool_fails_probe():
 
 if __name__ == "__main__":
     import pytest
+
+
+def test_custom_test_command_never_executes_on_host():
+    store, tmp = make_store()
+    try:
+        cand = store.create(DESTRUCTIVE_MANIFEST, DESTRUCTIVE_SOURCE)
+        result = store.test(cand, ["python", "-c", "raise SystemExit(0)"])
+        assert not result.passed and "disabled" in result.detail
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 from collections import defaultdict
+from collections.abc import Sequence
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -53,12 +54,12 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("broker.health", "broker.logs", "broker.start",
                     "broker.stop", "broker.remove"),
     },
-    "isycode.tui.TUIApp._workspace_request": {
+    "isycode.tui_app_workspace.WorkspaceMixin._workspace_request": {
         "owner": "workspace_read",
         "actions": ("workspace.files.list", "workspace.files.read",
                     "workspace.files.search", "workspace.context.inject"),
     },
-    "isycode.tui.TUIApp._authorize_remote_read": {
+    "isycode.tui_app_remote.RemoteMixin._authorize_remote_read": {
         "owner": "remote_catalog",
         "actions": ("catalog.external.read", "gateway.files.read", "mcp.discover"),
     },
@@ -92,6 +93,10 @@ _SECURE_DIRECT_FUNCTIONS = frozenset({
 # reliable automatic way to infer whether an arbitrary Python function is a
 # product execution owner.
 KNOWN_EFFECT_CALLSITES = (
+    ("web.fetch", "WebFetchOwner.execute", "web_fetch", "COVERED"),
+    ("session.create", "IterationOwner._persist", "chat_sessions", "COVERED"),
+    ("session.resume", "IterationOwner.inspect", "chat_sessions", "COVERED"),
+    ("provider.request", "run_iteration.complete", "provider_network", "COVERED"),
     ("tailscale.inspect", "TailscaleReadOwner.inspect", "tailscale_read", "COVERED"),
     ("tailscale.install.prepare", "TailscalePackageInstallOwner.prepare", "tailscale_package_install", "COVERED"),
     ("tailscale.install.stage", "TailscalePackageInstallOwner.stage", "tailscale_package_install", "COVERED"),
@@ -105,8 +110,8 @@ KNOWN_EFFECT_CALLSITES = (
     ("workspace.config.read", "WorkspaceConfigOwner.read_config", "workspace_config", "COVERED"),
     ("workspace.config.list", "WorkspaceConfigOwner.commands", "workspace_config", "COVERED"),
     ("workspace.config.write", "WorkspaceConfigOwner.apply", "workspace_config", "COVERED"),
-    ("workspace.context.inject", "TUIApp._inject_agent_context", "workspace_read", "COVERED"),
-    ("workspace.files.read", "TUIApp._workspace_request", "workspace_read", "COVERED"),
+    ("workspace.context.inject", "WorkspaceMixin._inject_agent_context", "workspace_read", "COVERED"),
+    ("workspace.files.read", "WorkspaceMixin._workspace_request", "workspace_read", "COVERED"),
     ("workspace.files.write", "WorkspaceWriteOwner.apply", "workspace_write", "COVERED"),
     ("workspace.files.restore", "WorkspaceWriteOwner._apply_undo", "workspace_write", "COVERED"),
     ("workspace.files.delete", "WorkspaceWriteOwner._apply_delete", "workspace_write", "COVERED"),
@@ -120,6 +125,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("git.status", "GitOwner.is_path_tracked", "workspace_git", "COVERED"),
     ("git.diff", "GitOwner.diff", "workspace_git", "COVERED"),
     ("git.commit", "GitOwner.commit", "workspace_git", "COVERED"),
+    ("git.push", "PublishOwner.run", "workspace_publish", "COVERED"),
     ("mcp.local.start", "LocalMCPOwner.start", "mcp_local", "COVERED"),
     ("mcp.local.invoke", "LocalMCPOwner.call", "mcp_local", "COVERED"),
     ("broker.build", "BrokerProvisionOwner.provision", "broker_provision", "COVERED"),
@@ -153,12 +159,14 @@ KNOWN_EFFECT_CALLSITES = (
     ("session.create", "ChatSessionStore.create", "", "UNWIRED"),
     ("session.create", "ChatSessionStore.rename", "", "UNWIRED"),
     ("session.create", "ChatSessionStore.fork", "", "UNWIRED"),
-    ("desktop.file_picker", "TUIApp._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
-    ("desktop.file_picker", "TUIApp._provision_broker", "", "BLOCKED_BY_DESIGN"),
-    ("desktop.file_picker", "TUIApp._register_builtin_plugins._readme_cmd", "", "BLOCKED_BY_DESIGN"),
+    ("desktop.file_picker", "RemoteMixin._open_broker_preview", "", "BLOCKED_BY_DESIGN"),
+    ("desktop.file_picker", "RemoteMixin._provision_broker", "", "BLOCKED_BY_DESIGN"),
+    ("desktop.file_picker", "tui_app_menu._readme_cmd", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_file", "", "BLOCKED_BY_DESIGN"),
     ("desktop.file_picker", "file_picker.choose_workspace_directory", "", "BLOCKED_BY_DESIGN"),
+    ("clipboard.paste", "ClipboardOwner.paste", "clipboard", "COVERED"),
     ("clipboard.copy", "ClipboardOwner.copy", "clipboard", "COVERED"),
+    ("bridge.agents", "BridgePresenceOwner.read", "bridge_presence", "COVERED"),
 )
 
 
@@ -311,6 +319,9 @@ def owner_coverage_report() -> dict[str, Any]:
         "secure_closed": (
             not direct_api_bypasses and not conflicts and not mismatches
             and not unclassified_effectful_actions(rows) and not unresolved_dynamic
+            and not any(item["status"] in {"UNWIRED", "BYPASS_RISK",
+                                           "NOT_DEMONSTRATED", "PLANNED"}
+                        for item in callsites)
             and all(action in EXPLICIT_DENY_ACTIONS for action in unowned_effectful)
             and set(ACTION_BY_ID) == (set(EXPLICIT_DENY_ACTIONS)
                                       | set(NON_AUTHORITY_ACTIONS) | set(owners_by_action))
@@ -318,32 +329,42 @@ def owner_coverage_report() -> dict[str, Any]:
     }
 
 
-def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, Any]]:
-    """Find direct calls from TUIApp and screens it actually constructs.
+def _is_screen_class(node: ast.ClassDef) -> bool:
+    return any(_ast_name(base.value if isinstance(base, ast.Subscript) else base)
+               .endswith(("Screen", "ModalScreen")) for base in node.bases)
 
-    Low-level Mobile/Bridge/session APIs are intentionally present for isolated
-    adapters and tests. They count as a Secure bypass only if a TUI entrypoint
-    can reach them without going through a registered owner.
+
+def _issues_from_trees(trees: Sequence[ast.Module]) -> list[dict[str, Any]]:
+    """Walk TUIApp, its mixins, and screens those methods construct.
+
+    Screen classes may live in another module. Module-level functions in the
+    same trees stay in the walk: the built-in slash commands are functions,
+    not methods. A source string passed to ``secure_tui_direct_api_bypasses``
+    stays one tree, which is what the single-file audits construct.
     """
-    source_path = Path(__file__).resolve().parent / "tui.py"
-    try:
-        contents = (source_path.read_text(encoding="utf-8") if source is None else source)
-        tree = ast.parse(contents, filename=str(source_path))
-    except (OSError, UnicodeError, SyntaxError, TypeError) as exc:
-        return [{"callsite": str(source_path), "reason": f"TUI source unavailable ({type(exc).__name__})"}]
-    app = next((node for node in tree.body
-                if isinstance(node, ast.ClassDef) and node.name == "TUIApp"), None)
+    classes: dict[str, ast.ClassDef] = {}
+    screens: dict[str, ast.ClassDef] = {}
+    for tree in trees:
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            classes[node.name] = node
+            if _is_screen_class(node):
+                screens[node.name] = node
+    app = classes.get("TUIApp")
     if app is None:
         return [{"callsite": "TUIApp", "reason": "Secure entrypoint class is missing"}]
 
-    screens = {}
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        if any(_ast_name(base.value if isinstance(base, ast.Subscript) else base)
-               .endswith(("Screen", "ModalScreen")) for base in node.bases):
-            screens[node.name] = node
     reachable_nodes: list[tuple[str, ast.AST]] = [("TUIApp", app)]
+    for base in app.bases:
+        base_name = _ast_name(base.value if isinstance(base, ast.Subscript) else base)
+        base_class = classes.get(base_name)
+        if base_class is not None and base_class is not app:
+            reachable_nodes.append((base_name, base_class))
+    for tree in trees:
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                reachable_nodes.append((node.name, node))
     reachable_screens: set[str] = set()
     cursor = 0
     while cursor < len(reachable_nodes):
@@ -409,6 +430,36 @@ def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, 
                     "reason": "direct effect API call is reachable from a Secure TUI surface",
                 })
     return sorted(issues, key=lambda item: item["callsite"])
+
+
+def secure_tui_direct_api_bypasses(source: str | None = None) -> list[dict[str, Any]]:
+    """Find direct calls from TUIApp and screens it actually constructs.
+
+    Low-level Mobile/Bridge/session APIs are intentionally present for isolated
+    adapters and tests. They count as a Secure bypass only if a TUI entrypoint
+    can reach them without going through a registered owner.
+
+    With no source string, the walk includes ``tui.py`` and the ``tui_*.py``
+    modules the app was split into. A source string is parsed alone so the
+    single-file audits keep their contract.
+    """
+    source_path = Path(__file__).resolve().parent / "tui.py"
+    try:
+        if source is None:
+            package = source_path.parent
+            paths = [source_path, *sorted(package.glob("tui_*.py"))]
+            trees = [ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+                     for path in paths]
+        else:
+            trees = [ast.parse(source, filename=str(source_path))]
+    except (OSError, UnicodeError, SyntaxError, TypeError) as exc:
+        return [{"callsite": str(source_path), "reason": f"TUI source unavailable ({type(exc).__name__})"}]
+    return _issues_from_trees(trees)
+
+
+def secure_tui_direct_api_bypasses_from_sources(sources: list[str]) -> list[dict[str, Any]]:
+    """Audit several source strings as one TUI entrypoint."""
+    return _issues_from_trees([ast.parse(source) for source in sources])
 
 
 def _looks_like_sensitive_receiver(receiver: str) -> bool:
@@ -487,8 +538,19 @@ def discover_action_request_constructors() -> list[dict[str, Any]]:
     for source_path in sorted(package.rglob("*.py")):
         relative = source_path.relative_to(package.parent).as_posix()
         try:
-            tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=relative)
-        except (OSError, UnicodeError, SyntaxError):
+            source = source_path.read_text(encoding="utf-8")
+        except UnicodeError:
+            discovered.append({"file": relative, "line": 0,
+                               "action": None, "owner": None,
+                               "parse_error": True})
+            continue
+        # An unreadable file must not silently become an empty inventory
+        # entry: this snapshot is security evidence, so a transient read
+        # failure has to surface instead of being recorded as a parse
+        # error that could later be committed.
+        try:
+            tree = ast.parse(source, filename=relative)
+        except SyntaxError:
             discovered.append({"file": relative, "line": 0,
                                "action": None, "owner": None,
                                "parse_error": True})
@@ -543,8 +605,16 @@ def _defined_callables() -> frozenset[str]:
 
     for source_path in package.rglob("*.py"):
         try:
-            tree = ast.parse(source_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, SyntaxError):
+            source = source_path.read_text(encoding="utf-8")
+        except UnicodeError:
+            continue
+        # Dropping an unreadable file would make its real callsites look
+        # stale (this set is lru_cache'd, so one transient error would
+        # poison every later check in the process). A file that cannot be
+        # read must fail loudly.
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
             continue
         module = source_path.relative_to(package.parent).with_suffix("").as_posix().replace("/", ".")
         short_module = module.removeprefix("isycode.")

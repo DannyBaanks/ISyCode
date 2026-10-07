@@ -75,9 +75,9 @@ def test_long_session(tmp_path, monkeypatch):
         return {'text': 'Completed.', 'tool_calls': [], 'usage': {'prompt_tokens': 800, 'completion_tokens': 200}}
 
     original_execute = CommandRunOwner._execute
-    async def observed_execute(self, preview):
+    async def observed_execute(self, preview, *, promote=True):
         try:
-            return await original_execute(self, preview)
+            return await original_execute(self, preview, promote=promote)
         except Exception as exc:
             stats['command_failure'] = str(exc)
             stats['command_cause'] = repr(exc.__cause__)

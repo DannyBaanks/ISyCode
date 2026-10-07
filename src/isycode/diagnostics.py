@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 from isycode.command_runner import sandbox_executable
 from isycode.providers import PRESETS, selected_model_name, selected_provider_name
 from isycode.user_defaults import UserDefaultsStore
-from isycode.workspace_authority import WorkspaceAuthority
+from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
 
 def collect_diagnostics(root: Path) -> dict:
@@ -47,7 +47,7 @@ def collect_diagnostics(root: Path) -> dict:
         policy = authority.effective_policy()
         mode = authority.mode() or 'security'
         grants = sorted(action for action, grant in policy.get('grants', {}).items() if grant.get('enabled'))
-    except (OSError, ValueError):
+    except (OSError, ValueError, WorkspaceAuthorityError):
         mode, grants = 'unavailable; actions remain denied', []
     return {'version': 1, 'network_tested': False, 'dependencies': dependencies,
             'provider': {'name': name if name in PRESETS else 'unknown',

@@ -3,6 +3,26 @@ from pathlib import Path
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
+AUTHORITY = SOURCE.with_name("tui_app_authority.py")
+
+
+def _tui_methods() -> tuple[dict[str, str], dict[str, ast.AST]]:
+    """Methods of TUIApp plus mixins that now own part of the class."""
+    sources: dict[str, str] = {}
+    methods: dict[str, ast.AST] = {}
+    for path in (SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for klass in module.body:
+            if not isinstance(klass, ast.ClassDef):
+                continue
+            if klass.name != "TUIApp" and not klass.name.endswith("Mixin"):
+                continue
+            for node in klass.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    methods[node.name] = node
+                    sources[node.name] = source
+    return sources, methods
 
 
 def _method_calls(method: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
@@ -31,62 +51,57 @@ def test_secure_tui_mount_does_not_start_mobile_or_bridge_services():
 
 
 def test_secure_tui_adapter_controls_have_no_unmediated_effect_calls():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    _, methods = _tui_methods()
     forbidden = {"start", "rotate_pairing_code", "hello", "heartbeat", "goodbye",
                  "peek", "claim", "release", "send", "wake"}
 
+    menu_handlers = [name for name in methods
+                     if name == "_select_menu_entry" or name.startswith("_menu_")]
     for method_name in ("_start_mobile_host", "_set_bridge_enabled", "_enable_bridge",
-                        "_bridge_tick", "_select_menu_entry"):
+                        "_bridge_tick", *menu_handlers):
         assert not (_method_calls(methods[method_name]) & forbidden), method_name
-    assert "_add_named_credential" not in _method_calls(methods["_select_menu_entry"])
+    for method_name in menu_handlers:
+        assert "_add_named_credential" not in _method_calls(methods[method_name]), method_name
 
 
 def test_secure_tui_persists_chat_sessions_only_through_the_owner():
-    source = SOURCE.read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    sources, methods = _tui_methods()
 
     store_methods = {"create", "append", "save", "load", "list_sessions", "import_json"}
     for name in ("_startup_workspace", "_persist_chat_message", "_show_chat_sessions",
-                 "_resume_chat_session"):
+                 "_refresh_work_list", "_resume_chat_session"):
+        source = sources[name]
         assert "ChatSessionStore" not in _method_calls(methods[name]), name
         for node in ast.walk(methods[name]):
             if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                     and node.func.attr in store_methods):
                 receiver = ast.get_source_segment(source, node.func.value) or ""
                 assert "session" not in receiver.casefold(), (name, receiver)
-    persist = ast.get_source_segment(source, methods["_persist_chat_message"])
+    persist = ast.get_source_segment(sources["_persist_chat_message"], methods["_persist_chat_message"])
     assert persist.index("_sessions_enabled()") < persist.index("owner.record(")
-    assert "owner.list_conversations" in ast.get_source_segment(source, methods["_show_chat_sessions"])
-    assert "owner.resume" in ast.get_source_segment(source, methods["_resume_chat_session"])
+    shown = ast.get_source_segment(sources["_show_chat_sessions"], methods["_show_chat_sessions"])
+    assert "_refresh_work_list" in shown
+    assert "owner.list_conversations" in ast.get_source_segment(
+        sources["_refresh_work_list"], methods["_refresh_work_list"])
+    assert "owner.resume" in ast.get_source_segment(
+        sources["_resume_chat_session"], methods["_resume_chat_session"])
 
 
 def test_secure_tui_session_delete_requires_confirmation_and_separate_authority():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    sources, methods = _tui_methods()
 
     delete_calls = _method_calls(methods["_delete_chat_session"])
     assert "set_grant" not in delete_calls
-    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), methods["_delete_chat_session"])
+    source = ast.get_source_segment(sources["_delete_chat_session"], methods["_delete_chat_session"])
     assert source.index("await self._await_screen") < source.index("self._action_approvals.issue")
     assert "SessionDeleteOwner" in source
 
 
 def test_authority_settings_gates_session_deletion_with_its_own_permission():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = AUTHORITY.read_text(encoding="utf-8")
     module = ast.parse(source)
     app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+               if isinstance(node, ast.ClassDef) and node.name == "AuthorityMixin")
     method = next(node for node in app.body
                   if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
     menu_source = ast.get_source_segment(source, method)
@@ -115,16 +130,11 @@ def test_authority_settings_never_presents_an_explicit_deny_as_granted():
 
 
 def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-    source = SOURCE.read_text(encoding="utf-8")
+    sources, methods = _tui_methods()
     for name in ("_open_authority_menu", "_append_network_grant_entry",
                  "_open_tailscale_permissions", "_initialize_workspace",
                  "_workspace_chat_tools_enabled"):
-        segment = ast.get_source_segment(source, methods[name])
+        segment = ast.get_source_segment(sources[name], methods[name])
         # Raw `enabled` flags must never decide an ON label on their own.
         assert '.get("enabled")' not in segment, name
         assert 'get("enabled", False)' not in segment, name
@@ -145,12 +155,12 @@ def test_authority_capability_indicator_uses_clear_green_and_red_states():
 
 
 def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    module = ast.parse(AUTHORITY.read_text(encoding="utf-8"))
     app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
+               if isinstance(node, ast.ClassDef) and node.name == "AuthorityMixin")
     method = next(node for node in app.body
                   if isinstance(node, ast.FunctionDef) and node.name == "_open_authority_menu")
-    source = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), method)
+    source = ast.get_source_segment(AUTHORITY.read_text(encoding="utf-8"), method)
 
     assert "Read and search workspace files" in source
     assert "Connect to the selected AI model" in source
@@ -162,7 +172,7 @@ def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels(
 
 
 def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():
-    source = SOURCE.read_text(encoding="utf-8")
+    source = AUTHORITY.read_text(encoding="utf-8")
 
     assert '"Systembilities: {checks}\\n"' in source
     assert '"Request: {digest[:12]}… · Authority: {authority}\\n"' in source
@@ -183,12 +193,7 @@ def test_semantic_navigation_keeps_lsp_and_files_branches_reachable(monkeypatch)
 
 
 def test_tui_uses_narrow_owner_for_context_picker_and_keeps_other_pickers_blocked():
-    source = SOURCE.read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    methods = {node.name: node for node in app.body
-               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    _, methods = _tui_methods()
 
     inject_calls = _method_calls(methods["_inject_agent_context"])
     assert "ContextFilePickerOwner" in inject_calls
@@ -198,11 +203,11 @@ def test_tui_uses_narrow_owner_for_context_picker_and_keeps_other_pickers_blocke
         assert not (calls & {"choose_context_file", "choose_workspace_file",
                              "choose_workspace_directory", "create_subprocess_exec"})
 
-    # The README command is nested under plugin registration.
-    nested = [node for node in ast.walk(methods["_register_builtin_plugins"])
+    menu_tree = ast.parse((SOURCE.parent / "tui_app_menu.py").read_text(encoding="utf-8"))
+    readme = [node for node in menu_tree.body
               if isinstance(node, ast.AsyncFunctionDef) and node.name == "_readme_cmd"]
-    assert len(nested) == 1
-    assert not (_method_calls(nested[0]) & {"choose_workspace_file", "create_subprocess_exec"})
+    assert len(readme) == 1
+    assert not (_method_calls(readme[0]) & {"choose_workspace_file", "create_subprocess_exec"})
 
 
 def test_tui_copies_workspace_paths_only_through_the_clipboard_owner():

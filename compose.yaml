@@ -1,0 +1,27 @@
+services:
+  isycode:
+    build: .
+    image: isycode-e2e
+    working_dir: /workspace
+    volumes:
+      # Carpeta de prueba vacía (el workspace que ISyCode verá como proyecto)
+      - ${E2E_WORKSPACE:-~/Documents/isycode-e2e}:/workspace
+      # Estado aislado y fresco: primera corrida real cada vez que borres el volumen
+      - isycode-e2e-state:/state
+    environment:
+      ISYCODE_STATE_HOME: /state
+      ISYCODE_PROVIDER: ${ISYCODE_PROVIDER:-}
+      ISYCODE_MODEL: ${ISYCODE_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NEBIUS_API_KEY: ${NEBIUS_API_KEY:-}
+      TERM: xterm-256color
+    # Permite a bubblewrap crear los namespaces del sandbox de comandos.
+    # Sin esto, ISyCode degrada honestamente: comandos apagados, resto funciona.
+    cap_add:
+      - SYS_ADMIN
+    stdin_open: true
+    tty: true
+
+volumes:
+  isycode-e2e-state:

@@ -17,18 +17,36 @@ import urllib.request
 import urllib.error
 from typing import Iterator, Callable
 
+from isycode.egress import EgressDenied, review_destination
+from isycode.turn_control import TransportRetry, tool_arguments_complete
+
+DEFAULT_STREAM_TIMEOUT_S = None
+
+
+class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Streaming requests carry bearer credentials; never follow redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
 
 class StreamError(Exception):
-    def __init__(self, message: str, status: int | None = None):
+    def __init__(self, message: str, status: int | None = None, *, provider_code: str | None = None, retry_after: float | None = None):
         super().__init__(message)
         self.status = status
+        self.provider_code = provider_code
+        self.retry_after = retry_after
         self.transport = status is None
 
 
 
 async def _upgrade_client_tls(writer: asyncio.StreamWriter, context: ssl.SSLContext,
                               host: str) -> None:
-    """Upgrade a CONNECT stream on supported Python 3.10+ runtimes."""
+    """Upgrade a CONNECT stream without turning certificate checks off.
+
+    The chat transport no longer opens a proxy tunnel. This stays so a later
+    reviewed tunnel cannot replace the handshake with an unverified socket.
+    """
     if callable(getattr(writer, "start_tls", None)):
         await writer.start_tls(context, server_hostname=host)
         return
@@ -78,13 +96,14 @@ def stream_complete(
     api_key: str,
     model: str,
     messages: list[dict],
-    max_tokens: int = 2000,
+    max_tokens: int | None = None,
     temperature: float = 0.2,
     token_limit_field: str = "max_tokens",
     reasoning_effort: str | None = None,
     temperature_supported: bool = True,
-    timeout_s: float = 120.0,
+    timeout_s: float | None = DEFAULT_STREAM_TIMEOUT_S,
     on_chunk: Callable[[str, str], None] | None = None,
+    chat_template_kwargs: dict | None = None,
 ) -> dict:
     """Stream a chat completion. Returns collected result.
 
@@ -97,11 +116,14 @@ def stream_complete(
         "messages": messages,
         "stream": True,
     }
-    body[token_limit_field] = max_tokens
+    if max_tokens is not None:
+        body[token_limit_field] = max_tokens
     if temperature_supported:
         body["temperature"] = temperature
     if reasoning_effort is not None:
         body["reasoning_effort"] = reasoning_effort
+    if chat_template_kwargs is not None:
+        body["chat_template_kwargs"] = chat_template_kwargs
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/chat/completions",
         data=json.dumps(body).encode(),
@@ -116,9 +138,17 @@ def stream_complete(
     usage: dict = {}
     t0 = time.time()
     try:
-        resp = urllib.request.urlopen(req, timeout=timeout_s)
+        review_destination(base_url)
+    except EgressDenied as exc:
+        raise StreamError(str(exc)) from exc
+    try:
+        resp = urllib.request.build_opener(
+            urllib.request.ProxyHandler({}), _RejectRedirectHandler).open(
+            req, timeout=timeout_s)
     except urllib.error.HTTPError as e:
-        raise StreamError(f"HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
+        from isycode.provider_errors import error_signals
+        code, retry = error_signals(e.read(65536), {"retry-after": e.headers.get("Retry-After", "")})
+        raise StreamError(f"provider returned HTTP {e.code}", status=e.code, provider_code=code, retry_after=retry) from e
     except (urllib.error.URLError, OSError) as e:
         raise StreamError(f"stream unreachable: {e}")
     try:
@@ -167,14 +197,15 @@ async def async_stream_complete(
     api_key: str,
     model: str,
     messages: list[dict],
-    max_tokens: int = 1200,
+    max_tokens: int | None = None,
     token_limit_field: str = "max_tokens",
     reasoning_effort: str | None = None,
     temperature_supported: bool = True,
-    timeout_s: float = 120.0,
+    timeout_s: float | None = DEFAULT_STREAM_TIMEOUT_S,
     on_chunk: Callable[[str, str], None] | None = None,
     tools: list[dict] | None = None,
     include_usage: bool = False,
+    chat_template_kwargs: dict | None = None,
 ) -> dict:
     """Stream a completion over an asyncio-owned socket that its task can cancel."""
     parsed = urlparse(base_url)
@@ -184,9 +215,10 @@ async def async_stream_complete(
         raise StreamError("provider URL must not contain embedded credentials")
     if any(char in api_key for char in "\r\n"):
         raise StreamError("provider credential contains invalid HTTP header characters")
-    proxy_url = urllib.request.getproxies().get(parsed.scheme)
-    if proxy_url and urllib.request.proxy_bypass(parsed.netloc):
-        proxy_url = None
+    try:
+        reviewed = review_destination(base_url)
+    except EgressDenied as exc:
+        raise StreamError(str(exc)) from exc
 
     body = {"model": model, "messages": messages, "stream": True}
     if include_usage:
@@ -194,11 +226,14 @@ async def async_stream_complete(
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
-    body[token_limit_field] = max_tokens
+    if max_tokens is not None:
+        body[token_limit_field] = max_tokens
     if temperature_supported:
         body["temperature"] = 0.2
     if reasoning_effort is not None:
         body["reasoning_effort"] = reasoning_effort
+    if chat_template_kwargs is not None:
+        body["chat_template_kwargs"] = chat_template_kwargs
     payload = json.dumps(body).encode("utf-8")
     host = parsed.hostname.encode("idna").decode("ascii")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
@@ -211,77 +246,58 @@ async def async_stream_complete(
     if any(char in request_path for char in "\r\n "):
         raise StreamError("provider URL contains invalid request-target characters")
 
-    loop = asyncio.get_running_loop()
-    deadline = loop.time() + timeout_s
-
     async def bounded(awaitable):
-        remaining = deadline - loop.time()
-        if remaining <= 0:
-            raise asyncio.TimeoutError
-        return await asyncio.wait_for(awaitable, timeout=remaining)
+        """Wait with a deadline without turning cancellation into a timeout.
+
+        Python 3.10's ``asyncio.wait_for`` can report a cancelled read as
+        ``TimeoutError``. ``asyncio.wait`` leaves ``CancelledError`` alone.
+        """
+        if timeout_s is None:
+            return await awaitable
+        inner = asyncio.ensure_future(awaitable)
+        try:
+            done, _pending = await asyncio.wait({inner}, timeout=timeout_s)
+        except asyncio.CancelledError:
+            inner.cancel()
+            raise
+        if inner not in done:
+            inner.cancel()
+            raise asyncio.TimeoutError()
+        return inner.result()
 
     tls = ssl.create_default_context() if parsed.scheme == "https" else None
-    if proxy_url:
-        proxy = urlparse(proxy_url)
-        if proxy.scheme != "http" or not proxy.hostname or proxy.username or proxy.password:
-            raise StreamError("streaming requires an HTTP proxy without embedded credentials")
-        reader, writer = await bounded(asyncio.open_connection(proxy.hostname, proxy.port or 80))
-        if tls:
-            # CONNECT carries no provider credential; TLS verification remains enabled.
-            tunnel_target = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
-            try:
-                writer.write((f"CONNECT {tunnel_target} HTTP/1.1\r\n"
-                              f"Host: {tunnel_target}\r\n\r\n").encode("ascii"))
-                await bounded(writer.drain())
-                status_line = await bounded(reader.readline())
-                parts = status_line.decode("latin-1").split()
-                if len(parts) < 2 or not parts[0].startswith("HTTP/") or not parts[1].isdigit():
-                    raise StreamError("proxy returned an invalid HTTP status")
-                status = int(parts[1])
-                if status != 200:
-                    raise StreamError(f"proxy refused provider tunnel (HTTP {status}); no provider request was sent")
-                header_bytes = 0
-                while True:
-                    line = await bounded(reader.readline())
-                    header_bytes += len(line)
-                    if not line or header_bytes > 64 * 1024:
-                        raise StreamError("proxy returned incomplete or oversized headers")
-                    if line == b"\r\n":
-                        break
-                # Stop plaintext reads before TLS takes over. A CONNECT peer may
-                # have appended unauthenticated bytes to its headers; those must
-                # never enter the authenticated SSE parser after the upgrade.
-                writer.transport.pause_reading()
-                if reader._buffer:
-                    raise StreamError("proxy sent unexpected plaintext after CONNECT headers")
-                await bounded(_upgrade_client_tls(writer, tls, host))
-            except BaseException:
-                writer.close()
-                try:
-                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
-                except (asyncio.TimeoutError, OSError):
-                    pass
-                raise
-        else:
-            request_path = f"http://{host_header}{request_path}"
-    else:
-        reader, writer = await bounded(asyncio.open_connection(
-            host, port, ssl=tls, server_hostname=host if tls else None))
+    # The peer is the address review_destination accepted. The Host header and
+    # the TLS name stay the configured hostname. An ambient proxy is not used.
+    peer = reviewed.ips[0]
+
+    async def connect_once():
+        # Retries stay here, before request bytes. A lost response is not retried.
+        return await bounded(asyncio.open_connection(
+            peer, reviewed.port, ssl=tls, server_hostname=host if tls else None))
+
+    try:
+        reader, writer = await TransportRetry().attempt(connect_once)
+    except asyncio.CancelledError:
+        raise
+    except (ConnectionRefusedError, TimeoutError, asyncio.TimeoutError, OSError) as exc:
+        raise StreamError("provider connection failed") from exc
     content: list[str] = []
     reasoning: list[str] = []
     usage: dict = {}
     tool_calls: dict[int, dict] = {}
     finish_reason = None
     line_buffer = bytearray()
+    stream_done = False
     started = time.monotonic()
 
     def consume_sse_line(raw_line: bytes) -> bool:
-        nonlocal finish_reason, usage
+        nonlocal finish_reason, usage, stream_done
         line = raw_line.decode("utf-8", errors="replace").strip()
         if not line.startswith("data:"):
             return False
         data = line[5:].strip()
         if data == "[DONE]":
+            stream_done = True
             return True
         try:
             event = json.loads(data)
@@ -289,6 +305,12 @@ async def async_stream_complete(
             return False
         if not isinstance(event, dict):
             return False
+        if "error" in event:
+            # Providers may fail after sending HTTP 200. Never echo their body:
+            # it can contain credentials or private request/transcript data.
+            from isycode.provider_errors import error_signals
+            code, _ = error_signals(json.dumps(event))
+            raise StreamError("provider reported a streaming API error", provider_code=code)
         choices = event.get("choices") or []
         if not choices:
             if isinstance(event.get("usage"), dict):
@@ -330,9 +352,9 @@ async def async_stream_complete(
         line_buffer.extend(data)
         while True:
             newline = line_buffer.find(b"\n")
+            if (newline < 0 and len(line_buffer) > 1024 * 1024) or newline > 1024 * 1024:
+                raise StreamError("provider SSE frame exceeds 1 MiB")
             if newline < 0:
-                if len(line_buffer) > 1_000_000:
-                    raise StreamError("provider sent an oversized streaming event")
                 return False
             raw_line = bytes(line_buffer[:newline])
             del line_buffer[:newline + 1]
@@ -372,7 +394,21 @@ async def async_stream_complete(
                 key, value = header_line.decode("latin-1").split(":", 1)
                 headers[key.strip().casefold()] = value.strip()
         if status != 200:
-            raise StreamError(f"provider returned HTTP {status}", status=status)
+            from isycode.provider_errors import error_signals
+            error_body = b""
+            try:
+                async with asyncio.timeout(3):
+                    if "chunked" in headers.get("transfer-encoding", "").casefold():
+                        size = int((await reader.readline()).split(b";", 1)[0].strip(), 16)
+                        error_body = await reader.readexactly(min(size, 65536))
+                    elif "content-length" in headers:
+                        error_body = await reader.readexactly(min(max(0, int(headers["content-length"])), 65536))
+                    else:
+                        error_body = await reader.read(65536)
+            except (ValueError, OSError, asyncio.TimeoutError, asyncio.IncompleteReadError):
+                pass
+            code, retry = error_signals(error_body, headers)
+            raise StreamError(f"provider returned HTTP {status}", status=status, provider_code=code, retry_after=retry)
 
         async def read_chunked() -> None:
             while True:
@@ -415,10 +451,21 @@ async def async_stream_complete(
                 data = await bounded(reader.read(65536))
                 if not data or await consume_bytes(data):
                     break
+        if not stream_done and not finish_reason:
+            raise StreamError("provider closed an incomplete completion stream")
+        executable: list[dict] = []
+        # [DONE] is the end of the frame. A finish reason without it, a length
+        # stop, or arguments that are not one JSON object are not a tool call.
+        if stream_done and finish_reason not in {"length", "content_filter"}:
+            for index in sorted(tool_calls):
+                call = tool_calls[index]
+                raw = (call.get("function") or {}).get("arguments")
+                if tool_arguments_complete(raw):
+                    executable.append(call)
         return {
             "text": "".join(content), "reasoning": "".join(reasoning),
             "finish_reason": finish_reason, "usage": usage,
-            "tool_calls": [tool_calls[index] for index in sorted(tool_calls)],
+            "tool_calls": executable,
             "latency_s": time.monotonic() - started,
         }
     except asyncio.TimeoutError as error:

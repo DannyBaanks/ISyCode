@@ -1,0 +1,107 @@
+hito: M6
+puerta: G6
+estado: EN_REVISION
+sha_evaluado: a495361cf04393c20278192155e9dffcdd60e5e2
+fecha_utc: 2026-10-02T15:50:48Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, glibc 2.39, bubblewrap 0.9.0, libseccomp.so.2, curl 8.5.0, Python 3.12.3, Textual 8.2.8, 12 CPU, 14.8Gi RAM
+perfil_y_politica: policy version 1; el journal de operaciones vive fuera del workspace y se marca effected antes del efecto; un recibo no se repite y una respuesta perdida queda UNCERTAIN; Esc cancela stream, staging y promoción; el backoff solo reintenta el connect; git.push sigue fuera de Classic y del conjunto quieto; este hito no abre el bucle de agente ni M6A
+dependencias: G4, G5
+dependencias_estado:
+  G4: EN_REVISION
+  G5: EN_REVISION
+casos:
+  - id: G6-01
+    prueba: tests/test_turn_control.py::test_g6_01_cancel_during_stream_closes_the_socket tests/test_turn_control.py::test_g6_01_cancel_during_staging_kills_child_and_grandchild tests/test_turn_control.py::test_g6_01_cancel_during_promotion_stops_later_files
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: cancelar durante el stream, el staging, la promoción, el hijo y el nieto no deja procesos de ese trabajo; la verificación de procesos es desde /proc del host
+    observado: >
+      El servidor local aceptó la petición y el cancel de la tarea cerró el
+      socket; el resultado fue CancelledError y no una tool call. Con bwrap
+      real, el comando hizo fork de un hijo y un nieto sin setsid; /proc del
+      host mostró al menos 3 procesos vivos con la marca y, tras cancelar,
+      cero. El workspace quedó con .isyroot. La promoción se interrumpió en
+      before-apply:1: a.txt volvió a su texto y b.txt no cambió, el cargo
+      quedó en 0 y la misma operación después levantó LedgerDenied uncertain
+      sin volver a cobrar. La tabla de puntos está en el docstring de
+      tests/test_turn_control.py y en ADR 0007.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/pytest-not-integration.txt
+        sha256: 5c34baa1f4882e5e9c6459f7ecffcd59712ea396add3f87da76cc2c83f265a92
+  - id: G6-02
+    prueba: tests/test_turn_control.py::test_g6_02_lost_publish_response_is_not_a_second_publish tests/test_turn_control.py::test_g6_02_a_committed_promotion_is_not_charged_twice
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: perder la respuesta después del efecto y reabrir produce un solo efecto o UNCERTAIN, nunca una segunda publicación ni un segundo cargo
+    observado: >
+      El transporte de git.push corrió una vez y persist_receipt devolvió
+      falso: la decisión fue NOT_VERIFIABLE. Un PublishOwner nuevo, con el
+      mismo estado, devolvió UNCERTAIN y no llamó al transporte. La promoción
+      con crash after-commit dejó el archivo en A y un cargo; al reabrir el
+      ledger y el journal la misma operación devolvió committed reconciliado,
+      el mismo cargo y el mismo byte. No hubo segunda escritura.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/pytest-not-integration.txt
+        sha256: 5c34baa1f4882e5e9c6459f7ecffcd59712ea396add3f87da76cc2c83f265a92
+  - id: G6-03
+    prueba: tests/test_turn_control.py::test_g6_03_restart_keeps_an_open_reservation_and_one_charge tests/test_turn_control.py::test_g6_02_lost_publish_response_is_not_a_second_publish
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: matar al owner y abrir otro proceso conserva la reserva o el recibo; la reconciliación no cobra dos veces ni publica dos veces
+    observado: >
+      El crash after-apply:0 dejó la reserva abierta. Un EffectLedger nuevo
+      sobre el mismo directorio la vio abierta. La primera reconcile terminó
+      en ROLLED_BACK, UNCERTAIN o COMMITTED y la segunda en IDLE o UNCERTAIN.
+      El cargo no subió. La misma operación no volvió a aplicarse. La
+      publicación ya marcada effected, reabierta por otro owner, no llamó al
+      transporte. No se hizo git push.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/pytest-not-integration.txt
+        sha256: 5c34baa1f4882e5e9c6459f7ecffcd59712ea396add3f87da76cc2c83f265a92
+  - id: G6-04
+    prueba: tests/test_turn_control.py::test_g6_04_truncated_tool_calls_are_not_executable tests/test_turn_control.py::test_g6_04_retry_keeps_the_new_draft_and_transcript_order
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: un stream truncado o unos argumentos que no son un objeto JSON completo no se ejecutan; el retry conserva el borrador nuevo y el orden del transcript
+    observado: >
+      Argumentos cortados con finish_reason tool_calls, con y sin DONE,
+      dejaron tool_calls vacío. Un objeto JSON partido en dos deltas y cerrado
+      con DONE sí se devolvió, así que el filtro no tira una llamada completa.
+      En la TUI, al cancelar, el borrador nuevo se quedó, el historial siguió
+      siendo earlier y luego reply, la nota vieja de herramienta no se
+      relanzó y /retry no pisó ese borrador.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/pytest-not-integration.txt
+        sha256: 5c34baa1f4882e5e9c6459f7ecffcd59712ea396add3f87da76cc2c83f265a92
+  - id: G6-05
+    prueba: tests/test_turn_control.py::test_g6_05_backoff_is_bounded_cancellable_and_does_not_change_authority
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: el backoff tiene tope y jitter, se cancela, no arma una tormenta, y un fallo de provider no cambia la autoridad
+    observado: >
+      max_attempts 5 se rechaza. Tres ConnectionRefused producen dos esperas,
+      cada una como máximo 0.2 s. El evento de cancelación corta en el primer
+      fallo. ValueError no se reintenta. async_stream_complete con el connect
+      parcheado llamó 3 veces y levantó StreamError. policy() y el modo
+      security quedaron iguales. No hubo set_grant.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/pytest-not-integration.txt
+        sha256: 5c34baa1f4882e5e9c6459f7ecffcd59712ea396add3f87da76cc2c83f265a92
+sin_evidencia_real:
+  - revisor distinto del autor
+  - exactly-once universal; sin recibo el estado es UNCERTAIN y no se repite el efecto
+  - un nieto que llame a setsid y salga del grupo no está demostrado
+  - el bucle de agente no se abrió; agent_loop sigue siendo compactación
+  - M6A no está empezado
+  - LSP conserva --share-net; no entra en este hito
+  - Windows y macOS
+  - git push en vivo; el transporte de la prueba es un recorder en proceso
+  - G0, G1, G2, G3, G4 y G5 siguen EN_REVISION
+  - este push del producto no esperó los checks; el remoto imprimió Bypassed rule violations para a495361, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - este push de la evidencia no esperó los checks; el remoto imprimió Bypassed rule violations para c339060, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - no se afirma que CI pasó
+regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1105 passed, 2 skipped, 11 deselected; 98.73s; skips anthropic ausente y TypeScript sandbox_ready ausente
+riesgos_residuales: marcar effected antes del transporte deja UNCERTAIN si el proceso muere antes de la llamada; el retry de connect no envuelve el urllib síncrono ni el turno de chat; una promoción incierta sigue bloqueando reservas nuevas del ledger
+rollback_ensayado: revertir a495361cf04393c20278192155e9dffcdd60e5e2 quita el journal de operaciones, el interruptor de promoción y el retry de connect; no borra journals de prueba bajo el estado local ni abre el bucle
+revision: ausente

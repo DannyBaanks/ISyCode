@@ -34,6 +34,7 @@ from isycode.action_runtime import (
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
+from isycode.staging import remove_spill, spill_bytes
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_setup import state_root
 from isycode.winfs import VerifiedFS, is_link, use_verified_fs
@@ -402,6 +403,113 @@ class WorkspaceWriteOwner:
 
     # ── apply ──────────────────────────────────────────────────
 
+    def _effect_ledger(self):
+        from isycode.effect_ledger import EffectLedger
+        return EffectLedger(self.root)
+
+    def _reserve_effect(self, title: str, paths: tuple[str, ...], deletes: int, churn: int):
+        """Reserve before authorization so a budget denial does not consume the approval.
+
+        The lock stays held until commit or cancel, so another promotion cannot
+        reconcile this reservation away mid-write.
+        """
+        from isycode.effect_ledger import EffectCost, LedgerDenied
+        book = self._effect_ledger()
+        book._acquire()
+        self._effect_book = book
+        try:
+            reservation = book.reserve(EffectCost(paths, deletes, churn))
+            self._effect_reservation = reservation
+            return reservation
+        except LedgerDenied as exc:
+            book._release()
+            self._effect_book = None
+            return ActionOutcome(title, "DENY", None, str(exc)[:300])
+
+    def _cancel_effect(self, reservation_id: str) -> None:
+        from isycode.effect_ledger import LedgerDenied
+        book = getattr(self, "_effect_book", None)
+        if book is None:
+            return
+        try:
+            book.reconcile()
+        except LedgerDenied:
+            return
+        finally:
+            book._release()
+            self._effect_book = None
+
+    def _commit_effect(self, reservation_id: str, paths: tuple[str, ...], deletes: int, churn: int) -> None:
+        book = self._effect_book
+        assert book is not None
+        try:
+            book.mark_applied(reservation_id, paths[0])
+            book.commit(reservation_id, applied_paths=paths, deletes=deletes, churn_bytes=churn)
+        finally:
+            book._release()
+            self._effect_book = None
+
+    def _prepare_effect(self, reservation_id: str, preview: WritePreview) -> str:
+        """Persist preimages, a recovery plan and undo before the first mutation."""
+        from isycode.effect_fs import digest, read_file
+
+        book = self._effect_book
+        assert book is not None
+        params = preview.request.parameters
+        before = read_file(self.root, preview.path)
+        if preview.kind == "move":
+            after = read_file(self.root, preview.destination)
+            if before is None or after is not None or digest(before) != params["sha256"]:
+                raise ValueError("move preimage changed")
+            plan = [
+                {"path": preview.destination, "kind": "move-destination", "preimage": None,
+                 "target": digest(before), "churn": 0, "preimage_mode": None,
+                 "target_mode": before[1], "typed": True},
+                {"path": preview.path, "kind": "move-source", "preimage": digest(before),
+                 "target": None, "churn": len(before[0]), "preimage_mode": before[1],
+                 "target_mode": None, "typed": True},
+            ]
+            record = {"kind": "move", "time": time.time(), "path": preview.path,
+                      "to": preview.destination, "after_sha256": params["sha256"],
+                      "before": None, "new_folders": list(params["new_folders"])}
+        else:
+            expected = params.get("before_sha256", params.get("current_sha256"))
+            if ("absent" if before is None else digest(before)) != expected:
+                raise ValueError("file preimage changed")
+            payload = None if preview.removes else preview.content.encode("utf-8")
+            plan = [{"path": preview.path, "kind": "delete" if preview.removes else "write",
+                     "preimage": digest(before), "target": None if payload is None else _sha(payload),
+                     "churn": (0 if before is None else len(before[0]))
+                              + (0 if payload is None else len(payload)),
+                     "preimage_mode": None if before is None else before[1],
+                     "target_mode": None if payload is None else 0o644 if before is None else before[1],
+                     "typed": True}]
+            record = {"time": time.time(), "path": preview.path,
+                      "before": None if before is None else before[0].decode("utf-8"),
+                      "after_sha256": "absent" if payload is None else _sha(payload),
+                      "new_folders": list(params.get("new_folders", ()))}
+            if preview.kind == "delete":
+                record["kind"] = "delete"
+        if before is not None:
+            book.backup_file(reservation_id, preview.path, before[0])
+        book.store_plan(reservation_id, plan)
+        checkpoint = "undo" if preview.is_undo else self.checkpoints.save(record)
+        book.mark_applying(reservation_id, plan[0]["path"])
+        return checkpoint
+
+    def _regular_size(self, target: Path) -> int:
+        try:
+            info = target.lstat()
+        except OSError:
+            return 0
+        if not stat.S_ISREG(info.st_mode):
+            return 0
+        return info.st_size
+
+    def _write_cost(self, preview: WritePreview) -> tuple[tuple[str, ...], int, int]:
+        return ((preview.path,), 0,
+                self._regular_size(Path(preview.request.target)) + len(preview.content.encode("utf-8")))
+
     def _authorize(self, request: ActionRequest, approval: ActionApproval | None) -> str | None:
         try:
             authority, decision = self.gate.authorize(
@@ -414,6 +522,12 @@ class WorkspaceWriteOwner:
             return authority.reason[:300]
         return "; ".join(f"{item.name}: {item.reason}" for item in decision.checks
                          if not item.passed)[:300]
+
+    def stage_preview(self, preview: WritePreview) -> Path:
+        """Put the approved bytes outside the workspace. The user file stays unchanged."""
+        if not isinstance(preview, WritePreview):
+            raise TypeError("preview has the wrong type")
+        return spill_bytes(preview.content.encode("utf-8"))
 
     def apply(self, preview: WritePreview, approval: ActionApproval | None) -> ActionOutcome:
         if not isinstance(preview, WritePreview):
@@ -433,15 +547,27 @@ class WorkspaceWriteOwner:
         except (OSError, ValueError) as exc:
             return ActionOutcome("File change denied.", "DENY", None,
                                  f"file cannot be re-checked: {str(exc)[:200]}")
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("File change denied.", "DENY", None,
                                  "the file changed since the reviewed diff; review a new one")
+        paths, deletes, churn = self._write_cost(preview)
+        reservation = self._reserve_effect("File change denied.", paths, deletes, churn)
+        if isinstance(reservation, ActionOutcome):
+            return reservation
         denied = self._authorize(preview.request, approval)
         if denied is not None:
+            self._cancel_effect(reservation)
             return ActionOutcome("File change denied.", "DENY", None, denied)
 
         params = preview.request.parameters
         target = Path(preview.request.target)
+        try:
+            checkpoint = self._prepare_effect(reservation, preview)
+            staged = self.stage_preview(preview)
+        except (OSError, ValueError) as exc:
+            self._cancel_effect(reservation)
+            return ActionOutcome("File change denied.", "DENY", None,
+                                 f"durable recovery could not be prepared: {str(exc)[:200]}")
         try:
             if ".isycode/commands" in params["new_folders"]:
                 commands_directory = self.root / ".isycode" / "commands"
@@ -452,24 +578,29 @@ class WorkspaceWriteOwner:
                     directory_fd = self._open_directory(commands_directory,
                                                         tuple(params["new_folders"]))
                     os.close(directory_fd)
-            before = self._replace(target, preview.content.encode("utf-8"),
+            payload = staged.read_bytes()
+            if payload != preview.content.encode("utf-8"):
+                raise ValueError("staged bytes do not match the approved content")
+            before = self._replace(target, payload,
                                    params["before_sha256"], tuple(params["new_folders"]))
             written = self._read_back(target)
             if written is None or _sha(written) != params["after_sha256"]:
                 raise ValueError("written content does not match the approved digest")
         except (OSError, ValueError) as exc:
+            self._cancel_effect(reservation)
             receipt = self._receipt(preview.request, "FAILURE", "write_failed")
             return ActionOutcome("File change failed; the approved content is not verified.",
                                  "ERROR", receipt, str(exc)[:300])
+        finally:
+            remove_spill(staged)
         try:
-            checkpoint = self.checkpoints.save({
-                "time": time.time(), "path": params["path"],
-                "before": None if before is None else before.decode("utf-8"),
-                "after_sha256": params["after_sha256"],
-                "new_folders": list(params["new_folders"]),
-            })
-        except (OSError, ValueError):
-            checkpoint = ""
+            self._commit_effect(reservation, paths, deletes, churn)
+        except Exception as exc:
+            from isycode.effect_ledger import LedgerDenied
+            if isinstance(exc, LedgerDenied):
+                return ActionOutcome("File written, but the effect ledger did not accept it.",
+                                     "NOT_VERIFIABLE", None, str(exc)[:300])
+            raise
         result = json.dumps({"path": params["path"], "after_sha256": params["after_sha256"]},
                             sort_keys=True)
         receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), preview.request.action_id,
@@ -487,14 +618,25 @@ class WorkspaceWriteOwner:
             fresh = self.preview_undo(params["checkpoint_id"])
         except (OSError, ValueError, KeyError) as exc:
             return ActionOutcome("Undo denied.", "DENY", None, str(exc)[:200])
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("Undo denied.", "DENY", None,
                                  "the file changed since the reviewed undo; review a new one")
+        if preview.removes:
+            paths, deletes, churn = ((preview.path,), 1, self._regular_size(Path(preview.request.target)))
+        else:
+            paths, deletes, churn = ((preview.path,), 0,
+                                     self._regular_size(Path(preview.request.target))
+                                     + len(preview.content.encode("utf-8")))
+        reservation = self._reserve_effect("Undo denied.", paths, deletes, churn)
+        if isinstance(reservation, ActionOutcome):
+            return reservation
         denied = self._authorize(preview.request, approval)
         if denied is not None:
+            self._cancel_effect(reservation)
             return ActionOutcome("Undo denied.", "DENY", None, denied)
         target = Path(preview.request.target)
         try:
+            self._prepare_effect(reservation, preview)
             if preview.removes:
                 self._remove(target, params["current_sha256"])
                 if self._read_back(target) is not None:
@@ -507,8 +649,16 @@ class WorkspaceWriteOwner:
                 if written is None or _sha(written) != params["restore_sha256"]:
                     raise ValueError("restored content does not match the checkpoint")
             self.checkpoints.mark_undone(params["checkpoint_id"])
+            self._commit_effect(reservation, paths, deletes, churn)
         except (OSError, ValueError) as exc:
+            self._cancel_effect(reservation)
             return ActionOutcome("Undo failed; check the file.", "ERROR", None, str(exc)[:300])
+        except Exception as exc:
+            from isycode.effect_ledger import LedgerDenied
+            if not isinstance(exc, LedgerDenied):
+                raise
+            return ActionOutcome("Undo changed the file, but the effect ledger did not accept it.",
+                                 "NOT_VERIFIABLE", None, str(exc)[:300])
         receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), preview.request.action_id,
                                 preview.request.digest, "ALLOW", "SUCCESS",
                                 _sha(f"restored:{params['checkpoint_id']}".encode()))
@@ -531,26 +681,34 @@ class WorkspaceWriteOwner:
             fresh = self.preview_delete(preview.path)
         except (OSError, ValueError) as exc:
             return ActionOutcome("Delete denied.", "DENY", None, f"file cannot be re-checked: {str(exc)[:200]}")
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("Delete denied.", "DENY", None,
                                  "the file changed since it was reviewed; review it again")
+        paths, deletes, churn = ((preview.path,), 1, len(preview.content.encode("utf-8")))
+        reservation = self._reserve_effect("Delete denied.", paths, deletes, churn)
+        if isinstance(reservation, ActionOutcome):
+            return reservation
         denied = self._authorize(preview.request, approval)
         if denied is not None:
+            self._cancel_effect(reservation)
             return ActionOutcome("Delete denied.", "DENY", None, denied)
         params = preview.request.parameters
         target = Path(preview.request.target)
         try:
+            checkpoint = self._prepare_effect(reservation, preview)
             self._remove(target, params["before_sha256"])
             if self._exists(target):
                 raise ValueError("the file is still present")
+            self._commit_effect(reservation, paths, deletes, churn)
         except (OSError, ValueError) as exc:
+            self._cancel_effect(reservation)
             return ActionOutcome("Delete failed; check the file.", "ERROR", None, str(exc)[:300])
-        try:
-            checkpoint = self.checkpoints.save({
-                "kind": "delete", "time": time.time(), "path": params["path"],
-                "before": preview.content, "after_sha256": "absent", "new_folders": []})
-        except (OSError, ValueError):
-            checkpoint = ""
+        except Exception as exc:
+            from isycode.effect_ledger import LedgerDenied
+            if not isinstance(exc, LedgerDenied):
+                raise
+            return ActionOutcome("Delete changed the file, but the effect ledger did not accept it.",
+                                 "NOT_VERIFIABLE", None, str(exc)[:300])
         return self._finish(preview.request, f"deleted:{params['path']}", f"Deleted {params['path']}",
                             "reviewed delete applied" + ("" if checkpoint else "; undo unavailable"))
 
@@ -564,29 +722,38 @@ class WorkspaceWriteOwner:
                     raise ValueError("that move was already undone")
         except (OSError, ValueError) as exc:
             return ActionOutcome("Move denied.", "DENY", None, f"file cannot be re-checked: {str(exc)[:200]}")
-        if fresh.request != preview.request:
+        if fresh != preview:
             return ActionOutcome("Move denied.", "DENY", None,
                                  "the file or destination changed since review; review it again")
+        source = Path(preview.request.target)
+        paths = (params["path"], params["to"])
+        deletes, churn = 0, self._regular_size(source)
+        reservation = self._reserve_effect("Move denied.", paths, deletes, churn)
+        if isinstance(reservation, ActionOutcome):
+            return reservation
         denied = self._authorize(preview.request, approval)
         if denied is not None:
+            self._cancel_effect(reservation)
             return ActionOutcome("Move denied.", "DENY", None, denied)
-        source = Path(preview.request.target)
         destination = self.root / params["to"]
         try:
+            checkpoint = self._prepare_effect(reservation, preview)
             self._move(source, destination, params["sha256"], tuple(params["new_folders"]))
             if self._file_digest(destination) != params["sha256"] or self._exists(source):
                 raise ValueError("the moved file could not be verified")
+            self._commit_effect(reservation, paths, deletes, churn)
         except (OSError, ValueError) as exc:
+            self._cancel_effect(reservation)
             return ActionOutcome("Move failed; check both paths.", "ERROR", None, str(exc)[:300])
-        checkpoint = "undo"
+        except Exception as exc:
+            from isycode.effect_ledger import LedgerDenied
+            if not isinstance(exc, LedgerDenied):
+                raise
+            return ActionOutcome("Move changed the file, but the effect ledger did not accept it.",
+                                 "NOT_VERIFIABLE", None, str(exc)[:300])
         try:
             if params["undo_of"]:
                 self.checkpoints.mark_undone(params["undo_of"])
-            else:
-                checkpoint = self.checkpoints.save({
-                    "kind": "move", "time": time.time(), "path": params["path"],
-                    "to": params["to"], "after_sha256": params["sha256"], "before": None,
-                    "new_folders": list(params["new_folders"])})
         except (OSError, ValueError):
             checkpoint = ""
         verb = "Moved back" if params["undo_of"] else "Moved"
@@ -773,6 +940,12 @@ class WorkspaceWriteOwner:
             raise ValueError("the file changed during approval; nothing was moved")
         if use_verified_fs():
             VerifiedFS(self.root).move(source, destination, new_folders)
+            book = self._effect_book
+            assert book is not None
+            book.mark_applied(self._effect_reservation,
+                              destination.relative_to(self.root).as_posix())
+            book.mark_applying(self._effect_reservation,
+                               source.relative_to(self.root).as_posix())
             return
         source_fd = self._open_directory(source.parent)
         try:
@@ -780,6 +953,13 @@ class WorkspaceWriteOwner:
             try:
                 os.link(source.name, destination.name, src_dir_fd=source_fd,
                         dst_dir_fd=destination_fd, follow_symlinks=False)
+                os.fsync(destination_fd)
+                book = self._effect_book
+                assert book is not None
+                book.mark_applied(self._effect_reservation,
+                                  destination.relative_to(self.root).as_posix())
+                book.mark_applying(self._effect_reservation,
+                                   source.relative_to(self.root).as_posix())
                 os.unlink(source.name, dir_fd=source_fd)
                 os.fsync(destination_fd)
                 os.fsync(source_fd)

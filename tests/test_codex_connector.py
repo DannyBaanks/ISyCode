@@ -123,9 +123,9 @@ MESSAGES = [{"role": "system", "content": "system-imported"},
 
 def connector(tmp_path, scenario="normal", *, timeout_s=2):
     executable = tmp_path / "fake-codex"
-    # A shebang cannot hold a path with spaces (e.g. a venv under "ISyCo Git"); the fake needs only stdlib.
-    interpreter = sys.executable if " " not in sys.executable else "/usr/bin/env python3"
-    executable.write_text(f"#!{interpreter}\n" + FAKE.replace("__SCENARIO__", repr(scenario)))
+    # The project's interpreter path contains spaces, which POSIX shebangs
+    # cannot represent. The fake peer uses stdlib only and the sanitized PATH.
+    executable.write_text("#!/usr/bin/env python3\n" + FAKE.replace("__SCENARIO__", repr(scenario)))
     executable.chmod(0o700)
     return CodexConnector(str(executable), tmp_path / "managed", timeout_s=timeout_s)
 
@@ -254,6 +254,9 @@ def test_text_stream_and_transcript_boundaries(tmp_path):
     assert "system-imported" not in thread["baseInstructions"] + thread["developerInstructions"]
     assert len(turn["input"]) == 1 and turn["input"][0]["type"] == "text"
     assert json.loads(turn["input"][0]["text"]) == {"messages": MESSAGES}
+    assert "functions.exec" in thread["developerInstructions"]
+    assert "Do not print tool-call JSON" in thread["developerInstructions"]
+    assert "Never execute built-in shell" in thread["developerInstructions"]
     assert thread["dynamicTools"][0] == {"type": "function", "name": "workspace_read",
         "description": TOOLS[0]["function"]["description"], "inputSchema": TOOLS[0]["function"]["parameters"]}
 
@@ -395,3 +398,18 @@ def test_official_published_reasoning_summary_and_usage_are_reported():
             assert response["text"]=="Hello world"
     asyncio.run(run())
     assert chunks==[("reasoning","Checking the request."),("content","Hello "),("content","world")]
+
+
+def test_inline_image_is_actual_user_input_not_json_text(tmp_path):
+    connection = connector(tmp_path)
+    url = "data:image/png;base64,aGVsbG8="
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Explain [IMAGE#1]"}, {"type": "image_url", "image_url": {"url": url}}]}]
+    async def run():
+        async with connection:
+            await connection.complete("m1", messages, None, None, effort="low")
+    asyncio.run(run())
+    turn = next(r["params"] for r in requests(connection) if r.get("method") == "turn/start")
+    assert turn["input"][1] == {"type": "image", "url": url}
+    assert url not in turn["input"][0]["text"]
+    assert turn["effort"] == "low"
+    assert turn["environments"] == []

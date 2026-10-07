@@ -10,12 +10,14 @@ requires-python = ">=3.10"
 dependencies = [
   "rich>=13.7,<15",
   "pathspec>=0.12,<2",
-  "textual==1.0.0",
+  "textual==8.2.8",
   "aiohttp>=3.9,<4",
   "keyring>=25.7,<26",
+  "tomli>=2; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
+vision-probe = ["Pillow>=10,<13"]
 # Native Claude provider (Anthropic Messages API).
 anthropic = ["anthropic>=1.10,<2"]
 
@@ -31,10 +33,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
 markers = [
   "integration: requires an external ISyCo checkout or running Gateway service",
 ]
 
 [tool.setuptools.package-data]
-isycode = ["bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md"]
+isycode = ["*.tcss", "assets/*.rgbz", "assets/*.png", "assets/*.gf", "assets/*.txt", "assets/*.json", "bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md"]

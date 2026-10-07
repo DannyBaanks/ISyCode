@@ -5,6 +5,7 @@ import asyncio
 import os
 from pathlib import Path
 import shutil
+import stat
 import sys
 
 
@@ -19,14 +20,14 @@ def build_linux_file_picker_command(executable: str, initial_directory: Path) ->
         return [
             executable,
             "--file-selection",
-            "--title=Choose context file",
+            "--title=Elegir archivo de contexto",
             "--filename=" + str(initial_directory.expanduser()) + "/",
             "--file-filter=Context documents | *.md *.txt",
         ]
     if name == "kdialog":
         return [
             executable,
-            "--title", "Choose context file",
+            "--title", "Elegir archivo de contexto",
             "--getopenfilename", str(initial_directory.expanduser()),
             "*.md *.txt",
         ]
@@ -82,10 +83,87 @@ async def choose_context_file(initial_directory: Path, *, timeout: float = 300.0
             if executable:
                 break
         if executable is None:
-            raise FilePickerUnavailable("Install Zenity or KDE Dialog to choose a context file.")
+            raise FilePickerUnavailable("Instala Zenity o KDE Dialog para elegir un archivo de contexto.")
         argv = build_linux_file_picker_command(executable, initial_directory)
         return await _run_picker(argv, timeout)
     raise FilePickerUnavailable("No native context-file picker is available on this platform.")
+
+
+async def choose_sibling_workspace_folder(main_directory: Path, *,
+                                          timeout: float = 300.0) -> Path | None:
+    """Open the OS folder chooser at the workspace parent.
+
+    The result is only a candidate. SiblingFolderPickerOwner and
+    WorkspaceFolders.add both validate the exact sibling boundary before any
+    workspace grants are written.
+    """
+    main = main_directory.expanduser().resolve(strict=True)
+    if not main.is_dir():
+        raise FilePickerUnavailable("The current workspace folder is unavailable.")
+    initial_directory = main.parent
+    if os.name == "nt":
+        return await asyncio.to_thread(_choose_windows_directory, initial_directory)
+    if sys.platform.startswith("linux"):
+        executable = None
+        for name in ("zenity", "kdialog"):
+            executable = shutil.which(name)
+            if executable:
+                break
+        if executable is None:
+            raise FilePickerUnavailable(
+                "Install Zenity or KDE Dialog to choose a sibling project folder.")
+        argv = build_linux_directory_picker_command(
+            executable, initial_directory, title="Choose sibling project folder")
+        return await _run_picker(argv, timeout)
+    raise FilePickerUnavailable("No native folder picker is available on this platform.")
+
+
+async def choose_harness_folder(initial_directory: Path, *, title: str,
+                                timeout: float = 300.0) -> Path | None:
+    """Open one native folder chooser for Multi Harness. Grants nothing."""
+    initial_directory = initial_directory.expanduser().resolve(strict=True)
+    if not initial_directory.is_dir():
+        raise FilePickerUnavailable("The initial folder is unavailable.")
+    if os.name == "nt":
+        try:
+            return await asyncio.to_thread(
+                _choose_windows_directory, initial_directory, title=title)
+        except FilePickerUnavailable as exc:
+            raise FilePickerUnavailable(f"Folder selection for {title.removeprefix('Choose the folder for ')} failed.") from exc
+    if sys.platform.startswith("linux"):
+        executable = next((found for name in ("zenity", "kdialog")
+                           if (found := shutil.which(name))), None)
+        if executable is None:
+            harness = title.removeprefix("Choose the folder for ")
+            raise FilePickerUnavailable(f"Folder selection for {harness} failed.")
+        argv = build_linux_directory_picker_command(executable, initial_directory, title=title)
+        try:
+            return await _run_picker(argv, timeout)
+        except FilePickerUnavailable as exc:
+            harness = title.removeprefix("Choose the folder for ")
+            raise FilePickerUnavailable(f"Folder selection for {harness} failed.") from exc
+    harness = title.removeprefix("Choose the folder for ")
+    raise FilePickerUnavailable(f"Folder selection for {harness} failed.")
+
+
+def _choose_windows_directory(initial_directory: Path, *,
+                              title: str = "Choose sibling project folder") -> Path | None:
+    """Use Windows' native folder chooser without launching a shell."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            root.attributes("-topmost", True)
+            selected = filedialog.askdirectory(
+                title=title,
+                initialdir=str(initial_directory), mustexist=True)
+        finally:
+            root.destroy()
+    except (ImportError, OSError, RuntimeError) as exc:
+        raise FilePickerUnavailable("Windows native folder picker is unavailable.") from exc
+    return Path(selected) if selected else None
 
 
 def _choose_windows_file(initial_directory: Path) -> Path | None:
@@ -145,32 +223,85 @@ async def _run_picker(argv: list[str], timeout: float) -> Path | None:
 
 
 class ContextFilePickerOwner:
-    """Own the explicit chooser gesture and constrain its result to one document."""
+    """Own a user chooser and constrain the result to this or a sibling project."""
 
     def __init__(self, workspace_root: Path):
         self.root = workspace_root.expanduser().resolve(strict=True)
 
     async def choose(self) -> Path | None:
-        selected = await choose_context_file(self.root)
+        selected = await choose_context_file(self.root.parent)
         if selected is None:
             return None
+        return self.validate(selected)
+
+    def validate(self, selected: Path) -> Path:
+        """Return a safe Markdown/text document in this or a direct sibling root."""
         try:
             lexical = Path(os.path.abspath(selected.expanduser()))
-            relative = lexical.relative_to(self.root)
-            current = self.root
+            project_root = self._project_root(lexical)
+            relative = lexical.relative_to(project_root)
+            current = project_root
             for part in relative.parts:
                 current = current / part
                 if current.is_symlink():
                     raise ValueError
             resolved = lexical.resolve(strict=True)
-            relative = resolved.relative_to(self.root)
+            relative = resolved.relative_to(project_root)
             if (not resolved.is_file() or resolved.suffix.casefold() not in {".md", ".txt"}
-                    or any(part.casefold() in {".git", ".isycode", ".ssh", ".aws", ".gnupg"}
+                    or any(part.startswith(".") or part.casefold() in {
+                               ".git", ".isycode", ".ssh", ".aws", ".gnupg",
+                           }
                            for part in relative.parts)):
                 raise ValueError
         except (OSError, RuntimeError, ValueError) as exc:
-            raise FilePickerUnavailable("Choose a .md or .txt file inside this workspace.") from exc
+            raise FilePickerUnavailable(
+                "Choose a visible .md or .txt file in this workspace or a direct sibling project.") from exc
         return resolved
+
+    def project_root_for(self, selected: Path) -> Path:
+        """Resolve the project root after the same path checks used by validate()."""
+        safe_file = self.validate(selected)
+        return self._project_root(safe_file)
+
+    def _project_root(self, selected: Path) -> Path:
+        lexical = Path(os.path.abspath(selected.expanduser()))
+        if lexical == self.root or self.root in lexical.parents:
+            return self.root
+        if lexical.parent == self.root.parent:
+            # A selected sibling root itself is not a document.
+            raise ValueError
+        for parent in lexical.parents:
+            if parent.parent == self.root.parent and parent != self.root:
+                if parent.name.startswith(".") or parent.is_symlink():
+                    raise ValueError
+                return parent.resolve(strict=True)
+        raise ValueError
+
+
+class SiblingFolderPickerOwner:
+    """Constrain the native chooser result to one real direct sibling directory."""
+
+    def __init__(self, main_directory: Path):
+        self.main = main_directory.expanduser().resolve(strict=True)
+        if not self.main.is_dir():
+            raise FilePickerUnavailable("The current workspace folder is unavailable.")
+
+    async def choose(self) -> Path | None:
+        selected = await choose_sibling_workspace_folder(self.main)
+        if selected is None:
+            return None
+        try:
+            lexical = Path(os.path.abspath(selected.expanduser()))
+            info = lexical.lstat()
+            resolved = lexical.resolve(strict=True)
+            if (not stat.S_ISDIR(info.st_mode) or lexical.parent != self.main.parent
+                    or lexical == self.main or resolved != lexical
+                    or lexical.name.startswith(".")):
+                raise ValueError
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise FilePickerUnavailable(
+                "Choose a visible, real project folder directly beside this workspace.") from exc
+        return lexical
 
 
 async def choose_workspace_file(initial_directory: Path, *, title: str = "Choose a workspace file",

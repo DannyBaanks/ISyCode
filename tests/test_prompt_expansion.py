@@ -69,12 +69,20 @@ def test_workspace_command_files_need_the_read_grant(tmp_path, monkeypatch):
 
 
 def _methods():
-    source = (Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py").read_text(encoding="utf-8")
-    module = ast.parse(source)
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    return {node.name: ast.get_source_segment(source, node) for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    package = Path(__file__).resolve().parents[1] / "src" / "isycode"
+    found = {}
+    for path in (package / "tui.py", *sorted(package.glob("tui_app_*.py"))):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    found[item.name] = ast.get_source_segment(source, item)
+    return found
 
 
 def test_tui_reads_mentions_and_workspace_commands_through_the_read_owner():

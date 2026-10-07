@@ -1,0 +1,14 @@
+model = "gpt-test"
+model_reasoning_effort = "high"
+approvals_reviewer = "manual"
+openai_base_url = "https://should-not-display.example"
+[projects."/fixture"]
+trust_level = "trusted"
+[mcp_servers.fake]
+command = "fake-mcp"
+args = ["--stdio"]
+[plugins.fake]
+enabled = true
+[[skills.config]]
+path = "/fixture/skill"
+enabled = true

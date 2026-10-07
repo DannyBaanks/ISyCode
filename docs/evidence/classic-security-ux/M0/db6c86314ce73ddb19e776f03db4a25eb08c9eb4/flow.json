@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "case": "read_edit_diff",
+      "actions": [
+        "workspace_read",
+        "workspace_edit",
+        "git_diff"
+      ],
+      "approval_screens": [
+        {
+          "screen": "WriteApprovalScreen",
+          "appeared_s": 0.801,
+          "approved_s": 1.152
+        }
+      ],
+      "approval_count": 1,
+      "elapsed_s": 1.161,
+      "app_py_before_sha256": "585c93666fcb046b7b264d3fa73202aa2a38254ae82a4b3ba19e873c2d5a9886",
+      "app_py_after_sha256": "69ef4f409b530264b0da21ad4054978ada08895c93631a0da1957e2a10b592b5",
+      "file_changed": true,
+      "journal": "PASS",
+      "final_text": "value = 2\n",
+      "provider": "simulated",
+      "sandbox": null
+    },
+    {
+      "case": "with_command",
+      "actions": [
+        "workspace_read",
+        "workspace_edit",
+        "workspace_run",
+        "git_diff"
+      ],
+      "approval_screens": [
+        {
+          "screen": "WriteApprovalScreen",
+          "appeared_s": 0.515,
+          "approved_s": 1.055
+        },
+        {
+          "screen": "CommandApprovalScreen",
+          "appeared_s": 1.106,
+          "approved_s": 1.682
+        }
+      ],
+      "approval_count": 2,
+      "elapsed_s": 5.967,
+      "app_py_before_sha256": "585c93666fcb046b7b264d3fa73202aa2a38254ae82a4b3ba19e873c2d5a9886",
+      "app_py_after_sha256": "69ef4f409b530264b0da21ad4054978ada08895c93631a0da1957e2a10b592b5",
+      "file_changed": true,
+      "journal": "PASS",
+      "final_text": "value = 2\n",
+      "provider": "simulated",
+      "sandbox": "/usr/bin/bwrap"
+    },
+    {
+      "case": "edit_without_approval",
+      "decision": "DENY",
+      "reason": "fresh request-bound approval is required",
+      "file_unchanged": true,
+      "elapsed_s": 0.203
+    }
+  ]
+}

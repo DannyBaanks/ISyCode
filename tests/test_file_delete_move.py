@@ -149,7 +149,7 @@ def test_boundary_rejects_forged_moves(workspace, change):
 def test_toolkit_button_grants_only_what_the_computer_supports(tmp_path, monkeypatch):
     from isycode.tui import TUIApp
 
-    monkeypatch.setattr("isycode.tui.sandbox_executable", lambda: None)
+    monkeypatch.setattr("isycode.tui_app_authority.sandbox_executable", lambda: None)
     app = TUIApp.__new__(TUIApp)
     app._workspace_root = tmp_path
     app._lsp_inventory = []

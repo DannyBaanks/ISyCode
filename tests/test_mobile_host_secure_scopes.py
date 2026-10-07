@@ -88,7 +88,7 @@ def test_mobile_host_owner_requires_scoped_grant_and_single_use_approval(tmp_pat
         async def stop(self):
             return None
 
-    authority = WorkspaceAuthority(tmp_path)
+    authority = WorkspaceAuthority(tmp_path, state_directory=tmp_path / "authority")
     approvals = ActionApprovalStore()
     owner = MobileHostOwner(tmp_path, authority, approvals, host=FakeHost())
     request = owner.start_request()
@@ -117,7 +117,7 @@ def test_mobile_host_owner_rejects_non_loopback_configuration(tmp_path):
         async def start(self):
             raise AssertionError("unsafe configuration must fail before start")
 
-    authority = WorkspaceAuthority(tmp_path)
+    authority = WorkspaceAuthority(tmp_path, state_directory=tmp_path / "authority")
     owner = MobileHostOwner(tmp_path, authority, ActionApprovalStore(), host=FakeHost())
     request = owner.start_request()
     authority.set_grant("mobile.host.start", enabled=True,
@@ -142,7 +142,7 @@ def test_mobile_host_start_receipt_failure_stops_listener(tmp_path, monkeypatch)
         async def stop(self):
             self.stopped = True
 
-    authority = WorkspaceAuthority(tmp_path)
+    authority = WorkspaceAuthority(tmp_path, state_directory=tmp_path / "authority")
     authority.set_grant("mobile.host.start", enabled=True,
                         network_hosts=["127.0.0.1:8765"])
     approvals = ActionApprovalStore()

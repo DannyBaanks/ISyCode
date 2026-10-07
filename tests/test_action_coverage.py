@@ -12,7 +12,8 @@ import isycode.security as security_module
 def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     report = action_coverage.owner_coverage_report()
 
-    assert report["secure_closed"] is True
+    assert report["secure_closed"] is False
+    assert len(report["effectful_callsites_without_mediation"]) == 11
     assert "mobile.host.start" not in report["unowned_effectful_actions"]
     assert "oauth.authorize" in report["unowned_effectful_actions"]
     assert "credentials.add" not in report["unowned_effectful_actions"]
@@ -21,7 +22,7 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     assert callsites["MobileHostOwner.shutdown"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["BridgeClient.agents"]["status"] == "UNWIRED"
     assert callsites["BridgeClient._run"]["status"] == "UNWIRED"
-    assert callsites["TUIApp._inject_agent_context"]["status"] == "COVERED"
+    assert callsites["WorkspaceMixin._inject_agent_context"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.read_config"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.commands"]["status"] == "COVERED"
     assert callsites["WorkspaceConfigOwner.apply"]["status"] == "COVERED"
@@ -88,6 +89,24 @@ class TUIApp:
 
     assert any(item["callsite"].endswith("self.bridge_client.heartbeat")
                for item in issues)
+
+
+def test_secure_tui_direct_api_audit_follows_screens_defined_in_another_module():
+    app = '''
+class TUIApp:
+    def action_open(self):
+        self.push_screen(OuterScreen())
+'''
+    screen = '''
+class ModalScreen: pass
+class OuterScreen(ModalScreen):
+    def on_mount(self):
+        self.bridge_client.heartbeat()
+'''
+
+    issues = action_coverage.secure_tui_direct_api_bypasses_from_sources([app, screen])
+
+    assert any(item["callsite"].endswith("self.bridge_client.heartbeat") for item in issues)
 
 
 def test_secure_tui_direct_api_audit_fails_closed_for_unparseable_source():

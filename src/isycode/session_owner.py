@@ -15,6 +15,7 @@ import json
 import secrets
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 from isycode.action_runtime import ActionOutcome, ActionReceipt, ProductActionGate
@@ -28,6 +29,17 @@ LIST_TARGET = "sessions"
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _owned_sent_at(value: str | None) -> str:
+    """Keep a caller stamp only when it is already a real offset timestamp."""
+    if isinstance(value, str):
+        try:
+            ChatSessionStore._validate_sent_at({"sent_at": value})
+            return value
+        except ChatSessionError:
+            pass
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 class ChatSessionOwner:
@@ -57,7 +69,8 @@ class ChatSessionOwner:
         return receipt if self.gate.persist_receipt(request, receipt) else None
 
     def record(self, session_id: str | None, role: str,
-               content: str, *, state: dict | None = None) -> tuple[ActionOutcome, str | None]:
+               content: str, *, state: dict | None = None,
+               sent_at: str | None = None) -> tuple[ActionOutcome, str | None]:
         """Append one message, creating the transcript when session_id is None."""
         if role not in {"user", "assistant"} or not isinstance(content, str):
             return ActionOutcome("Message not saved.", "DENY", None, "message is malformed"), None
@@ -81,15 +94,17 @@ class ChatSessionOwner:
         denied = self._authorize(request)
         if denied is not None:
             return ActionOutcome("Message not saved.", "DENY", None, denied), None
+        stamp = _owned_sent_at(sent_at)
         try:
             if creating:
                 now = time.time()
                 session = ChatSession(target, self.store._auto_title(clean) if role == "user"
-                                      else "New session", [{"role": role, "content": clean}],
+                                      else "New session", [{"role": role, "content": clean,
+                                          "sent_at": stamp}],
                                       now, now)
             else:
                 session = self.store.load(target)
-                session.messages.append({"role": role, "content": clean})
+                session.messages.append({"role": role, "content": clean, "sent_at": stamp})
                 if session.title in {"New session", "Draft conversation"} and role == "user":
                     session.title = self.store._auto_title(clean)
             if clean_state is not None:
@@ -146,7 +161,7 @@ class ChatSessionOwner:
     def manage(self, operation: str, session_id: str | None,
                data: str = "") -> tuple[ActionOutcome, str | None]:
         """Bounded, journaled lifecycle changes; imported data never grants authority."""
-        if operation not in {"rename", "fork", "import", "state"} or not isinstance(data, str):
+        if operation not in {"rename", "auto_title", "fork", "import", "state"} or not isinstance(data, str):
             return ActionOutcome("Session unchanged.", "DENY", None, "unsupported session operation"), None
         parent = None
         if operation != "import" and not (operation == "state" and session_id is None):
@@ -160,13 +175,21 @@ class ChatSessionOwner:
                 clean = json.dumps(state, sort_keys=True)
             except (ValueError, TypeError):
                 return ActionOutcome("Session unchanged.", "ERROR", None, "invalid session state"), None
-        target = session_id if operation in {"rename", "state"} and session_id else uuid.uuid4().hex
+        target = session_id if operation in {"rename", "auto_title", "state"} and session_id else uuid.uuid4().hex
         if operation == "import":
             try:
                 imported = self.store.parse_import(data, session_id=target)
                 clean = self.store.serialize(imported)
             except (ValueError, TypeError):
                 return ActionOutcome("Session unchanged.", "ERROR", None, "invalid session import"), None
+        if operation == "auto_title":
+            count = sum(message.get("role") == "user" for message in parent.messages)
+            if parent.title_manual or not 1 <= count <= 5:
+                return ActionOutcome("Title unchanged.", "DENY", None,
+                                     "automatic titles require the first five user messages and no manual title"), None
+            clean = " ".join(clean.split())
+            if not clean or len(clean) > 80 or not clean.isprintable():
+                return ActionOutcome("Title unchanged.", "DENY", None, "title must contain 1–80 characters"), None
         request = ActionRequest("session.create", self.root, target, {
             "operation": operation, "session_id": target,
             "content_sha256": _sha(clean), "size": len(clean.encode("utf-8")),
@@ -176,7 +199,14 @@ class ChatSessionOwner:
         if denied is not None:
             return ActionOutcome("Session unchanged.", "DENY", None, denied), None
         try:
-            if operation == "rename":
+            if operation == "auto_title":
+                # Recheck live state immediately before applying a proposed title.
+                session = self.store.load(target)
+                if session.title_manual or not 1 <= sum(m.get("role") == "user" for m in session.messages) <= 5:
+                    return ActionOutcome("Title unchanged.", "DENY", None, "title window closed"), None
+                session.title = clean
+                self.store.save(session)
+            elif operation == "rename":
                 session = self.store.rename(target, clean)
             elif operation == "state":
                 now = time.time()

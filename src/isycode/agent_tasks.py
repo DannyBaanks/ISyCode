@@ -64,16 +64,18 @@ def render_tasks(tasks: list[dict[str, str]], *, collapsed: bool = False) -> Tex
         return text
     text = Text(f"▾ Tasks · {done}/{len(tasks)} done", style="bold #bb8cff")
     text.append("   click or Ctrl+T to fold\n", style="#6c757d")
+    from isycode.operation_style import operation_color
     for task in tasks:
+        color = operation_color(task["title"]) or "#c0c0c4"
         if task["status"] == "completed":
             text.append("  ✔ ", style="#4ade80")
-            text.append(task["title"] + "\n", style="strike #6c757d")
+            text.append(task["title"] + "\n", style="strike " + color)
         elif task["status"] == "in_progress":
             text.append("  ▶ ", style="#fbbf24")
-            text.append(task["title"] + "\n", style="bold")
+            text.append(task["title"] + "\n", style="bold " + color)
         else:
             text.append("  ○ ", style="#6c757d")
-            text.append(task["title"] + "\n")
+            text.append(task["title"] + "\n", style=color)
     text.rstrip()
     return text
 

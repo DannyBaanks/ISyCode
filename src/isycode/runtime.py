@@ -116,14 +116,18 @@ class IsyMotronRuntime:
             {"role": "user", "content": f"CATALOGUE\n{catalog}\n\nREQUEST\n{intent}"},
         ]
 
+        from isycode.reasoning_options import thinking_options
+        thinking = thinking_options(self.provider.name, self.provider.model, self.provider.reasoning_effort)
+        extra = {"chat_template_kwargs": thinking} if thinking is not None else {}
+
         def stream() -> dict:
             return stream_complete(
                 self.provider.base_url, self.provider.api_key, self.provider.model,
-                messages, max_tokens=2000,
+                messages, max_tokens=None,
                 token_limit_field=self.provider.token_limit_field,
-                reasoning_effort=self.provider.reasoning_effort,
+                reasoning_effort=None if thinking is not None else self.provider.reasoning_effort,
                 temperature_supported=self.provider.temperature_supported,
-                on_chunk=on_chunk)
+                on_chunk=on_chunk, **extra)
 
         owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
 
@@ -133,7 +137,7 @@ class IsyMotronRuntime:
         result, request_outcome = await owner.execute(
             self.provider,
             {"operation": "isycode.plan", "messages": messages,
-             "max_tokens": 2000, "token_limit_field": self.provider.token_limit_field,
+             "max_tokens": None, "token_limit_field": self.provider.token_limit_field,
              "reasoning_effort": self.provider.reasoning_effort,
              "temperature_supported": self.provider.temperature_supported},
             send)

@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 74,
-    "effectful": 57,
-    "owner_valid": 48,
+    "actions": 78,
+    "effectful": 60,
+    "owner_valid": 52,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 23,
@@ -12,7 +12,7 @@
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "secure_tui_closed": true,
-    "secure_closed": true
+    "secure_closed": false
   },
   "actions": [
     {
@@ -237,6 +237,22 @@
       "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
     },
     {
+      "action": "git.push",
+      "effect": "external",
+      "approval_required": true,
+      "owners": [
+        "workspace_publish"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "PublishBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
       "action": "workspace.files.move",
       "effect": "write",
       "approval_required": true,
@@ -307,6 +323,22 @@
       "authority": "Workspace Authority",
       "sentinel": [
         "ProviderNetworkBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "web.fetch",
+      "effect": "network-read",
+      "approval_required": false,
+      "owners": [
+        "web_fetch"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "RemoteReadBoundary"
       ],
       "variants": [],
       "status": "OWNER_VALID",
@@ -871,6 +903,22 @@
       "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
     },
     {
+      "action": "bridge.agents",
+      "effect": "read",
+      "approval_required": true,
+      "owners": [
+        "bridge_presence"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "BridgePresenceBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
       "action": "l1.create",
       "effect": "write",
       "approval_required": true,
@@ -985,6 +1033,22 @@
       "authority": "Workspace Authority",
       "sentinel": [
         "SessionDeleteBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "clipboard.paste",
+      "effect": "external",
+      "approval_required": false,
+      "owners": [
+        "clipboard"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "ClipboardBoundary"
       ],
       "variants": [],
       "status": "OWNER_VALID",
@@ -1155,6 +1219,30 @@
   "unclassified_actions": [],
   "callsites": [
     {
+      "action": "web.fetch",
+      "callsite": "WebFetchOwner.execute",
+      "owner": "web_fetch",
+      "status": "COVERED"
+    },
+    {
+      "action": "session.create",
+      "callsite": "IterationOwner._persist",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "session.resume",
+      "callsite": "IterationOwner.inspect",
+      "owner": "chat_sessions",
+      "status": "COVERED"
+    },
+    {
+      "action": "provider.request",
+      "callsite": "run_iteration.complete",
+      "owner": "provider_network",
+      "status": "COVERED"
+    },
+    {
       "action": "tailscale.inspect",
       "callsite": "TailscaleReadOwner.inspect",
       "owner": "tailscale_read",
@@ -1234,13 +1322,13 @@
     },
     {
       "action": "workspace.context.inject",
-      "callsite": "TUIApp._inject_agent_context",
+      "callsite": "WorkspaceMixin._inject_agent_context",
       "owner": "workspace_read",
       "status": "COVERED"
     },
     {
       "action": "workspace.files.read",
-      "callsite": "TUIApp._workspace_request",
+      "callsite": "WorkspaceMixin._workspace_request",
       "owner": "workspace_read",
       "status": "COVERED"
     },
@@ -1320,6 +1408,12 @@
       "action": "git.commit",
       "callsite": "GitOwner.commit",
       "owner": "workspace_git",
+      "status": "COVERED"
+    },
+    {
+      "action": "git.push",
+      "callsite": "PublishOwner.run",
+      "owner": "workspace_publish",
       "status": "COVERED"
     },
     {
@@ -1510,19 +1604,19 @@
     },
     {
       "action": "desktop.file_picker",
-      "callsite": "TUIApp._open_broker_preview",
+      "callsite": "RemoteMixin._open_broker_preview",
       "owner": null,
       "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "desktop.file_picker",
-      "callsite": "TUIApp._provision_broker",
+      "callsite": "RemoteMixin._provision_broker",
       "owner": null,
       "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "desktop.file_picker",
-      "callsite": "TUIApp._register_builtin_plugins._readme_cmd",
+      "callsite": "tui_app_menu._readme_cmd",
       "owner": null,
       "status": "BLOCKED_BY_DESIGN"
     },
@@ -1539,9 +1633,21 @@
       "status": "BLOCKED_BY_DESIGN"
     },
     {
+      "action": "clipboard.paste",
+      "callsite": "ClipboardOwner.paste",
+      "owner": "clipboard",
+      "status": "COVERED"
+    },
+    {
       "action": "clipboard.copy",
       "callsite": "ClipboardOwner.copy",
       "owner": "clipboard",
+      "status": "COVERED"
+    },
+    {
+      "action": "bridge.agents",
+      "callsite": "BridgePresenceOwner.read",
+      "owner": "bridge_presence",
       "status": "COVERED"
     }
   ],
@@ -1550,73 +1656,80 @@
   "request_constructors": [
     {
       "file": "isycode/action_runtime.py",
-      "line": 91,
+      "line": 92,
       "callable": "isycode.action_runtime._workspace_config_request",
       "action": null,
       "owner": "workspace_config"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1870,
+      "line": 2009,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1659,
+      "line": 1798,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1723,
+      "line": 1862,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1793,
+      "line": 1932,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1879,
+      "line": 2018,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1930,
+      "line": 2069,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1938,
+      "line": 2077,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1998,
+      "line": 2135,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2064,
+      "line": 2203,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/bridge_presence.py",
+      "line": 110,
+      "callable": "isycode.bridge_presence.BridgePresenceOwner.prepare",
+      "action": "bridge.agents",
+      "owner": "bridge_presence"
     },
     {
       "file": "isycode/broker.py",
@@ -1662,14 +1775,21 @@
     },
     {
       "file": "isycode/clipboard_owner.py",
-      "line": 70,
+      "line": 102,
+      "callable": "isycode.clipboard_owner.ClipboardOwner.paste",
+      "action": "clipboard.paste",
+      "owner": "clipboard"
+    },
+    {
+      "file": "isycode/clipboard_owner.py",
+      "line": 124,
       "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
       "action": "clipboard.copy",
       "owner": "clipboard"
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 243,
+      "line": 254,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
@@ -1697,21 +1817,49 @@
     },
     {
       "file": "isycode/git_owner.py",
-      "line": 185,
+      "line": 305,
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
     },
     {
+      "file": "isycode/inspection_cli.py",
+      "line": 141,
+      "callable": "isycode.inspection_cli._sessions",
+      "action": "session.delete",
+      "owner": "session_delete"
+    },
+    {
+      "file": "isycode/iteration.py",
+      "line": 197,
+      "callable": "isycode.iteration.IterationOwner.list_sessions",
+      "action": "session.resume",
+      "owner": "chat_sessions"
+    },
+    {
+      "file": "isycode/iteration.py",
+      "line": 63,
+      "callable": "isycode.iteration.IterationOwner._authorize",
+      "action": "session.resume",
+      "owner": "chat_sessions"
+    },
+    {
+      "file": "isycode/iteration.py",
+      "line": 67,
+      "callable": "isycode.iteration.IterationOwner._authorize",
+      "action": "session.create",
+      "owner": "chat_sessions"
+    },
+    {
       "file": "isycode/mcp_local.py",
-      "line": 211,
+      "line": 221,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "action": "mcp.local.start",
       "owner": "mcp_local"
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 313,
+      "line": 322,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
       "action": "mcp.local.invoke",
       "owner": "mcp_local"
@@ -1752,29 +1900,36 @@
       "owner": "provider_auth"
     },
     {
+      "file": "isycode/publish.py",
+      "line": 60,
+      "callable": "isycode.publish.PublishOwner.prepare",
+      "action": "git.push",
+      "owner": "workspace_publish"
+    },
+    {
       "file": "isycode/session_owner.py",
-      "line": 108,
+      "line": 123,
       "callable": "isycode.session_owner.ChatSessionOwner.list_conversations",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 170,
+      "line": 193,
       "callable": "isycode.session_owner.ChatSessionOwner.manage",
       "action": "session.create",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 73,
+      "line": 86,
       "callable": "isycode.session_owner.ChatSessionOwner.record",
       "action": "session.create",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/session_owner.py",
-      "line": 122,
+      "line": 137,
       "callable": "isycode.session_owner.ChatSessionOwner.resume",
       "action": "session.resume",
       "owner": "chat_sessions"
@@ -1829,78 +1984,99 @@
       "owner": "tailscale_serve"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 7043,
-      "callable": "isycode.tui.TUIApp._delete_chat_session",
-      "action": "session.delete",
-      "owner": "session_delete"
-    },
-    {
-      "file": "isycode/tui.py",
-      "line": 7145,
-      "callable": "isycode.tui.TUIApp._workspace_request",
-      "action": null,
-      "owner": "workspace_read"
-    },
-    {
-      "file": "isycode/tui.py",
-      "line": 4835,
-      "callable": "isycode.tui.TUIApp._open_gateway_mcp_tool",
+      "file": "isycode/tui_app_remote.py",
+      "line": 622,
+      "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 4887,
-      "callable": "isycode.tui.TUIApp._open_gateway_semantic_search",
+      "file": "isycode/tui_app_remote.py",
+      "line": 674,
+      "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_semantic_search",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 5046,
-      "callable": "isycode.tui.TUIApp._open_lsp_server",
+      "file": "isycode/tui_app_remote.py",
+      "line": 805,
+      "callable": "isycode.tui_app_remote.RemoteMixin._open_lsp_server",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 6353,
-      "callable": "isycode.tui.TUIApp._authorize_remote_read",
+      "file": "isycode/tui_app_remote.py",
+      "line": 846,
+      "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
     },
     {
+      "file": "isycode/tui_app_sessions.py",
+      "line": 917,
+      "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
+      "action": "session.delete",
+      "owner": "session_delete"
+    },
+    {
+      "file": "isycode/tui_app_sessions.py",
+      "line": 952,
+      "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
+      "action": "session.delete",
+      "owner": "session_delete"
+    },
+    {
+      "file": "isycode/tui_app_workspace.py",
+      "line": 82,
+      "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
+      "action": "workspace.context.inject",
+      "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/tui_app_workspace.py",
+      "line": 166,
+      "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
+      "action": null,
+      "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/web_fetch.py",
+      "line": 118,
+      "callable": "isycode.web_fetch.WebFetchOwner.execute",
+      "action": "web.fetch",
+      "owner": "web_fetch"
+    },
+    {
       "file": "isycode/workspace_write.py",
-      "line": 354,
+      "line": 355,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
       "action": "workspace.files.restore",
       "owner": "workspace_write"
     },
     {
       "file": "isycode/workspace_write.py",
-      "line": 371,
+      "line": 372,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_delete",
       "action": "workspace.files.delete",
       "owner": "workspace_write"
     },
     {
       "file": "isycode/workspace_write.py",
-      "line": 394,
+      "line": 395,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner._preview_move",
       "action": "workspace.files.move",
       "owner": "workspace_write"
     },
     {
       "file": "isycode/workspace_write.py",
-      "line": 306,
+      "line": 307,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "action": "workspace.config.write",
       "owner": "workspace_config"
     },
     {
       "file": "isycode/workspace_write.py",
-      "line": 309,
+      "line": 310,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "action": "workspace.files.write",
       "owner": "workspace_write"
@@ -1909,14 +2085,14 @@
   "dynamic_request_constructors": [
     {
       "file": "isycode/action_runtime.py",
-      "line": 91,
+      "line": 92,
       "callable": "isycode.action_runtime._workspace_config_request",
       "action": null,
       "owner": "workspace_config"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2064,
+      "line": 2203,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -1930,7 +2106,7 @@
     },
     {
       "file": "isycode/git_owner.py",
-      "line": 185,
+      "line": 305,
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
@@ -1943,18 +2119,18 @@
       "owner": "tailscale_serve"
     },
     {
-      "file": "isycode/tui.py",
-      "line": 7145,
-      "callable": "isycode.tui.TUIApp._workspace_request",
-      "action": null,
-      "owner": "workspace_read"
-    },
-    {
-      "file": "isycode/tui.py",
-      "line": 6353,
-      "callable": "isycode.tui.TUIApp._authorize_remote_read",
+      "file": "isycode/tui_app_remote.py",
+      "line": 846,
+      "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
+    },
+    {
+      "file": "isycode/tui_app_workspace.py",
+      "line": 166,
+      "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
+      "action": null,
+      "owner": "workspace_read"
     }
   ],
   "unresolved_dynamic_request_constructors": []

@@ -1,0 +1,1 @@
+{"editor":{"vimMode":true},"display":{"mode":"zen","showLineNumbers":true},"notifications":true,"hints":false,"exploreSubagentModel":"fake-model","hasChangedDefaultModel":true,"permissions":{"allow":["x"],"deny":[]},"approvalMode":"allowlist","sandbox":{"mode":"disabled","networkAccess":"none"},"autoAcceptWebSearch":true,"runEverythingSettingsPromptStreak":2}

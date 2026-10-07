@@ -1,0 +1,1 @@
+{"provider":"openai","models":{"gateway":"gpt-test","codex":"gpt-code"},"effort":"high","fast_mode":false,"credential_source":"DO_NOT_COPY"}

@@ -4,9 +4,9 @@ Running git on a repository can start programs the repository itself
 configures: fsmonitor, filters, pagers, textconv and external diff drivers,
 credential helpers and hooks. This owner refuses any repository whose local
 config defines one, disables hooks for commits, ignores the system config,
-and hides the same sensitive paths the chat file tools refuse. Only a
-``.git`` folder at the workspace root is supported, so git never walks up
-past ``.isyroot`` into a parent repository.
+and hides the same sensitive paths the chat file tools refuse. The workspace
+root or one unambiguous direct-child repository is supported. Git is pinned
+to that exact root and never walks up past the workspace boundary.
 """
 from __future__ import annotations
 
@@ -52,26 +52,30 @@ _SAFE_OVERRIDES = (
 GIT_TOOLS = [
     {"type": "function", "function": {
         "name": "git_status",
-        "description": "Show the git branch and changed files of the workspace repository.",
-        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        "description": "Show local branch and changes. Set repository to a direct child project (for example IntentLang) when the workspace contains nested repositories.",
+        "parameters": {"type": "object", "properties": {
+            "repository": {"type": "string", "description": "Optional direct child repository folder name; defaults to the workspace root."},
+        }, "additionalProperties": False},
     }},
     {"type": "function", "function": {
         "name": "git_diff",
-        "description": "Show the git diff of the workspace (unstaged by default, or staged).",
+        "description": "Show a local diff from the selected repository (unstaged by default, or staged).",
         "parameters": {"type": "object", "properties": {
-            "path": {"type": "string", "description": "Workspace-relative file or folder; defaults to everything."},
+            "path": {"type": "string", "description": "Repository-relative file or folder; defaults to everything."},
             "staged": {"type": "boolean", "description": "Show staged changes instead of unstaged ones."},
+            "repository": {"type": "string", "description": "Optional direct child repository folder name."},
         }, "additionalProperties": False},
     }},
 ]
 GIT_COMMIT_TOOL = {"type": "function", "function": {
     "name": "git_commit",
-    "description": ("Propose a git commit. The user reviews the exact diff and message and must "
+    "description": ("Propose a git commit in the selected repository. The user reviews the exact diff and message and must "
                     "approve it. Hooks do not run and nothing is pushed."),
     "parameters": {"type": "object", "properties": {
         "message": {"type": "string", "description": "Commit message."},
         "paths": {"type": "array", "items": {"type": "string"},
-                  "description": "Workspace-relative files to commit; defaults to every changed file."},
+                  "description": "Repository-relative files to commit; defaults to every changed file."},
+        "repository": {"type": "string", "description": "Optional direct child repository folder name."},
     }, "required": ["message"], "additionalProperties": False},
 }}
 GIT_TOOL_NAMES = frozenset({"git_status", "git_diff", "git_commit"})
@@ -83,6 +87,31 @@ def git_executable() -> str | None:
         if candidate.is_file() and os.access(candidate, os.X_OK):
             return str(candidate)
     return None
+
+
+def git_repository_available(root: Path) -> bool:
+    """Whether Git controls should be offered for a root or a direct child repo."""
+    try:
+        canonical = root.resolve(strict=True)
+        if not canonical.is_dir():
+            return False
+        if (canonical / ".git").is_dir():
+            return True
+        with os.scandir(canonical) as entries:
+            for index, entry in enumerate(entries):
+                if index >= 4096:
+                    return False
+                if (entry.name.startswith(".")
+                        or not entry.is_dir(follow_symlinks=False)):
+                    continue
+                try:
+                    if stat.S_ISDIR((canonical / entry.name / ".git").lstat().st_mode):
+                        return True
+                except (FileNotFoundError, OSError):
+                    continue
+    except (OSError, RuntimeError):
+        return False
+    return False
 
 
 def _sensitive_excludes() -> list[str]:
@@ -111,8 +140,11 @@ class GitOwner:
     """The only execution owner for git.status, git.diff and git.commit."""
 
     def __init__(self, root: Path, authority: WorkspaceAuthority,
-                 approvals: ActionApprovalStore | None = None):
+                 approvals: ActionApprovalStore | None = None,
+                 repository: str | None = None):
         self.root = root.resolve(strict=True)
+        self.repository = repository
+        self.repo_root = self._resolve_repository(repository)
         self.authority = authority
         self.approvals = approvals
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
@@ -120,21 +152,99 @@ class GitOwner:
     # ── repository checks and process ────────────────────────────
 
     def _repository_problem(self) -> str | None:
-        git_dir = self.root / ".git"
+        git = git_executable()
+        if git is None:
+            return "git is not installed in a system bin folder"
+        if self.repository is not None and self.repository != ".":
+            if (Path(self.repository).is_absolute() or len(Path(self.repository).parts) != 1
+                    or self.repository.startswith(".")
+                    or not command_relative_path_valid(self.repository)):
+                return "repository must be the workspace root or one visible direct child folder"
+            candidate = self.root / self.repository
+            if candidate.is_symlink() or not candidate.is_dir():
+                return "the selected direct child repository is unavailable"
+            candidates = [candidate]
+        else:
+            candidates = [self.root]
+        try:
+            with os.scandir(self.root) as entries:
+                inspected = 0
+                for entry in entries:
+                    if self.repository is not None:
+                        break
+                    inspected += 1
+                    if inspected > 4096:
+                        return ("the workspace has too many entries for safe repository discovery; "
+                                "retry with the repository field set to one direct child folder")
+                    if (entry.name.startswith(".")
+                            or not entry.is_dir(follow_symlinks=False)):
+                        continue
+                    child = self.root / entry.name
+                    try:
+                        if stat.S_ISDIR((child / ".git").lstat().st_mode):
+                            if len(candidates) >= 128:
+                                return ("too many direct child repositories for automatic discovery; "
+                                        "retry with the repository field set to one folder")
+                            candidates.append(child)
+                    except (FileNotFoundError, OSError):
+                        continue
+        except OSError:
+            return "the workspace entries could not be inspected safely"
+
+        valid: list[Path] = []
+        problems: list[str] = []
+        for candidate in candidates:
+            problem = self._check_repository_candidate(candidate, git)
+            if problem is None:
+                valid.append(candidate)
+            else:
+                problems.append(problem)
+        if len(valid) > 1:
+            if self.root in valid:
+                self.repo_root = self.root
+                return None
+            self.repo_root = self.root
+            names = [item.relative_to(self.root).as_posix() for item in valid if item != self.root]
+            return ("multiple repositories found: " + ", ".join(names[:12])
+                    + "; retry with the repository field set to one folder")
+        if valid:
+            self.repo_root = valid[0]
+            return None
+        self.repo_root = self.root
+        if problems:
+            return problems[0]
+        return "this workspace has no supported Git repository at the selected root or direct child"
+
+    def _resolve_repository(self, repository: str | None) -> Path:
+        if repository in {None, "", "."}:
+            return self.root
+        relative = Path(repository)
+        if (relative.is_absolute() or len(relative.parts) != 1 or repository.startswith(".")
+                or not command_relative_path_valid(repository)):
+            return self.root
+        return self.root / repository
+
+    def _check_repository_candidate(self, candidate: Path, git: str) -> str | None:
+        """Check inert config keys before asking Git to inspect a repository."""
+        self.repo_root = candidate
+        git_dir = candidate / ".git"
         try:
             info = git_dir.lstat()
         except FileNotFoundError:
             return "this workspace is not a git repository (no .git folder at its root)"
+        except OSError:
+            return "the repository metadata could not be inspected safely"
         if not stat.S_ISDIR(info.st_mode):
-            return "only a .git folder at the workspace root is supported (not a worktree link)"
-        git = git_executable()
-        if git is None:
-            return "git is not installed in a system bin folder"
+            return "only repositories with a real .git directory are supported (not worktree links)"
         for name in ("config", "config.worktree"):
             config = git_dir / name
-            if not config.exists():
+            try:
+                config_info = config.lstat()
+            except FileNotFoundError:
                 continue
-            if config.is_symlink() or not config.is_file():
+            except OSError:
+                return f".git/{name} could not be inspected safely"
+            if stat.S_ISLNK(config_info.st_mode) or not stat.S_ISREG(config_info.st_mode):
                 return f".git/{name} is not a regular file"
             result = self._raw([git, "config", "--file", str(config), "--no-includes",
                                 "--list", "--name-only", "-z"])
@@ -145,12 +255,22 @@ class GitOwner:
             if flagged:
                 return ("the repository config defines programs git would run ("
                         + ", ".join(flagged[:5]) + "); ISyCode will not run git here")
+        result = self._raw([git, "rev-parse", "--show-toplevel"])
+        if result is None or result[0] != 0:
+            return "git rejected this repository root"
+        try:
+            reported = Path(result[1].decode("utf-8", "strict").strip()).resolve(strict=True)
+        except (UnicodeError, OSError, RuntimeError):
+            return "git returned an invalid repository root"
+        if reported != candidate:
+            return "git repository root does not match the selected folder"
         return None
 
     def _environment(self) -> dict[str, str]:
+        repo_root = self.repo_root
         env = {"PATH": ":".join(COMMAND_SYSTEM_BIN_DIRS), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
-               "GIT_DIR": str(self.root / ".git"), "GIT_WORK_TREE": str(self.root),
-               "GIT_CEILING_DIRECTORIES": str(self.root.parent), "GIT_CONFIG_NOSYSTEM": "1",
+               "GIT_DIR": str(repo_root / ".git"), "GIT_WORK_TREE": str(repo_root),
+               "GIT_CEILING_DIRECTORIES": str(repo_root.parent), "GIT_CONFIG_NOSYSTEM": "1",
                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0", "GIT_PAGER": "cat",
                "GIT_EDITOR": "true", "GIT_NO_REPLACE_OBJECTS": "1"}
         # The user's own global config supplies the commit identity.
@@ -160,7 +280,7 @@ class GitOwner:
 
     def _raw(self, argv: list[str]) -> tuple[int, bytes, bool] | None:
         try:
-            done = subprocess.run(argv, cwd=self.root, env=self._environment(),
+            done = subprocess.run(argv, cwd=self.repo_root, env=self._environment(),
                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, timeout=GIT_TIMEOUT_S, check=False)
         except (OSError, subprocess.TimeoutExpired):
@@ -183,7 +303,9 @@ class GitOwner:
 
     def _request(self, action_id: str, **extra) -> ActionRequest:
         return ActionRequest(action_id, self.root, str(self.root),
-                             {"git": git_executable() or "", "workspace_root": str(self.root), **extra},
+                             {"git": git_executable() or "", "workspace_root": str(self.root),
+                              "repo_path": ("." if self.repo_root == self.root else
+                                            self.repo_root.relative_to(self.root).as_posix()), **extra},
                              execution_owner="workspace_git")
 
     def _finish(self, request: ActionRequest, result: dict) -> ActionOutcome:
@@ -245,7 +367,7 @@ class GitOwner:
             branch, entries = self._status_entries()
         except ValueError as exc:
             return ActionOutcome("Git status failed.", "ERROR", None, str(exc)[:300])
-        return self._finish(request, {"branch": branch, "changes": entries,
+        return self._finish(request, {"repository": str(self.repo_root), "branch": branch, "changes": entries,
                                       "clean": not entries})
 
     def is_path_tracked(self, path: str) -> ActionOutcome:

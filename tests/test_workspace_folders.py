@@ -11,6 +11,7 @@ def make_store(tmp_path, monkeypatch):
     other = tmp_path / 'Other Project'
     main.mkdir()
     other.mkdir()
+    WorkspaceAuthority(main).set_mode('classic')
     from isycode.workspace_folders import WorkspaceFolders
     return WorkspaceFolders(main), main, other
 
@@ -63,6 +64,7 @@ def test_replaced_root_and_removed_alias_do_not_route(tmp_path, monkeypatch):
 
 def test_auto_edit_preference_is_disabled_by_default_and_root_scoped(tmp_path, monkeypatch):
     store, main, other = make_store(tmp_path, monkeypatch)
+    WorkspaceAuthority(other).set_mode('classic')
     store.add('other', str(other), editable=True)
     assert not store.auto_edit_allowed('main') and not store.auto_edit_allowed('other')
     store.set_auto_edit('other', True)
@@ -156,3 +158,30 @@ def test_recorded_grants_cannot_claim_write_on_a_read_only_folder(tmp_path, monk
     store._save(data)
     with pytest.raises(ValueError):
         store.list()
+
+
+@pytest.mark.parametrize('secured', ['main', 'other'])
+def test_security_mode_suspends_saved_automatic_edits(tmp_path, monkeypatch, secured):
+    store, main, other = make_store(tmp_path, monkeypatch)
+    WorkspaceAuthority(other).set_mode('classic')
+    store.add('other', str(other), editable=True)
+    store.set_auto_edit('other', True)
+    WorkspaceAuthority(main if secured == 'main' else other).set_mode('security')
+    assert not store.auto_edit_allowed('other')
+    with pytest.raises(ValueError, match='Security'):
+        store.set_auto_edit('other', True)
+    store.set_auto_edit('other', False)
+    assert not store.auto_edit_allowed('other')
+
+
+@pytest.mark.parametrize('policy', ['unconfigured', 'corrupt'])
+def test_unconfigured_or_unreadable_attachment_cannot_delegate(tmp_path, monkeypatch, policy):
+    store, _, other = make_store(tmp_path, monkeypatch)
+    store.add('other', str(other), editable=True)
+    if policy == 'corrupt':
+        WorkspaceAuthority(other).policy_path.write_text('{broken')
+    assert not store.auto_edit_allowed('other')
+    with pytest.raises(ValueError, match='Security'):
+        store.set_auto_edit('other', True)
+    store.set_auto_edit('other', False)
+    assert not store.auto_edit_allowed('other')

@@ -1,10 +1,13 @@
 """Run one reviewed command inside the workspace sandbox after Authority and IsySentinel.
 
 The argv is never given to a shell. Bubblewrap exposes read-only system files
-and the workspace as the only writable host folder; every sensitive path the
-chat tools refuse (``.git``, ``.env``, keys…) is masked, the ``.isyroot``
-marker is read-only, and a seccomp bootstrap denies socket syscalls before
-the program starts. Each run needs a ``workspace.command.run`` grant for the
+and a private copy of the workspace; every sensitive path the chat tools refuse
+(``.git``, ``.env``, keys…) is masked, the ``.isyroot`` marker is read-only,
+and a seccomp bootstrap denies socket syscalls before the program starts.
+The network namespace is not shared: a project command has no route to the host
+network, and there is no separate grant that turns that route back on.
+The user tree is unchanged until that measured diff is promoted. There is no
+host-shell fallback. Each run needs a ``workspace.command.run`` grant for the
 exact sandbox executable plus a fresh approval bound to the reviewed request.
 """
 from __future__ import annotations
@@ -20,6 +23,7 @@ import signal
 import stat
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 try:
     import resource
@@ -34,12 +38,14 @@ from isycode.action_runtime import (
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.lsp import network_deny_bootstrap
 from isycode.security import ActionRequest
+from isycode.staging import (
+    StagingError, cleanup_staging, measure_changes, prepare_staging, promote_accounted,
+)
 from isycode.workspace_authority import WorkspaceAuthority
 
 OWNER_ID = "workspace_command"
 COMMAND_TOOL_NAME = "workspace_run"
 DEFAULT_TIMEOUT_S = 120
-MAX_MASK_SCAN = 100_000
 MAX_PROCESSES = 256
 PYTHON = "/usr/bin/python3"
 # Only the files dynamic linking and user lookups need; no hosts, resolv or keys.
@@ -57,7 +63,9 @@ COMMAND_TOOL = {"type": "function", "function": {
     "parameters": {"type": "object", "properties": {
         "argv": {"type": "array", "items": {"type": "string"}, "minItems": 1,
                  "description": "Program and arguments, e.g. [\"python3\", \"-m\", \"pytest\", \"-q\"]."},
+        "background": {"type": "boolean", "description": "TUI only: return a process ID immediately after review; inspect or stop it in Ctrl+S ShellBox. Existing timeout and sandbox still apply."},
         "cwd": {"type": "string", "description": "Workspace-relative folder; defaults to the root."},
+        "scope": {"type": "string", "description": "Optional workspace-relative folder to stage in isolation for a small project inside a large workspace. Paths remain workspace-relative; siblings are not mounted."},
         "timeout_s": {"type": "integer", "minimum": 1, "maximum": COMMAND_MAX_TIMEOUT_S,
                       "description": f"Seconds before the command is stopped; default {DEFAULT_TIMEOUT_S}."},
     }, "required": ["argv"], "additionalProperties": False},
@@ -119,21 +127,17 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
     """Every sensitive file or folder in the workspace, as (relative path, is_folder).
 
     Symlinks are not masked: only the workspace is mounted, so their targets
-    are either outside the sandbox or a real entry that is masked itself.
-    Too many entries fails closed instead of running with partial masking.
+    are either outside the sandbox or a real entry that is masked itself. The
+    scan is exhaustive: command execution never proceeds with only a partial
+    list of sensitive paths, and large workspaces are not rejected by an
+    arbitrary entry-count ceiling.
     """
     found: list[tuple[str, bool]] = []
     stack = [root]
-    seen = 0
     while stack:
         folder = stack.pop()
         with os.scandir(folder) as entries:
             for entry in entries:
-                seen += 1
-                if seen > MAX_MASK_SCAN:
-                    raise ValueError(
-                        f"the workspace has more than {MAX_MASK_SCAN:,} entries; sensitive files "
-                        "cannot be masked safely")
                 if entry.is_symlink():
                     continue
                 is_folder = entry.is_dir(follow_symlinks=False)
@@ -152,7 +156,7 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
                     masks: tuple[tuple[str, bool], ...], *,
                     timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
     """Bubblewrap argv: system files read-only, only the workspace writable, sensitive paths masked."""
-    args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all", "--share-net",
+    args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all",
             "--clearenv", "--ro-bind", "/usr", "/usr"]
     for source, destination, alias in (("/bin", "/bin", "/usr/bin"), ("/sbin", "/sbin", "/usr/sbin"),
                                        ("/lib", "/lib", "/usr/lib"),
@@ -207,6 +211,7 @@ class CommandPreview:
     cwd: str
     timeout_s: int
     masks: tuple[tuple[str, bool], ...]
+    scope: str = "."
 
 
 class CommandRunOwner:
@@ -220,7 +225,7 @@ class CommandRunOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
 
     def prepare(self, argv: object, cwd: object = ".",
-                timeout_s: object = DEFAULT_TIMEOUT_S) -> CommandPreview:
+                timeout_s: object = DEFAULT_TIMEOUT_S, *, scope: object = ".") -> CommandPreview:
         """Build the exact request the user reviews. Raises ValueError when it cannot run."""
         if isinstance(argv, list):
             argv = tuple(argv)
@@ -237,25 +242,53 @@ class CommandRunOwner:
             raise ValueError(f"timeout must be 1–{COMMAND_MAX_TIMEOUT_S} seconds")
         sandbox = sandbox_executable()
         if sandbox is None:
-            raise ValueError("the command sandbox needs bubblewrap, libseccomp and python3 on Linux")
+            raise ValueError("the command sandbox needs bubblewrap, libseccomp and python3 on Linux; commands stay disabled and there is no unsandboxed fallback")
         program = resolve_program(self.root, argv[0])
-        masks = sensitive_entries(self.root)
+        if not isinstance(scope, str) or not command_relative_path_valid(scope, allow_root=True):
+            raise ValueError("scope must be a non-sensitive workspace-relative folder")
+        if scope != "." and (not _no_symlinks(self.root, scope) or not (self.root / scope).is_dir()):
+            raise ValueError("scope must be an existing folder without symlinks")
+        if scope != "." and cwd != "." and not (cwd == scope or cwd.startswith(scope + "/")):
+            raise ValueError("cwd is outside the selected staging scope")
+        masks = self._scope_masks(scope)
         request = ActionRequest(
             "workspace.command.run", self.root, program,
             {"argv": argv, "program": program, "cwd": cwd, "timeout_s": timeout_s,
              "network": "denied", "executable": sandbox, "workspace_root": str(self.root),
              "masked_sha256": masked_digest(masks), "masked_count": len(masks),
-             "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES},
+             "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES,
+             **({"scope": scope} if scope != "." else {})},
             execution_owner="workspace_command")
-        return CommandPreview(request, argv, program, cwd, timeout_s, masks)
+        return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope)
+
+    def _scope_masks(self, scope: str) -> tuple[tuple[str, bool], ...]:
+        entries = sensitive_entries(self.root / scope)
+        return entries if scope == "." else tuple((scope + "/" + path, folder) for path, folder in entries)
 
     async def run(self, preview: CommandPreview,
-                  approval: ActionApproval | None) -> ActionOutcome:
+                  approval: ActionApproval | None, *, on_output: Callable[[str], None] | None = None) -> ActionOutcome:
+        """Run in staging and promote the measured diff after the process exits."""
+        self._on_output = on_output
+        try:
+            return await self._run(preview, approval, promote=True)
+        finally:
+            self._on_output = None
+
+    async def run_staged(self, preview: CommandPreview,
+                         approval: ActionApproval | None) -> ActionOutcome:
+        """Run in staging and leave the user tree untouched."""
+        return await self._run(preview, approval, promote=False)
+
+    async def _run(self, preview: CommandPreview, approval: ActionApproval | None, *,
+                   promote: bool) -> ActionOutcome:
         request = preview.request
         # Re-derive the sandbox facts: a new secret or a swapped program after
         # review denies instead of running with a stale mask set.
         try:
-            masks = sensitive_entries(self.root)
+            fresh = self.prepare(list(preview.argv), preview.cwd, preview.timeout_s, scope=preview.scope)
+            if fresh != preview:
+                raise ValueError("sensitive files, command scope or the program changed after review")
+            masks = self._scope_masks(preview.scope)
             program = resolve_program(self.root, preview.argv[0])
         except (OSError, ValueError) as exc:
             return ActionOutcome("Command denied.", "DENY", None, str(exc)[:200] or "sandbox facts unavailable")
@@ -268,10 +301,11 @@ class CommandRunOwner:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return ActionOutcome("Command denied.", "DENY", None, reason)
         try:
-            result = await self._execute(preview)
+            result = await self._execute(preview, promote=promote)
         except (OSError, RuntimeError, ValueError) as exc:
+            detail = str(exc).strip() or type(exc).__name__
             return ActionOutcome("Command could not start.", "ERROR", None,
-                                 f"sandboxed command failed to start ({type(exc).__name__})")
+                                 f"sandboxed command failed to start ({detail[:200]})")
         result_text = json.dumps(result, ensure_ascii=False, sort_keys=True)
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "workspace.command.run", request.digest,
@@ -282,44 +316,90 @@ class CommandRunOwner:
         if not self.gate.persist_receipt(request, receipt):
             return ActionOutcome("Command receipt could not be persisted.", "NOT_VERIFIABLE", None,
                                  "durable action journal is unavailable")
-        return ActionOutcome(result_text, "ALLOW", receipt,
-                             f"sandboxed command finished with exit code {result['exit_code']}")
+        promotion = result.get("staging", {}).get("promotion") or {}
+        if promotion.get("state") == "uncertain":
+            note = "command finished; the effect ledger is uncertain and further changes are blocked"
+        elif promotion.get("state") == "denied":
+            note = "command finished; its changes were not promoted (" + str(promotion.get("reason", ""))[:160] + ")"
+        else:
+            note = f"sandboxed command finished with exit code {result['exit_code']}"
+        return ActionOutcome(result_text, "ALLOW", receipt, note)
 
-    async def _execute(self, preview: CommandPreview) -> dict:
+    async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
-        command = sandbox_command(params["executable"], self.root, preview.program, preview.argv,
-                                  preview.cwd, preview.masks, timeout_s=preview.timeout_s)
-        proc = await asyncio.create_subprocess_exec(
-            *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-            start_new_session=True)
-        output = bytearray()
-        total = 0
-        timed_out = False
-
-        async def drain() -> None:
-            nonlocal total
-            while chunk := await proc.stdout.read(8192):
-                total += len(chunk)
-                room = COMMAND_MAX_OUTPUT_BYTES - len(output)
-                if room > 0:
-                    output.extend(chunk[:room])
-            await proc.wait()
-
         try:
-            await asyncio.wait_for(drain(), timeout=preview.timeout_s)
-        except asyncio.TimeoutError:
-            timed_out = True
-            self._kill(proc)
-            await proc.wait()
-        except asyncio.CancelledError:
-            self._kill(proc)
-            await proc.wait()
-            raise
-        return {"argv": list(preview.argv), "cwd": preview.cwd,
-                "exit_code": proc.returncode, "timed_out": timed_out,
-                "output": output.decode("utf-8", errors="replace"),
-                "output_truncated": total > len(output), "output_bytes": total}
+            staging = prepare_staging(self.root, scope=preview.scope)
+        except StagingError as exc:
+            raise OSError(str(exc)) from exc
+        try:
+            command = sandbox_command(params["executable"], staging.root, preview.program,
+                                      preview.argv, preview.cwd, preview.masks,
+                                      timeout_s=preview.timeout_s)
+            proc = await asyncio.create_subprocess_exec(
+                *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True)
+            output = bytearray()
+            total = 0
+            timed_out = False
+
+            async def drain() -> None:
+                nonlocal total
+                while chunk := await proc.stdout.read(8192):
+                    total += len(chunk)
+                    room = COMMAND_MAX_OUTPUT_BYTES - len(output)
+                    if room > 0:
+                        accepted = chunk[:room]
+                        output.extend(accepted)
+                        callback = getattr(self, "_on_output", None)
+                        if callback is not None:
+                            callback(accepted.decode("utf-8", errors="replace"))
+                await proc.wait()
+
+            try:
+                await asyncio.wait_for(drain(), timeout=preview.timeout_s)
+            except asyncio.TimeoutError:
+                timed_out = True
+                self._kill(proc)
+                await proc.wait()
+            except asyncio.CancelledError:
+                self._kill(proc)
+                await proc.wait()
+                raise
+            changes = measure_changes(staging)
+            if promote:
+                from isycode.effect_ledger import EffectLedger, LedgerDenied
+                try:
+                    applied, refused, promotion = promote_accounted(staging, changes)
+                    pending = []
+                except LedgerDenied as exc:
+                    try:
+                        recovered = EffectLedger(self.root).reconcile()
+                    except LedgerDenied:
+                        recovered = "UNCERTAIN"
+                    applied, refused, pending = [], [], []
+                    promotion = {"state": exc.effect_state if recovered != "UNCERTAIN" else "uncertain",
+                                 "reason": str(exc)[:300]}
+            else:
+                applied, refused = [], []
+                pending = [item["path"] for item in changes]
+                promotion = {"state": "staged"}
+            return {"argv": list(preview.argv), "cwd": preview.cwd,
+                    "exit_code": proc.returncode, "timed_out": timed_out,
+                    "output": output.decode("utf-8", errors="replace"),
+                    "output_truncated": total > len(output), "output_bytes": total,
+                    "staging": {
+                        "backend": "copy",
+                        "promoted_count": len(applied),
+                        "promoted": applied[:300],
+                        "pending_count": len(pending),
+                        "pending": pending[:300],
+                        "refused_count": len(refused),
+                        "refused": refused[:300],
+                        "promotion": promotion,
+                    }}
+        finally:
+            cleanup_staging(staging)
 
     @staticmethod
     def _kill(proc: asyncio.subprocess.Process) -> None:

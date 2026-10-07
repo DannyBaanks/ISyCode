@@ -40,12 +40,22 @@ def test_await_screen_works_outside_a_textual_worker():
 
 
 def test_tui_app_never_calls_push_screen_wait():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body
-               if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    calls = {node.func.attr for node in ast.walk(app)
-             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+    calls = set()
+    for path in (SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))):
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            targets = []
+            if isinstance(node, ast.ClassDef) and (
+                    node.name == "TUIApp" or node.name.endswith("Mixin")):
+                targets.append(node)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                targets.append(node)
+            for target in targets:
+                for item in ast.walk(target):
+                    if not isinstance(item, ast.Call):
+                        continue
+                    if isinstance(item.func, ast.Attribute):
+                        calls.add(item.func.attr)
+                    elif isinstance(item.func, ast.Name):
+                        calls.add(item.func.id)
     assert "push_screen_wait" not in calls
-    plugins = ast.get_source_segment(SOURCE.read_text(encoding="utf-8"), next(
-        node for node in app.body if getattr(node, "name", "") == "_register_builtin_plugins"))
-    assert "push_screen_wait" not in plugins

@@ -9,21 +9,18 @@ from textual.app import App
 from isycode.command_runner import CommandPreview
 from isycode.security import ActionRequest
 
-SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
+SURFACE = Path(__file__).resolve().parents[1] / "src" / "isycode"
 
 
 def _screens(tmp_path):
-    from isycode.tui import (CommandApprovalScreen, GrantProviderNetworkScreen,
-                             GrantWorkspaceReadScreen, LocalMCPConfirmScreen, TailscaleConfirmScreen)
+    from isycode.tui import CommandApprovalScreen, LocalMCPConfirmScreen, TailscaleConfirmScreen
 
     request = ActionRequest("workspace.command.run", tmp_path, "/usr/bin/echo", {"argv": ["echo"]},
                             execution_owner="workspace_command")
     preview = CommandPreview(request, ("echo", "hi"), "/usr/bin/echo", ".", 120, ())
     return [lambda: CommandApprovalScreen(preview),
             lambda: TailscaleConfirmScreen("Allow?", "body", "Allow"),
-            lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once"),
-            lambda: GrantWorkspaceReadScreen(tmp_path),
-            lambda: GrantProviderNetworkScreen("OpenAI API", "api.openai.com")]
+            lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once")]
 
 
 @pytest.mark.parametrize("keys, expected", [("y", True), ("n", False), ("escape", False),
@@ -47,14 +44,14 @@ def test_keys_decide_every_approval_screen(tmp_path, keys, expected):
 
 
 def test_every_boolean_approval_screen_uses_the_shared_keys():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    bases = {node.name: [ast.unparse(base) for base in node.bases]
-             for node in module.body if isinstance(node, ast.ClassDef)}
+    bases = {}
+    for path in sorted(SURFACE.glob("tui*.py")):
+        module = ast.parse(path.read_text(encoding="utf-8"))
+        for node in module.body:
+            if isinstance(node, ast.ClassDef):
+                bases[node.name] = [ast.unparse(base) for base in node.bases]
     approvals = [name for name in ("WriteApprovalScreen", "CommandApprovalScreen",
                                    "CommitApprovalScreen", "LocalMCPConfirmScreen",
                                    "MCPInvocationConfirmScreen", "TailscaleConfirmScreen",
-                                   "DeleteSessionScreen", "GlobalRecurringDefaultScreen",
-                                   "GrantWorkspaceReadScreen", "GrantProviderNetworkScreen",
-                                   "GrantMCPInvocationScreen", "GrantLSPProcessScreen",
-                                   "BrokerPreviewGrantScreen")]
+                                   "DeleteSessionScreen")]
     assert all(bases[name] == ["ApprovalScreen"] for name in approvals)

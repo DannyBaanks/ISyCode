@@ -11,6 +11,11 @@ Usage:
   isycode tui              Start the chat TUI
   isycode cli              Browse actions by semantic category
   isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
+  isycode sessions ...      List/show/search/rename/delete local conversations; add --json
+  isycode models [--json]   Show local provider/model metadata; no network calls
+  isycode stats [--json]    Aggregate locally recorded session usage
+  isycode dirs [--json]     Show config/state locations and precedence, never values
+  isycode completion SHELL  Print bash, zsh or fish completion
   isycode actualizar       Actualizar el checkout limpio o preparar una instalación
   isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
   isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
@@ -66,6 +71,10 @@ def main(argv: list[str] | None = None) -> int:
         root = discover_workspace_identity(Path.cwd()).workspace_root
         print(format_diagnostics(collect_diagnostics(root)))
         return 0
+    if arguments and arguments[0] in {"sessions", "models", "stats", "dirs", "completion"}:
+        from isycode.inspection_cli import main as inspection_main
+
+        return inspection_main(arguments)
     if arguments and arguments[0] in {"-p", "--print"} or arguments[:2] in (
             ["--json", "-p"], ["--json", "--print"]):
         from isycode.headless import main as headless_main

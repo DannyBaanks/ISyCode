@@ -1,0 +1,95 @@
+hito: M8
+puerta: G8
+estado: APROBADO
+sha_evaluado: 32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa
+fecha_utc: 2026-10-06T22:30:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: solo presentación; ningún cambio de permisos del producto
+renovacion: >
+  Renueva el paquete 1d588426 (retirado; en git history). Regla 8: los
+  commits 1d58842 (recibo enriquecido) y 32aa6cc (recibo plegado dentro de
+  la tarjeta de herramienta, dogfood) cambiaron src/isycode/tui_app_tools.py
+  tras la aceptación original. Contenido validado idéntico en espíritu;
+  G8-05 actualizado al contrato nuevo (recibo dentro de la hoja).
+dependencias: G7
+dependencias_estado:
+  G7: APROBADO
+casos:
+  - id: G8-01
+    prueba: tests/test_approval_keys.py (28 casos) + tests/test_ux_polish.py::test_reject_button_is_the_default_focus
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py tests/test_approval_keys.py tests/test_side_panel.py tests/test_integrated_layout.py tests/test_visual_tui.py -ra --tb=short
+    esperado: recorrido completo solo teclado, sin foco atrapado; Esc cancela correctamente, Enter no acepta frontera accidentalmente
+    observado: >
+      Pasó (31/31). Igual que el paquete original: 28 combinaciones deciden
+      cada pantalla, foco inicial en Reject, Enter arrastrado rechaza.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+        sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+      - tests/test_approval_keys.py
+        sha256: 5eb756cfb2f094acf7cfcc789ecfe4e9b436e3cacb42c795ad059e1fa4bc9117
+  - id: G8-02
+    prueba: tests/test_ux_polish.py::test_resize_200x60_and_back_keeps_composer_and_draft tests/test_integrated_layout.py
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py tests/test_integrated_layout.py -ra --tb=short
+    esperado: capturas y resize real a 80x24, 120x40 y 200x60; composer/acciones esenciales visibles, sin overlap ni pérdida del borrador
+    observado: >
+      Pasó. Resize real 200x60 ↔ 80x24 con borrador intacto y sin overlap;
+      80/120 por test_integrated_layout.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+        sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+  - id: G8-03
+    prueba: tests/test_side_panel.py::test_palette_meets_wcag_aa_for_its_actual_uses + docs/design/terminal-colors.md
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_side_panel.py -ra --tb=short
+    esperado: tema por defecto con contraste objetivo >=4.5:1 para texto normal y >=3:1 para indicadores; documentar colores efectivos y límites del terminal
+    observado: >
+      Pasó. Ratios fijados por test; colores, canales sin color y límites
+      documentados en docs/design/terminal-colors.md.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+        sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+      - tests/test_side_panel.py
+        sha256: a016f9d3d6e353e248be27f5b59113ff0e8a0020b93dda7750a94082eeb367a5
+      - docs/design/terminal-colors.md
+        sha256: 87bf68441f8f9899a1e309ca9dce3cce181fe19802ef699848dbeccb8bb20776
+  - id: G8-04
+    prueba: tests/test_ux_polish.py::test_thousand_tool_events_keep_order_and_failed_stays_failed
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py -ra --tb=short
+    esperado: 1000 eventos de herramientas mantienen orden, scroll manual, selección y estado de Tasks; ningún resultado fallido se muestra completado
+    observado: >
+      Pasó. 1000 hojas en orden estricto; una hoja Failed jamás muestra
+      Completed. Además (dogfood): el recibo ya no duplica tarjeta por llamada
+      — vive dentro de la hoja de la herramienta (commit 32aa6cc).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+        sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+  - id: G8-05
+    prueba: tests/test_ux_polish.py::test_receipt_expands_decision_scope_budget_recovery_without_canary tests/test_visual_tui.py::test_owned_read_keeps_receipt_in_expandable_detail
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_ux_polish.py tests/test_visual_tui.py -ra --tb=short
+    esperado: recibos compactos expanden decisión, paths seguros, presupuesto restante y recuperación; canarios de secretos ausentes incluso en errores
+    observado: >
+      Pasó. El recibo expande Decision, Receipt id, Scope sanitizado, Budget
+      (usado/restante) y Recovery — ahora DENTRO del cuerpo expandible de la
+      tarjeta de la herramienta (test_visual_tui actualizado al nuevo
+      contrato: sin caja .tool-receipt separada; la búsqueda de consola
+      encuentra rcpt_ expandiendo la hoja). Canario ausente.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+        sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+      - tests/test_visual_tui.py
+        sha256: f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5
+sin_evidencia_real:
+  - revisión en terminal física real (los snapshots son pilot/Textual)
+  - widget del sidebar de agentes M6A renderizado en la TUI viva
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1497 passed, 1 skipped, 11 deselected; 302.82s
+riesgos_residuales: la prueba de 1000 eventos usa stub de mount para 990 hojas (lógica real de orden/estado); ratios WCAG contra el fondo del tema
+rollback_ensayado: revertir 32aa6cc devuelve el recibo a caja separada; el paquete 1d588426 queda en git history
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T21:42:22Z
+revision_declaracion: Re-aceptación tras renovación por regla 8 (recibo dentro de la tarjeta); casos, artefactos y hashes verificados con scripts/validate_gates.py

@@ -115,12 +115,13 @@ def find_isymotron_root() -> Path:
 
 def load_api_key(provider_name: str | None = None) -> str:
     """Load the selected provider key from env or IsyMotron's external store."""
-    selected_provider = (provider_name or os.environ.get("ISYCODE_PROVIDER", os.environ.get(
-        "ISYMOTRON_PROVIDER", "nebius"))).casefold()
+    active_provider = os.environ.get("ISYCODE_PROVIDER", os.environ.get(
+        "ISYMOTRON_PROVIDER", "nebius")).casefold()
+    selected_provider = (provider_name or active_provider).casefold()
     # Generic overrides describe only the active provider. Explicit provider
     # lookups (for example, the Roundtrip reviewer) resolve their own key.
     generic_override_applies = (
-        provider_name is None or provider_name.casefold() == selected_provider)
+        provider_name is None or selected_provider == active_provider)
     if generic_override_applies:
         value = os.environ.get("ISYMOTRON_API_KEY", "").strip()
         if value:
@@ -131,15 +132,8 @@ def load_api_key(provider_name: str | None = None) -> str:
         key_file = Path(configured_file).expanduser()
     else:
         provider = selected_provider
-        key_env = {
-            "openai": "OPENAI_API_KEY",
-            "nvidia": "NVIDIA_NIM_API_KEY",
-            "nebius": "NEBIUS_API_KEY",
-            "groq": "GROQ_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
-            "ollama": "OLLAMA_API_KEY",
-            "llamacpp": "LLAMACPP_API_KEY",
-        }.get(provider)
+        from isycode.providers import PRESETS
+        key_env = str(PRESETS.get(provider, {}).get("key_env") or "")
         if not key_env:
             return ""
         provider_value = os.environ.get(key_env, "").strip()

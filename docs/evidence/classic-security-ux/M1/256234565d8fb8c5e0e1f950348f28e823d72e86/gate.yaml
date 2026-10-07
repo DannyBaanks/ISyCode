@@ -1,0 +1,82 @@
+hito: M1
+puerta: G1
+estado: EN_REVISION
+sha_evaluado: 256234565d8fb8c5e0e1f950348f28e823d72e86
+fecha_utc: 2026-10-02T12:11:07Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, bubblewrap 0.9.0, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; Classic sigue pidiendo aprobación por edición y por comando; este hito no abre autonomía
+dependencias: G0
+dependencias_estado:
+  G0: EN_REVISION
+casos:
+  - id: G1-01
+    prueba: tests/test_gate_equivalence.py y tests/test_effect_policy.py
+    comando: ./.venv/bin/python -m pytest -q tests/test_gate_equivalence.py tests/test_effect_policy.py --tb=line
+    esperado: la misma lectura tiene la misma decisión en owner, gate y headless; owner desconocido, checks vacíos, excepción y acción sin clase deniegan; una denegación explícita gana al preset
+    observado: >
+      Esas pruebas pasaron dentro de la suite hermética. Una lectura Classic
+      devuelve ALLOW en LocalWorkspaceReadOwner, ProductActionGate y headless.
+      Security sin grants devuelve DENY en las tres y no cambia el archivo.
+      owner_id not_registered, IsySentinel sin Systembilities y una Systembility
+      que lanza deniegan. not.registered sale por EffectClass y no ejecuta.
+      workspace.files.read revocado en Classic sigue en el preset y aun así DENY.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/pytest-not-integration.txt
+        sha256: 57190d934f7b6f4ad0afc4e7e58b73be4402b207c0964cb69b8ae2acde8aa0c1
+  - id: G1-02
+    prueba: tests/test_gate_equivalence.py::test_revocation_changed_digest_expiry_reuse_and_other_workspace_write_nothing
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: revocación, digest cambiado, aprobación expirada o reutilizada y otro workspace no producen un efecto nuevo
+    observado: >
+      La prueba escribió solo la edición aprobada una vez (x = 5). Revocar
+      workspace.files.write entre preview y apply, cambiar el archivo, expirar
+      el token a los 2 s y reutilizarlo devolvieron DENY sin una segunda
+      escritura. Un request de otro workspace contra el gate de este root
+      también DENY y dejó ambos archivos como estaban.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/pytest-not-integration.txt
+        sha256: 57190d934f7b6f4ad0afc4e7e58b73be4402b207c0964cb69b8ae2acde8aa0c1
+  - id: G1-03
+    prueba: tests/test_gate_equivalence.py::test_receipt_text_is_presentation_and_imports_no_policy
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: la extracción conserva la suite y los componentes visuales no importan la política
+    observado: >
+      decision_view no importa autoridad, Sentinel, approvals, owners ni
+      effect_policy. tui importa decision_view y no effect_policy. Las líneas
+      de recibo del chat siguen el texto ISySentinel ALLOW. La suite hermética
+      completa pasó, incluido el snapshot de cobertura con los números de línea
+      movidos por el cambio en authorize.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/pytest-not-integration.txt
+        sha256: 57190d934f7b6f4ad0afc4e7e58b73be4402b207c0964cb69b8ae2acde8aa0c1
+  - id: G1-04
+    prueba: scripts/validate_gates.py y el job gate-evidence
+    comando: ./.venv/bin/python scripts/validate_gates.py --self-test && ./.venv/bin/python scripts/validate_gates.py
+    esperado: CI rechaza manifest ausente, dependencia falsa, SHA ajeno, test omitido y bypass; el check remoto obligatorio queda probado
+    observado: >
+      El self-test local rechaza documento vacío, SHA ajeno, test omitido,
+      dependencia falsa y APROBADO con un caso FAIL. validate_tree rechaza
+      además un SHA de carpeta distinto y cualquier estado APROBADO. El job
+      gate-evidence está en .github/workflows/ci.yml y el empaquetado espera
+      a los dos jobs de tests y a ese job. PUT de la protección de main y la
+      lectura de vuelta muestran contexts Tests (Linux), Tests (Linux, Textual 8)
+      y Gate evidence, strict false, enforce_admins false, sin reviews obligatorias.
+      El propietario sigue pudiendo pushear. No se abrió una PR de bypass para
+      verla rechazada. No se anuncia enforcement contra el admin. El autor no
+      puede aprobar su propia puerta.
+    resultado: EN_REVISION
+    artefactos:
+      - scripts/validate_gates.py
+sin_evidencia_real:
+  - una PR de bypass rechazada por los checks requeridos
+  - enforce_admins encendido
+  - Classic autónomo con 0 aprobaciones por acción
+  - staging de efectos antes de promover al árbol del usuario
+regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1060 passed, 2 skipped, 11 deselected; 96.19s
+riesgos_residuales: la versión de política no entra en el journal; el sandbox sigue montando el workspace escribible; Security no borra grants explícitos previos
+rollback_ensayado: revertir 256234565d8fb8c5e0e1f950348f28e823d72e86 devuelve la autorización anterior; M1 no cambia grants guardados
+revision: ausente

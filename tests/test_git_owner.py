@@ -83,13 +83,16 @@ def test_is_path_tracked_is_bound_to_git_status_and_only_checks_isycode(repo):
     assert json.loads(tracked.text)["tracked_paths"] == [".isycode/config.json"]
 
 
-def test_classic_mode_reads_git_but_never_commits(repo):
+def test_classic_mode_reads_git_and_commits_only_after_exact_approval(repo):
     owner, authority, approvals, root = repo
     authority.set_mode("classic")
     (root / "app.py").write_text("x = 3\n")
     assert owner.status().decision == "ALLOW"
     preview = owner.preview_commit("change")
-    assert owner.commit(preview, approvals.issue(preview.request)).decision == "DENY"
+    assert owner.commit(preview, None).decision == "DENY"
+    outcome = owner.commit(preview, approvals.issue(preview.request))
+    assert outcome.decision == "ALLOW"
+    assert _git(root, "log", "-1", "--format=%s").strip() == "change"
 
 
 def test_commit_needs_approval_and_commits_exactly_the_reviewed_files(repo):
@@ -162,7 +165,7 @@ def test_worktree_links_and_missing_repositories_are_refused(tmp_path, monkeypat
     owner = GitOwner(root, authority)
     assert "not a git repository" in owner.status().reason
     (root / ".git").write_text("gitdir: /elsewhere\n")
-    assert "not a worktree link" in owner.status().reason
+    assert "not worktree links" in owner.status().reason
 
 
 @pytest.mark.parametrize("paths", [[".env"], ["../x"], ["missing.py"], []])

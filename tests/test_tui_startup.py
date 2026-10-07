@@ -1,7 +1,7 @@
 """Exercise the complete TUI against the installed Textual dependency."""
 import asyncio
 
-from isycode.tui import PromptArea, TUIApp, WorkspaceModeScreen, WorkspaceSetupScreen
+from isycode.tui import PromptArea, QuickStartScreen, TUIApp, WorkspaceModeScreen, WorkspaceSetupScreen
 
 
 def test_tui_starts_in_a_temporary_security_workspace(tmp_path, monkeypatch, capsys):
@@ -14,6 +14,9 @@ def test_tui_starts_in_a_temporary_security_workspace(tmp_path, monkeypatch, cap
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            assert isinstance(app.screen, QuickStartScreen)
+            await pilot.press("escape")
             await pilot.pause()
             assert isinstance(app.screen, WorkspaceSetupScreen)
             await pilot.press("escape")

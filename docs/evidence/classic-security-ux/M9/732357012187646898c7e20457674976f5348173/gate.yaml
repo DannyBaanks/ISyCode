@@ -1,0 +1,99 @@
+hito: M9
+puerta: G9
+estado: BLOQUEADO
+sha_evaluado: 732357012187646898c7e20457674976f5348173
+fecha_utc: 2026-10-06T21:00:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4 NVMe, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM — NO es la caja de referencia (4 cores/8GiB); la diferencia queda registrada, no extrapolada
+perfil_y_politica: mediciones con provider simulado; G9-06 requiere credencial autorizada
+dependencias: G8
+dependencias_estado:
+  G8: APROBADO
+casos:
+  - id: G9-01
+    prueba: suite de todos los IDs de gates aprobados (111 tests) + scripts/validate_gates.py
+    comando: python3 scripts/validate_gates.py && python3 -m pytest -q tests/test_turn_control.py tests/test_workspace_trust.py tests/test_egress.py tests/test_gate_equivalence.py tests/test_effect_policy.py tests/test_staging.py tests/test_effect_ledger.py tests/test_agent_events.py tests/test_instruction_queue.py tests/test_agent_panel.py tests/test_agent_polling.py tests/test_everyday_flows.py tests/test_ux_polish.py tests/test_approval_keys.py tests/test_side_panel.py -ra --tb=line
+    esperado: todos los IDs anteriores vigentes PASS; cero skips críticos, escapes, pérdidas de trabajo o filtraciones de canarios
+    observado: >
+      exit 0 en ambos. 111/111 tests de los 8 gates aprobados (G0..G8) PASS en
+      el SHA evaluado; el validador acepta los 8 manifiestos APROBADO con sus
+      artefactos y hashes. Cero escapes/canarios: los tests de canario de G5 y
+      G6A-06 están dentro de los 111.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/gate-tests.txt
+        sha256: 3b301ab8a74c44d5341ae6df4c880763635f35101610b06987b3d7754805f71a
+  - id: G9-02
+    prueba: scripts/measure_g9.py (30 arranques warm + 30 ecos de teclado)
+    comando: env -u ISYCODE_STATE_HOME python3 scripts/measure_g9.py measurements.json
+    esperado: 30 arranques warm: p95 a composer usable <=2 s; interacción teclado p95 <=100 ms; no atribuir latencia del provider a la UI
+    observado: >
+      p95 warm start 0.9769s (<=2s); p95 eco de teclado 78.85ms (<=100ms).
+      30/30 muestras crudas guardadas en measurements.json con metodología;
+      provider simulado por construcción (su latencia no entra en la medición).
+      Host medido: 12 CPU/14Gi — no es la caja de referencia de 4/8.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/measurements.json
+        sha256: 78b730188d1acf7a0b302e759a09caccb65dbb2900d90ad5ab938d3fb918771f
+      - scripts/measure_g9.py
+        sha256: c32464f85ae80ca962f146c7c7a36fdb48b523284251df5508be346a0877b953
+  - id: G9-03
+    prueba: scripts/measure_g9.py (30 cancelaciones de comando sandboxed)
+    comando: env -u ISYCODE_STATE_HOME python3 scripts/measure_g9.py measurements.json
+    esperado: 30 cancelaciones: p95 reconocimiento UI <=250 ms y árbol terminado <=2 s; documentar timeout duro y estado incierto excepcional
+    observado: >
+      p95 reconocimiento 0.01ms (<=250ms); p95 árbol terminado 0.002s (<=2s),
+      verificado con pgrep fuera del proceso. Timeout duro: wait_for(task, 5s)
+      en el harness; el estado incierto excepcional queda cubierto por
+      UNCERTAIN de G6 (ya aprobado).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/measurements.json
+        sha256: 78b730188d1acf7a0b302e759a09caccb65dbb2900d90ad5ab938d3fb918771f
+      - scripts/measure_g9.py
+        sha256: c32464f85ae80ca962f146c7c7a36fdb48b523284251df5508be346a0877b953
+  - id: G9-04
+    prueba: scripts/soak_g9.py (soak >=2h, >=100 ciclos, 3 restarts; huérfanos y RSS)
+    comando: nohup env -u ISYCODE_STATE_HOME python3 scripts/soak_g9.py /tmp/g9-soak.json &
+    esperado: soak >=2 h y >=100 ciclos con 3 restarts: sin procesos huérfanos ni pérdida; RSS final <=baseline warm +25% y <=500 MiB en fixture declarado
+    observado: >
+      COMPLETADO 2026-10-06 (~2h reales): 1585 ciclos de chat (turno completo
+      con provider simulado, write real por owner y undo), 3 restarts del
+      proceso, 0 fallos. Huérfanos: 0 al final (2 lecturas pgrep transitorias
+      durante ciclos de restart, verificadas como el propio hijo de relanzamiento
+      a mitad de su arranque; todas las muestras restantes y la final en 0).
+      RSS: baseline warm 167.7 MiB → máximo 173.9 MiB (+3.7%, ≤+25%) y final
+      167.8 MiB (≤500 MiB). Artefacto crudo: soak.json.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/soak.json
+        sha256: 069fcda80d803d7a7f6bb94f24e2f2cfc38cd8db688550f0676dfb52640396b5
+      - scripts/soak_g9.py
+        sha256: 1355f1ac9c2669c746666bd25b06438dc8c73c82daf37dd5d8df56270bbdde0f
+  - id: G9-05
+    prueba: participantes humanos
+    comando: no ejecutable sin 5 participantes reales
+    esperado: 5 participantes realizan 3 tareas: >=4/5 terminan cada una sin ayuda, mediana onboarding <=2 min con credencial ya disponible, cero modales ordinarios tras trust
+    observado: >
+      BLOQUEADO por diseño: la aceptación del roadmap prohíbe sustituir
+      humanos por un modelo. Requiere reclutar 5 participantes y una sesión
+      moderada con Quick Start (M-UX4, ya implementado).
+    resultado: EN_REVISION
+  - id: G9-06
+    prueba: flujo vivo con provider autorizado
+    comando: pendiente de autorización explícita del propietario (scope + gasto)
+    esperado: al menos un flujo vivo con provider autorizado; registrar modelo/latencias/errores/coste disponible, sin extrapolar soporte a todos los providers
+    observado: >
+      BLOQUEADO: requiere que el propietario autorice una llamada viva con
+      credencial real, scope y gasto. No se usaron credenciales reales.
+    resultado: EN_REVISION
+sin_evidencia_real:
+  - resultado del soak de 2h (en curso al cerrar)
+  - participantes humanos (G9-05)
+  - flujo vivo autorizado (G9-06)
+  - medición en la caja de referencia 4 cores/8GiB (este host es 12/14; diferencia registrada)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1488 passed, 1 skipped, 11 deselected (misma corrida de G8, código idéntico salvo scripts de medición)
+riesgos_residuales: las latencias son del harness pilot, no de un terminal físico; el estado de M9 es BLOQUEADO hasta que G9-04/05/06 tengan evidencia real
+rollback_ensayado: revertir 7323570 quita los dos scripts de medición
+revision: ausente

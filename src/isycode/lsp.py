@@ -191,6 +191,54 @@ def discover_servers() -> list[dict[str, Any]]:
     return found
 
 
+# Display-only. discover_servers() stays "found on PATH" so a missing binary
+# is never handed to the sandbox launcher.
+_LANGUAGE_SERVERS: tuple[dict[str, str], ...] = (
+    {"id": "pyright", "label": "Pyright Language Server",
+     "install_hint": "npm install -g pyright"},
+    {"id": "rust-analyzer", "label": "rust-analyzer",
+     "install_hint": "rustup component add rust-analyzer"},
+    {"id": "typescript", "label": "TypeScript Language Server",
+     "install_hint": "npm install -g typescript-language-server typescript"},
+    {"id": "gopls", "label": "gopls",
+     "install_hint": "go install golang.org/x/tools/gopls@latest"},
+    {"id": "clangd", "label": "clangd",
+     "install_hint": "Install clangd from your system packages and put clangd on PATH"},
+    {"id": "jdtls", "label": "Eclipse JDT Language Server",
+     "install_hint": "Put the jdtls launcher on PATH"},
+    {"id": "pylsp", "label": "Python LSP Server",
+     "install_hint": "pip install 'python-lsp-server'"},
+)
+
+
+def language_server_catalog(discovered: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Known language servers for the sidebar, including ones that are not installed.
+
+    Passing ``discovered`` avoids a second PATH scan. ``None`` reads discover_servers().
+    A ``not_installed`` row is display-only and is never returned by discover_servers().
+    """
+    found = {item["id"]: item for item in (discover_servers() if discovered is None else discovered)}
+    rows: list[dict[str, Any]] = []
+    for spec in _LANGUAGE_SERVERS:
+        current = found.get(spec["id"])
+        if current is None:
+            rows.append({
+                "id": spec["id"],
+                "label": spec["label"],
+                "state": "not_installed",
+                "install_hint": spec["install_hint"],
+                "presence": "missing",
+            })
+            continue
+        rows.append({
+            **current,
+            "label": current.get("label") or spec["label"],
+            "install_hint": spec["install_hint"],
+            "presence": "installed",
+        })
+    return rows
+
+
 def _frame(message: dict[str, Any]) -> bytes:
     payload = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     if len(payload) > MAX_FRAME_BYTES:
@@ -593,5 +641,5 @@ async def pyright_diagnostics(root: Path, relative_path: str, text: str,
                         "network": "network socket access denied by seccomp; anonymous local IPC allowed only for TypeScript"}}
 
 
-__all__ = ["discover_servers", "network_deny_bootstrap", "pyright_diagnostics",
-           "pyright_workspace_symbols"]
+__all__ = ["discover_servers", "language_server_catalog", "network_deny_bootstrap",
+           "pyright_diagnostics", "pyright_workspace_symbols"]

@@ -100,6 +100,7 @@ def test_folder_removed_while_diff_is_open_cannot_be_written(tmp_path, monkeypat
 
 def test_auto_edit_warning_cancel_enable_disable_and_authority_remain(tmp_path, monkeypatch, capsys):
     _, sibling, store = setup(tmp_path, monkeypatch)
+    WorkspaceAuthority(sibling).set_mode('classic')
 
     async def scenario():
         from isycode.tui import AutomaticEditsWarningScreen
@@ -153,6 +154,7 @@ def test_file_browser_selection_keeps_primary_identity(tmp_path, monkeypatch, ca
 
 def test_readded_alias_invalidates_pending_diff_and_warning(tmp_path, monkeypatch, capsys):
     _, sibling, store = setup(tmp_path, monkeypatch)
+    WorkspaceAuthority(sibling).set_mode('classic')
 
     async def scenario():
         from isycode.tui import AutomaticEditsWarningScreen
@@ -193,6 +195,11 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
     sibling.mkdir()
     (sibling / 'file.py').write_text('value = 1\n')
     store = WorkspaceFolders(root)
+    WorkspaceAuthority(sibling).set_mode('classic')
+
+    async def choose_sibling(self):
+        return sibling
+    monkeypatch.setattr('isycode.tui.SiblingFolderPickerOwner.choose', choose_sibling)
 
     async def scenario():
         from isycode.tui import AddWorkspaceFolderScreen, AutomaticEditsWarningScreen
@@ -204,7 +211,6 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
             await pilot.pause()
             assert isinstance(app.screen, AddWorkspaceFolderScreen)
             app.screen.query_one('#folder-alias', Input).value = 'sibling'
-            app.screen.query_one('#folder-path', Input).value = str(sibling)
             button = app.screen.query_one('#folder-add')
             assert button.region.bottom <= 24
             await pilot.click('#folder-add')
@@ -273,6 +279,63 @@ def test_warning_controls_remain_visible_and_cancel_by_default(tmp_path, monkeyp
             await pilot.press('enter')
             assert not await asyncio.wait_for(task, 10)
             assert not WorkspaceFolders(root).auto_edit_allowed('main')
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('secured', ['main', 'sibling'])
+def test_security_requires_review_despite_saved_automatic_edits(tmp_path, monkeypatch, capsys, secured):
+    root, sibling, store = setup(tmp_path, monkeypatch)
+    WorkspaceAuthority(sibling).set_mode('classic')
+    store.set_auto_edit('sibling', True)
+    WorkspaceAuthority(root if secured == 'main' else sibling).set_mode('security')
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
+                path='file.py', old_text='value = 1', new_text='value = 2')))
+            for _ in range(100):
+                await pilot.pause(.01)
+                if isinstance(app.screen, WriteApprovalScreen) or task.done():
+                    break
+            assert (sibling / 'file.py').read_text() == 'value = 1\n'
+            assert isinstance(app.screen, WriteApprovalScreen)
+            assert not app.screen.query('#write-approval-always')
+            await pilot.press('enter')
+            _, result = await asyncio.wait_for(task, 10)
+            assert json.loads(result)['status'] == 'rejected_by_user'
+            assert (sibling / 'file.py').read_text() == 'value = 1\n'
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_security_parent_requires_review_for_trusted_classic_attachment(tmp_path, monkeypatch, capsys):
+    from isycode.workspace_trust import WorkspaceTrust, ACCEPT_PHRASE
+    root, sibling, _ = setup(tmp_path, monkeypatch)
+    authority = WorkspaceAuthority(sibling)
+    authority.set_mode('classic')
+    WorkspaceTrust().accept(authority, ACCEPT_PHRASE)
+    WorkspaceAuthority(root).set_mode('security')
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
+                path='file.py', old_text='value = 1', new_text='value = 2')))
+            for _ in range(100):
+                await pilot.pause(.01)
+                if isinstance(app.screen, WriteApprovalScreen) or task.done():
+                    break
+            assert (sibling / 'file.py').read_text() == 'value = 1\n'
+            assert isinstance(app.screen, WriteApprovalScreen)
+            await pilot.press('escape')
+            _, result = await asyncio.wait_for(task, 10)
+            assert json.loads(result)['status'] == 'rejected_by_user'
 
     with capsys.disabled():
         asyncio.run(scenario())

@@ -5,7 +5,7 @@
 > **Estado:** en desarrollo. Esta página separa lo que ya se ejecutó de verdad de lo que está implementado y probado solo con dobles de prueba. Mira [Qué está probado](#qué-está-probado).
 
 
-**Novedades (2026-10-01):** agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
+**Novedades (2026-10-04):** el modelo guardado sobrevive al reinicio, también como clave de visión; `.netrc`, `.npmrc` y `.pypirc` no se leen ni se copian al log de comandos; Ctrl+S abre ShellBox; la cola puede hacer steer y devolver el texto si falla; Sessions borra con confirmación; cada conversación conserva su transcript, cola y turno en curso, y al cambiar de chat ese turno se aparca (no se cancela); las aprobaciones de cambios, comandos, commits o borrados son fail-closed —`n`/`Esc` rechazan, el botón por defecto es Reject— con el diff o comando exacto y su receipt; en Chat, `Esc` detiene el turno y `/retry` ofrece recuperarlo. Lo anterior (2026-10-01): agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
 
 **Uso diario (2026-09-30):** recuperación manual con `/retry`, borradores y sesiones versionadas, `/context` para AGENTS.md, diagnóstico local `isycode doctor` y `/doctor`, y verificación explícita del proveedor con `/check`. Consulta [la guía y sus límites de verificación](docs/daily-use-readiness.md).
 
@@ -37,18 +37,18 @@ Las capturas son evidencia histórica de la TUI real de Textual con un workspace
 
 Lo que verás al usarla:
 
-- **Chat y transcript limpio:** las lecturas salen en una sola línea gris (`✓ read src/app.py · rcpt_…`); cada cambio de archivo muestra tu decisión (`✓ You approved · ruta` o `✗ You rejected · ruta · nothing was written`) y el modelo la recibe en el resultado (`approved_by_user`), así nunca confunde un rechazo con un éxito.
-- **Aprobaciones:** cada cambio, comando o commit abre una ventana con el diff o el comando exacto. `y` aprueba, `n` o `Esc` rechazan y `Enter` sobre el botón por defecto rechaza. Si una escritura reemplaza un archivo existente completo, la ventana lo dice: *Replace whole file*.
+- **Chat y transcript limpio:** las lecturas salen en una sola línea gris (`✓ read src/app.py · rcpt_…`). Un cambio que revisas muestra tu decisión (`✓ You approved · ruta` o `✗ You rejected · ruta · nothing was written`) y el modelo la recibe en `approved_by_user`. En una carpeta Classic ya confiable, el cambio ordinario sale como `✓ Quiet Classic · ruta` y el modelo recibe `approved_by_user: false` con `approval_mode: quiet-profile`. Un rechazo no se presenta como un éxito, y una edición quieta no se presenta como si la hubieras aprobado una a una.
+- **Aprobaciones:** mientras la carpeta no está confiada, cada cambio, comando o commit abre una ventana con el diff o el comando exacto. `y` aprueba, `n` o `Esc` rechazan y `Enter` sobre el botón por defecto rechaza. Si una escritura reemplaza un archivo existente completo, la ventana lo dice: *Replace whole file*. Tras confiar la carpeta, las ediciones recuperables y los comandos con sandbox dejan de abrir esa ventana. El commit, los secretos, la autoridad, deshacer y MCP siguen abriéndola.
 - **Settings y la paleta `/`:** se abren como una ventana grande y centrada. La opción resaltada se explica debajo de la lista; las que llevan `?` abren un cuadrito de ayuda al pulsar `?`. En el campo de filtro, `?` se escribe normal.
 - **Panel Tasks:** el plan del agente con su progreso. Clic en el panel o `Ctrl+T` lo pliegan a una línea (`▸ Tasks · 3/7 done · now: …`) y lo vuelven a abrir.
-- **Panel lateral:** MCPs, LSPs y Skills aparecen como interruptores **● ON** (verde) u **OFF ○** (rojo), con el motivo en gris y un resumen en el título (`LSPs · 1/2 on`). Cada sección se pliega con un clic en su título; Gateway, Mobile Host, Bridge y Workspace empiezan plegadas.
+- **Panel lateral:** MCPs, LSPs y Skills se leen por un punto de color (verde listo, ámbar comprobando, rojo no listo, gris apagado), sin pastilla de fondo. El título resume, por ejemplo `LSPs · 1 ready · 5 missing`. *Install commands* escribe el comando exacto en la sección y no descarga ni arranca nada. Cada sección se pliega con un clic en su título; Gateway, Mobile Host, Bridge y Workspace empiezan plegadas.
 - **Copiar:** con el permiso *Copy selected text to the clipboard*, seleccionar texto con el ratón lo copia al portapapeles del sistema (wl-copy, xclip, xsel, pbcopy o clip, y además OSC 52). El botón *Copy path* del árbol de archivos usa el mismo camino. El campo de API key nunca se copia y el journal guarda solo tamaño y digest, nunca el texto.
 
 ## Instalar y arrancar
 
 Desde el código fuente (Python 3.10 o posterior):
 
-La instalación fija **Textual 1.0.0**, la versión validada con Python 3.10 y 3.12 para arranque, navegación, aprobaciones y panel lateral. Textual 8.x no está soportado.
+La instalación fija **Textual 8.2.8**, que habilita seleccionar texto en el chat y copiarlo mediante el permiso del workspace. CI ejecuta la suite con Python 3.10 y 3.12.
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git
@@ -153,17 +153,18 @@ Cada workspace tiene su modo. Lo eliges la primera vez que abres la carpeta (`Es
 | | Classic | Security |
 | --- | --- | --- |
 | Leer y buscar archivos del workspace | incluido | lo activas tú |
-| Proponer ediciones (diff + *Apply* en cada cambio) | incluido | lo activas tú |
+| Proponer ediciones (diff + *Apply* en cada cambio) | incluido; tras confiar la carpeta, las ediciones ordinarias se aplican sin preguntar cada una; antes de eso, diff + *Apply* | lo activas tú |
 | Chat con el provider elegido (solo hosts conocidos o el endpoint configurado) | incluido | lo activas tú |
 | Guardar y reanudar conversaciones | incluido | lo activas tú |
 | Guardar, usar y quitar API keys (guardar y quitar piden confirmación) | incluido | lo activas tú por servicio |
-| Ver `git status` y diffs | incluido | lo activas tú |
-| Commits, comandos en sandbox, MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
+| Git status/diff y commits revisados | incluido; cada commit pide aprobación | permiso explícito; cada commit pide aprobación |
+| Comandos de desarrollo en sandbox Bubblewrap/seccomp (si está disponible) | incluido; tras confiar la carpeta no pregunta cada comando; antes de eso, revisas y apruebas cada uno. Sin sandbox se quedan apagados | permiso explícito; revisas y apruebas cada comando |
+| MCP local, diagnósticos Pyright | permiso explícito | permiso explícito |
 | Gateway, broker, Tailscale, Mobile Host | permiso explícito | permiso explícito |
-| Borrar y mover archivos | implícito (con aprobación por acción) | permiso explícito |
+| Borrar y mover archivos | implícito; tras confiar la carpeta no pregunta cada vez; antes de eso, aprobación por acción | permiso explícito |
 | Shell libre, archivos sensibles, editar `.isyroot` | no disponible | no disponible |
 
-Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: IsySentinel revisa cada acción, las aprobaciones por acción siguen y todo queda en el journal en ambos modos. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security.
+Classic es un preset de permisos implícitos de Workspace Authority, **no un bypass**: los comandos pasan solo por el sandbox verificado. En una carpeta que todavía no confiaste, cada edición y cada comando conservan su aprobación exacta. Cuando confías la carpeta, las lecturas, las ediciones recuperables dentro del presupuesto y los comandos aislados dejan de preguntar uno a uno. El commit, los secretos, los cambios de autoridad, deshacer, MCP y un comando sin sandbox siguen pidiendo confirmación o se quedan apagados. IsySentinel revisa cada acción y todo queda en el journal. Si no hay sandbox, no existe fallback inseguro. El preset nunca se escribe en la política explícita. Los workspaces creados antes de los modos siguen en Security. Una carpeta movida, copiada o recreada no hereda la confianza.
 
 ## Qué puede hacer el agente
 
@@ -173,12 +174,12 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | --- | --- | --- | --- |
 | Listar, leer y buscar por nombre | `workspace_list`, `workspace_read`, `workspace_search` | Read and search workspace files | no |
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
-| Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto |
-| Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto |
-| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra |
-| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (incluido en Classic) | sí; nunca sobrescribe el destino |
+| Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
+| Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
+| Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra, salvo carpeta Classic ya confiable |
+| Mover o renombrar un archivo | `workspace_move` | Edit workspace files (incluido en Classic) | sí; nunca sobrescribe el destino. En carpeta Classic ya confiable no pregunta cada vez |
 | Deshacer el último cambio de ISyCode | `/undo` | Edit workspace files | sí, con el diff inverso |
-| Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto |
+| Ejecutar un programa (tests, build, linter) | `workspace_run`, `/run` | Run commands in a sandbox | sí, con el comando exacto, salvo carpeta Classic ya confiable y con sandbox |
 | Ver rama, cambios y diffs | `git_status`, `git_diff`, `/git`, `/diff` | See git status and diffs | no |
 | Crear un commit | `git_commit`, `/commit` | Create git commits | sí, con archivos, mensaje y diff |
 | Herramientas de servidores MCP locales | `mcp__<servidor>__<herramienta>`, `/mcp` | se concede al arrancar el servidor | sí: al arrancar y en cada llamada |
@@ -186,39 +187,38 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | Mostrar su plan de trabajo | `update_tasks` (panel **Tasks**) | ninguno: no es una acción | no |
 | Copiar texto que **tú** seleccionas | selección con el ratón, *Copy path* | Copy selected text to the clipboard | no (es un gesto tuyo; el modelo no tiene esta herramienta) |
 
-**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Cada cambio, comando y commit sigue pidiéndote aprobación.
+**Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Eso no apaga las preguntas. Cada commit sigue pidiendo aprobación. Los cambios y comandos ordinarios dejan de preguntar uno a uno solo después de confiar la carpeta. Sin esa confianza, cada uno sigue pidiendo aprobación. Sin sandbox los comandos se quedan apagados.
 
 Si una herramienta está apagada, el agente te dice dónde activarla en vez de solo decir que no puede.
 
 ### Bucle y contexto
 
-- **Sin límite de pasos por defecto:** el agente trabaja hasta responder, sin tope de llamadas por respuesta. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Si prefieres acotar cuántas peticiones al modelo (y cuánto gasto) usa un prompt, elige 10, 25, 50 o 100 pasos en **Settings → My defaults**.
+- **Sin límite local de pasos:** el agente trabaja hasta responder. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Las opciones heredadas de número de pasos se conservan por compatibilidad, pero no limitan el turno.
 - **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
 - El chat muestra cada explicación y el razonamiento que entregue el provider, luego sus herramientas y después el siguiente paso. El scroll sigue la salida mientras estás abajo; si subes a leer o buscas un mensaje antiguo, conserva tu posición. Pulsa `End` dentro del chat o vuelve al final para seguir la salida otra vez.
-- Las sesiones conservan hasta 32 notas de herramientas y el resumen de contexto, con límites y redacción de secretos comunes. Al retomar se muestran como historial que puede estar desactualizado; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
-- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y peticiones de chat/resumen. **Settings → My defaults → Chat budget per session** ofrece 10.000, 50.000, 100.000 o 500.000 tokens; está apagado por defecto. Detiene peticiones posteriores al agotar el presupuesto o si el consumo es desconocido. Una petición en curso puede sobrepasarlo; no es un límite de facturación. `/check` y la revisión externa se cuentan por separado.
-- Cuando la conversación ya no cabe, ISyCode **resume los mensajes antiguos** con el mismo provider (una petición autorizada y con receipt, como cualquier otra) y recorta resultados de herramientas antiguos dentro de un turno largo. `/compact` lo hace a mano. La conversación guardada conserva siempre el transcript completo.
+- Las sesiones conservan notas de herramientas completas, sin recortes automáticos de longitud o número, y su resumen de contexto. Los resultados se muestran como datos no confiables y pueden estar desactualizados; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
+- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y solicitudes. Las opciones heredadas `chat_token_budget`, `answer_tokens` y `agent_steps` no limitan la conversación activa. No hay límite local de generación ni recorte/compactación automática; el endpoint puede tener límites propios y cobrar según su configuración. `/compact` resume solo cuando lo pides. `/check` y la revisión externa son solicitudes aparte.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
 
 ### Ediciones
 
 `workspace_edit` reemplaza un fragmento exacto de un archivo; `workspace_write` propone el contenido completo y puede crear hasta 8 carpetas nuevas, que aparecen en la aprobación. La escritura es atómica, no sigue symlinks, rechaza rutas sensibles y archivos de más de 128 KiB, y **no sobrescribe si el archivo cambió después de la revisión**. Cada cambio guarda un checkpoint fuera del proyecto para `/undo`.
 
-En Linux y macOS se usan descriptores que nunca siguen enlaces. En Windows se usan rutas verificadas: se rechazan symlinks y junctions en toda la ruta y se comprueba con la ruta final del handle que lo abierto está dentro del workspace. En escrituras queda una ventana mínima entre la última comprobación y el `rename`, documentada en [`isycode/winfs.py`](isycode/winfs.py).
+En Linux y macOS se usan descriptores que nunca siguen enlaces. En Windows se usan rutas verificadas: se rechazan symlinks y junctions en toda la ruta y se comprueba con la ruta final del handle que lo abierto está dentro del workspace. En escrituras queda una ventana mínima entre la última comprobación y el `rename`, documentada en [`src/isycode/winfs.py`](src/isycode/winfs.py).
 
 ### Comandos en sandbox
 
 Necesita **bubblewrap, libseccomp y python3 en Linux**; sin ellos, la opción aparece como no disponible.
 
 - Sin shell: se ejecuta exactamente el programa y los argumentos aprobados (sin pipes, redirecciones ni variables).
-- **Red bloqueada** por seccomp, solo el workspace es escribible, `.isyroot` es de solo lectura y las rutas sensibles (`.git`, `.env`, claves…) quedan ocultas.
+- **Red bloqueada:** el namespace de red no se comparte y seccomp niega los sockets. Solo el workspace es escribible, `.isyroot` es de solo lectura y las rutas sensibles (`.git`, `.env`, claves…) quedan ocultas. No hay un permiso que vuelva a abrir esa red.
 - Límite de tiempo (120 s por defecto, 600 s como máximo) y 64 KiB de salida.
 - Si aparece un archivo sensible nuevo o cambia el programa después de revisarlo, no se ejecuta.
 - Los cambios hechos por un comando no se deshacen con `/undo`.
 
 ### Git
 
-Status, diffs y commits pasan por su propio owner. Los hooks nunca corren, no se hace push, se ignora la configuración del sistema y los archivos sensibles quedan fuera de status y diffs. Un repositorio cuyo `.git/config` define programas que git ejecutaría (fsmonitor, filtros, pager, textconv, credential helpers, includes…) se rechaza. Solo se admite una carpeta `.git` en la raíz del workspace.
+Status, diffs y commits pasan por su propio owner. Los hooks nunca corren, un commit no hace push, se ignora la configuración del sistema y los archivos sensibles quedan fuera de status y diffs. Publicar un ref es otra acción, `git.push`: exige el remoto https, el ref y el digest exactos, y sin un transporte registrado no contacta a nadie. Un repositorio cuyo `.git/config` define programas que git ejecutaría (fsmonitor, filtros, pager, textconv, credential helpers, includes…) se rechaza. Solo se admite una carpeta `.git` en la raíz del workspace.
 
 ### MCP local
 
@@ -228,7 +228,7 @@ Los servidores stdio se declaran **solo** en tu `~/.config/isycode/mcp.json`, nu
 {"servers": {"docs": {"command": ["npx", "-y", "some-mcp-server"], "env": {"API_TOKEN": "…"}}}}
 ```
 
-`/mcp` los lista; `/mcp start docs` pide permiso para ese ejecutable y aprobación del comando exacto. Mientras corre, sus herramientas aparecen para el modelo y **cada llamada** muestra los argumentos exactos y pide aprobación. Los servidores corren con tu usuario (red incluida), en la carpeta del workspace y con un entorno mínimo, y se detienen al salir. Sus descripciones y respuestas se tratan como datos no confiables.
+`/mcp` los lista; `/mcp start docs` pide permiso para ese ejecutable y aprobación del comando exacto. Mientras corre, sus herramientas aparecen para el modelo y **cada llamada** muestra los argumentos exactos y pide aprobación. Los servidores corren con tu usuario (red incluida), en la carpeta del workspace y con un entorno mínimo: solo unas variables de base y las que escribiste en `mcp.json`. Las claves de proveedor del host no se copian. Se detienen al salir. Sus descripciones y respuestas se tratan como datos no confiables.
 
 ### Skills, MCP, LSP y subagentes
 
@@ -258,7 +258,7 @@ Responde una vez y sale. Usa los mismos owners, IsySentinel y journal que la TUI
 | Comando | Qué hace |
 | --- | --- |
 | `/undo` | Deshace el último cambio de ISyCode, mostrando antes el diff |
-| `/run <programa> [args]` | Ejecuta un comando en el sandbox (pide aprobación) |
+| `/run <programa> [args]` | Ejecuta un comando en el sandbox. Pide aprobación salvo que la carpeta esté confiada y haya sandbox |
 | `/git`, `/diff [ruta] [--staged]` | Rama y cambios; diff |
 | `/commit <mensaje>` | Commit de los archivos cambiados tras revisar el diff |
 | `/mcp add playwright`, `/mcp add context7`, `/mcp`, `/mcp start <nombre>`, `/mcp stop <nombre>` | MCP fijados; al añadir se configura, al iniciar se revisa npm y cada llamada pide aprobación |
@@ -281,9 +281,9 @@ Selecciónalo desde **Providers** o con `ISYCODE_PROVIDER` / `ISYCODE_MODEL`. Si
 | Nebius | `NEBIUS_API_KEY` | Probado por el equipo |
 | Groq | `GROQ_API_KEY` | |
 | OpenRouter | `OPENROUTER_API_KEY` | Herramientas solo con `ISYCODE_TOOL_CALLS=1` |
-| Ollama, llama.cpp | opcional | Endpoints locales; herramientas solo con `ISYCODE_TOOL_CALLS=1` |
+| Ollama, llama.cpp | opcional | Endpoints locales |
 
-En OpenRouter, Ollama y llama.cpp el soporte de herramientas depende del modelo, y un modelo sin él rechaza la petición entera. Por eso el agente solo conversa con ellos hasta que exportes `ISYCODE_TOOL_CALLS=1` con un modelo que sí las soporte (en llama.cpp, el servidor con `--jinja`).
+Los presets que no anuncian llamadas a herramientas (OpenRouter, Fireworks, Cerebras y otros) solo conversan, porque un modelo sin ese soporte rechaza la petición entera. Si tu modelo sí las soporta, exporta `ISYCODE_TOOL_CALLS=1`.
 
 **Claude nativo:** el provider `anthropic` usa la API Messages con el modelo `claude-opus-5-5` por defecto, thinking adaptativo (su resumen aparece en el bloque de razonamiento) y effort `medium`. Los bloques de thinking se devuelven intactos dentro de un turno de herramientas; si ISyCode recorta contexto, la API descarta los bloques afectados en vez de fallar (`prefix_mismatch_behavior: drop_block`). Si Claude rechaza una petición, el servidor puede reintentarla en otro modelo (`fallbacks: "default"`). Una negativa o una llamada a herramienta cortada por longitud nunca se ejecuta.
 
@@ -309,10 +309,12 @@ no concede permisos. Requiere grants existentes de lectura/escritura y, en un
 repo Git, `git.status`. Cada archivo se aprueba por separado. Si `.isycode/` ya
 está versionado o Git no puede comprobarlo, se detiene sin cambiar el índice.
 
-**Workspace preferences** permite guardar `default_role`, `agent_steps`,
-`answer_tokens` y `chat_token_budget` para ese proyecto. Prevalecen sobre los
-valores personales, nunca sobre permisos, modo, scopes o resultados de
-IsySentinel. **Copy legacy workspace commands…** copia un comando antiguo tras
+**Workspace preferences** permite guardar `default_role` para ese proyecto.
+Las opciones heredadas `agent_steps`, `answer_tokens` y `chat_token_budget` se
+ignoran. Las llamadas al modelo no tienen límites locales de salida ni
+compactación automática del historial; el endpoint aplica sus propios límites.
+Workspace Authority, IsySentinel y las aprobaciones de herramientas siguen
+activos. **Copy legacy workspace commands…** copia un comando antiguo tras
 revisar el diff y conserva el original. `.gitignore` evita commits accidentales;
 no es un límite de seguridad.
 
@@ -337,7 +339,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode, en red interna, montaje read-only y sin credenciales.
 - **Chat con NVIDIA NIM** tras autorizar el host; cancelación de chat y streaming.
 - **Agente con herramientas en la máquina de Danny (Linux):** leer, buscar, escribir, editar y borrar de principio a fin pasando por las aprobaciones. Un modelo de NVIDIA (Nemotron) ejecutó además una autoprueba guiada de lectura, edición, mover, borrar, ataques que deben fallar, comandos y git; sus hallazgos de UX se corrigieron (decisión visible, *Replace whole file*, cómo activar herramientas).
-- **Capturas históricas con Textual 8.2.8 (versión no soportada):** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia histórica; la instalación y las pruebas actuales usan Textual 1.0.0.
+- **Capturas históricas con Textual 8.2.8:** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia de esa revisión de la interfaz.
 
 **Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
 
@@ -345,7 +347,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - Diagnósticos tras editar: servidor LSP simulado, no Pyright.
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
 - MCP local: servidor MCP simulado.
-- Portapapeles: herramienta de copia simulada en las pruebas; falta confirmarlo en el escritorio real (Wayland/X11).
+- Portapapeles: las pruebas unitarias siguen usando una herramienta simulada. El 2026-10-04, en este escritorio X11, `ClipboardOwner.copy` pasó por el grant y por `xclip`: decisión ALLOW, la lectura de vuelta coincidió y el portapapeles anterior se restauró. Evidencia: `docs/evidence/clipboard-witness-2026-10-04.json`. El journal guarda tamaño y digest, no el texto.
 - Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
 
 **Parcial o pendiente:**
@@ -372,8 +374,10 @@ La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia
 
 | Atajo | Acción |
 | --- | --- |
-| `Enter` / `Shift+Enter` | Enviar / nueva línea |
-| `Esc` | Detener el turno del agente; si no hay operación, volver o cerrar menú |
+| `Enter` | Enviar. `Shift+Enter`, `Ctrl+J` y `Alt+Enter` insertan una nueva línea. `Ctrl+Enter` no envía |
+| `Enter` durante un turno | Encola el mensaje (máximo 8). Envío vacío sobre la cola: steer |
+| `Esc` | Detener el turno; si no hay operación, volver o cerrar. En la cola, devuelve el texto sin pisar el borrador |
+| `Ctrl+S` | Idea Box / ShellBox de procesos ya aprobados en sandbox |
 | `/` o `Ctrl+P` | Navegación semántica |
 | `Ctrl+F` | Buscar en la consola |
 | `Ctrl+B` | Mostrar u ocultar el panel lateral |
@@ -391,16 +395,18 @@ El engranaje **Settings** incluye el mapa completo.
 
 Lo poquito que queda, en orden:
 
-1. **Solo modelos activos de NVIDIA:** filtrar del selector los modelos deprecados. Falta ver qué campos devuelve de verdad `/v1/models` de NVIDIA para no adivinar.
+1. **Catálogo NVIDIA:** el 2026-10-03, en la cuenta y el endpoint de chat probados, 55 IDs respondieron HTTP 404 y el selector los oculta sin borrarlos. Eso no es un campo oficial de deprecación y no se transfiere a otros endpoints. Nueve quedaron NOT_DEMONSTRATED. Evidencia: `docs/evidence/tools-catalog-2026-10-03/`.
 2. **Rail de IsySentinel:** que el panel lateral muestre en vivo qué decidió Sentinel (ALLOW/DENY) y qué permisos están activos, junto a MCP/LSP.
 3. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
 4. **Ediciones tolerantes a espacios:** que `workspace_edit` encuentre el fragmento aunque cambien espacios o sangría, mostrando siempre el diff exacto antes de aprobar.
-5. **Validar en real** lo que hoy solo tiene dobles de prueba: portapapeles en escritorio, sandbox de comandos, MCP local, Claude nativo y Windows.
+5. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
 6. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
 
-La estrategia tiene dos etapas: primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
+**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0, M1, M2, M3 y M4 están en revisión. Ninguna puerta está APROBADA. En una carpeta Classic que todavía no confiaste, cada edición y cada comando siguen pidiendo confirmación. Tras confiarla, las ediciones recuperables y los comandos con sandbox dejan de preguntar uno a uno; el commit, los secretos y la autoridad siguen preguntando. Un comando escribe en una copia y el árbol cambia al promover ese diff. Esa promoción, igual que escribir, borrar o mover, cuenta en un ledger fuera del checkout. Si pasa el tope, el comando puede terminar y el árbol no cambia. El objetivo sigue siendo autonomía acotada, con confirmación al cruzar una frontera real.
+
+La estrategia histórica describía dos etapas (la evolución Classic/Security se concreta ahora en el roadmap anterior): primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
 
 Prioridades abiertas:
 

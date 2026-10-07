@@ -12,7 +12,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, TypeGuard
 from urllib.parse import urlsplit
 
 from isycode.actions import ACTION_BY_ID
@@ -28,6 +28,7 @@ from isycode.private_access import OwnedServeRoute
 from isycode.tailscale import ServeRoute, _valid_gateway
 from isycode.workspace_setup import state_root
 from isycode.winfs import VerifiedFS, use_verified_fs
+from isycode.sensitive_paths import is_sensitive_path_name
 
 
 READ_ACTIONS = frozenset({
@@ -121,6 +122,16 @@ CHAT_WORKSPACE_TOOLS = [
         }, "required": ["query"], "additionalProperties": False},
     }},
 ]
+CONTEXT_ACCESS_TOOL_NAME = "request_context_access"
+CONTEXT_ACCESS_TOOL = {"type": "function", "function": {
+    "name": CONTEXT_ACCESS_TOOL_NAME,
+    "description": ("Pide permiso explícito para leer un único archivo de contexto .md o .txt "
+                    "de un proyecto hermano directo. Abre un aviso; no concede acceso hasta "
+                    "que el usuario lo apruebe."),
+    "parameters": {"type": "object", "properties": {
+        "path": {"type": "string", "description": "Ruta absoluta a un archivo .md o .txt de un proyecto hermano directo."},
+    }, "required": ["path"], "additionalProperties": False},
+}}
 TOOL_ACTIONS = {
     "workspace_list": "workspace.files.list",
     "workspace_read": "workspace.files.read",
@@ -165,10 +176,11 @@ COMMAND_MAX_TIMEOUT_S = 600
 COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
 GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
+PUBLISH_PARAMETER_KEYS = frozenset({"remote", "ref", "content_sha256"})
 GIT_PARAMETER_KEYS = {
-    "git.status": frozenset({"git", "workspace_root", "inspect_path"}),
-    "git.diff": frozenset({"git", "workspace_root", "staged", "path"}),
-    "git.commit": frozenset({"git", "workspace_root", "message", "paths", "diff_sha256"}),
+    "git.status": frozenset({"git", "workspace_root", "repo_path", "inspect_path"}),
+    "git.diff": frozenset({"git", "workspace_root", "repo_path", "staged", "path"}),
+    "git.commit": frozenset({"git", "workspace_root", "repo_path", "message", "paths", "diff_sha256"}),
 }
 MCP_SERVER_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
@@ -231,6 +243,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
                                 "WorkspaceConfigBoundary"}),
     "provider_auth": frozenset({"ProviderAuthBoundary"}),
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
+    "web_fetch": frozenset({"RemoteReadBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
     "chat_sessions": frozenset({"SessionStoreBoundary"}),
@@ -252,8 +265,10 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "mobile_host": frozenset({"MobileHostBoundary"}),
     "workspace_command": frozenset({"CommandProcessBoundary"}),
     "workspace_git": frozenset({"GitBoundary"}),
+    "workspace_publish": frozenset({"PublishBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
     "clipboard": frozenset({"ClipboardBoundary"}),
+    "bridge_presence": frozenset({"BridgePresenceBoundary"}),
 }
 
 
@@ -266,6 +281,7 @@ OWNER_ACTIONS = {
     CONFIG_OWNER_ID: CONFIG_ACTIONS,
     "provider_auth": frozenset({"provider.authenticate"}),
     "provider_network": frozenset({"provider.request"}),
+    "web_fetch": frozenset({"web.fetch"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
     "chat_sessions": frozenset({"session.create", "session.resume"}),
@@ -285,8 +301,10 @@ OWNER_ACTIONS = {
     "mobile_host": frozenset({"mobile.host.start", "mobile.pair", "mobile.pair.issue"}),
     "workspace_command": frozenset({"workspace.command.run"}),
     "workspace_git": GIT_ACTIONS,
+    "workspace_publish": frozenset({"git.push"}),
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
-    "clipboard": frozenset({"clipboard.copy"}),
+    "clipboard": frozenset({"clipboard.copy", "clipboard.paste"}),
+    "bridge_presence": frozenset({"bridge.agents"}),
 }
 
 
@@ -381,11 +399,7 @@ class WorkspaceReadSystembility:
 
     @staticmethod
     def is_sensitive_name(name: str) -> bool:
-        lower = name.casefold()
-        return (lower in {".git", ".isycode", ".ssh", ".aws", ".gnupg"}
-                or lower == ".env" or lower.startswith(".env.")
-                or lower in {"id_rsa", "id_ed25519", "credentials", "secrets.json"}
-                or lower.endswith((".pem", ".key", ".p12", ".pfx")))
+        return is_sensitive_path_name(name)
 
 
 class WorkspaceWriteSystembility:
@@ -533,7 +547,7 @@ class WorkspaceConfigBoundary:
         return SystembilityResult(self.name, True, "internal config path is within the workspace boundary")
 
 
-def command_argv_valid(argv: object) -> bool:
+def command_argv_valid(argv: object) -> TypeGuard[tuple[str, ...]]:
     """A bounded, NUL-free argv tuple; no shell ever interprets it."""
     return (isinstance(argv, tuple) and 1 <= len(argv) <= COMMAND_MAX_ARGS
             and all(isinstance(item, str) and "\x00" not in item
@@ -541,7 +555,7 @@ def command_argv_valid(argv: object) -> bool:
             and bool(argv[0]) and sum(len(item) for item in argv) <= COMMAND_MAX_ARGV_CHARS)
 
 
-def command_relative_path_valid(value: object, *, allow_root: bool = False) -> bool:
+def command_relative_path_valid(value: object, *, allow_root: bool = False) -> TypeGuard[str]:
     """A workspace-relative POSIX path with no traversal or sensitive part."""
     if not isinstance(value, str) or not value or len(value) > 1024 or "\x00" in value:
         return False
@@ -574,7 +588,7 @@ class CommandProcessSystembility:
         if request.action_id != "workspace.command.run":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        if set(params) != COMMAND_PARAMETER_KEYS:
+        if set(params) not in (COMMAND_PARAMETER_KEYS, COMMAND_PARAMETER_KEYS | {"scope"}):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
         argv = params.get("argv")
         if not command_argv_valid(argv):
@@ -583,6 +597,8 @@ class CommandProcessSystembility:
             return SystembilityResult(self.name, False, "program must be a system or workspace executable")
         timeout = params.get("timeout_s")
         count = params.get("masked_count")
+        if "scope" in params and not command_relative_path_valid(params["scope"], allow_root=True):
+            return SystembilityResult(self.name, False, "command staging scope is invalid")
         if (not command_relative_path_valid(params.get("cwd"), allow_root=True)
                 or type(timeout) is not int or not 1 <= timeout <= COMMAND_MAX_TIMEOUT_S
                 or params.get("network") != "denied"
@@ -620,9 +636,15 @@ class GitSystembility:
                            and set(params) == expected - {"inspect_path"}))
         if not valid_shape:
             return SystembilityResult(self.name, False, "git request shape is not the reviewed one")
-        if (request.target != str(request.workspace_root)
+        repo_path = params.get("repo_path", ".")
+        repo_valid = (isinstance(repo_path, str) and
+                      (repo_path == "." or
+                       (command_relative_path_valid(repo_path)
+                        and len(Path(repo_path).parts) == 1
+                        and not repo_path.startswith("."))))
+        if (not repo_valid or request.target != str(request.workspace_root)
                 or params.get("workspace_root") != str(request.workspace_root)):
-            return SystembilityResult(self.name, False, "git request must target the workspace repository")
+            return SystembilityResult(self.name, False, "git request must target one direct workspace repository")
         if not sandbox_program_valid(params.get("git"), "git"):
             return SystembilityResult(self.name, False, "git must be the system git executable")
         if request.action_id == "git.diff":
@@ -649,6 +671,41 @@ class GitSystembility:
         return SystembilityResult(
             self.name, True,
             "workspace repository only; repository-defined programs and hooks are refused")
+
+
+def _publish_remote_exact(remote: str) -> bool:
+    """One https URL with a host and a repository path, and nothing else."""
+    parsed = urlsplit(remote)
+    return bool(parsed.scheme == "https" and parsed.hostname and not parsed.username
+                and not parsed.password and not parsed.query and not parsed.fragment
+                and parsed.path not in {"", "/"} and ".." not in parsed.path.split("/"))
+
+
+class PublishSystembility:
+    """One https remote, one ref and one content digest. There is no other publication."""
+
+    name = "PublishBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "git.push":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        remote = params.get("remote") if isinstance(params, Mapping) else None
+        ref = params.get("ref") if isinstance(params, Mapping) else None
+        digest = params.get("content_sha256") if isinstance(params, Mapping) else None
+        if (not isinstance(params, Mapping) or set(params) != PUBLISH_PARAMETER_KEYS
+                or not isinstance(remote, str) or remote != request.target
+                or not _publish_remote_exact(remote)):
+            return SystembilityResult(self.name, False,
+                                      "publication remote is not one exact https URL")
+        if not isinstance(ref, str) or re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}", ref) is None:
+            return SystembilityResult(self.name, False, "publication ref is invalid")
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            return SystembilityResult(self.name, False, "publication content digest is invalid")
+        return SystembilityResult(
+            self.name, True, "one https remote, one ref and one content digest")
 
 
 class LocalMCPSystembility:
@@ -695,6 +752,9 @@ class ClipboardSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id == "clipboard.paste":
+            valid = (request.target == "clipboard" and request.parameters == {"source": "user_paste", "max_bytes": 8 * 1024 * 1024})
+            return SystembilityResult(self.name, valid, "bounded user-initiated clipboard read" if valid else "clipboard paste shape is invalid")
         if request.action_id != "clipboard.copy":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
@@ -790,7 +850,7 @@ class RemoteReadSystembility:
             return SystembilityResult(self.name, True,
                                       "local listener is checked by the Mobile Host boundary")
         if request.action_id not in {"gateway.files.read", "gateway.semantic.read",
-                                     "mcp.discover", "catalog.external.read"}:
+                                     "mcp.discover", "catalog.external.read", "web.fetch"}:
             if request.action_id == "mcp.invoke":
                 return SystembilityResult(self.name, True, "MCP invocation is checked by its dedicated boundary")
             return SystembilityResult(self.name, False, "no remote read execution owner is registered")
@@ -871,7 +931,7 @@ class SessionStoreSystembility:
                      and re.fullmatch(r"[0-9a-f]{64}", params["content_sha256"]) is not None
                      and type(size) is int and 0 <= size <= 1_000_000)
             valid = valid and isinstance(state_digest, str) and re.fullmatch(r"[0-9a-f]{64}", state_digest) is not None
-            if params.get("operation") in {"rename", "fork", "import", "state"}:
+            if params.get("operation") in {"rename", "auto_title", "fork", "import", "state"}:
                 source = params.get("source_id")
                 valid = (set(params) == {"operation", "session_id", "content_sha256", "size", "source_id"}
                          and valid_id and request.target == session_id
@@ -882,7 +942,7 @@ class SessionStoreSystembility:
                          and (source in {"", session_id} if params["operation"] == "state"
                               else source == "" if params["operation"] == "import"
                               else re.fullmatch(r"[0-9a-f]{32}", source) is not None)
-                         and (source == session_id if params["operation"] == "rename" else True))
+                         and (source == session_id if params["operation"] in {"rename", "auto_title"} else True))
             return SystembilityResult(self.name, valid,
                                       "one bounded message bound to one local transcript")
         if params.get("operation") == "list":
@@ -1555,11 +1615,41 @@ class MobileHostSystembility:
         return SystembilityResult(self.name, False, "Mobile Host owner does not implement this action")
 
 
+class BridgePresenceSystembility:
+    """Allow only a reviewed local agents listing. Never connect, send, or wake."""
+
+    name = "BridgePresenceBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        del authority
+        if request.action_id != "bridge.agents":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        handshake = params.get("handshake")
+        valid = (
+            request.target == "agents"
+            and request.execution_owner == "bridge_presence"
+            and set(params) == {"executable", "handshake", "sha256", "operation"}
+            and params.get("operation") == "agents"
+            and isinstance(params.get("executable"), str)
+            and params["executable"].startswith("/")
+            and isinstance(handshake, str)
+            and handshake.endswith("/handshake.py")
+            and ".." not in Path(handshake).parts
+            and isinstance(params.get("sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", params["sha256"]) is not None
+        )
+        return SystembilityResult(
+            self.name, valid, "presence read is limited to the agents listing")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
     def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str,
-                 tailscale_facts: TailscaleAuthorityFacts | None = None):
+                 tailscale_facts: TailscaleAuthorityFacts | None = None,
+                 journal: bool = True):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
         owner_id = self.owner_id
@@ -1574,13 +1664,16 @@ class ProductActionGate:
                             if item.action_id == request.action_id]
                 owner_variants = [item for item in variants if item.owner_id == owner_id]
                 denied = request.action_id in EXPLICIT_DENY_ACTIONS
-                bound = (not denied and request.execution_owner == owner_id
+                bound = (not denied and request.workspace_root == canonical
+                         and request.execution_owner == owner_id
                          and request.action_id in allowed_actions
                          and (not variants or any(item.matches(request) for item in owner_variants)))
                 if denied:
                     reason = "action is explicitly denied in Secure"
                 elif not owner_id or not allowed_actions:
                     reason = "no execution owner is registered for this gate"
+                elif request.workspace_root != canonical:
+                    reason = "request workspace does not match execution owner"
                 elif request.execution_owner != owner_id:
                     reason = "request is bound to a different execution owner"
                 elif request.action_id not in allowed_actions:
@@ -1592,9 +1685,12 @@ class ProductActionGate:
                 return SystembilityResult(self.name, bound, reason)
 
         self.authority = authority
-        try:
-            self.audit: ActionAuditJournal | None = ActionAuditJournal(canonical)
-        except ActionAuditError:
+        if journal:
+            try:
+                self.audit: ActionAuditJournal | None = ActionAuditJournal(canonical)
+            except ActionAuditError:
+                self.audit = None
+        else:
             self.audit = None
         self.sentinel = IsySentinel([
             ExecutionOwnerBindingSystembility(),
@@ -1611,11 +1707,54 @@ class ProductActionGate:
             TailscaleGatewaySystembility(tailscale_facts),
             TailscalePrivateServeSystembility(tailscale_facts),
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
-            LocalMCPSystembility(), ClipboardSystembility(),
+            PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
+            BridgePresenceSystembility(),
         ])
+
+    def preview(self, request: ActionRequest):
+        """Evaluate the real grant/Systembility chain without audit or approval consumption."""
+        from isycode.effect_policy import POLICY_VERSION, stamp
+        try:
+            bound = stamp(request)
+            classified = (bound.policy_version == POLICY_VERSION
+                          and bound.request_digest == request.digest
+                          and bound.action_id == request.action_id)
+        except (KeyError, TypeError, ValueError):
+            classified = False
+        if not classified:
+            digest = request.digest if isinstance(request, ActionRequest) else ""
+            action_id = request.action_id if isinstance(request, ActionRequest) else ""
+            reason = "action has no effect classification"
+            return (
+                AuthorityDecision(False, "", reason, digest),
+                SentinelDecision(action_id, digest, (
+                    DecisionCheck("EffectClass", False, reason),)),
+            )
+        authority = self.authority.evaluate(request, preview=True)
+        return authority, self.sentinel.evaluate(request, authority)
 
     def authorize(self, request: ActionRequest, *, approvals: ActionApprovalStore | None = None,
                   approval: ActionApproval | None = None):
+        # Classification is fail-closed and stays off the success path: a known
+        # action keeps the existing Sentinel checks, and a missing class denies
+        # before any effect. The policy version is not written into the journal.
+        from isycode.effect_policy import POLICY_VERSION, stamp
+        try:
+            bound = stamp(request)
+            classified = (bound.policy_version == POLICY_VERSION
+                          and bound.request_digest == request.digest
+                          and bound.action_id == request.action_id)
+        except (KeyError, TypeError, ValueError):
+            classified = False
+        if not classified:
+            digest = request.digest if isinstance(request, ActionRequest) else ""
+            action_id = request.action_id if isinstance(request, ActionRequest) else ""
+            reason = "action has no effect classification"
+            return (
+                AuthorityDecision(False, "", reason, digest),
+                SentinelDecision(action_id, digest, (
+                    DecisionCheck("EffectClass", False, reason),)),
+            )
         authority = self.authority.evaluate(request, approvals=approvals, approval=approval)
         decision = self.sentinel.evaluate(request, authority)
         try:
@@ -1965,14 +2104,12 @@ class LPSSymbolOwner:
 
 
 class ProviderNetworkOwner:
-    """Authorize one provider request and durably receipt its bounded response.
+    """Authorize one provider request and durably receipt its response.
 
     The transport callback is supplied by trusted ISyCode code, never by a
     model or workspace file. Its request material is hashed into the immutable
     action identity; neither prompt nor response contents enter the journal.
     """
-
-    MAX_RESULT_BYTES = 2_000_000
 
     def __init__(self, root: Path, authority: WorkspaceAuthority):
         self.root = root.resolve(strict=True)
@@ -2010,6 +2147,11 @@ class ProviderNetworkOwner:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
             return None, ActionOutcome("Provider request denied.", "DENY", None,
                                        reason or authority.reason)
+        from isycode import egress
+        try:
+            egress.review_destination(url)
+        except egress.EgressDenied as exc:
+            return None, ActionOutcome("Provider request denied.", "DENY", None, str(exc))
         response = await send()
         try:
             result_text = json.dumps(response, ensure_ascii=False, sort_keys=True,
@@ -2017,9 +2159,6 @@ class ProviderNetworkOwner:
         except (TypeError, ValueError):
             return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
                                        "provider result is not JSON serializable")
-        if len(result_text.encode("utf-8")) > self.MAX_RESULT_BYTES:
-            return None, ActionOutcome("Provider response is not verifiable.", "NOT_VERIFIABLE", None,
-                                       "provider result exceeded the 2 MB receipt limit")
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "provider.request", request.digest,
             "ALLOW", "SUCCESS", hashlib.sha256(result_text.encode("utf-8")).hexdigest())
@@ -2291,7 +2430,11 @@ class LocalWorkspaceReadOwner:
             return VerifiedFS(self.root).open_read(path)
         parent_fd = self._open_directory(path.parent)
         try:
-            return os.open(path.name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+            # Open before checking the descriptor's type without waiting for a
+            # FIFO writer. A repository-controlled named pipe must not pin an
+            # executor thread (or prevent shutdown after cancellation).
+            return os.open(path.name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                           | getattr(os, "O_NONBLOCK", 0),
                            dir_fd=parent_fd)
         finally:
             os.close(parent_fd)

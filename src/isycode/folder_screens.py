@@ -20,17 +20,17 @@ class AddWorkspaceFolderScreen(ModalScreen[dict | None]):
     """
     BINDINGS = [Binding('escape', 'cancel', 'Cancel')]
 
-    def __init__(self, main: Path):
+    def __init__(self, main: Path, selected_folder: Path):
         super().__init__()
         self.main = main
+        self.selected_folder = selected_folder
 
     def compose(self) -> ComposeResult:
         with Vertical(id='folder-card'):
             with VerticalScroll(id='folder-content'):
                 yield Static('Add sibling folder', markup=False)
-                yield Static(f'Choose one real project folder directly inside {self.main.parent}', markup=False)
+                yield Static(f'Selected sibling folder: {self.selected_folder}', markup=False)
                 yield Input(placeholder='Alias, e.g. other-project', id='folder-alias')
-                yield Input(placeholder='Absolute folder path (spaces are supported)', id='folder-path')
                 yield Checkbox('Allow proposed file edits', value=True, id='folder-editable')
                 yield Static('This grants reads/searches and optionally edits for this exact folder. '
                              'Every edit asks until you explicitly enable automatic edits. '
@@ -46,7 +46,7 @@ class AddWorkspaceFolderScreen(ModalScreen[dict | None]):
         event.stop()
         if event.button.id == 'folder-add':
             self.dismiss({'alias': self.query_one('#folder-alias', Input).value.strip(),
-                          'path': self.query_one('#folder-path', Input).value.strip(),
+                          'path': str(self.selected_folder),
                           'editable': self.query_one('#folder-editable', Checkbox).value})
         else:
             self.dismiss(None)

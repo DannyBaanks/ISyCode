@@ -29,35 +29,60 @@ class WorkspaceAuthorityError(RuntimeError):
     """Workspace grant state is invalid or unsafe to access."""
 
 
+class OneShotActionAuthority:
+    """Overlay one human-approved request without persisting a workspace grant.
+
+    ProductActionGate still runs ISySentinel, including owner binding and the
+    filesystem boundary. The overlay accepts one immutable request digest once;
+    every other request falls through to the normal WorkspaceAuthority policy.
+    """
+
+    def __init__(self, authority: "WorkspaceAuthority", approved_request: ActionRequest):
+        self.authority = authority
+        self._request_digest = approved_request.digest
+        self._used = False
+
+    def evaluate(self, request: ActionRequest, *, approvals=None, approval=None) -> AuthorityDecision:
+        if not self._used and request.digest == self._request_digest:
+            self._used = True
+            return AuthorityDecision(
+                True, "user-approved-once", "one exact request approved by the user",
+                request.digest)
+        return self.authority.evaluate(request, approvals=approvals, approval=approval)
+
+
 MODES = frozenset({"security", "classic"})
 
-# Classic mode is a per-workspace preset of implicit grants, not a bypass:
-# IsySentinel, execution owners, per-action approvals (diff Apply, key save
-# and removal) and the action journal are unchanged. Anything not listed here
-# still needs an explicit grant, and explicitly denied actions stay denied.
+# Classic mode is a per-workspace preset of implicit grants, not a bypass.
+# Without a trust record, edits and commands still need a per-action approval.
+# A trusted root may skip that approval only for QUIET_CLASSIC_ACTIONS.
+# Explicit denials, IsySentinel, the journal and the effect ledger stay in force.
 CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.files.list", "workspace.files.read", "workspace.files.search",
     "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
     # Delete and move stay inside the workspace and still need a per-action approval.
     "workspace.files.delete", "workspace.files.move",
 })
-CLASSIC_PLAIN_ACTIONS = frozenset({"session.create", "session.resume", "git.status", "git.diff"})
+# These are grants only; execution owners still require exact approvals for commits.
+CLASSIC_GRANTED_ACTIONS = frozenset({
+    "session.create", "session.resume", "git.status", "git.diff", "git.commit"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
-CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_PLAIN_ACTIONS | CLASSIC_SERVICE_ACTIONS
-                   | {"provider.request"})
+CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_GRANTED_ACTIONS | CLASSIC_SERVICE_ACTIONS
+                   | {"provider.request", "workspace.command.run"})
 
 
 def _known_provider_hosts() -> list[str]:
     """Hosts of the provider presets and any configured endpoint override."""
-    from isycode.providers import PRESETS  # local import: providers loads lazily
+    from isycode.providers import PRESETS, provider_base_url  # providers loads lazily
 
     urls = [str(preset.get("base_url", "")) for preset in PRESETS.values()]
-    urls += [os.environ.get("ISYCODE_BASE_URL", ""), os.environ.get("ISYMOTRON_BASE_URL", "")]
+    urls += [provider_base_url(name) for name in PRESETS]
     hosts = set()
     for url in urls:
         try:
             parsed = urlsplit(url.strip())
-            if parsed.hostname:
+            if (parsed.scheme in {"http", "https"} and parsed.hostname
+                    and not parsed.username and not parsed.password):
                 hosts.add(parsed.hostname.casefold().rstrip(".")
                           + (f":{parsed.port}" if parsed.port else ""))
         except ValueError:
@@ -171,6 +196,9 @@ class WorkspaceAuthority:
         grants = {action: dict(grant) for action, grant in policy["grants"].items()}
 
         def merge(action: str, key: str | None = None, values: list[str] | None = None) -> None:
+            # An explicit denial overrides the implicit Classic preset.
+            if grants.get(action, {}).get("enabled") is False:
+                return
             current = grants.setdefault(action, {})
             current["enabled"] = True
             if key is not None:
@@ -178,12 +206,21 @@ class WorkspaceAuthority:
 
         for action in CLASSIC_PATH_ACTIONS:
             merge(action, "path_prefixes", [str(self.root)])
-        for action in CLASSIC_PLAIN_ACTIONS:
+        for action in CLASSIC_GRANTED_ACTIONS:
             merge(action)
         services = _known_services()
         for action in CLASSIC_SERVICE_ACTIONS:
             merge(action, "targets", services)
         merge("provider.request", "network_hosts", _known_provider_hosts())
+        # Commands are ready in Classic only when the verified sandbox exists.
+        # The grant is bound to that exact executable; there is no shell fallback.
+        try:
+            from isycode.command_runner import sandbox_executable
+            sandbox = sandbox_executable()
+        except (ImportError, OSError, RuntimeError, ValueError):
+            sandbox = None
+        if sandbox:
+            merge("workspace.command.run", "executables", [sandbox])
         return {**policy, "grants": grants}
 
     @staticmethod
@@ -226,7 +263,8 @@ class WorkspaceAuthority:
 
     def evaluate(self, request: ActionRequest, *,
                  approvals: ActionApprovalStore | None = None,
-                 approval: ActionApproval | None = None) -> AuthorityDecision:
+                 approval: ActionApproval | None = None,
+                 preview: bool = False) -> AuthorityDecision:
         if not isinstance(request, ActionRequest):
             return AuthorityDecision(False, "", "invalid action request", "")
         digest = request.digest
@@ -239,6 +277,8 @@ class WorkspaceAuthority:
             policy = self.effective_policy()
         except WorkspaceAuthorityError:
             return AuthorityDecision(False, "", "workspace grant policy unavailable or invalid", digest)
+        if policy["grants"].get(request.action_id, {}).get("enabled") is False:
+            return AuthorityDecision(False, "", "action explicitly revoked", digest)
         grant_action_id = AUTHORITY_GRANT_ALIASES.get(request.action_id, request.action_id)
         grant = policy["grants"].get(grant_action_id, {})
         if not grant.get("enabled", False):
@@ -297,7 +337,7 @@ class WorkspaceAuthority:
             if not request.target or request.target not in grant.get("targets", []):
                 return AuthorityDecision(False, "", "action target is not explicitly granted", digest)
 
-        if spec.approval_required:
+        if spec.approval_required and not _trusted_quiet(self, request) and not preview:
             if approvals is None or not approvals.consume(request, approval):
                 return AuthorityDecision(False, "", "fresh request-bound approval is required", digest)
 
@@ -362,6 +402,15 @@ class WorkspaceAuthority:
         finally:
             if temporary.exists():
                 temporary.unlink()
+
+
+def _trusted_quiet(authority: WorkspaceAuthority, request: ActionRequest) -> bool:
+    """Fail closed: a broken trust lookup keeps the per-action approval."""
+    try:
+        from isycode.workspace_trust import quiet_classic
+        return bool(quiet_classic(authority, request))
+    except Exception:
+        return False
 
 
 __all__ = ["CLASSIC_ACTIONS", "MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]

@@ -64,9 +64,7 @@ def sandbox(tmp_path: Path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    # A shebang cannot hold a path with spaces (e.g. a venv under "ISyCo Git").
-    python = sys.executable if " " not in sys.executable else "/usr/bin/env python3"
-    fake.write_text(FAKE_BWRAP.format(python=python), encoding="utf-8")
+    fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     log = tmp_path / "bwrap.json"
@@ -88,6 +86,33 @@ def _grant(authority, executable):
 def _run(owner, approvals, argv, **kwargs):
     preview = owner.prepare(argv, **kwargs)
     return preview, asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+
+
+def test_classic_uses_exact_sandbox_grant_but_keeps_per_command_approval(sandbox):
+    owner, authority, approvals, fake, _ = sandbox
+    authority.set_mode("classic")
+    preview = owner.prepare(["echo", "classic"])
+    assert authority.effective_policy()["grants"]["workspace.command.run"]["executables"] == [fake]
+    assert asyncio.run(owner.run(preview, None)).decision == "DENY"
+    result = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+    assert result.decision == "ALLOW" and "classic" in json.loads(result.text)["output"]
+
+
+def test_scoped_command_streams_before_exit_and_does_not_copy_siblings(sandbox, monkeypatch):
+    owner, authority, approvals, fake, _ = sandbox
+    _grant(authority, fake)
+    monkeypatch.setattr("isycode.staging.MAX_STAGE_BYTES", 100)
+    (owner.root / "large.dat").write_bytes(b"x" * 200)
+    seen = []
+    preview = owner.prepare(["python3", "-c",
+                             "import pathlib; print('tick', flush=True); "
+                             "assert not pathlib.Path('large.dat').exists()"], scope="src")
+    outcome = asyncio.run(owner.run(preview, approvals.issue(preview.request), on_output=seen.append))
+    assert outcome.decision == "ALLOW", outcome.reason
+    assert json.loads(outcome.text)["exit_code"] == 0
+    assert "tick" in "".join(seen)
+    assert (owner.root / "large.dat").read_bytes() == b"x" * 200
+
 
 
 def test_no_grant_denies_even_with_an_approval(sandbox):
@@ -116,7 +141,10 @@ def test_an_approved_command_runs_in_the_workspace_and_is_journaled(sandbox):
     result = json.loads(outcome.text)
     assert outcome.decision == "ALLOW" and outcome.receipt is not None
     assert result["exit_code"] == 0 and not result["timed_out"]
-    assert result["output"].splitlines() == [str(owner.root / "src"), "/tmp"]
+    cwd_line, home = result["output"].splitlines()
+    assert home == "/tmp"
+    assert cwd_line.endswith("/src") and Path(cwd_line) != owner.root / "src"
+    assert (owner.root / "src" / "app.py").read_text(encoding="utf-8") == "print('app')\n"
     assert preview.program in {"/usr/local/bin/python3", "/usr/bin/python3", "/bin/python3"}
     assert ActionAuditJournal(owner.root).verify().receipts == 1
 
@@ -171,17 +199,26 @@ def test_sensitive_paths_are_masked_and_the_marker_is_read_only(sandbox):
     _grant(authority, fake)
     (owner.root / ".env").write_text("TOKEN=x\n", encoding="utf-8")
     (owner.root / ".git").mkdir()
+    (owner.root / ".netrc").write_text(
+        "machine example login user password secret\n", encoding="utf-8")
+    (owner.root / ".npmrc").write_text(
+        "//registry.example/:_authToken=secret\n", encoding="utf-8")
+    (owner.root / ".pypirc").write_text("[pypi]\npassword = secret\n", encoding="utf-8")
     (owner.root / "src" / "server.pem").write_text("key\n", encoding="utf-8")
     (owner.root / "src" / "link.pem").symlink_to(owner.root / "src" / "app.py")
     preview, outcome = _run(owner, approvals, ["echo", "ok"])
     assert outcome.decision == "ALLOW"
-    assert preview.request.parameters["masked_count"] == 3
+    assert preview.request.parameters["masked_count"] == 6
     logged = json.loads(log.read_text())
-    assert sorted(logged["masks"]) == ["/workspace/.env", "/workspace/.git", "/workspace/src/server.pem"]
+    assert sorted(logged["masks"]) == [
+        "/workspace/.env", "/workspace/.git", "/workspace/.netrc",
+        "/workspace/.npmrc", "/workspace/.pypirc", "/workspace/src/server.pem",
+    ]
     assert logged["readonly"] == ["/workspace/.isyroot"]
     command = sandbox_command(fake, owner.root, "/usr/bin/echo", ("echo",), ".", preview.masks)
     assert command.index("--bind") < command.index("--tmpfs", command.index("--bind"))
     assert "--clearenv" in command and "--die-with-parent" in command
+    assert "--share-net" not in command
 
 
 def test_a_new_secret_after_review_denies_the_run(sandbox):
@@ -245,13 +282,6 @@ def test_sentinel_rejects_forged_command_requests(sandbox, change):
     gate = ProductActionGate(owner.root, authority, owner_id="workspace_command")
     _, decision = gate.authorize(request, approvals=approvals, approval=approvals.issue(request))
     assert not decision.allowed
-
-
-def test_classic_mode_never_implies_commands(sandbox):
-    owner, authority, approvals, _, log = sandbox
-    authority.set_mode("classic")
-    _, outcome = _run(owner, approvals, ["echo", "hi"])
-    assert outcome.decision == "DENY" and not log.exists()
 
 
 def test_without_bubblewrap_nothing_can_be_prepared(sandbox, monkeypatch):

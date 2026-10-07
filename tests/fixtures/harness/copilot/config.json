@@ -1,0 +1,8 @@
+// JSONC fixture
+{
+  "firstLaunchAt": 1,
+  "appTipShown": true,
+  /* trust must never become ISyCode WorkspaceTrust */
+  "trustedFolders": ["/fixture/project"],
+  "reasoningSummariesCleanupDone": true
+}

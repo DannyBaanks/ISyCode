@@ -1,7 +1,10 @@
 import pytest
 
 from isycode.config import load_api_key
-from isycode.providers import PRESETS, Provider
+from isycode.providers import (
+    PRESETS, Provider, model_context_limit, model_slot, record_model_metadata,
+    save_model_slot, save_provider_selection,
+)
 
 
 @pytest.mark.parametrize(("name", "base_url", "key_env"), [
@@ -23,6 +26,28 @@ def test_added_cloud_provider_preset_and_env_key(monkeypatch, tmp_path,
     assert load_api_key(name) == "test-provider-key"
 
 
+def test_provider_screen_lists_wired_presets_and_unwired_names():
+    from isycode.providers import PRESETS, PROVIDER_SCREEN
+
+    groups = [group for group, _key, _label, _blurb in PROVIDER_SCREEN]
+    assert groups[0] == "popular"
+    assert "providers" in groups
+    wired = {key for _group, key, _label, _blurb in PROVIDER_SCREEN if key}
+    assert {"nvidia", "openai", "xai", "deepseek", "opencode"} <= wired
+    assert wired <= set(PRESETS)
+    assert set(PRESETS) - wired == {"chatgpt"}
+    for key in wired:
+        preset = PRESETS[key]
+        assert preset.get("base_url")
+        # nvidia and nebius already fall back to DEFAULT_MODEL. New rows must name one.
+        assert key in {"nvidia", "nebius"} or preset.get("default_model")
+    unwired = [label for _group, key, label, _blurb in PROVIDER_SCREEN if not key]
+    assert "GitHub Copilot" in unwired
+    assert "AWS Bedrock" in unwired
+    assert "Google Vertex AI" in unwired
+    assert all(label not in PRESETS for label in unwired)
+
+
 def test_openrouter_does_not_advertise_model_agnostic_tool_support():
     provider = Provider(name="openrouter", model="example/model", api_key="test")
     assert provider.supports_tools is False
@@ -32,8 +57,31 @@ def test_model_dependent_presets_send_tools_only_after_an_explicit_opt_in(monkey
     from isycode.providers import provider_supports_tools
 
     monkeypatch.delenv("ISYCODE_TOOL_CALLS", raising=False)
-    assert not provider_supports_tools("ollama") and not provider_supports_tools("openrouter")
+    assert provider_supports_tools("ollama")  # the preset declares the protocol
+    assert not provider_supports_tools("openrouter") and not provider_supports_tools("cerebras")
     monkeypatch.setenv("ISYCODE_TOOL_CALLS", "1")
-    assert provider_supports_tools("ollama") and provider_supports_tools("llamacpp")
+    assert provider_supports_tools("openrouter") and provider_supports_tools("cerebras")
     assert Provider(name="openrouter", model="example/model", api_key="test").supports_tools
     assert not provider_supports_tools("not-a-provider")
+
+
+def test_small_model_slot_is_typed_private_metadata(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    save_model_slot("small", "openai", "gpt-5.6-mini")
+
+    assert model_slot("small") == {"provider": "openai", "model": "gpt-5.6-mini"}
+    assert model_slot("chat") is None
+    with pytest.raises(ValueError):
+        save_model_slot("admin", "openai", "gpt-5.6-mini")
+    with pytest.raises(ValueError):
+        save_model_slot("small", "missing-provider", "x")
+
+
+def test_live_model_context_window_survives_model_selection_without_accepting_bad_metadata(monkeypatch, tmp_path):
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    record_model_metadata("openai", "gpt-example", {"context_length": 200_000})
+    assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")
+    save_provider_selection("openai", "gpt-example")
+    assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")
+    record_model_metadata("openai", "gpt-example", {"context_length": True})
+    assert model_context_limit("openai", "gpt-example") == (200_000, "live-catalog")

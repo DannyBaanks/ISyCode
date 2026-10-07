@@ -51,6 +51,43 @@ def system_clipboard_command() -> list[str] | None:
     return None
 
 
+def _bounded_clipboard_read(command: list[str], limit: int) -> bytes:
+    import threading
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as process:
+        timer = threading.Timer(TOOL_TIMEOUT_S, process.kill)
+        timer.start()
+        try:
+            data = process.stdout.read(limit + 1)
+            if len(data) > limit:
+                process.kill()
+                raise ValueError("clipboard exceeds limit")
+            if process.wait(timeout=TOOL_TIMEOUT_S) != 0:
+                raise ValueError("clipboard read failed")
+            return data
+        finally:
+            timer.cancel()
+            if process.poll() is None:
+                process.kill()
+
+
+def read_system_clipboard() -> tuple[str, bytes]:
+    if os.environ.get("WAYLAND_DISPLAY") and (tool := shutil.which("wl-paste")):
+        types = _bounded_clipboard_read([tool, "--list-types"], 4096).decode("utf-8").splitlines()
+        command = lambda mime: [tool, "--no-newline", "--type", mime]
+    elif os.environ.get("DISPLAY") and (tool := shutil.which("xclip")):
+        types = _bounded_clipboard_read([tool, "-selection", "clipboard", "-o", "-t", "TARGETS"], 4096).decode("utf-8").splitlines()
+        command = lambda mime: [tool, "-selection", "clipboard", "-o", "-t", mime]
+    else:
+        raise ValueError("no Linux clipboard reader")
+    mime = next((t for t in ("image/png", "image/jpeg", "image/webp", "image/gif", "text/plain;charset=utf-8", "UTF8_STRING", "text/plain") if t in types), None)
+    if mime is None:
+        raise ValueError("unsupported clipboard type")
+    data = _bounded_clipboard_read(command(mime), 8 * 1024 * 1024)
+    if not data:
+        raise ValueError("empty clipboard")
+    return (mime if mime.startswith("image/") else "text/plain"), data
+
+
 class ClipboardOwner:
     """The only execution owner for clipboard.copy."""
 
@@ -59,6 +96,23 @@ class ClipboardOwner:
         self.root = root.resolve(strict=True)
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
         self._command_finder = command_finder
+
+    def paste(self) -> tuple[ActionOutcome, str, bytes]:
+        """Authorize before probing or reading the OS clipboard; never journal bytes."""
+        request = ActionRequest("clipboard.paste", self.root, CLIPBOARD_TARGET,
+                                {"source": "user_paste", "max_bytes": 8 * 1024 * 1024}, execution_owner="clipboard")
+        _, decision = self.gate.authorize(request)
+        if not decision.allowed:
+            return ActionOutcome("Nothing pasted.", "DENY", None, "; ".join(c.reason for c in decision.checks if not c.passed)), "", b""
+        try:
+            mime, data = read_system_clipboard()
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return ActionOutcome("Nothing pasted.", "ERROR", None, "clipboard unavailable, unsupported, too large or timed out"), "", b""
+        receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), request.action_id, request.digest,
+                                "ALLOW", "SUCCESS", hashlib.sha256(data).hexdigest())
+        if not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Nothing pasted.", "NOT_VERIFIABLE", None, "durable action journal unavailable"), "", b""
+        return ActionOutcome(mime, "ALLOW", receipt, "clipboard read"), mime, data
 
     def copy(self, text: str, *, source: str,
              terminal_write: Callable[[str], None] | None = None) -> ActionOutcome:

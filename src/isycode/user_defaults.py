@@ -49,7 +49,8 @@ class UserDefaultsStore:
             return {"version": self.VERSION, "new_workspace": "ask",
                     "new_workspace_mode": "ask", "default_role": None,
                     "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
-                    "chat_token_budget": 0}
+                    "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
+                    "high_contrast": False, "ascii_only": False}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
         if os.name == "posix" and metadata.st_mode & 0o077:
@@ -83,6 +84,18 @@ class UserDefaultsStore:
                 or not isinstance(role.get("name"), str)
                 or not 1 <= len(role["name"]) <= 120):
             raise ValueError("ISyCode default role is invalid")
+        sounds = data.get("notification_sounds", True)
+        if type(sounds) is not bool:
+            raise ValueError("ISyCode notification sounds preference is invalid")
+        marquee = data.get("compact_marquee", False)
+        if type(marquee) is not bool:
+            raise ValueError("ISyCode compact marquee preference is invalid")
+        contrast = data.get("high_contrast", False)
+        if type(contrast) is not bool:
+            raise ValueError("ISyCode high contrast preference is invalid")
+        ascii_only = data.get("ascii_only", False)
+        if type(ascii_only) is not bool:
+            raise ValueError("ISyCode ASCII-only preference is invalid")
         steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
         tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
         budget = data.get("chat_token_budget", 0)
@@ -90,18 +103,37 @@ class UserDefaultsStore:
             raise ValueError("ISyCode chat token budget is invalid")
         if type(steps) is not int or steps not in AGENT_STEP_CHOICES:
             raise ValueError("ISyCode agent step limit is invalid")
-        if type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES:
+        if tokens is not None and (type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES):
             raise ValueError("ISyCode answer length is invalid")
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
-                "chat_token_budget": budget}
+                "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds,
+                "high_contrast": contrast, "ascii_only": ascii_only}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
                default_role: dict[str, str] | None | object = ...,
                agent_steps: int | None = None, answer_tokens: int | None = None,
-               chat_token_budget: int | None = None) -> None:
+               chat_token_budget: int | None = None, compact_marquee: bool | None = None,
+               notification_sounds: bool | None = None, high_contrast: bool | None = None,
+               ascii_only: bool | None = None) -> None:
         current = self.load()
+        if ascii_only is not None:
+            if type(ascii_only) is not bool:
+                raise ValueError("ISyCode ASCII-only preference is invalid")
+            current["ascii_only"] = ascii_only
+        if high_contrast is not None:
+            if type(high_contrast) is not bool:
+                raise ValueError("ISyCode high contrast preference is invalid")
+            current["high_contrast"] = high_contrast
+        if notification_sounds is not None:
+            if type(notification_sounds) is not bool:
+                raise ValueError("ISyCode notification sounds preference is invalid")
+            current["notification_sounds"] = notification_sounds
+        if compact_marquee is not None:
+            if type(compact_marquee) is not bool:
+                raise ValueError("ISyCode compact marquee preference is invalid")
+            current["compact_marquee"] = compact_marquee
         if chat_token_budget is not None:
             if type(chat_token_budget) is not int or chat_token_budget not in CHAT_TOKEN_BUDGET_CHOICES:
                 raise ValueError("ISyCode chat token budget is invalid")

@@ -13,7 +13,7 @@ import secrets
 import stat
 from pathlib import Path
 
-from isycode.workspace_authority import WorkspaceAuthority
+from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.workspace_setup import state_root
 
 MAX_FOLDERS = 8
@@ -218,13 +218,30 @@ class WorkspaceFolders:
     def auto_edit_allowed(self, alias: str = 'main') -> bool:
         data = self._load()
         self.resolve(alias, write=True)
+        if not self.auto_edit_available(alias):
+            return False
         return data['auto_edit'] if alias == 'main' else next(item['auto_edit'] for item in data['folders'] if item['alias'] == alias)
+
+    def auto_edit_available(self, alias: str = 'main') -> bool:
+        """Security in either workspace requires individual review.
+
+        Recheck live policies so switching modes suspends saved preferences.
+        Unconfigured and legacy workspaces retain Security's review rule.
+        """
+        root = self.resolve(alias, write=True)
+        try:
+            return (WorkspaceAuthority(self.main).mode() == 'classic'
+                    and WorkspaceAuthority(root).mode() == 'classic')
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
 
     def set_auto_edit(self, alias: str, enabled: bool) -> None:
         if type(enabled) is not bool:
             raise ValueError('Auto-edit preference must be a boolean')
         data = self._load()
         self.resolve(alias, write=enabled)
+        if enabled and not self.auto_edit_available(alias):
+            raise ValueError('Security requires review of each edit; automatic edits need Classic mode')
         if alias == 'main':
             data['auto_edit'] = enabled
         else:

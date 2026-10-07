@@ -54,11 +54,19 @@ def test_invalid_copies_are_refused(owner, text, source):
 
 
 def _methods():
-    module = ast.parse(SOURCE.read_text(encoding="utf-8"))
-    app = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
-    source = SOURCE.read_text(encoding="utf-8")
-    return {node.name: ast.get_source_segment(source, node) for node in app.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    found = {}
+    for path in (SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))):
+        source = path.read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name != "TUIApp" and not node.name.endswith("Mixin"):
+                continue
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    found[item.name] = ast.get_source_segment(source, item)
+    return found
 
 
 def test_every_copy_goes_through_the_owner_and_never_copies_the_key_field():

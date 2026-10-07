@@ -29,6 +29,26 @@ def grant(authority, root):
     authority.set_grant("workspace.files.write", enabled=True, path_prefixes=[root])
 
 
+@pytest.mark.parametrize("operation", ["write", "delete", "move"])
+def test_no_mutation_starts_without_a_durable_checkpoint(writer, monkeypatch, operation):
+    owner, authority, approvals, root = writer
+    authority.set_mode("classic")
+    preview = (owner.preview_delete("src/app.py") if operation == "delete" else
+               owner.preview_move("src/app.py", "src/moved.py") if operation == "move" else
+               owner.preview("src/app.py", "changed\n"))
+    before = (root / "src/app.py").read_bytes()
+
+    def full_disk(_record):
+        raise OSError("synthetic checkpoint disk full")
+
+    monkeypatch.setattr(owner.checkpoints, "save", full_disk)
+    outcome = owner.apply(preview, approvals.issue(preview.request))
+    assert outcome.decision != "ALLOW"
+    assert (root / "src/app.py").read_bytes() == before
+    assert not (root / "src/moved.py").exists()
+    assert owner._effect_ledger().status()["churn_bytes"] == 0
+
+
 def test_preview_shows_the_exact_diff_and_writes_nothing(writer):
     owner, _, _, root = writer
     preview = owner.preview("src/app.py", "print('hello')\n")

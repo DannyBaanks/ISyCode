@@ -77,29 +77,47 @@ def test_interrupted_turn_preserves_completed_tool_context(tmp_path, monkeypatch
         asyncio.run(scenario())
 
 
-@pytest.mark.parametrize('usage', [
-    {'prompt_tokens': 9000, 'completion_tokens': 1000}, None,
-])
-def test_budget_stops_next_model_request_but_keeps_completed_tools(tmp_path, monkeypatch, capsys, usage):
+def test_usage_and_legacy_budget_do_not_impose_local_chat_caps(tmp_path, monkeypatch, capsys):
     root = configure(tmp_path, monkeypatch)
     (root / 'first.py').write_text('value = 1\n')
     UserDefaultsStore().update(chat_token_budget=10000)
     calls = []
     async def complete(provider, messages, **kwargs):
         calls.append(kwargs['max_tokens'])
-        return {'text': 'Reading.', 'tool_calls': [{'id': 'r', 'function': {
-            'name': 'workspace_read', 'arguments': '{"path":"first.py"}'}}], 'usage': usage}
+        if len(calls) == 1:
+            return {'text': 'Reading.', 'tool_calls': [{'id': 'r', 'function': {
+                'name': 'workspace_read', 'arguments': '{"path":"first.py"}'}}],
+                'usage': {'prompt_tokens': 9000, 'completion_tokens': 1000}}
+        return {'text': 'Done.', 'tool_calls': [],
+                'usage': {'prompt_tokens': 9000, 'completion_tokens': 1000}}
     monkeypatch.setattr('isycode.tui.provider_complete', complete)
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
             await pilot.pause()
             await app._run_chat('Read it.')
-            assert len(calls) == 1
+            assert calls == [None, None]
             assert len(app._tool_history) == 1
             await app._run_chat('Continue.')
-            assert len(calls) == 1
-            assert '10000' in app._usage_status_text().replace(',', '')
+            assert calls == [None, None, None]
+            assert 'usage unknown' not in app._usage_status_text().lower()
+            assert '30000' in app._usage_status_text().replace(',', '')
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_usage_status_shows_estimated_context_and_unknown_cost(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._history = [{"role": "user", "content": "x" * 400}]
+            text = app._usage_status_text().lower()
+            assert "ctx ~100 est" in text
+            assert "cost" not in text
+            assert "req" not in text
+            assert "$0" not in text
     with capsys.disabled():
         asyncio.run(scenario())
 
@@ -118,7 +136,6 @@ def test_budget_defaults_are_validated_and_legacy_settings_load(tmp_path):
 def test_usage_and_budget_fit_the_standard_terminal_width(tmp_path, monkeypatch, capsys):
     from textual.widgets import Static
     configure(tmp_path, monkeypatch)
-    UserDefaultsStore().update(chat_token_budget=10000)
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as pilot:
@@ -127,12 +144,12 @@ def test_usage_and_budget_fit_the_standard_terminal_width(tmp_path, monkeypatch,
             app._refresh_usage()
             text = plain_text(app.query_one('#usage-status', Static))
             assert len(text) <= 80
-            assert 'unknown' in text.lower() and '10,000' in text
+            assert '+?' in text
     with capsys.disabled():
         asyncio.run(scenario())
 
 
-def test_unreadable_budget_settings_stop_provider_requests(tmp_path, monkeypatch, capsys):
+def test_unreadable_legacy_budget_settings_do_not_block_provider_requests(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     calls = []
     async def complete(provider, messages, **kwargs):
@@ -145,12 +162,12 @@ def test_unreadable_budget_settings_stop_provider_requests(tmp_path, monkeypatch
             await pilot.pause()
             UserDefaultsStore().path.write_text('invalid JSON')
             await app._run_chat('Explain this.')
-            assert calls == []
+            assert calls == [True]
     with capsys.disabled():
         asyncio.run(scenario())
 
 
-def test_compaction_consumption_stops_the_following_chat_request(tmp_path, monkeypatch, capsys):
+def test_chat_does_not_automatically_compact_long_history(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     UserDefaultsStore().update(chat_token_budget=10000)
     requests = []
@@ -167,7 +184,9 @@ def test_compaction_consumption_stops_the_following_chat_request(tmp_path, monke
                             for role in ('user', 'assistant') * 6]
             await app._run_chat('Continue.')
             assert len(requests) == 1
-            assert app._conversation_summary == 'Old history summary.'
+            assert app._conversation_summary == ''
+            assert any(message.get('content') == 'Continue.' for message in requests[0])
+            assert any(message.get('content') == 'x' * 15000 for message in requests[0])
             assert app._usage.to_state()['input_tokens'] == 9900
     with capsys.disabled():
         asyncio.run(scenario())
@@ -189,6 +208,36 @@ def test_failed_explicit_compaction_saves_unknown_consumption(tmp_path, monkeypa
             assert app._active_chat_session_id
             state = app._chat_session_owner.resume(app._active_chat_session_id)[1].state
             assert state['usage']['unknown_requests'] == 1
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_compact_uses_small_slot_and_user_instructions(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    from isycode.providers import save_model_slot
+    save_model_slot('small', 'openai', 'gpt-small-fixture')
+    calls = []
+
+    async def complete(provider, messages, **kwargs):
+        calls.append((provider.name, provider.model, messages))
+        return {'text': 'Compact summary.', 'tool_calls': [],
+                'usage': {'prompt_tokens': 10, 'completion_tokens': 2}}
+
+    monkeypatch.setattr('isycode.tui.provider_complete', complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._history = [
+                {'role': 'user', 'content': 'Old conversation.'},
+                {'role': 'assistant', 'content': 'Old answer.'},
+            ] * 4
+            await app._compact_conversation('Keep failing tests and exact paths.')
+            assert calls[0][0:2] == ('openai', 'gpt-small-fixture')
+            assert 'Keep failing tests and exact paths.' in calls[0][2][0]['content']
+            assert app._conversation_summary == 'Compact summary.'
+
     with capsys.disabled():
         asyncio.run(scenario())
 

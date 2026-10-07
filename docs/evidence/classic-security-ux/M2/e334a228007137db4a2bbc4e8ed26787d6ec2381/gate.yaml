@@ -1,0 +1,102 @@
+hito: M2
+puerta: G2
+estado: EN_REVISION
+sha_evaluado: e334a228007137db4a2bbc4e8ed26787d6ec2381
+fecha_utc: 2026-10-02T12:47:18Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; Classic sigue pidiendo aprobación por edición y por comando; este hito no abre autonomía
+dependencias: G1
+dependencias_estado:
+  G1: EN_REVISION
+casos:
+  - id: G2-01
+    prueba: tests/test_staging.py::test_shell_and_python_mutations_stay_staged_until_promote y tests/test_staging.py::test_typed_spills_do_not_create_files_until_apply
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: shell, Python pathlib y la escritura tipada pueden crear o borrar cientos de archivos; el árbol original sigue intacto hasta la promoción
+    observado: >
+      El shell de builtins escribió 200 src/sN.txt y cambió app.py dentro de la
+      copia. Antes de promover, app.py seguía en keep y no había sN.txt.
+      Después, app.py era changed y había 200 archivos. Python creó 200
+      py/fN.txt, borró src/gone.txt e intentó reescribir .git/config. Antes de
+      promover, gone.txt seguía y .git no cambió. Después, los 200 archivos
+      estaban, gone.txt no, y .git/config quedó en refused. 200 stage_preview
+      no crearon bulk/; apply escribió solo bulk/0.txt.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M2/e334a228007137db4a2bbc4e8ed26787d6ec2381/pytest-not-integration.txt
+        sha256: 730a3490584dda5ced22fa73b3b7532bc75ac55d00f8017822de63adbceaa6b4
+  - id: G2-02
+    prueba: tests/test_staging.py::test_copy_breaks_hardlinks_and_promotion_skips_protected_paths tests/test_staging.py::test_promote_refuses_parent_paths_and_a_human_edit tests/test_staging.py::test_promote_does_not_follow_a_swapped_parent_symlink tests/test_staging.py::test_real_bubblewrap_keeps_attacks_inside_staging
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: symlink, hardlink, ruta .., alias de root y un directorio montado no escriben fuera del staging autorizado
+    observado: >
+      copy2 rompe el hardlink: el inodo de la copia no es el del original.
+      ../outside.txt se niega y no aparece al lado del temporal. Si el usuario
+      sustituye un directorio por un symlink hacia fuera o hacia .git después
+      de la copia, sub/new.txt se niega y el destino no recibe el archivo.
+      Bubblewrap real dejó el root en workspace tmp dev proc y las libs; home
+      no estaba. /workspace/../neighbor.txt no tocó el neighbor del host.
+      mount -t tmpfs devolvió MOUNT:denied (CapEff 0). El symlink link no
+      modificó outside.txt.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M2/e334a228007137db4a2bbc4e8ed26787d6ec2381/pytest-not-integration.txt
+        sha256: 730a3490584dda5ced22fa73b3b7532bc75ac55d00f8017822de63adbceaa6b4
+  - id: G2-03
+    prueba: tests/test_staging.py::test_real_bubblewrap_keeps_attacks_inside_staging
+    comando: ./.venv/bin/python -m pytest -q tests/test_staging.py::test_real_bubblewrap_keeps_attacks_inside_staging --tb=short
+    esperado: .git, .isyroot, autoridad, vault, home, journal y checkpoints no se modifican; un secreto no se lee desde el subprocess
+    observado: >
+      El ataque con mkdir, rm y redirecciones corrió en Bubblewrap 0.9.0.
+      Antes y después de promover, .git/config seguía git, .isyroot seguía id
+      y .env seguía TOKEN=supersecret. La salida no contiene supersecret ni
+      vault-secret. credentials.sqlite3, journal.jsonl, checkpoint.json y el
+      marker de autoridad no cambiaron. .git/config, .env y .isyroot no están
+      en promoted. Esos directorios viven fuera del checkout y el root del
+      sandbox no monta /home.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M2/e334a228007137db4a2bbc4e8ed26787d6ec2381/pytest-not-integration.txt
+        sha256: 730a3490584dda5ced22fa73b3b7532bc75ac55d00f8017822de63adbceaa6b4
+  - id: G2-04
+    prueba: tests/test_staging.py::test_a_workspace_over_the_budget_is_not_run tests/test_staging.py::test_low_disk_does_not_run_the_command tests/test_staging.py::test_a_dead_sandbox_does_not_fall_back_to_the_host tests/test_command_runner.py::test_without_bubblewrap_nothing_can_be_prepared
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: presupuesto, disco, sandbox ausente o sandbox que no arranca terminan sin ejecutar en el host
+    observado: >
+      Con el tope bajado a 4 bytes, prepare_staging lanza StagingError y el
+      archivo queda igual. Con espacio libre 0, run devuelve ERROR y el motivo
+      dice que el comando no se ejecutó; app.py sigue en keep. Un bwrap que
+      sale 1 no ejecuta el python que escribiría pwned; promoted_count es 0.
+      Sin bwrap en PATH, prepare rechaza antes de revisar. La salida larga
+      sigue truncada en el tope que ya tenía el runner. Overlay no está
+      disponible en este host (uid_map denegado; mount overlay exit 32) y por
+      eso el backend es copia, no un mount.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M2/e334a228007137db4a2bbc4e8ed26787d6ec2381/pytest-not-integration.txt
+        sha256: 730a3490584dda5ced22fa73b3b7532bc75ac55d00f8017822de63adbceaa6b4
+  - id: G2-05
+    prueba: tests/test_staging.py::test_binary_space_and_unicode_keep_bytes_and_mode
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: binario, espacio y Unicode se promueven con sus bytes y su modo; un .git de submódulo y un symlink no
+    observado: >
+      data.bin conservó el NUL y el byte 0xff. my file.txt, café.txt y
+      dir with space/archivo.txt llegaron con el texto nuevo. tool.sh quedó
+      0755 y nuevo archivo.txt 0640. sub/.git y link se negaron: el gitdir y
+      el symlink del original siguieron igual.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M2/e334a228007137db4a2bbc4e8ed26787d6ec2381/pytest-not-integration.txt
+        sha256: 730a3490584dda5ced22fa73b3b7532bc75ac55d00f8017822de63adbceaa6b4
+sin_evidencia_real:
+  - revisor distinto del autor
+  - copia real de un árbol de 512 MiB; el tope se probó bajando MAX_STAGE_BYTES a 4
+  - promoción multiarchivo atómica
+  - Windows y macOS
+  - Classic autónomo con 0 aprobaciones por acción
+  - este push no esperó los checks; el remoto imprimió Bypassed rule violations para 0f9a4e4, 3 de 3 checks esperados, enforce_admins sigue apagado
+regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1070 passed, 2 skipped, 11 deselected; 145.89s
+riesgos_residuales: la promoción archivo a archivo puede quedar a medias; un checkout de más de 512 MiB no ejecuta comandos; el doble FAKE_BWRAP no es un namespace; crear o borrar symlinks no se promueve
+rollback_ensayado: revertir e334a228007137db4a2bbc4e8ed26787d6ec2381 devuelve el bind escribible anterior; M2 no cambia grants guardados ni abre autonomía
+revision: ausente
