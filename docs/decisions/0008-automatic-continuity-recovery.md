@@ -1,6 +1,6 @@
 # ADR 0008: Recuperación automática de un paso de chat
 
-- **Estado:** propuesto. Reemplaza parcialmente la [ADR 0007](0007-cancellation-and-reconciled-retry.md). Reabre `G6-05`, pendiente de revisión independiente.
+- **Estado:** aceptado (G6 re-aprobado por Danny Baanks, 2026-10-07, evidencia `31bee476`). Reemplaza parcialmente la [ADR 0007](0007-cancellation-and-reconciled-retry.md).
 - **Fecha:** 2026-10-07
 - **Autorización para reabrir:** Danny Baanks, 2026-10-07 ("SI OK").
 - **Plan:** [roadmap Classic/Security](../roadmap-classic-security-ux.md)

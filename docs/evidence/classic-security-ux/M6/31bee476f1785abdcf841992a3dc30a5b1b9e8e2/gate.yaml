@@ -1,6 +1,6 @@
 hito: M6
 puerta: G6
-estado: EN_REVISION
+estado: APROBADO
 sha_evaluado: 31bee476f1785abdcf841992a3dc30a5b1b9e8e2
 fecha_utc: 2026-10-07T21:48:19Z
 autor: Claude Code session (ADR 0008)
@@ -81,3 +81,7 @@ sin_evidencia_real:
 regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration"; 1572 passed, 2 failed, 2 skipped (test_g7_01 depende del bubblewrap del host; test_m15_closure lo corrige el PR #15)
 riesgos_residuales: un provider que acepta el request y luego corta el stream cobra la generación descartada; cada reintento es un request nuevo y cuesta tokens
 rollback_ensayado: revertir el commit restaura el comportamiento de ADR 0007 (sin reintento en el turno)
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-07T22:20:32Z
+revision_declaracion: Aprobación del propietario en sesión (2026-10-07, "EL PAQUETE M6 QUEDA APROBADO") tras revisar ADR 0008, casos G6-01..05 y CI verde del PR #17
