@@ -2,6 +2,7 @@ from isycode.tui import plain_text
 import asyncio
 import json
 import os
+from pathlib import Path
 
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible as TextualCollapsible, Static
@@ -316,3 +317,19 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_external_stylesheet_is_packaged_and_applied(tmp_path, monkeypatch):
+    from isycode.tui import TUIApp
+    assert (Path(__file__).resolve().parents[1] / "src" / "isycode" / "isycode.tcss").is_file()
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            sources = {str(path) for path in app.stylesheet.source}
+            assert any("isycode.tcss" in path for path in sources)
+            prompt = app.query_one("#prompt-input")
+            assert prompt.styles.background.hex in {"#242529", "#292630"}
+
+    asyncio.run(scenario())
