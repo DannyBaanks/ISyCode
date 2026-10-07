@@ -17,7 +17,9 @@ from isycode.command_runner import CommandRunOwner, sandbox_executable
 from isycode.workspace_write import DELETE_TOOL_NAME, MOVE_TOOL_NAME, WorkspaceWriteOwner
 from isycode.authority_view import displayed_on
 from isycode.security import ActionRequest
-from textual.widgets import Button
+from rich.syntax import Syntax
+from textual.widgets import Button, Static
+from isycode.tui_widgets import Collapsible
 from isycode.tui_theme import MUTED, GREEN, YELLOW, RED, CYAN
 from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.tui_composer import IdeaBox, ShellBox
@@ -423,12 +425,30 @@ class WorkspaceMixin:
         outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+            if quiet:
+                self._show_applied_diff(preview)
             return json.dumps({"status": "done", "approved_by_user": not quiet,
                                "approval_mode": "quiet-profile" if quiet else "reviewed",
                                "result": outcome.text, "receipt": outcome.receipt.receipt_id})
         self._append(f"  Tool {outcome.decision} · {action} · {outcome.reason[:180]}", YELLOW)
         return json.dumps({"error": "change was not applied", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
+
+    def _show_applied_diff(self, preview) -> None:
+        """A change applied without a review screen (quiet Classic, session trust,
+        automatic edits) still shows its exact diff in the transcript."""
+        diff = getattr(preview, "diff", "") or ""
+        if not diff.strip():
+            return
+        lines = diff.splitlines()
+        added = sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
+        removed = sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
+        chat = self.query_one(ChatArea)
+        chat.mount(Collapsible(
+            Static(Syntax(diff, "diff", theme="monokai", word_wrap=True)),
+            title=f"Diff · {preview.path} · +{added} −{removed} · applied without a review screen",
+            collapsed=len(lines) > 40, classes="applied-diff"))
+        chat.follow_tail()
 
     def _session_trust_active(self, folder_alias: str) -> bool:
         """In-memory, per-run trust. Classic-only, re-checked live: switching a
@@ -478,6 +498,7 @@ class WorkspaceMixin:
             self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
+        diff_reviewed = False  # set when the approval screen showed this exact diff
         quiet = self._request_is_quiet(preview.request)
         # A batch gesture applies only to the exact previewed digest; any drift
         # since the batch screen falls back to an individual review.
@@ -505,6 +526,7 @@ class WorkspaceMixin:
                 delegated = self._folder_store().auto_edit_allowed(folder_alias)
             except (OSError, ValueError) as exc:
                 return json.dumps({'error': f'Folder approval settings unavailable: {str(exc)[:120]}'})
+            diff_reviewed = not delegated
             choice = True if delegated else await self._await_screen(
                 WriteApprovalScreen(preview, replaces_whole_file=replaces,
                     allow_automatic_edits=self._folder_store().auto_edit_available(folder_alias),
@@ -544,6 +566,8 @@ class WorkspaceMixin:
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
+            if not diff_reviewed and not batch_approved:
+                self._show_applied_diff(preview)
             self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
                          f"receipt {outcome.receipt.receipt_id}", GREEN)
             if quiet:
