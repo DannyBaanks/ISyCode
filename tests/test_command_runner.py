@@ -64,7 +64,9 @@ def sandbox(tmp_path: Path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    fake.write_text(FAKE_BWRAP.format(python=sys.executable), encoding="utf-8")
+    # A shebang cannot hold a path with spaces (e.g. a venv under "ISyCo Git").
+    python = sys.executable if " " not in sys.executable else "/usr/bin/env python3"
+    fake.write_text(FAKE_BWRAP.format(python=python), encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     log = tmp_path / "bwrap.json"
