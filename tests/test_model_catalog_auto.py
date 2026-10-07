@@ -75,3 +75,26 @@ def test_catalog_default_effort_is_model_specific(monkeypatch):
     assert reasoning.effective_reasoning('chatgpt','fixture','medium')=='high'
     reasoning.select_reasoning('chatgpt','fixture','low')
     assert reasoning.effective_reasoning('chatgpt','fixture','medium')=='low'
+
+
+def test_a_catalog_refresh_before_the_picker_mounts_does_not_stack_two_pickers(tmp_path, monkeypatch):
+    """Regression: the push is deferred; a second render meanwhile must update it,
+    not schedule another picker that later catalog loads would never reach."""
+    configure(tmp_path, monkeypatch)
+    from isycode.tui import ModelsScreen
+    monkeypatch.setattr(Provider, 'models', lambda p: [])
+
+    async def run():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            first = app._branch_entries('models')
+            app._render_menu('branch', 'Models', first)
+            later = first + [{'label': 'late row', 'kind': 'info', 'value': '', 'detail': ''}]
+            app._render_menu('branch', 'Models', later)  # same tick, before the push ran
+            for _ in range(10):
+                await pilot.pause(.05)
+            pickers = [screen for screen in app.screen_stack if isinstance(screen, ModelsScreen)]
+            assert len(pickers) == 1
+            assert pickers[0].entries == app._menu_entries  # the latest render reached it
+    asyncio.run(run())
