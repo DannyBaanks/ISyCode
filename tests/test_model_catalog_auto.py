@@ -42,9 +42,22 @@ def test_expanding_another_provider_loads_its_catalog_without_switching(tmp_path
         async with app.run_test(size=(120,40)) as pilot:
             await pilot.pause()
             app._render_menu('branch','Models',app._branch_entries('models'))
-            for _ in range(5):await pilot.pause(.1)
+            # The screen is rebuilt when a catalog load finishes; wait for conditions,
+            # not fixed sleeps, so a slow runner cannot catch it half-built.
+            async def until(condition):
+                for _ in range(200):
+                    await pilot.pause(.05)
+                    try:
+                        if condition():
+                            return True
+                    except Exception:
+                        pass
+                return False
+            assert await until(lambda: calls==['openai'] and not getattr(app,'_account_models_loading',False)
+                               and app.screen.query_one('#model-provider-nvidia',Collapsible) is not None)
             app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed=False
-            for _ in range(5):await pilot.pause(.1)
+            assert await until(lambda: 'nvidia|nvidia-concrete' in [e['value'] for e in app.screen.entries if e['kind']=='model']
+                               and not app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed)
             assert calls==['openai','nvidia']
             assert selected_provider_name()=='openai'
             assert not app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed
