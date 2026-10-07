@@ -370,6 +370,26 @@ class AuthorityMixin:
     async def _revoke_workspace_read(self) -> None:
         await self._change_workspace_read_grant(False)
 
+    @staticmethod
+    def _selected_provider_host() -> str | None:
+        """host[:port] of the selected provider endpoint, or None if unknown/invalid."""
+        selected_name = selected_provider_name()
+        preset = PRESETS.get(selected_name)
+        if preset is None:
+            return None
+        from isycode.grok_session import session_transport
+        parsed = urlparse(os.environ.get("ISYCODE_BASE_URL")
+                          or os.environ.get("ISYMOTRON_BASE_URL")
+                          or (session_transport() if selected_name == "xai" else None)
+                          or preset["base_url"])
+        host = (parsed.hostname or "").casefold().rstrip(".")
+        try:
+            if parsed.port:
+                host += f":{parsed.port}"
+        except ValueError:
+            return None
+        return host or None
+
     async def _change_provider_network_grant(self, enabled: bool) -> None:
         selected_name = selected_provider_name()
         preset = PRESETS.get(selected_name)
@@ -377,17 +397,8 @@ class AuthorityMixin:
             self._append("  Selected provider is unknown; no network grant was changed.", RED)
             self._open_authority_menu()
             return
-        from isycode.grok_session import session_transport
-        base_url = (os.environ.get("ISYCODE_BASE_URL")
-                    or os.environ.get("ISYMOTRON_BASE_URL")
-                    or (session_transport() if selected_name == "xai" else None)
-                    or preset["base_url"])
-        parsed = urlparse(base_url)
-        host = (parsed.hostname or "").casefold().rstrip(".")
-        try:
-            if parsed.port:
-                host += f":{parsed.port}"
-        except ValueError:
+        host = self._selected_provider_host()
+        if host is None:
             self._append("  Provider endpoint is invalid; no network grant was changed.", RED)
             self._open_authority_menu()
             return
@@ -708,6 +719,17 @@ class AuthorityMixin:
                    for action in FILE_CHANGE_GRANTS]
         grants.append(("clipboard.copy", {"targets": [CLIPBOARD_TARGET]},
                        "copy selected text to the clipboard"))
+        # Without this the agent cannot even be asked: every tool above is useless.
+        host = self._selected_provider_host()
+        if host:
+            try:
+                current = WorkspaceAuthority(self._workspace_root).policy()["grants"].get(
+                    "provider.request", {})
+                hosts = set(current.get("network_hosts", [])) if current.get("enabled") else set()
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                hosts = set()
+            grants.append(("provider.request", {"network_hosts": sorted(hosts | {host})},
+                           f"connect to the selected AI model ({host})"))
         sandbox = sandbox_executable()
         if sandbox:
             grants.append(("workspace.command.run", {"executables": [sandbox]},

@@ -47,9 +47,10 @@ def push_peer_commit(peer: Path, message: str, content: str = "Incoming version\
     git("push", cwd=peer)
 
 
-def updater(repo: Path):
+def updater(repo: Path, *, confirm=lambda question, details: True):
+    """An updater whose user answers «s» to stash/merge unless a test says otherwise."""
     assert SelfUpdater is not None, "SelfUpdater must exist before updater behavior can be tested"
-    return SelfUpdater(source_root=repo, allow_local_remotes=True)
+    return SelfUpdater(source_root=repo, allow_local_remotes=True, confirm=confirm)
 
 
 def test_clean_checkout_advances_only_by_fast_forward(tmp_path):
@@ -247,7 +248,7 @@ def test_failed_coverage_regeneration_aborts_the_merge_and_preserves_checkout(tm
         return subprocess.run(args, **kwargs)
 
     report = SelfUpdater(source_root=repo, command_runner=runner,
-                         allow_local_remotes=True).run()
+                         allow_local_remotes=True, confirm=lambda question, details: True).run()
 
     assert report.status == "error"
     assert git("rev-parse", "HEAD", cwd=repo) == before_head
@@ -348,7 +349,7 @@ def test_divergence_preflight_failure_stops_safely(tmp_path):
         return subprocess.run(args, **kwargs)
 
     report = SelfUpdater(source_root=repo, command_runner=runner,
-                         allow_local_remotes=True).run()
+                         allow_local_remotes=True, confirm=lambda question, details: True).run()
 
     assert report.status == "blocked"
     assert git("rev-parse", "HEAD", cwd=repo) == before_head
@@ -358,6 +359,8 @@ def test_divergence_preflight_failure_stops_safely(tmp_path):
 
 @pytest.mark.parametrize("url,secret", [
     ("https://github.com/another-project/tool.git", ""),
+    ("https://github.com/attacker/isycode.git", ""),
+    ("https://github.com/someone/ISyCode", ""),
     ("https://user:private-token@github.com/DannyBaanks/ISyCode.git", "private-token"),
 ])
 def test_unsafe_remote_is_rejected_without_echoing_url(tmp_path, url, secret):
@@ -570,3 +573,33 @@ def test_bootstrap_installs_source_without_replacing_foreign_launcher(tmp_path, 
     assert (destination / ".venv" / "bin" / "python").is_file()
     assert foreign.read_text(encoding="utf-8") == "another application\n"
     assert any(str(destination / "scripts" / "isycode") in line for line in report.lines)
+
+
+def test_official_repository_is_accepted_case_insensitively():
+    updater_ = SelfUpdater(source_root=None, discover_source_checkout=False)
+    assert updater_._remote_allowed("https://github.com/dannybaanks/isycode")
+    assert updater_._remote_allowed("https://github.com/DannyBaanks/ISyCode.git")
+    assert not updater_._remote_allowed("https://github.com/DannyBaanks/ISyCode-fork.git")
+
+
+def test_declined_merge_leaves_the_branch_untouched(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    diverge_without_conflict(repo, peer)
+    before_head = git("rev-parse", "HEAD", cwd=repo)
+    asked = []
+    report = updater(repo, confirm=lambda question, details: asked.append(question) or False).run()
+    assert report.status == "blocked" and asked
+    assert git("rev-parse", "HEAD", cwd=repo) == before_head
+    assert any("confirmación" in line for line in report.lines)
+
+
+def test_without_anyone_to_ask_local_changes_are_never_stashed(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    push_peer_commit(peer, "remote change")
+    (repo / "notes.txt").write_text("my edits\n", encoding="utf-8")
+    before_head = git("rev-parse", "HEAD", cwd=repo)
+    report = updater(repo, confirm=None).run()
+    assert report.status == "dirty"
+    assert git("rev-parse", "HEAD", cwd=repo) == before_head
+    assert (repo / "notes.txt").read_text() == "my edits\n"
+    assert git("stash", "list", cwd=repo) == ""

@@ -38,13 +38,25 @@ class SelfUpdater:
     def __init__(self, source_root: Path | str | None = None, *, data_home: Path | str | None = None,
                  command_runner=subprocess.run, allow_local_remotes: bool = False,
                  official_repository: str = OFFICIAL_REPOSITORY,
-                 discover_source_checkout: bool = True):
+                 discover_source_checkout: bool = True,
+                 confirm=None):
         self.source_root = (Path(source_root).resolve() if source_root is not None else
                             self.discover_checkout() if discover_source_checkout else None)
         self.data_home = Path(data_home) if data_home is not None else None
         self.command_runner = command_runner
         self.allow_local_remotes = allow_local_remotes
         self.official_repository = official_repository
+        # Asked before anything beyond a clean fast-forward (backing up local
+        # changes in a stash, or creating a merge commit). None means "no".
+        self.confirm = confirm
+
+    def _confirmed(self, question: str, details: tuple[str, ...] = ()) -> bool:
+        if self.confirm is None:
+            return False
+        try:
+            return self.confirm(question, details) is True
+        except (EOFError, KeyboardInterrupt):
+            return False
 
     @staticmethod
     def discover_checkout(package_file: Path | str | None = None) -> Path | None:
@@ -243,7 +255,9 @@ class SelfUpdater:
                     )
                 return UpdateReport("current", tuple(lines))
             if dirty_paths or collisions:
-                if dirty_paths and not collisions and not check_only:
+                if (dirty_paths and not collisions and not check_only and self._confirmed(
+                        f"Tienes {len(dirty_paths)} cambio(s) local(es). ¿Guardarlos en un git stash, "
+                        "actualizar y volver a aplicarlos?", tuple(f"Local: {p}" for p in dirty_paths[:30]))):
                     saved = self._stash_local_changes()
                     if isinstance(saved, UpdateReport):
                         return saved
@@ -295,6 +309,9 @@ class SelfUpdater:
                         if check_only:
                             lines.append("La comprobación no integró ni regeneró archivos.")
                             return UpdateReport("available", tuple(lines))
+                        if not self._confirmed("Tu rama y la remota divergieron. ¿Crear un commit de merge?",
+                                               tuple(lines)):
+                            return self._merge_declined(lines)
                         merged = self._merge_and_regenerate_coverage(root)
                         if merged is not None:
                             return UpdateReport(merged.status, (*lines, *merged.lines))
@@ -315,6 +332,9 @@ class SelfUpdater:
                 if check_only:
                     lines.append("No se integró nada porque esta es una comprobación.")
                     return UpdateReport("available", tuple(lines))
+                if not self._confirmed("Tu rama y la remota divergieron. ¿Crear un commit de merge?",
+                                       tuple(lines)):
+                    return self._merge_declined(lines)
                 merge = self._git("merge", "--no-edit", "--no-ff", "FETCH_HEAD", check=False)
                 if merge.returncode:
                     return UpdateReport("error", (
@@ -336,6 +356,12 @@ class SelfUpdater:
             return UpdateReport("updated", ("ISyCode actualizado correctamente.", *details))
         except RuntimeError as exc:
             return UpdateReport("error", (str(exc),))
+
+    @staticmethod
+    def _merge_declined(lines: list[str]) -> UpdateReport:
+        return UpdateReport("blocked", (*lines,
+            "No se integró nada: el merge necesita tu confirmación.",
+            "Ejecuta isycode actualizar en una terminal y responde «s», o integra con git merge."))
 
     def _stash_local_changes(self) -> str | UpdateReport:
         """Back up staged-safe dirty work before merging; never absorb an existing index."""
