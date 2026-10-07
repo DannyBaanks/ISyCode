@@ -45,6 +45,9 @@ from isycode.tui_screens_approval import TailscaleConfirmScreen, LocalMCPConfirm
 from isycode.tui_screens_sessions import AgentQuestionScreen
 
 
+from isycode.providers import provider_supports_tools
+
+
 class ToolMixin:
     async def _dispatch_chat_tool(self, call: dict) -> tuple[str, str]:
         """Dispatch one tool and report its full duration, including approval time."""
@@ -420,11 +423,11 @@ class ToolMixin:
                 return {**identity, "status": "error", "error_kind": "APIKEY", "phase": "configuration", "provider_hint": "Selected provider credentials are not configured", "error": "Selected provider is not configured"}
             tools = []
             read_enabled = self._workspace_chat_tools_enabled() or self._additional_folder_access()
-            if read_enabled and PRESETS[provider.name].get("supports_tools"):
+            if read_enabled and provider_supports_tools(provider.name):
                 tools = json.loads(json.dumps(CHAT_WORKSPACE_TOOLS))
                 if self._workspace_write_tool_enabled() or self._additional_folder_access(write=True):
                     tools += json.loads(json.dumps([EDIT_TOOL, WRITE_TOOL]))
-            if PRESETS[provider.name].get("supports_tools"):
+            if provider_supports_tools(provider.name):
                 from isycode.web_fetch import WEB_FETCH_TOOL
                 tools.append(WEB_FETCH_TOOL)
             context = [{"role": "system", "content": (

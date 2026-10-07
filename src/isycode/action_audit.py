@@ -135,7 +135,7 @@ class ActionAuditJournal:
         return digest, len(lines)
 
     def record_decision(self, request: ActionRequest, authority: AuthorityDecision,
-                        decision: SentinelDecision) -> None:
+                        decision: SentinelDecision, *, approval_mode: str | None = None) -> None:
         if (not isinstance(request, ActionRequest)
                 or not isinstance(authority, AuthorityDecision)
                 or not isinstance(decision, SentinelDecision)):
@@ -149,8 +149,10 @@ class ActionAuditJournal:
                 or not isinstance(check.passed, bool)
                 for check in decision.checks)):
             raise ActionAuditError("action decision checks are malformed")
+        if approval_mode not in {None, "user", "delegated"}:
+            raise ActionAuditError("approval mode is malformed")
         failed = [check.name[:120] for check in decision.checks if not check.passed]
-        self._append({
+        record = {
             "kind": "decision", "time": time.time(),
             "workspace": hashlib.sha256(str(request.workspace_root).encode()).hexdigest()[:32],
             "action": request.action_id, "owner": request.execution_owner,
@@ -159,7 +161,10 @@ class ActionAuditJournal:
             "sentinel": decision.status, "failed_checks": failed[:64],
             "checks": [{"name": check.name[:120], "passed": check.passed}
                        for check in decision.checks[:64]],
-        })
+        }
+        if approval_mode is not None:
+            record["approval"] = approval_mode  # who approved: the user, or a setting they enabled
+        self._append(record)
 
     def record_receipt(self, request: ActionRequest, receipt: Any) -> None:
         if not isinstance(request, ActionRequest):
@@ -300,6 +305,8 @@ class ActionAuditJournal:
                                    or not isinstance(item.get("passed"), bool)
                                    for item in checks)):
                         raise ValueError(f"decision {line_number} has invalid check metadata")
+                    if body.get("approval") not in {None, "user", "delegated"}:
+                        raise ValueError(f"decision {line_number} has an invalid approval mode")
                     # A frozen request can be re-evaluated after grant state changes.
                     # Keep each chronological decision; a later DENY does not erase an
                     # earlier successful execution receipt.
@@ -334,6 +341,7 @@ class ActionAuditJournal:
                 "authority": item.get("authority"), "sentinel": item.get("sentinel"),
                 "failed_checks": item.get("failed_checks", []),
                 "checks": item.get("checks", []),
+                "approval": item.get("approval"),
                 "receipt_id": item.get("receipt_id"),
                 "result_digest": item.get("result_digest"),
                 "outcome": item.get("outcome", "SUCCESS") if item["kind"] == "receipt" else None,

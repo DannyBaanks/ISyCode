@@ -478,28 +478,29 @@ class WorkspaceMixin:
             self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
+        verb = "create" if preview.created else "replace whole file" if replaces else "edit"
         quiet = self._request_is_quiet(preview.request)
         # A batch gesture applies only to the exact previewed digest; any drift
         # since the batch screen falls back to an individual review.
         batch_approved = batch_digest is not None and batch_digest == preview.request.digest
         session_trusted = self._session_trust_active(folder_alias)
         if quiet:
-            self._append(f"  Tool · quiet Classic · {'replace whole file' if replaces else 'edit'} · "
+            self._append(f"  Tool · quiet Classic · {verb} · "
                          f"{preview.path}", CYAN)
             delegated = False
             choice = True
         elif batch_approved:
-            self._append(f"  Tool · batch-approved · {'replace whole file' if replaces else 'edit'} · "
+            self._append(f"  Tool · batch-approved · {verb} · "
                          f"{preview.path}", CYAN)
             delegated = False
             choice = True
         elif session_trusted:
-            self._append(f"  Tool · session trust · {'replace whole file' if replaces else 'edit'} · "
+            self._append(f"  Tool · session trust · {verb} · "
                          f"{preview.path}", CYAN)
             delegated = False
             choice = True
         else:
-            self._append(f"  Tool requested · {'replace whole file' if replaces else 'edit'} · "
+            self._append(f"  Tool requested · {verb} · "
                          f"{preview.path} · review the diff", CYAN)
             try:
                 delegated = self._folder_store().auto_edit_allowed(folder_alias)
@@ -541,7 +542,11 @@ class WorkspaceMixin:
                      'Session trust' if session_trusted else
                      'User-enabled automatic edits' if delegated else 'You approved')
             self._append(f"  ✓ {label} · {folder_alias} · {preview.path}", MUTED)
-            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+            # The journal records who said yes: the user (reviewed or batch), or a
+            # standing setting they enabled (automatic edits, session trust).
+            approval = self._action_approvals.issue(
+                preview.request, ttl_seconds=60,
+                mode="delegated" if delegated or session_trusted else "user")
         outcome = await asyncio.to_thread(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
@@ -586,11 +591,14 @@ class WorkspaceMixin:
     def _menu_folder_remove(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
         try:
-            self._folder_store().remove(value)
+            revoked = self._folder_store().remove(value)
+            self._append(f"  Folder removed · {value} · "
+                         + (f"revoked {len(revoked)} permission(s) ISyCode had given it"
+                            if revoked else "its own permissions were left as they were"), GREEN)
             if self._file_browser_alias == value:
                 self._file_browser_alias = 'main'
                 self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, WorkspaceAuthorityError) as exc:
             self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
         self._open_workspace_folders_menu()
         return

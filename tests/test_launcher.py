@@ -92,6 +92,9 @@ def test_update_command_dispatches_check_and_exit_code(monkeypatch, capsys):
     calls = []
 
     class FakeUpdater:
+        def __init__(self, confirm=None):
+            self.confirm = confirm
+
         def run(self, check_only=False):
             calls.append(check_only)
             return isycode.updater.UpdateReport("available", ("Hay una actualización.",))
@@ -110,6 +113,9 @@ def test_update_command_returns_failure_when_local_changes_need_resolution(monke
     from isycode.launcher import main
 
     class FakeUpdater:
+        def __init__(self, confirm=None):
+            self.confirm = confirm
+
         def run(self, check_only=False):
             return isycode.updater.UpdateReport(
                 "updated-conflicts", ("Se requiere resolver un cambio local.",))
@@ -118,6 +124,27 @@ def test_update_command_returns_failure_when_local_changes_need_resolution(monke
 
     assert main(["actualizar"]) == 1
     assert "resolver" in capsys.readouterr().out
+
+
+def test_update_asks_only_when_someone_can_answer(monkeypatch):
+    import isycode.updater
+    from isycode.launcher import main
+
+    seen = []
+
+    class FakeUpdater:
+        def __init__(self, confirm=None):
+            seen.append(confirm)
+
+        def run(self, check_only=False):
+            return isycode.updater.UpdateReport("current", ())
+
+    monkeypatch.setattr(isycode.updater, "SelfUpdater", FakeUpdater)
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False)
+    main(["actualizar"])
+    assert seen[-1] is None
+    main(["actualizar", "--yes"])
+    assert seen[-1]("¿merge?", ()) is True
 
 
 def test_update_command_rejects_unknown_flags(capsys):
