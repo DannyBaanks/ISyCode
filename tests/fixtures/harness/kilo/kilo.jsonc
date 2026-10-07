@@ -1,0 +1,2 @@
+// fixture only
+{"plugin":["fake-plugin"],"mcp":{"fake":{"type":"local","command":["fake"],"environment":{"API_KEY":"never"}}}}

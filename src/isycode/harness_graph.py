@@ -10,7 +10,7 @@ from isycode.chat_sessions import ChatSessionStore
 
 CATALOG_IDS = (
     "crush", "qwen", "opencode", "claude", "codex", "grok", "hermes",
-    "fx", "openclaw", "pi", "kimi", "cursor", "copilot",
+    "fx", "openclaw", "pi", "kimi", "cursor", "copilot", "commandcode", "kilo",
 )
 
 Transfer = Literal["copyable", "display_only", "non_transferable", "secret_skip", "gap"]

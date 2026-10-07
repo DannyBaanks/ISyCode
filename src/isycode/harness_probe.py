@@ -19,6 +19,9 @@ class HarnessCatalogEntry:
     harness_id: str
     executables: tuple[str, ...]
     dotfolder: str
+    # Extra environment for the `--version` probe only. Some CLIs self-update
+    # when run; the probe must stay read-only, so they get their opt-out here.
+    probe_env: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -43,6 +46,13 @@ CATALOG: dict[str, HarnessCatalogEntry] = {
     "kimi": HarnessCatalogEntry("kimi", ("kimi",), ".kimi-code"),
     "cursor": HarnessCatalogEntry("cursor", ("cursor-agent", "cursor"), ".cursor"),
     "copilot": HarnessCatalogEntry("copilot", ("copilot",), ".copilot"),
+    # `command-code --version` installs pending updates (1.74.1 -> 1.77.0 seen
+    # 2026-10-07); COMMANDCODE_SKIP_UPDATES gates both its check and its apply.
+    "commandcode": HarnessCatalogEntry(
+        "commandcode", ("command-code",), ".commandcode",
+        probe_env=(("COMMANDCODE_SKIP_UPDATES", "1"),),
+    ),
+    "kilo": HarnessCatalogEntry("kilo", ("kilo", "kilocode"), ".config/kilo"),
 }
 
 if tuple(CATALOG) != CATALOG_IDS:  # checked-in data must not silently reorder the UI.
@@ -77,7 +87,7 @@ def _public_version_line(output: bytes) -> str:
     return first
 
 
-def _run_probe(path: Path, *, timeout: float) -> tuple[bool, str]:
+def _run_probe(path: Path, *, timeout: float, env: tuple[tuple[str, str], ...] = ()) -> tuple[bool, str]:
     if timeout <= 0 or timeout > 10:
         raise ValueError("probe timeout is outside the allowed range")
     process = None
@@ -88,6 +98,7 @@ def _run_probe(path: Path, *, timeout: float) -> tuple[bool, str]:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             shell=False,
+            env={**os.environ, **dict(env)} if env else None,
             start_new_session=(os.name == "posix"),
         )
         output, _ = process.communicate(timeout=timeout)
@@ -137,7 +148,7 @@ def probe_catalog_entry(harness_id: str, *, timeout: float = 3.0) -> ProbeResult
         path = _resolved_executable(executable_name)
         if path is None:
             continue
-        answered, line = _run_probe(path, timeout=timeout)
+        answered, line = _run_probe(path, timeout=timeout, env=entry.probe_env)
         # Cursor probes only the first executable found on PATH, even if it fails.
         return ProbeResult(harness_id, path, answered, line)
     return ProbeResult(harness_id, None, False, "")

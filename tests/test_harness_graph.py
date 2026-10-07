@@ -9,10 +9,10 @@ from isycode.harness_graph import (
 )
 
 
-def test_catalog_is_the_reviewed_thirteen_in_order():
+def test_catalog_is_the_reviewed_fifteen_in_order():
     assert CATALOG_IDS == (
         "crush", "qwen", "opencode", "claude", "codex", "grok", "hermes",
-        "fx", "openclaw", "pi", "kimi", "cursor", "copilot",
+        "fx", "openclaw", "pi", "kimi", "cursor", "copilot", "commandcode", "kilo",
     )
 
 
