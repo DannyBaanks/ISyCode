@@ -46,7 +46,7 @@ def test_scanner_sees_exactly_the_reviewed_product_callers(monkeypatch):
                         {key: frozenset() for key in action_coverage.PRIMITIVE_CALLERS})
     seen = {item["callsite"].rsplit(":", 1)[0] for item in action_coverage.primitive_caller_violations()}
     # Seen (so the scanner is not blind) and allowed by the real table.
-    assert seen == {"mobile_host.MobileHost._pair", "session_owner.ChatSessionOwner.manage"}
+    assert seen == {"mobile_host.MobileHost._pair"}
 
 
 def test_product_has_no_unreviewed_primitive_caller():
