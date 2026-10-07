@@ -11,7 +11,7 @@ Se requiere Python 3.10 o posterior. Desde la raíz del repositorio:
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e . pytest
+python -m pip install -e '.[test]'
 ```
 
 La suite hermética se ejecuta con:

@@ -396,15 +396,17 @@ async def async_stream_complete(
         if status != 200:
             from isycode.provider_errors import error_signals
             error_body = b""
+            async def read_error_body() -> bytes:
+                if "chunked" in headers.get("transfer-encoding", "").casefold():
+                    size = int((await reader.readline()).split(b";", 1)[0].strip(), 16)
+                    return await reader.readexactly(min(size, 65536))
+                if "content-length" in headers:
+                    return await reader.readexactly(min(max(0, int(headers["content-length"])), 65536))
+                return await reader.read(65536)
+
             try:
-                async with asyncio.timeout(3):
-                    if "chunked" in headers.get("transfer-encoding", "").casefold():
-                        size = int((await reader.readline()).split(b";", 1)[0].strip(), 16)
-                        error_body = await reader.readexactly(min(size, 65536))
-                    elif "content-length" in headers:
-                        error_body = await reader.readexactly(min(max(0, int(headers["content-length"])), 65536))
-                    else:
-                        error_body = await reader.read(65536)
+                # wait_for, not asyncio.timeout: the latter is Python 3.11+.
+                error_body = await asyncio.wait_for(read_error_body(), 3)
             except (ValueError, OSError, asyncio.TimeoutError, asyncio.IncompleteReadError):
                 pass
             code, retry = error_signals(error_body, headers)
