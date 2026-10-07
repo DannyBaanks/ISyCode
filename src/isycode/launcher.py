@@ -18,6 +18,7 @@ Usage:
   isycode completion SHELL  Print bash, zsh or fish completion
   isycode actualizar       Actualizar el checkout limpio o preparar una instalación
   isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
+  isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
   isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
                            add --json for machine-readable output. Only read-only
                            tools that were granted run; nothing asks for approval.
@@ -28,15 +29,27 @@ The CLI browser groups actions by purpose. It does not run arbitrary shell comma
 """
 
 
+def _ask(question: str, details: tuple[str, ...]) -> bool:
+    for line in details:
+        print(f"  {line}")
+    return input(f"{question} [s/N] ").strip().casefold() in {"s", "si", "sí", "y", "yes"}
+
+
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     if arguments and arguments[0] == "actualizar":
         from isycode.updater import SelfUpdater
 
-        if arguments[1:] not in ([], ["--check"]):
-            print("Uso: isycode actualizar [--check]", file=sys.stderr)
+        if arguments[1:] not in ([], ["--check"], ["--yes"]):
+            print("Uso: isycode actualizar [--check | --yes]", file=sys.stderr)
             return 2
-        report = SelfUpdater().run(check_only=arguments[1:] == ["--check"])
+        if arguments[1:] == ["--yes"]:
+            confirm = lambda question, details: True  # noqa: E731
+        elif sys.stdin.isatty():
+            confirm = _ask
+        else:
+            confirm = None  # no one to ask: never stash or merge on their behalf
+        report = SelfUpdater(confirm=confirm).run(check_only=arguments[1:] == ["--check"])
         for line in report.lines:
             print(line)
         return 1 if report.status in {"blocked", "dirty", "error", "updated-conflicts"} else 0

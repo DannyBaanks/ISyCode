@@ -28,6 +28,7 @@ import inspect
 import sys
 import os
 import asyncio
+from isycode.asyncio_compat import note_cancel_requested
 import hashlib
 import json
 import shlex
@@ -571,7 +572,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             {"label": f"/{name}  {description}", "kind": "command", "value": name}
             for name, description in commands
         ]
-        if self._workspace_config_warning:
+        # Without a read grant there is simply nothing to apply yet; printing that at
+        # every start reads like an error. The reason stays available in Settings.
+        if self._workspace_config_warning and "grant" not in self._workspace_config_warning:
             self._append_startup(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
         self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup")
         # Mobile Host and Bridge have catalog actions but no product execution owners yet.
@@ -918,6 +921,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         if self._chat_turn_task and not self._chat_turn_task.done():
             # Stops the whole agent turn: a pending model request, a tool, or a running command.
+            note_cancel_requested(self._chat_turn_task)
             self._chat_turn_task.cancel()
             self._set_activity("Stopping response…", YELLOW)
             return
@@ -1580,7 +1584,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
 
     def _push_models_screen(self, entries: list[dict[str, str]]) -> None:
-        self.push_screen(ModelsScreen(entries), self._model_picker_result)
+        # Entries may have been refreshed (a catalog load finished) while the
+        # push was pending; open the latest ones, exactly once.
+        pending = getattr(self, "_models_screen_pending", None)
+        self._models_screen_pending = None
+        self.push_screen(ModelsScreen(pending if pending is not None else entries),
+                         self._model_picker_result)
 
     def _render_menu(self, mode: str, title: str, entries: list[dict[str, str]]) -> None:
         if mode == "branch" and title == "Models":
@@ -1594,16 +1603,22 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._menu_title = title
         self._menu_entries = entries
         if (mode == "branch" and title == "Models") or mode == "model_account":
-            existing = next((screen for screen in self.screen_stack if isinstance(screen, ModelsScreen)), None)
+            existing = next((screen for screen in reversed(self.screen_stack)
+                             if isinstance(screen, ModelsScreen)), None)
             if existing is not None:
                 existing.entries = entries
                 existing.choices = {}
                 existing.refresh(recompose=True)
+            elif getattr(self, "_models_screen_pending", None) is not None:
+                # A push is already scheduled; a second one would stack two
+                # pickers and later catalog loads would update the hidden one.
+                self._models_screen_pending = entries
             else:
                 self.query_one("#action-menu", Vertical).display = False
                 # Defer the push out of the worker context: a click landing
                 # while the screen is still mounting hits an Input with no
                 # parent and crashes Textual's selection offset math.
+                self._models_screen_pending = entries
                 self.call_after_refresh(self._push_models_screen, entries)
             return
         card = self.query_one("#action-card", Vertical)

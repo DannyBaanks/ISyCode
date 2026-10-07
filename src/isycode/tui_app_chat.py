@@ -5,6 +5,7 @@ The phases keep the same statements. TUIApp inherits this mixin.
 from __future__ import annotations
 
 import asyncio
+from isycode.asyncio_compat import cancel_requested
 import json
 import uuid
 from isycode.work_list import clock_label
@@ -293,7 +294,8 @@ class ChatMixin:
             self._history.append({"role": "user", "content": text})
             workspace_tools_granted = self._workspace_chat_tools_enabled() or self._additional_folder_access()
             provider_name = selected_provider_name()
-            provider_supports_tools = bool(PRESETS.get(provider_name, {}).get("supports_tools", False))
+            from isycode.providers import provider_supports_tools as _tools_supported
+            provider_supports_tools = _tools_supported(provider_name)
             tools_active = workspace_tools_granted and provider_supports_tools
             write_active = tools_active and (self._workspace_write_tool_enabled() or self._additional_folder_access(write=True))
             command_active = tools_active and self._command_tool_enabled()
@@ -638,7 +640,7 @@ class ChatMixin:
                             continue
                         raise
                     except asyncio.CancelledError:
-                        if self._pending_steering and not asyncio.current_task().cancelling():
+                        if self._pending_steering and not cancel_requested(asyncio.current_task()):
                             finish_step()
                             if step_content:
                                 messages.append({"role": "assistant", "content": "".join(step_content)})
@@ -655,6 +657,9 @@ class ChatMixin:
                             f"  Provider request {provider_result.decision} · "
                             f"{provider_result.reason[:240] or 'request was not completed'}; "
                             "no further request was sent.", YELLOW)
+                        if provider_result.decision == "DENY" and "grant" in provider_result.reason:
+                            self._append("  To chat here: Settings → Authority → “Connect to the selected "
+                                         "AI model” (or “Turn on all coding tools…”).", MUTED)
                         return
                     if steer_trial is not None and not step_content and not response.get("text") and not response.get("tool_calls"):
                         messages[:] = steer_trial["messages"]

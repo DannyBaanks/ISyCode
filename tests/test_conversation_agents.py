@@ -1,6 +1,8 @@
 """Each open conversation keeps its own turn when the view changes."""
 import asyncio
 
+from isycode.asyncio_compat import cancel_requested
+
 from isycode.tui import TUIApp, plain_text
 from isycode.tui_widgets import ChatArea
 from isycode.user_defaults import UserDefaultsStore
@@ -88,8 +90,8 @@ def test_escape_cancels_only_the_visible_conversation(tmp_path, monkeypatch):
             app._chat_turn_task = front
             app.action_escape_to_chat()
             await asyncio.sleep(0)
-            assert front.cancelled() or front.cancelling()
-            assert not back.cancelled() and not back.cancelling()
+            assert front.cancelled() or cancel_requested(front)
+            assert not back.cancelled() and not cancel_requested(back)
             assert parked.loop_task is back
             back.cancel()
             front.cancel()

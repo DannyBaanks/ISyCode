@@ -1760,7 +1760,9 @@ class ProductActionGate:
         try:
             if self.audit is None:
                 raise ActionAuditError("journal is unavailable")
-            self.audit.record_decision(request, authority, decision)
+            self.audit.record_decision(
+                request, authority, decision,
+                approval_mode=getattr(approval, "mode", None) if approval is not None else None)
         except ActionAuditError:
             decision = SentinelDecision(
                 decision.action_id, decision.request_digest,

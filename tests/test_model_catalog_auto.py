@@ -42,9 +42,22 @@ def test_expanding_another_provider_loads_its_catalog_without_switching(tmp_path
         async with app.run_test(size=(120,40)) as pilot:
             await pilot.pause()
             app._render_menu('branch','Models',app._branch_entries('models'))
-            for _ in range(5):await pilot.pause(.1)
+            # The screen is rebuilt when a catalog load finishes; wait for conditions,
+            # not fixed sleeps, so a slow runner cannot catch it half-built.
+            async def until(condition):
+                for _ in range(200):
+                    await pilot.pause(.05)
+                    try:
+                        if condition():
+                            return True
+                    except Exception:
+                        pass
+                return False
+            assert await until(lambda: calls==['openai'] and not getattr(app,'_account_models_loading',False)
+                               and app.screen.query_one('#model-provider-nvidia',Collapsible) is not None)
             app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed=False
-            for _ in range(5):await pilot.pause(.1)
+            assert await until(lambda: 'nvidia|nvidia-concrete' in [e['value'] for e in app.screen.entries if e['kind']=='model']
+                               and not app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed)
             assert calls==['openai','nvidia']
             assert selected_provider_name()=='openai'
             assert not app.screen.query_one('#model-provider-nvidia',Collapsible).collapsed
@@ -62,3 +75,26 @@ def test_catalog_default_effort_is_model_specific(monkeypatch):
     assert reasoning.effective_reasoning('chatgpt','fixture','medium')=='high'
     reasoning.select_reasoning('chatgpt','fixture','low')
     assert reasoning.effective_reasoning('chatgpt','fixture','medium')=='low'
+
+
+def test_a_catalog_refresh_before_the_picker_mounts_does_not_stack_two_pickers(tmp_path, monkeypatch):
+    """Regression: the push is deferred; a second render meanwhile must update it,
+    not schedule another picker that later catalog loads would never reach."""
+    configure(tmp_path, monkeypatch)
+    from isycode.tui import ModelsScreen
+    monkeypatch.setattr(Provider, 'models', lambda p: [])
+
+    async def run():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            first = app._branch_entries('models')
+            app._render_menu('branch', 'Models', first)
+            later = first + [{'label': 'late row', 'kind': 'info', 'value': '', 'detail': ''}]
+            app._render_menu('branch', 'Models', later)  # same tick, before the push ran
+            for _ in range(10):
+                await pilot.pause(.05)
+            pickers = [screen for screen in app.screen_stack if isinstance(screen, ModelsScreen)]
+            assert len(pickers) == 1
+            assert pickers[0].entries == app._menu_entries  # the latest render reached it
+    asyncio.run(run())

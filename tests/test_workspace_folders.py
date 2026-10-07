@@ -122,6 +122,44 @@ def test_private_state_inside_primary_cannot_enable_delegation(tmp_path, monkeyp
         WorkspaceFolders(main)
 
 
+def _enabled(root):
+    return {action for action, grant in WorkspaceAuthority(root).policy()['grants'].items()
+            if grant.get('enabled')}
+
+
+def test_removing_a_folder_revokes_only_what_attaching_it_granted(tmp_path, monkeypatch):
+    store, _, other = make_store(tmp_path, monkeypatch)
+    # The user had already allowed reading that folder on their own.
+    WorkspaceAuthority(other).set_grant('workspace.files.read', enabled=True, path_prefixes=[str(other)])
+    store.add('other', str(other), editable=True)
+    assert _enabled(other) == {'workspace.files.list', 'workspace.files.read',
+                               'workspace.files.search', 'workspace.files.write'}
+    revoked = store.remove('other')
+    assert sorted(revoked) == ['workspace.files.list', 'workspace.files.search', 'workspace.files.write']
+    assert _enabled(other) == {'workspace.files.read'}
+
+
+def test_removing_a_legacy_registration_revokes_the_grants_it_always_set(tmp_path, monkeypatch):
+    store, _, other = make_store(tmp_path, monkeypatch)
+    store.add('other', str(other), editable=False)
+    data = json.loads(store.path.read_text())
+    del data['folders'][0]['granted']  # saved before grants were recorded
+    store._save(data)
+    assert sorted(store.remove('other')) == ['workspace.files.list', 'workspace.files.read',
+                                             'workspace.files.search']
+    assert _enabled(other) == set()
+
+
+def test_recorded_grants_cannot_claim_write_on_a_read_only_folder(tmp_path, monkeypatch):
+    store, _, other = make_store(tmp_path, monkeypatch)
+    store.add('other', str(other), editable=False)
+    data = json.loads(store.path.read_text())
+    data['folders'][0]['granted'].append('workspace.files.write')
+    store._save(data)
+    with pytest.raises(ValueError):
+        store.list()
+
+
 @pytest.mark.parametrize('secured', ['main', 'other'])
 def test_security_mode_suspends_saved_automatic_edits(tmp_path, monkeypatch, secured):
     store, main, other = make_store(tmp_path, monkeypatch)

@@ -179,6 +179,9 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                 events.emit("agent.end", {"status": "denied"})
                 print(f"isycode: provider request {outcome.decision} · {outcome.reason[:240]}",
                       file=log)
+                if outcome.decision == "DENY" and "grant" in outcome.reason:
+                    print("isycode: allow it once in the TUI: Settings → Authority → "
+                          "“Connect to the selected AI model”.", file=log)
                 return EXIT_DENIED
             receipts.append(outcome.receipt.receipt_id)
             usage.record(response.get("usage"))
