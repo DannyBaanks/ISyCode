@@ -20,12 +20,29 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
             assert isinstance(screen, ModelsScreen)
             assert all(group.collapsed for group in screen.query(Collapsible))
             screen.query_one('#models-search').value = 'nemotron-3-ultra'
-            await pilot.pause()
-            button = next(button for button in screen.query('.model-choice')
-                          if 'nvidia/nemotron-3-ultra' in str(button.label))
+            # Searching expands the NVIDIA group, which loads the account catalog in a
+            # worker and may rebuild this screen when it finishes. Use the button only
+            # once the same widget has stayed on the current screen for a while.
+            button, stable = None, 0
+            for _ in range(200):
+                await pilot.pause(0.05)
+                current = app.screen
+                found = None
+                if isinstance(current, ModelsScreen) and not getattr(app, '_account_models_loading', False):
+                    found = next((item for item in current.query('.model-choice')
+                                  if 'nvidia/nemotron-3-ultra' in str(item.label)), None)
+                stable = stable + 1 if found is not None and found is button else 0
+                button = found
+                if stable >= 10:
+                    break
+            assert button is not None, 'filtered model button never appeared'
+
             assert 'Nemotron 3 Ultra' in str(button.label)
             button.press()
-            await pilot.pause()
+            for _ in range(100):
+                await pilot.pause(0.05)
+                if app._menu_mode == 'reasoning':
+                    break
             assert app._menu_mode == 'reasoning'
             assert [entry['value'].rsplit('|', 1)[1] for entry in app._menu_entries] == ['default', 'off', 'on']
             app._select_menu_entry(app._menu_entries[-1])
