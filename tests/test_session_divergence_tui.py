@@ -1,5 +1,6 @@
 """The real TUI meets a second continuity (another process) of its open conversation."""
 import asyncio
+import json
 import pytest
 
 from isycode.tui import TUIApp
@@ -79,7 +80,11 @@ def test_fork_keeps_the_other_window_and_saves_mine_apart(tui_env, capsys):
 
 def test_reload_shows_exactly_the_saved_version(tui_env, capsys):
     def check(app, owner, sid, other_window):
-        assert owner.store._read_bytes(sid) == other_window
+        # Re-based on the saved version, this window may save on top of it again
+        # (draft, usage); what the other window wrote must still be exactly there.
+        other_messages = [m['content'] for m in json.loads(other_window)['messages']]
+        assert [m['content'] for m in owner.store.load(sid).messages] == other_messages
+        assert 'A: agrega tests' not in other_messages
         assert app._active_chat_session_id == sid
         saved = owner.store.load(sid)
         assert [m['content'] for m in app._history] == [m['content'] for m in saved.messages]
