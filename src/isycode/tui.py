@@ -28,6 +28,7 @@ import inspect
 import sys
 import os
 import asyncio
+from isycode.asyncio_compat import note_cancel_requested
 import hashlib
 import json
 import shlex
@@ -918,6 +919,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         if self._chat_turn_task and not self._chat_turn_task.done():
             # Stops the whole agent turn: a pending model request, a tool, or a running command.
+            note_cancel_requested(self._chat_turn_task)
             self._chat_turn_task.cancel()
             self._set_activity("Stopping response…", YELLOW)
             return
