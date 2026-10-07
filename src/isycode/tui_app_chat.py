@@ -40,6 +40,12 @@ def _transport_reason(exc: BaseException) -> str:
         if re.search(pattern, message):
             return label
     return "transport error before the first answer"
+
+
+def _recovery_label(kind: str) -> str:
+    return {"STREAM": "Stream interrupted", "NETWORK": "Connection lost",
+            "TIMEOUT": "Provider timed out", "PROVIDER": "Provider error",
+            "RATE_LIMIT": "Provider rate limited"}.get(kind, "Provider failure")
 from isycode.agent_loop import split_history, summary_messages, summary_system_message
 from isycode.prompt_expansion import (
     MAX_MENTIONS,
@@ -72,7 +78,7 @@ from isycode.providers import (
 )
 from isycode.streaming import StreamError, detect_unexecuted_tool_request
 import time as _time
-from isycode.tui_theme import MUTED, YELLOW, RED, CYAN
+from isycode.tui_theme import MUTED, YELLOW, RED, CYAN, GREEN
 from isycode.tui_widgets import ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 
@@ -531,6 +537,28 @@ class ChatMixin:
                 lane.stream_block = None
                 lane.partial_reason = ""
 
+            def discard_failed_step(content_mark: int, reason_mark: int) -> None:
+                """Drop what a failed step streamed: shown text, reasoning, buffers.
+
+                Only that step's partial output goes; earlier steps and every tool
+                result already in ``messages`` stay exactly as they were.
+                """
+                nonlocal block
+                del content_buf[content_mark:]
+                del reason_buf[reason_mark:]
+                step_content.clear()
+                step_reason.clear()
+                lane = self._active_lane()
+                for widget in (holder.get("widget"), block):
+                    if widget is not None and getattr(widget, "is_mounted", False):
+                        widget.remove()
+                holder["widget"] = None
+                lane.stream_widget = None
+                lane.stream_block = None
+                lane.partial = ""
+                lane.partial_reason = ""
+                block = None
+
             def on_chunk(kind: str, chunk: str) -> None:
                 nonlocal block, thought_started
                 if not chunk:
@@ -585,6 +613,7 @@ class ChatMixin:
                                                on_chunk=on_chunk, tools=chat_tools)
 
             steer_trial = None
+            recovery_failures = 0
             try:
                 if provider_supports_tools and self._idea_nudge_timer is None and self._lane_on_screen():
                     self._idea_nudge_timer = self.set_interval(
@@ -593,6 +622,7 @@ class ChatMixin:
                     holder["widget"] = None
                     step_content.clear()
                     step_reason.clear()
+                    content_mark, reason_mark = len(content_buf), len(reason_buf)
                     if self._pending_steering:
                         steer_trial = {"messages": list(messages), "history": list(self._history), "instructions": list(self._pending_steering)}
                         for instruction in self._pending_steering:
@@ -638,6 +668,26 @@ class ChatMixin:
                             self._append(
                                 "  Picture not accepted · sending the question as text.", YELLOW)
                             continue
+                        # ADR 0008: this step failed before dispatching any tool, so
+                        # re-sending its messages cannot repeat an effect. Fixed delay
+                        # per failure class, small budget, never for terminal classes.
+                        from isycode.continuity_recovery import plan_recovery, wait_fixed
+                        decision = plan_recovery(exc, recovery_failures + 1)
+                        if not steered and decision.retry:
+                            recovery_failures += 1
+                            discard_failed_step(content_mark, reason_mark)
+                            self._set_activity(
+                                f"↻ {_recovery_label(decision.kind)} · retrying in "
+                                f"{decision.delay_s:.1f}s ({decision.attempt}/{decision.max_attempts})",
+                                YELLOW)
+                            await wait_fixed(decision.delay_s)
+                            continue
+                        if recovery_failures:
+                            discard_failed_step(content_mark, reason_mark)
+                            self._append(
+                                f"  ⚠ Recovery stopped after {recovery_failures} automatic "
+                                f"attempt{'s' if recovery_failures != 1 else ''} · "
+                                f"{decision.reason} · no tool effects were repeated.", YELLOW)
                         raise
                     except asyncio.CancelledError:
                         if self._pending_steering and not cancel_requested(asyncio.current_task()):
@@ -661,6 +711,12 @@ class ChatMixin:
                             self._append("  To chat here: Settings → Authority → “Connect to the selected "
                                          "AI model” (or “Turn on all coding tools…”).", MUTED)
                         return
+                    if recovery_failures:
+                        self._append(
+                            f"  ✓ Response recovered after {recovery_failures} automatic "
+                            f"retr{'ies' if recovery_failures != 1 else 'y'} · no tool effects repeated", MUTED)
+                        self._set_activity("Response recovered", GREEN)
+                        recovery_failures = 0
                     if steer_trial is not None and not step_content and not response.get("text") and not response.get("tool_calls"):
                         messages[:] = steer_trial["messages"]
                         self._history[:] = steer_trial["history"]
