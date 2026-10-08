@@ -1640,6 +1640,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     existing.provider_scope = getattr(self, "_models_scope", None)
                 existing.choices = {}
                 existing.refresh(recompose=True)
+                existing.call_after_refresh(existing._reveal_current)
             elif getattr(self, "_models_screen_pending", None) is not None:
                 # A push is already scheduled; a second one would stack two
                 # pickers and later catalog loads would update the hidden one.

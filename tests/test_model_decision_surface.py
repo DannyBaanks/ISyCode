@@ -226,6 +226,26 @@ def test_vanished_current_model_is_reported_not_replaced(tui, monkeypatch, capsy
         run(scenario)
 
 
+def test_reveal_does_not_crash_when_the_current_row_is_not_mounted(tui, capsys):
+    from isycode.tui_screens_harness import ModelChoice
+
+    async def scenario(app, pilot):
+        entries = app._branch_entries("models")
+        app._models_scope = "openai"
+        screen = ModelsScreen(entries, provider_scope="openai")
+        await app.push_screen(screen)
+        await pilot.pause()
+        for button in list(screen.query(ModelChoice)):
+            await button.remove()
+        screen._reveal_current()
+        await pilot.pause()
+        assert isinstance(app.screen, ModelsScreen)
+        assert "gpt-6-luna" in str(screen.query_one("#model-detail").render())
+
+    with capsys.disabled():
+        run(scenario)
+
+
 def test_narrow_terminal_stacks_the_card_below_the_list(tui, capsys):
     async def scenario(app, pilot):
         screen = await open_nvidia(app, pilot)

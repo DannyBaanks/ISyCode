@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 from textual.binding import Binding
+from textual.css.query import NoMatches
 from textual.widgets import Button, Input, Static
 from isycode.harness_graph import CATALOG_IDS, SEED_OPTIONS, gap_status
 from textual.app import ComposeResult
@@ -279,18 +280,33 @@ class ModelsScreen(ModalScreen):
 
     def on_mount(self) -> None:
         self._apply_width(self.app.size.width)
-        self._reveal_current()
+        # The row is registered during compose, before nested containers finish
+        # mounting. Querying it here crashes the screen.
+        self.call_after_refresh(self._reveal_current)
 
-    def _reveal_current(self) -> None:
-        """Show the model already in use, without arming it for a click."""
+    def _reveal_current(self, attempt: int = 0) -> None:
+        """Show the model already in use, without arming it for a click.
+
+        A catalog refresh clears the rows and mounts them again on the next
+        idle. A query in that gap finds the choice recorded and the widget
+        not yet in the tree.
+        """
         wanted = f"{selected_provider_name()}|{selected_model_name()}"
-        for key, entry in self.choices.items():
-            if entry.get("kind") == "model" and entry.get("value") == wanted:
+        for key, entry in list(self.choices.items()):
+            if entry.get("kind") != "model" or entry.get("value") != wanted:
+                continue
+            try:
                 self.show_details(*wanted.split("|", 1))
                 button = self.query_one(f"#{key}", ModelChoice)
-                self.call_after_refresh(button.scroll_visible)
-                self.call_after_refresh(button.focus)
+            except NoMatches:
+                if attempt < 3:
+                    self.call_after_refresh(self._reveal_current, attempt + 1)
                 return
+            button.scroll_visible()
+            button.focus()
+            return
+        if attempt < 3 and not self.choices:
+            self.call_after_refresh(self._reveal_current, attempt + 1)
 
     def on_resize(self, event) -> None:
         self._apply_width(event.size.width)
