@@ -367,6 +367,7 @@ Desde 2026-10-07, `secure_closed: true` es un resultado verificado, no una etiqu
   - El canario encontró que NIM responde un desborde como `max_tokens must be at least 1, got -N`, sin la palabra "context", y eso quedó corregido.
 
   Los cortes del lado del servidor, los 429 y los 5xx reales siguen NOT_DEMONSTRATED. Evidencia: [`docs/evidence/continuity-canary-2026-10-08/`](docs/evidence/continuity-canary-2026-10-08/README.md).
+- **MCP local real (2026-10-08):** el preset fijado `context7` se descargó con npm y arrancó tras sus dos aprobaciones, en 16,1 s y con 2 herramientas. Una llamada rechazada no llegó al servidor; la aprobada devolvió una respuesta real del servicio context7 con su recibo. Tras `stop`, la herramienta dejó de ofrecerse. El journal verifica PASS. El modelo era simulado. Evidencia: [`docs/evidence/mcp-local-live-2026-10-08/`](docs/evidence/mcp-local-live-2026-10-08/README.md).
 - **Capturas históricas con Textual 8.2.8:** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia de esa revisión de la interfaz.
 
 **Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
@@ -374,7 +375,7 @@ Desde 2026-10-07, `secure_closed: true` es un resultado verificado, no una etiqu
 - Comandos en sandbox: los tests unitarios simulan Bubblewrap; un witness local adicional ejecutó lectura, edición aprobada, unittest y Git diff con Bubblewrap real y provider simulado.
 - Diagnósticos tras editar: servidor LSP simulado, no Pyright.
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
-- MCP local: servidor MCP simulado.
+- MCP local: la suite usa un servidor simulado; el preset real `context7` se probó aparte (ver arriba).
 - Portapapeles: las pruebas unitarias siguen usando una herramienta simulada. El 2026-10-04, en este escritorio X11, `ClipboardOwner.copy` pasó por el grant y por `xclip`: decisión ALLOW, la lectura de vuelta coincidió y el portapapeles anterior se restauró. Evidencia: `docs/evidence/clipboard-witness-2026-10-04.json`. El journal guarda tamaño y digest, no el texto.
 - Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
 
@@ -426,7 +427,7 @@ Lo poquito que queda, en orden:
 
 1. **Catálogo NVIDIA:** medido de nuevo el 2026-10-08 en la cuenta y el endpoint de chat probados: 80 modelos, 18 disponibles y los mismos 55 con HTTP 404. El selector oculta esos 404 sin borrarlos. Un 404 no es un campo oficial de deprecación y no se transfiere a otros endpoints. Siete quedaron NOT_DEMONSTRATED (timeout, 500, 400 o stream cortado). Evidencia: `docs/evidence/continuity-canary-2026-10-08/`.
 2. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
-3. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
+3. **Validar en real** lo que sigue en doble de prueba: Claude nativo y Windows. El MCP local ya se vio en real el 2026-10-08 (`docs/evidence/mcp-local-live-2026-10-08/`); falta el preset `playwright` y un arranque en frío con red lenta, porque el timeout de 30 s incluye la descarga npm. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
 4. **Recuperación y cápsula fuera de NVIDIA:** con NIM ya están probadas (2026-10-08). Faltan Anthropic, OpenAI y otros providers, que pueden redactar el rechazo por tamaño de otra forma, además de 429/5xx reales y el ahorro por caché de prompts (NOT_DEMONSTRATED).
 5. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
