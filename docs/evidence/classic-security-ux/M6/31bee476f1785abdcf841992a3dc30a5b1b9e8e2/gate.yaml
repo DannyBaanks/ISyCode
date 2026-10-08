@@ -1,0 +1,83 @@
+hito: M6
+puerta: G6
+estado: EN_REVISION
+sha_evaluado: 31bee476f1785abdcf841992a3dc30a5b1b9e8e2
+fecha_utc: 2026-10-07T21:48:19Z
+autor: Claude Code session (ADR 0008)
+entorno: Linux 7.0.0-38-generic x86_64, Python 3.12.3, Textual 8.2.8
+perfil_y_politica: policy version 1; G6-05 reabierto por ADR 0008 (reintento automático del paso con retraso fijo); G6-01..04 re-corridos sin cambios de código en turn_control
+dependencias: G4, G5
+dependencias_estado:
+  G4: APROBADO
+  G5: APROBADO
+casos:
+  - id: G6-01
+    prueba: tests/test_turn_control.py::test_g6_01_cancel_during_stream_closes_the_socket tests/test_turn_control.py::test_g6_01_cancel_during_staging_kills_child_and_grandchild tests/test_turn_control.py::test_g6_01_cancel_during_promotion_stops_later_files
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: cancelar durante stream, staging, promoción, hijo y nieto no deja procesos del trabajo
+    observado: >
+      Pasó en este commit; turn_control.py y su test no cambiaron (mismo sha256
+      que la evidencia aprobada 8a280c17).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/31bee476f1785abdcf841992a3dc30a5b1b9e8e2/gate-tests.txt
+        sha256: eef21cab3a7401c27718db6f8644b430e795dfb1e7060de4c159ce65c273905f
+  - id: G6-02
+    prueba: tests/test_turn_control.py::test_g6_02_lost_publish_response_is_not_a_second_publish tests/test_turn_control.py::test_g6_02_a_committed_promotion_is_not_charged_twice
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: perder respuesta después del efecto y reintentar/reabrir produce un solo efecto o bloqueo UNCERTAIN
+    observado: >
+      Pasó. Además, el reintento automático del paso de chat (ADR 0008) no
+      re-despacha una herramienta ya completada:
+      tests/test_continuity_recovery.py::test_completed_tool_effects_are_not_dispatched_again.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/31bee476f1785abdcf841992a3dc30a5b1b9e8e2/gate-tests.txt
+        sha256: eef21cab3a7401c27718db6f8644b430e795dfb1e7060de4c159ce65c273905f
+  - id: G6-03
+    prueba: tests/test_turn_control.py::test_g6_03_restart_keeps_an_open_reservation_and_one_charge
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py -ra --tb=short
+    esperado: kill del owner y restart conservan reserva/recibo y reconciliación
+    observado: Pasó en este commit; sin cambios en el código evaluado.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/31bee476f1785abdcf841992a3dc30a5b1b9e8e2/gate-tests.txt
+        sha256: eef21cab3a7401c27718db6f8644b430e795dfb1e7060de4c159ce65c273905f
+  - id: G6-04
+    prueba: tests/test_turn_control.py::test_g6_04_truncated_tool_calls_are_not_executable tests/test_turn_control.py::test_g6_04_retry_keeps_the_new_draft_and_transcript_order tests/test_continuity_recovery.py::test_interrupted_stream_recovers_without_manual_retry_and_drops_the_partial
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py tests/test_continuity_recovery.py -ra --tb=short
+    esperado: streams truncados/tool calls incompletos no ejecutan; retry preserva borrador nuevo y orden del transcript
+    observado: >
+      Pasó. Con la recuperación automática, el parcial del paso fallido no se
+      guarda ni queda en pantalla y los mensajes guardados conservan el orden
+      usuario → respuesta final.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/31bee476f1785abdcf841992a3dc30a5b1b9e8e2/gate-tests.txt
+        sha256: eef21cab3a7401c27718db6f8644b430e795dfb1e7060de4c159ce65c273905f
+  - id: G6-05
+    prueba: tests/test_continuity_recovery.py tests/test_daily_tui.py::test_failed_turn_recovers_original_prompt_without_replaying tests/test_session_continuity_tui.py::test_interrupted_turn_preserves_completed_tool_context tests/test_turn_control.py::test_g6_05_backoff_is_bounded_cancellable_and_does_not_change_authority
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_turn_control.py tests/test_continuity_recovery.py tests/test_daily_tui.py tests/test_session_continuity_tui.py -ra --tb=short
+    esperado: retraso fijo por clase con presupuesto pequeño y Retry-After acotado; clases terminales sin reintento; Esc cancela la espera; nunca se repite una herramienta despachada; fallos de provider no cambian autoridad
+    observado: >
+      Pasó. Retraso idéntico en cada intento para STREAM/NETWORK/PROVIDER/
+      RATE_LIMIT y presupuesto agotado tras max_attempts; Retry-After 11 s se
+      respeta, 120 s se detiene y se informa; 401/402/403/400/404, errores
+      deterministas y errores in-stream desconocidos no se reintentan; Esc
+      durante la espera cancela sin más requests; steering en cola se aplica
+      en el paso reintentado. Control negativo: con la recuperación
+      desactivada fallan los 9 tests que la ejercitan. El reintento de
+      connect de TransportRetry no cambió (test_g6_05_backoff... pasa).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M6/31bee476f1785abdcf841992a3dc30a5b1b9e8e2/gate-tests.txt
+        sha256: eef21cab3a7401c27718db6f8644b430e795dfb1e7060de4c159ce65c273905f
+      - src/isycode/continuity_recovery.py
+        sha256: 1fa95f5916617c00a7c44d8f0b2a66610812f5e5f312f21644937e04282e11a8
+      - tests/test_continuity_recovery.py
+        sha256: 6110d6a99fd8735c734d07365a97b9d4e0df75f36ddeb44daceb2d893e6474a6
+sin_evidencia_real:
+  - corte de stream de un provider real (los cortes son inyectados con fakes de provider_complete)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration"; 1572 passed, 2 failed, 2 skipped (test_g7_01 depende del bubblewrap del host; test_m15_closure lo corrige el PR #15)
+riesgos_residuales: un provider que acepta el request y luego corta el stream cobra la generación descartada; cada reintento es un request nuevo y cuesta tokens
+rollback_ensayado: revertir el commit restaura el comportamiento de ADR 0007 (sin reintento en el turno)

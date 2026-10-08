@@ -1593,8 +1593,8 @@
     {
       "action": "session.create",
       "callsite": "ChatSessionStore.rename",
-      "owner": "chat_sessions",
-      "status": "COVERED"
+      "owner": null,
+      "status": "BLOCKED_BY_DESIGN"
     },
     {
       "action": "session.create",

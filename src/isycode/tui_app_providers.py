@@ -301,6 +301,16 @@ class ProviderMixin:
     def _model_picker_result(self, entry: dict | None) -> None:
         if entry is not None:
             self._select_menu_entry(entry)
+        elif getattr(self, "_models_scope", None):
+            # Esc from a provider's models walks back to the provider list; the
+            # active provider/model was never changed on the way here.
+            self._models_scope = None
+            self._open_provider_menu()
+
+    def _open_scoped_models(self, name: str) -> None:
+        """Step two of provider → model → reasoning. Nothing is applied yet."""
+        self._models_scope = name
+        self._render_menu("branch", "Models", self._branch_entries("models"))
 
     def _step_reasoning(self, direction: int) -> None:
         from isycode.reasoning_options import reasoning_levels, effective_reasoning, select_reasoning
@@ -688,7 +698,7 @@ class ProviderMixin:
         if value == "xai":
             self._open_xai_auth_methods()
             return
-        self._select_provider(value)
+        self._open_scoped_models(value)
         return
 
     def _menu_xai_api_key(self, entry: dict[str, str | bool]) -> None:
@@ -791,7 +801,13 @@ class ProviderMixin:
         kind, value = entry["kind"], entry["value"]
         from isycode.reasoning_options import select_reasoning
         name, model, level = value.split("|", 2)
+        self._models_scope = None
         select_reasoning(name, model, level)
+        # The model chosen in the picker is applied only now, together with its level.
+        if (name, model) != (selected_provider_name(), resolved_chat_model(selected_provider_name())):
+            self._select_provider(name, model)
+            if self.query_one("#key-entry", Vertical).display:
+                return
         self._paint_idea_box()
         self._close_menu()
         self.run_worker(self._check_model(), exclusive=False)
@@ -800,9 +816,15 @@ class ProviderMixin:
     def _menu_model(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
         provider_name, model_name = value.split("|", 1)
-        self._select_provider(provider_name, model_name)
-        if not self.query_one("#key-entry", Vertical).display:
-            self._open_reasoning_menu(provider_name, model_name)
+        from isycode.reasoning_options import reasoning_levels
+        if not reasoning_levels(provider_name, model_name):
+            # No selectable levels: apply directly instead of inventing a selector.
+            self._models_scope = None
+            self._select_provider(provider_name, model_name)
+            return
+        # Draft: nothing changes until a level is chosen; Esc returns to the models.
+        self._menu_stack = [("branch", "Models", self._branch_entries("models"))]
+        self._open_reasoning_menu(provider_name, model_name)
         return
 
     def _menu_provider_catalog_grant(self, entry: dict[str, str | bool]) -> None:

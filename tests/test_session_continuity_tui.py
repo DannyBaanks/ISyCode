@@ -64,6 +64,13 @@ def test_interrupted_turn_preserves_completed_tool_context(tmp_path, monkeypatch
                 'usage': {'prompt_tokens': 10, 'completion_tokens': 5}}
         raise ProviderError('failure', status=503)
     monkeypatch.setattr('isycode.tui.provider_complete', complete)
+    from isycode import continuity_recovery
+
+    async def no_wait(delay):
+        return None
+
+    monkeypatch.setattr(continuity_recovery, 'wait_fixed', no_wait)
+    retries = continuity_recovery.POLICIES['PROVIDER'].max_attempts
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
@@ -72,7 +79,9 @@ def test_interrupted_turn_preserves_completed_tool_context(tmp_path, monkeypatch
             session = app._chat_session_owner.resume(app._active_chat_session_id)[1]
             assert session.messages == []
             assert 'completed_tool_marker' in session.state['tool_history'][0]['result']
-            assert session.state['usage']['unknown_requests'] == 1
+            # The read ran once; the 503 step was re-sent (each attempt is a request).
+            assert len(calls) == 2 + retries
+            assert session.state['usage']['unknown_requests'] == 1 + retries
     with capsys.disabled():
         asyncio.run(scenario())
 
