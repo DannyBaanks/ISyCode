@@ -687,6 +687,8 @@ class SessionMixin:
         return "generating" if self._loop_task and not self._loop_task.done() else "idle"
 
     def _paint_work_status(self) -> None:
+        if not self.screen_stack:
+            return  # the 1 s timer can still tick while the app shuts down
         try:
             panel = self.screen_stack[0].query_one("#work-list", WorkList)
             if not panel.display:
