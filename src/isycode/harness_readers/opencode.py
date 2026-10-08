@@ -20,14 +20,20 @@ def read_root(root: Path, *, automatic: bool = False) -> tuple[list[HarnessSetti
         skipped(HARNESS_ID, "mcp-auth.json", "secret"),
     ]
     config = load_jsonc(root, "opencode.jsonc")
+    settings.extend(config_rows(HARNESS_ID, config, "opencode.jsonc"))
+    return settings, skipped_files
 
+
+def config_rows(harness_id: str, config: dict, relative_path: str) -> list[HarnessSetting]:
+    """Allowlisted rows for the opencode config schema (shared with forks such as kilo)."""
+    rows: list[HarnessSetting] = []
     lsp = config.get("lsp")
     if isinstance(lsp, dict):
         count = sum(1 for value in lsp.values() if isinstance(value, dict) and isinstance(value.get("command"), list))
         if count:
-            settings.append(row(
-                HARNESS_ID,
-                "opencode.jsonc",
+            rows.append(row(
+                harness_id,
+                relative_path,
                 "lsp.*.command",
                 count,
                 "lsp_configured_command",
@@ -36,9 +42,9 @@ def read_root(root: Path, *, automatic: bool = False) -> tuple[list[HarnessSetti
 
     mcp = config.get("mcp")
     if isinstance(mcp, dict):
-        settings.append(row(
-            HARNESS_ID,
-            "opencode.jsonc",
+        rows.append(row(
+            harness_id,
+            relative_path,
             "mcp",
             len(mcp),
             "mcp_server_list",
@@ -47,9 +53,9 @@ def read_root(root: Path, *, automatic: bool = False) -> tuple[list[HarnessSetti
 
     plugins = config.get("plugin")
     if isinstance(plugins, list):
-        settings.append(row(
-            HARNESS_ID,
-            "opencode.jsonc",
+        rows.append(row(
+            harness_id,
+            relative_path,
             "plugin[]",
             len(plugins),
             "enabled_plugins",
@@ -58,4 +64,4 @@ def read_root(root: Path, *, automatic: bool = False) -> tuple[list[HarnessSetti
             counts_toward_n=False,
         ))
 
-    return settings, skipped_files
+    return rows

@@ -35,6 +35,19 @@ def test_probe_one_uses_version_argv_and_rejects_timeout_and_private_lines(tmp_p
     assert probe_one("slow", timeout=0.05).answered is False
 
 
+def test_probe_env_reaches_only_the_entry_that_declares_it(tmp_path, monkeypatch):
+    # command-code self-updates on --version unless COMMANDCODE_SKIP_UPDATES is set
+    exe = _exe(tmp_path / "cc", 'test "$COMMANDCODE_SKIP_UPDATES" = "1" && echo "Safe 1" || echo "Unsafe 1"')
+    monkeypatch.setattr("isycode.harness_probe.shutil.which", lambda name: str(exe))
+    monkeypatch.delenv("COMMANDCODE_SKIP_UPDATES", raising=False)
+    from isycode.harness_probe import probe_catalog_entry
+
+    assert CATALOG["commandcode"].probe_env == (("COMMANDCODE_SKIP_UPDATES", "1"),)
+    assert probe_catalog_entry("commandcode", timeout=2).version_line == "Safe 1"
+    assert probe_catalog_entry("codex", timeout=2).version_line == "Unsafe 1"
+    assert "COMMANDCODE_SKIP_UPDATES" not in os.environ
+
+
 def test_probe_timeout_does_not_wait_for_child_holding_stdout(tmp_path, monkeypatch):
     inherited_pipe = _exe(tmp_path / "inherited-pipe", "sleep 5 & exit 0")
     monkeypatch.setattr("isycode.harness_probe.shutil.which", lambda name: str(inherited_pipe))
@@ -47,6 +60,8 @@ def test_catalog_has_reviewed_cursor_fallback_and_kimi_folder():
     assert tuple(CATALOG) == CATALOG_IDS
     assert CATALOG["cursor"].executables == ("cursor-agent", "cursor")
     assert CATALOG["kimi"].dotfolder == ".kimi-code"
+    assert CATALOG["kilo"].executables == ("kilo", "kilocode")
+    assert CATALOG["kilo"].dotfolder == ".config/kilo"
     assert "agent" not in CATALOG
 
 
