@@ -123,6 +123,14 @@ def test_context_overflow_is_recognised_and_never_retried_blindly():
     anthropic = json.dumps({"error": {"type": "invalid_request_error",
                                       "message": "prompt is too long: 210000 tokens > 200000 maximum"}})
     assert error_signals(anthropic)[0] == "context_length_exceeded"
+    # NVIDIA NIM / vLLM, measured 2026-10-08 (docs/evidence/continuity-canary-2026-10-08):
+    # the prompt is subtracted from the window and the negative remainder rejected.
+    nim = json.dumps({"error": {"message": "max_tokens must be at least 1, got -50994. "
+                                "(parameter=max_tokens, value=-50994)", "type": "BadRequestError",
+                                "param": "max_tokens", "code": 400}})
+    assert error_signals(nim)[0] == "context_length_exceeded"
+    zero = json.dumps({"error": {"message": "max_tokens must be at least 1, got 0.", "code": 400}})
+    assert error_signals(zero)[0] is None                         # a real parameter error stays REQUEST
     error = StreamError("provider returned HTTP 400", status=400, provider_code="context_length_exceeded")
     assert classify_provider_error(error)["error_kind"] == "CONTEXT"
     assert classify_provider_error(StreamError("x", status=413))["error_kind"] == "CONTEXT"

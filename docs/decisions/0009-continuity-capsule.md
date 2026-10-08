@@ -59,6 +59,15 @@ ISyCode arma una **cápsula de continuidad** (`isycode/continuity_capsule.py`).
 
 **Qué se guarda.** El transcript guardado no cambia: los mensajes se agregan sin borrarse. La cápsula y las notas narrativas son contexto del request, no historial.
 
+## Evidencia real (2026-10-08)
+
+Canario contra NVIDIA NIM en [`docs/evidence/continuity-canary-2026-10-08/`](../evidence/continuity-canary-2026-10-08/README.md):
+
+- **Cápsula sola y con notas narrativas:** PASS.
+- **Rechazo real por tamaño:** PASS, después de agregar la redacción de vLLM/NIM (`max_tokens must be at least 1, got -N`) a la clase `CONTEXT`.
+- **Corte de stream:** PASS.
+- **Estimación de tamaño:** con texto repetitivo se midieron unos 5 caracteres por token, así que la estimación de 3 es conservadora.
+
 ## Qué no hace
 
 - No cambia grants, autoridad, aprobaciones ni el journal.

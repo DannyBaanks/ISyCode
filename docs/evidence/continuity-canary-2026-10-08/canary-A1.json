@@ -1,0 +1,46 @@
+{
+  "scenario": "A1",
+  "model": "z-ai/glm-5.3-flash",
+  "started": "2026-10-08T05:16:11Z",
+  "turn": "completed",
+  "final_role": "assistant",
+  "final_answer": "ZAFIRO-7319",
+  "codeword_in_answer": true,
+  "notes": [
+    "Context capsule · 28 earlier messages and old tool results condensed to fit z-ai/glm-5.3-flash; the saved conversation keeps everything"
+  ],
+  "history_len": 42,
+  "calls": [
+    {
+      "n": 1,
+      "t": 1791436574.3415563,
+      "model": "z-ai/glm-5.3-flash",
+      "kind": "chat",
+      "messages": 15,
+      "chars": 25589,
+      "sha256": "0653e6c3afb5d40042a997a1ebaa617afc3d884f12507f42141f48c063247736",
+      "has_capsule": true,
+      "has_request_0": false,
+      "has_summary_notes": false,
+      "ok": true,
+      "answer": "ZAFIRO-7319",
+      "usage": {
+        "prompt_tokens": 7687,
+        "completion_tokens": 100,
+        "total_tokens": 7787,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 91,
+          "rejected_prediction_tokens": null
+        }
+      }
+    }
+  ],
+  "journal": "PASS",
+  "finished": "2026-10-08T05:16:38Z"
+}
