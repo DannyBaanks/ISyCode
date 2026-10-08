@@ -1778,12 +1778,16 @@ class ProductActionGate:
             self.audit.record_decision(
                 request, authority, decision,
                 approval_mode=getattr(approval, "mode", None) if approval is not None else None)
-        except ActionAuditError:
+        except ActionAuditError as exc:
+            # Name the OS cause (e.g. "No space left on device") so the person can fix it.
+            cause = exc.__cause__
+            detail = (f" ({cause.strerror})" if isinstance(cause, OSError) and cause.strerror
+                      else "")
             decision = SentinelDecision(
                 decision.action_id, decision.request_digest,
                 decision.checks + (DecisionCheck(
                     "DurableActionJournal", False,
-                    "authorization could not be durably recorded; action denied"),))
+                    f"authorization could not be durably recorded{detail}; action denied"),))
         return authority, decision
 
     def persist_receipt(self, request: ActionRequest, receipt: ActionReceipt) -> bool:

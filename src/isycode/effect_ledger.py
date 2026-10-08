@@ -185,14 +185,22 @@ class EffectLedger:
         _mkdir_real(target.parent)
         temporary = target.with_name(target.name + ".tmp")
         flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(temporary, flags, 0o600)
         try:
-            view = memoryview(payload)
-            while view:
-                view = view[os.write(descriptor, view):]
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+            descriptor = os.open(temporary, flags, 0o600)
+            try:
+                view = memoryview(payload)
+                while view:
+                    view = view[os.write(descriptor, view):]
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+        except OSError as exc:
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+            raise LedgerDenied(f"pre-change backup could not be saved ({exc.strerror or type(exc).__name__}); "
+                               "nothing was changed") from exc
         os.replace(temporary, target)
         if os.name == "posix":
             os.chmod(target, 0o600)
@@ -399,23 +407,38 @@ class EffectLedger:
         return loaded
 
     def _write(self, state: dict) -> None:
+        """Replace the ledger atomically; a failed write (disk full) leaves the old one.
+
+        Any OS error becomes LedgerDenied so callers deny cleanly and release
+        the lock, instead of a raw OSError ending the user's turn.
+        """
         payload = json.dumps(state, ensure_ascii=False, sort_keys=True).encode("utf-8")
         temporary = self.path.with_name(self.path.name + ".tmp")
-        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-                             | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
-            os.write(descriptor, payload)
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
-        os.replace(temporary, self.path)
-        if os.name == "posix":
-            os.chmod(self.path, 0o600)
-        directory = os.open(self.directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+            descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                                 | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            try:
+                view = memoryview(payload)
+                while view:                    # a short write must not truncate the ledger
+                    view = view[os.write(descriptor, view):]
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            os.replace(temporary, self.path)
+            if os.name == "posix":
+                os.chmod(self.path, 0o600)
+            directory = os.open(self.directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        except OSError as exc:
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+            raise LedgerDenied(f"effect ledger could not be saved ({exc.strerror or type(exc).__name__}); "
+                               "nothing was changed") from exc
 
 
 class _Exclusive:
