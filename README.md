@@ -5,7 +5,9 @@
 > **Estado:** en desarrollo. Esta página separa lo que ya se ejecutó de verdad de lo que está implementado y probado solo con dobles de prueba. Mira [Qué está probado](#qué-está-probado).
 
 
-**Novedades (2026-10-04):** el modelo guardado sobrevive al reinicio, también como clave de visión; `.netrc`, `.npmrc` y `.pypirc` no se leen ni se copian al log de comandos; Ctrl+S abre ShellBox; la cola puede hacer steer y devolver el texto si falla; Sessions borra con confirmación; cada conversación conserva su transcript, cola y turno en curso, y al cambiar de chat ese turno se aparca (no se cancela); las aprobaciones de cambios, comandos, commits o borrados son fail-closed —`n`/`Esc` rechazan, el botón por defecto es Reject— con el diff o comando exacto y su receipt; en Chat, `Esc` detiene el turno y `/retry` ofrece recuperarlo. Lo anterior (2026-10-01): agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
+**Novedades (2026-10-07):** si se corta el stream o el provider devuelve un 5xx, un timeout o un 429, el paso se reenvía solo, con un retraso fijo por tipo de fallo y pocos intentos; nunca se repite una herramienta ya ejecutada ([ADR 0008](docs/decisions/0008-automatic-continuity-recovery.md)). La **cápsula de continuidad** cubre cada pérdida de contexto sin gastar tokens: conversación larga, rechazo por "demasiado largo", cambio a un modelo con menos ventana, sesión retomada y subagentes ([ADR 0009](docs/decisions/0009-continuity-capsule.md)). Elegir modelo es un solo flujo, provider → modelo → razonamiento, con una ficha que muestra solo datos conocidos y su fuente. Multi Harness lee también Command Code y Kilo CLI (15 herramientas). Una conversación abierta en dos ventanas ya no se pisa en silencio. En M15, `secure_closed` quedó cerrado por evidencia. Las puertas M0 a M8 están APROBADAS.
+
+**Antes (2026-10-04):** el modelo guardado sobrevive al reinicio, también como clave de visión; `.netrc`, `.npmrc` y `.pypirc` no se leen ni se copian al log de comandos; Ctrl+S abre ShellBox; la cola puede hacer steer y devolver el texto si falla; Sessions borra con confirmación; cada conversación conserva su transcript, cola y turno en curso, y al cambiar de chat ese turno se aparca (no se cancela); las aprobaciones de cambios, comandos, commits o borrados son fail-closed —`n`/`Esc` rechazan, el botón por defecto es Reject— con el diff o comando exacto y su receipt; en Chat, `Esc` detiene el turno y `/retry` ofrece recuperarlo. Lo anterior (2026-10-01): agente sin límite de pasos, borrar y mover archivos, *Turn on all coding tools…* en un paso, Settings en ventana grande con `?` por opción, aprobar con `y`/`n`, copiar el texto seleccionado, panel de tareas plegable, panel lateral con interruptores verde/rojo y modelos destacados (GLM 5.3, Kimi K3, DeepSeek V4.1 Flash). Lo que falta está en [Lo que nos falta](#lo-que-nos-falta).
 
 **Uso diario (2026-09-30):** recuperación manual con `/retry`, borradores y sesiones versionadas, `/context` para AGENTS.md, diagnóstico local `isycode doctor` y `/doctor`, y verificación explícita del proveedor con `/check`. Consulta [la guía y sus límites de verificación](docs/daily-use-readiness.md).
 
@@ -196,9 +198,17 @@ Si una herramienta está apagada, el agente te dice dónde activarla en vez de s
 - **Sin límite local de pasos:** el agente trabaja hasta responder. Lo que decide qué puede hacer es IsySentinel, no un contador. `Esc` lo detiene cuando quieras. Las opciones heredadas de número de pasos se conservan por compatibilidad, pero no limitan el turno.
 - **`Esc` detiene todo el turno**: la petición al modelo, una herramienta o un comando en marcha.
 - El chat muestra cada explicación y el razonamiento que entregue el provider, luego sus herramientas y después el siguiente paso. El scroll sigue la salida mientras estás abajo; si subes a leer o buscas un mensaje antiguo, conserva tu posición. Pulsa `End` dentro del chat o vuelve al final para seguir la salida otra vez.
-- Las sesiones conservan notas de herramientas completas, sin recortes automáticos de longitud o número, y su resumen de contexto. Los resultados se muestran como datos no confiables y pueden estar desactualizados; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
+- Las sesiones guardan las notas de herramientas completas y su resumen de contexto. Si esas notas ya no caben en la ventana del modelo, el request lleva su versión condensada dentro de la cápsula de continuidad; lo guardado no se recorta. Los resultados se muestran como datos no confiables y pueden estar desactualizados; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
 - **Dos ventanas, una conversación.** Puedes abrir la misma conversación guardada en dos ventanas o procesos de ISyCode; cada una es una continuidad válida. Lo que no pasa nunca es que se mezclen o se pisen en silencio: cada ventana recuerda la huella (sha256) de lo que cargó o guardó, y solo escribe si el archivo sigue siendo exactamente ese, bajo un lock entre procesos. Si otra ventana la cambió (mensajes, resumen, borrador o notas), esta deja de guardar y te pregunta: guardar la tuya como conversación nueva (*Fork: …*, la otra queda intacta), abrir la versión guardada (descarta lo que solo está en esta ventana, con confirmación) o seguir sin guardar. Con la última, cerrar ISyCode descarta lo que solo está en esta ventana; `/sessions diverged` vuelve a mostrar la elección. El journal registra cada paso solo con ids y huellas. El lock usa `flock` en Linux y macOS; en Windows usa `msvcrt.locking`, todavía sin probar en Windows.
 - La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y solicitudes. Las opciones heredadas `chat_token_budget`, `answer_tokens` y `agent_steps` no limitan la conversación activa. No hay límite local de generación. Si el historial no cabe en la ventana del modelo, el request lleva los mensajes recientes y una cápsula de continuidad determinista en lugar de los viejos, sin coste de tokens; un rechazo por "demasiado largo" se reenvía una vez con la cápsula ([ADR 0009](docs/decisions/0009-continuity-capsule.md)). La conversación guardada conserva todo. `/compact` resume cuando lo pides. `/check` y la revisión externa son solicitudes aparte.
+- **Recuperación automática ([ADR 0008](docs/decisions/0008-automatic-continuity-recovery.md)):** si un paso falla por el stream, la red, un timeout, un 5xx o un 429, ISyCode descarta lo que alcanzó a llegar y reenvía ese mismo paso. Ese paso todavía no ejecutó herramientas, así que ningún efecto se repite. Los retrasos son fijos por tipo de fallo: stream 0.75 s ×4, red 1.5 s ×3, timeout 2 s ×3, 5xx 3 s ×3 y 429 7 s ×3. Si el provider pide `Retry-After`, se respeta hasta 15 s; si pide más, se te avisa. La barra de estado muestra `↻ … retrying in Xs (n/m)` y `Esc` cancela la espera. Credenciales, cuota, permisos, request inválido y errores desconocidos nunca se reintentan. Al agotar los intentos, el prompt queda guardado y `/retry` sigue disponible.
+- **Cápsula de continuidad ([ADR 0009](docs/decisions/0009-continuity-capsule.md)):** un mensaje que ISyCode arma sin llamar a ningún modelo. Incluye tus pedidos anteriores, las tareas, el Idea box, cada cambio con el resultado que reportó la herramienta, los comandos con su código de salida, lo que se leyó y los últimos resultados recortados. Tiene un presupuesto que respeta, no lleva ids de llamadas, aprobaciones ni grants, y avisa al modelo de que debe verificar el estado actual antes de actuar. Se usa en cuatro casos:
+  - **Conversación larga:** la conversación usa como máximo la mitad de la ventana del modelo (unos 3 caracteres por token; si no se conoce la ventana, se asume una de 128k). Si no cabe, el request lleva los mensajes recientes más la cápsula. Lo que cabe se manda igual que antes.
+  - **"Demasiado largo":** si el provider rechaza el request por tamaño, ISyCode lo detecta (`context_length_exceeded`, los mensajes conocidos de OpenAI, vLLM/NIM y Anthropic, o un HTTP 413) y lo reenvía **una vez** con la cápsula.
+  - **Modelo con menos ventana o sesión retomada:** se cubren solos, porque el presupuesto se recalcula en cada turno.
+  - **Subagentes:** arrancan con una cápsula de hasta 6000 caracteres.
+
+  Si el slot de modelo *small* usa el mismo provider que el chat, además escribe notas narrativas de lo antiguo. La conversación nunca se manda a otro provider para resumirla.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
 
 ### Ediciones
@@ -239,7 +249,7 @@ Los servidores stdio se declaran **solo** en tu `~/.config/isycode/mcp.json`, nu
 
 Settings → LSP ofrece búsqueda LSP de símbolos para los servidores con un adapter de solo lectura y red denegada disponibles en este equipo. Actualmente Pyright y TypeScript reales pasaron handshake y búsqueda sandboxed; rust-analyzer, gopls y clangd se muestran solo cuando sus runtimes y sandbox están instalados. TypeScript necesita IPC anónimo AF_UNIX para su proceso tsserver; no puede crear sockets ni conectar a la red. Diagnósticos automáticos tras editar siguen disponibles para Pyright/Python.
 
-`/models` enseña hasta doce pares provider/model recientes. `/subagent <tarea>` abre un selector antes de enviar; `delegate_task` permite que el modelo principal proponga uno, que requiere tu selección. Cada subagente usa el proveedor y endpoint elegidos, trabaja de uno en uno y, para editar, comparte los permisos y revisiones diff del workspace. Sus mensajes no reciben la conversación privada completa ni pueden lanzar subagentes anidados.
+`/models` enseña hasta doce pares provider/model recientes. `/subagent <tarea>` abre un selector antes de enviar; `delegate_task` permite que el modelo principal proponga uno, que requiere tu selección. Cada subagente usa el proveedor y endpoint elegidos, trabaja de uno en uno y, para editar, comparte los permisos y revisiones diff del workspace. No reciben la conversación completa: arrancan con una cápsula de continuidad acotada (tus pedidos, tareas y actividad de herramientas, hasta 6000 caracteres), y no pueden lanzar subagentes anidados.
 
 En Files, `Copy path` funciona para archivos y carpetas; `Open preview` abre un modal de texto de solo lectura seleccionable con botón de copia. La copia sigue pasando por IsySentinel y ClipboardOwner.
 
@@ -263,7 +273,9 @@ Responde una vez y sale. Usa los mismos owners, IsySentinel y journal que la TUI
 | `/git`, `/diff [ruta] [--staged]` | Rama y cambios; diff |
 | `/commit <mensaje>` | Commit de los archivos cambiados tras revisar el diff |
 | `/mcp add playwright`, `/mcp add context7`, `/mcp`, `/mcp start <nombre>`, `/mcp stop <nombre>` | MCP fijados; al añadir se configura, al iniciar se revisa npm y cada llamada pide aprobación |
-| `/compact` | Resume los mensajes antiguos para liberar contexto |
+| `/compact` | Resume ahora los mensajes antiguos con el slot *small*. La cápsula automática actúa sola cuando el contexto no cabe |
+| `/retry` | Prepara el prompt interrumpido para que lo revises y lo reenvíes; nunca relanza herramientas |
+| `/harness` | Multi Harness: ajustes de las otras CLIs de agentes, en solo lectura |
 | `/providers`, `/provider`, `/models` | Providers, catálogo y modelos recientes |
 | `/session` | Workspace, provider y rol actuales |
 | `/readme`, `/plan`, `/review` | Vista previa de README, plan vía IsyMotron (opcional), revisión externa |
@@ -287,6 +299,13 @@ Selecciónalo desde **Providers** o con `ISYCODE_PROVIDER` / `ISYCODE_MODEL`. Si
 Los presets que no anuncian llamadas a herramientas (OpenRouter, Fireworks, Cerebras y otros) solo conversan, porque un modelo sin ese soporte rechaza la petición entera. Si tu modelo sí las soporta, exporta `ISYCODE_TOOL_CALLS=1`.
 
 **Claude nativo:** el provider `anthropic` usa la API Messages con el modelo `claude-opus-5-5` por defecto, thinking adaptativo (su resumen aparece en el bloque de razonamiento) y effort `medium`. Los bloques de thinking se devuelven intactos dentro de un turno de herramientas; si ISyCode recorta contexto, la API descarta los bloques afectados en vez de fallar (`prefix_mismatch_behavior: drop_block`). Si Claude rechaza una petición, el servidor puede reintentarla en otro modelo (`fallbacks: "default"`). Una negativa o una llamada a herramienta cortada por longitud nunca se ejecuta.
+
+**Elegir modelo:** en **Providers**, al elegir un provider se abre su lista de modelos y, si el modelo tiene niveles de razonamiento, el selector de razonamiento. El cambio se guarda al confirmar. La lista busca por nombre, id y familia. Al mover el foco, una ficha muestra solo datos conocidos, cada uno con su fuente:
+- contexto, de la cuenta o de la configuración;
+- familia, herramientas y precios, del snapshot de models.dev;
+- disponibilidad, medida por ISyCode.
+
+Lo que no se sabe aparece como *Not reported*. Si el modelo activo desaparece del catálogo, sigue elegido y se avisa.
 
 **Modelos destacados:** si el provider los lista, el selector de modelos pone arriba, con ★, GLM 5.3 Flash, GLM 5.3, Kimi K3 y DeepSeek V4.1 Flash (`deepseek-ai/deepseek-v4.1-flash` en NVIDIA). El resto del catálogo sigue debajo.
 
@@ -329,7 +348,7 @@ ISyCode separa tres conceptos:
 
 Cada acción sigue el mismo camino: **intención → execution owner → Workspace Authority → IsySentinel → efecto → receipt**. IsySentinel es deny-by-default: agrega comprobaciones puras (Systembilities) y no ejecuta nada. Las acciones sin owner quedan denegadas. Las aprobaciones son de un solo uso y están ligadas al digest exacto de la petición. Decisiones y receipts van a un journal privado, encadenado por hash y rotado en segmentos de 4 MB (un segmento alterado, faltante o reordenado se detecta). El Gateway mantiene además su propia autenticación y sus scopes.
 
-El inventario de owners y acciones se regenera en [`docs/security/m15-authority-coverage.json`](docs/security/m15-authority-coverage.json). Diseño y límites: [fronteras de seguridad](docs/design/isysentinel-security-boundaries.md), [contrato Mobile Host](docs/mobile-host-v1.md) y [decisión de runtime](docs/decisions/0001-runtime-boundary.md).
+Desde 2026-10-07, `secure_closed: true` es un resultado verificado, no una etiqueta: cada callsite de efecto pasa por su owner. Un escáner (`action_coverage.primitive_caller_violations`) lo vuelve a poner en `false` si aparece cualquier otro llamador de esas primitivas. M15 sigue abierto solo por los testigos remotos del Gateway. El inventario de owners y acciones se regenera en [`docs/security/m15-authority-coverage.json`](docs/security/m15-authority-coverage.json). Diseño y límites: [fronteras de seguridad](docs/design/isysentinel-security-boundaries.md), [contrato Mobile Host](docs/mobile-host-v1.md) y [decisión de runtime](docs/decisions/0001-runtime-boundary.md).
 
 ## Qué está probado
 
@@ -349,6 +368,7 @@ El inventario de owners y acciones se regenera en [`docs/security/m15-authority-
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
 - MCP local: servidor MCP simulado.
 - Portapapeles: las pruebas unitarias siguen usando una herramienta simulada. El 2026-10-04, en este escritorio X11, `ClipboardOwner.copy` pasó por el grant y por `xclip`: decisión ALLOW, la lectura de vuelta coincidió y el portapapeles anterior se restauró. Evidencia: `docs/evidence/clipboard-witness-2026-10-04.json`. El journal guarda tamaño y digest, no el texto.
+- Recuperación automática y cápsula de continuidad: la suite usa providers simulados que cortan el stream, devuelven 5xx/429/413 o `context_length_exceeded`. Todavía no se ejecutó un canario contra un provider real.
 - Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
 
 **Parcial o pendiente:**
@@ -369,6 +389,7 @@ La [matriz de features](docs/product/tui-feature-matrix.md) detalla la evidencia
 - **Mobile Host:** escucha en `127.0.0.1:8765`; arranque y pairing con PIN de un solo uso pasan por su owner. Un bind remoto exige certificado y llave TLS.
 - **Catálogo externo OpenISy:** con `OPENISY_API_URL` lee estados y metadatos de MCP, Skills y providers; descubrir no activa ni invoca.
 - **IsyMotron:** planner/runtime opcional para `/plan`. No es la autoridad de seguridad de ISyCode; sus grants nunca autorizan acciones del producto.
+- **Multi Harness:** `/harness`, la barra inferior o Settings abren una tarjeta por cada agente de terminal instalado en tu equipo: Crush, Qwen Code, OpenCode, Claude Code, Codex, Grok, Hermes, fx, OpenClaw, Pi, Kimi, Cursor, Copilot, Command Code y Kilo CLI. Cada tarjeta muestra su versión y sus ajustes, con un mapa de diferencias frente a ISyCode. La vista es de solo lectura: las credenciales se saltan, y el historial crudo de prompts de Command Code (`history.jsonl`) no se lee. Copiar el modelo por defecto o importar un transcript anterior pide confirmación. La sonda de versión de Command Code pasa `COMMANDCODE_SKIP_UPDATES` para no instalar actualizaciones.
 - **Roles:** agentes de ISyCode y los ocho motores de ISyCo en catálogos separados. Elegir un rol no ejecuta comandos ni concede permisos.
 
 ## Atajos
@@ -401,21 +422,23 @@ Lo poquito que queda, en orden:
 3. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
 4. **Ediciones tolerantes a espacios:** que `workspace_edit` encuentre el fragmento aunque cambien espacios o sangría, mostrando siempre el diff exacto antes de aprobar.
 5. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
-6. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
+6. **Canario real de recuperación y cápsula:** cortar un stream y llenar la ventana de un modelo real (por ejemplo, NVIDIA NIM). El ahorro por caché de prompts de cada provider sigue NOT_DEMONSTRATED.
+7. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
 
-**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. M0, M1, M2, M3 y M4 están en revisión. Ninguna puerta está APROBADA. En una carpeta Classic que todavía no confiaste, cada edición y cada comando siguen pidiendo confirmación. Tras confiarla, las ediciones recuperables y los comandos con sandbox dejan de preguntar uno a uno; el commit, los secretos y la autoridad siguen preguntando. Un comando escribe en una copia y el árbol cambia al promover ese diff. Esa promoción, igual que escribir, borrar o mover, cuenta en un ledger fuera del checkout. Si pasa el tope, el comando puede terminar y el árbol no cambia. El objetivo sigue siendo autonomía acotada, con confirmación al cruzar una frontera real.
+**Dirección de producto Classic/Security:** [roadmap ejecutable de autonomía segura y UX](docs/roadmap-classic-security-ux.md), con hitos, pruebas y puertas obligatorias. Las puertas M0 a M8 están APROBADAS por Danny Baanks: M0–M3 con evidencia `33b218df`, M4–M5 con `8a280c17`, M6 con `31bee476` (re-aprobada tras reabrir G6-05 por la ADR 0008), M6A con `ae616fbe`, M7 con `0eaa4eb2` y M8 con `32aa6ccb`. Siguen pendientes M9 (matriz adversarial, dogfood y rendimiento) y M10 (release gradual). En una carpeta Classic que todavía no confiaste, cada edición y cada comando siguen pidiendo confirmación. Tras confiarla, las ediciones recuperables y los comandos con sandbox dejan de preguntar uno a uno; el commit, los secretos y la autoridad siguen preguntando. Un comando escribe en una copia y el árbol cambia al promover ese diff. Esa promoción, igual que escribir, borrar o mover, cuenta en un ledger fuera del checkout. Si pasa el tope, el comando puede terminar y el árbol no cambia. El objetivo sigue siendo autonomía acotada, con confirmación al cruzar una frontera real.
 
 La estrategia histórica describía dos etapas (la evolución Classic/Security se concreta ahora en el roadmap anterior): primero **ISyCode Secure**, con acciones tipadas y permisos mínimos; después **ISyCode Full**, sumando capacidades con permisos explícitos. Full no desactiva IsySentinel: cada capacidad nueva necesita su owner, sus límites y su receipt.
 
 Prioridades abiertas:
 
-1. Cerrar los pendientes remotos de M15: checker estructural del Gateway, HTTPS/proxy de despliegue y una operación semántica real con permiso y scope.
-2. Cerrar M16: sesiones recuperables, diagnósticos, cobertura UX y matriz con testigos reproducibles.
-3. Validar en entornos reales lo que hoy solo tiene dobles de prueba (sandbox de comandos, Pyright, Claude, MCP, Windows).
-4. Completar Mobile Host con adapters, sesiones y approvals.
-5. Evaluar L0/L1 cuando la base de seguridad esté cerrada.
+1. M9: matriz adversarial, dogfood y rendimiento.
+2. Cerrar los pendientes remotos de M15: checker estructural del Gateway, HTTPS/proxy de despliegue y una operación semántica real con permiso y scope.
+3. Cerrar M16: sesiones recuperables, diagnósticos, cobertura UX y matriz con testigos reproducibles.
+4. Validar en entornos reales lo que hoy solo tiene dobles de prueba (sandbox de comandos, Pyright, Claude, MCP, Windows).
+5. Completar Mobile Host con adapters, sesiones y approvals.
+6. Evaluar L0/L1 cuando la base de seguridad esté cerrada.
 
 El release no se declara "daily-driver-ready" mientras M15 siga abierto.
 
@@ -423,6 +446,7 @@ El release no se declara "daily-driver-ready" mientras M15 siga abierto.
 - [Roadmap por milestones](docs/ROADMAP.md)
 - [Matriz de features y evidencia](docs/product/tui-feature-matrix.md)
 - [Comparativa con otras CLIs](docs/product/cli-competitive-audit.md)
+- [Decisiones de arquitectura (ADR)](docs/decisions/)
 - [Fronteras de IsySentinel](docs/design/isysentinel-security-boundaries.md)
 - [Contrato Mobile Host v1](docs/mobile-host-v1.md)
 

@@ -368,3 +368,19 @@ def test_cancelled_preflight_recovers_prompt(tmp_path, monkeypatch, capsys):
             assert app._history == []
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_work_status_timer_tolerates_an_app_that_is_shutting_down(tmp_path, monkeypatch, capsys):
+    # The 1 s work-status timer can tick after the screen stack is gone; CI hit
+    # an IndexError there that failed an unrelated test at teardown.
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+        assert not app.screen_stack
+        app._paint_work_status()
+
+    with capsys.disabled():
+        asyncio.run(scenario())

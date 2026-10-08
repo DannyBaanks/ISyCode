@@ -151,7 +151,7 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | M3 | Ledger de presupuestos y recuperación durable | M2 | APROBADO (G3, revisor Danny Baanks, evidencia 33b218df) | G3 |
 | M4 | Confianza, perfiles Classic/Security y degradación | M3 | APROBADO (G4, revisor Danny Baanks, evidencia 8a280c17) | G4 |
 | M5 | Egress, secretos e integraciones acotadas | M3 | APROBADO (G5, revisor Danny Baanks, evidencia 8a280c17) | G5 |
-| M6 | Bucle, cancelación y retry reconciliado | M4, M5 | APROBADO (G6, revisor Danny Baanks, evidencia 8a280c17); G6-05 REABIERTO 2026-10-07 por ADR 0008, en revisión | G6 |
+| M6 | Bucle, cancelación y retry reconciliado | M4, M5 | APROBADO (G6, revisor Danny Baanks, evidencia 31bee476 tras reabrir G6-05 por ADR 0008; antes 8a280c17) | G6 |
 | M6A | Agentes observables e instrucciones en cola | M6 | APROBADO (G6A, revisor Danny Baanks, evidencia ae616fbe) | G6A |
 | M7 | Flujos cotidianos completos | M6A | APROBADO (G7, revisor Danny Baanks, evidencia 0eaa4eb2) | G7 |
 | M8 | Pulido visual, teclado y accesibilidad | M7 | APROBADO (G8, revisor Danny Baanks, evidencia 1d588426) | G8 |
@@ -269,7 +269,7 @@ Tras restart, una tool note es historial no confiable, no una orden pendiente qu
 - `G6-02`: perder respuesta después del efecto y reintentar/reabrir produce un solo efecto o bloqueo UNCERTAIN, nunca duplicación silenciosa.
 - `G6-03`: kill del owner y restart conservan reserva/recibo y reconciliación; no descuentan saldo ni repiten publicación dos veces.
 - `G6-04`: streams truncados/tool calls incompletos no ejecutan; retry preserva borrador nuevo y orden del transcript.
-- `G6-05` *(reabierto 2026-10-07 por la [ADR 0008](decisions/0008-automatic-continuity-recovery.md); criterio anterior: backoff acotado con jitter)*: el paso de chat fallido se reenvía con retraso fijo por clase y presupuesto pequeño, `Retry-After` acotado, clases terminales sin reintento, Esc cancela la espera, nunca se repite una herramienta ya despachada; fallos de provider no cambian autoridad.
+- `G6-05` *(reabierto y re-aprobado 2026-10-07 con la [ADR 0008](decisions/0008-automatic-continuity-recovery.md); criterio anterior: backoff acotado con jitter)*: el paso de chat fallido se reenvía con retraso fijo por clase y presupuesto pequeño, `Retry-After` acotado, clases terminales sin reintento, Esc cancela la espera, nunca se repite una herramienta ya despachada; fallos de provider no cambian autoridad.
 
 Aceptación: tabla de puntos de interrupción y estado final observado; efectos inciertos impiden dependientes aunque la TUI siga usable.
 
