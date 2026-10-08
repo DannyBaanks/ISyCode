@@ -206,3 +206,6 @@ retuvo más salida; expandir no recupera esos bytes.
 La confirmación usa opciones grandes: Rechazar está enfocado inicialmente.
 Las tarjetas cambian la presentación; no conceden permisos ni ejecutan
 comandos por sí mismas.
+
+
+Para ejecutar y leer el soak G9-04, consulta [la guía del soak](soak-g9.md). El progreso de un worker no equivale al resultado final del gate.
