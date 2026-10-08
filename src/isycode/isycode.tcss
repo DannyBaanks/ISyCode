@@ -121,7 +121,8 @@
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
     }
-    #slash-suggestions { display: none; layer: overlay; dock: bottom; height: 8; max-height: 45%; margin: 0 1; background: #292a2e; border: round #48494e; }
+    /* Above the prompt, in the composer flow. Docking this to the bottom covers the draft. */
+    #slash-suggestions { display: none; height: auto; max-height: 8; margin: 0 1; background: #292a2e; border: round #48494e; }
     #slash-suggestions > .option-list--option-highlighted { background: #5c4077; color: #f0f0f2; }
     #composer { height: auto; }
     #prompt-input {

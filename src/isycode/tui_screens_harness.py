@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 from textual.binding import Binding
+from textual.css.query import NoMatches
 from textual.widgets import Button, Input, Static
 from isycode.harness_graph import CATALOG_IDS, SEED_OPTIONS, gap_status
 from textual.app import ComposeResult
@@ -21,7 +22,7 @@ from isycode.tui_theme import (
     GREEN,
     TEXT,
 )
-from isycode.tui_widgets import Collapsible
+from isycode.tui_widgets import Collapsible, activate_on_second_click
 
 
 
@@ -138,18 +139,31 @@ class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class ModelChoice(Button):
+    """One model row. The first click reads it; Enter or a second click uses it."""
+
+    async def _on_click(self, event) -> None:
+        # prevent_default skips Button._on_click, which would select on this same click.
+        event.prevent_default()
+        event.stop()
+        self.focus()
+        if activate_on_second_click(self, event, "model"):
+            self.press()
+
+
 class ModelsScreen(ModalScreen):
     """Searchable provider accordions; model IDs belong only in this selector.
 
     With ``provider_scope`` it lists only that provider's models (the step after
     choosing a provider). The detail card shows the highlighted model's facts and
-    where each came from; nothing is selected until a model is pressed.
+    where each came from. A click reads a model. Enter, or a second click on the
+    same row, is what selects it.
     """
 
     DEFAULT_CSS = """
     ModelsScreen { align: center middle; background: #000000 58%; }
     #models-card { width: 110; max-width: 96%; height: 85%; padding: 1 2; background: #17191f; border: round #514d5a; }
-    #models-title { height: 2; }
+    #models-title { height: auto; max-height: 4; }
     #models-search { height: 3; margin-bottom: 1; }
     #models-body { height: 1fr; }
     #models-scroll { height: 1fr; width: 1fr; }
@@ -159,8 +173,10 @@ class ModelsScreen(ModalScreen):
     ModelsScreen.-narrow #model-detail-scroll { width: 100%; height: 12; margin-left: 0; border-left: none; border-top: tall #2c2e36; }
     .model-group { height: auto; background: transparent; }
     .model-group > Contents { padding: 0 1; }
-    .model-choice { width: 100%; height: auto; min-height: 1; border: none; background: transparent; text-align: left; content-align: left middle; padding: 0 1; margin: 0; }
-    .model-choice:focus { background: #30303c; }
+    .model-family-block { height: auto; margin-top: 1; background: transparent; }
+    .model-family { height: 1; color: #8b93a7; text-style: bold; padding: 0 1; }
+    .model-choice { width: 100%; height: auto; min-height: 2; border: none; background: transparent; text-align: left; content-align: left top; padding: 0 1; margin: 0; }
+    .model-choice:focus { background: #1e3a5f; }
     .model-choice:hover { background: #242630; }
     #models-status { height: auto; color: #9aa3ad; margin: 1 0; }
     #models-close { height: 3; width: 16; }
@@ -179,7 +195,6 @@ class ModelsScreen(ModalScreen):
         self.search_query = ""
 
     def compose(self) -> ComposeResult:
-        from isycode.model_presentation import model_display_name
         groups: dict[str, list[dict]] = {}
         families: dict[str, list[dict]] = {}
         for entry in self.entries:
@@ -204,8 +219,8 @@ class ModelsScreen(ModalScreen):
             groups = {scope: groups.get(scope, [])}
             self.expanded_providers.add(scope)
         heading = ("Models · " + PRESETS.get(scope, {}).get("label", scope)) if scope else "Models"
-        hint = ("Highlight a model to see its details · Enter selects · Esc back to providers"
-                if scope else "Expand a provider · select a model · choose reasoning")
+        hint = ("Click a model to read it · Enter or a second click uses it · Esc back"
+                if scope else "Expand a provider · click a model to read it · Enter uses it")
         with Vertical(id="models-card"):
             yield Static(Text.assemble((heading + "\n", "bold #c7b8d4"), (hint, MUTED)), id="models-title")
             yield Input(value=self.search_query, placeholder="Find a model, id or family…", id="models-search")
@@ -217,30 +232,81 @@ class ModelsScreen(ModalScreen):
                             self.choices[key] = entry
                             yield Button("Refresh account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
                                          id=key, classes="model-choice")
-                    for provider, entries in groups.items():
-                        with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
-                                         collapsed=provider not in self.expanded_providers, classes="model-group", id="model-provider-" + provider):
-                            for entry in entries:
-                                model = entry["value"].split("|", 1)[1]
-                                key = f"model-choice-{len(self.choices)}"
-                                self.choices[key] = entry
-                                label = Text(model_display_name(model), style=TEXT)
-                                label.append(" / " + model, style=MUTED)
-                                if provider == selected_provider_name() and model == selected_model_name():
-                                    label.append(" · current", style=GREEN)
-                                yield Button(label, id=key, classes="model-choice")
-                    if scope and not groups[scope]:
-                        yield Static("No models listed for this provider yet · refresh its account catalog.",
-                                     classes="model-empty")
+                    if scope:
+                        if not groups[scope]:
+                            yield Static("No models listed for this provider yet · refresh its account catalog.",
+                                         classes="model-empty")
+                        else:
+                            for family, family_entries in self._by_family(groups[scope]):
+                                with Vertical(classes="model-family-block"):
+                                    yield Static(family, classes="model-family")
+                                    for entry in family_entries:
+                                        yield self._choice_button(entry)
+                    else:
+                        for provider, entries in groups.items():
+                            with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
+                                             collapsed=provider not in self.expanded_providers, classes="model-group", id="model-provider-" + provider):
+                                for entry in entries:
+                                    yield self._choice_button(entry)
                 with VerticalScroll(id="model-detail-scroll"):
-                    yield Static(Text("Highlight a model to see what ISyCode knows about it.", style=MUTED),
+                    yield Static(Text("Click a model. Context, reasoning and tools show here.", style=MUTED),
                                  id="model-detail")
             notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
             yield Static("\n".join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
-            yield Button("Close", id="models-close")
+            yield Button("Back" if scope else "Close", id="models-close")
+
+    def _choice_button(self, entry: dict) -> ModelChoice:
+        from isycode.model_presentation import model_display_name
+        provider, model = entry["value"].split("|", 1)
+        key = f"model-choice-{len(self.choices)}"
+        self.choices[key] = entry
+        label = Text(model_display_name(model), style="bold")
+        if provider == selected_provider_name() and model == selected_model_name():
+            label.append("  · current", style=GREEN)
+        label.append("\n" + model, style=MUTED)
+        return ModelChoice(label, id=key, classes="model-choice")
+
+    def _by_family(self, entries: list[dict]) -> list[tuple[str, list[dict]]]:
+        from isycode.model_presentation import model_family
+        order: list[str] = []
+        buckets: dict[str, list[dict]] = {}
+        for entry in entries:
+            family = model_family(entry["value"].split("|", 1)[1])
+            if family not in buckets:
+                order.append(family)
+                buckets[family] = []
+            buckets[family].append(entry)
+        return [(family, buckets[family]) for family in order]
 
     def on_mount(self) -> None:
         self._apply_width(self.app.size.width)
+        # The row is registered during compose, before nested containers finish
+        # mounting. Querying it here crashes the screen.
+        self.call_after_refresh(self._reveal_current)
+
+    def _reveal_current(self, attempt: int = 0) -> None:
+        """Show the model already in use, without arming it for a click.
+
+        A catalog refresh clears the rows and mounts them again on the next
+        idle. A query in that gap finds the choice recorded and the widget
+        not yet in the tree.
+        """
+        wanted = f"{selected_provider_name()}|{selected_model_name()}"
+        for key, entry in list(self.choices.items()):
+            if entry.get("kind") != "model" or entry.get("value") != wanted:
+                continue
+            try:
+                self.show_details(*wanted.split("|", 1))
+                button = self.query_one(f"#{key}", ModelChoice)
+            except NoMatches:
+                if attempt < 3:
+                    self.call_after_refresh(self._reveal_current, attempt + 1)
+                return
+            button.scroll_visible()
+            button.focus()
+            return
+        if attempt < 3 and not self.choices:
+            self.call_after_refresh(self._reveal_current, attempt + 1)
 
     def on_resize(self, event) -> None:
         self._apply_width(event.size.width)
@@ -289,10 +355,25 @@ class ModelsScreen(ModalScreen):
             return
         self.search_query = event.value
         query = event.value.casefold().strip()
+        blocks = list(self.query(".model-family-block"))
+        if blocks:
+            for block in blocks:
+                matches = 0
+                for button in block.query(".model-choice"):
+                    entry = self.choices.get(button.id or "")
+                    if not entry or entry.get("kind") != "model":
+                        continue
+                    provider, model = entry["value"].split("|", 1)
+                    button.display = not query or query in self._haystack(provider, model)
+                    matches += bool(button.display)
+                block.display = bool(matches)
+            return
         for group in self.query(".model-group"):
             matches = 0
             for button in group.query(Button):
                 entry = self.choices[button.id]
+                if entry.get("kind") != "model":
+                    continue
                 provider, model = entry["value"].split("|", 1)
                 button.display = not query or query in self._haystack(provider, model)
                 matches += bool(button.display)

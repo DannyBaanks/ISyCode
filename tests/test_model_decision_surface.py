@@ -166,7 +166,10 @@ def test_model_with_levels_is_applied_only_with_its_reasoning(tui, monkeypatch, 
     async def scenario(app, pilot):
         before = selected_provider_name()
         screen = await open_nvidia(app, pilot)
-        await pilot.click(f"#{choice(screen, 'z-ai/glm-5.3').id}")
+        target = f"#{choice(screen, 'z-ai/glm-5.3').id}"
+        await pilot.click(target)
+        assert isinstance(app.screen, ModelsScreen)
+        await pilot.click(target)
         assert await until(pilot, lambda: app._menu_mode == "reasoning")
         assert selected_provider_name() == before            # still a draft
         assert [e["value"].rsplit("|", 1)[1] for e in app._menu_entries] == ["default", "low", "high"]
@@ -174,7 +177,9 @@ def test_model_with_levels_is_applied_only_with_its_reasoning(tui, monkeypatch, 
         assert await until(pilot, lambda: isinstance(app.screen, ModelsScreen))
         assert selected_provider_name() == before
         screen = app.screen
-        await pilot.click(f"#{choice(screen, 'z-ai/glm-5.3').id}")
+        target = f"#{choice(screen, 'z-ai/glm-5.3').id}"
+        await pilot.click(target)
+        await pilot.click(target)
         assert await until(pilot, lambda: app._menu_mode == "reasoning")
         app._select_menu_entry(app._menu_entries[-1])
         assert await until(pilot, lambda: selected_provider_name() == "nvidia")
@@ -191,7 +196,12 @@ def test_model_without_levels_is_applied_without_a_fake_selector(tui, monkeypatc
 
     async def scenario(app, pilot):
         screen = await open_nvidia(app, pilot)
-        await pilot.click(f"#{choice(screen, 'moonshotai/kimi-k3').id}")
+        target = f"#{choice(screen, 'moonshotai/kimi-k3').id}"
+        await pilot.click(target)
+        assert isinstance(app.screen, ModelsScreen)
+        detail = str(app.screen.query_one("#model-detail").render())
+        assert "kimi-k3" in detail
+        await pilot.click(target)
         assert await until(pilot, lambda: selected_provider_name() == "nvidia")
         assert resolved_chat_model("nvidia") == "moonshotai/kimi-k3"
         assert app._menu_mode != "reasoning"
@@ -211,6 +221,26 @@ def test_vanished_current_model_is_reported_not_replaced(tui, monkeypatch, capsy
         rows = [entry["label"] for entry in app.screen.entries if entry["kind"] == "info"]
         assert any("retired/old-model is not in the refreshed" in row for row in rows)
         assert resolved_chat_model("nvidia") == "retired/old-model"
+
+    with capsys.disabled():
+        run(scenario)
+
+
+def test_reveal_does_not_crash_when_the_current_row_is_not_mounted(tui, capsys):
+    from isycode.tui_screens_harness import ModelChoice
+
+    async def scenario(app, pilot):
+        entries = app._branch_entries("models")
+        app._models_scope = "openai"
+        screen = ModelsScreen(entries, provider_scope="openai")
+        await app.push_screen(screen)
+        await pilot.pause()
+        for button in list(screen.query(ModelChoice)):
+            await button.remove()
+        screen._reveal_current()
+        await pilot.pause()
+        assert isinstance(app.screen, ModelsScreen)
+        assert "gpt-6-luna" in str(screen.query_one("#model-detail").render())
 
     with capsys.disabled():
         run(scenario)

@@ -77,8 +77,23 @@ async def _subagent_cmd(app: "TUIApp", arg: str) -> None:
 async def _iteration_cmd(app: "TUIApp", arg: str) -> None:
     await app._run_iteration_window(arg.strip())
 
+def _provider_from_arg(arg: str) -> str | None:
+    text = arg.strip().casefold()
+    if not text:
+        return None
+    for key, preset in PRESETS.items():
+        if text == key or text == str(preset.get("label", "")).casefold():
+            return key
+    return None
+
+
 async def _models_cmd(app: "TUIApp", arg: str) -> None:
-    app._render_menu("branch", "Models", app._branch_entries("models"))
+    # Same window as choosing the current provider from the model button.
+    # An unknown name stays on that provider instead of opening a second catalog.
+    named = _provider_from_arg(arg)
+    if arg.strip() and named is None:
+        app._append("  /models · unknown provider · opening the current one", MUTED)
+    app._open_scoped_models(named or selected_provider_name())
 
 async def _skills_cmd(app: "TUIApp", arg: str) -> None:
     parts = arg.split()
@@ -504,7 +519,7 @@ class MenuMixin:
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
                 PluginCommand("iteration", "sequential iteration with three chosen models; /iteration retry <id>", _iteration_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
-                PluginCommand("models", "recent and available models", _models_cmd),
+                PluginCommand("models", "models for the current provider", _models_cmd),
                 PluginCommand("skills", "bundled workflow guidance: list, use <name>, clear", _skills_cmd),
                 PluginCommand("git", "show git branch and changed files", _git_cmd),
                 PluginCommand("diff", "show the git diff (optional path, --staged)", _diff_cmd),
