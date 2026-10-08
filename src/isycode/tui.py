@@ -491,7 +491,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             with Vertical(id="main"):
                 yield WorkList(id="work-list")
                 yield ChatArea(id="chat")
-                yield OptionList(id="slash-suggestions")
                 yield TasksPanel("", id="agent-tasks")
                 with Vertical(id="composer"):
                     with Horizontal(id="queued-row"):
@@ -507,6 +506,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield IdeaBox("Idea box\nCapture an idea · Ctrl+Shift+Enter", id="idea-box", markup=False)
                         yield ShellBox("ShellBox · no processes", id="shell-box", markup=False)
                         yield Static("", id="usage-status")
+                    yield OptionList(id="slash-suggestions")
                     yield PromptArea(id="prompt-input")
                     yield Static("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar", id="composer-hint")
                     with Horizontal(id="command-bar"):
@@ -1006,15 +1006,26 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         else: panel.action_cursor_up()
         return True
 
-    def _complete_slash(self, index: int | None = None) -> bool:
+    def _complete_slash(self, index: int | None = None, *, submit_exact: bool = False) -> bool:
         panel = self.query_one('#slash-suggestions', OptionList)
-        if not panel.display or not self._slash_matches: return False
-        index = index if index is not None else panel.highlighted or 0
-        if index < 0 or index >= len(self._slash_matches): return False
+        if not panel.display or not self._slash_matches:
+            return False
+        prompt = self.query_one(PromptArea)
+        highlighted = 0 if panel.highlighted is None else panel.highlighted
+        # Enter on a command that is already fully typed runs it. A prefix,
+        # or a different highlighted row, only fills the name so arguments fit.
+        if submit_exact and index is None and 0 <= highlighted < len(self._slash_matches):
+            typed = prompt.text[1:] if prompt.text.startswith('/') else ''
+            if typed.casefold() == self._slash_matches[highlighted]['value'].casefold():
+                panel.display = False
+                return False
+        index = highlighted if index is None else index
+        if index < 0 or index >= len(self._slash_matches):
+            return False
         name = self._slash_matches[index]['value']
-        self.query_one(PromptArea).load_text('/' + name + ' ')
+        prompt.load_text('/' + name + ' ')
         panel.display = False
-        self.query_one(PromptArea).focus()
+        prompt.focus()
         return True
 
     def on_input_changed(self, event: Input.Changed) -> None:
@@ -1625,6 +1636,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                              if isinstance(screen, ModelsScreen)), None)
             if existing is not None:
                 existing.entries = entries
+                if mode == "branch" and title == "Models":
+                    existing.provider_scope = getattr(self, "_models_scope", None)
                 existing.choices = {}
                 existing.refresh(recompose=True)
             elif getattr(self, "_models_screen_pending", None) is not None:

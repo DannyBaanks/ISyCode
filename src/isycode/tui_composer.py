@@ -168,7 +168,8 @@ class PromptArea(TextArea):
         if not self.app._complete_slash(): self.screen.focus_next()
 
     def action_submit_prompt(self) -> None:
-        if self.app._complete_slash(): return
+        if self.app._complete_slash(submit_exact=True):
+            return
         self.post_message(self.Submitted(self, self.text))
 
     def action_insert_line_break(self) -> None:
