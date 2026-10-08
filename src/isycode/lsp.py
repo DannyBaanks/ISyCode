@@ -374,7 +374,7 @@ def _sandbox_command(root: Path, server: dict[str, Any]) -> list[str]:
                  "--setenv", "HOME", "/tmp", "--setenv", "XDG_CONFIG_HOME", "/tmp/config",
                  "--setenv", "PATH", runtime_path,
                  "--setenv", "RAYON_NUM_THREADS", "2", "--setenv", "GOMAXPROCS", "2",
-                 "--", "/usr/bin/python3", "-c", network_deny_bootstrap(32, allow_local_ipc=server["id"] == "typescript"), *invocation])
+                 "--", "/usr/bin/python3", "-I", "-c", network_deny_bootstrap(32, allow_local_ipc=server["id"] == "typescript"), *invocation])
     return args
 
 

@@ -183,7 +183,7 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
                  "--setenv", "PATH", ":".join(COMMAND_SYSTEM_BIN_DIRS),
                  "--setenv", "LANG", "C.UTF-8", "--setenv", "TERM", "dumb",
                  "--setenv", "NO_COLOR", "1",
-                 "--", PYTHON, "-c", command_bootstrap(timeout_s), program, *argv[1:]])
+                 "--", PYTHON, "-I", "-c", command_bootstrap(timeout_s), program, *argv[1:]])
     return args
 
 

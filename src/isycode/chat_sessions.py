@@ -141,7 +141,7 @@ class ChatSessionStore:
     _SESSION_ID = re.compile(r"^[a-f0-9]{32}$")
     _SECRET_VALUE = re.compile(
         r"(?i)(api[_-]?key|access[_-]?token|refresh[_-]?token|secret|password|authorization)"
-        r"(\"?\s*[:=]\s*)(\"(?:[^\"\\]|\\.)*\"|'[^']*'|[^\s,;]+)"
+        r"([\"']?\s*[:=]\s*)(\"(?:[^\"\\]|\\.)*\"|'[^']*'|[^\s,;]+)"
     )
     _BEARER_VALUE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{12,}={0,2}")
     _API_TOKEN = re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b")
