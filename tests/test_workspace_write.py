@@ -275,3 +275,28 @@ def test_diff_marks_a_missing_final_newline_instead_of_gluing_lines(tmp_path):
     diff = WorkspaceWriteOwner._diff(b"Test\nFecha: 2025", b"Test\nFecha: 2025\nEdit tool\n", "f.txt")
     assert "-Fecha: 2025\n\\ No newline at end of file\n+Fecha: 2025\n+Edit tool\n" in diff
     assert "2025+Fecha" not in diff
+
+
+@pytest.mark.parametrize("operation", ["write", "delete"])
+def test_a_fifo_is_refused_without_waiting_for_a_writer(writer, operation):
+    """Hermes audit 2026-10-08, finding 7: previewing a FIFO blocked before any check."""
+    import threading
+    owner, authority, _, root = writer
+    grant(authority, root)
+    os.mkfifo(root / "src" / "pipe")
+    outcome = []
+
+    def preview():
+        try:
+            if operation == "write":
+                owner.preview("src/pipe", "x\n")
+            else:
+                owner.preview_delete("src/pipe")
+            outcome.append("previewed")
+        except (OSError, ValueError) as exc:
+            outcome.append(exc)
+    thread = threading.Thread(target=preview, daemon=True)
+    thread.start()
+    thread.join(3)
+    assert not thread.is_alive(), "the preview is still waiting on the FIFO"
+    assert outcome and outcome[0] != "previewed"
