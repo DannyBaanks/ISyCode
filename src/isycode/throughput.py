@@ -68,6 +68,11 @@ class ThroughputMeter:
         self.measured_turns += 1
         return rate
 
+    def rate_line(self, total_tokens: int, unknown: bool) -> str:
+        mark = " +?" if unknown else ""
+        tokens = f"{total_tokens / 1000:.0f}k" if total_tokens >= 10_000 else f"{total_tokens:,}"
+        return f"{format_rate(self.last_rate, measuring=self.measuring)} · {tokens}{mark} tok"
+
     def widget_text(self, total_tokens: int, unknown: bool, context: str) -> str:
         mark = " +?" if unknown else ""
         return f"{format_rate(self.last_rate, measuring=self.measuring)}\n{total_tokens:,}{mark} tok\n{context}"
