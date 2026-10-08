@@ -23,7 +23,7 @@ import re
 import secrets
 import stat
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -60,8 +60,10 @@ EDIT_TOOL = {"type": "function", "function": {
     "name": EDIT_TOOL_NAME,
     "description": ("Propose replacing an exact text fragment in one existing UTF-8 file. "
                     "old_text must appear exactly once unless replace_all is true; include "
-                    "enough surrounding lines to make it unique. The user reviews the diff "
-                    "and must approve."),
+                    "enough surrounding lines to make it unique. If it is not found exactly, "
+                    "whole lines are matched ignoring line endings, trailing whitespace and "
+                    "then indentation (new_text is re-indented to fit); the match must still "
+                    "be unique. The user reviews the exact diff and must approve."),
     "parameters": {"type": "object", "properties": {
         "path": {"type": "string", "description": "Workspace-relative file path."},
         "old_text": {"type": "string", "description": "Exact current text to replace."},
@@ -96,6 +98,106 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+
+def _lines(text: str) -> list[str]:
+    return text.replace("\r\n", "\n").split("\n")
+
+
+def _indent(line: str) -> str:
+    return line[:len(line) - len(line.lstrip(" \t"))]
+
+
+def tolerant_replace(text: str, old_text: str, new_text: str) -> tuple[str, str]:
+    """Locate ``old_text`` by whole lines when it is not found exactly.
+
+    Only used after an exact search found nothing. Tried in order, each one
+    looser than the last, and each must find exactly one block of whole lines:
+
+    - ``line-endings``: CRLF and LF are the same;
+    - ``trailing-whitespace``: spaces/tabs at line ends are ignored;
+    - ``indentation``: leading whitespace is ignored, and ``new_text`` is
+      re-indented by the difference between the file and ``old_text``.
+
+    A fragment inside a line never matches loosely, and an ambiguous match is
+    refused rather than guessed. The caller still shows the exact diff of the
+    resulting file for approval; nothing here decides whether to write.
+    Returns the new text and the stage that matched.
+    """
+    newline = "\r\n" if "\r\n" in text else "\n"
+    if newline == "\r\n" and "\n" in text.replace("\r\n", ""):
+        # Re-joining would rewrite every LF line of a mixed file; only exact text is safe.
+        raise ValueError("old_text was not found exactly, and this file mixes CRLF and LF "
+                         "line endings; copy the exact current text")
+    file_lines = _lines(text)
+    old_lines = _lines(old_text.strip("\r\n"))
+    if not any(line.strip() for line in old_lines):
+        raise ValueError("old_text was not found in the file")
+    stages = (("line-endings", lambda line: line),
+              ("trailing-whitespace", lambda line: line.rstrip(" \t")),
+              ("indentation", lambda line: line.strip(" \t")))
+    size = len(old_lines)
+    for stage, key in stages:
+        wanted = [key(line) for line in old_lines]
+        keyed = [key(line) for line in file_lines]
+        starts = [index for index in range(len(file_lines) - size + 1)
+                  if keyed[index:index + size] == wanted]
+        if len(starts) > 1:
+            raise ValueError(f"old_text matches {len(starts)} places when ignoring {stage}; "
+                             "add surrounding lines to make it unique")
+        if not starts:
+            continue
+        start = starts[0]
+        replacement = _lines(new_text.strip("\r\n")) if new_text.strip("\r\n") else []
+        if stage == "indentation":
+            replacement = _reindent(replacement, old_lines, file_lines[start:start + size])
+        result = file_lines[:start] + replacement + file_lines[start + size:]
+        return newline.join(result), stage
+    raise ValueError("old_text was not found in the file, even ignoring line endings, "
+                     "trailing whitespace and indentation")
+
+
+def _reindent(new_lines: list[str], old_lines: list[str], found: list[str]) -> list[str]:
+    """Give ``new_lines`` the file's indentation, learned from the matched lines.
+
+    Each old_text indentation maps to the file's indentation on the same line.
+    A deeper indentation keeps its extra part, converted to the file's own unit
+    (tabs or N spaces) so a tab never lands in a space-indented file or the
+    reverse. A shallower one is clamped to the block's first line.
+    """
+    mapping: dict[str, str] = {}
+    for old, have in zip(old_lines, found):
+        if old.strip():
+            mapping.setdefault(_indent(old), _indent(have))
+    unit = "\t" if any("\t" in value for value in mapping.values()) \
+        else " " * _step(mapping.values())
+    old_step = _step(key for key in mapping if "\t" not in key)
+    base_old = _indent(next(line for line in old_lines if line.strip()))
+    shifted = []
+    for line in new_lines:
+        if not line.strip():
+            shifted.append("")
+            continue
+        indent, body = _indent(line), line.lstrip(" \t")
+        if indent in mapping:
+            shifted.append(mapping[indent] + body)
+            continue
+        anchor = max((key for key in mapping if indent.startswith(key)), key=len, default=None)
+        if anchor is None:                       # shallower than old_text: clamp to its base
+            shifted.append(mapping[base_old] + body)
+            continue
+        extra = indent[len(anchor):]           # in the model's unit; convert to the file's
+        levels = extra.count("\t") + len(extra.replace("\t", "")) // old_step
+        shifted.append(mapping[anchor] + unit * max(1, levels) + body)
+    return shifted
+
+
+def _step(indents) -> int:
+    """Smallest positive width difference between indentations; 4 when unknown."""
+    widths = sorted({len(value) for value in indents})
+    steps = [b - a for a, b in zip(widths, widths[1:]) if b > a]
+    return min(steps) if steps else 4
+
+
 @dataclass(frozen=True)
 class WritePreview:
     request: ActionRequest
@@ -105,6 +207,9 @@ class WritePreview:
     content: str = field(repr=False)
     removes: bool = False
     destination: str = ""
+    # How workspace_edit located old_text (see tolerant_replace). Metadata only:
+    # apply() re-derives the preview and compares request, path, diff and content.
+    match: str = field(default="exact", compare=False)
 
     @property
     def is_undo(self) -> bool:
@@ -324,12 +429,13 @@ class WorkspaceWriteOwner:
             raise ValueError("the file does not exist; use workspace_write to create it")
         text = current.decode("utf-8")
         count = text.count(old_text)
-        if count == 0:
-            raise ValueError("old_text was not found in the file")
         if count > 1 and not replace_all:
             raise ValueError(f"old_text appears {count} times; add surrounding lines to make "
                              "it unique or set replace_all")
-        return self.preview(path, text.replace(old_text, new_text))
+        if count:
+            return self.preview(path, text.replace(old_text, new_text))
+        updated, match = tolerant_replace(text, old_text, new_text)
+        return replace(self.preview(path, updated), match=match)
 
     def preview_undo(self, checkpoint_id: str | None = None) -> WritePreview:
         """Restore the content from before one change; refuses if edited since."""

@@ -299,6 +299,9 @@ class SidePanel(Vertical):
             yield Button("Files", id="show-files")
         with QuietVerticalScroll(id="overview-view"):
             with Vertical(id="rail-card"):
+                with Collapsible(title="IsySentinel", id="rail-sentinel"):
+                    yield Static("Reading Workspace Authority and the action journal…",
+                                 id="sentinel-status", classes="rail-copy")
                 with Collapsible(title="MCPs", id="rail-mcp"):
                     yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
                 with Collapsible(title="LSPs", id="rail-lsp"):

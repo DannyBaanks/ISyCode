@@ -17,6 +17,30 @@ from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, Se
 from isycode.workspace_setup import state_root
 
 
+# In-process observers of journaled decisions (the IsySentinel rail). They get
+# a copy of the record exactly as written, only after it was durably appended,
+# and they can never change, block or fail a decision.
+_decision_listeners: list = []
+
+
+def add_decision_listener(listener) -> None:
+    if listener not in _decision_listeners:
+        _decision_listeners.append(listener)
+
+
+def remove_decision_listener(listener) -> None:
+    if listener in _decision_listeners:
+        _decision_listeners.remove(listener)
+
+
+def _notify_decision(record: dict[str, Any]) -> None:
+    for listener in list(_decision_listeners):
+        try:
+            listener(json.loads(json.dumps(record)))
+        except Exception:  # an observer must never affect the action gate
+            pass
+
+
 class ActionAuditError(RuntimeError):
     """The private action journal is unsafe, corrupt, or unavailable."""
 
@@ -165,6 +189,7 @@ class ActionAuditJournal:
         if approval_mode is not None:
             record["approval"] = approval_mode  # who approved: the user, or a setting they enabled
         self._append(record)
+        _notify_decision(record)
 
     def record_receipt(self, request: ActionRequest, receipt: Any) -> None:
         if not isinstance(request, ActionRequest):
