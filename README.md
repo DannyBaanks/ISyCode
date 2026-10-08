@@ -360,6 +360,13 @@ Desde 2026-10-07, `secure_closed: true` es un resultado verificado, no una etiqu
 - **Broker semántico local:** build y arranque Docker con health check mediante el owner de ISyCode, en red interna, montaje read-only y sin credenciales.
 - **Chat con NVIDIA NIM** tras autorizar el host; cancelación de chat y streaming.
 - **Agente con herramientas en la máquina de Danny (Linux):** leer, buscar, escribir, editar y borrar de principio a fin pasando por las aprobaciones. Un modelo de NVIDIA (Nemotron) ejecutó además una autoprueba guiada de lectura, edición, mover, borrar, ataques que deben fallar, comandos y git; sus hallazgos de UX se corrigieron (decisión visible, *Replace whole file*, cómo activar herramientas).
+- **Recuperación y cápsula contra NVIDIA NIM (2026-10-08).** Se probaron cuatro casos:
+  - La cápsula sola, y también con notas narrativas: el modelo real recordó una palabra clave que solo estaba en un mensaje viejo que el request ya no llevaba.
+  - Un rechazo real por tamaño en `gpt-oss-20b` (896k caracteres), recuperado con un único reenvío de 3,4k tokens.
+  - Un stream real cortado a mitad, recuperado con un reintento idéntico.
+  - El canario encontró que NIM responde un desborde como `max_tokens must be at least 1, got -N`, sin la palabra "context", y eso quedó corregido.
+
+  Los cortes del lado del servidor, los 429 y los 5xx reales siguen NOT_DEMONSTRATED. Evidencia: [`docs/evidence/continuity-canary-2026-10-08/`](docs/evidence/continuity-canary-2026-10-08/README.md).
 - **Capturas históricas con Textual 8.2.8:** documentaron la ventana de Settings, la ayuda `?`, el hover de la barra inferior y los interruptores del panel lateral. Se conservan como evidencia de esa revisión de la interfaz.
 
 **Implementado y probado solo con dobles de prueba** (la suite hermética lo cubre, pero no se ha ejecutado contra el sistema real):
@@ -369,7 +376,6 @@ Desde 2026-10-07, `secure_closed: true` es un resultado verificado, no una etiqu
 - Provider Anthropic: el SDK real contra respuestas HTTP simuladas; sin llamadas a la API real.
 - MCP local: servidor MCP simulado.
 - Portapapeles: las pruebas unitarias siguen usando una herramienta simulada. El 2026-10-04, en este escritorio X11, `ClipboardOwner.copy` pasó por el grant y por `xclip`: decisión ALLOW, la lectura de vuelta coincidió y el portapapeles anterior se restauró. Evidencia: `docs/evidence/clipboard-witness-2026-10-04.json`. El journal guarda tamaño y digest, no el texto.
-- Recuperación automática y cápsula de continuidad: la suite usa providers simulados que cortan el stream, devuelven 5xx/429/413 o `context_length_exceeded`. Todavía no se ejecutó un canario contra un provider real.
 - Archivos en Windows: la lógica se prueba en Linux simulando la ruta final del handle; aún no se ha ejecutado en Windows.
 
 **Parcial o pendiente:**
@@ -418,10 +424,10 @@ El engranaje **Settings** incluye el mapa completo.
 
 Lo poquito que queda, en orden:
 
-1. **Catálogo NVIDIA:** el 2026-10-03, en la cuenta y el endpoint de chat probados, 55 IDs respondieron HTTP 404 y el selector los oculta sin borrarlos. Eso no es un campo oficial de deprecación y no se transfiere a otros endpoints. Nueve quedaron NOT_DEMONSTRATED. Evidencia: `docs/evidence/tools-catalog-2026-10-03/`.
+1. **Catálogo NVIDIA:** medido de nuevo el 2026-10-08 en la cuenta y el endpoint de chat probados: 80 modelos, 18 disponibles y los mismos 55 con HTTP 404. El selector oculta esos 404 sin borrarlos. Un 404 no es un campo oficial de deprecación y no se transfiere a otros endpoints. Siete quedaron NOT_DEMONSTRATED (timeout, 500, 400 o stream cortado). Evidencia: `docs/evidence/continuity-canary-2026-10-08/`.
 2. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
 3. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
-4. **Canario real de recuperación y cápsula:** cortar un stream y llenar la ventana de un modelo real (por ejemplo, NVIDIA NIM). El ahorro por caché de prompts de cada provider sigue NOT_DEMONSTRATED.
+4. **Recuperación y cápsula fuera de NVIDIA:** con NIM ya están probadas (2026-10-08). Faltan Anthropic, OpenAI y otros providers, que pueden redactar el rechazo por tamaño de otra forma, además de 429/5xx reales y el ahorro por caché de prompts (NOT_DEMONSTRATED).
 5. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
