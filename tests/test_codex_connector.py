@@ -3,6 +3,7 @@ import asyncio
 import json
 from pathlib import Path
 import sys
+import time
 
 import pytest
 
@@ -40,6 +41,8 @@ for line in sys.stdin:
             sys.stdout.write('{"token":"SECRET",broken}\n'); sys.stdout.flush()
         elif SCENARIO == "oversized":
             sys.stdout.write('x' * 1_000_002 + '\n'); sys.stdout.flush()
+        elif SCENARIO == "unterminated":
+            sys.stdout.write('x' * (4 * 1024 * 1024)); sys.stdout.flush(); time.sleep(30)
         elif SCENARIO == "nonfinite":
             sys.stdout.write('{"id":1,"result":{"a":NaN}}\n'); sys.stdout.flush()
         elif SCENARIO == "wrong_home":
@@ -413,3 +416,19 @@ def test_inline_image_is_actual_user_input_not_json_text(tmp_path):
     assert url not in turn["input"][0]["text"]
     assert turn["effort"] == "low"
     assert turn["environments"] == []
+
+
+def test_a_frame_without_newline_cannot_grow_past_the_pending_limit(tmp_path, monkeypatch):
+    """Hermes audit 2026-10-08, finding 4: 4 MiB with no newline kept initialization pending."""
+    import isycode.codex_connector as codex
+    monkeypatch.setattr(codex, "MAX_PENDING_FRAME", 1024 * 1024)
+    connection = connector(tmp_path, "unterminated", timeout_s=10)
+    async def run():
+        started = time.monotonic()
+        with pytest.raises(CodexConnectorError):
+            async with connection:
+                pass
+        # Refused when the line passes the limit, not after buffering until the 10 s deadline.
+        assert time.monotonic() - started < 5
+        assert connection._process.returncode is not None
+    asyncio.run(run())

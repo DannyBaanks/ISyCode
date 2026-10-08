@@ -18,6 +18,10 @@ from isycode.providers import ProviderError
 
 
 MAX_FRAME = 2**63 - 1  # No local transcript/response size ceiling.
+# Bytes buffered for one JSON-RPC line that has not ended yet. This bounds the
+# transport, not transcripts or generation: a frame this large is a broken or
+# hostile peer, and without it a line with no newline grows until memory runs out.
+MAX_PENDING_FRAME = 256 * 1024 * 1024
 MAX_ARGUMENTS = 64 * 1024
 MAX_EVENTS = 64
 MAX_TEXT = 2**63 - 1
@@ -196,7 +200,7 @@ class CodexConnector:
                 self.executable, "app-server", "--listen", "stdio://",
                 stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE, cwd=str(self.home),
-                env=self._environment(), limit=MAX_FRAME + 1), self.timeout_s)
+                env=self._environment(), limit=MAX_PENDING_FRAME), self.timeout_s)
             self._reader = asyncio.create_task(self._read_loop())
             self._stderr = asyncio.create_task(self._discard_stderr())
             result = await self.request("initialize", {
@@ -285,7 +289,10 @@ class CodexConnector:
         assert self._process and self._process.stdout
         try:
             while True:
-                raw = await self._process.stdout.readline()
+                try:
+                    raw = await self._process.stdout.readline()
+                except ValueError:  # the line outgrew MAX_PENDING_FRAME before its newline
+                    raise CodexConnectorError("Codex frame exceeds the transport limit") from None
                 if not raw:
                     raise CodexConnectorError("Codex app-server disconnected")
                 if len(raw) > MAX_FRAME or not raw.endswith(b"\n"):
