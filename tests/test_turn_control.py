@@ -470,3 +470,30 @@ def test_g6_05_backoff_is_bounded_cancellable_and_does_not_change_authority(tmp_
     assert attempts["n"] == 3
     assert json.dumps(authority.policy(), sort_keys=True) == before
     assert authority.policy().get("mode") == "security"
+
+
+def test_two_threads_on_one_journal_cannot_both_claim_the_same_effect(tmp_path):
+    """Hermes audit 2026-10-08, finding 5: _depth took another thread for reentry."""
+    import threading
+    import time
+    root = tmp_path / "project"
+    root.mkdir()
+    journal = OperationJournal(root, state_directory=tmp_path / "operations")
+    read = journal._read
+
+    def slow_read():
+        state = read()
+        time.sleep(0.2)  # widen the read-then-write window
+        return state
+    journal._read = slow_read
+    results = []
+
+    def claim():
+        results.append(journal.claim_effect("ab" * 32, kind="publish")[1])
+    threads = [threading.Thread(target=claim) for _ in range(2)]
+    threads[0].start()
+    time.sleep(0.05)  # the first thread holds the lock and sits in its slow read
+    threads[1].start()
+    for thread in threads:
+        thread.join(10)
+    assert sorted(results) == [False, True]

@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 import random
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -67,6 +68,9 @@ class OperationJournal:
         self.path = base / f"{self.identity}.json"
         self.lock_path = base / f"{self.identity}.lock"
         self._depth = 0
+        # flock is per process and _depth counts reentry: without this a second
+        # thread on the same instance would look like reentry and skip the lock.
+        self._thread_lock = threading.RLock()
         self._descriptor: int | None = None
 
     def lookup(self, operation_id: str) -> OperationRecord | None:
@@ -138,6 +142,14 @@ class OperationJournal:
         return {"version": JOURNAL_VERSION, "identity": self.identity, "operations": {}}
 
     def _acquire(self) -> None:
+        self._thread_lock.acquire()
+        try:
+            self._acquire_file()
+        except BaseException:
+            self._thread_lock.release()
+            raise
+
+    def _acquire_file(self) -> None:
         if self._depth:
             self._depth += 1
             return
@@ -163,6 +175,12 @@ class OperationJournal:
     def _release(self) -> None:
         if self._depth == 0:
             return
+        try:
+            self._release_file()
+        finally:
+            self._thread_lock.release()
+
+    def _release_file(self) -> None:
         self._depth -= 1
         if self._depth:
             return
