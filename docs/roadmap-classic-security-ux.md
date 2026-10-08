@@ -1,7 +1,7 @@
 # Roadmap ejecutable: Classic seguro, Security explícito y UX de uso diario
 
-Fecha: 2026-10-02. Estado: **M0, M1, M2, M3, M4, M5 y M6 en revisión; M6A–M10 pendientes**. Ninguna puerta está APROBADA.
-Este documento define el destino y sus puertas de aceptación; publicarlo no supera ninguna puerta.
+Fecha: 2026-10-02. Estado: **M0–M8 están APROBADO, cada uno solo para el SHA evaluado en su `gate.yaml` (tabla de la sección 4)**. Esa aceptación no reaprueba el HEAD actual. **M9 y M10 siguen PENDIENTE; M9 no está APROBADO.**
+Este documento define el destino y sus puertas de aceptación; publicarlo no supera ninguna puerta. `scripts/validate_gates.py` comprueba la evidencia histórica contra su `sha_evaluado` y no hereda esa aprobación al checkout.
 La evidencia de M0 está en [docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/](evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml). No aprueba G0.
 La evidencia de M1 está en [docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/](evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/gate.yaml). No aprueba G1 ni abre Classic autónomo.
 Los IDs `M0`–`M10` (incluido `M6A`) son locales a este roadmap, no los del [roadmap histórico](ROADMAP.md).
@@ -427,14 +427,14 @@ Los artefactos CI y aceptación viven ligados al código probado; el mero ficher
 
 ## 7. Handoff para cualquier agente y siguiente paso
 
-**Próximo paso: G0, G1, G2, G3, G4, G5 y G6 siguen EN REVISIÓN. Ninguna puerta está APROBADA. Los push del producto de M6 (`a495361`) y de su evidencia (`c339060`) imprimieron `Bypassed rule violations`: los tres checks siguen exigidos y `enforce_admins` sigue apagado. El propietario pidió seguir con la implementación; eso no convierte estas puertas en APROBADO. La evidencia de M6 está en [docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/](evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/gate.yaml). El siguiente trabajo de producto es M6A (agentes observables e instrucciones en cola). M6 no abrió el bucle de agente.**
+**Próximo paso: M0–M8 están APROBADO en la tabla de la sección 4, cada uno ligado al SHA de su evidencia. Esa aceptación no se hereda al HEAD actual. M9 sigue PENDIENTE y no está APROBADO: el soak de memoria no fue aceptado, G9-05 no lo ejecutaron cinco personas, y la validación de release sigue rechazando M9. M10 sigue PENDIENTE. El siguiente trabajo de producto es M9, sin declarar esa puerta aprobada. Los push históricos de M6 (`a495361`, evidencia `c339060`) imprimieron `Bypassed rule violations`; `enforce_admins` sigue apagado y eso no reabre ni reaprueba puertas ya aceptadas en su SHA.**
 
 ```text
 Trabaja en ISyCode siguiendo docs/roadmap-classic-security-ux.md.
 1. Lee AGENTS.md, git status/branch/remotes y las instrucciones aplicables.
 2. Preserva cambios ajenos; identifica baseline y evidencia del ultimo gate.
-3. Selecciona el primer hito cuyas dependencias esten APROBADAS.
-   M0, M1, M2, M3, M4, M5 y M6 están EN REVISIÓN: no los marques APROBADOS ni los reabras como si no hubiera evidencia.
+3. Selecciona el primer hito cuyas dependencias esten APROBADAS en su SHA evaluado.
+   M0–M8 lo están solo para esos SHA. No reapruebes el HEAD actual ni marques M9 o M10.
 4. Reutiliza owners y contratos existentes; verifica fuentes antes de proponer duplicados.
 5. Ejecuta sus IDs de aceptacion y regresiones pertinentes con SHA y entorno.
 6. Si falla una prueba obligatoria, para dependientes y corrige o registra BLOQUEADO.

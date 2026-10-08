@@ -17,7 +17,7 @@ import urllib.request
 import urllib.error
 from typing import Iterator, Callable
 
-from isycode.egress import EgressDenied, review_destination
+from isycode.egress import EgressDenied, open_reviewed, review_destination
 from isycode.turn_control import TransportRetry, tool_arguments_complete
 
 DEFAULT_STREAM_TIMEOUT_S = None
@@ -138,13 +138,11 @@ def stream_complete(
     usage: dict = {}
     t0 = time.time()
     try:
-        review_destination(base_url)
+        reviewed = review_destination(base_url)
     except EgressDenied as exc:
         raise StreamError(str(exc)) from exc
     try:
-        resp = urllib.request.build_opener(
-            urllib.request.ProxyHandler({}), _RejectRedirectHandler).open(
-            req, timeout=timeout_s)
+        resp = open_reviewed(reviewed, _RejectRedirectHandler()).open(req, timeout=timeout_s)
     except urllib.error.HTTPError as e:
         from isycode.provider_errors import error_signals
         code, retry = error_signals(e.read(65536), {"retry-after": e.headers.get("Retry-After", "")})

@@ -101,6 +101,49 @@ def test_without_a_provider_grant_nothing_is_sent(workspace):
     assert code == EXIT_DENIED and "provider request DENY" in log.getvalue()
 
 
+def test_terminal_writes_drop_controls_and_json_keeps_the_answer(workspace):
+    raw = "ok \x1b[2J\x1b]52;c;cHdu\x07 tail"
+    WorkspaceAuthority(workspace).set_mode("classic")
+
+    async def transport(messages, tools, on_chunk):
+        on_chunk("content", raw)
+        return {"text": "", "tool_calls": []}
+
+    out, log = io.StringIO(), io.StringIO()
+    assert asyncio.run(run_headless("hi", root=workspace, out=out, log=log,
+                                    transport=transport)) == EXIT_OK
+    shown = out.getvalue()
+    assert "\x1b" not in shown and "\x07" not in shown
+    assert shown.startswith("ok ") and shown.endswith(" tail\n")
+
+    out = io.StringIO()
+    assert asyncio.run(run_headless("hi", root=workspace, out=out, log=io.StringIO(),
+                                    transport=transport, json_output=True)) == EXIT_OK
+    encoded = out.getvalue()
+    assert "\x1b" not in encoded and "\x07" not in encoded
+    assert json.loads(encoded)["answer"] == raw
+
+
+def test_stderr_drops_controls_from_provider_and_tool_text(workspace):
+    from isycode.providers import ProviderError
+    WorkspaceAuthority(workspace).set_mode("classic")
+    calls = {"n": 0}
+
+    async def transport(messages, tools, on_chunk):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"text": "", "tool_calls": [{"id": "c1", "function": {
+                "name": "tool\x1b[2J", "arguments": "{}"}}]}
+        raise ProviderError("boom \x1b]52;c;cHdu\x07")
+
+    log = io.StringIO()
+    assert asyncio.run(run_headless("hi", root=workspace, out=io.StringIO(), log=log,
+                                    transport=transport)) == 1
+    text = log.getvalue()
+    assert "\x1b" not in text and "\x07" not in text
+    assert "tool" in text and "ProviderError" in text
+
+
 def test_usage_errors_and_launcher_routing(monkeypatch):
     assert main(["--json"]) == EXIT_USAGE
     assert main(["-p"], stdin=io.StringIO("   ")) == EXIT_USAGE

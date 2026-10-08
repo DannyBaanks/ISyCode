@@ -13,6 +13,8 @@ import urllib.error
 import urllib.parse
 from dataclasses import dataclass
 
+from isycode.egress import cleartext_loopback_host
+
 
 class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Do not forward a Gateway bearer token to a different origin."""
@@ -56,9 +58,7 @@ class GatewayClient:
             raise ValueError("GATEWAY_URL must be an http(s) server URL.")
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("GATEWAY_URL must not contain credentials, query, or fragment.")
-        host = parsed.hostname.lower()
-        local_http = host == "localhost" or host == "::1" or host.startswith("127.")
-        if parsed.scheme != "https" and not local_http:
+        if parsed.scheme != "https" and not cleartext_loopback_host(parsed.hostname):
             raise ValueError("Gateway bearer credentials require HTTPS unless the server is loopback.")
 
     def _request(self, method: str, path: str, body: dict | None = None) -> dict:

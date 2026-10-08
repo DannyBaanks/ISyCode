@@ -471,3 +471,21 @@ def test_g5_05_revoking_a_provider_does_not_switch_endpoint(tmp_path, monkeypatc
     assert response is None and called == [] and outcome.decision == "DENY"
     _files_lack(CANARY, tmp_path / "state")
     _files_lack(CANARY, root)
+
+
+def test_name_resolving_to_cgnat_is_denied_and_a_typed_address_is_kept(monkeypatch):
+    monkeypatch.setattr("urllib.request.getproxies", lambda: {})
+    real = socket.getaddrinfo
+
+    def fake(host, port, *args, **kwargs):
+        if host == "metadata.example.test":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("100.100.100.200", port))]
+        return real(host, port, *args, **kwargs)
+
+    monkeypatch.setattr("isycode.egress.socket.getaddrinfo", fake)
+    with pytest.raises(EgressDenied, match="unexpected private address"):
+        review_destination("https://metadata.example.test/v1")
+    reviewed = review_destination("http://100.100.100.200:9/v1")
+    assert reviewed.ips == ("100.100.100.200",)
+    reviewed = review_destination("http://127.0.0.1:9/v1")
+    assert reviewed.ips == ("127.0.0.1",)
