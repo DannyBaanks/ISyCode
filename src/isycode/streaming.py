@@ -150,7 +150,13 @@ def stream_complete(
     except (urllib.error.URLError, OSError) as e:
         raise StreamError(f"stream unreachable: {e}")
     try:
-        for raw_line in resp:
+        while True:
+            # Same bounds as async_stream_complete: one SSE line is at most 1 MiB.
+            raw_line = resp.readline(1024 * 1024 + 1)
+            if not raw_line:
+                break
+            if len(raw_line) > 1024 * 1024:
+                raise StreamError("provider SSE frame exceeds 1 MiB")
             line = raw_line.decode(errors="replace").strip()
             if not line.startswith("data:"):
                 continue
@@ -161,6 +167,13 @@ def stream_complete(
                 evt = json.loads(data)
             except json.JSONDecodeError:
                 continue
+            if not isinstance(evt, dict):
+                continue
+            if "error" in evt:
+                # Providers may fail after HTTP 200; never echo their body.
+                from isycode.provider_errors import error_signals
+                code, _ = error_signals(json.dumps(evt))
+                raise StreamError("provider reported a streaming API error", provider_code=code)
             choices = evt.get("choices") or []
             if not choices:
                 if "usage" in evt:
