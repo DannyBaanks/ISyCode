@@ -23,6 +23,8 @@ from isycode.lsp import (
     language_server_catalog,
 )
 from isycode.workspace import WorkspaceUnavailable
+from isycode.action_audit import ActionAuditError, ActionAuditJournal
+from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.tui_theme import (
     TEXT,
     MUTED,
@@ -248,6 +250,57 @@ class RailMixin:
         self.query_one("#lsp-status", Static).update(body)
         self._set_rail_title("rail-lsp", title)
         self._paint_idle()
+
+    # ── IsySentinel ────────────────────────────────────────────────────
+    def _on_journal_decision(self, record: dict) -> None:
+        """Journal observer: may run on a worker thread; paints on the UI thread."""
+        def apply() -> None:
+            self._sentinel_feed.add(record)
+            self._paint_sentinel()
+        try:
+            self.call_from_thread(apply)
+        except RuntimeError:          # already on the app's thread (or not running)
+            apply()
+
+    def _paint_sentinel(self) -> None:
+        if not self.is_mounted or not self.screen_stack:
+            return
+        from isycode.sentinel_rail import render
+        from isycode.workspace_trust import WorkspaceTrust
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            policy = authority.effective_policy()
+            trusted = policy.get("mode") == "classic" and WorkspaceTrust().trusted(authority)
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            policy, trusted = None, False
+        body, title = render(self._sentinel_feed, policy, trusted=trusted)
+        try:
+            self.screen_stack[0].query_one("#sentinel-status", Static).update(body)
+        except NoMatches:
+            return
+        self._set_rail_title("rail-sentinel", title)
+
+    async def _load_sentinel_journal(self) -> None:
+        """Verify the hash chain once and show its latest decisions (not counted)."""
+        def read():
+            journal = ActionAuditJournal.for_read_only_inspection(self._workspace_root)
+            return journal.verify(recent_limit=40)
+        try:
+            report = await asyncio.to_thread(read)
+        except (ActionAuditError, OSError, ValueError) as exc:
+            self._sentinel_feed.journal = f"unreadable · {type(exc).__name__}"
+        else:
+            if report.status == "NOT_VERIFIABLE":
+                self._sentinel_feed.journal = "empty"
+            else:
+                self._sentinel_feed.journal = f"{report.status} · {report.records} records"
+            seen = list(self._sentinel_feed.recent)
+            self._sentinel_feed.recent.clear()
+            for record in report.recent:
+                self._sentinel_feed.add(record, count=False)
+            for entry in seen:                 # decisions that arrived while verifying
+                self._sentinel_feed.recent.append(entry)
+        self._paint_sentinel()
 
     def _show_lsp_install_hints(self) -> None:
         """Show the exact install command. Nothing is downloaded or started."""

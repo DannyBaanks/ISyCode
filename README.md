@@ -43,6 +43,7 @@ Lo que verás al usarla:
 - **Aprobaciones:** mientras la carpeta no está confiada, cada cambio, comando o commit abre una ventana con el diff o el comando exacto. `y` aprueba, `n` o `Esc` rechazan y `Enter` sobre el botón por defecto rechaza. Si una escritura reemplaza un archivo existente completo, la ventana lo dice: *Replace whole file*. Tras confiar la carpeta, las ediciones recuperables y los comandos con sandbox dejan de abrir esa ventana. El commit, los secretos, la autoridad, deshacer y MCP siguen abriéndola.
 - **Settings y la paleta `/`:** se abren como una ventana grande y centrada. La opción resaltada se explica debajo de la lista; las que llevan `?` abren un cuadrito de ayuda al pulsar `?`. En el campo de filtro, `?` se escribe normal.
 - **Panel Tasks:** el plan del agente con su progreso. Clic en el panel o `Ctrl+T` lo pliegan a una línea (`▸ Tasks · 3/7 done · now: …`) y lo vuelven a abrir.
+- **IsySentinel en el panel lateral:** es la primera sección del panel y se actualiza en vivo. Muestra el modo del workspace y los permisos que Sentinel aceptaría ahora mismo. Si una etiqueta agrupa varias acciones y una de ellas está denegada, sale como *partial*. Debajo van las últimas decisiones ALLOW/DENY, con los checks que fallaron o quién aprobó, y el estado de la cadena del journal. El título lleva la cuenta de la sesión (`IsySentinel · 12 allow · 1 deny`). Solo muestra los campos que guarda el journal: nunca prompts, rutas, parámetros ni contenido. Es solo lectura y no decide nada.
 - **Panel lateral:** MCPs, LSPs y Skills se leen por un punto de color (verde listo, ámbar comprobando, rojo no listo, gris apagado), sin pastilla de fondo. El título resume, por ejemplo `LSPs · 1 ready · 5 missing`. *Install commands* escribe el comando exacto en la sección y no descarga ni arranca nada. Cada sección se pliega con un clic en su título; Gateway, Mobile Host, Bridge y Workspace empiezan plegadas.
 - **Copiar:** con el permiso *Copy selected text to the clipboard*, seleccionar texto con el ratón lo copia al portapapeles del sistema (wl-copy, xclip, xsel, pbcopy o clip, y además OSC 52). El botón *Copy path* del árbol de archivos usa el mismo camino. El campo de API key nunca se copia y el journal guarda solo tamaño y digest, nunca el texto.
 
@@ -213,7 +214,7 @@ Si una herramienta está apagada, el agente te dice dónde activarla en vez de s
 
 ### Ediciones
 
-`workspace_edit` reemplaza un fragmento exacto de un archivo; `workspace_write` propone el contenido completo y puede crear hasta 8 carpetas nuevas, que aparecen en la aprobación. La escritura es atómica, no sigue symlinks, rechaza rutas sensibles y archivos de más de 128 KiB, y **no sobrescribe si el archivo cambió después de la revisión**. Cada cambio guarda un checkpoint fuera del proyecto para `/undo`.
+`workspace_edit` reemplaza un fragmento de un archivo. Si el texto no aparece tal cual, lo busca por líneas completas ignorando, en este orden: los finales de línea (CRLF/LF), los espacios al final y la sangría. En el último caso re-sangra el texto nuevo según el archivo (tabs o N espacios). La coincidencia tiene que ser única, nunca se busca a medias dentro de una línea y un archivo con finales de línea mezclados solo acepta el texto exacto. La aprobación sigue mostrando el diff exacto. El chat avisa `matched ignoring indentation` y el modelo recibe `matched_ignoring`. `workspace_write` propone el contenido completo y puede crear hasta 8 carpetas nuevas, que aparecen en la aprobación. La escritura es atómica, no sigue symlinks, rechaza rutas sensibles y archivos de más de 128 KiB, y **no sobrescribe si el archivo cambió después de la revisión**. Cada cambio guarda un checkpoint fuera del proyecto para `/undo`.
 
 En Linux y macOS se usan descriptores que nunca siguen enlaces. En Windows se usan rutas verificadas: se rechazan symlinks y junctions en toda la ruta y se comprueba con la ruta final del handle que lo abierto está dentro del workspace. En escrituras queda una ventana mínima entre la última comprobación y el `rename`, documentada en [`src/isycode/winfs.py`](src/isycode/winfs.py).
 
@@ -418,12 +419,10 @@ El engranaje **Settings** incluye el mapa completo.
 Lo poquito que queda, en orden:
 
 1. **Catálogo NVIDIA:** el 2026-10-03, en la cuenta y el endpoint de chat probados, 55 IDs respondieron HTTP 404 y el selector los oculta sin borrarlos. Eso no es un campo oficial de deprecación y no se transfiere a otros endpoints. Nueve quedaron NOT_DEMONSTRATED. Evidencia: `docs/evidence/tools-catalog-2026-10-03/`.
-2. **Rail de IsySentinel:** que el panel lateral muestre en vivo qué decidió Sentinel (ALLOW/DENY) y qué permisos están activos, junto a MCP/LSP.
-3. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
-4. **Ediciones tolerantes a espacios:** que `workspace_edit` encuentre el fragmento aunque cambien espacios o sangría, mostrando siempre el diff exacto antes de aprobar.
-5. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
-6. **Canario real de recuperación y cápsula:** cortar un stream y llenar la ventana de un modelo real (por ejemplo, NVIDIA NIM). El ahorro por caché de prompts de cada provider sigue NOT_DEMONSTRATED.
-7. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
+2. **Identidad visual propia:** terminar de diferenciar la TUI (marca, colores, encabezado) de otras CLIs.
+3. **Validar en real** lo que sigue en doble de prueba: MCP local, Claude nativo y Windows. El portapapeles de este escritorio X11 quedó visto el 2026-10-04 (`docs/evidence/clipboard-witness-2026-10-04.json`). El sandbox Linux con bubblewrap sí se vio en vivo el 2026-10-03 (un proceso ShellBox real y su cancelación, `docs/evidence/tools-catalog-2026-10-03/shellbox-live.json`).
+4. **Canario real de recuperación y cápsula:** cortar un stream y llenar la ventana de un modelo real (por ejemplo, NVIDIA NIM). El ahorro por caché de prompts de cada provider sigue NOT_DEMONSTRATED.
+5. **Remotos de M15 y Mobile Host:** una operación real contra el Gateway con permiso y scope, y sesiones/approvals remotos en Mobile Host.
 
 ## Roadmap y documentación
 

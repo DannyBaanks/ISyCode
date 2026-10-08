@@ -102,6 +102,8 @@ from isycode.prompt_expansion import (
     parse_command, read_result_text, render_command,
 )
 from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
+from isycode.action_audit import add_decision_listener, remove_decision_listener
+from isycode.sentinel_rail import SentinelFeed
 from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
 from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME, validate_question
@@ -348,6 +350,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._history: list[dict] = []
         self._last_context_input_tokens = None
         self._tool_history: list[dict] = []
+        self._sentinel_feed = SentinelFeed()
         self._idea_box = ""
         self._idea_nudge_due = False
         self._idea_nudge_timer = None
@@ -537,6 +540,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._refresh_usage()
         self._set_activity("Chat ready", MUTED)
         self.set_interval(1.0, self._paint_work_status)
+        add_decision_listener(self._on_journal_decision)
+        self.set_interval(5.0, self._paint_sentinel)   # permissions changed in Settings
+        self.run_worker(self._load_sentinel_journal(), group="sentinel-journal")
         prompt = self.query_one("#prompt-input", PromptArea)
         self.query_one("#role-button", Button).label = self._role_button_label()
         self._refresh_model_button()
@@ -584,6 +590,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     async def on_unmount(self, event) -> None:
         """Release local temporary state; unowned optional services never start in Secure."""
         del event
+        remove_decision_listener(self._on_journal_decision)
         if self._draft_timer is not None:
             self._draft_timer.stop()
         self._save_draft()
