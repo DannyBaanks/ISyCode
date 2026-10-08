@@ -10,7 +10,7 @@ import json
 import uuid
 from isycode.work_list import clock_label
 from datetime import datetime
-from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
+from isycode.tool_history import record_tool_result, sanitize_historical_text
 from isycode.catalog import ROLE_KERNEL
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.action_runtime import (
@@ -46,7 +46,9 @@ def _recovery_label(kind: str) -> str:
     return {"STREAM": "Stream interrupted", "NETWORK": "Connection lost",
             "TIMEOUT": "Provider timed out", "PROVIDER": "Provider error",
             "RATE_LIMIT": "Provider rate limited"}.get(kind, "Provider failure")
-from isycode.agent_loop import split_history, summary_messages, summary_system_message
+from isycode.agent_loop import split_history, summary_messages, summary_system_message, total_chars
+from isycode.continuity_capsule import (build_capsule, capsule_message, history_budget_chars,
+                                         plan_context, shrink_request)
 from isycode.prompt_expansion import (
     MAX_MENTIONS,
     WORKSPACE_COMMANDS_DIR,
@@ -73,6 +75,7 @@ from isycode.providers import (
     ProviderError,
     load_provider_key,
     model_slot,
+    model_context_limit,
     resolved_chat_model,
     selected_provider_name,
 )
@@ -133,17 +136,65 @@ class ChatMixin:
         if not older:
             self._append("  Nothing to compact yet.", MUTED)
             return
-        compact_slot = model_slot("small")
-        provider_name = (compact_slot or {}).get("provider") or selected_provider_name()
-        provider_model = (compact_slot or {}).get("model") or resolved_chat_model(provider_name)
         try:
-            provider = Provider(name=provider_name, model=provider_model,
-                                api_key=load_provider_key(provider_name) or None)
+            provider = self._compaction_provider()
         except ProviderError as exc:
             self._append(f"  {self._provider_failure(exc, 'Compaction')}", RED)
             return
         owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
         await self._summarize_older(provider, owner, older, recent, instructions)
+
+    @staticmethod
+    def _compaction_provider() -> Provider:
+        """The "small" model slot when configured, else the chat model."""
+        compact_slot = model_slot("small")
+        provider_name = (compact_slot or {}).get("provider") or selected_provider_name()
+        provider_model = (compact_slot or {}).get("model") or resolved_chat_model(provider_name)
+        return Provider(name=provider_name, model=provider_model,
+                        api_key=load_provider_key(provider_name) or None)
+
+    def _context_budget(self) -> int:
+        provider_name = selected_provider_name()
+        limit, _ = model_context_limit(provider_name, resolved_chat_model(provider_name))
+        return history_budget_chars(limit)
+
+    def _context_plan(self) -> dict:
+        return plan_context(self._history, self._tool_history, budget_chars=self._context_budget(),
+                            summary=self._conversation_summary, tasks=self._agent_tasks,
+                            idea_box=self._idea_box)
+
+    async def _plan_turn_context(self) -> dict:
+        """What this request carries (ADR 0009): everything, or recent history + a capsule.
+
+        When the history does not fit the model window, the older messages are
+        first condensed into narrative notes by the small model slot, but only
+        when that slot uses the chat's own provider: automatic compaction never
+        sends the conversation to a provider the user did not choose for it.
+        Without notes (another provider, a failure, a denial) the deterministic
+        capsule alone covers the older messages. It costs no tokens.
+        """
+        plan = self._context_plan()
+        if not plan["older"]:
+            self._capsule_dropped = 0
+            return plan
+        try:
+            provider = self._compaction_provider()
+        except ProviderError:
+            provider = None
+        if provider is not None and provider.name == selected_provider_name() \
+                and provider.configured():
+            owner = ProviderNetworkOwner(self._workspace_root,
+                                         WorkspaceAuthority(self._workspace_root))
+            if await self._summarize_older(provider, owner, plan["older"], plan["history"]):
+                plan = self._context_plan()
+        if plan["older"] and len(plan["older"]) != getattr(self, "_capsule_dropped", 0):
+            provider_name = selected_provider_name()
+            self._append(
+                f"  Context capsule · {len(plan['older'])} earlier messages and old tool results "
+                f"condensed to fit {resolved_chat_model(provider_name)}; the saved conversation "
+                "keeps everything", MUTED)
+        self._capsule_dropped = len(plan["older"])
+        return plan
 
     async def _run_custom_command(self, text: str) -> None:
         """Expand /name from the user's or the workspace's prompt files, else chat as typed."""
@@ -289,11 +340,11 @@ class ChatMixin:
         # ``nonlocal`` declaration below resolves to an enclosing cell. Initialising
         # to None also makes a read before the real assignment raise a clear
         # TypeError instead of UnboundLocalError masking the original fault.
-        chat_tools = command_active = messages = notes = None
+        chat_tools = command_active = messages = notes = context_plan = None
         provider = provider_supports_tools = thought_started = tools_active = None
 
         async def _prepare_chat_tools() -> None:
-            nonlocal chat_tools, command_active, messages, notes, provider_supports_tools, text, tools_active
+            nonlocal chat_tools, command_active, context_plan, messages, notes, provider_supports_tools, text, tools_active
             if self._agent_context and self._agent_context.get("path") == "AGENTS.md":
                 await self._load_project_context()
             text = await self._expand_mentions(text)
@@ -407,8 +458,9 @@ class ChatMixin:
                 "person can cancel. update_idea_box only updates the visible Idea box. Neither changes "
                 "the workspace; ask_user and update_idea_box grant nothing. " + tool_availability
             )
-            notes = tool_history_context(self._tool_history)
-            messages = [dict(message) for message in self._history]
+            context_plan = await self._plan_turn_context()
+            notes = context_plan["notes"]
+            messages = [dict(message) for message in context_plan["history"]]
             messages.insert(0, {
                 "role": "system",
                 "content": (
@@ -591,7 +643,11 @@ class ChatMixin:
 
             owner = ProviderNetworkOwner(
                 self._workspace_root, WorkspaceAuthority(self._workspace_root))
-            if self._conversation_summary:
+            if context_plan["capsule"]:
+                leading = next((index for index, message in enumerate(messages)
+                                if message.get("role") != "system"), len(messages))
+                messages.insert(leading, capsule_message(context_plan["capsule"]))
+            elif self._conversation_summary:
                 leading = next((index for index, message in enumerate(messages)
                                 if message.get("role") != "system"), len(messages))
                 messages.insert(leading, summary_system_message(self._conversation_summary))
@@ -614,6 +670,11 @@ class ChatMixin:
 
             steer_trial = None
             recovery_failures = 0
+            # Where this turn starts: its user prompt. Everything before it may be
+            # replaced by the capsule if the provider says the request is too long.
+            turn_start = max((index for index, message in enumerate(messages)
+                              if message.get("role") == "user"), default=len(messages))
+            context_shrunk = False
             try:
                 if provider_supports_tools and self._idea_nudge_timer is None and self._lane_on_screen():
                     self._idea_nudge_timer = self.set_interval(
@@ -667,6 +728,30 @@ class ChatMixin:
                             messages = self._image_attachments.without_images(messages)
                             self._append(
                                 "  Picture not accepted · sending the question as text.", YELLOW)
+                            continue
+                        from isycode.provider_errors import classify_provider_error
+                        if (not steered and not context_shrunk
+                                and classify_provider_error(exc)["error_kind"] == "CONTEXT"):
+                            # ADR 0009: the window was smaller than ISyCode estimated.
+                            # Re-send once with the capsule in place of older context;
+                            # the step dispatched nothing, so no effect can repeat.
+                            context_shrunk = True
+                            discard_failed_step(content_mark, reason_mark)
+                            budget = min(self._context_budget(), total_chars(messages) // 2)
+                            earlier = context_plan["older"] + [
+                                message for message in messages[:turn_start]
+                                if message.get("role") != "system"]
+                            capsule = build_capsule(
+                                budget_chars=max(2_000, budget // 4),
+                                tool_history=self._tool_history, older_messages=earlier,
+                                summary=self._conversation_summary, tasks=self._agent_tasks,
+                                idea_box=self._idea_box)
+                            messages, turn_start, removed = shrink_request(
+                                messages, turn_start, capsule, budget)
+                            self._append(
+                                f"  Context capsule · the request was larger than the model "
+                                f"window; {removed} earlier messages or tool results condensed "
+                                "and sent again · no tool effects repeated", MUTED)
                             continue
                         # ADR 0008: this step failed before dispatching any tool, so
                         # re-sending its messages cannot repeat an effect. Fixed delay

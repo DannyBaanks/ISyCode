@@ -439,6 +439,15 @@ class ToolMixin:
                 "Report completed work, errors and remaining work truthfully.") }]
             folders = [{"alias": "main", "path": str(self._workspace_root)}] + self._folder_store().list()
             context[0]["content"] += " Registered folder metadata: " + json.dumps(folders)
+            # ADR 0009: the child starts with the parent's continuity capsule, not
+            # an empty conversation. It is bounded, redacted and carries no grants.
+            from isycode.continuity_capsule import SUBAGENT_CAPSULE_CHARS, build_capsule
+            capsule = build_capsule(
+                budget_chars=SUBAGENT_CAPSULE_CHARS, tool_history=self._tool_history,
+                older_messages=self._history, summary=self._conversation_summary,
+                tasks=self._agent_tasks, idea_box=self._idea_box)
+            if capsule:
+                context.append({"role": "system", "content": capsule})
             if previous_error and self._tool_history:
                 context.append({"role": "system", "content": tool_history_context(self._tool_history)})
             if self._active_skills:

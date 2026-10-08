@@ -198,7 +198,7 @@ Si una herramienta está apagada, el agente te dice dónde activarla en vez de s
 - El chat muestra cada explicación y el razonamiento que entregue el provider, luego sus herramientas y después el siguiente paso. El scroll sigue la salida mientras estás abajo; si subes a leer o buscas un mensaje antiguo, conserva tu posición. Pulsa `End` dentro del chat o vuelve al final para seguir la salida otra vez.
 - Las sesiones conservan notas de herramientas completas, sin recortes automáticos de longitud o número, y su resumen de contexto. Los resultados se muestran como datos no confiables y pueden estar desactualizados; nunca se reejecutan. Si cancelas durante una operación, queda una nota de resultado no verificado para comprobar archivos y journal antes de reintentar. Las sesiones antiguas no pueden recuperar resultados que nunca guardaron.
 - **Dos ventanas, una conversación.** Puedes abrir la misma conversación guardada en dos ventanas o procesos de ISyCode; cada una es una continuidad válida. Lo que no pasa nunca es que se mezclen o se pisen en silencio: cada ventana recuerda la huella (sha256) de lo que cargó o guardó, y solo escribe si el archivo sigue siendo exactamente ese, bajo un lock entre procesos. Si otra ventana la cambió (mensajes, resumen, borrador o notas), esta deja de guardar y te pregunta: guardar la tuya como conversación nueva (*Fork: …*, la otra queda intacta), abrir la versión guardada (descarta lo que solo está en esta ventana, con confirmación) o seguir sin guardar. Con la última, cerrar ISyCode descarta lo que solo está en esta ventana; `/sessions diverged` vuelve a mostrar la elección. El journal registra cada paso solo con ids y huellas. El lock usa `flock` en Linux y macOS; en Windows usa `msvcrt.locking`, todavía sin probar en Windows.
-- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y solicitudes. Las opciones heredadas `chat_token_budget`, `answer_tokens` y `agent_steps` no limitan la conversación activa. No hay límite local de generación ni recorte/compactación automática; el endpoint puede tener límites propios y cobrar según su configuración. `/compact` resume solo cuando lo pides. `/check` y la revisión externa son solicitudes aparte.
+- La línea de consumo y `/usage` muestran tokens reportados de entrada/salida, incluyendo caché de Anthropic, y solicitudes. Las opciones heredadas `chat_token_budget`, `answer_tokens` y `agent_steps` no limitan la conversación activa. No hay límite local de generación. Si el historial no cabe en la ventana del modelo, el request lleva los mensajes recientes y una cápsula de continuidad determinista en lugar de los viejos, sin coste de tokens; un rechazo por "demasiado largo" se reenvía una vez con la cápsula ([ADR 0009](docs/decisions/0009-continuity-capsule.md)). La conversación guardada conserva todo. `/compact` resume cuando lo pides. `/check` y la revisión externa son solicitudes aparte.
 - `@ruta/archivo` en un mensaje adjunta ese archivo (hasta 5), leído con el permiso de lectura y marcado como datos, no instrucciones.
 
 ### Ediciones
@@ -312,8 +312,8 @@ está versionado o Git no puede comprobarlo, se detiene sin cambiar el índice.
 
 **Workspace preferences** permite guardar `default_role` para ese proyecto.
 Las opciones heredadas `agent_steps`, `answer_tokens` y `chat_token_budget` se
-ignoran. Las llamadas al modelo no tienen límites locales de salida ni
-compactación automática del historial; el endpoint aplica sus propios límites.
+ignoran. Las llamadas al modelo no tienen límites locales de salida; si el historial
+no cabe en la ventana del modelo se manda con la cápsula de continuidad (ADR 0009).
 Workspace Authority, IsySentinel y las aprobaciones de herramientas siguen
 activos. **Copy legacy workspace commands…** copia un comando antiguo tras
 revisar el diff y conserva el original. `.gitignore` evita commits accidentales;
