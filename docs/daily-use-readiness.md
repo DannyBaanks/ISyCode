@@ -36,9 +36,11 @@ The status line and `/usage` report provider-reported chat input/output tokens
 and requests. OpenAI requests streamed usage; Anthropic reports usage including
 input cache reads/writes. Other providers may omit usage, so totals can be lower
 bounds. Legacy per-session token budget and output-limit preferences are ignored;
-ISyCode does not impose a local generation cap or automatic history compaction.
-The selected provider endpoint may enforce its own context/output limits and
-billing. `/compact` explicitly summarizes history only when requested.
+ISyCode does not impose a local generation cap. When the history does not fit
+the selected model's window, the request carries the recent messages plus a
+deterministic continuity capsule instead of the older ones, and a "too long"
+rejection is capsuled and sent once more ([ADR 0009](decisions/0009-continuity-capsule.md)).
+The saved conversation keeps everything. `/compact` still summarizes on request.
 Connection checks and external reviews are separate. Legacy session usage is
 unknown; imported counters are historical data, not verified billing records.
 

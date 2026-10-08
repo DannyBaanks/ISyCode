@@ -1,8 +1,13 @@
 """Safe provider diagnostics: classify signals without echoing credentials or bodies."""
 import json
 
-CODE_KINDS = {"unsupported_image": "IMAGES", "unsupported_image_input": "IMAGES", "image_input_not_supported": "IMAGES", "unsupported_steering": "STEER", "steering_not_supported": "STEER", "invalid_api_key": "APIKEY", "authentication_error": "APIKEY", "insufficient_quota": "QUOTA", "billing_hard_limit_reached": "QUOTA", "credit_balance_too_low": "QUOTA", "rate_limit_exceeded": "RATE_LIMIT", "rate_limit_error": "RATE_LIMIT", "model_not_found": "MODEL", "not_found_error": "CONFIG", "permission_denied": "PERMISSION", "overloaded_error": "PROVIDER", "invalid_request_error": "REQUEST"}
-HINTS = {"IMAGES": "Provider reports that image input is not supported", "STEER": "Provider reports that steering is not supported", "APIKEY": "Provider credentials are missing, invalid or rejected", "QUOTA": "Provider reports exhausted quota or a billing restriction", "RATE_LIMIT": "Provider request limit reached; wait before retrying", "MODEL": "Selected model is unavailable to this account", "CONFIG": "Provider model or endpoint was not found", "PERMISSION": "Provider account lacks permission for this request", "PROVIDER": "Provider service failed or is overloaded", "NETWORK": "Could not connect to the provider", "TIMEOUT": "Provider did not respond in time", "STREAM": "Provider response was interrupted", "REQUEST": "Provider rejected the request parameters", "AUTHORITY": "Workspace Authority denied or could not verify the request", "UNKNOWN": "Provider failure without a recognized diagnostic"}
+CODE_KINDS = {"unsupported_image": "IMAGES", "unsupported_image_input": "IMAGES", "image_input_not_supported": "IMAGES", "unsupported_steering": "STEER", "steering_not_supported": "STEER", "invalid_api_key": "APIKEY", "authentication_error": "APIKEY", "insufficient_quota": "QUOTA", "billing_hard_limit_reached": "QUOTA", "credit_balance_too_low": "QUOTA", "rate_limit_exceeded": "RATE_LIMIT", "rate_limit_error": "RATE_LIMIT", "model_not_found": "MODEL", "not_found_error": "CONFIG", "permission_denied": "PERMISSION", "overloaded_error": "PROVIDER", "invalid_request_error": "REQUEST", "context_length_exceeded": "CONTEXT", "string_above_max_length": "CONTEXT"}
+HINTS = {"IMAGES": "Provider reports that image input is not supported", "STEER": "Provider reports that steering is not supported", "APIKEY": "Provider credentials are missing, invalid or rejected", "QUOTA": "Provider reports exhausted quota or a billing restriction", "RATE_LIMIT": "Provider request limit reached; wait before retrying", "MODEL": "Selected model is unavailable to this account", "CONFIG": "Provider model or endpoint was not found", "PERMISSION": "Provider account lacks permission for this request", "PROVIDER": "Provider service failed or is overloaded", "NETWORK": "Could not connect to the provider", "TIMEOUT": "Provider did not respond in time", "STREAM": "Provider response was interrupted", "REQUEST": "Provider rejected the request parameters", "CONTEXT": "Request is larger than the model context window", "AUTHORITY": "Workspace Authority denied or could not verify the request", "UNKNOWN": "Provider failure without a recognized diagnostic"}
+# Wordings providers use when a request exceeds the model window (OpenAI, vLLM/NIM,
+# Anthropic, Gemini-compatible and others); matched only inside the error message.
+CONTEXT_PHRASES = ("maximum context length", "context length", "context_length", "context window",
+                   "prompt is too long", "too many tokens", "input is too long",
+                   "reduce the length", "exceeds the maximum number of tokens")
 
 def error_signals(body, headers=None):
     try:
@@ -11,8 +16,11 @@ def error_signals(body, headers=None):
         if not isinstance(error, dict):
             error = {}
         code = error.get("code") or error.get("type")
-        if "credit balance is too low" in str(error.get("message", ""))[:4096].casefold():
+        message = str(error.get("message", ""))[:4096].casefold()
+        if "credit balance is too low" in message:
             code = "credit_balance_too_low"
+        elif any(phrase in message for phrase in CONTEXT_PHRASES):
+            code = "context_length_exceeded"
     except (ValueError, TypeError, AttributeError):
         code = None
     code = code if isinstance(code, str) and code in CODE_KINDS else None
@@ -50,6 +58,8 @@ def classify_provider_error(exc):
         kind = "RATE_LIMIT"
     elif status == 404:
         kind = "CONFIG"
+    elif status == 413:
+        kind = "CONTEXT"
     elif isinstance(status, int) and status >= 500:
         kind = "PROVIDER"
     elif isinstance(status, int) and status >= 400:
