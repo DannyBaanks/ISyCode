@@ -369,9 +369,14 @@ class CommandRunOwner:
             changes = measure_changes(staging)
             if promote:
                 from isycode.effect_ledger import EffectLedger, LedgerDenied
+                revoked = self._revoked_effect(changes)
                 try:
-                    applied, refused, promotion = promote_accounted(staging, changes)
-                    pending = []
+                    if revoked:
+                        applied, refused, pending = [], [item["path"] for item in changes], []
+                        promotion = {"state": "denied", "reason": revoked}
+                    else:
+                        applied, refused, promotion = promote_accounted(staging, changes)
+                        pending = []
                 except LedgerDenied as exc:
                     try:
                         recovered = EffectLedger(self.root).reconcile()
@@ -400,6 +405,28 @@ class CommandRunOwner:
                     }}
         finally:
             cleanup_staging(staging)
+
+    def _revoked_effect(self, changes: list[dict]) -> str | None:
+        """Why the measured diff may not reach the user tree, or None.
+
+        The command approval covers running the program; its file effects still
+        answer to the file grants. An explicit denial (which Classic does not
+        override) or a path outside a grant's prefixes refuses the whole diff.
+        """
+        grants = self.authority.effective_policy().get("grants", {})
+        for change in changes:
+            action = ("workspace.files.delete" if change.get("kind") == "delete"
+                      else "workspace.files.write")
+            grant = grants.get(action, {})
+            if grant.get("enabled") is False:
+                return f"{action} is revoked"
+            prefixes = grant.get("path_prefixes") if grant.get("enabled") is True else None
+            if prefixes:
+                target = self.root / str(change.get("path", ""))
+                if not any(target == Path(prefix) or Path(prefix) in target.parents
+                           for prefix in prefixes):
+                    return f"{change.get('path')} is outside the {action} grant"
+        return None
 
     @staticmethod
     def _kill(proc: asyncio.subprocess.Process) -> None:

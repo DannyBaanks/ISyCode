@@ -289,3 +289,43 @@ def test_without_bubblewrap_nothing_can_be_prepared(sandbox, monkeypatch):
     monkeypatch.setattr("isycode.command_runner.shutil.which", lambda name: None)
     with pytest.raises(ValueError, match="bubblewrap"):
         owner.prepare(["echo", "hi"])
+
+
+def test_revoked_file_grants_stop_an_approved_command_from_promoting(sandbox):
+    """Hermes audit 2026-10-08, finding 2: Classic + write/delete revoked."""
+    owner, authority, approvals, fake, _ = sandbox
+    authority.set_mode("classic")
+    (owner.root / "app.txt").write_text("keep\n", encoding="utf-8")
+    script = "open('command.txt','w').write('x'); import os; os.remove('app.txt')"
+    preview, outcome = _run(owner, approvals, ["python3", "-c", script])
+    assert json.loads(outcome.text)["staging"]["promotion"]["state"] != "denied"
+    assert (owner.root / "command.txt").exists() and not (owner.root / "app.txt").exists()
+
+    (owner.root / "command.txt").unlink()
+    (owner.root / "app.txt").write_text("keep\n", encoding="utf-8")
+    authority.set_grant("workspace.files.write", enabled=False)
+    authority.set_grant("workspace.files.delete", enabled=False)
+    preview, outcome = _run(owner, approvals, ["python3", "-c", script])
+    staging = json.loads(outcome.text)["staging"]
+    assert staging["promotion"]["state"] == "denied" and staging["promoted_count"] == 0
+    assert "revoked" in staging["promotion"]["reason"]
+    assert not (owner.root / "command.txt").exists()
+    assert (owner.root / "app.txt").read_text(encoding="utf-8") == "keep\n"
+
+    # Deleting alone is refused by the delete grant even when writing is allowed.
+    authority.set_grant("workspace.files.write", enabled=True, path_prefixes=[owner.root])
+    preview, outcome = _run(owner, approvals, ["python3", "-c", "import os; os.remove('app.txt')"])
+    staging = json.loads(outcome.text)["staging"]
+    assert staging["promotion"]["reason"] == "workspace.files.delete is revoked"
+    assert (owner.root / "app.txt").exists()
+
+
+def test_command_writes_outside_the_write_grant_prefixes_are_not_promoted(sandbox):
+    owner, authority, approvals, fake, _ = sandbox
+    _grant(authority, fake)
+    authority.set_grant("workspace.files.write", enabled=True, path_prefixes=[owner.root / "src"])
+    _, inside = _run(owner, approvals, ["python3", "-c", "open('src/ok.txt','w').write('x')"])
+    assert (owner.root / "src" / "ok.txt").exists()
+    _, outside = _run(owner, approvals, ["python3", "-c", "open('top.txt','w').write('x')"])
+    assert "outside" in json.loads(outside.text)["staging"]["promotion"]["reason"]
+    assert not (owner.root / "top.txt").exists()
