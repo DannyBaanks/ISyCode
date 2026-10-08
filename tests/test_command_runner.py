@@ -329,3 +329,19 @@ def test_command_writes_outside_the_write_grant_prefixes_are_not_promoted(sandbo
     _, outside = _run(owner, approvals, ["python3", "-c", "open('top.txt','w').write('x')"])
     assert "outside" in json.loads(outside.text)["staging"]["promotion"]["reason"]
     assert not (owner.root / "top.txt").exists()
+
+
+def test_hardlinks_to_sensitive_files_are_masked_too(tmp_path):
+    """Hermes audit 2026-10-08, finding 6: a hardlink named public.txt exposed .env."""
+    from isycode.command_runner import sensitive_entries
+    root = tmp_path / "project"
+    (root / ".git").mkdir(parents=True)
+    (root / "docs").mkdir()
+    (root / ".env").write_text("TOKEN=synthetic\n", encoding="utf-8")
+    (root / ".git" / "config").write_text("[core]\n", encoding="utf-8")
+    (root / "notes.txt").write_text("plain\n", encoding="utf-8")
+    os.link(root / ".env", root / "public.txt")
+    os.link(root / ".git" / "config", root / "docs" / "config.txt")
+    os.link(root / "notes.txt", root / "docs" / "notes-copy.txt")
+    masked = dict(sensitive_entries(root))
+    assert masked == {".env": False, ".git": True, "public.txt": False, "docs/config.txt": False}
