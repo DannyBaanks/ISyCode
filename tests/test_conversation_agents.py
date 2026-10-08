@@ -1,5 +1,6 @@
 """Each open conversation keeps its own turn when the view changes."""
 import asyncio
+import threading
 
 from isycode.asyncio_compat import cancel_requested
 
@@ -67,6 +68,50 @@ def test_switching_leaves_the_other_conversation_running(tmp_path, monkeypatch):
             await pilot.pause()
             assert "FROM keep-going" in _chat_text(app)
             assert app._foreground_lane() is first
+
+    asyncio.run(scenario())
+
+
+def test_overlapping_refresh_keeps_the_list_that_arrived_while_loading(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    from isycode.chat_sessions import ChatSession
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            entered = threading.Event()
+            release = threading.Event()
+            calls = {"n": 0}
+            later = ChatSession("a" * 32, "Later", [], 0.0, 0.0, {})
+
+            class Owner:
+                def list_conversations(self):
+                    calls["n"] += 1
+                    outcome = type("Outcome", (), {"decision": "ALLOW", "reason": ""})()
+                    if calls["n"] == 1:
+                        entered.set()
+                        if not release.wait(5):
+                            raise TimeoutError("refresh was not released")
+                        return outcome, []
+                    return outcome, [later]
+
+            app._chat_session_owner = Owner()
+            app._sessions_enabled = lambda: True
+            first = asyncio.create_task(app._refresh_work_list())
+            assert await asyncio.to_thread(entered.wait, 5)
+            second = asyncio.create_task(app._refresh_work_list())
+            joined = False
+            for _ in range(50):
+                await asyncio.sleep(0)
+                if app._work_refresh_again and app._work_refresh_lock.locked():
+                    joined = True
+                    break
+            assert joined and not second.done()
+            release.set()
+            await asyncio.wait_for(asyncio.gather(first, second), 5)
+            assert calls["n"] >= 2
+            assert any(row["id"] == later.session_id for row in app._work_rows)
 
     asyncio.run(scenario())
 

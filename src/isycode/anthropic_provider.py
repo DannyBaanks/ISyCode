@@ -148,6 +148,54 @@ def interpret(content: list[dict[str, Any]], stop_reason: str | None,
             "stop_reason": stop_reason}
 
 
+def _sdk_httpx(anthropic: Any):
+    import importlib
+    client_module = importlib.import_module(anthropic.__name__ + "._client")
+    for name in ("httpx", "httpx2"):
+        module = getattr(client_module, name, None)
+        if module is not None:
+            return module
+    raise ProviderError("the Anthropic SDK has no HTTP client to pin", transport=True)
+
+
+class _DialReviewedPeer:
+    """Dial the address review accepted. The request URL keeps the hostname."""
+
+    def __init__(self, peer: str, inner: Any):
+        self._peer = peer
+        self._inner = inner
+
+    def connect_tcp(self, host: str, port: int, timeout: float | None = None,
+                    local_address: str | None = None, socket_options: Any = None):
+        return self._inner.connect_tcp(
+            self._peer, port, timeout=timeout, local_address=local_address,
+            socket_options=socket_options)
+
+    def __getattr__(self, name: str):
+        return getattr(self._inner, name)
+
+
+def _pinned_sdk_client(anthropic: Any, *, api_key: str | None, base_url: str,
+                       timeout_s: float | None, peer: str, asynchronous: bool):
+    httpx_mod = _sdk_httpx(anthropic)
+    transport_cls = httpx_mod.AsyncHTTPTransport if asynchronous else httpx_mod.HTTPTransport
+    client_cls = httpx_mod.AsyncClient if asynchronous else httpx_mod.Client
+    sdk_cls = anthropic.AsyncAnthropic if asynchronous else anthropic.Anthropic
+    transport = transport_cls(trust_env=False, retries=0)
+    pool = getattr(transport, "_pool", None)
+    inner = getattr(pool, "_network_backend", None) if pool is not None else None
+    if inner is None or not callable(getattr(inner, "connect_tcp", None)):
+        raise ProviderError("cannot pin the Anthropic connection to the reviewed address",
+                            transport=True)
+    pool._network_backend = _DialReviewedPeer(peer, inner)
+    client_options: dict[str, Any] = {
+        "transport": transport, "trust_env": False, "follow_redirects": False}
+    if timeout_s is not None:
+        client_options["timeout"] = timeout_s
+    return sdk_cls(api_key=api_key, base_url=base_url, timeout=timeout_s,
+                   http_client=client_cls(**client_options))
+
+
 async def anthropic_stream_complete(api_key: str | None, model: str, messages: list[dict],
                                     *, max_tokens: int | None = None, effort: str | None = None,
                                     on_chunk: Callable[[str, str], None] | None = None,
@@ -167,11 +215,12 @@ async def anthropic_stream_complete(api_key: str | None, model: str, messages: l
     if client is None:
         from isycode.egress import EgressDenied, review_destination
         try:
-            review_destination(base_url)
+            reviewed = review_destination(base_url)
         except EgressDenied as exc:
             raise ProviderError(str(exc), transport=True) from exc
-        client = anthropic.AsyncAnthropic(
-            api_key=api_key, base_url=base_url, timeout=timeout_s)
+        client = _pinned_sdk_client(
+            anthropic, api_key=api_key, base_url=base_url, timeout_s=timeout_s,
+            peer=reviewed.ips[0], asynchronous=True)
     request: dict[str, Any] = {"model": model, "messages": converted, **options}
     if max_tokens is None:
         # Anthropic requires max_tokens on Messages. Its model catalog supplies
@@ -239,11 +288,13 @@ def list_models(api_key: str | None, base_url: str = ANTHROPIC_BASE_URL) -> list
                             "pip install 'isycode[anthropic]'") from exc
     from isycode.egress import EgressDenied, review_destination
     try:
-        review_destination(base_url)
+        reviewed = review_destination(base_url)
     except EgressDenied as exc:
         raise ProviderError(str(exc), transport=True) from exc
     try:
-        client = anthropic.Anthropic(api_key=api_key, base_url=base_url)
+        client = _pinned_sdk_client(
+            anthropic, api_key=api_key, base_url=base_url, timeout_s=None,
+            peer=reviewed.ips[0], asynchronous=False)
         return sorted(model.id for model in client.models.list())
     except anthropic.APIStatusError as exc:
         raise ProviderError("Anthropic model catalog request failed", exc.status_code) from exc

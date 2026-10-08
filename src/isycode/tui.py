@@ -476,7 +476,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._rail_width = 38
         self._rail_compact_width = 28
         self._work_rows: list[dict[str, Any]] = []
-        self._work_refresh_busy = False
+        self._work_refresh_lock = asyncio.Lock()
+        self._work_refresh_again = False
         self._prompt_history: list[str] = []
         self._prompt_history_idx = -1
         self._prompt_history_draft = ""
@@ -715,7 +716,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     "  This conversation stays in memory · turn on “Save conversations” in "
                     "Settings → Authority (recurring workspaces only).", MUTED)
         except Exception as exc:
-            self._append_startup(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+            # The screen that was current during an awaited load may already be gone.
+            # Reporting that must not raise, or Textual fails the worker.
+            try:
+                self._append_startup(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+            except (NoMatches, NoScreen):
+                return
 
     def _register_saved_key_reader(self) -> None:
         """Security mode: every saved-key read is its own owned, journaled decision."""

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from isycode.contracts import CatalogSnapshot
+from isycode.egress import cleartext_loopback_host
 
 
 class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -56,9 +57,7 @@ class OpenIsyClient:
             raise ValueError("Put integration credentials in environment variables, not the URL.")
         if parsed.query or parsed.fragment:
             raise ValueError("OPENISY_API_URL must not contain a query or fragment.")
-        host = parsed.hostname.lower()
-        local_http = host == "localhost" or host == "::1" or host.startswith("127.")
-        if parsed.scheme != "https" and not local_http:
+        if parsed.scheme != "https" and not cleartext_loopback_host(parsed.hostname):
             raise ValueError("Integration credentials require HTTPS unless the server is loopback.")
 
     def mcp_status(self) -> CatalogSnapshot:

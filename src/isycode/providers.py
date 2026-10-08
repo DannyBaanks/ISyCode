@@ -563,9 +563,9 @@ class Provider:
             return asyncio.run(catalog())
         if not self.configured():
             raise ProviderError(f"no credential configured for {self.name}")
-        from isycode.egress import EgressDenied, review_destination
+        from isycode.egress import EgressDenied, open_reviewed, review_destination
         try:
-            review_destination(self.base_url)
+            reviewed = review_destination(self.base_url)
         except EgressDenied as exc:
             raise ProviderError(str(exc), transport=True) from exc
         if PRESETS[self.name].get("api") == "anthropic":
@@ -575,8 +575,7 @@ class Provider:
         request = urllib.request.Request(
             self.base_url + "/models", headers=self._headers(), method="GET")
         try:
-            opener = urllib.request.build_opener(
-                urllib.request.ProxyHandler({}), _RejectRedirectHandler)
+            opener = open_reviewed(reviewed, _RejectRedirectHandler())
             with opener.open(request, timeout=self.timeout_s) as response:
                 payload = json.loads(response.read(2_000_001))
         except urllib.error.HTTPError as exc:

@@ -4,7 +4,7 @@ from isycode import web_fetch as web
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.action_audit import ActionAuditJournal
 
-@pytest.mark.parametrize('url', ['http://example.com', 'https://localhost', 'https://127.0.0.1', 'https://[::1]', 'https://169.254.169.254', 'https://user:secret@example.com', 'https://example.com?q=secret', 'https://example.com/#secret', 'https://example.com:444/', 'https://example.com/\nheader'])
+@pytest.mark.parametrize('url', ['http://example.com', 'https://localhost', 'https://127.0.0.1', 'https://[::1]', 'https://169.254.169.254', 'https://100.100.100.200/', 'https://[64:ff9b::a9fe:a9fe]/', 'https://[ff02::1]/', 'https://user:secret@example.com', 'https://example.com?q=secret', 'https://example.com/#secret', 'https://example.com:444/', 'https://example.com/\nheader'])
 def test_private_or_credential_urls_denied(url):
     with pytest.raises(ValueError): web.validate_url(url)
 
@@ -30,6 +30,9 @@ def test_private_dns_and_redirect_denied(monkeypatch):
     from isycode.egress import ReviewedDestination
     monkeypatch.setattr(web,'review_destination',lambda url:ReviewedDestination('example.com',443,('127.0.0.1',),'https'))
     with pytest.raises(ValueError):web.fetch_public('https://example.com')
+    for address in ('64:ff9b::a9fe:a9fe', 'ff02::1', '100.100.100.200'):
+        monkeypatch.setattr(web,'review_destination',lambda url, address=address: ReviewedDestination('example.com',443,(address,),'https'))
+        with pytest.raises(ValueError):web.fetch_public('https://example.com')
     monkeypatch.setattr(web,'review_destination',lambda url:ReviewedDestination('example.com',443,('93.184.216.34',),'https'))
     class Response:
         status=302

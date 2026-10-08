@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from isycode.gateway_client import GatewayClient, GatewayError
+from isycode.openisy_client import OpenIsyClient
 from isycode.semantic_gateway import SemanticGatewayClient
 
 
@@ -42,6 +43,23 @@ def _handler(routes, seen):
             pass
 
     return Handler
+
+
+def test_cleartext_is_only_localhost_or_a_real_loopback_address():
+    for url in ("http://127.0.0.1:8787", "http://localhost:8787", "http://[::1]:8787"):
+        GatewayClient._validate_base_url(url)
+        OpenIsyClient._validate_base_url(url)
+    for url in (
+        "http://127.evil.com:8787",
+        "http://127.0.0.1.attacker.example:8787",
+        "http://127.1:8787",
+    ):
+        with pytest.raises(ValueError):
+            GatewayClient._validate_base_url(url)
+        with pytest.raises(ValueError):
+            OpenIsyClient._validate_base_url(url)
+        with pytest.raises(ValueError):
+            SemanticGatewayClient(base_url=url, api_key="fixture")
 
 
 def test_base_urls_reject_bearer_credentials_over_non_loopback_or_with_url_secrets():

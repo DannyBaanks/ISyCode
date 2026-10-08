@@ -29,6 +29,7 @@ from isycode.streaming import StreamError
 from isycode.turn_events import TurnEventStream
 from isycode.usage import CostBucket, UsageLedger
 from isycode.context_meter import context_snapshot
+from isycode.terminal_safety import strip_controls
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
 EXIT_OK = 0
@@ -37,6 +38,11 @@ EXIT_USAGE = 2
 EXIT_DENIED = 3
 
 Transport = Callable[[list[dict], list[dict] | None, Callable[[str, str], None]], Awaitable[dict]]
+
+
+def _terminal(stream: TextIO, text: str) -> None:
+    """Write untrusted text without terminal control characters."""
+    print(strip_controls(text), file=stream)
 
 
 def _grants(authority: WorkspaceAuthority) -> dict[str, Any]:
@@ -102,13 +108,12 @@ def _dispatch(root: Path, authority: WorkspaceAuthority, call: dict, log: TextIO
             return call_id, json.dumps({"error": "path must be a string and staged a boolean"})
         outcome = GitOwner(root, authority).diff(path, staged)
     else:
-        print(f"isycode: tool {name!r} is not available without a person to approve it",
-              file=log)
+        _terminal(log, f"isycode: tool {name!r} is not available without a person to approve it")
         return call_id, json.dumps({"error": "this tool is not available in non-interactive mode"})
     if outcome.decision != "ALLOW" or outcome.receipt is None:
-        print(f"isycode: {name} {outcome.decision} · {outcome.reason[:200]}", file=log)
+        _terminal(log, f"isycode: {name} {outcome.decision} · {outcome.reason[:200]}")
         return call_id, json.dumps({"error": "ISyCode denied the action", "reason": outcome.reason[:300]})
-    print(f"isycode: {name} ALLOW · receipt {outcome.receipt.receipt_id}", file=log)
+    _terminal(log, f"isycode: {name} ALLOW · receipt {outcome.receipt.receipt_id}")
     return call_id, outcome.text
 
 
@@ -118,7 +123,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                        tool_profile: str = "read-only") -> int:
     """Answer one prompt. Returns a process exit code."""
     if tool_profile not in {"read-only", "none"}:
-        print("isycode: unknown tool profile", file=log)
+        _terminal(log, "isycode: unknown tool profile")
         return EXIT_USAGE
     root = (root or discover_workspace_identity(Path.cwd()).workspace_root).resolve()
     authority = WorkspaceAuthority(root)
@@ -128,7 +133,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
         provider = Provider(name=name, model=resolved_chat_model(name),
                             api_key=load_provider_key(name) or None)
     except ProviderError as exc:
-        print(f"isycode: provider unavailable · {exc}", file=log)
+        _terminal(log, f"isycode: provider unavailable · {exc}")
         return EXIT_FAILED
     tools = (available_tools(root, authority)
              if provider.supports_tools and tool_profile != "none" else [])
@@ -151,7 +156,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
         if kind == "content":
             streamed.append(chunk)
             if not json_output:
-                out.write(chunk)
+                out.write(strip_controls(chunk))
                 out.flush()
 
     async def default_transport(request_messages, request_tools, callback):
@@ -177,11 +182,10 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                 provider, material, lambda: send(messages, tools or None, on_chunk))
             if outcome.decision != "ALLOW" or not isinstance(response, dict):
                 events.emit("agent.end", {"status": "denied"})
-                print(f"isycode: provider request {outcome.decision} · {outcome.reason[:240]}",
-                      file=log)
+                _terminal(log, f"isycode: provider request {outcome.decision} · {outcome.reason[:240]}")
                 if outcome.decision == "DENY" and "grant" in outcome.reason:
-                    print("isycode: allow it once in the TUI: Settings → Authority → "
-                          "“Connect to the selected AI model”.", file=log)
+                    _terminal(log, "isycode: allow it once in the TUI: Settings → Authority → "
+                              "“Connect to the selected AI model”.")
                 return EXIT_DENIED
             receipts.append(outcome.receipt.receipt_id)
             usage.record(response.get("usage"))
@@ -203,7 +207,7 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
                 out.write("\n")
     except (ProviderError, StreamError, OSError) as exc:
         events.emit("agent.end", {"status": "failed", "error": type(exc).__name__})
-        print(f"isycode: request failed · {type(exc).__name__}: {str(exc)[:200]}", file=log)
+        _terminal(log, f"isycode: request failed · {type(exc).__name__}: {str(exc)[:200]}")
         return EXIT_FAILED
     events.emit("agent.end", {"status": "complete"})
     if json_output:
@@ -224,16 +228,16 @@ def main(arguments: list[str], stdin: TextIO = sys.stdin) -> int:
     no_tools = "--no-tools" in arguments
     rest = [item for item in arguments if item not in {"--json", "--offline", "--no-tools"}]
     if offline:
-        print("isycode: offline mode disables provider network requests", file=sys.stderr)
+        _terminal(sys.stderr, "isycode: offline mode disables provider network requests")
         return EXIT_FAILED
     if not rest or rest[0] not in {"-p", "--print"}:
-        print("usage: isycode -p [PROMPT|-] [--json]", file=sys.stderr)
+        _terminal(sys.stderr, "usage: isycode -p [PROMPT|-] [--json]")
         return EXIT_USAGE
     prompt = " ".join(rest[1:]).strip()
     if not prompt or prompt == "-":
         prompt = stdin.read(256 * 1024).strip()
     if not prompt:
-        print("isycode: empty prompt", file=sys.stderr)
+        _terminal(sys.stderr, "isycode: empty prompt")
         return EXIT_USAGE
     return asyncio.run(run_headless(prompt, json_output=json_output,
                                     tool_profile="none" if no_tools else "read-only"))
