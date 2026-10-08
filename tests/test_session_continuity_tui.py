@@ -123,7 +123,9 @@ def test_usage_status_shows_estimated_context_and_unknown_cost(tmp_path, monkeyp
             await pilot.pause()
             app._history = [{"role": "user", "content": "x" * 400}]
             text = app._usage_status_text().lower()
-            assert "ctx ~100 est" in text
+            # The default model may now get its window from the models.dev
+            # snapshot; either way the locally estimated count keeps its "~".
+            assert "ctx ~100" in text
             assert "cost" not in text
             assert "req" not in text
             assert "$0" not in text

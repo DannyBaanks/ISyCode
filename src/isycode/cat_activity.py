@@ -65,6 +65,22 @@ _WALK_FRAMES = (
         ".####.#.#####.##",
     ),
 )
+# Whole cat curled up on all three rows: ears, closed eyes, back, belly and a
+# tail curling out on the right. Used whenever the column has room for it.
+_REST_LOAF = (
+    ".#...#..........",
+    ".##.##..........",
+    ".#####..........",
+    "#.....#.........",
+    "#.##.##.####....",
+    "#.....##....#...",
+    ".#####......#...",
+    ".#...........#..",
+    ".#...........#..",
+    "..#.........#..#",
+    "...#########...#",
+    "...........####.",
+)
 # Face on the left, tail trailing on the right. The widest one is used when
 # the caption line has room; the others keep a face and a tail in narrow columns.
 _REST_FULL = (
@@ -219,6 +235,21 @@ def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "
         return Text(_clip_cells(label, width), style=caption_style)
     if cell_len(label) > width:
         return _wrapped_status(label, width, caption_style)
+
+    loaf = _dots(_REST_LOAF)
+    start = cell_len(label) + 1
+    if start + 1 + cell_len(loaf[0]) <= width:
+        result = Text()
+        for row, pixels in enumerate(loaf):
+            line = Text(label, style=caption_style) if row == 2 else Text(" " * cell_len(label))
+            line.append(" ")
+            line.append("z" if row == 1 else " ", style="#77d8b0")
+            line.append(pixels, style="#77d8b0")
+            line.append(" " * (width - start - 1 - cell_len(pixels)))
+            result.append(line)
+            if row < 2:
+                result.append("\n")
+        return result
 
     chosen: tuple[str, str, int] | None = None
     for bitmap, gap in (

@@ -67,3 +67,11 @@ def test_long_caption_wraps_inside_the_activity_column():
         assert "Interrupted" in sleeping_cat(width, label).plain
         if width >= 28:
             assert "retrying" in sleeping_cat(width, label).plain
+
+
+def test_resting_cat_fills_all_three_rows_when_the_column_has_room():
+    from isycode.cat_activity import sleeping_cat
+    rows = sleeping_cat(24).plain.splitlines()
+    ink = [[i for i, char in enumerate(row) if "⠀" < char <= "⣿"] for row in rows]
+    assert all(ink), "ears, body and tail each get a row"
+    assert all(i > len("Chat ready") for row in ink for i in row)

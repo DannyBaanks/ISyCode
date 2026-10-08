@@ -758,6 +758,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def on_resize(self, event) -> None:
         if not self.is_mounted:
             return
+        # The context bar is drawn to the column's width; redraw it once the new layout lands.
+        self.call_after_refresh(self._refresh_usage)
         rail = self.query_one(SidePanel)
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(event.size.width)
@@ -1427,11 +1429,24 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("user_defaults", "Settings · My defaults", entries)
 
-    def _usage_status_text(self) -> str:
-        from isycode.context_meter import compact_context_label
+    def _context_window(self) -> tuple[int | None, str]:
+        """Window of the selected model: the account catalog first, then the
+        vendored models.dev snapshot (exact id match), else unknown."""
+        from isycode.model_card import catalog_entry
         from isycode.providers import model_context_limit, resolved_chat_model, selected_provider_name
         provider, model = selected_provider_name(), resolved_chat_model()
-        limit, _source = model_context_limit(provider, model)
+        limit, source = model_context_limit(provider, model)
+        if limit:
+            return limit, source
+        entry = catalog_entry(provider, model)
+        context = entry.get("context") if entry else None
+        if type(context) is int and 0 < context <= 10**9:
+            return context, "snapshot"
+        return None, "unknown"
+
+    def _usage_status_text(self) -> str:
+        from isycode.context_meter import compact_context_label
+        limit, _source = self._context_window()
         reported = getattr(self, "_last_context_input_tokens", None)
         total = self._usage.input_tokens + self._usage.output_tokens
         context = compact_context_label(self._history, provider_limit_tokens=limit,
@@ -1446,7 +1461,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _refresh_usage(self) -> None:
         if not self._lane_on_screen():
             return
-        self.query_one("#usage-status", Static).update(Text(self._usage_status_text(), style=MUTED))
+        from isycode.context_meter import usage_panel
+        widget = self.query_one("#usage-status", Static)
+        limit, source = self._context_window()
+        total = self._usage.input_tokens + self._usage.output_tokens
+        widget.update(usage_panel(
+            self._history, widget.content_size.width or 18,
+            self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
+            provider_limit_tokens=limit, limit_source=source,
+            reported_tokens=getattr(self, "_last_context_input_tokens", None)))
 
     async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int | None = None,
                                        on_chunk=None, tools=None) -> dict:
