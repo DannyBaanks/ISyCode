@@ -522,7 +522,9 @@ class WorkspaceMixin:
             choice = True
         else:
             self._append(f"  Tool requested · {verb} · "
-                         f"{preview.path} · review the diff", CYAN)
+                         f"{preview.path} · review the diff"
+                         + (f" · matched ignoring {preview.match}" if preview.match != "exact" else ""),
+                         CYAN)
             try:
                 delegated = self._folder_store().auto_edit_allowed(folder_alias)
             except (OSError, ValueError) as exc:
@@ -588,6 +590,9 @@ class WorkspaceMixin:
             result = {"status": "written", "approved_by_user": approved_by_user,
                       "approval_mode": approval_mode, "folder": folder_alias, "path": preview.path,
                       "replaced_whole_file": replaces, "receipt": outcome.receipt.receipt_id}
+            if preview.match != "exact":
+                # The model's old_text differed from the file; say how it was located.
+                result["matched_ignoring"] = preview.match
             problems = await self._post_edit_diagnostics(preview.path, preview.content) if root == self._workspace_root else None
             if problems is not None:
                 result["diagnostics"] = problems[:50]
