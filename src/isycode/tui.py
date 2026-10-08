@@ -104,6 +104,9 @@ from isycode.prompt_expansion import (
 from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
 from isycode.action_audit import add_decision_listener, remove_decision_listener
 from isycode.sentinel_rail import SentinelFeed
+from isycode.terminal_safety import install as _install_terminal_safety
+
+_install_terminal_safety()  # untrusted text never reaches the terminal as control codes
 from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
 from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME, validate_question

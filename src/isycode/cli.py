@@ -61,6 +61,11 @@ def _search_key(value: str) -> str:
     return "".join(char for char in decomposed if not unicodedata.combining(char))
 
 
+
+from isycode.terminal_safety import install as _install_terminal_safety
+
+_install_terminal_safety()
+
 class CommandBrowser(App[None]):
     """Navigate available actions as semantic folders rather than shell flags."""
 
