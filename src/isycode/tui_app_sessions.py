@@ -716,39 +716,39 @@ class SessionMixin:
             return
 
     async def _refresh_work_list(self) -> None:
-        if self._work_refresh_busy:
-            return
-        self._work_refresh_busy = True
-        try:
-            sessions = []
-            owner = self._chat_session_owner
-            if owner is not None and self._sessions_enabled():
-                outcome, sessions = await asyncio.to_thread(owner.list_conversations)
-                if outcome.decision != "ALLOW":
-                    self._set_activity("Conversations unavailable · " + outcome.reason[:100], YELLOW)
-            self._work_rows = [self._conversation_row(session) for session in sessions]
-            if self._sessions_enabled():
-                from isycode.iteration import IterationOwner
-                try:
-                    iterations = await asyncio.to_thread(self._iteration_owner().list_sessions)
-                    for item in iterations:
-                        self._work_rows.append({"id": "iteration:" + item["iteration_session_id"],
-                            "title": item["title"], "session_kind": "iterative",
-                            "model": item["participants"][0]["model"] if item["participants"] else "",
-                            "provider": item["participants"][0]["provider"] if item["participants"] else "",
-                            "workspace": self._workspace_root.name,
-                            "status": "generating" if item["status"] == "RUNNING" else "waiting" if item["status"] == "WAITING_FOR_HUMAN" else "idle",
-                            "age": age_label(item["created_at"]),
-                            "detail": " → ".join(self._model_display_label(p["provider"], p["model"]) for p in item["participants"]) + "\n" + item["status"] + "\n\n" + (item["turns"][-1]["content"] if item["turns"] else "")})
-                except (OSError, RuntimeError, ValueError):
-                    self._set_activity("Iteration sessions unavailable; ordinary sessions preserved.", YELLOW)
-            if not self._active_chat_session_id:
-                self._work_rows.insert(0, {"id": "memory", "workspace": self._workspace_root.name,
-                                          "title": "Current conversation", "preview": "",
-                                          "age": "", "status": "idle"})
-            self._paint_work_status()
-        finally:
-            self._work_refresh_busy = False
+        # A second caller used to return while the first was still loading, so the
+        # list stayed idle or empty. The waiter marks another pass; the holder runs it.
+        self._work_refresh_again = True
+        async with self._work_refresh_lock:
+            while self._work_refresh_again:
+                self._work_refresh_again = False
+                sessions = []
+                owner = self._chat_session_owner
+                if owner is not None and self._sessions_enabled():
+                    outcome, sessions = await asyncio.to_thread(owner.list_conversations)
+                    if outcome.decision != "ALLOW":
+                        self._set_activity("Conversations unavailable · " + outcome.reason[:100], YELLOW)
+                self._work_rows = [self._conversation_row(session) for session in sessions]
+                if self._sessions_enabled():
+                    from isycode.iteration import IterationOwner
+                    try:
+                        iterations = await asyncio.to_thread(self._iteration_owner().list_sessions)
+                        for item in iterations:
+                            self._work_rows.append({"id": "iteration:" + item["iteration_session_id"],
+                                "title": item["title"], "session_kind": "iterative",
+                                "model": item["participants"][0]["model"] if item["participants"] else "",
+                                "provider": item["participants"][0]["provider"] if item["participants"] else "",
+                                "workspace": self._workspace_root.name,
+                                "status": "generating" if item["status"] == "RUNNING" else "waiting" if item["status"] == "WAITING_FOR_HUMAN" else "idle",
+                                "age": age_label(item["created_at"]),
+                                "detail": " → ".join(self._model_display_label(p["provider"], p["model"]) for p in item["participants"]) + "\n" + item["status"] + "\n\n" + (item["turns"][-1]["content"] if item["turns"] else "")})
+                    except (OSError, RuntimeError, ValueError):
+                        self._set_activity("Iteration sessions unavailable; ordinary sessions preserved.", YELLOW)
+                if not self._active_chat_session_id:
+                    self._work_rows.insert(0, {"id": "memory", "workspace": self._workspace_root.name,
+                                              "title": "Current conversation", "preview": "",
+                                              "age": "", "status": "idle"})
+                self._paint_work_status()
 
     async def _legacy_chat_sessions_menu(self) -> None:
         owner = self._chat_session_owner

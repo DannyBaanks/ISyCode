@@ -11,6 +11,7 @@ from pathlib import Path
 from isycode.decision_view import verified_receipt_line
 from isycode.contracts import CatalogSnapshot
 from textual.css.query import NoMatches
+from textual.dom import NoScreen
 from textual.widgets import (
     Static,
     Input,
@@ -366,6 +367,14 @@ class RailMixin:
                 Text(f"{item['name']} · {self._origin_tag(item.get('origin', ''))}"), data=dict(item))
         tree.root.expand()
 
+    def _show_file_preview(self, text: str) -> bool:
+        """Paint the file preview. Return False when that widget is no longer on screen."""
+        try:
+            self.query_one("#file-preview", Static).update(text)
+        except (NoMatches, NoScreen):
+            return False
+        return True
+
     async def _load_directory(self, logical_path: str) -> None:
         if self._workspace is None:
             return
@@ -400,9 +409,10 @@ class RailMixin:
             entries = payload.get("entries", [])
         except (WorkspaceUnavailable, json.JSONDecodeError, OSError, ValueError) as exc:
             if generation == self._workspace_generation:
-                self.query_one("#file-preview", Static).update(
-                    str(exc) if isinstance(exc, WorkspaceUnavailable) else
-                    f"Workspace read failed closed ({type(exc).__name__}).")
+                message = (str(exc) if isinstance(exc, WorkspaceUnavailable) else
+                           f"Workspace read failed closed ({type(exc).__name__}).")
+                if not self._show_file_preview(message):
+                    return
             tree.root.expand()
             return
         if generation != self._workspace_generation:
@@ -422,9 +432,10 @@ class RailMixin:
                                        "bytes": entry.get("bytes", 0)})
         self._search_mode = False
         status = verified_receipt_line(outcome.receipt.receipt_id)
-        self.query_one("#file-preview", Static).update(
-            f"{len(tree.root.children)} entries · {browser_root}\n"
-            f"{status}")
+        if not self._show_file_preview(
+                f"{len(tree.root.children)} entries · {browser_root}\n"
+                f"{status}"):
+            return
         tree.root.expand()
 
     async def _search_workspace(self, query: str) -> None:

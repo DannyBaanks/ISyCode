@@ -173,6 +173,55 @@ def test_terminal_failure_is_not_retried_and_keeps_the_prompt(chat, monkeypatch,
         run_app(scenario)
 
 
+def test_directory_reload_survives_a_screen_without_the_rail(chat, capsys):
+    import threading
+    from textual.screen import ModalScreen
+    from textual.widgets import Static
+
+    class Cover(ModalScreen[None]):
+        def compose(self):
+            yield Static("cover")
+
+    async def scenario(app, pilot):
+        for _ in range(200):
+            pending = [worker for worker in app.workers
+                       if worker.group == "workspace-startup" and not worker.is_finished]
+            if app._workspace is not None and not pending:
+                break
+            await pilot.pause(0.05)
+        else:
+            raise AssertionError("startup did not finish")
+        started = threading.Event()
+        release = threading.Event()
+        original_owner = app._workspace_read_owner
+
+        def owner():
+            current = original_owner()
+            execute = current.execute
+
+            def blocked(action, payload):
+                if action == "workspace.files.list":
+                    started.set()
+                    if not release.wait(5):
+                        raise TimeoutError("directory list was not released")
+                return execute(action, payload)
+
+            current.execute = blocked
+            return current
+
+        app._workspace_read_owner = owner
+        load = asyncio.create_task(app._load_directory(str(app._workspace_root)))
+        assert await asyncio.to_thread(started.wait, 5)
+        app.push_screen(Cover())
+        await pilot.pause()
+        release.set()
+        await asyncio.wait_for(load, 5)
+        app.pop_screen()
+
+    with capsys.disabled():
+        run_app(scenario)
+
+
 def test_escape_while_waiting_cancels_recovery(chat, monkeypatch, capsys):
     root, _ = chat
     calls = []
