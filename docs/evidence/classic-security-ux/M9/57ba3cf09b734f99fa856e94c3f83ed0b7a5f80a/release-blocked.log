@@ -1,0 +1,14 @@
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml: artifact 'docs/decisions/0002-classic-security-reuse.md' has no valid sha256
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/gate.yaml: artifact 'scripts/validate_gates.py' has no valid sha256
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M1/256234565d8fb8c5e0e1f950348f28e823d72e86/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/gate.yaml: artifact 'scripts/validate_gates.py' sha256 mismatch
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M2/e334a228007137db4a2bbc4e8ed26787d6ec2381/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M3/c5e409720de6bdf03fe8129dd95be0a860eb1e31/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M6/a495361cf04393c20278192155e9dffcdd60e5e2/gate.yaml: release blocked: gate is EN_REVISION, not APROBADO
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/gate.yaml: artifact 'scripts/soak_g9.py' sha256 mismatch
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/gate.yaml: G9-05 has no artifact evidence
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/gate.yaml: G9-06 has no artifact evidence
+/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M9/732357012187646898c7e20457674976f5348173/gate.yaml: release blocked: gate is BLOQUEADO, not APROBADO

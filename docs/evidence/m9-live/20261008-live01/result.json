@@ -1,0 +1,165 @@
+{
+  "provider": "nvidia",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "started_utc": "2026-10-08T06:38:47Z",
+  "environment": {
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "bwrap": "bubblewrap 0.9.0"
+  },
+  "scope": "Real NVIDIA transport/model, owners, journal and bubblewrap; automated explicit approval of fixture edit/test commands through normal screens. Synthetic task, no real participants.",
+  "initial_test": {
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "test_add (test_calc.TestAdd.test_add) ... FAIL\n\n======================================================================\nFAIL: test_add (test_calc.TestAdd.test_add)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/g9-06-dxowlzvh/project/test_calc.py\", line 7, in test_add\n    self.assertEqual(add(2, 3), 5)\nAssertionError: -1 != 5\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (failures=1)\n"
+  },
+  "fixture": "/tmp/g9-06-dxowlzvh/project",
+  "cost": {
+    "status": "NOT_AVAILABLE",
+    "reason": "Provider reports tokens, not billed currency; no price estimate invented."
+  },
+  "turn": "completed",
+  "turn_wall_s": 29.696,
+  "final_answer": "The unit test now passes - the bug was that `add()` was subtracting instead of adding, which I fixed by changing `return a - b` to `return a + b`.",
+  "tool_history": [
+    {
+      "name": "workspace_read",
+      "arguments": "{\"path\":\"calc.py\"}",
+      "result": "{\"path\":\"calc.py\",\"text\":\"def add(a, b):\\n    return a - b\\n\"}"
+    },
+    {
+      "name": "workspace_read",
+      "arguments": "{\"path\":\"test_calc.py\"}",
+      "result": "{\"path\":\"test_calc.py\",\"text\":\"import unittest\\nfrom calc import add\\n\\n\\nclass TestAdd(unittest.TestCase):\\n    def test_add(self):\\n        self.assertEqual(add(2, 3), 5)\\n\\n\\nif __name__ == '__main__':\\n    unittest.main()\\n\"}"
+    },
+    {
+      "name": "workspace_edit",
+      "arguments": "{\"new_text\":\"def add(a, b):\\n    return a + b\",\"old_text\":\"def add(a, b):\\n    return a - b\",\"path\":\"calc.py\"}",
+      "result": "{\"approval_mode\":\"reviewed\",\"approved_by_user\":true,\"folder\":\"main\",\"path\":\"calc.py\",\"receipt\":\"rcpt_efc96e6e0a1ad07f\",\"replaced_whole_file\":false,\"status\":\"written\"}"
+    },
+    {
+      "name": "workspace_run",
+      "arguments": "{\"argv\":[\"python3\",\"-m\",\"unittest\",\"-v\"]}",
+      "result": "{\"argv\":[\"python3\",\"-m\",\"unittest\",\"-v\"],\"cwd\":\".\",\"exit_code\":0,\"output\":\"test_add (test_calc.TestAdd.test_add) ... ok\\n\\n----------------------------------------------------------------------\\nRan 1 test in 0.000s\\n\\nOK\\n\",\"output_bytes\":142,\"output_truncated\":false,\"staging\":{\"backend\":\"copy\",\"pending\":[],\"pending_count\":0,\"promoted\":[\"__pycache__/calc.cpython-312.pyc\"],\"promoted_count\":1,\"promotion\":{\"state\":\"committed\"},\"refused\":[],\"refused_count\":0},\"timed_out\":false}"
+    }
+  ],
+  "final_test": {
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "test_add (test_calc.TestAdd.test_add) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n"
+  },
+  "tests_unchanged": true,
+  "calc_py": "def add(a, b):\n    return a + b\n",
+  "calc_fixed": true,
+  "requests": [
+    {
+      "n": 1,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "messages": 2,
+      "request_chars": 3252,
+      "started": 1791441529.880247,
+      "first_chunk_s": 1.444,
+      "latency_s": 5.616,
+      "usage": {
+        "prompt_tokens": 3969,
+        "completion_tokens": 119,
+        "total_tokens": 4088
+      },
+      "tool_calls": [
+        "workspace_read",
+        "workspace_read"
+      ],
+      "text_chars": 2
+    },
+    {
+      "n": 2,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "messages": 5,
+      "request_chars": 4133,
+      "started": 1791441535.5913393,
+      "first_chunk_s": 1.121,
+      "latency_s": 8.189,
+      "usage": {
+        "prompt_tokens": 4143,
+        "completion_tokens": 109,
+        "total_tokens": 4252
+      },
+      "tool_calls": [
+        "workspace_edit"
+      ],
+      "text_chars": 0
+    },
+    {
+      "n": 3,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "messages": 7,
+      "request_chars": 4740,
+      "started": 1791441550.3832517,
+      "first_chunk_s": 1.295,
+      "latency_s": 3.281,
+      "usage": {
+        "prompt_tokens": 4292,
+        "completion_tokens": 56,
+        "total_tokens": 4348
+      },
+      "tool_calls": [
+        "workspace_run"
+      ],
+      "text_chars": 0
+    },
+    {
+      "n": 4,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "messages": 9,
+      "request_chars": 5641,
+      "started": 1791441554.1464763,
+      "first_chunk_s": 1.028,
+      "latency_s": 3.774,
+      "usage": {
+        "prompt_tokens": 4514,
+        "completion_tokens": 68,
+        "total_tokens": 4582
+      },
+      "tool_calls": [],
+      "text_chars": 146
+    }
+  ],
+  "approval_screens": [
+    {
+      "screen": "WriteApprovalScreen",
+      "t": 15.715
+    },
+    {
+      "screen": "CommandApprovalScreen",
+      "t": 25.463
+    }
+  ],
+  "journal": "PASS",
+  "tokens_in": 16918,
+  "tokens_out": 352,
+  "errors": [],
+  "finished_utc": "2026-10-08T06:39:18Z",
+  "action_journal": "{\"action\":\"workspace.files.list\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"8741c4a3f3f0bb167926c3110cca6ae6805307aeea49d7cb6388c10f51dd28c8\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"workspace_read\",\"previous\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"request_digest\":\"0c3b4a57b399dbcd9cf3ddc3e8e289cd15802fd5b59c16f0cc39a3628b3cdc56\",\"sentinel\":\"ALLOW\",\"time\":1791441527.6778889,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.list\",\"digest\":\"dd4d9d59e4a7a67ce4d8f8f28a74bb3e9367a681f97988151dfc26a46abbf702\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"workspace_read\",\"previous\":\"8741c4a3f3f0bb167926c3110cca6ae6805307aeea49d7cb6388c10f51dd28c8\",\"receipt_id\":\"rcpt_9fbd9c5a75acaeed\",\"request_digest\":\"0c3b4a57b399dbcd9cf3ddc3e8e289cd15802fd5b59c16f0cc39a3628b3cdc56\",\"result_digest\":\"3ef49ac104f9bb6c9da359cee6a7191c5dded8e40f41c11f4790059ad636bd5f\",\"time\":1791441527.780811,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"credentials.use\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"71d51d7d7311475e3b2815983c64fb102532c3c524fb361f5072f109ec357562\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"credential_use\",\"previous\":\"dd4d9d59e4a7a67ce4d8f8f28a74bb3e9367a681f97988151dfc26a46abbf702\",\"request_digest\":\"e7ffe4daff7e43e9aba40bc7eed40fe8687eb73aef4cada0c9b9ec4474a8ef1d\",\"sentinel\":\"ALLOW\",\"time\":1791441528.3299928,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"credentials.use\",\"digest\":\"9b487176a8990ca59c61d896a8f5782114623b9badd47799dde454c2af0c56f8\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"credential_use\",\"previous\":\"71d51d7d7311475e3b2815983c64fb102532c3c524fb361f5072f109ec357562\",\"receipt_id\":\"rcpt_fcaef0b0675fef4f\",\"request_digest\":\"e7ffe4daff7e43e9aba40bc7eed40fe8687eb73aef4cada0c9b9ec4474a8ef1d\",\"result_digest\":\"ca34441c8527c0e8622d4c5aa776188449013681a3c4f59de5051d3e17f0f73d\",\"time\":1791441528.3351564,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"c418651ce605b43332a8a01fd6fa0382ef74072afe872fefd36bcefc4df3f459\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"provider_network\",\"previous\":\"9b487176a8990ca59c61d896a8f5782114623b9badd47799dde454c2af0c56f8\",\"request_digest\":\"9651e9ccb31097ab60c7e37004b1091cc273c1fc42227856b2a7612e9e6ef2a0\",\"sentinel\":\"ALLOW\",\"time\":1791441528.3449354,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"digest\":\"01c5b42fa0cc0a7385a7b886d4a11a400de3dcdef57b23c4c91194719f0a75fa\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"provider_network\",\"previous\":\"c418651ce605b43332a8a01fd6fa0382ef74072afe872fefd36bcefc4df3f459\",\"receipt_id\":\"rcpt_9d3d03d02103beb4\",\"request_digest\":\"9651e9ccb31097ab60c7e37004b1091cc273c1fc42227856b2a7612e9e6ef2a0\",\"result_digest\":\"a4804222accc19954c0534fcae6d9a9ab0b03cf429ca9c986c504132dd512cb5\",\"time\":1791441535.4968474,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.read\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"31be6d774696690002f4cf5097e57be6113bb20aa7d0d9cc5d8302ccfcdf293e\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"workspace_read\",\"previous\":\"01c5b42fa0cc0a7385a7b886d4a11a400de3dcdef57b23c4c91194719f0a75fa\",\"request_digest\":\"c70bde8b775036f7887f9d951a3003c5fc26721c4b90920c758182b39ae78a3f\",\"sentinel\":\"ALLOW\",\"time\":1791441535.534687,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.read\",\"digest\":\"8fc873ec0e28128a8c918c33ef4c9c207dae3499739200bd51335e7b1a6853e4\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"workspace_read\",\"previous\":\"31be6d774696690002f4cf5097e57be6113bb20aa7d0d9cc5d8302ccfcdf293e\",\"receipt_id\":\"rcpt_3d9a668deb2a9959\",\"request_digest\":\"c70bde8b775036f7887f9d951a3003c5fc26721c4b90920c758182b39ae78a3f\",\"result_digest\":\"22f57dd1b8478d35dddf1b6ce8d0146343326aa4a463e15f4b719cc8eb612a72\",\"time\":1791441535.5500667,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.read\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"cc74048db0bdd194d7eaa19028851c55fb8498e6ad860453c7d7034e90fc39ac\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"workspace_read\",\"previous\":\"8fc873ec0e28128a8c918c33ef4c9c207dae3499739200bd51335e7b1a6853e4\",\"request_digest\":\"8eb67852d07c6e8df271743db3183ff0385e076d3603b670e470173832779c83\",\"sentinel\":\"ALLOW\",\"time\":1791441535.5720122,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.read\",\"digest\":\"7d95d1a28bdb19e57777416b6cb467557df36ec318d47694e048b9e6a6fa250d\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"workspace_read\",\"previous\":\"cc74048db0bdd194d7eaa19028851c55fb8498e6ad860453c7d7034e90fc39ac\",\"receipt_id\":\"rcpt_7c9aa72e73b386c3\",\"request_digest\":\"8eb67852d07c6e8df271743db3183ff0385e076d3603b670e470173832779c83\",\"result_digest\":\"2f3a86746ab919e61fb773463010b8252d296ddd20e9d9b2e13d1cc856211277\",\"time\":1791441535.5764875,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"96907b21fc5d8bc3eda3d09c1ed89ce2a147469165ac64aa988c096a57c6806b\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"provider_network\",\"previous\":\"7d95d1a28bdb19e57777416b6cb467557df36ec318d47694e048b9e6a6fa250d\",\"request_digest\":\"eb169cdbfc3ce96080898d8125a8c0cbf1b5ae38efd4161c55d37f031f97c5ce\",\"sentinel\":\"ALLOW\",\"time\":1791441535.581781,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"digest\":\"161d0160a26f409c62ecf6a729a50a604cfd742f89c871c5b338dd9b7b97d168\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"provider_network\",\"previous\":\"96907b21fc5d8bc3eda3d09c1ed89ce2a147469165ac64aa988c096a57c6806b\",\"receipt_id\":\"rcpt_2e9d18424ff96adf\",\"request_digest\":\"eb169cdbfc3ce96080898d8125a8c0cbf1b5ae38efd4161c55d37f031f97c5ce\",\"result_digest\":\"ea395f108e6f0f596a28a1b6ee0b321d661e6b0afd9c05378220348b765c338f\",\"time\":1791441543.7805252,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.write\",\"approval\":\"user\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"d28ce45d155196667ad55c30b93d0ddffb65e26317d585c0160181c4286b135f\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"workspace_write\",\"previous\":\"161d0160a26f409c62ecf6a729a50a604cfd742f89c871c5b338dd9b7b97d168\",\"request_digest\":\"0dbe75f760926bd6280365321daab7b5e6462682c231852b4d289913fa95871b\",\"sentinel\":\"ALLOW\",\"time\":1791441544.0723333,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.files.write\",\"digest\":\"731db0c3621839897b0160f5595fd9f638a77371e012116bfdf85bd1ad912726\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"workspace_write\",\"previous\":\"d28ce45d155196667ad55c30b93d0ddffb65e26317d585c0160181c4286b135f\",\"receipt_id\":\"rcpt_efc96e6e0a1ad07f\",\"request_digest\":\"0dbe75f760926bd6280365321daab7b5e6462682c231852b4d289913fa95871b\",\"result_digest\":\"2e89e48da6f77480634dedd877d4ad19bc16456a763467d96d17f1d7156076f3\",\"time\":1791441544.0857568,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"1e8beb278787e14fc1e7cf508d3aa618791d79761c606e4b0dd14c1937e782da\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"provider_network\",\"previous\":\"731db0c3621839897b0160f5595fd9f638a77371e012116bfdf85bd1ad912726\",\"request_digest\":\"13f73ce1540e024eff157303190d257000276ea4788860821d76d3503082ca4d\",\"sentinel\":\"ALLOW\",\"time\":1791441544.0945272,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"digest\":\"338431c66ceafdf62edfcb88a797252c9653c6505c54f1343161c598e67d5aae\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"provider_network\",\"previous\":\"1e8beb278787e14fc1e7cf508d3aa618791d79761c606e4b0dd14c1937e782da\",\"receipt_id\":\"rcpt_9f2de6f9ee1632ae\",\"request_digest\":\"13f73ce1540e024eff157303190d257000276ea4788860821d76d3503082ca4d\",\"result_digest\":\"86f020e1c0b76d40673e59253562a0af751bcc3529b75b05614572aab1379009\",\"time\":1791441553.6649714,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.command.run\",\"approval\":\"user\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"e69ab98e469d5d103e56b88d45e16dcaeded6d1aa43655ba47664e479e194b9f\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"workspace_command\",\"previous\":\"338431c66ceafdf62edfcb88a797252c9653c6505c54f1343161c598e67d5aae\",\"request_digest\":\"77ca0b6b6dce1be77275a0b24e14236239d2b07e2dc6fcbaf76bb9ca83a57f36\",\"sentinel\":\"ALLOW\",\"time\":1791441553.822749,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"workspace.command.run\",\"digest\":\"bdfaacea6ce185e99de5a8400a6e93561ca7a0f63f6e7f448821be1867e73eae\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"workspace_command\",\"previous\":\"e69ab98e469d5d103e56b88d45e16dcaeded6d1aa43655ba47664e479e194b9f\",\"receipt_id\":\"rcpt_d2c342e0f5db920d\",\"request_digest\":\"77ca0b6b6dce1be77275a0b24e14236239d2b07e2dc6fcbaf76bb9ca83a57f36\",\"result_digest\":\"7550b5eaa79a9df581249ec0b0b8e28a755b8a97cf66ed74fe6e6c8c1c5474c9\",\"time\":1791441553.8862908,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"authority\":true,\"checks\":[{\"name\":\"KnownAction\",\"passed\":true},{\"name\":\"Authority\",\"passed\":true},{\"name\":\"SystembilitySet\",\"passed\":true},{\"name\":\"ExecutionOwnerBinding\",\"passed\":true},{\"name\":\"WorkspaceReadBoundary\",\"passed\":true},{\"name\":\"WorkspaceWriteBoundary\",\"passed\":true},{\"name\":\"WorkspaceConfigBoundary\",\"passed\":true},{\"name\":\"ProviderAuthBoundary\",\"passed\":true},{\"name\":\"ProviderNetworkBoundary\",\"passed\":true},{\"name\":\"RemoteReadBoundary\",\"passed\":true},{\"name\":\"SessionStoreBoundary\",\"passed\":true},{\"name\":\"SessionDeleteBoundary\",\"passed\":true},{\"name\":\"CredentialBoundary\",\"passed\":true},{\"name\":\"MCPInvocationBoundary\",\"passed\":true},{\"name\":\"GatewaySemanticBoundary\",\"passed\":true},{\"name\":\"LSPProcessBoundary\",\"passed\":true},{\"name\":\"BrokerRecipeBoundary\",\"passed\":true},{\"name\":\"BrokerProvisionBoundary\",\"passed\":true},{\"name\":\"BrokerRegistryBoundary\",\"passed\":true},{\"name\":\"TailscaleExecutableBoundary\",\"passed\":true},{\"name\":\"TailscalePackageBoundary\",\"passed\":true},{\"name\":\"TailscaleGatewayBoundary\",\"passed\":true},{\"name\":\"TailscalePrivateServeBoundary\",\"passed\":true},{\"name\":\"MobileHostBoundary\",\"passed\":true},{\"name\":\"CommandProcessBoundary\",\"passed\":true},{\"name\":\"GitBoundary\",\"passed\":true},{\"name\":\"PublishBoundary\",\"passed\":true},{\"name\":\"LocalMCPBoundary\",\"passed\":true},{\"name\":\"ClipboardBoundary\",\"passed\":true},{\"name\":\"BridgePresenceBoundary\",\"passed\":true}],\"digest\":\"8a8c88d8064a768e45b9aff2f0dd34be09db51625549aede3de9418bb6c4f52f\",\"failed_checks\":[],\"kind\":\"decision\",\"owner\":\"provider_network\",\"previous\":\"bdfaacea6ce185e99de5a8400a6e93561ca7a0f63f6e7f448821be1867e73eae\",\"request_digest\":\"4e2a9902a7b8b7139784ac1631d31b545c89c1605d4384b8317c113ee546d18e\",\"sentinel\":\"ALLOW\",\"time\":1791441553.8909981,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n{\"action\":\"provider.request\",\"digest\":\"d700bd31d012e1c27c67b25ec714c1a7c0453f907850bea02c8de9f24566f819\",\"kind\":\"receipt\",\"outcome\":\"SUCCESS\",\"owner\":\"provider_network\",\"previous\":\"8a8c88d8064a768e45b9aff2f0dd34be09db51625549aede3de9418bb6c4f52f\",\"receipt_id\":\"rcpt_0aaf9a2d18ccae6a\",\"request_digest\":\"4e2a9902a7b8b7139784ac1631d31b545c89c1605d4384b8317c113ee546d18e\",\"result_digest\":\"15582123902b8f4e119f3ac8a996b417239876d2c90d5ac9af583a6e2beab5dc\",\"time\":1791441557.920868,\"version\":1,\"workspace\":\"987a9e3aa5a6e0f3c3dbc029ca4b58c5\"}\n",
+  "fixture_hashes": {
+    "calc.py": "ba1a531f581d2e6094e978ed6f7aca7a8d92eeb62c6e7ad73ee692f7f18bc772",
+    "test_calc.py": "4adbc7fb2655c573bba07993fd6f476e7e4777412f54d14561a5bfcfa7232739"
+  },
+  "token_usage_complete": true,
+  "checks": {
+    "negative_control": true,
+    "read_both_files": true,
+    "edit_applied": false,
+    "sandboxed_tests_pass": true,
+    "independent_tests_pass": true,
+    "tests_unchanged": true,
+    "journal_verified": true,
+    "provider_flow": true
+  },
+  "status": "FAIL",
+  "latency_s": {
+    "n": 4,
+    "min": 3.281,
+    "median": 5.616,
+    "max": 8.189
+  }
+}

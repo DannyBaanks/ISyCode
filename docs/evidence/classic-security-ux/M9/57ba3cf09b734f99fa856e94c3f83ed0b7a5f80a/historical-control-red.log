@@ -1,0 +1,31 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_historical_source_is_verified_at_evaluated_commit_without_releasing_current_code _
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-34/test_historical_source_is_veri0')
+
+    def test_historical_source_is_verified_at_evaluated_commit_without_releasing_current_code(tmp_path):
+        git(tmp_path, 'init', '-q')
+        git(tmp_path, 'config', 'user.email', 'fixture@example.invalid')
+        git(tmp_path, 'config', 'user.name', 'Synthetic fixture')
+        (tmp_path / 'scripts').mkdir()
+        source = tmp_path / 'scripts/fixture.py'
+        source.write_text('original source\n')
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        git(tmp_path, 'add', '--', 'scripts/fixture.py')
+        git(tmp_path, 'commit', '-qm', 'fixture source', '--', 'scripts/fixture.py')
+        sha = git(tmp_path, 'rev-parse', 'HEAD')
+        gate = _write_gate(tmp_path, sha=sha)
+        gate.write_text(gate.read_text() + f'      - scripts/fixture.py\n        sha256: {digest}\n')
+        source.write_text('changed current source\n')
+        validator = _validator()
+>       assert validator.validate_tree(tmp_path) == []
+E       assert ['/tmp/pytest...256 mismatch'] == []
+E         
+E         Left contains one more item: "/tmp/pytest-of-danny/pytest-34/test_historical_source_is_veri0/docs/evidence/classic-security-ux/M6/43830d50ec091714baf31b753eeb04169d6604d7/gate.yaml: artifact 'scripts/fixture.py' sha256 mismatch"
+E         Use -v to get more diff
+
+tests/test_gate_historical_source.py:26: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_gate_historical_source.py::test_historical_source_is_verified_at_evaluated_commit_without_releasing_current_code
+1 failed in 0.08s

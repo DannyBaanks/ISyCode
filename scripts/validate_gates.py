@@ -150,7 +150,8 @@ def validate_document(document: dict, *, required_ids: set[str] | None = None,
     return errors
 
 
-def _artifact_errors(root: Path, folder: Path, case: dict, *, strict: bool) -> list[str]:
+def _artifact_errors(root: Path, folder: Path, case: dict, *, strict: bool,
+                     evaluated_sha: str | None = None) -> list[str]:
     artifacts = case.get("artefactos") or []
     if not artifacts:
         return [f"{case['id']} has no artifact evidence"] if strict else []
@@ -175,9 +176,27 @@ def _artifact_errors(root: Path, folder: Path, case: dict, *, strict: bool) -> l
                 continue  # Historical reference on a case still EN_REVISION.
             if not re.fullmatch(r"[0-9a-f]{64}", str(expected or "")):
                 errors.append(f"artifact {name!r} has no valid sha256")
-            elif hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-                errors.append(f"artifact {name!r} sha256 mismatch")
-        except (OSError, ValueError) as exc:
+            else:
+                payload = path.read_bytes()
+                if (evaluated_sha is not None and relative.parts[0] in {"src", "scripts", "tests"}
+                        and hashlib.sha256(payload).hexdigest() != expected):
+                    # A source reference that drifted may be recovered exactly
+                    # from the declared evaluated commit. Method/test artifacts
+                    # already matching their recorded hash retain legacy behavior.
+                    # Raw evidence remains checked on disk. Release checks always
+                    # use the current checkout, so this grants no new approval.
+                    tree = subprocess.run(["git", "ls-tree", evaluated_sha, "--", relative.as_posix()],
+                                          cwd=root, capture_output=True, timeout=10)
+                    if tree.returncode or not tree.stdout or tree.stdout.split()[0] not in {b"100644", b"100755"}:
+                        raise ValueError("historical source is absent or not a regular tracked file")
+                    blob = subprocess.run(["git", "show", evaluated_sha + ":" + relative.as_posix()],
+                                          cwd=root, capture_output=True, timeout=10)
+                    if blob.returncode:
+                        raise ValueError("historical source cannot be read")
+                    payload = blob.stdout
+                if hashlib.sha256(payload).hexdigest() != expected:
+                    errors.append(f"artifact {name!r} sha256 mismatch")
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
             errors.append(f"artifact {name!r}: {exc}")
     return errors
 
@@ -218,7 +237,9 @@ def validate_tree(root: Path, *, require_approved: bool = False) -> list[str]:
                 found.append("evaluated commit is absent from this checkout; fetch its history")
         for case in document.get("casos", []):
             found.extend(_artifact_errors(root, path.parent, case,
-                         strict=require_approved or case.get("resultado") == "PASS"))
+                         strict=require_approved or case.get("resultado") == "PASS",
+                         evaluated_sha=sha if not require_approved and SHA.fullmatch(sha)
+                         and (root / ".git").exists() else None))
         if require_approved:
             if document.get("estado") != "APROBADO":
                 found.append(f"release blocked: gate is {document.get('estado')}, not APROBADO")
