@@ -133,6 +133,29 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
     arbitrary entry-count ceiling.
     """
     found: list[tuple[str, bool]] = []
+    # A hardlink is the same file under a harmless name, so a name-only mask
+    # misses it. Remember sensitive inodes and every multi-link file, then mask
+    # the links that share an inode with a sensitive file.
+    secret_inodes: set[tuple[int, int]] = set()
+    linked: list[tuple[str, tuple[int, int]]] = []
+
+    def inode(entry: os.DirEntry) -> tuple[tuple[int, int], int] | None:
+        try:
+            info = entry.stat(follow_symlinks=False)
+        except OSError:
+            return None
+        return (info.st_dev, info.st_ino), info.st_nlink
+
+    def collect_secret_files(folder: str) -> None:
+        with os.scandir(folder) as entries:
+            for entry in entries:
+                if entry.is_symlink():
+                    continue
+                if entry.is_dir(follow_symlinks=False):
+                    collect_secret_files(entry.path)
+                elif entry.is_file(follow_symlinks=False) and (facts := inode(entry)):
+                    secret_inodes.add(facts[0])
+
     stack = [root]
     while stack:
         folder = stack.pop()
@@ -143,8 +166,15 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
                 is_folder = entry.is_dir(follow_symlinks=False)
                 if WorkspaceReadSystembility.is_sensitive_name(entry.name):
                     found.append((Path(entry.path).relative_to(root).as_posix(), is_folder))
+                    if is_folder:
+                        collect_secret_files(entry.path)
+                    elif facts := inode(entry):
+                        secret_inodes.add(facts[0])
                 elif is_folder:
                     stack.append(Path(entry.path))
+                elif entry.is_file(follow_symlinks=False) and (facts := inode(entry)) and facts[1] > 1:
+                    linked.append((Path(entry.path).relative_to(root).as_posix(), facts[0]))
+    found.extend((relative, False) for relative, key in linked if key in secret_inodes)
     return tuple(sorted(found))
 
 

@@ -69,7 +69,7 @@ def test_g7_01_dirty_repo_diagnose_edit_test_diff_undo(repo, monkeypatch):
     bin_dir = root / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    fake.write_text(FAKE_BWRAP.format(python=__import__("sys").executable), encoding="utf-8")
+    fake.write_text(FAKE_BWRAP.format(python=__import__("pathlib").Path(__import__("sys").executable).resolve()), encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{__import__('os').pathsep}{__import__('os').environ.get('PATH', '')}")
     monkeypatch.setenv("FAKE_BWRAP_LOG", str(root / "bwrap.json"))

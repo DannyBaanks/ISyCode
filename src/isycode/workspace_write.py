@@ -918,7 +918,10 @@ class WorkspaceWriteOwner:
             return None
 
     def _read_at(self, parent_fd: int, name: str) -> bytes | None:
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        # O_NONBLOCK: a workspace FIFO opens at once and is refused as not regular,
+        # instead of blocking the preview until some writer appears.
+        flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+                 | getattr(os, "O_NONBLOCK", 0))
         try:
             descriptor = os.open(name, flags, dir_fd=parent_fd)
         except FileNotFoundError:
@@ -1018,7 +1021,8 @@ class WorkspaceWriteOwner:
         except FileNotFoundError:
             return None
         try:
-            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+            flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
             try:
                 descriptor = os.open(target.name, flags, dir_fd=parent_fd)
             except FileNotFoundError:

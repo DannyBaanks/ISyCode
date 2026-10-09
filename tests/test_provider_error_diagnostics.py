@@ -74,3 +74,34 @@ def test_subagent_failure_reopens_selector_before_any_new_request(tmp_path, monk
             result = await asyncio.wait_for(task, 5)
             assert result["status"] == "completed" and len(calls) == 2
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("body, expected", [
+    (b"data: " + b"x" * (2 * 1024 * 1024), "exceeds 1 MiB"),
+    (b'data: {"error": {"code": "invalid_api_key", "message": "Bearer secret-do-not-echo"}}\n\n', "streaming API error"),
+])
+def test_sync_stream_has_the_async_bounds_and_error_events(body, expected):
+    """Hermes audit 2026-10-08, finding 8: the sync SSE path lacked the async hardening."""
+    import http.server
+    import threading
+    from isycode.streaming import stream_complete
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        with pytest.raises(StreamError, match=expected) as caught:
+            stream_complete(f"http://127.0.0.1:{server.server_port}/v1", "", "fixture", [], timeout_s=5)
+        assert "secret-do-not-echo" not in str(caught.value)
+    finally:
+        server.shutdown()
