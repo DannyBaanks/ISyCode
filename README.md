@@ -177,6 +177,7 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | --- | --- | --- | --- |
 | Listar, leer y buscar por nombre | `workspace_list`, `workspace_read`, `workspace_search` | Read and search workspace files | no |
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
+| Preparar contexto con archivos elegidos | `workspace_pack` | Read and search workspace files | sí, con lista exacta y estimación de tokens |
 | Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
 | Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
 | Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra, salvo carpeta Classic ya confiable |
@@ -193,6 +194,8 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 **Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Eso no apaga las preguntas. Cada commit sigue pidiendo aprobación. Los cambios y comandos ordinarios dejan de preguntar uno a uno solo después de confiar la carpeta. Sin esa confianza, cada uno sigue pidiendo aprobación. Sin sandbox los comandos se quedan apagados.
 
 Si una herramienta está apagada, el agente te dice dónde activarla en vez de solo decir que no puede.
+
+`workspace_pack` prepara, bajo petición, contexto de una lista de archivos o directorios del workspace activo. Antes de leer contenidos muestra los archivos exactos, tamaños y estimación, y exige aprobación para esa llamada; cancela sin leer el contenido. El límite se aplica a una estimación local aproximada basada en bytes UTF-8 (2 bytes por token), no a un tokenizer del provider. Acepta hasta 32 rutas, 200 archivos y 1 MiB total; cada archivo conserva el límite normal de lectura de 128 KiB y los paquetes omiten rutas sensibles, entradas ocultas al recorrer directorios y directorios comunes de dependencias/build/caché. La estimación no garantiza el conteo del provider. El texto empaquetado se marca como datos no confiables. No lee ni inyecta automáticamente el workspace, no escribe un archivo de salida y no incluye compresión Tree-sitter ni historial/diffs Git.
 
 ### Bucle y contexto
 

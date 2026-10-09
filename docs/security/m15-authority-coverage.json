@@ -1664,64 +1664,64 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2038,
+      "line": 2039,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1819,
+      "line": 1820,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1891,
+      "line": 1892,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1961,
+      "line": 1962,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2047,
+      "line": 2048,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2098,
+      "line": 2099,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2106,
+      "line": 2107,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2164,
+      "line": 2165,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2232,
-      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
+      "line": 2246,
+      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
     },
@@ -2100,8 +2100,8 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2232,
-      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
+      "line": 2246,
+      "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
     },

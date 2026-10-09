@@ -36,7 +36,7 @@ NON_AUTHORITY_ACTIONS = frozenset({"role.select"})
 # Their selector implementations are exercised by focused tests; a new dynamic
 # constructor has no contract here and blocks the frontier report.
 DYNAMIC_ACTION_RESOLVERS = {
-    "isycode.action_runtime.LocalWorkspaceReadOwner.execute": {
+    "isycode.action_runtime.LocalWorkspaceReadOwner._execute": {
         "owner": "workspace_read",
         "actions": ("workspace.files.list", "workspace.files.read",
                     "workspace.files.search", "workspace.context.inject"),

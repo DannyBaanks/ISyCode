@@ -62,6 +62,7 @@ from isycode.prompt_expansion import (
 from isycode.agent_tasks import TASK_TOOL
 from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME
 from isycode.idea_box import IDEA_BOX_TOOL, IDEA_BOX_TOOL_NAME, IDEA_NUDGE_SECONDS
+from isycode.workspace_pack import WORKSPACE_PACK_TOOL
 from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
 from isycode.command_runner import COMMAND_TOOL
 from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner
@@ -358,6 +359,8 @@ class ChatMixin:
             command_active = tools_active and self._command_tool_enabled()
             chat_tools = (CHAT_WORKSPACE_TOOLS + [EDIT_TOOL, WRITE_TOOL] if write_active
                           else list(CHAT_WORKSPACE_TOOLS) if tools_active else [])
+            if tools_active:
+                chat_tools = chat_tools + [WORKSPACE_PACK_TOOL]
             if provider_supports_tools:
                 # These tools can only open a human prompt; they grant nothing by themselves.
                 from isycode.web_fetch import WEB_FETCH_TOOL
