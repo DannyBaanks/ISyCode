@@ -77,6 +77,13 @@ La barra inferior tiene **Sidebar**, **Sessions**, **Multi Harness** y **⚙**. 
 En **Context → Choose AGENTS.md…**, el selector de archivos de Linux te deja elegirlo sin escribir ruta. El archivo debe estar dentro del workspace y pasa por el grant `workspace.context.inject` de Workspace Authority e IsySentinel.
 `/readme` abre el selector nativo de Linux, deja escoger un README del workspace y lo previsualiza tras el grant de lectura y Sentinel.
 
+### Preparar contexto con archivos del workspace
+
+En el chat puedes pedir, por ejemplo: «Empaqueta `src/isycode` y `tests` para revisar la arquitectura con un presupuesto de 20.000 tokens». La herramienta `workspace_pack` solo aparece cuando están activas las herramientas de lectura del workspace. Acepta rutas de archivos o directorios relativos al workspace actual; los directorios se recorren de forma recursiva.
+
+Antes de leer el contenido, ISyCode muestra el inventario exacto, el tamaño total, una estimación local de tokens y el presupuesto solicitado. **Read and send once** autoriza solo ese paquete; **Cancel** o `Esc` cancela sin leer los contenidos. Cada lectura conserva sus grants, IsySentinel y recibo habituales. Los archivos son datos no confiables: pueden contener instrucciones maliciosas y no conceden autoridad.
+
+Límites: 32 rutas seleccionadas, 200 archivos, 200 directorios recorridos, 128 KiB por archivo, 1 MiB total y presupuesto de 1 a 100.000 tokens estimados. El estimador local usa aproximadamente dos bytes UTF-8 por token; no es el tokenizer del provider ni una garantía de que el request quepa en su ventana. No se incluyen rutas sensibles (`.env`, claves, `.git`, `.isycode`), entradas ocultas halladas al recorrer un directorio ni directorios comunes de caché, dependencias y build; puedes seleccionar un archivo oculto no sensible por su ruta exacta. Esta primera versión no interpreta `.gitignore` ni `.ignore`, no comprime código con Tree-sitter, no agrega diffs/logs Git y no guarda un archivo de salida.
 ### Memoria privada del workspace
 
 En el chat interactivo, pide expresamente guardar o buscar algo; por ejemplo: «Guarda que este proyecto usa SQLite para los datos locales» o «Busca lo que recordamos sobre autenticación». Con herramientas de workspace activas, el modelo puede usar `memory_store`, `memory_recall`, `memory_update`, `memory_forget`, `memory_list_topics` y `memory_consolidate`. Los grafos de conocimiento usan `memoir_create`, `memoir_list`, `memoir_show`, `memoir_add_concept`, `memoir_link` y `memoir_search`.

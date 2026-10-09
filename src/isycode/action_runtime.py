@@ -161,6 +161,7 @@ RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "
 # must never rewrite it.
 WRITE_PROTECTED_NAMES = frozenset({".isyroot"})
 MAX_OUTPUT_CHARS = 24_000
+MAX_PACK_READ_OUTPUT_CHARS = 1_000_000
 MAX_SCAN_ENTRIES = 6_000
 # Sandboxed workspace commands (isycode.command_runner). The request binds the
 # exact argv, resolved program, working folder, limits and the set of masked
@@ -2362,6 +2363,19 @@ class LocalWorkspaceReadOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id=owner_id)
 
     def execute(self, action_id: str, arguments: dict[str, Any]) -> ActionOutcome:
+        return self._execute(action_id, arguments, output_limit=MAX_OUTPUT_CHARS)
+
+    def execute_pack_read(self, path: str) -> ActionOutcome:
+        """Read one reviewed pack file with the normal grant, Sentinel, and receipt."""
+        if (self.owner_id != "workspace_read" or not isinstance(path, str)
+                or len(path) > 4096):
+            return ActionOutcome("Pack read unavailable.", "DENY", None,
+                                 "pack reads require a bounded workspace-relative path")
+        return self._execute("workspace.files.read", {"path": path},
+                             output_limit=MAX_PACK_READ_OUTPUT_CHARS)
+
+    def _execute(self, action_id: str, arguments: dict[str, Any], *,
+                 output_limit: int) -> ActionOutcome:
         allowed = READ_ACTIONS if self.owner_id == "workspace_read" else (
             CONFIG_READ_ACTIONS if self.owner_id == CONFIG_OWNER_ID else frozenset())
         if action_id not in allowed:
@@ -2419,10 +2433,10 @@ class LocalWorkspaceReadOwner:
         except (OSError, ValueError) as exc:
             return ActionOutcome("Read action failed; no content was returned.",
                                  "ERROR", None, str(exc)[:300])
-        if len(result) > MAX_OUTPUT_CHARS and not (
+        if len(result) > output_limit and not (
                 self.owner_id == CONFIG_OWNER_ID and action_id == "workspace.config.read"
                 and Path(target).relative_to(self.root).as_posix() == ".gitignore"):
-            result = result[:MAX_OUTPUT_CHARS] + "\n[output truncated]"
+            result = result[:output_limit] + "\n[output truncated]"
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), action_id, request.digest, "ALLOW", "SUCCESS",
             hashlib.sha256(result.encode("utf-8")).hexdigest())

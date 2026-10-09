@@ -177,6 +177,7 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | --- | --- | --- | --- |
 | Listar, leer y buscar por nombre | `workspace_list`, `workspace_read`, `workspace_search` | Read and search workspace files | no |
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
+| Preparar contexto con archivos elegidos | `workspace_pack` | Read and search workspace files | sí, con lista exacta y estimación de tokens |
 | Memoria privada y grafos de conocimiento | `memory_*`, `memoir_*` | Herramientas de workspace activas | sí, una vez por operación; las lecturas avisan que su contenido puede enviarse al modelo |
 | Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
 | Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
@@ -195,6 +196,7 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 
 Si una herramienta está apagada, el agente te dice dónde activarla en vez de solo decir que no puede.
 
+`workspace_pack` prepara, bajo petición, contexto de una lista de archivos o directorios del workspace activo. Antes de leer contenidos muestra los archivos exactos, tamaños y estimación, y exige aprobación para esa llamada; cancela sin leer el contenido. El límite se aplica a una estimación local aproximada basada en bytes UTF-8 (2 bytes por token), no a un tokenizer del provider. Acepta hasta 32 rutas, 200 archivos y 1 MiB total; cada archivo conserva el límite normal de lectura de 128 KiB y los paquetes omiten rutas sensibles, entradas ocultas al recorrer directorios y directorios comunes de dependencias/build/caché. La estimación no garantiza el conteo del provider. El texto empaquetado se marca como datos no confiables. No lee ni inyecta automáticamente el workspace, no escribe un archivo de salida y no incluye compresión Tree-sitter ni historial/diffs Git.
 La memoria guarda datos en una base SQLite privada fuera del checkout, separada por workspace. El agente solo la consulta o modifica cuando se lo pides; cada operación muestra sus argumentos para aprobación de un solo uso. No extrae recuerdos automáticamente ni los inyecta al iniciar sesión o cada prompt. Incluye recuerdos por tema, búsqueda, actualización, olvido, consolidación manual y grafos con conceptos y enlaces. Olvidar elimina el recuerdo; consolidar archiva las fuentes. Las lecturas aprobadas pueden enviar los resultados al modelo seleccionado: trata ese contenido como contexto no confiable y verifica que siga vigente. No depende del código, binario ni servidor MCP de ICM.
 
 ### Bucle y contexto

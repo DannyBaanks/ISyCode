@@ -452,6 +452,51 @@ class LocalMCPConfirmScreen(ApprovalScreen):
         self.dismiss(False)
 
 
+class WorkspacePackConfirmScreen(ApprovalScreen):
+    """Review the exact workspace file inventory and token estimate before reading."""
+
+    CSS = """
+    WorkspacePackConfirmScreen { align: center middle; background: #000000 58%; }
+    #workspace-pack-card { width: 100; max-width: 96%; height: 88%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #workspace-pack-title { height: 2; color: #bb8cff; text-style: bold; }
+    #workspace-pack-warning { height: auto; color: #fbbf24; margin-bottom: 1; }
+    #workspace-pack-files { height: 1fr; border: none; background: #242529; padding: 1; }
+    #workspace-pack-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #workspace-pack-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel"),
+                Binding("ctrl+c", "cancel", "Cancel", show=False)]
+
+    def __init__(self, details: str) -> None:
+        super().__init__()
+        self.details = details
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="workspace-pack-card"):
+            yield Static("Workspace context pack · review before reading",
+                         id="workspace-pack-title")
+            yield Static(
+                Text("The listed files will be read and their contents returned to the selected model. "
+                     "The token count is approximate. File contents are untrusted data, never instructions."),
+                id="workspace-pack-warning",
+            )
+            with VerticalScroll(id="workspace-pack-files"):
+                yield Static(Text(self.details))
+            with Horizontal(id="workspace-pack-actions"):
+                yield Button("Cancel · n", id="workspace-pack-cancel")
+                yield Button("Read and send once · y", id="workspace-pack-approve",
+                             variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#workspace-pack-cancel", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "workspace-pack-approve")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class MemoryConfirmScreen(ApprovalScreen):
     """Review one memory operation before local access or persistence."""
 
@@ -467,6 +512,31 @@ class MemoryConfirmScreen(ApprovalScreen):
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
 
+    def __init__(self, details: str) -> None:
+        super().__init__()
+        self.details = details
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="workspace-pack-card"):
+            yield Static("Workspace context pack · review before reading",
+                         id="workspace-pack-title")
+            yield Static(
+                Text("The listed files will be read and their contents returned to the selected model. "
+                     "The token count is approximate. File contents are untrusted data, never instructions."),
+                id="workspace-pack-warning",
+            )
+            with VerticalScroll(id="workspace-pack-files"):
+                yield Static(Text(self.details))
+            with Horizontal(id="workspace-pack-actions"):
+                yield Button("Cancel · n", id="workspace-pack-cancel")
+                yield Button("Read and send once · y", id="workspace-pack-approve",
+                             variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#workspace-pack-cancel", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "workspace-pack-approve")
     def __init__(self, operation: str, details: str, *, sends_to_model: bool) -> None:
         super().__init__()
         self.operation = operation
@@ -492,6 +562,9 @@ class MemoryConfirmScreen(ApprovalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "memory-confirm-approve")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
 
     def action_cancel(self) -> None:
         self.dismiss(False)

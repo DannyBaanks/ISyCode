@@ -45,7 +45,8 @@ from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, _elapsed_la
 from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import (
-    TailscaleConfirmScreen, LocalMCPConfirmScreen, MemoryConfirmScreen,
+    TailscaleConfirmScreen, LocalMCPConfirmScreen, WorkspacePackConfirmScreen,
+    MemoryConfirmScreen,
 )
 from isycode.workspace_memory import MEMORY_TOOL_OPERATIONS, WorkspaceMemoryOwner
 from isycode.tui_screens_sessions import AgentQuestionScreen
@@ -163,6 +164,12 @@ class ToolMixin:
             except json.JSONDecodeError:
                 mcp_arguments = None
             return tool_call_id, await self._call_local_mcp(name, mcp_arguments)
+        if name == "workspace_pack":
+            try:
+                pack_arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
+            except json.JSONDecodeError:
+                pack_arguments = None
+            return tool_call_id, await self._call_workspace_pack(pack_arguments)
         if isinstance(name, str) and name in MEMORY_TOOL_OPERATIONS:
             try:
                 memory_arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
@@ -653,6 +660,43 @@ class ToolMixin:
         self._append(f"  MCP ALLOW · {server}.{tool} · receipt {outcome.receipt.receipt_id}", GREEN)
         return outcome.text
 
+    async def _call_workspace_pack(self, arguments) -> str:
+        """Review a bounded file inventory before packing any file contents."""
+        from isycode.workspace_pack import WorkspacePackOwner
+
+        try:
+            owner = WorkspacePackOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            preview = await asyncio.to_thread(owner.prepare, arguments)
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            return json.dumps({
+                "error": f"workspace pack unavailable ({type(exc).__name__}): {str(exc)[:240]}"})
+
+        rows = [
+            f"{json.dumps(item.path, ensure_ascii=False)} · {item.size:,} bytes · "
+            f"~{(item.size + len(item.path.encode('utf-8')) + 49) // 2:,} tokens"
+            for item in preview.files
+        ]
+        details = (
+            f"Files: {len(preview.files)} / 200\n"
+            f"Total size: {preview.total_bytes:,} bytes\n"
+            f"Estimated tokens: ~{preview.estimated_tokens:,}\n"
+            f"Approved budget: {preview.arguments['token_budget']:,}\n\n"
+            + "\n".join(rows)
+        )
+        if not await self._await_screen(WorkspacePackConfirmScreen(details)):
+            self._append("  Workspace pack cancelled · no file contents were read", MUTED)
+            return json.dumps({"status": "cancelled", "files_read": 0})
+        try:
+            result = await asyncio.to_thread(owner.execute, preview)
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            self._append(f"  Workspace pack failed · {str(exc)[:180]}", YELLOW)
+            return json.dumps({"error": f"workspace pack failed: {str(exc)[:240]}"})
+        self._append(
+            f"  Workspace pack · {len(preview.files)} files · ~{result['estimated_tokens']:,} tokens",
+            GREEN,
+        )
+        return result["content"]
     async def _call_workspace_memory(self, tool_name: str, arguments) -> str:
         """Run an explicit memory operation after reviewing it with the user."""
         operation = MEMORY_TOOL_OPERATIONS.get(tool_name)
