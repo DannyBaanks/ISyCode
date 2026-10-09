@@ -1,0 +1,60 @@
+{
+  "argv": [
+    "grep",
+    "-H",
+    "-n",
+    "needle",
+    "notes.txt"
+  ],
+  "command_success": true,
+  "cwd": ".",
+  "exit_code": 0,
+  "output": "300 matches in 1F:\n\n[file] notes.txt (300):\n     1: needle_0\n     2: needle_1\n     3: needle_2\n     4: needle_3\n     5: needle_4\n     6: needle_5\n     7: needle_6\n     8: needle_7\n     9: needle_8\n    10: needle_9\n  +290\n\n",
+  "output_bytes": 7282,
+  "output_truncated": false,
+  "rtk": {
+    "applied": true,
+    "captured_bytes": 7282,
+    "fallback": "",
+    "filter_argv": [
+      "rtk",
+      "pipe",
+      "--filter",
+      "grep"
+    ],
+    "model_bytes": 222,
+    "path": "/usr/local/bin/rtk",
+    "raw_complete": true,
+    "raw_sha256": "e01f4b9fc820d81120bf2dd606f5037b288cc4baabb6038d7bc46c80127b3576",
+    "rewrite_argv": [
+      "rtk",
+      "grep",
+      "-H",
+      "-n",
+      "needle",
+      "notes.txt"
+    ],
+    "saved_bytes": 7060,
+    "sha256": "b947215511bfd8f5f6eb12c6b6d4a9f70b72e9ce37442cfa4df2352b033cd0ea",
+    "strategy": "pipe",
+    "version": "rtk 0.51.0"
+  },
+  "staging": {
+    "backend": "copy",
+    "pending": [],
+    "pending_count": 0,
+    "promoted": [],
+    "promoted_count": 0,
+    "promotion": {
+      "state": "idle"
+    },
+    "refused": [],
+    "refused_count": 0
+  },
+  "timed_out": false,
+  "probe": {
+    "normal_approval_modals": 1,
+    "raw_recall_verified": true,
+    "settings_enabled_via_button": true
+  }
+}
