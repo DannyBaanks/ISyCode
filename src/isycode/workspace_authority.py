@@ -65,7 +65,8 @@ CLASSIC_PATH_ACTIONS = frozenset({
 })
 # These are grants only; execution owners still require exact approvals for commits.
 CLASSIC_GRANTED_ACTIONS = frozenset({
-    "session.create", "session.resume", "git.status", "git.diff", "git.commit"})
+    "session.create", "session.resume", "workspace.memory.read", "workspace.memory.write",
+    "workspace.memory.forget", "git.status", "git.diff", "git.commit"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
 CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_GRANTED_ACTIONS | CLASSIC_SERVICE_ACTIONS
                    | {"provider.request", "workspace.command.run"})
