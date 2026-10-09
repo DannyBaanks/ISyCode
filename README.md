@@ -177,6 +177,7 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 | --- | --- | --- | --- |
 | Listar, leer y buscar por nombre | `workspace_list`, `workspace_read`, `workspace_search` | Read and search workspace files | no |
 | Buscar texto dentro de archivos | `workspace_grep` | Read and search workspace files | no |
+| Memoria privada y grafos de conocimiento | `memory_*`, `memoir_*` | Herramientas de workspace activas | sí, una vez por operación; las lecturas avisan que su contenido puede enviarse al modelo |
 | Editar un fragmento exacto | `workspace_edit` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
 | Crear o reescribir un archivo (y sus carpetas) | `workspace_write` | Edit workspace files | sí, con el diff exacto, salvo carpeta Classic ya confiable |
 | Borrar un archivo de texto | `workspace_delete` | Edit workspace files (incluido en Classic) | sí, mostrando todo lo que se borra, salvo carpeta Classic ya confiable |
@@ -193,6 +194,8 @@ Con un provider que soporta tool calls, el chat es un bucle de agente: el modelo
 **Todo de una vez:** en **Settings → Authority**, *Turn on all coding tools…* concede en un paso lectura, edición, mover, borrar, deshacer, comandos en sandbox, git, diagnósticos y copiar al portapapeles (lo que tu equipo soporte). Eso no apaga las preguntas. Cada commit sigue pidiendo aprobación. Los cambios y comandos ordinarios dejan de preguntar uno a uno solo después de confiar la carpeta. Sin esa confianza, cada uno sigue pidiendo aprobación. Sin sandbox los comandos se quedan apagados.
 
 Si una herramienta está apagada, el agente te dice dónde activarla en vez de solo decir que no puede.
+
+La memoria guarda datos en una base SQLite privada fuera del checkout, separada por workspace. El agente solo la consulta o modifica cuando se lo pides; cada operación muestra sus argumentos para aprobación de un solo uso. No extrae recuerdos automáticamente ni los inyecta al iniciar sesión o cada prompt. Incluye recuerdos por tema, búsqueda, actualización, olvido, consolidación manual y grafos con conceptos y enlaces. Olvidar elimina el recuerdo; consolidar archiva las fuentes. Las lecturas aprobadas pueden enviar los resultados al modelo seleccionado: trata ese contenido como contexto no confiable y verifica que siga vigente. No depende del código, binario ni servidor MCP de ICM.
 
 ### Bucle y contexto
 

@@ -63,6 +63,11 @@ DYNAMIC_ACTION_RESOLVERS = {
         "owner": "remote_catalog",
         "actions": ("catalog.external.read", "gateway.files.read", "mcp.discover"),
     },
+    "isycode.workspace_memory.WorkspaceMemoryOwner.prepare": {
+        "owner": "workspace_memory",
+        "actions": ("workspace.memory.read", "workspace.memory.write",
+                    "workspace.memory.forget"),
+    },
     "isycode.tailscale_serve.TailscaleServeOwner._prepare": {
         "owner": "tailscale_serve",
         "actions": ("tailscale.serve.enable", "tailscale.serve.disable"),
@@ -84,6 +89,7 @@ _SECURE_DIRECT_API_METHODS = {
         "create", "append", "load", "list_sessions", "rename", "fork", "delete", "save",
         "import_json",
     }),
+    "MemoryStore": frozenset({"perform"}),
 }
 _SECURE_DIRECT_FUNCTIONS = frozenset({
     "choose_context_file", "choose_workspace_file", "choose_workspace_directory",
@@ -99,10 +105,11 @@ PRIMITIVE_CALLERS: dict[tuple[str, str], frozenset[str]] = {
     ("ChatSessionStore", "fork"): frozenset(),
     ("ChatSessionStore", "create"): frozenset(),
     ("BridgeClient", "__init__"): frozenset(),
+    ("MemoryStore", "perform"): frozenset({"workspace_memory.WorkspaceMemoryOwner.execute"}),
 }
 # Modules that define a primitive; their own internal calls are not callers.
 _PRIMITIVE_HOME = {"ApiKeyStore": "mobile_host", "ChatSessionStore": "chat_sessions",
-                   "BridgeClient": "bridge"}
+                   "BridgeClient": "bridge", "MemoryStore": "workspace_memory"}
 
 
 def _guarded_bindings(trees: dict[str, ast.AST]) -> dict[str, set[str]]:
@@ -252,6 +259,9 @@ KNOWN_EFFECT_CALLSITES = (
     ("broker.start", "BrokerProvisionOwner.provision", "broker_provision", "COVERED_VARIANT"),
     ("broker.start", "BrokerManagementOwner.perform", "broker_management", "COVERED_VARIANT"),
     ("session.delete", "SessionDeleteOwner.delete", "session_delete", "COVERED"),
+    ("workspace.memory.read", "WorkspaceMemoryOwner.execute", "workspace_memory", "COVERED"),
+    ("workspace.memory.write", "WorkspaceMemoryOwner.execute", "workspace_memory", "COVERED"),
+    ("workspace.memory.forget", "WorkspaceMemoryOwner.execute", "workspace_memory", "COVERED"),
     ("mobile.host.start", "MobileHostOwner.authorize_and_launch", "mobile_host", "COVERED"),
     # TUI shutdown is lifecycle cleanup, not a user-authorized stop action.
     # The catalog action remains explicitly denied in Secure.
@@ -604,6 +614,7 @@ def _receiver_matches_api(receiver: str, class_name: str) -> bool:
         "ApiKeyStore": ("key_store", "credential_store", "apikeystore"),
         "BridgeClient": ("bridge", "bridge_client"),
         "ChatSessionStore": ("chat_session", "session_store", "chatsessionstore"),
+        "MemoryStore": ("memory_store", "memorystore"),
     }
     return any(marker in lowered for marker in markers[class_name])
 
