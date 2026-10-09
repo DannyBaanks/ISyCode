@@ -318,11 +318,12 @@ class CommandRunOwner:
         # Re-derive the sandbox facts: a new secret or a swapped program after
         # review denies instead of running with a stale mask set.
         try:
-            fresh = self.prepare(list(preview.argv), preview.cwd, preview.timeout_s, scope=preview.scope)
+            fresh = await asyncio.to_thread(self.prepare, list(preview.argv), preview.cwd,
+                                            preview.timeout_s, scope=preview.scope)
             if fresh != preview:
                 raise ValueError("sensitive files, command scope or the program changed after review")
-            masks = self._scope_masks(preview.scope)
-            program = resolve_program(self.root, preview.argv[0])
+            masks = await asyncio.to_thread(self._scope_masks, preview.scope)
+            program = await asyncio.to_thread(resolve_program, self.root, preview.argv[0])
         except (OSError, ValueError) as exc:
             return ActionOutcome("Command denied.", "DENY", None, str(exc)[:200] or "sandbox facts unavailable")
         if (masks != preview.masks or masked_digest(masks) != request.parameters["masked_sha256"]
@@ -371,7 +372,19 @@ class CommandRunOwner:
     async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
         try:
-            staging = prepare_staging(self.root, scope=preview.scope)
+            stage_task = asyncio.create_task(asyncio.to_thread(prepare_staging, self.root, scope=preview.scope))
+            try:
+                staging = await asyncio.shield(stage_task)
+            except asyncio.CancelledError:
+                # A copying worker cannot be killed: finish it before cleanup so
+                # cancellation never leaves an orphan or deletes an active copy.
+                try:
+                    abandoned = await stage_task
+                except (OSError, RuntimeError, ValueError):
+                    pass
+                else:
+                    await asyncio.to_thread(cleanup_staging, abandoned)
+                raise
         except StagingError as exc:
             raise OSError(str(exc)) from exc
         try:
