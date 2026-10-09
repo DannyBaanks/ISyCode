@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 80,
-    "effectful": 60,
-    "owner_valid": 53,
+    "actions": 83,
+    "effectful": 62,
+    "owner_valid": 56,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 24,
@@ -1070,6 +1070,54 @@
       "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
     },
     {
+      "action": "workspace.memory.read",
+      "effect": "read",
+      "approval_required": false,
+      "owners": [
+        "workspace_memory"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceMemoryBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "workspace.memory.write",
+      "effect": "write",
+      "approval_required": true,
+      "owners": [
+        "workspace_memory"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceMemoryBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "workspace.memory.forget",
+      "effect": "destructive",
+      "approval_required": true,
+      "owners": [
+        "workspace_memory"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceMemoryBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
       "action": "clipboard.paste",
       "effect": "external",
       "approval_required": false,
@@ -1490,6 +1538,24 @@
       "status": "COVERED"
     },
     {
+      "action": "workspace.memory.read",
+      "callsite": "WorkspaceMemoryOwner.execute",
+      "owner": "workspace_memory",
+      "status": "COVERED"
+    },
+    {
+      "action": "workspace.memory.write",
+      "callsite": "WorkspaceMemoryOwner.execute",
+      "owner": "workspace_memory",
+      "status": "COVERED"
+    },
+    {
+      "action": "workspace.memory.forget",
+      "callsite": "WorkspaceMemoryOwner.execute",
+      "owner": "workspace_memory",
+      "status": "COVERED"
+    },
+    {
       "action": "mobile.host.start",
       "callsite": "MobileHostOwner.authorize_and_launch",
       "owner": "mobile_host",
@@ -1701,77 +1767,77 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2077,
+      "line": 2116,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2203,
+      "line": 2242,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "workspace.files.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1858,
+      "line": 1897,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1930,
+      "line": 1969,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2000,
+      "line": 2039,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2086,
+      "line": 2125,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2137,
+      "line": 2176,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2145,
+      "line": 2184,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2211,
+      "line": 2250,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "grit.claims.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2273,
+      "line": 2312,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2341,
+      "line": 2380,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -2106,6 +2172,13 @@
       "owner": "web_fetch"
     },
     {
+      "file": "isycode/workspace_memory.py",
+      "line": 547,
+      "callable": "isycode.workspace_memory.WorkspaceMemoryOwner.prepare",
+      "action": null,
+      "owner": "workspace_memory"
+    },
+    {
       "file": "isycode/workspace_write.py",
       "line": 461,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
@@ -2151,7 +2224,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2341,
+      "line": 2380,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute",
       "action": null,
       "owner": "workspace_read"
@@ -2190,6 +2263,13 @@
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/workspace_memory.py",
+      "line": 547,
+      "callable": "isycode.workspace_memory.WorkspaceMemoryOwner.prepare",
+      "action": null,
+      "owner": "workspace_memory"
     }
   ],
   "unresolved_dynamic_request_constructors": []

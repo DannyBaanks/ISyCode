@@ -264,3 +264,33 @@ def test_eighty_model_catalog_opens_quickly(tui, capsys):
 
     with capsys.disabled():
         run(scenario)
+
+
+def test_arming_one_model_row_disarms_the_others(tmp_path, monkeypatch):
+    """Hermes audit 2026-10-08, finding 9: A, B, A selected A on the third click."""
+    import asyncio
+    from textual.app import App
+    from textual.widgets import Static
+    from isycode.tui_screens_harness import ModelsScreen
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+
+    class Probe(App):
+        def compose(self):
+            yield Static("probe")
+    entries = [{"kind": "model", "value": "openai|audit-model-a", "label": "A"},
+               {"kind": "model", "value": "openai|audit-model-b", "label": "B"}]
+
+    async def clicks(order):
+        app, chosen = Probe(), []
+        async with app.run_test(size=(120, 40)) as pilot:
+            app.push_screen(ModelsScreen(entries, provider_scope="openai"), chosen.append)
+            await pilot.pause()
+            for key in order:
+                await pilot.click(f"#model-choice-{key}")
+                await pilot.pause()
+            return chosen, type(app.screen).__name__
+    chosen, screen = asyncio.run(clicks([0, 1, 0]))
+    assert chosen == [] and screen == "ModelsScreen"
+    chosen, screen = asyncio.run(clicks([0, 0]))
+    assert len(chosen) == 1 and "audit-model-a" in str(chosen[0])
