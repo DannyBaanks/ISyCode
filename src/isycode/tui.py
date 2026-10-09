@@ -2147,7 +2147,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _idle_column(title: str, rows: list[tuple[str, str]]) -> list[Text]:
         lines = [Text(title, style="bold #c7b8d4")]
         if not rows:
-            lines.append(Text("None", style=MUTED))
+            lines.append(Text("○ None configured", style=MUTED))
             return lines
         shown = rows[:14]
         for color, name in shown:
@@ -2163,9 +2163,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _idle_lsp_rows(self) -> list[tuple[str, str]]:
         rows = []
         for server in self._lsp_inventory:
-            ready = server.get("state") == "sandbox_ready"
+            state = server.get("state")
+            ready = state == "sandbox_ready"
             name = str(server.get("label") or server.get("id") or "language server")
-            rows.append((GREEN if ready else YELLOW, name))
+            if ready:
+                color = GREEN
+            elif state in {"installed_unavailable", "installed_unsupported"}:
+                color = RED
+            else:
+                color = YELLOW
+            rows.append((color, name))
         return rows
 
     def _idle_mcp_rows(self) -> list[tuple[str, str]]:

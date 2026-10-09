@@ -25,7 +25,7 @@
     #workspace-layout { height: 1fr; width: 100%; }
     #main { height: 100%; width: 1fr; min-width: 0; }
     #side-panel {
-        display: none; width: 38; height: 100%; background: #17191f;
+        display: none; width: 40; height: 100%; background: #17191f;
         border: round #414650; padding: 1 1;
     }
     .panel-title { color: #c7b8d4; text-style: bold; padding: 0 0 1 0; }
@@ -41,7 +41,10 @@
     #rail-card > Collapsible:last-of-type { border-bottom: none; }
     #overview-view Collapsible:focus-within { border-bottom: solid #bb8cff; }
     #overview-view #rail-connections > Contents { padding: 0 1 0 2; }
-    #overview-view CollapsibleTitle { color: #c5cad3; text-style: bold; padding: 0; background: transparent; }
+    #overview-view CollapsibleTitle {
+        color: #c5cad3; text-style: bold; padding: 0; background: transparent;
+        text-wrap: nowrap; text-overflow: ellipsis;
+    }
     #overview-view CollapsibleTitle:hover { background: #35363a; color: #e0e0e0; }
     #overview-view CollapsibleTitle:focus { background: #3a2f4d; color: #e0e0e0; }
     #overview-view Collapsible > Contents { padding: 0 1; height: auto; }
@@ -116,7 +119,11 @@
        composer and centred on it, and #queued-row mirrors it with a 20% spacer
        and a 60% #queue-stack. Changing one column moves all three boxes. */
     #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
-    #usage-status { width: 20%; height: 3; padding: 0 1; content-align: right top; color: #9aa3ad; overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis; }
+    #usage-status {
+        width: 20%; height: 3; padding: 0 1; content-align: right top;
+        color: #9aa3ad; text-wrap: nowrap;
+        overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis;
+    }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;

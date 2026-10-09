@@ -82,6 +82,12 @@ class QueuedBox(ExpandableBox):
 class PromptArea(TextArea):
     """Enter sends or queues; selected queue entries can be promoted explicitly."""
 
+    DEFAULT_PLACEHOLDER = "Describe a task, ask a question, or type / for commands..."
+
+    def __init__(self, *args, **kwargs) -> None:
+        kwargs.setdefault("placeholder", self.DEFAULT_PLACEHOLDER)
+        super().__init__(*args, **kwargs)
+
     BINDINGS = [
         Binding("enter", "submit_prompt", "Send", priority=True),
         Binding("up", "slash_up", show=False, priority=True),

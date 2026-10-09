@@ -93,12 +93,15 @@ def usage_panel(messages: list[dict[str, Any]], width: int, rate_line: str, *,
     limit = snap["provider_limit_tokens"]
     percent = snap["percent"]
     if limit is None:
-        head = f"ctx {used_mark}{_compact_tokens(used)} / ?"
+        head = f"ctx {used_mark}{_compact_tokens(used)} / ?" if width >= 18 else f"{used_mark}{_compact_tokens(used)}/?"
     else:
         window_mark = "≈" if limit_source == "snapshot" else ""
-        head = f"ctx {used_mark}{_compact_tokens(used)}/{window_mark}{_compact_tokens(int(limit))}"
+        if width >= 18:
+            head = f"ctx {used_mark}{_compact_tokens(used)}/{window_mark}{_compact_tokens(int(limit))}"
+        else:
+            head = f"{used_mark}{_compact_tokens(used)}/{window_mark}{_compact_tokens(int(limit))}"
     tail = " ?" if percent is None else f" {percent}%"
-    cells = max(4, width - 2 - len(tail))
+    cells = max(3, width - 2 - len(tail))
     filled = 0 if percent is None else min(cells, round(cells * int(percent) / 100))
     if percent is not None and percent > 0:
         filled = max(1, filled)
@@ -109,7 +112,7 @@ def usage_panel(messages: list[dict[str, Any]], width: int, rate_line: str, *,
     bar = Text(" " * max(0, width - (cells + 2 + len(tail))))
     bar.append("[", style="#6b7280")
     bar.append("█" * filled, style=color)
-    bar.append(("░" if percent is not None else "·") * (cells - filled), style="#3f4450")
+    bar.append(("░" if percent is not None else "·") * max(0, cells - filled), style="#3f4450")
     bar.append("]", style="#6b7280")
     bar.append(tail, style=color if percent is not None else "#6b7280")
     panel.append(bar)
