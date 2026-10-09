@@ -16,7 +16,10 @@ import uuid
 from pathlib import Path
 from isycode.config import ConfigurationError
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
-from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
+from isycode.workspace_authority import (
+    OneShotActionAuthority, WorkspaceAuthority, WorkspaceAuthorityError,
+)
+from isycode.actions import ACTION_BY_ID
 from isycode.file_picker import ContextFilePickerOwner, FilePickerUnavailable
 from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS,
@@ -43,7 +46,9 @@ from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import (
     TailscaleConfirmScreen, LocalMCPConfirmScreen, WorkspacePackConfirmScreen,
+    MemoryConfirmScreen,
 )
+from isycode.workspace_memory import MEMORY_TOOL_OPERATIONS, WorkspaceMemoryOwner
 from isycode.tui_screens_sessions import AgentQuestionScreen
 
 
@@ -165,6 +170,12 @@ class ToolMixin:
             except json.JSONDecodeError:
                 pack_arguments = None
             return tool_call_id, await self._call_workspace_pack(pack_arguments)
+        if isinstance(name, str) and name in MEMORY_TOOL_OPERATIONS:
+            try:
+                memory_arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
+            except json.JSONDecodeError:
+                memory_arguments = None
+            return tool_call_id, await self._call_workspace_memory(name, memory_arguments)
         if (name not in TOOL_ACTIONS and name not in GIT_TOOL_NAMES
                 and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
                                  DELETE_TOOL_NAME, MOVE_TOOL_NAME,
@@ -686,6 +697,44 @@ class ToolMixin:
             GREEN,
         )
         return result["content"]
+    async def _call_workspace_memory(self, tool_name: str, arguments) -> str:
+        """Run an explicit memory operation after reviewing it with the user."""
+        operation = MEMORY_TOOL_OPERATIONS.get(tool_name)
+        if operation is None:
+            return json.dumps({"error": "memory tool is not registered"})
+        authority = WorkspaceAuthority(self._workspace_root)
+        try:
+            owner = WorkspaceMemoryOwner(self._workspace_root, authority,
+                                         self._action_approvals)
+            preview = owner.prepare(operation, arguments)
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            return json.dumps({"error": f"memory request invalid or unavailable ({type(exc).__name__})"})
+        action = ACTION_BY_ID[preview.request.action_id]
+        try:
+            configured = authority.policy().get("grants", {}).get(action.id, {})
+        except (OSError, RuntimeError, ValueError):
+            return json.dumps({"error": "workspace memory authority is unavailable"})
+        if configured.get("enabled") is False:
+            self._append("  Memory action denied · explicitly revoked in workspace authority", YELLOW)
+            return json.dumps({"error": "workspace memory action was explicitly revoked",
+                               "decision": "DENY"})
+        sends_to_model = operation in {
+            "recall", "list_topics", "list_memoirs", "show_memoir", "search_memoir",
+        }
+        if not await self._await_screen(MemoryConfirmScreen(
+                operation, json.dumps(preview.arguments, ensure_ascii=False, indent=2),
+                sends_to_model=sends_to_model)):
+            self._append(f"  Memory {operation} rejected · nothing was read or changed", MUTED)
+            return json.dumps({"status": "rejected_by_user"})
+        one_shot = OneShotActionAuthority(authority, preview.request)
+        owner = WorkspaceMemoryOwner(self._workspace_root, one_shot, self._action_approvals)
+        outcome = await asyncio.to_thread(owner.execute, preview)
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            self._append(f"  Memory {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            return json.dumps({"error": "workspace memory action did not complete",
+                               "decision": outcome.decision, "reason": outcome.reason[:240]})
+        self._append(f"  Memory {operation} · receipt {outcome.receipt.receipt_id}", GREEN)
+        return outcome.text
 
     def _menu_skill_use(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]

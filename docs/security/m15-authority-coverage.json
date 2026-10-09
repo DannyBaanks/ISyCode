@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 78,
-    "effectful": 60,
-    "owner_valid": 52,
+    "actions": 81,
+    "effectful": 62,
+    "owner_valid": 55,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 23,
@@ -1039,6 +1039,54 @@
       "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
     },
     {
+      "action": "workspace.memory.read",
+      "effect": "read",
+      "approval_required": false,
+      "owners": [
+        "workspace_memory"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceMemoryBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "workspace.memory.write",
+      "effect": "write",
+      "approval_required": true,
+      "owners": [
+        "workspace_memory"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceMemoryBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "workspace.memory.forget",
+      "effect": "destructive",
+      "approval_required": true,
+      "owners": [
+        "workspace_memory"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceMemoryBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
       "action": "clipboard.paste",
       "effect": "external",
       "approval_required": false,
@@ -1453,6 +1501,24 @@
       "status": "COVERED"
     },
     {
+      "action": "workspace.memory.read",
+      "callsite": "WorkspaceMemoryOwner.execute",
+      "owner": "workspace_memory",
+      "status": "COVERED"
+    },
+    {
+      "action": "workspace.memory.write",
+      "callsite": "WorkspaceMemoryOwner.execute",
+      "owner": "workspace_memory",
+      "status": "COVERED"
+    },
+    {
+      "action": "workspace.memory.forget",
+      "callsite": "WorkspaceMemoryOwner.execute",
+      "owner": "workspace_memory",
+      "status": "COVERED"
+    },
+    {
       "action": "mobile.host.start",
       "callsite": "MobileHostOwner.authorize_and_launch",
       "owner": "mobile_host",
@@ -1664,63 +1730,63 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2039,
+      "line": 2083,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1820,
+      "line": 1864,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1892,
+      "line": 1936,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1962,
+      "line": 2006,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2048,
+      "line": 2092,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2099,
+      "line": 2143,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2107,
+      "line": 2151,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2165,
+      "line": 2209,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2246,
+      "line": 2290,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -1790,7 +1856,7 @@
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 284,
+      "line": 286,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
@@ -2055,6 +2121,13 @@
       "owner": "web_fetch"
     },
     {
+      "file": "isycode/workspace_memory.py",
+      "line": 547,
+      "callable": "isycode.workspace_memory.WorkspaceMemoryOwner.prepare",
+      "action": null,
+      "owner": "workspace_memory"
+    },
+    {
       "file": "isycode/workspace_write.py",
       "line": 461,
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
@@ -2100,7 +2173,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2246,
+      "line": 2290,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2139,6 +2212,13 @@
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/workspace_memory.py",
+      "line": 547,
+      "callable": "isycode.workspace_memory.WorkspaceMemoryOwner.prepare",
+      "action": null,
+      "owner": "workspace_memory"
     }
   ],
   "unresolved_dynamic_request_constructors": []

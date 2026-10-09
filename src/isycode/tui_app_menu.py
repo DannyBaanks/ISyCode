@@ -87,6 +87,11 @@ def _provider_from_arg(arg: str) -> str | None:
     return None
 
 
+async def _rtk_cmd(app, arg: str) -> None:
+    from isycode.rtk_tui import command
+    await command(app, arg.strip())
+
+
 async def _models_cmd(app: "TUIApp", arg: str) -> None:
     # Same window as choosing the current provider from the model button.
     # An unknown name stays on that provider instead of opening a second catalog.
@@ -434,6 +439,7 @@ MENU_DISPATCH: dict[str, str] = {
     "auth_saved": "_menu_auth_saved",
     "providers_open": "_menu_providers_open",
     "roles_open": "_menu_roles_open",
+    "rtk_settings": "_menu_rtk_settings",
     "sounds_toggle": "_menu_sounds_toggle",
     "contrast_toggle": "_menu_contrast_toggle",
     "ascii_toggle": "_menu_ascii_toggle",
@@ -491,6 +497,10 @@ MENU_DISPATCH: dict[str, str] = {
 }
 
 class MenuMixin:
+    def _menu_rtk_settings(self, entry):
+        from isycode.rtk_tui import RTKSettingsScreen
+        self.push_screen(RTKSettingsScreen())
+
 
     def _select_menu_entry(self, entry: dict[str, str | bool]) -> None:
         kind = entry["kind"]
@@ -513,6 +523,7 @@ class MenuMixin:
                 PluginCommand("providers", "open the provider selector", _providers_cmd),
                 PluginCommand("keys", "show credential status grouped by setup state", _keys_cmd),
                 PluginCommand("undo", "undo ISyCode's last file change (shows the diff first)", _undo_cmd),
+                PluginCommand("rtk", "native RTK settings; recall <sha256> shows captured original output", _rtk_cmd),
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("idea", "expand the current idea note", _idea_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),

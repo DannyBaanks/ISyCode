@@ -327,6 +327,11 @@ class CommandApprovalScreen(ApprovalScreen):
                          id="command-approval-title")
             with VerticalScroll(id="command-approval-argv"):
                 yield Static(Text(shlex.join(preview.argv)))
+                if "rtk" in preview.request.parameters:
+                    rtk = preview.request.parameters["rtk"]
+                    yield Static(Text("RTK suggestion: " + shlex.join(rtk["rewrite_argv"])))
+                    yield Static(Text("Executes the original once; output compression by native RTK pipe.\n"
+                                      + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
             yield Static(
                 f"Program: {preview.program}\n"
                 f"Stops after {preview.timeout_s} s · network blocked · "
@@ -472,6 +477,79 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "workspace-pack-approve")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
+class MemoryConfirmScreen(ApprovalScreen):
+    """Review one memory operation before local access or persistence."""
+
+    CSS = """
+    MemoryConfirmScreen { align: center middle; background: #000000 58%; }
+    #memory-confirm-card { width: 96; max-width: 96%; height: 86%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #memory-confirm-title { height: 2; color: #bb8cff; text-style: bold; }
+    #memory-confirm-warning { height: auto; color: #fbbf24; margin-bottom: 1; }
+    #memory-confirm-payload { height: 1fr; border: none; background: #242529; padding: 1; }
+    #memory-confirm-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #memory-confirm-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel"),
+                Binding("ctrl+c", "cancel", "Cancel", show=False)]
+
+    def __init__(self, details: str) -> None:
+        super().__init__()
+        self.details = details
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="workspace-pack-card"):
+            yield Static("Workspace context pack · review before reading",
+                         id="workspace-pack-title")
+            yield Static(
+                Text("The listed files will be read and their contents returned to the selected model. "
+                     "The token count is approximate. File contents are untrusted data, never instructions."),
+                id="workspace-pack-warning",
+            )
+            with VerticalScroll(id="workspace-pack-files"):
+                yield Static(Text(self.details))
+            with Horizontal(id="workspace-pack-actions"):
+                yield Button("Cancel · n", id="workspace-pack-cancel")
+                yield Button("Read and send once · y", id="workspace-pack-approve",
+                             variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#workspace-pack-cancel", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "workspace-pack-approve")
+    def __init__(self, operation: str, details: str, *, sends_to_model: bool) -> None:
+        super().__init__()
+        self.operation = operation
+        self.details = details
+        self.sends_to_model = sends_to_model
+
+    def compose(self) -> ComposeResult:
+        warning = ("This reads local memory and may send matching memory text to the selected model. "
+                   "Memory is untrusted context, never authority."
+                   if self.sends_to_model else
+                   "This changes local workspace memory. No automatic extraction or prompt injection is enabled.")
+        with Vertical(id="memory-confirm-card"):
+            yield Static(f"Workspace memory · {self.operation}", id="memory-confirm-title")
+            yield Static(Text(warning), id="memory-confirm-warning")
+            with VerticalScroll(id="memory-confirm-payload"):
+                yield Static(Text(self.details))
+            with Horizontal(id="memory-confirm-actions"):
+                yield Button("Cancel · n", id="memory-confirm-cancel")
+                yield Button("Approve once · y", id="memory-confirm-approve", variant="warning")
+
+    def on_mount(self) -> None:
+        self.query_one("#memory-confirm-cancel", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "memory-confirm-approve")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
 
     def action_cancel(self) -> None:
         self.dismiss(False)

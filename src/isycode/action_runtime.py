@@ -268,6 +268,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_git": frozenset({"GitBoundary"}),
     "workspace_publish": frozenset({"PublishBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
+    "workspace_memory": frozenset({"WorkspaceMemoryBoundary"}),
     "clipboard": frozenset({"ClipboardBoundary"}),
     "bridge_presence": frozenset({"BridgePresenceBoundary"}),
 }
@@ -286,6 +287,9 @@ OWNER_ACTIONS = {
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
     "chat_sessions": frozenset({"session.create", "session.resume"}),
+    "workspace_memory": frozenset({
+        "workspace.memory.read", "workspace.memory.write", "workspace.memory.forget",
+    }),
     "credentials": frozenset({"credentials.add", "credentials.revoke"}),
     "credential_use": frozenset({"credentials.use"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),
@@ -589,8 +593,13 @@ class CommandProcessSystembility:
         if request.action_id != "workspace.command.run":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        if set(params) not in (COMMAND_PARAMETER_KEYS, COMMAND_PARAMETER_KEYS | {"scope"}):
+        if set(params) not in tuple(COMMAND_PARAMETER_KEYS | extra for extra in
+                                   (set(), {"scope"}, {"rtk"}, {"scope", "rtk"})):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
+        if "rtk" in params:
+            from isycode.rtk_integration import valid_plan
+            if not valid_plan(params["rtk"]):
+                return SystembilityResult(self.name, False, "RTK identity or transform is invalid")
         argv = params.get("argv")
         if not command_argv_valid(argv):
             return SystembilityResult(self.name, False, "command arguments are invalid")
@@ -968,6 +977,40 @@ class SessionStoreSystembility:
                      and params.get("operation") == "load"
                      and valid_id and request.target == session_id)
         return SystembilityResult(self.name, valid, "list or load one local transcript")
+
+
+class WorkspaceMemorySystembility:
+    """Bind local memory operations to one bounded argument payload."""
+
+    name = "WorkspaceMemoryBoundary"
+    _operations = {
+        "workspace.memory.read": {"recall", "list_topics", "list_memoirs",
+                                  "show_memoir", "search_memoir"},
+        "workspace.memory.write": {"store", "update", "consolidate", "create_memoir",
+                                   "add_concept", "link_concepts"},
+        "workspace.memory.forget": {"forget"},
+    }
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id not in self._operations:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        operation = params.get("operation")
+        valid = (
+            operation in self._operations[request.action_id]
+            and set(params) == {"operation", "arguments_sha256", "size"}
+            and isinstance(params.get("arguments_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", params["arguments_sha256"]) is not None
+            and type(params.get("size")) is int
+            and 0 <= params["size"] <= 64 * 1024
+            and isinstance(request.target, str) and len(request.target) <= 128
+        )
+        return SystembilityResult(
+            self.name, valid,
+            "one bounded, digest-bound local memory operation" if valid
+            else "memory operation is not bound to its owner",
+        )
 
 
 class SessionDeleteSystembility:
@@ -1725,6 +1768,7 @@ class ProductActionGate:
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
             BridgePresenceSystembility(),
+            WorkspaceMemorySystembility(),
         ])
 
     def preview(self, request: ActionRequest):
