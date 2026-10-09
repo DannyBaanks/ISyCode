@@ -28,3 +28,19 @@ TMPDIR=/run/user/1000 '/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/pytho
 ```
 
 Preview launcher installed separately at ~/.local/bin/isycode-rtk; --help succeeded. It uses the isolated /tmp checkout and the original venv. The normal isycode launcher and original dirty checkout were preserved. This preview is temporary and depends on that checkout remaining present.
+
+## Completed full-suite control
+
+Full run exit status: 0. Result: **1700 passed, 8 skipped in 613.50s**. Unchanged raw log: full-suite-final3.log. The suite collected before the three additional RTK authority tests were added; those passed separately. This run verifies the RTK source at 4614b41 on base 2a8e696, before later main merges. No product-source changes were made during the run. Additional combined controls (rtk-final-controls-v2.log) passed: 45 tests.
+
+```bash
+TMPDIR=/run/user/1000 '/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python' -m pytest -q --basetemp=/run/user/1000/isycode-rtk-pytest-20261009-final3
+```
+
+During verification, main advanced to 43aab28 (native memory and model selector). Both lower stack branches were merged with main without rewriting published history, the authority snapshot was regenerated from its executable generator, and the UI branch merged the evidence branch. The earlier full-suite result is not claimed for these new main changes; post-merge controls and CI are recorded separately.
+
+Post-main controls completed with exit 0: **72 passed in 53.70s**, unchanged log post-main-controls.log. Coverage: RTK/native UI/authority, executable authority snapshot, native memory, model selection, menu categories/reasoning and optional IsyMotron imports.
+
+```bash
+TMPDIR=/run/user/1000 '/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python' -m pytest -q tests/test_rtk_integration.py tests/test_rtk_ui.py tests/test_rtk_authority.py tests/test_action_coverage.py tests/test_workspace_memory.py tests/test_model_decision_surface.py tests/test_menu_kinds.py tests/test_model_reasoning_ui.py tests/test_optional_isymotron.py
+```
