@@ -409,6 +409,14 @@ class CommandRunOwner:
                 self._kill(proc)
                 await proc.wait()
                 raise
+            result = {"argv": list(preview.argv), "cwd": preview.cwd,
+                      "exit_code": proc.returncode, "timed_out": timed_out,
+                      "output": output.decode("utf-8", errors="replace"),
+                      "output_truncated": total > len(output), "output_bytes": total}
+            if "rtk" in params:
+                from isycode.rtk_integration import finish
+                result["command_success"] = proc.returncode == 0 and not timed_out
+                await finish(params["rtk"], result, bytes(output))
             changes = measure_changes(staging)
             if promote:
                 from isycode.effect_ledger import EffectLedger, LedgerDenied
@@ -432,11 +440,7 @@ class CommandRunOwner:
                 applied, refused = [], []
                 pending = [item["path"] for item in changes]
                 promotion = {"state": "staged"}
-            result = {"argv": list(preview.argv), "cwd": preview.cwd,
-                    "exit_code": proc.returncode, "timed_out": timed_out,
-                    "output": output.decode("utf-8", errors="replace"),
-                    "output_truncated": total > len(output), "output_bytes": total,
-                    "staging": {
+            result["staging"] = {
                         "backend": "copy",
                         "promoted_count": len(applied),
                         "promoted": applied[:300],
@@ -445,10 +449,7 @@ class CommandRunOwner:
                         "refused_count": len(refused),
                         "refused": refused[:300],
                         "promotion": promotion,
-                    }}
-            if "rtk" in params:
-                from isycode.rtk_integration import finish
-                await finish(params["rtk"], result, bytes(output))
+                    }
             return result
         finally:
             cleanup_staging(staging)
