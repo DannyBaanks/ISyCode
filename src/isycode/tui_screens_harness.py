@@ -147,7 +147,9 @@ class ModelChoice(Button):
         event.prevent_default()
         event.stop()
         self.focus()
-        if activate_on_second_click(self, event, "model"):
+        # Arm on the screen, keyed by row: arming another row disarms this one,
+        # so A, B, A reads A again instead of selecting it.
+        if activate_on_second_click(self.screen, event, self.id or str(id(self))):
             self.press()
 
 
