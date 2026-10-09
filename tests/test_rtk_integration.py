@@ -170,3 +170,69 @@ def test_real_owner_filters_once_keeps_exit_and_journal(tmp_path, monkeypatch):
     result = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
     assert result.decision == 'ALLOW', result.reason
     assert json.loads(result.text)['exit_code'] == 2
+
+
+def test_raw_artifact_failure_prevents_promotion(tmp_path, monkeypatch):
+    from isycode import rtk_integration as rtk
+    from isycode.approvals import ActionApprovalStore
+    from isycode.command_runner import CommandRunOwner
+    from isycode.workspace_authority import WorkspaceAuthority
+    monkeypatch.setenv('ISYCODE_STATE_HOME', str(tmp_path / 'state'))
+    monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'xdg'))
+    root = tmp_path / 'project'
+    root.mkdir()
+    (root / '.isyroot').write_text('')
+    (root / 'input.txt').write_text('original')
+    authority = WorkspaceAuthority(root)
+    authority.set_mode('classic')
+    approvals = ActionApprovalStore()
+    owner = CommandRunOwner(root, authority, approvals)
+    # Exercise the real command owner/staging; only RTK's probe is a fixture.
+    identity = {'path': '/usr/local/bin/rtk', 'sha256': 'a'*64, 'version': 'rtk 0.51.0',
+                'strategy': 'pipe', 'decision': 'ask', 'rewrite_argv': ('rtk', 'proxy', 'python3')}
+    monkeypatch.setattr(rtk, 'plan', lambda *args: identity)
+    monkeypatch.setattr(rtk, '_artifact', lambda *args: (_ for _ in ()).throw(OSError('disk full')))
+    preview = owner.prepare(['python3', '-c', "from pathlib import Path; Path('input.txt').write_text('changed')"])
+    result = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+    assert result.decision == 'ERROR'
+    assert (root / 'input.txt').read_text() == 'original'
+
+
+def test_enable_rejects_identity_changed_after_display(adapter):
+    rtk, binary = adapter
+    shown = rtk.Settings().inspect()
+    binary.write_bytes(b'replaced after display')
+    with pytest.raises(ValueError, match='changed'):
+        rtk.Settings().enable(expected=shown)
+
+
+def test_private_artifacts_reject_hardlinks(adapter, tmp_path):
+    rtk, _ = adapter
+    raw = b'private output'
+    artifact = rtk._artifact(raw, '.bin')
+    os.link(artifact, tmp_path / 'alias')
+    with pytest.raises(ValueError):
+        rtk._artifact(raw, '.bin')
+
+
+def test_evidence_links_receipt_hash_to_original_bytes(tmp_path, monkeypatch):
+    from isycode import rtk_integration as rtk
+    from isycode.approvals import ActionApprovalStore
+    from isycode.command_runner import CommandRunOwner
+    from isycode.workspace_authority import WorkspaceAuthority
+    monkeypatch.setenv('ISYCODE_STATE_HOME', str(tmp_path / 'state'))
+    root = tmp_path / 'project'; root.mkdir(); (root / '.isyroot').write_text('')
+    (root / 'notes.txt').write_text('needle\n' * 80)
+    authority = WorkspaceAuthority(root); authority.set_mode('classic')
+    approvals = ActionApprovalStore(); owner = CommandRunOwner(root, authority, approvals)
+    rtk.Settings().enable()
+    preview = owner.prepare(['grep', '-H', '-n', 'needle', 'notes.txt'])
+    outcome = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+    assert outcome.decision == 'ALLOW', outcome.reason
+    result = json.loads(outcome.text)
+    directory = rtk._directory('outputs')
+    archived = directory / (outcome.receipt.result_digest + '.json')
+    assert archived.read_text() == outcome.text
+    raw = directory / (result['rtk']['raw_sha256'] + '.bin')
+    assert hashlib.sha256(raw.read_bytes()).hexdigest() == result['rtk']['raw_sha256']
+    assert len(raw.read_bytes()) == result['rtk']['captured_bytes']

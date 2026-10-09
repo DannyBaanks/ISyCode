@@ -33,25 +33,24 @@ _STATS_LOCK = threading.Lock()
 
 def _directory(name: str) -> Path:
     base = state_root() / 'rtk'
-    base.mkdir(mode=0o700, parents=True, exist_ok=True)
     path = base / name
-    path.mkdir(mode=0o700, exist_ok=True)
-    # No symlinks in the private RTK subtree.
-    for directory in (path, path.parent):
+    # Validate each parent before creating anything beneath it.
+    for directory in (base, path):
+        directory.mkdir(mode=0o700, parents=directory == base, exist_ok=True)
         info = directory.lstat()
-        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
-                or info.st_mode & 0o077):
+        if (not stat.S_ISDIR(info.st_mode) or (os.name == 'posix' and
+                (info.st_uid != os.getuid() or info.st_mode & 0o077))):
             raise ValueError('RTK private state directory is unsafe')
     return path
 
 
 def _read(path: Path, limit: int, *, private: bool = False) -> bytes:
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0))
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_size > limit
-                or (private and (info.st_uid != os.getuid() or info.st_mode & 0o077
-                                 or info.st_nlink != 1))):
+                or (private and (info.st_nlink != 1 or (os.name == 'posix' and
+                                 (info.st_uid != os.getuid() or info.st_mode & 0o077))))):
             raise ValueError('RTK file is unsafe or too large')
         data = bytearray()
         while chunk := os.read(fd, min(65536, limit + 1 - len(data))):
@@ -144,6 +143,7 @@ class Settings:
         return data
 
     def _save(self, data: dict) -> dict:
+        self.load()  # Never replace an unsafe settings file or link.
         # Private, atomic replacement of our one settings file only.
         fd, temporary = tempfile.mkstemp(dir=self.path.parent, prefix='native-')
         try:
@@ -157,7 +157,7 @@ class Settings:
                 os.unlink(temporary)
         return data
 
-    def enable(self) -> dict:
+    def inspect(self) -> dict:
         path = discover()
         if path is None:
             raise ValueError('RTK is not installed')
@@ -169,6 +169,12 @@ class Settings:
             raise ValueError('RTK version cannot be verified in the sandbox')
         identity['version'] = version.decode().strip()
         _binary(identity)
+        return identity
+
+    def enable(self, *, expected: dict | None = None) -> dict:
+        identity = self.inspect()
+        if expected is not None and identity != expected:
+            raise ValueError('RTK binary changed since it was displayed')
         return self._save(identity)
 
     def disable(self) -> dict:
@@ -195,6 +201,8 @@ def valid_plan(value: object) -> bool:
 
 
 def plan(argv: tuple[str, ...], program: str) -> dict | None:
+    if os.name != 'posix':
+        return None
     identity = Settings().load()
     if not identity['enabled']:
         return None
@@ -234,8 +242,12 @@ def _filter_args(value: Mapping) -> tuple[str, ...]:
 def _artifact(data: bytes, suffix: str) -> Path:
     digest = hashlib.sha256(data).hexdigest()
     path = _directory('outputs') / (digest + suffix)
+    if not path.exists():
+        entries = list(path.parent.iterdir())
+        if len(entries) >= 1024 or sum(f.lstat().st_size for f in entries) + len(data) > 64 * 1024**2:
+            raise ValueError('RTK evidence quota reached; disable RTK or preserve and manage its artifacts')
     try:
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     except FileExistsError:
         if _read(path, MAX_CAPTURE_BYTES, private=True) != data:
             raise ValueError('RTK output artifact failed verification')
