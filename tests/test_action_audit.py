@@ -204,8 +204,13 @@ def test_journal_verifier_rejects_broken_previous_link(tmp_path):
     journal.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     journal.path.write_text(json.dumps(body, sort_keys=True, separators=(",", ":")) + "\n",
                             encoding="utf-8")
+    # Without private permissions the verifier rejects the file before checking
+    # the chain, and this test would pass without testing what it names.
+    journal.path.chmod(0o600)
 
-    assert journal.verify().status == "JOURNAL_INVALID"
+    report = journal.verify()
+    assert report.status == "JOURNAL_INVALID"
+    assert "verification failed" in report.reason
 
 
 def test_journal_verifier_rejects_replayed_receipt_id(tmp_path):
@@ -220,3 +225,101 @@ def test_journal_verifier_rejects_replayed_receipt_id(tmp_path):
     journal.record_receipt(request, receipt)
 
     assert journal.verify().status == "JOURNAL_INVALID"
+
+
+def _write_chained_decision(journal, request, **overrides):
+    """Write one well-formed, correctly chained decision record on disk."""
+    body = {
+        "kind": "decision", "version": 1, "time": 1.0,
+        "workspace": "0" * 32, "action": request.action_id,
+        "owner": "workspace_read", "request_digest": request.digest,
+        "authority": True, "sentinel": "ALLOW", "failed_checks": [],
+        "checks": [], "previous": "0" * 64,
+    }
+    body.update(overrides)
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    body["digest"] = hashlib.sha256(("0" * 64 + canonical).encode()).hexdigest()
+    journal.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    journal.path.write_text(json.dumps(body, sort_keys=True, separators=(",", ":")) + "\n",
+                            encoding="utf-8")
+    # The journal refuses a file other accounts can read; without this the
+    # verifier would reject the file before it ever looked at its contents.
+    journal.path.chmod(0o600)
+
+
+def test_decision_records_the_effect_class_and_policy_version(tmp_path):
+    """Audit 2026-10-09 F2: a decision must carry its own classification."""
+    from isycode.effect_policy import POLICY_VERSION, effect_class
+
+    journal, request = _journal(tmp_path)
+    authority = AuthorityDecision(True, "grant:workspace.files.read", "matched", request.digest)
+    decision = SentinelDecision("workspace.files.read", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    journal.record_decision(request, authority, decision)
+
+    written = json.loads(journal.path.read_text(encoding="utf-8").splitlines()[0])
+    assert written["effect"] == effect_class("workspace.files.read") == "read"
+    assert written["policy_version"] == POLICY_VERSION
+    report = journal.verify()
+    assert report.status == "PASS" and report.unverifiable == 0
+    assert report.recent[0]["effect"] == "read"
+
+
+def test_the_recorded_effect_class_follows_the_catalog(tmp_path):
+    """The label is the action's real class, not a constant."""
+    from isycode.effect_policy import effect_class
+
+    journal, _ = _journal(tmp_path)
+    root = tmp_path / "workspace"
+    for action, owner in (("workspace.files.read", "workspace_read"),
+                          ("workspace.files.delete", "workspace_write"),
+                          ("git.push", "workspace_publish")):
+        request = ActionRequest(action, root, execution_owner=owner)
+        authority = AuthorityDecision(True, f"grant:{action}", "matched", request.digest)
+        decision = SentinelDecision(action, request.digest,
+                                    (DecisionCheck("Authority", True, "matched"),))
+        journal.record_decision(request, authority, decision)
+
+    lines = [json.loads(line) for line in
+             journal.path.read_text(encoding="utf-8").splitlines()]
+    assert [(item["action"], item["effect"]) for item in lines] == [
+        ("workspace.files.read", effect_class("workspace.files.read")),
+        ("workspace.files.delete", effect_class("workspace.files.delete")),
+        ("git.push", effect_class("git.push")),
+    ]
+
+
+def test_journal_rejects_an_unknown_effect_label(tmp_path):
+    journal, request = _journal(tmp_path)
+    _write_chained_decision(journal, request, effect="totally-made-up")
+
+    assert journal.verify().status == "JOURNAL_INVALID"
+
+
+def test_journal_rejects_an_unsupported_policy_version(tmp_path):
+    journal, request = _journal(tmp_path)
+    _write_chained_decision(journal, request, effect="read", policy_version=99)
+
+    assert journal.verify().status == "JOURNAL_INVALID"
+
+
+def test_a_legacy_decision_without_effect_identity_still_verifies(tmp_path):
+    """Journals written before the field existed must keep verifying."""
+    journal, request = _journal(tmp_path)
+    body = {
+        "kind": "decision", "version": 1, "time": 1.0,
+        "workspace": "0" * 32, "action": request.action_id,
+        "owner": "workspace_read", "request_digest": request.digest,
+        "authority": True, "sentinel": "ALLOW", "failed_checks": [],
+        "checks": [], "previous": "0" * 64,
+    }
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    body["digest"] = hashlib.sha256(("0" * 64 + canonical).encode()).hexdigest()
+    journal.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    journal.path.write_text(json.dumps(body, sort_keys=True, separators=(",", ":")) + "\n",
+                            encoding="utf-8")
+    journal.path.chmod(0o600)
+
+    report = journal.verify()
+    assert report.status == "PASS" and report.records == 1
+    assert report.recent[0]["effect"] is None

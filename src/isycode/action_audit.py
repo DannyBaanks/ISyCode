@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from isycode.actions import ACTION_BY_ID
+from isycode.effect_policy import EFFECTS, POLICY_VERSION, effect_class
 from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
 from isycode.workspace_setup import state_root
 
@@ -43,6 +44,19 @@ def _notify_decision(record: dict[str, Any]) -> None:
 
 class ActionAuditError(RuntimeError):
     """The private action journal is unsafe, corrupt, or unavailable."""
+
+
+def _journal_effect(action_id: str) -> str:
+    """Effect class recorded for one action, or a fail-closed error.
+
+    The gate classifies an action before it records a decision, so an
+    unclassified action reaching this point is a programming error and not a
+    reason to write a decision whose meaning cannot be re-checked later.
+    """
+    try:
+        return effect_class(action_id)
+    except KeyError as exc:
+        raise ActionAuditError("decision has no effect classification") from exc
 
 
 @dataclass(frozen=True)
@@ -185,6 +199,12 @@ class ActionAuditJournal:
             "sentinel": decision.status, "failed_checks": failed[:64],
             "checks": [{"name": check.name[:120], "passed": check.passed}
                        for check in decision.checks[:64]],
+            # The taxonomy that classified this action and the policy version
+            # that did it. Without them a later edit of the action catalog can
+            # re-label an old decision, or move an action out of the Classic
+            # preset, without leaving a trace in the journal.
+            "effect": _journal_effect(request.action_id),
+            "policy_version": POLICY_VERSION,
         }
         if approval_mode is not None:
             record["approval"] = approval_mode  # who approved: the user, or a setting they enabled
@@ -313,6 +333,15 @@ class ActionAuditJournal:
                     raise ValueError(f"record {line_number} has an unsupported format version")
                 if version is None:
                     unverifiable += 1
+                # Effect identity is optional so journals written before it
+                # existed keep verifying; when present it must be valid, or a
+                # forged label would pass as a recorded decision.
+                effect = body.get("effect")
+                if effect is not None and effect not in EFFECTS:
+                    raise ValueError(f"record {line_number} has an unknown effect class")
+                policy_version = body.get("policy_version")
+                if policy_version is not None and policy_version != POLICY_VERSION:
+                    raise ValueError(f"record {line_number} has an unsupported policy version")
                 if kind == "decision":
                     if (not isinstance(body.get("authority"), bool)
                             or body.get("sentinel") not in {"ALLOW", "DENY"}
@@ -366,6 +395,7 @@ class ActionAuditJournal:
                 "authority": item.get("authority"), "sentinel": item.get("sentinel"),
                 "failed_checks": item.get("failed_checks", []),
                 "checks": item.get("checks", []),
+                "effect": item.get("effect"),
                 "approval": item.get("approval"),
                 "receipt_id": item.get("receipt_id"),
                 "result_digest": item.get("result_digest"),

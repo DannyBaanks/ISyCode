@@ -1,0 +1,105 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________________ test_revalidation_does_not_block_event_loop __________________
+
+sandbox = (<isycode.command_runner.CommandRunOwner object at 0x7411c61096a0>, <isycode.workspace_authority.WorkspaceAuthority ob...s_not_blo0/bin/bwrap', PosixPath('/run/user/1000/pytest-of-danny/pytest-4/test_revalidation_does_not_blo0/bwrap.json'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7411c60e2cc0>
+
+    def test_revalidation_does_not_block_event_loop(sandbox, monkeypatch):
+        owner, authority, approvals, _, _ = sandbox
+        authority.set_mode('classic')
+        preview = owner.prepare(['echo', 'hello'])
+        ui_thread = threading.get_ident()
+        original = owner.prepare
+        def prepare(*args, **kwargs):
+            assert threading.get_ident() != ui_thread, 'revalidation blocks the TUI thread'
+            return original(*args, **kwargs)
+        monkeypatch.setattr(owner, 'prepare', prepare)
+>       result = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_command_responsiveness.py:17: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+src/isycode/command_runner.py:306: in run
+    return await self._run(preview, approval, promote=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/command_runner.py:321: in _run
+    fresh = self.prepare(list(preview.argv), preview.cwd, preview.timeout_s, scope=preview.scope)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (['echo', 'hello'], '.', 120), kwargs = {'scope': '.'}
+
+    def prepare(*args, **kwargs):
+>       assert threading.get_ident() != ui_thread, 'revalidation blocks the TUI thread'
+E       AssertionError: revalidation blocks the TUI thread
+E       assert 127619729662272 != 127619729662272
+E        +  where 127619729662272 = <built-in function get_ident>()
+E        +    where <built-in function get_ident> = threading.get_ident
+
+tests/test_command_responsiveness.py:14: AssertionError
+____________________ test_staging_does_not_block_event_loop ____________________
+
+sandbox = (<isycode.command_runner.CommandRunOwner object at 0x7411c63f8080>, <isycode.workspace_authority.WorkspaceAuthority ob..._block_ev0/bin/bwrap', PosixPath('/run/user/1000/pytest-of-danny/pytest-4/test_staging_does_not_block_ev0/bwrap.json'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7411c63f9d90>
+
+    def test_staging_does_not_block_event_loop(sandbox, monkeypatch):
+        from isycode import command_runner
+        owner, authority, approvals, _, _ = sandbox
+        authority.set_mode('classic')
+        preview = owner.prepare(['echo', 'hello'])
+        ui_thread = threading.get_ident()
+        original = command_runner.prepare_staging
+        def prepare(*args, **kwargs):
+            assert threading.get_ident() != ui_thread, 'staging blocks the TUI thread'
+            return original(*args, **kwargs)
+        monkeypatch.setattr(command_runner, 'prepare_staging', prepare)
+>       result = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_command_responsiveness.py:32: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+src/isycode/command_runner.py:306: in run
+    return await self._run(preview, approval, promote=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/command_runner.py:339: in _run
+    result = await self._execute(preview, promote=promote)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/command_runner.py:374: in _execute
+    staging = prepare_staging(self.root, scope=preview.scope)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (PosixPath('/run/user/1000/pytest-of-danny/pytest-4/test_staging_does_not_block_ev0/project'),)
+kwargs = {'scope': '.'}
+
+    def prepare(*args, **kwargs):
+>       assert threading.get_ident() != ui_thread, 'staging blocks the TUI thread'
+E       AssertionError: staging blocks the TUI thread
+E       assert 127619729662272 != 127619729662272
+E        +  where 127619729662272 = <built-in function get_ident>()
+E        +    where <built-in function get_ident> = threading.get_ident
+
+tests/test_command_responsiveness.py:29: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_command_responsiveness.py::test_revalidation_does_not_block_event_loop
+FAILED tests/test_command_responsiveness.py::test_staging_does_not_block_event_loop
+2 failed in 0.18s

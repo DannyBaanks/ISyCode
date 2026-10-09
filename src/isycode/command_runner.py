@@ -281,13 +281,16 @@ class CommandRunOwner:
         if scope != "." and cwd != "." and not (cwd == scope or cwd.startswith(scope + "/")):
             raise ValueError("cwd is outside the selected staging scope")
         masks = self._scope_masks(scope)
+        from isycode.rtk_integration import plan as rtk_plan
+        rtk = rtk_plan(argv, program)
         request = ActionRequest(
             "workspace.command.run", self.root, program,
             {"argv": argv, "program": program, "cwd": cwd, "timeout_s": timeout_s,
              "network": "denied", "executable": sandbox, "workspace_root": str(self.root),
              "masked_sha256": masked_digest(masks), "masked_count": len(masks),
              "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES,
-             **({"scope": scope} if scope != "." else {})},
+             **({"scope": scope} if scope != "." else {}),
+             **({"rtk": rtk} if rtk else {})},
             execution_owner="workspace_command")
         return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope)
 
@@ -315,17 +318,20 @@ class CommandRunOwner:
         # Re-derive the sandbox facts: a new secret or a swapped program after
         # review denies instead of running with a stale mask set.
         try:
-            fresh = self.prepare(list(preview.argv), preview.cwd, preview.timeout_s, scope=preview.scope)
+            fresh = await asyncio.to_thread(self.prepare, list(preview.argv), preview.cwd,
+                                            preview.timeout_s, scope=preview.scope)
             if fresh != preview:
                 raise ValueError("sensitive files, command scope or the program changed after review")
-            masks = self._scope_masks(preview.scope)
-            program = resolve_program(self.root, preview.argv[0])
+            masks = await asyncio.to_thread(self._scope_masks, preview.scope)
+            program = await asyncio.to_thread(resolve_program, self.root, preview.argv[0])
         except (OSError, ValueError) as exc:
             return ActionOutcome("Command denied.", "DENY", None, str(exc)[:200] or "sandbox facts unavailable")
         if (masks != preview.masks or masked_digest(masks) != request.parameters["masked_sha256"]
                 or program != preview.program or sandbox_executable() != request.parameters["executable"]):
             return ActionOutcome("Command denied.", "DENY", None,
                                  "sensitive files or the program changed after review")
+        if request.parameters.get("rtk", {}).get("decision") == "ask" and approval is None:
+            return ActionOutcome("Command denied.", "DENY", None, "RTK requested explicit review")
         _, decision = self.gate.authorize(request, approvals=self.approvals, approval=approval)
         if not decision.allowed:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
@@ -336,6 +342,14 @@ class CommandRunOwner:
             detail = str(exc).strip() or type(exc).__name__
             return ActionOutcome("Command could not start.", "ERROR", None,
                                  f"sandboxed command failed to start ({detail[:200]})")
+        if "rtk" in result:
+            from isycode.rtk_integration import archive_result, record_stats
+            try:
+                await asyncio.to_thread(archive_result, result)
+            except (OSError, ValueError):
+                return ActionOutcome("Command evidence unavailable.", "NOT_VERIFIABLE", None,
+                                     "RTK result artifact could not be persisted")
+            record_stats(self.root, result)
         result_text = json.dumps(result, ensure_ascii=False, sort_keys=True)
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "workspace.command.run", request.digest,
@@ -358,7 +372,19 @@ class CommandRunOwner:
     async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
         try:
-            staging = prepare_staging(self.root, scope=preview.scope)
+            stage_task = asyncio.create_task(asyncio.to_thread(prepare_staging, self.root, scope=preview.scope))
+            try:
+                staging = await asyncio.shield(stage_task)
+            except asyncio.CancelledError:
+                # A copying worker cannot be killed: finish it before cleanup so
+                # cancellation never leaves an orphan or deletes an active copy.
+                try:
+                    abandoned = await stage_task
+                except (OSError, RuntimeError, ValueError):
+                    pass
+                else:
+                    await asyncio.to_thread(cleanup_staging, abandoned)
+                raise
         except StagingError as exc:
             raise OSError(str(exc)) from exc
         try:
@@ -396,6 +422,14 @@ class CommandRunOwner:
                 self._kill(proc)
                 await proc.wait()
                 raise
+            result = {"argv": list(preview.argv), "cwd": preview.cwd,
+                      "exit_code": proc.returncode, "timed_out": timed_out,
+                      "output": output.decode("utf-8", errors="replace"),
+                      "output_truncated": total > len(output), "output_bytes": total}
+            if "rtk" in params:
+                from isycode.rtk_integration import finish
+                result["command_success"] = proc.returncode == 0 and not timed_out
+                await finish(params["rtk"], result, bytes(output))
             changes = measure_changes(staging)
             if promote:
                 from isycode.effect_ledger import EffectLedger, LedgerDenied
@@ -419,11 +453,7 @@ class CommandRunOwner:
                 applied, refused = [], []
                 pending = [item["path"] for item in changes]
                 promotion = {"state": "staged"}
-            return {"argv": list(preview.argv), "cwd": preview.cwd,
-                    "exit_code": proc.returncode, "timed_out": timed_out,
-                    "output": output.decode("utf-8", errors="replace"),
-                    "output_truncated": total > len(output), "output_bytes": total,
-                    "staging": {
+            result["staging"] = {
                         "backend": "copy",
                         "promoted_count": len(applied),
                         "promoted": applied[:300],
@@ -432,7 +462,8 @@ class CommandRunOwner:
                         "refused_count": len(refused),
                         "refused": refused[:300],
                         "promotion": promotion,
-                    }}
+                    }
+            return result
         finally:
             cleanup_staging(staging)
 

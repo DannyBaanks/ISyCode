@@ -597,8 +597,13 @@ class CommandProcessSystembility:
         if request.action_id != "workspace.command.run":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        if set(params) not in (COMMAND_PARAMETER_KEYS, COMMAND_PARAMETER_KEYS | {"scope"}):
+        if set(params) not in tuple(COMMAND_PARAMETER_KEYS | extra for extra in
+                                   (set(), {"scope"}, {"rtk"}, {"scope", "rtk"})):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
+        if "rtk" in params:
+            from isycode.rtk_integration import valid_plan
+            if not valid_plan(params["rtk"]):
+                return SystembilityResult(self.name, False, "RTK identity or transform is invalid")
         argv = params.get("argv")
         if not command_argv_valid(argv):
             return SystembilityResult(self.name, False, "command arguments are invalid")
