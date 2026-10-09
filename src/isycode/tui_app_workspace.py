@@ -596,6 +596,14 @@ class WorkspaceMixin:
             problems = await self._post_edit_diagnostics(preview.path, preview.content) if root == self._workspace_root else None
             if problems is not None:
                 result["diagnostics"] = problems[:50]
+            # Peer claims are advisory coordination data from the user's grit
+            # registry; they never change this write's authorization.
+            try:
+                advisory = await self._grit_peer_advisory(preview.path) if root == self._workspace_root else None
+            except Exception:
+                advisory = None
+            if advisory:
+                result["peer_advisory"] = advisory
             return json.dumps(result)
         self._append(f"  Tool {outcome.decision} · workspace.files.write · "
                      f"{outcome.reason[:180]}", YELLOW)
