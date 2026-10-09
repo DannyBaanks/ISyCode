@@ -85,9 +85,9 @@ Actualización desde la terminal:
 
 | Comando | Qué hace |
 | --- | --- |
-| **isycode actualizar** | Avanza un checkout limpio o prepara la instalación de usuario |
-| **isycode actualizar --check** | Consulta cambios sin instalar ni avanzar la rama |
-| **isycode actualizar --yes** | Acepta de antemano el stash o el merge que normalmente se te pregunta |
+| **isycode update** / **isycode actualizar** | Avanza un checkout limpio o prepara la instalación de usuario |
+| **isycode update --check** | Consulta cambios sin instalar ni avanzar la rama |
+| **isycode update --yes** | Acepta de antemano el stash o el merge que normalmente se te pregunta |
 
 El comando detecta el checkout desde el propio programa, así que puedes
 ejecutarlo desde cualquier carpeta. En una instalación de usuario sin checkout,

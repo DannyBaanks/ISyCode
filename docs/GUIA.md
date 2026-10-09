@@ -110,6 +110,13 @@ La búsqueda de la ruta vecina por defecto corresponde a este layout de desarrol
 Desde cualquier carpeta:
 
 ```bash
+isycode update --check
+isycode update
+```
+
+También puedes usar los alias en español:
+
+```bash
 isycode actualizar --check
 isycode actualizar
 ```

@@ -219,19 +219,46 @@ class SelfUpdater:
             if not self._config_keys_safe():
                 return UpdateReport("blocked", ("Configuración local de Git con filtros o ejecutables: revisión manual requerida.",))
             branch = self._git("symbolic-ref", "--quiet", "--short", "HEAD", check=False)
+            detached_note = ""
             if branch.returncode:
-                return UpdateReport("blocked", ("HEAD separado; cambia a una rama antes de actualizar.",))
-            branch_name = branch.stdout.strip()
-            upstream = self._git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}", check=False)
-            if upstream.returncode:
-                return UpdateReport("blocked", (
-                    "Esta rama no tiene upstream configurado.",
-                    f"Configúralo con: git branch --set-upstream-to=origin/{shlex.quote(branch_name)} {shlex.quote(branch_name)}",
-                ))
-            upstream_name = upstream.stdout.strip()
-            remote_name, separator, remote_branch = upstream_name.partition("/")
-            if not separator or not remote_name or not remote_branch or remote_branch.startswith("/"):
-                return UpdateReport("blocked", ("La referencia upstream no es válida.",))
+                # Managed installs may intentionally pin a release commit in a
+                # detached checkout. Resolve only the official remote's default
+                # branch; never guess main/master or create/move a branch.
+                remotes = [line.strip() for line in self._git("remote").stdout.splitlines() if line.strip()]
+                allowed = []
+                for candidate in remotes:
+                    candidate_url = self._git("remote", "get-url", candidate, check=False)
+                    if candidate_url.returncode == 0 and self._remote_allowed(candidate_url.stdout.strip()):
+                        allowed.append(candidate)
+                if len(allowed) != 1:
+                    return UpdateReport("blocked", (
+                        "HEAD está separado y no hay un único remoto oficial para determinar qué actualizar.",
+                    ))
+                remote_name = allowed[0]
+                advertised = self._git("ls-remote", "--symref", remote_name, "HEAD", check=False,
+                                       local_file_protocol=self.allow_local_remotes)
+                match = re.search(r"^ref:\s+refs/heads/(\S+)\s+HEAD$", advertised.stdout, re.MULTILINE)
+                if advertised.returncode or not match:
+                    return UpdateReport("blocked", (
+                        "HEAD está separado y no se pudo identificar la rama predeterminada del remoto oficial.",
+                    ))
+                remote_branch = match.group(1)
+                detached_note = (
+                    f"Checkout detached: se consultó la rama predeterminada {remote_branch}; "
+                    "la actualización conservará HEAD separado."
+                )
+            else:
+                branch_name = branch.stdout.strip()
+                upstream = self._git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}", check=False)
+                if upstream.returncode:
+                    return UpdateReport("blocked", (
+                        "Esta rama no tiene upstream configurado.",
+                        f"Configúralo con: git branch --set-upstream-to=origin/{shlex.quote(branch_name)} {shlex.quote(branch_name)}",
+                    ))
+                upstream_name = upstream.stdout.strip()
+                remote_name, separator, remote_branch = upstream_name.partition("/")
+                if not separator or not remote_name or not remote_branch or remote_branch.startswith("/"):
+                    return UpdateReport("blocked", ("La referencia upstream no es válida.",))
             remote = self._git("remote", "get-url", remote_name, check=False)
             if remote.returncode or not self._remote_allowed(remote.stdout.strip()):
                 return UpdateReport("blocked", ("El remoto configurado no es un repositorio ISyCode de GitHub permitido.",))
@@ -282,6 +309,8 @@ class SelfUpdater:
                 lines.extend(self._clean_line(line) for line in summary[:12])
                 return UpdateReport("dirty", tuple(lines))
             details = [f"Actualizaciones disponibles: {behind} commit(s)."]
+            if detached_note:
+                details.insert(0, detached_note)
             details.extend(self._clean_line(line) for line in commits[:12])
             details.extend(self._clean_line(line) for line in summary[:12])
             review = "git diff --stat HEAD FETCH_HEAD"
@@ -290,6 +319,8 @@ class SelfUpdater:
             if diverged:
                 local_commits = self._git("log", "--format=%h %s", "FETCH_HEAD..HEAD").stdout.splitlines()
                 lines = [f"Historial divergente: {ahead} commit(s) local(es) y {behind} remoto(s)."]
+                if detached_note:
+                    lines.insert(0, detached_note)
                 lines.append("Commits locales:")
                 lines.extend(self._clean_line(line) for line in local_commits[:10])
                 lines.append("Commits remotos:")

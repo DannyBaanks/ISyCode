@@ -83,6 +83,35 @@ def test_check_only_reports_incoming_changes_without_changing_checkout(tmp_path)
     assert any("git diff" in line for line in report.lines)
 
 
+def test_detached_checkout_checks_remote_default_branch_without_moving_head(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    git("checkout", "--detach", "HEAD", cwd=repo)
+    before_head = git("rev-parse", "HEAD", cwd=repo)
+    push_peer_commit(peer, "detached install update")
+
+    report = updater(repo).run(check_only=True)
+
+    assert report.status == "available", report.lines
+    assert any("rama predeterminada main" in line for line in report.lines)
+    assert any("detached" in line.casefold() for line in report.lines)
+    assert git("rev-parse", "HEAD", cwd=repo) == before_head
+    assert subprocess.run(["git", "symbolic-ref", "--quiet", "HEAD"], cwd=repo,
+                          capture_output=True).returncode != 0
+
+
+def test_detached_checkout_updates_by_fast_forward_and_remains_detached(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    git("checkout", "--detach", "HEAD", cwd=repo)
+    push_peer_commit(peer, "detached install update")
+
+    report = updater(repo).run()
+
+    assert report.status == "updated", report.lines
+    assert "Incoming version" in (repo / "README.md").read_text(encoding="utf-8")
+    assert subprocess.run(["git", "symbolic-ref", "--quiet", "HEAD"], cwd=repo,
+                          capture_output=True).returncode != 0
+
+
 @pytest.mark.parametrize("untracked", [False, True], ids=["tracked", "untracked"])
 def test_dirty_checkout_is_preserved_and_never_fast_forwarded(tmp_path, untracked):
     _, repo, peer = repositories(tmp_path)
