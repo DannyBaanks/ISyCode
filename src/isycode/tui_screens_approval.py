@@ -179,6 +179,7 @@ class WriteApprovalScreen(ApprovalScreen):
     #write-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
     #write-approval-title { height: 2; color: #bb8cff; text-style: bold; }
     #write-approval-summary { height: auto; margin-bottom: 1; }
+    #write-approval-peer { height: auto; margin-bottom: 1; color: #e9c778; display: none; }
     #write-approval-diff { height: 1fr; border: none; background: #202126; }
     #write-approval-actions { height: 3; dock: bottom; align-horizontal: right; }
     #write-approval-actions Button { margin-left: 1; width: 1fr; min-width: 0; padding: 0 1; }
@@ -217,6 +218,7 @@ class WriteApprovalScreen(ApprovalScreen):
                  f"+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
                  "unless you apply it. If the file changes before it is applied, the change is refused."),
                 id="write-approval-summary", markup=False)
+            yield Static("", id="write-approval-peer", markup=False)
             with VerticalScroll(id="write-approval-diff"):
                 from isycode.diff_view import side_by_side_table
                 yield Static(side_by_side_table(self.preview.diff, self.preview.path))
@@ -229,8 +231,21 @@ class WriteApprovalScreen(ApprovalScreen):
                 if self.allow_automatic_edits and self.preview.kind == "write" and not self.preview.is_undo:
                     yield Button("Always allow…", id="write-approval-always", variant="error")
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         self.query_one("#write-approval-reject", Button).focus()
+        # Advisory peer claims (grit) never gate this approval; a failure or a
+        # missing registry only leaves the note hidden.
+        loader = getattr(self.app, "_grit_peer_advisory", None)
+        if loader is None:
+            return
+        try:
+            note = await loader(self.preview.path)
+        except Exception:
+            return
+        if note:
+            widget = self.query_one("#write-approval-peer", Static)
+            widget.update(note)
+            widget.display = True
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "write-approval-always":

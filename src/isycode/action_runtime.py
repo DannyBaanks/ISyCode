@@ -188,7 +188,9 @@ MCP_ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,63}$")
 MCP_START_KEYS = frozenset({"server", "argv", "executable", "cwd", "env_keys", "config_sha256"})
 MCP_INVOKE_KEYS = frozenset({"server", "tool", "config_sha256", "arguments_sha256"})
 LSP_DIAGNOSTIC_KEYS = frozenset({"operation", "server_id", "path", "text_sha256", "workspace_root",
-                                 "executable", "server_executable", "node_executable"})
+                                  "executable", "server_executable", "node_executable"})
+GRIT_CLAIMS_KEYS = frozenset({"operation", "path", "workspace_root", "executable",
+                               "grit_executable", "grit_sha256"})
 GIT_MAX_COMMIT_PATHS = 200
 GIT_MAX_MESSAGE_CHARS = 4000
 
@@ -203,6 +205,7 @@ EXPLICIT_DENY_ACTIONS = frozenset({
     "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
     "l1.disable", "l1.rollback",
     "desktop.file_picker", "bridge.peek", "lsp.discover", "mobile.session.read",
+    "grit.discover",
 })
 
 
@@ -252,6 +255,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "gateway_mcp": frozenset({"MCPInvocationBoundary"}),
     "gateway_semantic": frozenset({"GatewaySemanticBoundary"}),
     "lsp_symbols": frozenset({"WorkspaceReadBoundary", "LSPProcessBoundary"}),
+    "grit_peers": frozenset({"WorkspaceReadBoundary", "GritPeersBoundary"}),
     "broker_preview": frozenset({"WorkspaceReadBoundary", "BrokerRecipeBoundary"}),
     "broker_provision": frozenset({
         "WorkspaceReadBoundary", "BrokerProvisionBoundary", "BrokerRegistryBoundary",
@@ -294,6 +298,7 @@ OWNER_ACTIONS = {
     "gateway_mcp": frozenset({"mcp.invoke"}),
     "gateway_semantic": frozenset({"gateway.semantic.read"}),
     "lsp_symbols": frozenset({"workspace.files.read", "lsp.start", "lsp.diagnostics"}),
+    "grit_peers": frozenset({"workspace.files.read", "grit.claims.read"}),
     "broker_preview": frozenset({"workspace.files.read", "broker.preview"}),
     "broker_provision": frozenset({"workspace.files.read", "broker.build", "broker.start"}),
     "broker_management": frozenset({"broker.health", "broker.logs", "broker.start",
@@ -1169,6 +1174,39 @@ class LSPStartSystembility:
             "known LSP server is restricted to a read-only workspace; seccomp denies socket syscalls")
 
 
+class GritPeersSystembility:
+    """Allow only the pinned grit binary reading its own claim registry in bwrap."""
+
+    name = "GritPeersBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != "grit.claims.read":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        try:
+            from isycode.grit import discover_grit, has_grit_registry
+            info = discover_grit()
+            sandbox = str(Path(shutil.which("bwrap") or "").resolve(strict=True))
+        except (OSError, RuntimeError, ValueError):
+            return SystembilityResult(self.name, False, "sandboxed grit peer registry is unavailable")
+        if info is None or info.get("state") != "sandbox_ready":
+            return SystembilityResult(self.name, False, "grit adapter is not sandbox-ready")
+        if not has_grit_registry(request.workspace_root):
+            return SystembilityResult(self.name, False, "workspace has no grit registry")
+        params = request.parameters
+        if (request.target != params.get("path") or set(params) != GRIT_CLAIMS_KEYS
+                or params.get("operation") != "status"
+                or params.get("executable") != sandbox
+                or params.get("grit_executable") != info["executable"]
+                or params.get("grit_sha256") != info["sha256"]
+                or params.get("workspace_root") != str(request.workspace_root)
+                or not command_relative_path_valid(params.get("path"))):
+            return SystembilityResult(self.name, False, "grit claims request does not match the sandbox owner")
+        return SystembilityResult(
+            self.name, True,
+            "pinned grit binary reads only its own claim registry; seccomp denies socket syscalls")
+
+
 class BrokerPreviewSystembility:
     """Bind broker previews to a project subtree and fixed hardening recipe."""
 
@@ -1758,7 +1796,8 @@ class ProductActionGate:
             RemoteReadSystembility(), SessionStoreSystembility(), SessionDeleteSystembility(),
             CredentialBoundarySystembility(),
             MCPInvocationSystembility(),
-            GatewaySemanticSystembility(), LSPStartSystembility(), BrokerPreviewSystembility(),
+            GatewaySemanticSystembility(), LSPStartSystembility(), GritPeersSystembility(),
+            BrokerPreviewSystembility(),
             BrokerProvisionSystembility(), BrokerManagementSystembility(),
             TailscaleExecutableSystembility(tailscale_facts),
             TailscalePackageSystembility(tailscale_facts),
@@ -2174,6 +2213,76 @@ class LPSSymbolOwner:
             return ActionOutcome("LSP receipt could not be persisted.", "NOT_VERIFIABLE", None,
                                  "durable action journal is unavailable")
         return ActionOutcome(result_text, "ALLOW", receipt, "diagnostics received from the sandboxed server")
+
+
+class GritPeersOwner:
+    """The only execution owner for grit.claims.read.
+
+    The outcome is advisory text shown next to an edit; it never gates the
+    edit itself, and grit never gains any authority from ISyCode reading it.
+    """
+
+    def __init__(self, root: Path, authority: WorkspaceAuthority,
+                 approvals: ActionApprovalStore):
+        self.root = root.resolve(strict=True)
+        self.authority = authority
+        self.approvals = approvals
+        self.gate = ProductActionGate(self.root, authority, owner_id="grit_peers")
+
+    async def claims(self, path: str) -> ActionOutcome:
+        """Read the peer claims touching one file (opt-in, advisory only)."""
+        from isycode.grit import (advisory_text, claims_for_path, discover_grit,
+                                  has_grit_registry, read_peer_claims)
+
+        if not isinstance(path, str) or not command_relative_path_valid(path):
+            return ActionOutcome("Peer claims denied.", "DENY", None, "invalid peer claims request")
+        info = discover_grit()
+        if info is None or info.get("state") != "sandbox_ready":
+            return ActionOutcome("Peer claims unavailable.", "DENY", None,
+                                 "grit binary or sandbox is unavailable")
+        if not has_grit_registry(self.root):
+            return ActionOutcome("Peer claims inactive.", "DENY", None,
+                                 "workspace has no grit registry (run grit init)")
+        target = str(self.root / path)
+        read_request = ActionRequest("workspace.files.read", self.root, target,
+                                     {"path": target}, execution_owner="grit_peers")
+        _, read_decision = self.gate.authorize(read_request)
+        if not read_decision.allowed:
+            reason = "; ".join(check.reason for check in read_decision.checks if not check.passed)
+            return ActionOutcome("Peer claims denied.", "DENY", None,
+                                 "workspace.files.read grant required for the selected root: " + reason)
+        try:
+            request = ActionRequest(
+                "grit.claims.read", self.root, path,
+                {"operation": "status", "executable": info["sandbox_executable"],
+                 "grit_executable": info["executable"], "grit_sha256": info["sha256"],
+                 "workspace_root": str(self.root), "path": path},
+                execution_owner="grit_peers")
+        except (TypeError, ValueError):
+            return ActionOutcome("Peer claims denied.", "DENY", None, "invalid peer claims request")
+        _, decision = self.gate.authorize(request, approvals=self.approvals)
+        if not decision.allowed:
+            reason = "; ".join(check.reason for check in decision.checks if not check.passed)
+            return ActionOutcome("Peer claims denied.", "DENY", None, reason)
+        try:
+            result = await read_peer_claims(self.root, info)
+            relevant = claims_for_path(result["claims"], path)
+            payload = json.dumps({"path": path, "claims": relevant,
+                                  "raw_sha256": result["raw_sha256"],
+                                  "grit_sha256": result["grit_sha256"],
+                                  "advisory": advisory_text(relevant)},
+                                 ensure_ascii=False, sort_keys=True)
+        except (OSError, ValueError, RuntimeError, asyncio.TimeoutError) as exc:
+            return ActionOutcome("Peer claims unavailable.", "ERROR", None,
+                                 f"sandboxed grit status failed ({type(exc).__name__})")
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "grit.claims.read", request.digest,
+            "ALLOW", "SUCCESS", hashlib.sha256(payload.encode("utf-8")).hexdigest())
+        if not receipt.verify(request, payload) or not self.gate.persist_receipt(request, receipt):
+            return ActionOutcome("Peer claims receipt could not be persisted.", "NOT_VERIFIABLE", None,
+                                 "durable action journal is unavailable")
+        return ActionOutcome(payload, "ALLOW", receipt,
+                             "peer claims read from the sandboxed grit registry")
 
 
 class ProviderNetworkOwner:

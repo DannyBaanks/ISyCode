@@ -26,6 +26,7 @@ from isycode.action_runtime import (
 ALLOWED_SHARED_ACTION_OWNERS = {
     "workspace.files.read": frozenset({
         "workspace_read", "lsp_symbols", "broker_preview", "broker_provision",
+        "grit_peers",
     }),
 }
 
@@ -247,6 +248,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("gateway.semantic.read", "GatewaySemanticOwner.invoke", "gateway_semantic", "COVERED"),
     ("lsp.start", "LPSSymbolOwner.search", "lsp_symbols", "COVERED"),
     ("lsp.diagnostics", "LPSSymbolOwner.diagnostics", "lsp_symbols", "COVERED"),
+    ("grit.claims.read", "GritPeersOwner.claims", "grit_peers", "COVERED"),
     ("workspace.command.run", "CommandRunOwner.run", "workspace_command", "COVERED"),
     ("git.status", "GitOwner.status", "workspace_git", "COVERED"),
     ("git.status", "GitOwner.is_path_tracked", "workspace_git", "COVERED"),

@@ -51,6 +51,8 @@ _ENTRIES = [
     ("lsp.start", "LSP", "Start a language server", "process", True),
     ("lsp.stop", "LSP", "Stop a language server", "process", False),
     ("lsp.diagnostics", "LSP", "Check a file with a language server after an edit", "process", False),
+    ("grit.discover", "Peers", "Detect the grit peer-claim registry", "read", False),
+    ("grit.claims.read", "Peers", "Read grit peer claims touching one file (advisory)", "read", False),
     ("broker.preview", "Semantic broker", "Preview a broker recipe", "read", False),
     ("broker.build", "Semantic broker", "Build a semantic broker image", "process", True),
     ("broker.start", "Semantic broker", "Start a semantic broker", "process", True),
