@@ -1121,6 +1121,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "context_inject": "Choose a Markdown or text file to add to the conversation.",
             }),
             "Preferences": ("#c7b8d4", {
+                "rtk_settings": "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged.",
                 "user_defaults": "Personal defaults shared across your workspaces.",
                 "workspace_config_init": "Create workspace preferences after reviewing the proposed files.",
                 "workspace_config_preferences": "Preferences for this workspace; permissions are separate.",

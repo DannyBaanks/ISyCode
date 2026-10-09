@@ -65,6 +65,7 @@ EXPECTED = {
     "auth_saved",
     "providers_open",
     "roles_open",
+    "rtk_settings",
     "sounds_toggle",
     "contrast_toggle",
     "ascii_toggle",
