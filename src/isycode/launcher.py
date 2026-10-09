@@ -16,6 +16,9 @@ Usage:
   isycode stats [--json]    Aggregate locally recorded session usage
   isycode dirs [--json]     Show config/state locations and precedence, never values
   isycode completion SHELL  Print bash, zsh or fish completion
+  isycode update           Update this ISyCode installation (alias: actualizar)
+  isycode update --check   Check for updates without installing or advancing
+  isycode update --yes     Pre-approve the stash/merge confirmation
   isycode actualizar       Actualizar el checkout limpio o preparar una instalación
   isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
   isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
@@ -37,11 +40,11 @@ def _ask(question: str, details: tuple[str, ...]) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
-    if arguments and arguments[0] == "actualizar":
+    if arguments and arguments[0] in {"update", "actualizar"}:
         from isycode.updater import SelfUpdater
 
         if arguments[1:] not in ([], ["--check"], ["--yes"]):
-            print("Uso: isycode actualizar [--check | --yes]", file=sys.stderr)
+            print("Uso: isycode update|actualizar [--check | --yes]", file=sys.stderr)
             return 2
         if arguments[1:] == ["--yes"]:
             confirm = lambda question, details: True  # noqa: E731

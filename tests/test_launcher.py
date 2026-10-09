@@ -82,6 +82,7 @@ def test_help_lists_spanish_self_update_commands(capsys):
     assert main(["--help"]) == 0
     help_text = capsys.readouterr().out
     assert "isycode actualizar" in help_text
+    assert "isycode update" in help_text
     assert "--check" in help_text
 
 
@@ -104,8 +105,12 @@ def test_update_command_dispatches_check_and_exit_code(monkeypatch, capsys):
     assert main(["actualizar", "--check"]) == 0
     assert calls == [True]
     assert "actualización" in capsys.readouterr().out
+    assert main(["update", "--check"]) == 0
+    assert calls == [True, True]
     assert main(["actualizar"]) == 0
-    assert calls == [True, False]
+    assert calls == [True, True, False]
+    assert main(["update"]) == 0
+    assert calls == [True, True, False, False]
 
 
 def test_update_command_returns_failure_when_local_changes_need_resolution(monkeypatch, capsys):

@@ -207,7 +207,7 @@ def _dirs(root: Path, out: TextIO, json_output: bool) -> int:
 
 
 def _completion(shell: str, out: TextIO) -> int:
-    commands = "sessions models stats dirs doctor completion cli tui actualizar"
+    commands = "sessions models stats dirs doctor completion cli tui update actualizar"
     if shell == "bash":
         out.write(f"complete -W '{commands}' isycode\n")
     elif shell == "zsh":
