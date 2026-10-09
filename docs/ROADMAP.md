@@ -23,7 +23,7 @@ Estado de este documento: **plan de trabajo**, no declaración de que las integr
 
 ### Auditoría del código de `main` (2026-10-09)
 
-Contraste de `origin/main` con este roadmap, el README, la readiness, el manifiesto de cobertura, los tests presentes y el workflow de CI. No ejecuté la suite ni probes live en esta auditoría; una casilla no se marca como demostrada solo por existir código o un test.
+Contraste de `origin/main` con este roadmap, el README, la readiness, el manifiesto de cobertura, los tests presentes y el workflow de CI. Después del contraste se ejecutó la suite hermética recomendada (`python3 -m pytest -q -m 'not integration'`): **1,783 passed, 0 failed, 1 skipped en 472.69 s**. No se ejecutaron probes live; una casilla no se marca como demostrada solo por existir código o un test.
 
 | Área | Estado comprobable en `main` | Qué cambia en este roadmap |
 |---|---|---|
@@ -34,7 +34,7 @@ Contraste de `origin/main` con este roadmap, el README, la readiness, el manifie
 | Empaquetado | `pyproject.toml` define el comando Python `isycode`; CI construye binarios/paquetes para Windows, Linux y macOS. El workflow crea Release solo con un tag versionado y gates aprobados. No hay release publicado ni tags `v*` en la revisión consultada. | M16 sigue abierto como producto/release. “El workflow puede empaquetar” no equivale a que haya un instalador publicado o un release listo. |
 | Gate Classic/Security | El estado M0–M8 aprobado y M9/M10 pendiente que resume el README pertenece a [`roadmap-classic-security-ux.md`](roadmap-classic-security-ux.md), no a los M0–M21 de este documento. | No transferir esos approvals a los hitos de producto de este roadmap. |
 
-La auditoría leyó el commit local de `main` y la metadata de PR/CI disponible al 2026-10-09. Providers reales, Gateway semántico, Tailscale/Mobile Host remoto, Windows, accesibilidad y soak multi-hora siguen sujetos a la evidencia descrita en sus secciones; no se volvieron a ejecutar aquí.
+La auditoría leyó el commit local de `main` y la metadata de PR/CI disponible al 2026-10-09. El resultado de la suite acredita los tests locales incluidos, no proveedores reales ni servicios externos. Gateway semántico, Tailscale/Mobile Host remoto, Windows, accesibilidad y soak multi-hora siguen sujetos a evidencia específica; no se volvieron a ejecutar aquí.
 
 ## 1. Producto que queremos construir
 
