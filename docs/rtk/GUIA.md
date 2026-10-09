@@ -87,3 +87,23 @@ exit code no cero en pruebas exitosas. Las métricas del proveedor no se modific
   Codex o Claude. Es un adaptador propio de ISyCode para el binario externo.
 
 Compresión de salida por [RTK](https://github.com/rtk-ai/rtk), Apache-2.0.
+
+## Probar las PR sin cambiar tu instalación habitual
+
+En este equipo se instaló un lanzador separado:
+
+```bash
+cd /ruta/a/tu/carpeta-de-prueba
+isycode-rtk
+```
+
+Después escribe `/rtk`, revisa el binario y pulsa **Enable this binary**.
+El modelo puede seguir usando sus comandos normales; el adaptador comprime
+la salida de los comandos compatibles. `/rtk` es configuración del usuario,
+no una herramienta que conceda permisos al modelo.
+
+Este lanzador de revisión depende del checkout
+`/tmp/isycode-rtk-native-20261009` y del venv de la instalación original.
+Es temporal: si ese checkout desaparece, el lanzador dejará de funcionar.
+El comando habitual `isycode` sigue usando el checkout anterior hasta
+que se integren las PR y se actualice esa instalación.
