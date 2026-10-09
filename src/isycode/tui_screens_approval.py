@@ -327,6 +327,11 @@ class CommandApprovalScreen(ApprovalScreen):
                          id="command-approval-title")
             with VerticalScroll(id="command-approval-argv"):
                 yield Static(Text(shlex.join(preview.argv)))
+                if "rtk" in preview.request.parameters:
+                    rtk = preview.request.parameters["rtk"]
+                    yield Static(Text("RTK suggestion: " + shlex.join(rtk["rewrite_argv"])))
+                    yield Static(Text("Executes the original once; output compression by native RTK pipe.\n"
+                                      + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
             yield Static(
                 f"Program: {preview.program}\n"
                 f"Stops after {preview.timeout_s} s · network blocked · "
