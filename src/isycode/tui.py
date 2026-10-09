@@ -1070,7 +1070,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._render_menu("roles_root", "Role · choose a catalog", entries)
 
     def _open_settings_menu(self) -> None:
+        from isycode.rtk_integration import Settings as RTKSettings
+        try:
+            rtk_label = "on" if RTKSettings().load()["enabled"] else "off"
+        except (OSError, ValueError):
+            rtk_label = "needs attention"
         entries = [
+            self._entry("RTK compression · " + rtk_label, "rtk_settings", "",
+                        "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."),
             self._entry("Providers & models", "providers_open", ""),
             self._entry("Reasoning level", "reasoning_open", ""),
             self._entry("Notification sounds · " + ("on" if self._notification_sounds else "off"), "sounds_toggle", "", "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
@@ -1444,6 +1451,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return context, "snapshot"
         return None, "unknown"
 
+    def _request_is_quiet(self, request) -> bool:
+        if request.parameters.get("rtk", {}).get("decision") == "ask":
+            return False
+        return super()._request_is_quiet(request)
+
     def _usage_status_text(self) -> str:
         from isycode.context_meter import compact_context_label
         limit, _source = self._context_window()
@@ -1456,7 +1468,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         # the three into a single line needs a wider column, and that width has to
         # come from the idea box, which then stops matching the prompt and the
         # queued box. The percentage already rides inside the context label.
-        return self._throughput.widget_text(total, bool(self._usage.unknown_requests), context)
+        text = self._throughput.widget_text(total, bool(self._usage.unknown_requests), context)
+        from isycode.rtk_integration import savings_label
+        rtk_label = savings_label(self._workspace_root)
+        if "~0 tok" not in rtk_label:
+            text += " · " + rtk_label
+        return text
 
     def _refresh_usage(self) -> None:
         if not self._lane_on_screen():
