@@ -84,6 +84,9 @@ _ENTRIES = [
     ("session.create", "Sessions", "Create a persistent conversation", "write", False),
     ("session.resume", "Sessions", "Resume a persistent conversation", "read", False),
     ("session.delete", "Sessions", "Delete a persistent conversation", "destructive", True),
+    ("workspace.memory.read", "Memory", "Read this workspace's private memory", "read", False),
+    ("workspace.memory.write", "Memory", "Write or consolidate this workspace's private memory", "write", True),
+    ("workspace.memory.forget", "Memory", "Permanently forget one memory", "destructive", True),
     # Only from a user gesture (selection, Ctrl+C, Copy path); that gesture is the
     # human-presence proof, and the model has no tool that can trigger it.
     ("clipboard.paste", "Desktop", "Paste an image or text from the clipboard", "external", False),
