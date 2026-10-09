@@ -162,6 +162,8 @@ Regla de oro de las aprobaciones: ninguna aprobación crea un permiso duradero. 
 
 Descubrir un MCP o una skill no concede permiso para invocarlo. Files es de solo lectura, parte de `.isyroot` y requiere grants explícitos de ISyCode evaluados por IsySentinel. Una key no concede acceso a red; los catálogos/Gateway también requieren grants de host. La interfaz nunca debe convertir un plan del modelo en autoridad.
 
+Aviso de pares (grit): si otros agentes usan [grit](https://github.com/rtk-ai/grit) en este workspace, la tarjeta de aprobación de una edición puede mostrar qué símbolos tienen reclamados (`Peer claims (grit, advisory only)`). Es solo un aviso de coordinación: no bloquea ni autoriza nada y requiere tus grants explícitos. Detalles y evaluación en [docs/grit-peer-claims.md](grit-peer-claims.md).
+
 ## Comandos observados
 
 ### `isycode`

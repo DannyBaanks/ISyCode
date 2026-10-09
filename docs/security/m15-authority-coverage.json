@@ -1,12 +1,12 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 81,
+    "actions": 83,
     "effectful": 62,
-    "owner_valid": 55,
+    "owner_valid": 56,
     "owner_shared_read": 1,
     "owner_variants": 1,
-    "explicit_deny": 23,
+    "explicit_deny": 24,
     "secure_excluded": 1,
     "unclassified": 0,
     "ambiguous": 0,
@@ -38,6 +38,7 @@
       "owners": [
         "broker_preview",
         "broker_provision",
+        "grit_peers",
         "lsp_symbols",
         "workspace_read"
       ],
@@ -47,6 +48,7 @@
         "BrokerProvisionBoundary",
         "BrokerRecipeBoundary",
         "BrokerRegistryBoundary",
+        "GritPeersBoundary",
         "LSPProcessBoundary",
         "WorkspaceReadBoundary"
       ],
@@ -580,6 +582,35 @@
       "authority": "Workspace Authority",
       "sentinel": [
         "LSPProcessBoundary",
+        "WorkspaceReadBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "grit.discover",
+      "effect": "read",
+      "approval_required": false,
+      "owners": [],
+      "classification": "EXPLICIT_DENY",
+      "authority": "explicit deny at owner binding",
+      "sentinel": [],
+      "variants": [],
+      "status": "EXPLICIT_DENY",
+      "secure_reachability": "SECURE_EXCLUDED_BY_OWNER_BINDING"
+    },
+    {
+      "action": "grit.claims.read",
+      "effect": "read",
+      "approval_required": false,
+      "owners": [
+        "grit_peers"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "GritPeersBoundary",
         "WorkspaceReadBoundary"
       ],
       "variants": [],
@@ -1429,6 +1460,12 @@
       "status": "COVERED"
     },
     {
+      "action": "grit.claims.read",
+      "callsite": "GritPeersOwner.claims",
+      "owner": "grit_peers",
+      "status": "COVERED"
+    },
+    {
       "action": "workspace.command.run",
       "callsite": "CommandRunOwner.run",
       "owner": "workspace_command",
@@ -1730,63 +1767,77 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2083,
+      "line": 2122,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1864,
+      "line": 2248,
+      "callable": "isycode.action_runtime.GritPeersOwner.claims",
+      "action": "workspace.files.read",
+      "owner": "grit_peers"
+    },
+    {
+      "file": "isycode/action_runtime.py",
+      "line": 1903,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1936,
+      "line": 1975,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2006,
+      "line": 2045,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2092,
+      "line": 2131,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2143,
+      "line": 2182,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2151,
+      "line": 2190,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2209,
+      "line": 2256,
+      "callable": "isycode.action_runtime.GritPeersOwner.claims",
+      "action": "grit.claims.read",
+      "owner": "grit_peers"
+    },
+    {
+      "file": "isycode/action_runtime.py",
+      "line": 2318,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2290,
+      "line": 2399,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2173,7 +2224,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2290,
+      "line": 2399,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"

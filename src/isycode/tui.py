@@ -91,7 +91,7 @@ from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS, CONTEXT_ACCESS_TOOL, CONTEXT_ACCESS_TOOL_NAME,
     GatewayMCPInvocationOwner, GatewaySemanticOwner,
     LocalWorkspaceReadOwner, ProviderNetworkOwner, SessionDeleteOwner,
-    LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
+    GritPeersOwner, LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
 )
 from isycode.actions import ACTION_BY_ID
 from isycode.chat_transport import assistant_turn, provider_complete
@@ -2578,6 +2578,22 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if not cancelled and not followed:
             self.notify("A conversation failed" if failed is not None else "A conversation finished")
         self.run_worker(self._refresh_work_list(), group="work-list")
+
+    async def _grit_peer_advisory(self, path: str) -> str | None:
+        """Advisory peer claims (grit) for one file; never gates the approval."""
+        try:
+            owner = GritPeersOwner(self._workspace_root,
+                                   WorkspaceAuthority(self._workspace_root),
+                                   self._action_approvals)
+            outcome = await owner.claims(path)
+        except (OSError, ValueError, RuntimeError):
+            return None
+        if outcome.decision != "ALLOW":
+            return None
+        try:
+            return json.loads(outcome.text).get("advisory")
+        except ValueError:
+            return None
 
     async def _await_screen(self, screen):
         """Show a modal screen and wait for its result from a worker or a plain task.
