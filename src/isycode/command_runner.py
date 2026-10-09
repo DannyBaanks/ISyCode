@@ -281,13 +281,16 @@ class CommandRunOwner:
         if scope != "." and cwd != "." and not (cwd == scope or cwd.startswith(scope + "/")):
             raise ValueError("cwd is outside the selected staging scope")
         masks = self._scope_masks(scope)
+        from isycode.rtk_integration import plan as rtk_plan
+        rtk = rtk_plan(argv, program)
         request = ActionRequest(
             "workspace.command.run", self.root, program,
             {"argv": argv, "program": program, "cwd": cwd, "timeout_s": timeout_s,
              "network": "denied", "executable": sandbox, "workspace_root": str(self.root),
              "masked_sha256": masked_digest(masks), "masked_count": len(masks),
              "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES,
-             **({"scope": scope} if scope != "." else {})},
+             **({"scope": scope} if scope != "." else {}),
+             **({"rtk": rtk} if rtk else {})},
             execution_owner="workspace_command")
         return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope)
 
@@ -326,6 +329,8 @@ class CommandRunOwner:
                 or program != preview.program or sandbox_executable() != request.parameters["executable"]):
             return ActionOutcome("Command denied.", "DENY", None,
                                  "sensitive files or the program changed after review")
+        if request.parameters.get("rtk", {}).get("decision") == "ask" and approval is None:
+            return ActionOutcome("Command denied.", "DENY", None, "RTK requested explicit review")
         _, decision = self.gate.authorize(request, approvals=self.approvals, approval=approval)
         if not decision.allowed:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
@@ -336,6 +341,14 @@ class CommandRunOwner:
             detail = str(exc).strip() or type(exc).__name__
             return ActionOutcome("Command could not start.", "ERROR", None,
                                  f"sandboxed command failed to start ({detail[:200]})")
+        if "rtk" in result:
+            from isycode.rtk_integration import archive_result, record_stats
+            try:
+                await asyncio.to_thread(archive_result, result)
+            except (OSError, ValueError):
+                return ActionOutcome("Command evidence unavailable.", "NOT_VERIFIABLE", None,
+                                     "RTK result artifact could not be persisted")
+            record_stats(self.root, result)
         result_text = json.dumps(result, ensure_ascii=False, sort_keys=True)
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "workspace.command.run", request.digest,
@@ -419,7 +432,7 @@ class CommandRunOwner:
                 applied, refused = [], []
                 pending = [item["path"] for item in changes]
                 promotion = {"state": "staged"}
-            return {"argv": list(preview.argv), "cwd": preview.cwd,
+            result = {"argv": list(preview.argv), "cwd": preview.cwd,
                     "exit_code": proc.returncode, "timed_out": timed_out,
                     "output": output.decode("utf-8", errors="replace"),
                     "output_truncated": total > len(output), "output_bytes": total,
@@ -433,6 +446,10 @@ class CommandRunOwner:
                         "refused": refused[:300],
                         "promotion": promotion,
                     }}
+            if "rtk" in params:
+                from isycode.rtk_integration import finish
+                await finish(params["rtk"], result, bytes(output))
+            return result
         finally:
             cleanup_staging(staging)
 
