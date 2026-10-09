@@ -215,6 +215,8 @@ def test_private_artifacts_reject_hardlinks(adapter, tmp_path):
         rtk._artifact(raw, '.bin')
 
 
+@pytest.mark.skipif(shutil.which('bwrap') is None or not Path('/usr/local/bin/rtk').is_file(),
+                    reason='real native RTK and bubblewrap are required')
 def test_evidence_links_receipt_hash_to_original_bytes(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     from isycode.approvals import ActionApprovalStore
@@ -236,3 +238,16 @@ def test_evidence_links_receipt_hash_to_original_bytes(tmp_path, monkeypatch):
     raw = directory / (result['rtk']['raw_sha256'] + '.bin')
     assert hashlib.sha256(raw.read_bytes()).hexdigest() == result['rtk']['raw_sha256']
     assert len(raw.read_bytes()) == result['rtk']['captured_bytes']
+
+
+def test_settings_fifo_is_rejected_without_opening_a_blocking_reader(adapter, monkeypatch):
+    rtk, _ = adapter
+    settings = rtk.Settings()
+    os.mkfifo(settings.path)
+    original = os.open
+    def checked_open(path, flags, *args):
+        assert flags & os.O_NONBLOCK, 'private FIFO can block RTK settings indefinitely'
+        return original(path, flags, *args)
+    monkeypatch.setattr(os, 'open', checked_open)
+    with pytest.raises(ValueError, match='unsafe'):
+        settings.load()

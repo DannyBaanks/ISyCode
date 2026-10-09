@@ -45,7 +45,7 @@ def _directory(name: str) -> Path:
 
 
 def _read(path: Path, limit: int, *, private: bool = False) -> bytes:
-    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0))
+    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0) | getattr(os, 'O_NONBLOCK', 0))
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_size > limit
