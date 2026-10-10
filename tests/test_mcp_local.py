@@ -10,7 +10,10 @@ import pytest
 from isycode.action_audit import ActionAuditJournal
 from isycode.action_runtime import ProductActionGate
 from isycode.approvals import ActionApprovalStore
-from isycode.mcp_local import LocalMCPOwner, ServerConfig, function_name, load_config
+from isycode.mcp_local import (
+    LocalMCPOwner, MCPSession, PLAYWRIGHT_COMMAND, ServerConfig, function_name,
+    load_config, visible_tools,
+)
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 
@@ -171,6 +174,65 @@ def test_function_names_fit_provider_limits():
     assert len(function_name("a" * 32, "b" * 64)) == 64
 
 
+def test_playwright_preset_exposes_only_read_only_snapshot_tool():
+    config = ServerConfig("playwright", PLAYWRIGHT_COMMAND)
+    tools = [
+        {"name": "browser_snapshot", "description": "read page", "inputSchema": {"type": "object"}},
+        {"name": "browser_navigate", "description": "navigate", "inputSchema": {"type": "object"}},
+        {"name": "browser_click", "description": "click", "inputSchema": {"type": "object"}},
+        {"name": "browser_evaluate", "description": "run JS", "inputSchema": {"type": "object"}},
+    ]
+
+    assert [tool["name"] for tool in visible_tools(config, tools)] == ["browser_snapshot"]
+
+
+def test_playwright_snapshot_is_filtered_before_it_reaches_chat(mcp):
+    owner, authority, approvals, _ = mcp
+    snapshot = '''- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - link "Log in" [ref=e4] [cursor=pointer]
+  - generic [ref=e5]:
+    - heading "Hackathon title" [level=1] [ref=e6]
+    - paragraph [ref=e7]: Deadline: 30 October.
+  - contentinfo [ref=e8]:
+    - link "Privacy" [ref=e9]
+'''
+    config = ServerConfig("playwright", PLAYWRIGHT_COMMAND)
+
+    class RunningProcess:
+        returncode = None
+
+    session = MCPSession(config, RunningProcess(), tools=[{
+        "name": "browser_snapshot", "description": "Read visible page text",
+        "inputSchema": {"type": "object", "properties": {}},
+    }])
+
+    async def return_snapshot(method, params, timeout):
+        assert method == "tools/call"
+        assert params["name"] == "browser_snapshot"
+        return {"content": [{"type": "text", "text": snapshot}], "isError": False}
+
+    session.request = return_snapshot
+    owner.sessions["playwright"] = session
+    authority.set_grant("mcp.local.invoke", enabled=True, targets=["playwright"])
+
+    async def invoke():
+        preview = owner.prepare_call("playwright", "browser_snapshot", {})
+        return await owner.call(preview, approvals.issue(preview.request))
+
+    outcome = asyncio.run(invoke())
+    payload = json.loads(outcome.text)
+
+    assert outcome.decision == "ALLOW"
+    assert payload["content"] == "Hackathon title\nDeadline: 30 October."
+    assert payload["filtered_chars"] < payload["input_chars"]
+    assert payload["untrusted"] is True
+    assert "Log in" not in outcome.text
+    assert "ref=e" not in outcome.text
+    assert ActionAuditJournal(owner.root).verify().status == "PASS"
+
+
 def _tui_methods():
     import ast
 
@@ -196,7 +258,63 @@ def test_tui_asks_before_starting_and_before_every_call():
     assert start.index("LocalMCPConfirmScreen(") < start.index("mcp_owner.start(preview, approval)")
     call = methods["_call_local_mcp"]
     assert call.index("LocalMCPConfirmScreen(") < call.index("mcp_owner.call(preview")
+    assert call.index("BrowserReadPreviewScreen(") < call.index("return outcome.text")
+    assert "rejected_by_user" in call
     assert "stop_all()" in methods["on_unmount"]
+
+
+@pytest.mark.parametrize("share", [False, True])
+def test_browser_text_is_shown_before_it_can_reach_the_model(tmp_path, monkeypatch, share):
+    from types import SimpleNamespace
+    from test_daily_tui import configure
+    from isycode.security import ActionRequest
+    from isycode.tui import BrowserReadPreviewScreen, LocalMCPConfirmScreen, TUIApp
+
+    root = configure(tmp_path, monkeypatch)
+    request = ActionRequest("mcp.local.invoke", root, "playwright",
+                            {"tool": "browser_snapshot"}, execution_owner="mcp_local")
+    preview = SimpleNamespace(request=request, arguments={})
+    body = "Approved visible page text"
+    outcome = SimpleNamespace(
+        decision="ALLOW", receipt=SimpleNamespace(receipt_id="rcpt_test"),
+        text=json.dumps({"browser_read": True, "content": body, "input_chars": 80,
+                         "filtered_chars": len(body), "truncated": False,
+                         "untrusted": True}),
+    )
+
+    class FakeMCPOwner:
+        def resolve_function(self, function):
+            return ("playwright", "browser_snapshot")
+
+        def prepare_call(self, server, tool, arguments):
+            return preview
+
+        async def call(self, preview, approval):
+            return outcome
+
+    async def scenario():
+        app = TUIApp()
+        app._local_mcp_owner = lambda: FakeMCPOwner()
+        async with app.run_test(size=(110, 36)) as pilot:
+            await pilot.pause()
+            task = asyncio.create_task(app._call_local_mcp("mcp__playwright__browser_snapshot", {}))
+            await pilot.pause()
+            assert isinstance(app.screen, LocalMCPConfirmScreen)
+            await pilot.click("#local-mcp-approve")
+            await pilot.pause()
+            assert isinstance(app.screen, BrowserReadPreviewScreen)
+            assert body in str(app.screen.query_one("#browser-read-content Static").render())
+            assert "not automatically certified" in str(
+                app.screen.query_one("#browser-read-warning").render()).lower()
+            await pilot.click("#browser-read-share" if share else "#browser-read-discard")
+            result = await task
+            if share:
+                assert json.loads(result)["content"] == body
+            else:
+                assert json.loads(result) == {
+                    "status": "rejected_by_user", "content_shared": False}
+
+    asyncio.run(scenario())
 
 
 def test_mcp_confirm_screen_cancels_by_default():

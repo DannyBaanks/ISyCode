@@ -169,6 +169,10 @@ Regla de oro de las aprobaciones: ninguna aprobación crea un permiso duradero. 
 
 Descubrir un MCP o una skill no concede permiso para invocarlo. Files es de solo lectura, parte de `.isyroot` y requiere grants explícitos de ISyCode evaluados por IsySentinel. Una key no concede acceso a red; los catálogos/Gateway también requieren grants de host. La interfaz nunca debe convertir un plan del modelo en autoridad.
 
+### Lectura de una página con Playwright
+
+En `/` → **MCP**, agrega `playwright` y luego ejecuta `/mcp start playwright`; ISyCode revisa el proceso y cada llamada por separado. El preset ofrece únicamente `browser_snapshot`: abre o navega tú mismo a la página en la ventana aislada de Playwright, pide la lectura y revisa el texto filtrado en la vista previa. **Discard** no comparte contenido; **Share with model** envía exactamente ese texto al modelo elegido. El filtro quita controles, navegación y metadatos del árbol, limita el texto a 24,000 caracteres y marca el resultado como contenido no confiable. Fidelidad y cobertura no se certifican automáticamente; si el texto alcanza el límite, se marca como incompleto. No navega, hace clic ni llena formularios, y no conecta con el perfil o las cookies de tu Chrome personal. El contenido compartido puede quedar en la conversación si guardas la sesión.
+
 Aviso de pares (grit): si otros agentes usan [grit](https://github.com/rtk-ai/grit) en este workspace, la tarjeta de aprobación de una edición puede mostrar qué símbolos tienen reclamados (`Peer claims (grit, advisory only)`). Es solo un aviso de coordinación: no bloquea ni autoriza nada y requiere tus grants explícitos. Detalles y evaluación en [docs/grit-peer-claims.md](grit-peer-claims.md).
 
 ## Comandos observados

@@ -53,18 +53,67 @@ def validate_url(url):
     return urlunsplit(('https', netloc, p.path or '/', '', '')), host
 
 
+_PAGE_CHROME_TAGS = frozenset({
+    'nav', 'footer', 'form', 'button', 'select', 'option', 'input', 'textarea',
+    'script', 'style', 'noscript', 'template', 'svg', 'canvas', 'iframe',
+    'object', 'embed',
+})
+_PAGE_CHROME_ROLES = frozenset({'navigation', 'contentinfo', 'search', 'dialog'})
+_VOID_TAGS = frozenset({
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link',
+    'meta', 'param', 'source', 'track', 'wbr',
+})
+_BLOCK_TAGS = frozenset({
+    'address', 'article', 'aside', 'blockquote', 'br', 'dd', 'div', 'dl',
+    'dt', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'main', 'ol', 'p',
+    'pre', 'section', 'table', 'td', 'th', 'tr', 'ul',
+})
+
+
 class PageText(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.hidden = 0
         self.parts = []
+        self.stack = []
+
     def handle_starttag(self, tag, attrs):
-        if tag in {'script', 'style', 'noscript'}: self.hidden += 1
-        if tag in {'p', 'div', 'br', 'li', 'h1', 'h2', 'h3'}: self.parts.append('\n')
+        attributes = {name.lower(): value for name, value in attrs}
+        role = (attributes.get('role') or '').lower()
+        style = (attributes.get('style') or '').replace(' ', '').lower()
+        suppressed = bool(
+            self.hidden or tag in _PAGE_CHROME_TAGS
+            or 'hidden' in attributes
+            or (attributes.get('aria-hidden') or '').lower() == 'true'
+            or role in _PAGE_CHROME_ROLES
+            or 'display:none' in style or 'visibility:hidden' in style
+        )
+        if tag not in _VOID_TAGS:
+            self.stack.append((tag, suppressed))
+        if suppressed:
+            self.hidden += 1
+        elif tag in _BLOCK_TAGS:
+            self.parts.append('\n')
+
     def handle_endtag(self, tag):
-        if tag in {'script', 'style', 'noscript'} and self.hidden: self.hidden -= 1
+        for index in range(len(self.stack) - 1, -1, -1):
+            if self.stack[index][0] == tag:
+                closed = self.stack[index:]
+                del self.stack[index:]
+                self.hidden = max(0, self.hidden - sum(suppressed for _, suppressed in closed))
+                break
     def handle_data(self, data):
-        if not self.hidden: self.parts.append(data)
+        if not self.hidden:
+            self.parts.append(data)
+
+
+def filter_page_html(html: str) -> str:
+    """Return bounded, readable page text without browser chrome or hidden code."""
+    parser = PageText()
+    parser.feed(html)
+    parser.close()
+    text = ''.join(parser.parts)
+    return '\n'.join(' '.join(line.split()) for line in text.splitlines() if line.strip())
 
 
 class PinnedHTTPS(http.client.HTTPSConnection):
@@ -93,6 +142,14 @@ def fetch_public(url):
         response = conn.getresponse()
         if 300 <= response.status < 400:
             return {'error': 'Redirect refused; request the destination explicitly', 'http_status': response.status}
+        if response.status == 403:
+            return {
+                'error': ('The site denied this automated request (HTTP 403). '
+                          'Open the URL in your browser or use an official API if available.'),
+                'http_status': 403,
+                'blocked_by_site': True,
+                'decision': 'ERROR',
+            }
         if response.status != 200:
             return {'error': 'HTTP request failed', 'http_status': response.status}
         media = response.getheader('Content-Type', '').split(';')[0].lower()

@@ -8,7 +8,8 @@ from isycode.mcp_local import config_path, load_config, MAX_CONFIG_BYTES, MAX_SE
 
 PRESETS = {
     'playwright': {'command': ['npx', '-y', '@playwright/mcp@0.0.83'],
-                   'description': 'Microsoft Playwright browser tools; npm download on approved start',
+                   'description': ('Read-only current-page snapshot; filtered before preview and '
+                                   'explicit sharing; npm download on approved start'),
                    'repository': 'https://github.com/microsoft/playwright-mcp'},
     'context7': {'command': ['npx', '-y', '@upstash/context7-mcp@4.1.1'],
                 'description': 'Upstash documentation lookup; service limits apply',

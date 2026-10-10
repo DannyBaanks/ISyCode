@@ -261,6 +261,7 @@ from isycode.tui_screens_approval import (
     CommandApprovalScreen,
     CommitApprovalScreen,
     LocalMCPConfirmScreen,
+    BrowserReadPreviewScreen,
     DeleteSessionScreen,
 )
 from isycode.tui_screens_grants import (

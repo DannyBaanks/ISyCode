@@ -1970,14 +1970,14 @@
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 221,
+      "line": 237,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "action": "mcp.local.start",
       "owner": "mcp_local"
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 322,
+      "line": 339,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
       "action": "mcp.local.invoke",
       "owner": "mcp_local"
@@ -2166,7 +2166,7 @@
     },
     {
       "file": "isycode/web_fetch.py",
-      "line": 127,
+      "line": 184,
       "callable": "isycode.web_fetch.WebFetchOwner.execute",
       "action": "web.fetch",
       "owner": "web_fetch"

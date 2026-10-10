@@ -42,6 +42,8 @@ START_TIMEOUT_S = 30
 CALL_TIMEOUT_S = 120
 PROTOCOL_VERSION = "2025-06-18"
 BASE_ENV_KEYS = ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "USER", "SHELL")
+PLAYWRIGHT_COMMAND = ("npx", "-y", "@playwright/mcp@0.0.83")
+PLAYWRIGHT_READ_TOOL = "browser_snapshot"
 
 
 def process_environment(config_env: tuple[tuple[str, str], ...]) -> dict[str, str]:
@@ -115,6 +117,20 @@ def resolve_executable(argv0: str) -> str:
 def function_name(server: str, tool: str) -> str:
     """Provider-safe function name: only letters, digits, "_" and "-", at most 64 chars."""
     return re.sub(r"[^A-Za-z0-9_-]", "_", f"mcp__{server}__{tool}")[:64]
+
+
+def visible_tools(config: ServerConfig, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Limit the pinned Playwright preset to a read-only current-page snapshot."""
+    if config.argv != PLAYWRIGHT_COMMAND:
+        return tools
+    result = []
+    for tool in tools:
+        if tool.get("name") == PLAYWRIGHT_READ_TOOL:
+            result.append({**tool, "description": (
+                "Read the current page in the visible Playwright browser. "
+                "Open the page yourself first; this action cannot navigate, click, or enter data. "
+                "The snapshot is filtered and treated as untrusted content." )})
+    return result
 
 
 @dataclass
@@ -271,6 +287,7 @@ class LocalMCPOwner:
                               "description": str(tool.get("description", ""))[:1000],
                               "inputSchema": schema if isinstance(schema, dict) else
                               {"type": "object", "properties": {}}})
+        tools = visible_tools(config, tools)
         session.tools = tools
         outcome = self._finish(request, {"server": name, "tools": [tool["name"] for tool in tools]},
                                f"{name} started with {len(tools)} tools")
@@ -351,11 +368,24 @@ class LocalMCPOwner:
             elif isinstance(item, dict):
                 parts.append(f"[{item.get('type', 'content')} omitted]")
         text = "\n".join(parts)
-        return self._finish(preview.request, {
-            "server": preview.server, "tool": preview.tool, "text": text,
-            "truncated": False,
-            "is_error": bool(result.get("isError")) if isinstance(result, dict) else False},
-            f"{preview.server}.{preview.tool} returned")
+        is_error = bool(result.get("isError")) if isinstance(result, dict) else False
+        if (session.config.argv == PLAYWRIGHT_COMMAND
+                and preview.tool == PLAYWRIGHT_READ_TOOL):
+            from isycode.browser_read import filter_accessibility_snapshot
+            if is_error:
+                data = {"server": preview.server, "tool": preview.tool,
+                        "text": "", "input_chars": len(text), "filtered_chars": 0,
+                        "truncated": False, "untrusted": True,
+                        "browser_read": True, "is_error": True}
+            else:
+                data = {"server": preview.server, "tool": preview.tool,
+                        **filter_accessibility_snapshot(text),
+                        "browser_read": True, "is_error": False}
+        else:
+            data = {"server": preview.server, "tool": preview.tool, "text": text,
+                    "truncated": False, "is_error": is_error}
+        return self._finish(preview.request, data,
+                            f"{preview.server}.{preview.tool} returned")
 
     async def stop(self, name: str) -> bool:
         session = self.sessions.pop(name, None)
@@ -379,4 +409,5 @@ class LocalMCPOwner:
 
 
 __all__ = ["CallPreview", "LocalMCPOwner", "ServerConfig", "StartPreview", "config_path",
-           "function_name", "load_config", "resolve_executable"]
+           "function_name", "load_config", "resolve_executable", "PLAYWRIGHT_COMMAND",
+           "PLAYWRIGHT_READ_TOOL", "visible_tools"]
