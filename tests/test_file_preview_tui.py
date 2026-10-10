@@ -20,8 +20,14 @@ def test_file_leaf_enables_preview_modal_and_copy_path(tmp_path,monkeypatch,caps
             assert not app.query_one('#file-copy-path').disabled
             WorkspaceAuthority(root).set_grant('clipboard.copy',enabled=True,targets=['clipboard'])
             await p.click('#file-copy-path');await p.pause();assert copied[-1]==str(file)
-            await p.click('#file-open-preview');await p.pause()
-            assert isinstance(app.screen,FilePreviewScreen)
+            await p.click('#file-open-preview')
+            # Opening the preview runs in a Textual worker. A single pause
+            # does not guarantee that its screen has been pushed on slow CI.
+            for _ in range(40):
+                if isinstance(app.screen, FilePreviewScreen):
+                    break
+                await p.pause(0.05)
+            assert isinstance(app.screen, FilePreviewScreen)
             editor=app.screen.query_one(TextArea);assert editor.read_only and editor.text=='fn main() {}\n'
             await p.click('#preview-copy');await p.pause();assert copied[-1]=='fn main() {}\n'
             await p.press('escape')

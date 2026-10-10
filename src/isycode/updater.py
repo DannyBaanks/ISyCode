@@ -275,6 +275,14 @@ class SelfUpdater:
             collisions = [incoming for incoming in incoming_paths
                           if any(self._overlap(incoming, ignored) for ignored in ignored_paths)]
             if behind == 0:
+                if not check_only:
+                    # A previous update may have advanced Git successfully but
+                    # failed while syncing the virtual environment. A normal
+                    # retry must be able to repair that partial outcome even
+                    # when the remote has no newer commits.
+                    sync = self._sync_environment(root)
+                    if sync is not None:
+                        return sync
                 lines = ["ISyCode ya está actualizado; no hay commits remotos nuevos."]
                 if dirty_paths:
                     lines.append(

@@ -83,6 +83,30 @@ def test_check_only_reports_incoming_changes_without_changing_checkout(tmp_path)
     assert any("git diff" in line for line in report.lines)
 
 
+def test_current_checkout_retries_environment_sync(monkeypatch, tmp_path):
+    _, repo, _ = repositories(tmp_path)
+    instance = updater(repo)
+    attempts = []
+    monkeypatch.setattr(instance, "_sync_environment", lambda root: attempts.append(root) or None)
+
+    report = instance.run()
+
+    assert report.status == "current"
+    assert attempts == [repo]
+
+
+def test_check_only_does_not_sync_environment_when_current(monkeypatch, tmp_path):
+    _, repo, _ = repositories(tmp_path)
+    instance = updater(repo)
+    attempts = []
+    monkeypatch.setattr(instance, "_sync_environment", lambda root: attempts.append(root) or None)
+
+    report = instance.run(check_only=True)
+
+    assert report.status == "current"
+    assert attempts == []
+
+
 def test_detached_checkout_checks_remote_default_branch_without_moving_head(tmp_path):
     _, repo, peer = repositories(tmp_path)
     git("checkout", "--detach", "HEAD", cwd=repo)
