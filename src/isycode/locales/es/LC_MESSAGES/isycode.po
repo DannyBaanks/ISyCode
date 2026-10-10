@@ -970,8 +970,8 @@ msgstr "No se pudo guardar el idioma"
 msgid "{mark}  {label}{note}"
 msgstr "{mark}  {label}{note}"
 
-msgid "{blurb}. {status}. Default model: {model}"
-msgstr "{blurb}. {status}. Modelo predeterminado: {model}"
+msgid "{blurb}. {status}. Default model: {default}"
+msgstr "{blurb}. {status}. Modelo predeterminado: {default}"
 
 msgid "·  {label}  ·  {blurb}"
 msgstr "·  {label}  ·  {blurb}"

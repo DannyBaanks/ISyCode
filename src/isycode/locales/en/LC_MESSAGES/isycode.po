@@ -970,8 +970,8 @@ msgstr "Language preference could not be saved"
 msgid "{mark}  {label}{note}"
 msgstr "{mark}  {label}{note}"
 
-msgid "{blurb}. {status}. Default model: {model}"
-msgstr "{blurb}. {status}. Default model: {model}"
+msgid "{blurb}. {status}. Default model: {default}"
+msgstr "{blurb}. {status}. Default model: {default}"
 
 msgid "·  {label}  ·  {blurb}"
 msgstr "·  {label}  ·  {blurb}"

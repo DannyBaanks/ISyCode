@@ -970,8 +970,8 @@ msgstr "无法保存语言偏好"
 msgid "{mark}  {label}{note}"
 msgstr "{mark}  {label}{note}"
 
-msgid "{blurb}. {status}. Default model: {model}"
-msgstr "{blurb}。{status}。默认模型：{model}"
+msgid "{blurb}. {status}. Default model: {default}"
+msgstr "{blurb}。{status}。默认模型：{default}"
 
 msgid "·  {label}  ·  {blurb}"
 msgstr "·  {label}  ·  {blurb}"

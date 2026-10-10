@@ -93,9 +93,9 @@ class ProviderMixin:
                 entries.append(self._entry(
                     tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
-                    tr("{blurb}. {status}. Default model: {model}",
+                    tr("{blurb}. {status}. Default model: {default}",
                        blurb=tr(blurb), status=status,
-                       model=provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL),
+                       default=provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL),
                     translate=False))
             else:
                 entries.append(self._entry(
