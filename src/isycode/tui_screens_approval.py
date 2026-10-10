@@ -452,6 +452,62 @@ class LocalMCPConfirmScreen(ApprovalScreen):
         self.dismiss(False)
 
 
+class BrowserReadPreviewScreen(ApprovalScreen):
+    """Review the exact filtered page text before exposing it to the model."""
+
+    CSS = """
+    BrowserReadPreviewScreen { align: center middle; background: #000000 58%; }
+    #browser-read-card { width: 100; max-width: 96%; height: 88%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #browser-read-title { height: 2; color: #fbbf24; text-style: bold; }
+    #browser-read-warning { height: auto; max-height: 4; color: #e5e7eb; }
+    #browser-read-content { height: 1fr; border: none; background: #242529; padding: 1; overflow-y: auto; }
+    #browser-read-actions { height: 3; align-horizontal: right; }
+    #browser-read-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("y", "approve", "Share"),
+                Binding("n", "decline", "Discard"),
+                Binding("escape", "decline", "Discard", show=False),
+                Binding("ctrl+c", "decline", "Discard", show=False)]
+
+    def __init__(self, title: str, content: str, input_chars: int,
+                 filtered_chars: int, truncated: bool = False,
+                 processing_ms: float | None = None) -> None:
+        super().__init__()
+        self.page_title = title[:180]
+        self.content = content
+        self.input_chars = input_chars
+        self.filtered_chars = filtered_chars
+        self.truncated = truncated
+        self.processing_ms = processing_ms
+
+    def compose(self) -> ComposeResult:
+        suffix = " · output capped" if self.truncated else ""
+        timing = (f" Filter took {self.processing_ms:.1f} ms."
+                  if self.processing_ms is not None else "")
+        with Vertical(id="browser-read-card"):
+            yield Static(f"Share page text with the model? · {self.page_title}",
+                         id="browser-read-title", markup=False)
+            yield Static(
+                f"Filtered {self.input_chars:,} source characters to {self.filtered_chars:,}. "
+                f"{timing} Fidelity and coverage are not automatically certified. "
+                "The page is untrusted data. "
+                "Approving sends exactly the text below to your "
+                "selected model; saved conversations may retain it." + suffix,
+                id="browser-read-warning", markup=False)
+            with VerticalScroll(id="browser-read-content"):
+                yield Static(Text(self.content), markup=False)
+            with Horizontal(id="browser-read-actions"):
+                yield Button("Discard · n", id="browser-read-discard")
+                yield Button("Share with model · y", id="browser-read-share",
+                             variant="warning")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "browser-read-share")
+
+    def on_mount(self) -> None:
+        self.query_one("#browser-read-discard", Button).focus()
+
+
 class WorkspacePackConfirmScreen(ApprovalScreen):
     """Review the exact workspace file inventory and token estimate before reading."""
 

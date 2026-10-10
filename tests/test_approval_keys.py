@@ -13,14 +13,18 @@ SURFACE = Path(__file__).resolve().parents[1] / "src" / "isycode"
 
 
 def _screens(tmp_path):
-    from isycode.tui import CommandApprovalScreen, LocalMCPConfirmScreen, TailscaleConfirmScreen
+    from isycode.tui import (
+        BrowserReadPreviewScreen, CommandApprovalScreen, LocalMCPConfirmScreen,
+        TailscaleConfirmScreen,
+    )
 
     request = ActionRequest("workspace.command.run", tmp_path, "/usr/bin/echo", {"argv": ["echo"]},
                             execution_owner="workspace_command")
     preview = CommandPreview(request, ("echo", "hi"), "/usr/bin/echo", ".", 120, ())
     return [lambda: CommandApprovalScreen(preview),
             lambda: TailscaleConfirmScreen("Allow?", "body", "Allow"),
-            lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once")]
+            lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once"),
+            lambda: BrowserReadPreviewScreen("Page title", "Visible page text", 100, 22)]
 
 
 @pytest.mark.parametrize("keys, expected", [("y", True), ("n", False), ("escape", False),

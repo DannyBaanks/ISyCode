@@ -45,9 +45,86 @@ def test_private_dns_and_redirect_denied(monkeypatch):
     assert web.fetch_public('https://example.com')['http_status']==302
 
 
+def test_site_403_reports_automated_access_block_and_browser_fallback(monkeypatch):
+    from isycode.egress import ReviewedDestination
+    monkeypatch.setattr(web,'review_destination',lambda url:ReviewedDestination('devpost.com',443,('93.184.216.34',),'https'))
+    class Response:
+        status=403
+    class Conn:
+        def __init__(self,*args):pass
+        def request(self,*args,**kwargs):pass
+        def getresponse(self):return Response()
+        def close(self):pass
+    monkeypatch.setattr(web,'PinnedHTTPS',Conn)
+
+    result=web.fetch_public('https://devpost.com/software/isymotron')
+
+    assert result['http_status']==403
+    assert result['decision']=='ERROR'
+    assert result['blocked_by_site'] is True
+    assert 'automated request' in result['error'].lower()
+    assert 'browser' in result['error'].lower()
+
+
 def test_html_removes_executable_content():
     parser=web.PageText();parser.feed('<h1>Title</h1><script>secret()</script><style>css</style><p>Body</p>')
     assert ''.join(parser.parts)=='\nTitle\nBody'
+
+
+def test_page_filter_drops_browser_chrome_and_keeps_page_content():
+    html = """
+    <nav><a>Home</a><a>Log in</a><a>Search</a></nav>
+    <main>
+      <article><h1>Nebius x NVIDIA Global AI Hackathon</h1>
+        <p>Build the next frontier of AI on open infrastructure.</p>
+        <p>Deadline: 30 October 2026.</p>
+      </article>
+      <aside><p>Prize pool: $50,000 in cash.</p></aside>
+      <form><label>Search projects</label><input value="private query"></form>
+      <div aria-hidden="true">Hidden tracking text</div>
+      <script>ignoreThis()</script><style>.hidden { color: red }</style>
+    </main>
+    <footer>Terms Privacy Cookie settings</footer>
+    """
+
+    result = web.filter_page_html(html)
+
+    assert result == (
+        "Nebius x NVIDIA Global AI Hackathon\n"
+        "Build the next frontier of AI on open infrastructure.\n"
+        "Deadline: 30 October 2026.\n"
+        "Prize pool: $50,000 in cash."
+    )
+
+
+def test_web_fetch_uses_filtered_html_for_model_content(monkeypatch):
+    from isycode.egress import ReviewedDestination
+    html = (b'<nav>Home Log in Search</nav><main><h1>Project</h1>'
+            b'<p>Useful overview.</p><aside>Deadline: 30 October.</aside>'
+            b'<footer>Terms Privacy</footer></main>')
+    monkeypatch.setattr(web, 'review_destination', lambda url: ReviewedDestination(
+        'example.com', 443, ('93.184.216.34',), 'https'))
+
+    class Response:
+        status = 200
+        def __init__(self): self.remaining = html
+        def getheader(self, name, default=''):
+            return {'Content-Type': 'text/html', 'Content-Encoding': 'identity'}.get(name, default)
+        def read1(self, size):
+            chunk, self.remaining = self.remaining[:size], self.remaining[size:]
+            return chunk
+
+    class Conn:
+        def __init__(self, *args): pass
+        def request(self, *args, **kwargs): pass
+        def getresponse(self): return Response()
+        def close(self): pass
+
+    monkeypatch.setattr(web, 'PinnedHTTPS', Conn)
+
+    result = web.fetch_public('https://example.com/page')
+
+    assert result['content'] == 'Project\nUseful overview.\nDeadline: 30 October.'
 
 
 def test_headless_web_grant_does_not_require_filesystem_grant(tmp_path,monkeypatch):

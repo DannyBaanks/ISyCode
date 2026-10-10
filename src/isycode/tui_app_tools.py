@@ -11,6 +11,7 @@ _tool_display_context = ContextVar("tool_display_context", default=None)
 import os
 import asyncio
 import json
+import math
 import shlex
 import uuid
 from pathlib import Path
@@ -46,7 +47,7 @@ from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import (
     TailscaleConfirmScreen, LocalMCPConfirmScreen, WorkspacePackConfirmScreen,
-    MemoryConfirmScreen,
+    MemoryConfirmScreen, BrowserReadPreviewScreen,
 )
 from isycode.workspace_memory import MEMORY_TOOL_OPERATIONS, WorkspaceMemoryOwner
 from isycode.tui_screens_sessions import AgentQuestionScreen
@@ -657,6 +658,31 @@ class ToolMixin:
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             self._append(f"  MCP {outcome.decision} · {outcome.reason[:180]}", YELLOW)
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
+        try:
+            payload = json.loads(outcome.text)
+        except (TypeError, json.JSONDecodeError):
+            payload = {}
+        if payload.get("browser_read") is True:
+            content = payload.get("content")
+            if not isinstance(content, str) or not content.strip():
+                self._append("  Browser snapshot contained no readable page text; raw output withheld.", YELLOW)
+                return json.dumps({"status": "no_readable_page_text", "content_shared": False})
+            title = content.splitlines()[0][:180]
+            raw_processing_ms = payload.get("processing_ms")
+            processing_ms = (
+                raw_processing_ms
+                if isinstance(raw_processing_ms, (int, float))
+                and not isinstance(raw_processing_ms, bool)
+                and math.isfinite(raw_processing_ms)
+                and raw_processing_ms >= 0
+                else None
+            )
+            if not await self._await_screen(BrowserReadPreviewScreen(
+                    title, content, int(payload.get("input_chars", 0)),
+                    int(payload.get("filtered_chars", len(content))),
+                    bool(payload.get("truncated")), processing_ms)):
+                self._append("  Browser text discarded · it was not shared with the model.", MUTED)
+                return json.dumps({"status": "rejected_by_user", "content_shared": False})
         self._append(f"  MCP ALLOW · {server}.{tool} · receipt {outcome.receipt.receipt_id}", GREEN)
         return outcome.text
 
