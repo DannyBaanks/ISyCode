@@ -49,24 +49,14 @@ def fit_cells(width: int, height: int, max_columns: int, max_rows: int) -> tuple
     return columns, rows
 
 
-def _nearest_resize(width: int, height: int, rgb: bytes,
-                    out_width: int, out_height: int) -> bytes:
-    """Sample one source pixel per cell so pixel art keeps its hard edges."""
-    result = bytearray(out_width * out_height * 3)
-    for out_y in range(out_height):
-        source_y = min(height - 1, out_y * height // out_height)
-        row = source_y * width
-        for out_x in range(out_width):
-            source_x = min(width - 1, out_x * width // out_width)
-            start = (row + source_x) * 3
-            dest = (out_y * out_width + out_x) * 3
-            result[dest:dest + 3] = rgb[start:start + 3]
-    return bytes(result)
-
-
 def _box_resize(width: int, height: int, rgb: bytes,
                 out_width: int, out_height: int) -> bytes:
-    """Average source pixels into each terminal half-cell pixel."""
+    """Average the source block behind each terminal half-cell pixel.
+
+    This is the only resampler the module keeps: the header grid is always much
+    smaller than its source, so point sampling would throw away most of the
+    image instead of shrinking it.
+    """
     result = bytearray(out_width * out_height * 3)
     for out_y in range(out_height):
         y0 = out_y * height // out_height
@@ -89,12 +79,21 @@ def _box_resize(width: int, height: int, rgb: bytes,
 
 @lru_cache(maxsize=16)
 def _scaled(path: str, columns: int, rows: int, cover_top: bool = False) -> bytes:
+    """Area-average the source into the half-cell grid.
+
+    The target grid is small (a 247-column terminal paints 247x72 pixels, one
+    per half cell), so every output pixel stands for a whole block of source
+    pixels. Point sampling keeps one of them and discards the rest, which ate
+    the moon, the mountains and the clouds into hard aliased edges. Averaging
+    the block uses all of them and is what makes the scene legible once it is
+    that small. ``cover_top`` only trims the bottom; it no longer changes the
+    filter.
+    """
     width, height, rgb = load_raster(path)
     if cover_top:
-        # Keep the lighthouse and moon, crop the bottom, and do not blend pixels.
+        # Keep the lighthouse and moon: crop the bottom, then resample.
         height = min(height, max(1, round(width * rows * 2 / columns)))
         rgb = rgb[:width * height * 3]
-        return _nearest_resize(width, height, rgb, columns, rows * 2)
     return _box_resize(width, height, rgb, columns, rows * 2)
 
 
