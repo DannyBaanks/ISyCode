@@ -164,20 +164,22 @@ class RemoteMixin:
                 status = "Private route recorded · Mobile Host health rechecked before changes"
         else:
             live_route = None
-        entries = [self._entry(f"Tailscale · {status}", "info", "",
+        entries = [self._entry(tr("Tailscale · {status}", status=tr(status)), "info", "",
                                f"Installed CLI: {snapshot.executable or 'not detected'}\n"
                                f"Tailnet identity: {snapshot.dns_name or 'not verified'}\n"
                                f"Serve inventory: {snapshot.serve_state}\n"
                                f"Gateway: {snapshot.gateway_url or 'not configured'} · "
                                f"{'healthy' if snapshot.gateway_healthy else 'not verified'}\n"
-                               "Tailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.")]
+                               "Tailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.",
+                               translate=False)]
         if live_route is not None:
             entries.append(self._entry(
-                f"Route stays on after ISyCode exits · {route_url(live_route)}", "info", "",
+                tr("Route stays on after ISyCode exits · {url}", url=route_url(live_route)), "info", "",
                 "Tailscale Serve keeps this private route until you disable it here; ISyCode does not "
                 "remove it on exit because removal is itself an approved change. While Mobile Host "
                 f"is stopped, whatever listens on {live_route.target} is reachable from your tailnet "
-                "at this path. Disable the route when you are not using it."))
+                "at this path. Disable the route when you are not using it.",
+                translate=False))
         if snapshot.state == "not_authorized":
             entries.append(self._entry("Grant read-only Tailscale inventory", "tailscale_permissions", ""))
         elif snapshot.state == "missing_cli":
@@ -260,10 +262,13 @@ class RemoteMixin:
                 payload = json.dumps({"action": action, "executable": executable,
                                       "enabled": enabled})
                 entries.append(self._entry(
-                    f"{'Revoke' if enabled else 'Grant'} {action} · {executable}",
+                    tr("{verb} {action} · {executable}",
+                       verb=tr("Revoke") if enabled else tr("Grant"),
+                       action=action, executable=executable),
                     "tailscale_grant", payload,
                     "This permission is scoped to this workspace and exact executable. "
-                    "Mutations still need a fresh approval."))
+                    "Mutations still need a fresh approval.",
+                    translate=False))
         except (OSError, ValueError, WorkspaceAuthorityError):
             entries.append(self._entry("Authority policy unavailable · all actions deny", "info"))
         if not entries:
@@ -576,14 +581,18 @@ class RemoteMixin:
             except (OSError, ValueError):
                 routed = None
             entries.append(self._entry(
-                f"Host alive · http://{status.address}:{status.port}", "info", "",
+                tr("Host alive · http://{address}:{port}",
+                   address=status.address, port=status.port), "info", "",
                 "Bound to loopback. " + (
                     f"Your saved private route {route_url(routed)} makes it reachable from "
                     "your tailnet while it runs." if routed is not None else
-                    "No saved private Tailscale route points here.")))
+                    "No saved private Tailscale route points here."),
+                translate=False))
             if pin:
-                entries.append(self._entry(f"Pairing PIN · {pin} · expires in 5 minutes",
-                                           "info", "", "One device exchange; token expires in one hour."))
+                entries.append(self._entry(
+                    tr("Pairing PIN · {pin} · expires in 5 minutes", pin=pin),
+                    "info", "", "One device exchange; token expires in one hour.",
+                    translate=False))
             entries.append(self._entry(
                 "New pairing PIN · asks first", "mobile_host_new_pin", "",
                 "Replaces the current PIN and clears failed attempts. Needs the Mobile Host grant."))

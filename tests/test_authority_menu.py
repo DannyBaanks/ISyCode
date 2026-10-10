@@ -47,7 +47,7 @@ def test_authority_menu_opens_with_every_integration_state(tmp_path, monkeypatch
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "test-not-real")
-    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
     monkeypatch.setattr("isycode.tui_app_authority.sandbox_executable", lambda: "/usr/bin/bwrap")
 
     async def workspace_startup(self):
@@ -84,7 +84,7 @@ def _app_env(tmp_path, monkeypatch):
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
 
 
 def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monkeypatch, capsys):

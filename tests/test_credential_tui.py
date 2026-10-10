@@ -37,7 +37,7 @@ def _segment(name):
 def test_key_input_is_masked():
     surface = "\n".join(path.read_text(encoding="utf-8")
                          for path in [SOURCE, *sorted(SOURCE.parent.glob("tui_app_*.py"))])
-    assert 'Input(placeholder="Paste API key…", password=True, id="provider-key-input")' in surface
+    assert 'Input(placeholder=tr("Paste API key…"), password=True, id="provider-key-input")' in surface
 
 
 def test_the_pasted_key_is_cleared_before_anything_else():

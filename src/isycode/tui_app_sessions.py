@@ -124,6 +124,7 @@ from isycode.tui_screens_sessions import (
     SessionDivergedScreen,
     SessionSearchScreen,
 )
+from isycode.localization import tr
 
 
 def _bounded_note(value: object, limit: int) -> str:
@@ -766,10 +767,14 @@ class SessionMixin:
         entries = [self._entry("Start a new conversation", "chat_session_new", "")]
         for session in sessions[:50]:
             when = _time.strftime("%Y-%m-%d %H:%M", _time.localtime(session.updated_at))
-            current = " · current" if session.session_id == self._active_chat_session_id else ""
+            if session.session_id == self._active_chat_session_id:
+                label = tr("{title} · {count} messages · {when} · current",
+                           title=session.title, count=len(session.messages), when=when)
+            else:
+                label = tr("{title} · {count} messages · {when}",
+                           title=session.title, count=len(session.messages), when=when)
             entries.append(self._entry(
-                f"{session.title} · {len(session.messages)} messages · {when}{current}",
-                "chat_session_resume", session.session_id))
+                label, "chat_session_resume", session.session_id, translate=False))
         if not sessions:
             entries.append(self._entry("No saved conversations yet", "info"))
         entries.append(self._entry("Back", "settings_back", ""))
@@ -1074,7 +1079,7 @@ class SessionMixin:
         if owner is None or lane is None or not owner.is_diverged(session_id):
             return
         lane.divergence_prompted = True
-        title = "this conversation"
+        title=tr("this conversation")
         _, saved, _ = owner.review(session_id)
         if saved is not None:
             title = saved.title
@@ -1338,7 +1343,7 @@ class SessionMixin:
         hits = []
         for row in rows:
             labels = []
-            title = " ".join(str(row["title"]).split())
+            title=tr(" ").join(str(row["title"]).split())
             ident = str(row["id"])
             if title:
                 labels.append(title)

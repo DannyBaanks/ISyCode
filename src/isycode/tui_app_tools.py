@@ -15,6 +15,7 @@ import shlex
 import uuid
 from pathlib import Path
 from isycode.config import ConfigurationError
+from isycode.localization import tr
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
 from isycode.workspace_authority import (
     OneShotActionAuthority, WorkspaceAuthority, WorkspaceAuthorityError,
@@ -394,7 +395,7 @@ class ToolMixin:
         finally:
             self._subagent_running = False
             self._subagent_task = None
-            self._set_activity("Chat ready", MUTED)
+            self._set_activity(tr("Chat ready"), MUTED)
             self.query_one("#prompt-input", PromptArea).focus()
             await self._refresh_work_list()
 

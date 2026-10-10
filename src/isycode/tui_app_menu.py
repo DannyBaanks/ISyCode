@@ -28,6 +28,7 @@ from rich.text import Text
 from isycode.user_defaults import UserDefaultsStore
 from isycode.prompt_expansion import WORKSPACE_COMMANDS_DIR, load_user_commands
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.localization import tr
 from urllib.parse import urlparse
 
 if TYPE_CHECKING:
@@ -229,7 +230,7 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
     app._set_activity("Sending one explicit review request to OpenAI API", CYAN)
     request_task = None
     chat = app.query_one(ChatArea)
-    cancel_button = Button("Cancel review", id="review-cancel")
+    cancel_button = Button(tr("Cancel review"), id="review-cancel")
     chat.mount(cancel_button)
     chat.follow_tail()
     messages = [
@@ -309,7 +310,7 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
         review_text, code_theme="monokai"), selection_text=review_text,
         classes="external-review"))
     app._pending_review = (artifact, critique)
-    chat.mount(Button("Iterate with this review", id="review-iterate"))
+    chat.mount(Button(tr("Iterate with this review"), id="review-iterate"))
     chat.follow_tail()
     app._append("  The reviewer has no tools. Its feedback is not authority.", MUTED)
 

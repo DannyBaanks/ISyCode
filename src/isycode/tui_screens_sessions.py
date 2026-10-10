@@ -15,6 +15,7 @@ import time as _time
 from isycode.tui_theme import _fit_cells, CYAN
 from isycode.tui_widgets import Collapsible, ChatArea
 from isycode.tui_screens_approval import DeleteSessionScreen
+from isycode.localization import tr
 
 
 
@@ -37,10 +38,10 @@ class IdeaNoteScreen(ModalScreen):
 
     def compose(self):
         with Vertical(id="idea-note-card"):
-            yield Static("Idea box · full note", id="idea-note-heading")
+            yield Static(tr("Idea box · full note"), id="idea-note-heading")
             with VerticalScroll(id="idea-note-scroll"):
                 yield Static(Text(self.note), id="idea-note-content")
-            yield Button("Close · Esc", id="idea-note-close")
+            yield Button(tr("Close · Esc"), id="idea-note-close")
 
     def action_close(self):
         self.dismiss()
@@ -64,13 +65,13 @@ class ShellProcessesScreen(ModalScreen):
 
     def compose(self):
         with Vertical(id="shell-card"):
-            yield Static("ShellBox · sandbox processes · session lifetime")
+            yield Static(tr("ShellBox · sandbox processes · session lifetime"))
             yield OptionList(id="shell-processes")
             with ChatArea(id="shell-output"):
-                yield Static("Select a process to inspect its output.", id="shell-text", markup=False)
+                yield Static(tr("Select a process to inspect its output."), id="shell-text", markup=False)
             with Horizontal(id="shell-actions"):
-                yield Button("Stop selected", id="shell-stop", variant="warning")
-                yield Button("Close", id="shell-close")
+                yield Button(tr("Stop selected"), id="shell-stop", variant="warning")
+                yield Button(tr("Close"), id="shell-close")
 
     def on_mount(self):
         self._selected_job = None
@@ -134,8 +135,8 @@ class PastedTextScreen(ModalScreen):
                 for index, (label, text) in enumerate(self.items):
                     with Collapsible(title=f"{label} · {len(text)} characters", collapsed=False):
                         yield Static(Text(text), classes="paste-full-text")
-                        yield Button("Remove from draft", id=f"paste-remove-{index}")
-            yield Button("Close · Esc", id="paste-review-close")
+                        yield Button(tr("Remove from draft"), id=f"paste-remove-{index}")
+            yield Button(tr("Close · Esc"), id="paste-review-close")
 
     def action_close(self):
         self.dismiss()
@@ -170,12 +171,12 @@ class QueuedMessagesScreen(ModalScreen):
             yield Static(Text("Message queue · Select queued + empty Send steers · Esc restores draft", style=CYAN))
             with VerticalScroll(id="queue-scroll"):
                 if not self.messages:
-                    yield Static("No pending messages.")
+                    yield Static(tr("No pending messages."))
                 for index, text in enumerate(self.messages):
                     with Collapsible(title=f"{index + 1} · " + _fit_cells(" ".join(text.split()), 60), collapsed=True):
                         yield Static(Text(text), classes="queue-message")
-                        yield Button("Remove pending message", id=f"queue-remove-{index}")
-            yield Button("Close · Esc", id="queue-close")
+                        yield Button(tr("Remove pending message"), id=f"queue-remove-{index}")
+            yield Button(tr("Close · Esc"), id="queue-close")
 
     def action_close(self):
         self.dismiss()
@@ -204,11 +205,11 @@ class IdeaBacklogScreen(QueuedMessagesScreen):
                 for index, text in enumerate(self.messages):
                     with Collapsible(title=_fit_cells(" ".join(text.split()), 60), collapsed=True):
                         yield Static(Text(text), classes="queue-message")
-                        yield Button("Promote to message queue", id=f"idea-promote-{index}")
-                        yield Button("Discard idea", id=f"idea-discard-{index}")
+                        yield Button(tr("Promote to message queue"), id=f"idea-promote-{index}")
+                        yield Button(tr("Discard idea"), id=f"idea-discard-{index}")
                 if not self.messages:
-                    yield Static("No captured ideas.")
-            yield Button("Close · Esc", id="queue-close")
+                    yield Static(tr("No captured ideas."))
+            yield Button(tr("Close · Esc"), id="queue-close")
 
     def on_button_pressed(self, event):
         button_id = event.button.id or ""
@@ -258,11 +259,11 @@ class AgentQuestionScreen(ModalScreen[dict]):
                     for index, choice in enumerate(self.choices):
                         yield Button(choice, id=f"ask-choice-{index}")
             else:
-                yield Input(placeholder="Your answer", id="ask-text", max_length=500)
+                yield Input(placeholder=tr("Your answer"), id="ask-text", max_length=500)
             with Horizontal(id="ask-actions"):
-                yield Button("Cancel", id="ask-cancel")
+                yield Button(tr("Cancel"), id="ask-cancel")
                 if not self.choices:
-                    yield Button("Send", id="ask-submit", variant="primary")
+                    yield Button(tr("Send"), id="ask-submit", variant="primary")
 
     def on_mount(self) -> None:
         if self.choices:
@@ -314,14 +315,13 @@ class BridgePresenceScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="bridge-presence-card"):
-            yield Static("Read Bridge presence?", id="bridge-presence-title")
-            yield Static(
-                "This lists recent agent names only. It does not connect, claim a lease, "
-                "send a message, or wake anyone. One confirmation, nothing remembered.",
+            yield Static(tr("Read Bridge presence?"), id="bridge-presence-title")
+            yield Static(tr("This lists recent agent names only. It does not connect, claim a lease, "
+                "send a message, or wake anyone. One confirmation, nothing remembered."),
                 id="bridge-presence-copy")
             with Horizontal(id="bridge-presence-actions"):
-                yield Button("Cancel", id="bridge-presence-no")
-                yield Button("Read names", id="bridge-presence-yes", variant="primary")
+                yield Button(tr("Cancel"), id="bridge-presence-no")
+                yield Button(tr("Read names"), id="bridge-presence-yes", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#bridge-presence-no", Button).focus()
@@ -372,22 +372,22 @@ class ChatSessionsScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="sessions-card"):
-            yield Static("Conversations", id="sessions-title")
-            yield Input(placeholder="Search titles and transcript…", id="sessions-search")
+            yield Static(tr("Conversations"), id="sessions-title")
+            yield Input(placeholder=tr("Search titles and transcript…"), id="sessions-search")
             yield OptionList(*self._options(self.visible_sessions), id="sessions-list")
             with Horizontal(id="sessions-actions"):
-                yield Button("New session", id="sessions-new", variant="primary")
-                yield Button("Rename", id="sessions-rename")
-                yield Button("Fork", id="sessions-fork")
-                yield Button("Delete", id="sessions-delete", variant="error")
-                yield Button("Close", id="sessions-close")
+                yield Button(tr("New session"), id="sessions-new", variant="primary")
+                yield Button(tr("Rename"), id="sessions-rename")
+                yield Button(tr("Fork"), id="sessions-fork")
+                yield Button(tr("Delete"), id="sessions-delete", variant="error")
+                yield Button(tr("Close"), id="sessions-close")
 
     @staticmethod
     def _options(sessions) -> list[Option]:
         options = [Option(
             f"{item.title}  ·  {_time.strftime('%b %d %H:%M', _time.localtime(item.updated_at))}",
             id=item.session_id) for item in sessions]
-        return options or [Option("No matching conversations", id="empty", disabled=True)]
+        return options or [Option(tr("No matching conversations"), id="empty", disabled=True)]
 
     def on_mount(self) -> None:
         self.query_one("#sessions-search", Input).focus()
@@ -482,11 +482,11 @@ class SessionTitleScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="session-title-card"):
-            yield Static("Rename conversation", id="session-title-heading")
-            yield Input(value=self.initial_title, placeholder="Conversation name", id="session-title-input")
+            yield Static(tr("Rename conversation"), id="session-title-heading")
+            yield Input(value=self.initial_title, placeholder=tr("Conversation name"), id="session-title-input")
             with Horizontal(id="session-title-actions"):
-                yield Button("Cancel", id="session-title-cancel")
-                yield Button("Save name", id="session-title-save", variant="primary")
+                yield Button(tr("Cancel"), id="session-title-cancel")
+                yield Button(tr("Save name"), id="session-title-save", variant="primary")
 
     def on_mount(self) -> None:
         field = self.query_one("#session-title-input", Input)
@@ -533,8 +533,8 @@ class SessionSearchScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="session-search-card"):
-            yield Static("Search all conversations", id="session-search-title")
-            yield Input(placeholder="Type terms found in any title or message…",
+            yield Static(tr("Search all conversations"), id="session-search-title")
+            yield Input(placeholder=tr("Type terms found in any title or message…"),
                         id="session-search-input")
             yield OptionList(*self._options(self.visible_sessions), id="session-search-list")
 
@@ -543,7 +543,7 @@ class SessionSearchScreen(ModalScreen[str | None]):
         options = [Option(
             f"{item.title}  ·  {_time.strftime('%b %d %H:%M', _time.localtime(item.updated_at))}",
             id=item.session_id) for item in sessions]
-        return options or [Option("No matching conversations", id="empty", disabled=True)]
+        return options or [Option(tr("No matching conversations"), id="empty", disabled=True)]
 
     @staticmethod
     def _matches(session, terms: list[str]) -> bool:
@@ -603,14 +603,14 @@ class ConsoleSearchScreen(ModalScreen[None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="console-search-card"):
-            yield Static("Find in console", id="console-search-title")
-            yield Input(placeholder="Search this conversation…", id="console-search-input")
-            yield Static("Type to search the current console", id="console-search-count")
-            yield Static("", id="console-search-snippet")
+            yield Static(tr("Find in console"), id="console-search-title")
+            yield Input(placeholder=tr("Search this conversation…"), id="console-search-input")
+            yield Static(tr("Type to search the current console"), id="console-search-count")
+            yield Static(tr(""), id="console-search-snippet")
             with Horizontal(id="console-search-actions"):
-                yield Button("↑ Previous", id="console-search-previous")
-                yield Button("Next ↓", id="console-search-next", variant="primary")
-                yield Button("Close", id="console-search-close")
+                yield Button(tr("↑ Previous"), id="console-search-previous")
+                yield Button(tr("Next ↓"), id="console-search-next", variant="primary")
+                yield Button(tr("Close"), id="console-search-close")
 
     def on_mount(self) -> None:
         self.query_one("#console-search-input", Input).focus()
@@ -674,17 +674,17 @@ class SessionDivergedScreen(ModalScreen[str]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="diverged-card"):
-            yield Static("Session changed elsewhere", id="diverged-heading")
+            yield Static(tr("Session changed elsewhere"), id="diverged-heading")
             yield Static(
                 f"“{self.title_text}” was changed by another ISyCode window or process after this "
                 "one opened it. Both are valid continuities of the same conversation; nothing was "
                 "merged and nothing of yours was written over it.", id="diverged-copy", markup=False)
             with Vertical(id="diverged-actions"):
-                yield Button("Save mine as a new conversation (Fork: …) · the saved one stays as it is",
+                yield Button(tr("Save mine as a new conversation (Fork: …) · the saved one stays as it is"),
                              id="diverged-fork", variant="primary")
-                yield Button("Open the saved version · what exists only in this window is discarded",
+                yield Button(tr("Open the saved version · what exists only in this window is discarded"),
                              id="diverged-reload")
-                yield Button("Continue without saving · Esc · nothing is written until you choose",
+                yield Button(tr("Continue without saving · Esc · nothing is written until you choose"),
                              id="diverged-unsaved")
 
     def on_mount(self) -> None:

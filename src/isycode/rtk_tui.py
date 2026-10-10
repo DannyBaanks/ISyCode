@@ -13,6 +13,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
 from isycode.rtk_integration import Settings, HASH, _directory, _read, savings_label, MAX_CAPTURE_BYTES
+from isycode.localization import tr
 
 
 class RTKSettingsScreen(ModalScreen):
@@ -34,9 +35,9 @@ class RTKSettingsScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(id='rtk-settings-card'):
             with VerticalScroll(id='rtk-settings-body'):
-                yield Static('Native RTK · output compression', markup=False)
-                yield Static('Inspecting installation…', id='rtk-state', markup=False)
-                yield Static('Checking the binary in the command sandbox…', id='rtk-identity', markup=False)
+                yield Static(tr('Native RTK · output compression'), markup=False)
+                yield Static(tr('Inspecting installation…'), id='rtk-state', markup=False)
+                yield Static(tr('Checking the binary in the command sandbox…'), id='rtk-identity', markup=False)
                 yield Static(Text('Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\n'
                                   'Off by default. The approved command runs once, unchanged. '
                                   'RTK filters its captured output inside an empty, network-denied sandbox. '
@@ -45,9 +46,9 @@ class RTKSettingsScreen(ModalScreen):
                                   'Savings are byte/4 estimates, not provider billing or tokenizer measurements. '
                                   'A changed binary needs a new explicit opt-in.'))
             with Horizontal(id='rtk-settings-actions'):
-                yield Button('Enable this binary', id='rtk-enable', disabled=True, variant='success')
-                yield Button('Disable', id='rtk-disable')
-                yield Button('Close', id='rtk-close')
+                yield Button(tr('Enable this binary'), id='rtk-enable', disabled=True, variant='success')
+                yield Button(tr('Disable'), id='rtk-disable')
+                yield Button(tr('Close'), id='rtk-close')
 
     def on_mount(self):
         self.run_worker(self._inspect(), group='rtk-settings', exit_on_error=False)
@@ -112,7 +113,7 @@ class RTKRawOutputScreen(ModalScreen):
             yield Static(Text('Captured original output · SHA-256 ' + self.digest))
             with VerticalScroll(id='rtk-raw-body'):
                 yield Static(Text(self.output))
-            yield Button('Close', id='rtk-raw-close')
+            yield Button(tr('Close'), id='rtk-raw-close')
 
     def on_button_pressed(self, event):
         self.dismiss()

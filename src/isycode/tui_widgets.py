@@ -34,6 +34,7 @@ from isycode.tui_theme import (
     CYAN,
     plain_text,
 )
+from isycode.localization import tr
 
 
 def activate_on_second_click(host, event, key) -> bool:
@@ -293,54 +294,54 @@ class SidePanel(Vertical):
     """Right rail for live integration status and the authorized file browser."""
 
     def compose(self) -> ComposeResult:
-        yield Static("ISYCODE  ·  WORKSPACE", classes="panel-title")
+        yield Static(tr("ISYCODE  ·  WORKSPACE"), classes="panel-title")
         with Horizontal(id="rail-tabs"):
-            yield Button("Overview", id="show-overview")
-            yield Button("Files", id="show-files")
+            yield Button(tr("Overview"), id="show-overview")
+            yield Button(tr("Files"), id="show-files")
         with QuietVerticalScroll(id="overview-view"):
             with Vertical(id="rail-card"):
-                with Collapsible(title="IsySentinel", id="rail-sentinel"):
-                    yield Static("Reading Workspace Authority and the action journal…",
+                with Collapsible(title=tr("IsySentinel"), id="rail-sentinel"):
+                    yield Static(tr("Reading Workspace Authority and the action journal…"),
                                  id="sentinel-status", classes="rail-copy")
-                with Collapsible(title="MCPs", id="rail-mcp"):
-                    yield Static("Tool service status has not been checked.", id="mcp-status", classes="rail-copy")
-                with Collapsible(title="LSPs", id="rail-lsp"):
-                    yield Static("Checking installed language servers…", id="lsp-status", classes="rail-copy")
-                    yield Button("Install commands", id="lsp-install-hint", compact=True)
-                    yield Static("", id="lsp-install-note", classes="rail-copy")
-                with Collapsible(title="Skills", id="rail-skills"):
-                    yield Static("ISyCode skill catalog has not been checked.", id="skill-status", classes="rail-copy")
-                    yield ActivateTree("ISyCode skills", id="skills-tree")
-                    yield Static("", id="skill-detail", classes="rail-copy")
-                with Collapsible(title="Connections · 4", id="rail-connections", collapsed=True):
-                    with Collapsible(title="ISyCo Gateway", id="rail-gateway"):
-                        yield Static("Gateway status has not been checked.", id="gateway-status", classes="rail-copy")
-                    with Collapsible(title="Gateway MCP", id="rail-gateway-mcp"):
-                        yield Static("Tool catalog has not been checked.", id="gateway-mcp-status", classes="rail-copy")
-                    with Collapsible(title="Mobile Host", id="rail-mobile"):
-                        yield Static("Starting local mobile host…", id="mobile-host-status", classes="rail-copy")
-                        yield Static("No mobile clients connected.", id="mobile-client-status", classes="rail-copy")
-                    with Collapsible(title="Bridge Coordination", id="rail-bridge"):
-                        yield Static("Disabled · No Bridge Handshake", id="bridge-status", classes="rail-copy")
-                with Collapsible(title="Workspace", id="rail-workspace"):
-                    yield Static("", id="workspace-label", classes="rail-copy")
-                    yield Static("", id="workspace-launch-label", classes="rail-copy")
-                    yield Static("", id="workspace-source-label", classes="rail-copy")
-                    yield Static("", id="workspace-authority-label", classes="rail-copy")
-            yield Button("Refresh integrations", id="refresh-openisy")
-            yield Button("No plan pending", id="review-plan", disabled=True)
+                with Collapsible(title=tr("MCPs"), id="rail-mcp"):
+                    yield Static(tr("Tool service status has not been checked."), id="mcp-status", classes="rail-copy")
+                with Collapsible(title=tr("LSPs"), id="rail-lsp"):
+                    yield Static(tr("Checking installed language servers…"), id="lsp-status", classes="rail-copy")
+                    yield Button(tr("Install commands"), id="lsp-install-hint", compact=True)
+                    yield Static(tr(""), id="lsp-install-note", classes="rail-copy")
+                with Collapsible(title=tr("Skills"), id="rail-skills"):
+                    yield Static(tr("ISyCode skill catalog has not been checked."), id="skill-status", classes="rail-copy")
+                    yield ActivateTree(tr("ISyCode skills"), id="skills-tree")
+                    yield Static(tr(""), id="skill-detail", classes="rail-copy")
+                with Collapsible(title=tr("Connections · 4"), id="rail-connections", collapsed=True):
+                    with Collapsible(title=tr("ISyCo Gateway"), id="rail-gateway"):
+                        yield Static(tr("Gateway status has not been checked."), id="gateway-status", classes="rail-copy")
+                    with Collapsible(title=tr("Gateway MCP"), id="rail-gateway-mcp"):
+                        yield Static(tr("Tool catalog has not been checked."), id="gateway-mcp-status", classes="rail-copy")
+                    with Collapsible(title=tr("Mobile Host"), id="rail-mobile"):
+                        yield Static(tr("Starting local mobile host…"), id="mobile-host-status", classes="rail-copy")
+                        yield Static(tr("No mobile clients connected."), id="mobile-client-status", classes="rail-copy")
+                    with Collapsible(title=tr("Bridge Coordination"), id="rail-bridge"):
+                        yield Static(tr("Disabled · No Bridge Handshake"), id="bridge-status", classes="rail-copy")
+                with Collapsible(title=tr("Workspace"), id="rail-workspace"):
+                    yield Static(tr(""), id="workspace-label", classes="rail-copy")
+                    yield Static(tr(""), id="workspace-launch-label", classes="rail-copy")
+                    yield Static(tr(""), id="workspace-source-label", classes="rail-copy")
+                    yield Static(tr(""), id="workspace-authority-label", classes="rail-copy")
+            yield Button(tr("Refresh integrations"), id="refresh-openisy")
+            yield Button(tr("No plan pending"), id="review-plan", disabled=True)
         with Vertical(id="files-view"):
             with Horizontal(id="file-controls"):
-                yield Button("↑ Up", id="file-up")
-                yield Button("Refresh", id="file-refresh")
-                yield Button("Folders", id="workspace-folders")
-            yield Input(placeholder="Search workspace paths…", id="file-search")
-            yield ActivateTree("Workspace", id="workspace-tree")
+                yield Button(tr("↑ Up"), id="file-up")
+                yield Button(tr("Refresh"), id="file-refresh")
+                yield Button(tr("Folders"), id="workspace-folders")
+            yield Input(placeholder=tr("Search workspace paths…"), id="file-search")
+            yield ActivateTree(tr("Workspace"), id="workspace-tree")
             with Horizontal(id="file-actions"):
-                yield Button("Copy path", id="file-copy-path", disabled=True)
-                yield Button("Open preview", id="file-open-preview", disabled=True)
+                yield Button(tr("Copy path"), id="file-copy-path", disabled=True)
+                yield Button(tr("Open preview"), id="file-open-preview", disabled=True)
             with VerticalScroll(id="file-preview-scroll"):
-                yield Static("Select a file to preview it.", id="file-preview", classes="rail-copy")
+                yield Static(tr("Select a file to preview it."), id="file-preview", classes="rail-copy")
 
     def on_mount(self) -> None:
         self.styles.background = "#17191f"
@@ -548,7 +549,7 @@ class ChatArea(QuietVerticalScroll):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._tail = Static("", classes="chat-tail")
+        self._tail = Static(tr(""), classes="chat-tail")
         self._tail.styles.height = 1
 
     def compose(self):

@@ -13,6 +13,7 @@ from textual.widgets.option_list import Option
 from pathlib import Path
 from isycode.workspace_setup import broad_workspace_reason
 from isycode.tui_screens_approval import ApprovalScreen
+from isycode.localization import tr
 
 
 
@@ -38,24 +39,26 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         broad = broad_workspace_reason(self.launch_dir)
         warning = ("" if broad is None else
-                   f"Caution: {broad}. A marker here would make every folder below it without "
-                   "its own .isyroot share this workspace's grants and sessions. Your "
-                   "'recurring' default is not applied here.\n\n")
+                   tr("Caution: {reason}. A marker here would make every folder below it without "
+                      "its own .isyroot share this workspace's grants and sessions. Your "
+                      "'recurring' default is not applied here.\n\n", reason=broad))
         with Vertical(id="workspace-setup-card"):
-            yield Static("Set up this workspace?", id="workspace-setup-title")
+            yield Static(tr("Set up this workspace?"), id="workspace-setup-title")
             yield Static(
-                f"Launch directory:\n{self.launch_dir}\n\n{warning}"
-                "If this is a recurring project, Yes creates an empty .isyroot here and saves chat "
-                "sessions in your private ISyCode state directory. .isyroot identifies the workspace; "
-                "it does not grant filesystem access. Not now keeps this run temporary, and its chat "
-                "history is removed when ISyCode exits.", id="workspace-setup-copy")
+                tr("Launch directory:\n{path}\n\n{warning}"
+                   "If this is a recurring project, Yes creates an empty .isyroot here and saves chat "
+                   "sessions in your private ISyCode state directory. .isyroot identifies the workspace; "
+                   "it does not grant filesystem access. Not now keeps this run temporary, and its chat "
+                   "history is removed when ISyCode exits.",
+                   path=str(self.launch_dir), warning=warning),
+                id="workspace-setup-copy")
             yield OptionList(
-                Option("Yes · recurring workspace", id="yes"),
-                Option("No · temporary run", id="no"),
+                Option(tr("Yes · recurring workspace"), id="yes"),
+                Option(tr("No · temporary run"), id="no"),
                 id="workspace-setup-options")
             with Horizontal(id="workspace-setup-actions"):
-                yield Button("Yes, remember this workspace", id="workspace-setup-yes", variant="primary")
-                yield Button("No, keep it temporary", id="workspace-setup-no")
+                yield Button(tr("Yes, remember this workspace"), id="workspace-setup-yes", variant="primary")
+                yield Button(tr("No, keep it temporary"), id="workspace-setup-no")
 
     def on_mount(self) -> None:
         self.query_one("#workspace-setup-options", OptionList).focus()
@@ -91,17 +94,16 @@ class GlobalRecurringDefaultScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="global-recurring-card"):
-            yield Static("Use recurring mode for new folders?", id="global-recurring-title")
-            yield Static(
-                "When ISyCode first opens a folder without a saved choice, it will create an empty "
+            yield Static(tr("Use recurring mode for new folders?"), id="global-recurring-title")
+            yield Static(tr("When ISyCode first opens a folder without a saved choice, it will create an empty "
                 ".isyroot marker there. This remembers the workspace identity only; it does not "
                 "grant file access or copy permissions from another workspace. Broad folders such as "
                 "your home directory, its parents, the temporary directory, or a mount point still ask "
-                "first, so unrelated projects never share one workspace by accident.",
+                "first, so unrelated projects never share one workspace by accident."),
                 id="global-recurring-copy")
             with Horizontal(id="global-recurring-actions"):
-                yield Button("Cancel · n", id="global-recurring-cancel")
-                yield Button("Use for new folders · y", id="global-recurring-confirm", variant="primary")
+                yield Button(tr("Cancel · n"), id="global-recurring-cancel")
+                yield Button(tr("Use for new folders · y"), id="global-recurring-confirm", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "global-recurring-confirm")
@@ -133,23 +135,24 @@ class QuickStartScreen(ModalScreen[str]):
         self.provider_ready = provider_ready
 
     def compose(self) -> ComposeResult:
-        provider_line = ("Your provider key is already in the environment, so chat works right away."
+        provider_line = (tr("Your provider key is already in the environment, so chat works right away.")
                          if self.provider_ready else
-                         "No provider key detected yet; you can add one later in Settings → Providers.")
+                         tr("No provider key detected yet; you can add one later in Settings → Providers."))
         with Vertical(id="quick-start-card"):
-            yield Static("Welcome to ISyCode · how do you want to start?",
+            yield Static(tr("Welcome to ISyCode · how do you want to start?"),
                          id="quick-start-title")
             yield Static(
-                f"{self.root}\n\n{provider_line}\n\n"
-                "Quick Start: this folder becomes a recurring workspace in Classic mode — "
-                "read/search, edit proposals and chat are ready. One more confirmation can turn on "
-                "all coding tools, and edits, commands and commits still ask until you approve them.\n"
-                "Custom setup: choose recurrence, Classic or Security, and each tool step by step.\n\n"
-                "Both paths keep IsySentinel and the action journal on everything.",
+                tr("{root}\n\n{provider_line}\n\n"
+                   "Quick Start: this folder becomes a recurring workspace in Classic mode — "
+                   "read/search, edit proposals and chat are ready. One more confirmation can turn on "
+                   "all coding tools, and edits, commands and commits still ask until you approve them.\n"
+                   "Custom setup: choose recurrence, Classic or Security, and each tool step by step.\n\n"
+                   "Both paths keep IsySentinel and the action journal on everything.",
+                   root=str(self.root), provider_line=provider_line),
                 id="quick-start-copy")
             yield OptionList(
-                Option("Quick Start · ready in under a minute", id="quick"),
-                Option("Custom setup · choose each step", id="custom"),
+                Option(tr("Quick Start · ready in under a minute"), id="quick"),
+                Option(tr("Custom setup · choose each step"), id="custom"),
                 id="quick-start-options")
 
     def on_mount(self) -> None:
@@ -180,19 +183,20 @@ class WorkspaceModeScreen(ModalScreen[str]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-mode-card"):
-            yield Static("How should ISyCode work in this folder?", id="workspace-mode-title")
+            yield Static(tr("How should ISyCode work in this folder?"), id="workspace-mode-title")
             yield Static(
-                f"{self.root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
-                "A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. "
-                "Until you confirm that, each edit, delete/move, command and commit still asks. "
-                "Commits, secrets and authority changes keep asking either way.\n"
-                "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
-                "Both modes use IsySentinel and the action journal. "
-                "Free shell and sensitive files are never implied. Switch any time "
-                "in Settings → Authority.", id="workspace-mode-copy")
+                tr("{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
+                   "A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. "
+                   "Until you confirm that, each edit, delete/move, command and commit still asks. "
+                   "Commits, secrets and authority changes keep asking either way.\n"
+                   "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
+                   "Both modes use IsySentinel and the action journal. "
+                   "Free shell and sensitive files are never implied. Switch any time "
+                   "in Settings → Authority.", root=str(self.root)),
+                id="workspace-mode-copy")
             yield OptionList(
-                Option("Classic · Ready To Use", id="classic"),
-                Option("Security · everything off until I allow it", id="security"),
+                Option(tr("Classic · Ready To Use"), id="classic"),
+                Option(tr("Security · everything off until I allow it"), id="security"),
                 id="workspace-mode-options")
 
     def on_mount(self) -> None:
@@ -225,18 +229,18 @@ class GrantWorkspaceReadScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-read-card"):
-            yield Static("Turn off file reading?" if self.revoke
-                         else "Allow ISyCode to read workspace files?", id="workspace-read-title")
-            copy = ("ISyCode will stop listing, reading, and searching files in this workspace. "
-                    "Your files and conversations stay where they are."
+            yield Static(tr("Turn off file reading?") if self.revoke
+                         else tr("Allow ISyCode to read workspace files?"), id="workspace-read-title")
+            copy = (tr("ISyCode will stop listing, reading, and searching files in this workspace. "
+                       "Your files and conversations stay where they are.")
                     if self.revoke else
-                    "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md "
-                    "to understand your project. It cannot edit or delete files, run commands, or access "
-                    "folders outside this workspace. You will still be asked before sensitive actions.")
+                    tr("ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md "
+                       "to understand your project. It cannot edit or delete files, run commands, or access "
+                       "folders outside this workspace. You will still be asked before sensitive actions."))
             yield Static(copy, id="workspace-read-copy")
             with Horizontal(id="workspace-read-actions"):
-                yield Button("Cancel · n", id="workspace-read-cancel")
-                yield Button("Turn off · y" if self.revoke else "Turn on · y",
+                yield Button(tr("Cancel · n"), id="workspace-read-cancel")
+                yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"),
                              id="workspace-read-grant", variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -275,12 +279,12 @@ class GrantProviderNetworkScreen(ApprovalScreen):
         if self.label == "Search and understand code with Gateway" and not self.revoke:
             copy += " You review each search and approve it before it runs."
         with Vertical(id="provider-network-card"):
-            yield Static("Turn off this option?" if self.revoke else "Turn on this option?",
+            yield Static(tr("Turn off this option?") if self.revoke else tr("Turn on this option?"),
                          id="provider-network-title")
             yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy")
             with Horizontal(id="provider-network-actions"):
-                yield Button("Cancel · n", id="provider-network-cancel")
-                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="provider-network-confirm",
+                yield Button(tr("Cancel · n"), id="provider-network-cancel")
+                yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="provider-network-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -314,12 +318,12 @@ class GrantMCPInvocationScreen(ApprovalScreen):
                 "ISyCode can run a tool you choose from your Gateway. You will see what it wants to do "
                 "and approve every run before it starts.")
         with Vertical(id="mcp-grant-card"):
-            yield Static("Turn off Gateway tools?" if self.revoke else "Allow Gateway tools?",
+            yield Static(tr("Turn off Gateway tools?") if self.revoke else tr("Allow Gateway tools?"),
                          id="mcp-grant-title")
             yield Static(copy, id="mcp-grant-copy")
             with Horizontal(id="mcp-grant-actions"):
-                yield Button("Cancel · n", id="mcp-grant-cancel")
-                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="mcp-grant-confirm",
+                yield Button(tr("Cancel · n"), id="mcp-grant-cancel")
+                yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="mcp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -355,12 +359,12 @@ class GrantLSPProcessScreen(ApprovalScreen):
                 "The helper cannot access the internet or run general commands. Reading files still "
                 "follows the separate file access option.")
         with Vertical(id="lsp-grant-card"):
-            yield Static("Turn off local code help?" if self.revoke else "Allow local code help?",
+            yield Static(tr("Turn off local code help?") if self.revoke else tr("Allow local code help?"),
                          id="lsp-grant-title")
             yield Static(copy, id="lsp-grant-copy")
             with Horizontal(id="lsp-grant-actions"):
-                yield Button("Cancel · n", id="lsp-grant-cancel")
-                yield Button("Turn off · y" if self.revoke else "Turn on · y", id="lsp-grant-confirm",
+                yield Button(tr("Cancel · n"), id="lsp-grant-cancel")
+                yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="lsp-grant-confirm",
                              variant="error" if self.revoke else "primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -389,15 +393,15 @@ class BrokerPreviewGrantScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="broker-grant-card"):
-            yield Static("Allow semantic broker preview?", id="broker-grant-title")
+            yield Static(tr("Allow semantic broker preview?"), id="broker-grant-title")
             yield Static(
                 f"Workspace: {self.root}\n\nThis stores only the broker.preview grant for this .isyroot. "
                 "The selected project still needs its own workspace.files.read grant. "
                 "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
                 id="broker-grant-copy")
             with Horizontal(id="broker-grant-actions"):
-                yield Button("Cancel · n", id="broker-grant-cancel")
-                yield Button("Grant preview · y", id="broker-grant-confirm", variant="primary")
+                yield Button(tr("Cancel · n"), id="broker-grant-cancel")
+                yield Button(tr("Grant preview · y"), id="broker-grant-confirm", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-grant-confirm")
@@ -422,18 +426,17 @@ class AddCredentialScreen(ModalScreen[dict[str, str] | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="credential-form"):
-            yield Static("Add a named API key", id="credential-form-title")
-            yield Static(
-                "Saved in the operating system keyring and never shown after saving. "
-                "Use service id `isyco-gateway` to supply the Gateway MCP.",
+            yield Static(tr("Add a named API key"), id="credential-form-title")
+            yield Static(tr("Saved in the operating system keyring and never shown after saving. "
+                "Use service id `isyco-gateway` to supply the Gateway MCP."),
                 id="credential-form-help")
-            yield Input(placeholder="Name shown in Settings", id="credential-name")
-            yield Input(placeholder="Service id, e.g. isyco-gateway", id="credential-service")
-            yield Input(placeholder="Purpose / where this key is used", id="credential-purpose")
-            yield Input(placeholder="Paste API key…", password=True, id="credential-secret")
+            yield Input(placeholder=tr("Name shown in Settings"), id="credential-name")
+            yield Input(placeholder=tr("Service id, e.g. isyco-gateway"), id="credential-service")
+            yield Input(placeholder=tr("Purpose / where this key is used"), id="credential-purpose")
+            yield Input(placeholder=tr("Paste API key…"), password=True, id="credential-secret")
             with Horizontal(id="credential-form-actions"):
-                yield Button("Cancel", id="credential-cancel")
-                yield Button("Save key", id="credential-save", variant="primary")
+                yield Button(tr("Cancel"), id="credential-cancel")
+                yield Button(tr("Save key"), id="credential-save", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#credential-name", Input).focus()

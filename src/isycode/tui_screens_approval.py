@@ -15,6 +15,7 @@ from pathlib import Path
 from rich.syntax import Syntax
 from rich.text import Text
 from isycode.workspace_write import WritePreview
+from isycode.localization import tr
 import shlex
 
 
@@ -40,13 +41,13 @@ ReviewConsentScreen { align: center middle; background: #000000 58%; }
 
     def compose(self) -> ComposeResult:
         with Vertical(id="review-consent"):
-            yield Static("External model review · GPT 6 Luna · OpenAI API", id="review-consent-title")
-            yield Static("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled.", id="review-consent-warning")
+            yield Static(tr("External model review · GPT 6 Luna · OpenAI API"), id="review-consent-title")
+            yield Static(tr("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."), id="review-consent-warning")
             with VerticalScroll(id="review-consent-artifact"):
                 yield Static(Text(self.artifact))
             with Horizontal(id="review-consent-actions"):
-                yield Button("Cancel", id="review-cancel")
-                yield Button("Send this text", id="review-send", variant="primary")
+                yield Button(tr("Cancel"), id="review-cancel")
+                yield Button(tr("Send this text"), id="review-send", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "review-send")
@@ -110,10 +111,10 @@ class ContextAccessScreen(ModalScreen[dict | None]):
             yield Static(title, id="context-access-title")
             yield Static(warning, id="context-access-copy")
             yield Static(str(self.path), id="context-access-path", markup=False)
-            yield Checkbox("Remember permission for this exact file", id="context-access-remember")
+            yield Checkbox(tr("Remember permission for this exact file"), id="context-access-remember")
             with Horizontal(id="context-access-actions"):
-                yield Button("No · n", id="context-access-no")
-                yield Button("Allow once · y", id="context-access-yes", variant="error")
+                yield Button(tr("No · n"), id="context-access-no")
+                yield Button(tr("Allow once · y"), id="context-access-yes", variant="error")
 
     def on_mount(self) -> None:
         self.query_one("#context-access-no", Button).focus()
@@ -158,8 +159,9 @@ class TailscaleConfirmScreen(ApprovalScreen):
             with VerticalScroll(id="tailscale-confirm-copy"):
                 yield Static(Text(self.details))
             with Horizontal(id="tailscale-confirm-actions"):
-                yield Button("Cancel · n", id="tailscale-cancel")
-                yield Button(f"{self.confirm_label} · y", id="tailscale-confirm", variant="primary")
+                yield Button(tr("Cancel · n"), id="tailscale-cancel")
+                yield Button(tr("{label} · y", label=tr(self.confirm_label)),
+                             id="tailscale-confirm", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#tailscale-cancel", Button).focus()
@@ -199,15 +201,15 @@ class WriteApprovalScreen(ApprovalScreen):
         added = sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
         removed = sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
         if self.preview.kind == "move":
-            kind = ("Undo · move back" if self.preview.is_undo else "Move file")
+            kind = tr("Undo · move back") if self.preview.is_undo else tr("Move file")
         elif self.preview.kind == "delete":
-            kind = "Delete file"
+            kind = tr("Delete file")
         elif self.preview.is_undo:
-            kind = "Undo · remove file" if self.preview.removes else "Undo · restore file"
+            kind = tr("Undo · remove file") if self.preview.removes else tr("Undo · restore file")
         elif self.preview.created:
-            kind = "Create new file"
+            kind = tr("Create new file")
         else:
-            kind = "Replace whole file" if self.replaces_whole_file else "Change file"
+            kind = tr("Replace whole file") if self.replaces_whole_file else tr("Change file")
         with Vertical(id="write-approval-card"):
             yield Static(f"{kind} · {self.preview.path}", id="write-approval-title", markup=False)
             yield Static(
@@ -218,18 +220,18 @@ class WriteApprovalScreen(ApprovalScreen):
                  f"+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
                  "unless you apply it. If the file changes before it is applied, the change is refused."),
                 id="write-approval-summary", markup=False)
-            yield Static("", id="write-approval-peer", markup=False)
+            yield Static(tr(""), id="write-approval-peer", markup=False)
             with VerticalScroll(id="write-approval-diff"):
                 from isycode.diff_view import side_by_side_table
                 yield Static(side_by_side_table(self.preview.diff, self.preview.path))
             with Horizontal(id="write-approval-actions"):
-                yield Button("Reject · n", id="write-approval-reject")
-                yield Button("Apply change · y", id="write-approval-apply", variant="warning")
+                yield Button(tr("Reject · n"), id="write-approval-reject")
+                yield Button(tr("Apply change · y"), id="write-approval-apply", variant="warning")
                 if self.allow_session_trust and self.preview.kind == "write" and not self.preview.is_undo:
-                    yield Button("Trust folder this session · s", id="write-approval-session",
+                    yield Button(tr("Trust folder this session · s"), id="write-approval-session",
                                  variant="primary")
                 if self.allow_automatic_edits and self.preview.kind == "write" and not self.preview.is_undo:
-                    yield Button("Always allow…", id="write-approval-always", variant="error")
+                    yield Button(tr("Always allow…"), id="write-approval-always", variant="error")
 
     async def on_mount(self) -> None:
         self.query_one("#write-approval-reject", Button).focus()
@@ -300,9 +302,9 @@ class BatchApprovalScreen(ModalScreen[str]):
                 for preview in self.previews:
                     yield Static(side_by_side_table(preview.diff, preview.path))
             with Horizontal(id="batch-approval-actions"):
-                yield Button("Reject all · n", id="batch-approval-reject")
-                yield Button("Review each · e", id="batch-approval-each")
-                yield Button(f"Approve all {len(self.previews)} · a",
+                yield Button(tr("Reject all · n"), id="batch-approval-reject")
+                yield Button(tr("Review each · e"), id="batch-approval-each")
+                yield Button(tr("Approve all {count} · a", count=len(self.previews)),
                              id="batch-approval-all", variant="warning")
 
     def on_mount(self) -> None:
@@ -354,8 +356,8 @@ class CommandApprovalScreen(ApprovalScreen):
                 "It may change files in this workspace; those changes cannot be undone with /undo. "
                 "Nothing runs unless you approve it.")
             with Horizontal(id="command-approval-actions"):
-                yield Button("Reject · n", id="command-approval-reject")
-                yield Button("Run command · y", id="command-approval-run", variant="warning")
+                yield Button(tr("Reject · n"), id="command-approval-reject")
+                yield Button(tr("Run command · y"), id="command-approval-run", variant="warning")
 
     def on_mount(self) -> None:
         card = self.query_one("#command-approval-card")
@@ -402,8 +404,8 @@ class CommitApprovalScreen(ApprovalScreen):
                 yield Static(Syntax(preview.diff or "(no content changes)", "diff",
                                     theme="monokai", word_wrap=True))
             with Horizontal(id="commit-approval-actions"):
-                yield Button("Reject · n", id="commit-approval-reject")
-                yield Button("Commit · y", id="commit-approval-apply", variant="warning")
+                yield Button(tr("Reject · n"), id="commit-approval-reject")
+                yield Button(tr("Commit · y"), id="commit-approval-apply", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#commit-approval-reject", Button).focus()
@@ -439,8 +441,9 @@ class LocalMCPConfirmScreen(ApprovalScreen):
             with VerticalScroll(id="local-mcp-payload"):
                 yield Static(Text(self.payload))
             with Horizontal(id="local-mcp-actions"):
-                yield Button("Cancel · n", id="local-mcp-cancel")
-                yield Button(f"{self.approve_label} · y", id="local-mcp-approve", variant="warning")
+                yield Button(tr("Cancel · n"), id="local-mcp-cancel")
+                yield Button(tr("{label} · y", label=tr(self.approve_label)),
+                             id="local-mcp-approve", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#local-mcp-cancel", Button).focus()
@@ -473,7 +476,7 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-pack-card"):
-            yield Static("Workspace context pack · review before reading",
+            yield Static(tr("Workspace context pack · review before reading"),
                          id="workspace-pack-title")
             yield Static(
                 Text("The listed files will be read and their contents returned to the selected model. "
@@ -483,8 +486,8 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
             with VerticalScroll(id="workspace-pack-files"):
                 yield Static(Text(self.details))
             with Horizontal(id="workspace-pack-actions"):
-                yield Button("Cancel · n", id="workspace-pack-cancel")
-                yield Button("Read and send once · y", id="workspace-pack-approve",
+                yield Button(tr("Cancel · n"), id="workspace-pack-cancel")
+                yield Button(tr("Read and send once · y"), id="workspace-pack-approve",
                              variant="warning")
 
     def on_mount(self) -> None:
@@ -518,7 +521,7 @@ class MemoryConfirmScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-pack-card"):
-            yield Static("Workspace context pack · review before reading",
+            yield Static(tr("Workspace context pack · review before reading"),
                          id="workspace-pack-title")
             yield Static(
                 Text("The listed files will be read and their contents returned to the selected model. "
@@ -528,8 +531,8 @@ class MemoryConfirmScreen(ApprovalScreen):
             with VerticalScroll(id="workspace-pack-files"):
                 yield Static(Text(self.details))
             with Horizontal(id="workspace-pack-actions"):
-                yield Button("Cancel · n", id="workspace-pack-cancel")
-                yield Button("Read and send once · y", id="workspace-pack-approve",
+                yield Button(tr("Cancel · n"), id="workspace-pack-cancel")
+                yield Button(tr("Read and send once · y"), id="workspace-pack-approve",
                              variant="warning")
 
     def on_mount(self) -> None:
@@ -554,8 +557,8 @@ class MemoryConfirmScreen(ApprovalScreen):
             with VerticalScroll(id="memory-confirm-payload"):
                 yield Static(Text(self.details))
             with Horizontal(id="memory-confirm-actions"):
-                yield Button("Cancel · n", id="memory-confirm-cancel")
-                yield Button("Approve once · y", id="memory-confirm-approve", variant="warning")
+                yield Button(tr("Cancel · n"), id="memory-confirm-cancel")
+                yield Button(tr("Approve once · y"), id="memory-confirm-approve", variant="warning")
 
     def on_mount(self) -> None:
         self.query_one("#memory-confirm-cancel", Button).focus()
@@ -590,18 +593,20 @@ class DeleteSessionScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         if self.kind == "iteration":
-            heading = "Delete this iteration?"
-            button = "Delete iteration · y"
-            detail = "This permanently removes this one iteration ledger."
+            heading = tr("Delete this iteration?")
+            button = tr("Delete iteration · y")
+            detail = tr("This permanently removes this one iteration ledger.")
         else:
-            heading = "Delete this conversation?"
-            button = "Delete conversation · y"
-            detail = "This permanently removes this one transcript."
+            heading = tr("Delete this conversation?")
+            button = tr("Delete conversation · y")
+            detail = tr("This permanently removes this one transcript.")
         with Vertical(id="delete-session-card"):
             yield Static(heading, id="delete-session-title")
-            yield Static(f"{self.title_text}\n\n{detail} A one-use, session-bound approval will be checked before deletion.", id="delete-session-copy")
+            yield Static(tr("{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion.",
+                            title=self.title_text, detail=detail),
+                         id="delete-session-copy")
             with Horizontal(id="delete-session-actions"):
-                yield Button("Keep · n", id="delete-session-cancel")
+                yield Button(tr("Keep · n"), id="delete-session-cancel")
                 yield Button(button, id="delete-session-confirm", variant="error")
 
     def on_mount(self) -> None:
