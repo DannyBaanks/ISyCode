@@ -323,6 +323,28 @@ def test_deadlines_kill_and_reap_process(tmp_path, scenario):
                 elif scenario == "pending_login":
                     challenge = await connection.start_login("device")
                     await connection.wait_login(challenge["login_id"])
+        assert connection._process is not None
+        assert connection._process.returncode is not None
+    asyncio.run(run())
+
+
+def test_protocol_deadline_still_reaps_after_a_slow_spawn(tmp_path, monkeypatch):
+    real = asyncio.create_subprocess_exec
+
+    async def delayed(*args, **kwargs):
+        await asyncio.sleep(0.25)
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", delayed)
+    connection = connector(tmp_path, "timeout", timeout_s=0.15)
+
+    async def run():
+        started = time.monotonic()
+        with pytest.raises(CodexConnectorError):
+            async with connection:
+                pass
+        assert time.monotonic() - started < 3
+        assert connection._process is not None
         assert connection._process.returncode is not None
     asyncio.run(run())
 

@@ -120,6 +120,7 @@ EXPECTED = {
     "oauth_info",
     "openisy_provider",
     "info",
+    "locale_cycle",
 }
 
 def test_menu_dispatch_keeps_every_extracted_kind():

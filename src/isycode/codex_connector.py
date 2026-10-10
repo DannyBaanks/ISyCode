@@ -25,6 +25,9 @@ MAX_PENDING_FRAME = 256 * 1024 * 1024
 MAX_ARGUMENTS = 64 * 1024
 MAX_EVENTS = 64
 MAX_TEXT = 2**63 - 1
+# Protocol timeout_s bounds RPC and turns. Fork/exec on a loaded host can exceed
+# a short test deadline; keep a floor so close() always has a child to reap.
+_SPAWN_TIMEOUT_FLOOR_S = 5.0
 _FEATURES = dict.fromkeys((
     "shell_tool", "unified_exec", "multi_agent", "collab", "plugins",
     "remote_plugin", "recommended_plugins", "plugin_hooks", "hooks",
@@ -191,16 +194,36 @@ class CodexConnector:
                     "XDG_CACHE_HOME": str(self.home / ".cache")})
         return env
 
+    def _spawn_deadline(self) -> float | None:
+        if self.timeout_s is None:
+            return None
+        return max(float(self.timeout_s), _SPAWN_TIMEOUT_FLOOR_S)
+
+    async def _start_child(self) -> None:
+        spawn = asyncio.create_task(asyncio.create_subprocess_exec(
+            self.executable, "app-server", "--listen", "stdio://",
+            stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE, cwd=str(self.home),
+            env=self._environment(), limit=MAX_PENDING_FRAME))
+        try:
+            self._process = await asyncio.wait_for(asyncio.shield(spawn), self._spawn_deadline())
+        except BaseException:
+            if spawn.done() and not spawn.cancelled() and spawn.exception() is None:
+                self._process = spawn.result()
+            else:
+                spawn.cancel()
+                try:
+                    self._process = await spawn
+                except (asyncio.CancelledError, Exception):
+                    pass
+            raise
+
     async def __aenter__(self) -> CodexConnector:
         if self._process is not None or self._closed:
             raise CodexConnectorError("Codex connection cannot be restarted")
         try:
             self._prepare_home()
-            self._process = await asyncio.wait_for(asyncio.create_subprocess_exec(
-                self.executable, "app-server", "--listen", "stdio://",
-                stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE, cwd=str(self.home),
-                env=self._environment(), limit=MAX_PENDING_FRAME), self.timeout_s)
+            await self._start_child()
             self._reader = asyncio.create_task(self._read_loop())
             self._stderr = asyncio.create_task(self._discard_stderr())
             result = await self.request("initialize", {

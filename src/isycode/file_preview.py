@@ -1,5 +1,6 @@
 """Selectable read-only file preview; all copying remains behind ClipboardOwner."""
 from textual.app import ComposeResult
+from isycode.localization import tr
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -22,8 +23,8 @@ class FilePreviewScreen(ModalScreen[None]):
             yield Static(f'{self.path}\nRead-only · select with mouse or Ctrl+A; Ctrl+C copies',id='preview-heading',markup=False)
             yield TextArea(self.text,read_only=True,id='preview-text',show_line_numbers=True)
             with Horizontal(id='preview-actions'):
-                yield Button('Copy selection / text',id='preview-copy')
-                yield Button('Close',id='preview-close')
+                yield Button(tr('Copy selection / text'),id='preview-copy')
+                yield Button(tr('Close'),id='preview-close')
     def on_mount(self):self.query_one(TextArea).focus()
     async def on_button_pressed(self,event):
         event.stop()

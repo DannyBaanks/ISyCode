@@ -34,6 +34,7 @@ from isycode.tui_screens_grants import (
     GrantWorkspaceReadScreen,
 )
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
+from isycode.localization import tr
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
 
@@ -313,23 +314,27 @@ class AuthorityMixin:
             mobile_on = mobile_host_enabled(grants)
             partial = not mobile_on and mobile_host_saved(grants)
             entries.append(self._capability_entry(
-                "Mobile Host on this computer" + (" · partial saved grant" if partial else ""),
+                ("Mobile Host on this computer · partial saved grant" if partial
+                 else "Mobile Host on this computer"),
                 "mobile_host", mobile_on,
-                f"Lets ISyCode start the loopback Mobile Host at {MOBILE_HOST_ADDRESS} and accept "
-                "one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; "
-                "they cannot read files, run tools, or open sessions. Starting still asks first."))
+                tr("Lets ISyCode start the loopback Mobile Host at {address} and accept "
+                   "one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; "
+                   "they cannot read files, run tools, or open sessions. Starting still asks first.",
+                   address=MOBILE_HOST_ADDRESS)))
             saved = other_saved_grants(grants)
             if saved:
                 entries.append(self._entry("— Other saved permissions —", "info", "",
                                            "Every other permission saved for this workspace."))
             for row in saved:
                 if row.state == "on":
-                    state = "ON · asks before each use" if row.approval_required else "ON"
+                    state = tr("ON · asks before each use") if row.approval_required else tr("ON")
                 else:
-                    state = "blocked · no Secure owner · saved grant ignored"
+                    state = tr("blocked · no Secure owner · saved grant ignored")
                 entries.append(self._entry(
-                    f"{row.label} · {state}", "authority_saved_grant", row.action_id,
-                    f"Scope: {row.scope}. Select to remove this saved permission."))
+                    tr("{label} · {state}", label=tr(row.label), state=state),
+                    "authority_saved_grant", row.action_id,
+                    tr("Scope: {scope}. Select to remove this saved permission.", scope=row.scope),
+                    translate=False))
         except (WorkspaceAuthorityError, OSError, ValueError):
             entries.append(self._entry(
                 "Protection settings are unavailable · everything stays off", "info"))
@@ -341,7 +346,7 @@ class AuthorityMixin:
             "File edits follow folder approval settings; other changes always ask.",
             "info", "", "Turning a permission on lets the assistant propose that kind of action. "
             "Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("authority_settings", "Settings · Authority & Security", entries)
@@ -357,7 +362,8 @@ class AuthorityMixin:
         except ValueError:
             host = "invalid endpoint"
         if not host or host == "invalid endpoint":
-            entries.append(self._entry(f"{label} · not ready yet", "info"))
+            entries.append(self._entry(
+                tr("{label} · not ready yet", label=tr(label)), "info", translate=False))
             return
         grant = grants.get(action_id, {})
         enabled = displayed_on(action_id, grant, host in grant.get("network_hosts", []))
@@ -550,12 +556,12 @@ class AuthorityMixin:
     async def _change_git_grant(self, commit: bool, enabled: bool) -> None:
         actions = ("git.commit",) if commit else ("git.status", "git.diff")
         if commit:
-            title = "Allow git commits in this workspace?" if enabled else "Turn off git commits?"
+            title=tr("Allow git commits in this workspace?") if enabled else tr("Turn off git commits?")
             body = ("The assistant may propose commits. Each one shows its files, message and diff "
                     "and is created only if you approve it. Hooks never run and nothing is pushed."
                     if enabled else "No commit can be created from ISyCode in this workspace.")
         else:
-            title = "Let ISyCode see git status and diffs?" if enabled else "Hide git status and diffs?"
+            title=tr("Let ISyCode see git status and diffs?") if enabled else tr("Hide git status and diffs?")
             body = ("The assistant may read the branch, changed files and diffs. Sensitive files "
                     "stay hidden." if enabled else "The assistant can no longer read git state here.")
         if not await self._await_screen(TailscaleConfirmScreen(
@@ -803,12 +809,17 @@ class AuthorityMixin:
             entries = [self._entry("JOURNAL_INVALID · verifier unavailable", "info")]
         else:
             entries = [self._entry(
-                f"Integrity · {report.status} · {report.records} records · {report.decisions} decisions · {report.receipts} receipts",
+                tr("Integrity · {status} · {records} records · {decisions} decisions · {receipts} receipts",
+                   status=report.status, records=report.records,
+                   decisions=report.decisions, receipts=report.receipts),
                 "info", "", report.reason or
-                "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored.")]
+                "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored.",
+                translate=False)]
             if report.unverifiable:
                 entries.append(self._entry(
-                    f"NOT_VERIFIABLE · {report.unverifiable} records lack an owner identity", "info"))
+                    tr("NOT_VERIFIABLE · {count} records lack an owner identity",
+                       count=report.unverifiable),
+                    "info", translate=False))
             paired_receipts = {item["request_digest"]: item for item in report.recent
                                if item["kind"] == "receipt"}
             for item in reversed(report.recent):
@@ -832,5 +843,5 @@ class AuthorityMixin:
                     "Target and successful Systembility details are not persisted; no secret or prompt is shown."))
             if not report.recent:
                 entries.append(self._entry("No durable decisions recorded for this workspace", "info"))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         self._render_menu("security_journal", "Security · Action journal (read-only)", entries)

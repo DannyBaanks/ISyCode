@@ -31,6 +31,8 @@ class UserDefaultsStore:
     # policy, and "ask" shows the mode screen.
     NEW_WORKSPACE_MODES = {"ask", "classic", "security"}
     ROLE_KINDS = {"agents", "subagents", "motors"}
+    LOCALES = {"es", "en", "zh"}
+    DEFAULT_LOCALE = "es"
 
     def __init__(self, directory: Path | None = None) -> None:
         self.directory = Path(directory or state_root()).expanduser()
@@ -50,7 +52,8 @@ class UserDefaultsStore:
                     "new_workspace_mode": "ask", "default_role": None,
                     "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
                     "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
-                    "high_contrast": False, "ascii_only": False}
+                    "high_contrast": False, "ascii_only": False,
+                    "locale": self.DEFAULT_LOCALE}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
         if os.name == "posix" and metadata.st_mode & 0o077:
@@ -105,10 +108,13 @@ class UserDefaultsStore:
             raise ValueError("ISyCode agent step limit is invalid")
         if tokens is not None and (type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES):
             raise ValueError("ISyCode answer length is invalid")
+        locale = data.get("locale", self.DEFAULT_LOCALE)
+        if not isinstance(locale, str) or locale not in self.LOCALES:
+            locale = self.DEFAULT_LOCALE
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
                 "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds,
-                "high_contrast": contrast, "ascii_only": ascii_only}
+                "high_contrast": contrast, "ascii_only": ascii_only, "locale": locale}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
@@ -116,8 +122,12 @@ class UserDefaultsStore:
                agent_steps: int | None = None, answer_tokens: int | None = None,
                chat_token_budget: int | None = None, compact_marquee: bool | None = None,
                notification_sounds: bool | None = None, high_contrast: bool | None = None,
-               ascii_only: bool | None = None) -> None:
+               ascii_only: bool | None = None, locale: str | None = None) -> None:
         current = self.load()
+        if locale is not None:
+            if locale not in self.LOCALES:
+                raise ValueError("ISyCode interface language is invalid")
+            current["locale"] = locale
         if ascii_only is not None:
             if type(ascii_only) is not bool:
                 raise ValueError("ISyCode ASCII-only preference is invalid")

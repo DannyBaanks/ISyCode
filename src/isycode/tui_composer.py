@@ -11,6 +11,7 @@ from rich.text import Text
 from isycode.tui_widgets import BoxTitle, ExpandableBox, activate_on_second_click
 from isycode.tui_theme import MUTED
 from isycode.tui_screens_sessions import PastedTextScreen
+from isycode.localization import tr
 
 
 
@@ -19,7 +20,7 @@ class IdeaBox(Static):
     BINDINGS = [Binding("enter,space", "expand", "Expand note", show=False)]
 
     def on_mount(self):
-        self.border_title = "Enter / Space / double-click expand"
+        self.border_title = tr("Enter / Space / double-click expand")
 
     def on_click(self, event) -> None:
         self.focus()
@@ -61,8 +62,8 @@ class QueuedBox(ExpandableBox):
                 Binding("escape", "undo_queued", "Undo queue", show=False, priority=True)]
 
     def __init__(self, **kwargs):
-        super().__init__(OptionList(id="queued-options"), title="Queued", collapsed=True, **kwargs)
-        self._title = QueuedTitle(label="Queued", collapsed_symbol="▶", expanded_symbol="▼", collapsed=True)
+        super().__init__(OptionList(id="queued-options"), title=tr("Queued"), collapsed=True, **kwargs)
+        self._title = QueuedTitle(label=tr("Queued"), collapsed_symbol="▶", expanded_symbol="▼", collapsed=True)
 
     def on_click(self, event):
         if self.app._queued_messages and self.app._selected_queued_message is None:

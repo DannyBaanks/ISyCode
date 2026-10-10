@@ -19,6 +19,7 @@ from textual.screen import ModalScreen
 from pathlib import Path
 import json
 from isycode.tui_screens_approval import ApprovalScreen
+from isycode.localization import tr
 
 
 
@@ -55,12 +56,12 @@ class MCPArgumentsScreen(ModalScreen[dict | None]):
         with Vertical(id="mcp-arguments-card"):
             yield Static(f"Gateway MCP · {name}", id="mcp-arguments-title")
             yield Static(description, id="mcp-arguments-description")
-            yield Static("Discovered input schema\n" + schema_text, id="mcp-arguments-schema")
+            yield Static(tr("Discovered input schema\n") + schema_text, id="mcp-arguments-schema")
             yield TextArea("{}", id="mcp-arguments-input", soft_wrap=True)
-            yield Static("Enter a JSON object; arguments are not sent until the next confirmation.", id="mcp-arguments-error")
+            yield Static(tr("Enter a JSON object; arguments are not sent until the next confirmation."), id="mcp-arguments-error")
             with Horizontal(id="mcp-arguments-actions"):
-                yield Button("Cancel", id="mcp-arguments-cancel")
-                yield Button("Review call…", id="mcp-arguments-review", variant="primary")
+                yield Button(tr("Cancel"), id="mcp-arguments-cancel")
+                yield Button(tr("Review call…"), id="mcp-arguments-review", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#mcp-arguments-input", TextArea).focus()
@@ -118,8 +119,8 @@ class MCPInvocationConfirmScreen(ApprovalScreen):
             with VerticalScroll(id="mcp-confirm-payload"):
                 yield Static(payload)
             with Horizontal(id="mcp-confirm-actions"):
-                yield Button("Cancel · n", id="mcp-confirm-cancel")
-                yield Button("Approve once and invoke · y", id="mcp-confirm-approve", variant="warning")
+                yield Button(tr("Cancel · n"), id="mcp-confirm-cancel")
+                yield Button(tr("Approve once and invoke · y"), id="mcp-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "mcp-confirm-approve")
@@ -157,21 +158,21 @@ class GatewaySemanticQueryScreen(ModalScreen[tuple[str, dict] | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="semantic-query-card"):
-            yield Static("ISyCo Gateway · semantic operations", id="semantic-query-title")
+            yield Static(tr("ISyCo Gateway · semantic operations"), id="semantic-query-title")
             yield Static(
                 f"Endpoint: {self.endpoint}\nConfigured workspace ID: {self.workspace_id}\n"
                 "The ID is an operator-managed binding, not a filesystem grant. Each request is "
                 "denied if the Gateway reports a different ID.", id="semantic-query-copy")
             yield Select([(operation, operation) for operation in self.OPERATIONS],
                          value="symbols/search", id="semantic-operation")
-            yield Static("Operation payload · JSON (fields are validated for the selected operation)",
+            yield Static(tr("Operation payload · JSON (fields are validated for the selected operation)"),
                          id="semantic-payload-label")
             yield TextArea('{\n  "query": "",\n  "max_results": 25\n}',
                            language="json", id="semantic-payload")
-            yield Static("", id="semantic-query-error")
+            yield Static(tr(""), id="semantic-query-error")
             with Horizontal(id="semantic-query-actions"):
-                yield Button("Cancel", id="semantic-query-cancel")
-                yield Button("Review request…", id="semantic-query-review", variant="primary")
+                yield Button(tr("Cancel"), id="semantic-query-cancel")
+                yield Button(tr("Review request…"), id="semantic-query-review", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#semantic-operation", Select).focus()
@@ -227,8 +228,8 @@ class GatewaySemanticConfirmScreen(ApprovalScreen):
                 "not added to model context. A one-use local approval is required.",
                 id="semantic-confirm-copy")
             with Horizontal(id="semantic-confirm-actions"):
-                yield Button("Cancel · n", id="semantic-confirm-cancel")
-                yield Button("Approve once and run · y", id="semantic-confirm-approve", variant="warning")
+                yield Button(tr("Cancel · n"), id="semantic-confirm-cancel")
+                yield Button(tr("Approve once and run · y"), id="semantic-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "semantic-confirm-approve")
@@ -260,10 +261,10 @@ class LSPQueryScreen(ModalScreen[str | None]):
         with Vertical(id="lsp-query-card"):
             yield Static(f"{self.label} · workspace symbol search", id="lsp-query-title")
             yield Static(f"Local workspace: {self.root}\nQuery goes only to the sandboxed local language server.", id="lsp-query-copy")
-            yield Input(placeholder="Symbol name…", id="lsp-query-input", max_length=256)
+            yield Input(placeholder=tr("Symbol name…"), id="lsp-query-input", max_length=256)
             with Horizontal(id="lsp-query-actions"):
-                yield Button("Cancel", id="lsp-query-cancel")
-                yield Button("Review search…", id="lsp-query-review", variant="primary")
+                yield Button(tr("Cancel"), id="lsp-query-cancel")
+                yield Button(tr("Review search…"), id="lsp-query-review", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#lsp-query-input", Input).focus()
@@ -301,7 +302,7 @@ class LSPConfirmScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="lsp-confirm-card"):
-            yield Static("Confirm local LSP search", id="lsp-confirm-title")
+            yield Static(tr("Confirm local LSP search"), id="lsp-confirm-title")
             yield Static(
                 f"Server: {self.label} · operation: workspace/symbol\nQuery: {self.query_text}\nWorkspace root: {self.root}\n\n"
                 "ISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. "
@@ -309,8 +310,8 @@ class LSPConfirmScreen(ApprovalScreen):
                 "and output/time limits apply. No Gateway or provider receives this query.",
                 id="lsp-confirm-copy")
             with Horizontal(id="lsp-confirm-actions"):
-                yield Button("Cancel · n", id="lsp-confirm-cancel")
-                yield Button("Approve once and search · y", id="lsp-confirm-approve", variant="warning")
+                yield Button(tr("Cancel · n"), id="lsp-confirm-cancel")
+                yield Button(tr("Approve once and search · y"), id="lsp-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "lsp-confirm-approve")
@@ -341,7 +342,7 @@ class BrokerProvisionConfirmScreen(ApprovalScreen):
     def compose(self) -> ComposeResult:
         file_rows = "\n".join(f"  {name} · SHA-256 {digest}" for name, digest in self.recipe.files)
         with Vertical(id="broker-provision-card"):
-            yield Static("Review semantic broker build + start", id="broker-provision-title")
+            yield Static(tr("Review semantic broker build + start"), id="broker-provision-title")
             yield Static(
                 f"Project root: {self.project}\nRecipe root: {self.recipe.source_root}\n"
                 f"Recipe SHA-256: {self.recipe.digest}\nImage: {self.image}\nFiles:\n{file_rows}\n\n"
@@ -353,8 +354,8 @@ class BrokerProvisionConfirmScreen(ApprovalScreen):
                 "this root and recipe digest, then revoke those grants after the attempt. Failed health checks "
                 "remove only the container/network created by this request.", id="broker-provision-copy")
             with Horizontal(id="broker-provision-actions"):
-                yield Button("Cancel · n", id="broker-provision-cancel")
-                yield Button("Approve · Build + Start · y", id="broker-provision-confirm", variant="warning")
+                yield Button(tr("Cancel · n"), id="broker-provision-cancel")
+                yield Button(tr("Approve · Build + Start · y"), id="broker-provision-confirm", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-provision-confirm")
@@ -383,7 +384,7 @@ class BrokerManagementScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="broker-manage-card"):
-            yield Static("Manage semantic broker", id="broker-manage-title")
+            yield Static(tr("Manage semantic broker"), id="broker-manage-title")
             yield Static(
                 f"Project: {self.project}\nStatus: {self.item.get('status')} · "
                 f"127.0.0.1:{self.item.get('host_port')}\nContainer: {self.item.get('container')}\n"
@@ -393,12 +394,12 @@ class BrokerManagementScreen(ModalScreen[str | None]):
                 "its dedicated network; the shared image stays.",
                 id="broker-manage-copy")
             with Horizontal(id="broker-manage-actions"):
-                yield Button("Close", id="broker-manage-close")
-                yield Button("Health", id="broker-manage-health")
-                yield Button("Logs…", id="broker-manage-logs")
-                yield Button("Start…", id="broker-manage-start", variant="primary")
-                yield Button("Stop…", id="broker-manage-stop", variant="warning")
-                yield Button("Remove…", id="broker-manage-remove", variant="error")
+                yield Button(tr("Close"), id="broker-manage-close")
+                yield Button(tr("Health"), id="broker-manage-health")
+                yield Button(tr("Logs…"), id="broker-manage-logs")
+                yield Button(tr("Start…"), id="broker-manage-start", variant="primary")
+                yield Button(tr("Stop…"), id="broker-manage-stop", variant="warning")
+                yield Button(tr("Remove…"), id="broker-manage-remove", variant="error")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         value = (event.button.id or "").removeprefix("broker-manage-")
@@ -437,8 +438,8 @@ class BrokerOperationConfirmScreen(ApprovalScreen):
                 "This grants only the exact Docker executable and broker target for this single operation; "
                 "the temporary grant is revoked afterward.", id="broker-operation-copy")
             with Horizontal(id="broker-operation-actions"):
-                yield Button("Cancel · n", id="broker-operation-cancel")
-                yield Button("Approve once · y", id="broker-operation-approve", variant="warning")
+                yield Button(tr("Cancel · n"), id="broker-operation-cancel")
+                yield Button(tr("Approve once · y"), id="broker-operation-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-operation-approve")

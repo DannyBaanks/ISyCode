@@ -16,6 +16,7 @@ from isycode.git_owner import GitOwner, git_executable
 from isycode.command_runner import CommandRunOwner, sandbox_executable
 from isycode.workspace_write import DELETE_TOOL_NAME, MOVE_TOOL_NAME, WorkspaceWriteOwner
 from isycode.authority_view import displayed_on
+from isycode.localization import tr
 from isycode.security import ActionRequest
 from rich.syntax import Syntax
 from textual.widgets import Button, Static
@@ -39,10 +40,12 @@ class WorkspaceMixin:
                 f"ISyCode local receipt {self._agent_context['receipt_id'][:12]} verified PASS. Content stays in this process memory."))
             entries.append(self._entry("Remove injected context", "context_clear", ""))
         self._menu_stack = []
-        self._render_menu("context_menu", "Context · workspace documents", entries)
+        self._render_menu("context_menu", tr("Context · workspace documents"), entries)
 
     def _context_button_label(self) -> str:
-        return f"Context: {Path(self._agent_context['path']).name}" if self._agent_context else "Context"
+        if self._agent_context:
+            return tr("Context: {name}", name=Path(self._agent_context["path"]).name)
+        return tr("Context")
 
     async def _inject_agent_context(self) -> None:
         self._close_menu()

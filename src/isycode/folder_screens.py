@@ -1,5 +1,6 @@
 """Native user-only controls for sibling folders and delegated file-edit approval."""
 from pathlib import Path
+from isycode.localization import tr
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -28,16 +29,16 @@ class AddWorkspaceFolderScreen(ModalScreen[dict | None]):
     def compose(self) -> ComposeResult:
         with Vertical(id='folder-card'):
             with VerticalScroll(id='folder-content'):
-                yield Static('Add sibling folder', markup=False)
+                yield Static(tr('Add sibling folder'), markup=False)
                 yield Static(f'Selected sibling folder: {self.selected_folder}', markup=False)
-                yield Input(placeholder='Alias, e.g. other-project', id='folder-alias')
-                yield Checkbox('Allow proposed file edits', value=True, id='folder-editable')
-                yield Static('This grants reads/searches and optionally edits for this exact folder. '
+                yield Input(placeholder=tr('Alias, e.g. other-project'), id='folder-alias')
+                yield Checkbox(tr('Allow proposed file edits'), value=True, id='folder-editable')
+                yield Static(tr('This grants reads/searches and optionally edits for this exact folder. '
                              'Every edit asks until you explicitly enable automatic edits. '
-                             'Commands and other projects receive no new access.', markup=False)
+                             'Commands and other projects receive no new access.'), markup=False)
             with Horizontal(id='folder-actions'):
-                yield Button('Cancel', id='folder-cancel')
-                yield Button('Add folder', id='folder-add', variant='primary')
+                yield Button(tr('Cancel'), id='folder-cancel')
+                yield Button(tr('Add folder'), id='folder-add', variant='primary')
 
     def on_mount(self) -> None:
         self.query_one('#folder-alias', Input).focus()
@@ -73,18 +74,18 @@ class AutomaticEditsWarningScreen(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Vertical(id='auto-edit-card'):
             with VerticalScroll(id='auto-edit-content'):
-                yield Static('Danger: allow automatic file edits', markup=False)
+                yield Static(tr('Danger: allow automatic file edits'), markup=False)
                 yield Static(f'Folder: {self.root}', markup=False)
-                yield Static('The assistant may create or overwrite files here without showing '
+                yield Static(tr('The assistant may create or overwrite files here without showing '
                              'each diff for approval. Model mistakes or malicious instructions in '
-                             'files can damage your work. Review changes with Git and keep backups.', markup=False)
-                yield Static('This setting persists for this workspace. Disable it from Files → Folders. '
+                             'files can damage your work. Review changes with Git and keep backups.'), markup=False)
+                yield Static(tr('This setting persists for this workspace. Disable it from Files → Folders. '
                              'Authority, ISySentinel, path protections and journaling stay active; '
                              'they cannot guarantee that an allowed edit is correct. Commands, deletes, '
-                             'moves and commits still require their own approvals.', markup=False)
+                             'moves and commits still require their own approvals.'), markup=False)
             with Horizontal(id='auto-edit-actions'):
-                yield Button('Cancel', id='auto-edit-cancel')
-                yield Button('Enable automatic edits', id='auto-edit-enable', variant='error')
+                yield Button(tr('Cancel'), id='auto-edit-cancel')
+                yield Button(tr('Enable automatic edits'), id='auto-edit-enable', variant='error')
 
     def on_mount(self) -> None:
         self.query_one('#auto-edit-cancel', Button).focus()

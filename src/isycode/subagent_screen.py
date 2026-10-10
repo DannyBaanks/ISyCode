@@ -1,5 +1,6 @@
 """Explicit model selection for every child launch; no preference mutation."""
 import asyncio
+from isycode.localization import tr
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -32,13 +33,13 @@ class SubagentModelScreen(ModalScreen[dict | None]):
         self.selected = dict(self.models[0]) if self.models else None
     def compose(self) -> ComposeResult:
         with Vertical(id='child-card'):
-            yield Static('Subagent · select a model from your providers',markup=False)
+            yield Static(tr('Subagent · select a model from your providers'),markup=False)
             if self.error:
                 yield Static(Text(self.error["provider_hint"] + "\nChoose another model or Cancel. Completed effects remain; retry may repeat work.", style="#e9c778"), id="child-error")
             with VerticalScroll(id='child-task'):
                 yield Static(self.assigned_task,markup=False)
-            yield Static('Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing.',id='child-copy',markup=False)
-            yield Input(placeholder='Find a model or provider…', id='child-search')
+            yield Static(tr('Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing.'),id='child-copy',markup=False)
+            yield Input(placeholder=tr('Find a model or provider…'), id='child-search')
             from isycode.tui import ExpandableBox
             from isycode.providers import PRESETS
             from isycode.model_presentation import model_display_name
@@ -55,8 +56,8 @@ class SubagentModelScreen(ModalScreen[dict | None]):
                             yield Button(label, id=f'child-choice-{index}', classes='child-model-choice')
             yield Static(self._selected_label(), id='child-selected', markup=False)
             with Horizontal(id='child-buttons'):
-                yield Button('Cancel',id='child-cancel')
-                yield Button('Launch selected model',id='child-launch',disabled=not self.models,variant='primary')
+                yield Button(tr('Cancel'),id='child-cancel')
+                yield Button(tr('Launch selected model'),id='child-launch',disabled=not self.models,variant='primary')
     def on_mount(self):
         self.query_one('#child-cancel',Button).focus()
         self.ready.set()

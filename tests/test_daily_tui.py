@@ -23,7 +23,7 @@ def configure(tmp_path, monkeypatch):
     # destination policy and supply one public resolver result for fixtures.
     monkeypatch.setattr('isycode.providers.Provider.models', lambda provider: [provider.model])
     monkeypatch.setattr('isycode.egress._ips', lambda _host, _port: ('93.184.216.34',))
-    UserDefaultsStore().update(new_workspace='temporary', new_workspace_mode='classic')
+    UserDefaultsStore().update(new_workspace='temporary', new_workspace_mode='classic', locale='en')
     authority = WorkspaceAuthority(project)
     authority.set_mode('classic')
     # Existing UI tests did not take the quiet-profile onboarding. Remember

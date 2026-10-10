@@ -63,6 +63,7 @@ def _search_key(value: str) -> str:
 
 
 from isycode.terminal_safety import install as _install_terminal_safety
+from isycode.localization import tr
 
 _install_terminal_safety()
 
@@ -96,20 +97,19 @@ class CommandBrowser(App[None]):
         self.selected_action: CLIAction | None = None
 
     def compose(self) -> ComposeResult:
-        yield Static("ISyCode  ·  COMMAND BROWSER", id="cli-header")
+        yield Static(tr("ISyCode  ·  COMMAND BROWSER"), id="cli-header")
         with Horizontal(id="cli-body"):
             with Vertical(id="command-navigation"):
-                yield Input(placeholder="Search commands…", id="command-search")
-                yield Tree("Categories", id="command-tree")
+                yield Input(placeholder=tr("Search commands…"), id="command-search")
+                yield Tree(tr("Categories"), id="command-tree")
             with Vertical(id="selection-panel"):
-                yield Static("Choose an action", id="selection-title")
-                yield Static("Agent · Workspace · Integrations · Providers · Session · Settings", id="selection-path")
-                yield Static(
-                    "Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. "
-                    "Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands.",
+                yield Static(tr("Choose an action"), id="selection-title")
+                yield Static(tr("Agent · Workspace · Integrations · Providers · Session · Settings"), id="selection-path")
+                yield Static(tr("Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. "
+                    "Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands."),
                     id="selection-description",
                 )
-                yield Button("Open action · Ctrl+O", id="open-selection", disabled=True)
+                yield Button(tr("Open action · Ctrl+O"), id="open-selection", disabled=True)
         yield Footer()
 
     def on_mount(self) -> None:

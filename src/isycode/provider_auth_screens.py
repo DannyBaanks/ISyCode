@@ -1,5 +1,6 @@
 """Login challenge UI: process-only, never appended to conversation history."""
 import asyncio
+from isycode.localization import tr
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
@@ -22,13 +23,13 @@ class SubscriptionLoginScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         with Vertical(id='subscription-card'):
             with VerticalScroll(id='subscription-copy'):
-                yield Static('Sign in with ChatGPT',markup=False)
-                yield Static('Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines.',markup=False)
+                yield Static(tr('Sign in with ChatGPT'),markup=False)
+                yield Static(tr('Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines.'),markup=False)
                 yield Static(self.challenge['url'],markup=False)
                 if self.challenge.get('user_code'):
-                    yield Static('Enter this one-use code: '+self.challenge['user_code'],markup=False)
-                yield Static('Waiting for sign-in… Your plan determines available models and usage limits. This does not add API credits.',markup=False)
-            yield Button('Cancel sign-in',id='subscription-cancel')
+                    yield Static(tr('Enter this one-use code: ')+self.challenge['user_code'],markup=False)
+                yield Static(tr('Waiting for sign-in… Your plan determines available models and usage limits. This does not add API credits.'),markup=False)
+            yield Button(tr('Cancel sign-in'),id='subscription-cancel')
     def on_mount(self):
         self.query_one('#subscription-cancel',Button).focus()
         self.ready.set()

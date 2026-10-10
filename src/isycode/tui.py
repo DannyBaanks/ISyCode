@@ -64,6 +64,7 @@ from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
 )
+from isycode.localization import configure_locale, language_msgid, tr
 from isycode.user_defaults import UserDefaultsStore
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
 from isycode.throughput import ThroughputMeter
@@ -444,15 +445,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._session_auto_edits: set[str] = set()
         self._batch_decisions: dict[str, str] = {}
         try:
-            self._compact_marquee_default = UserDefaultsStore().load().get("compact_marquee", False)
-            self._notification_sounds = UserDefaultsStore().load().get("notification_sounds", True)
-            self._high_contrast = UserDefaultsStore().load().get("high_contrast", False)
-            self._ascii_only = UserDefaultsStore().load().get("ascii_only", False)
+            defaults = UserDefaultsStore().load()
+            self._compact_marquee_default = defaults.get("compact_marquee", False)
+            self._notification_sounds = defaults.get("notification_sounds", True)
+            self._high_contrast = defaults.get("high_contrast", False)
+            self._ascii_only = defaults.get("ascii_only", False)
+            self._locale = defaults.get("locale", "es")
         except (OSError, ValueError):
             self._compact_marquee_default = False
             self._notification_sounds = True
             self._high_contrast = False
             self._ascii_only = False
+            self._locale = "es"
+        configure_locale(self._locale)
         from isycode.tui_theme import set_ascii_only
         set_ascii_only(self._ascii_only)
         self._provider_env_override = bool(os.environ.get("ISYCODE_PROVIDER"))
@@ -495,55 +500,137 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 yield TasksPanel("", id="agent-tasks")
                 with Vertical(id="composer"):
                     with Horizontal(id="queued-row"):
-                        yield Static("", classes="queue-spacer")
+                        yield Static(tr(""), classes="queue-spacer")
                         with Vertical(id="queue-stack"):
                             yield QueuedBox(id="queued-box")
                             with Horizontal(id="queue-notice"):
-                                yield Static("", id="queue-warning")
-                                yield Button("[?]", id="queue-steer-help")
-                        yield Static("", classes="queue-spacer")
+                                yield Static(tr(""), id="queue-warning")
+                                yield Button(tr("[?]"), id="queue-steer-help")
+                        yield Static(tr(""), classes="queue-spacer")
                     with Horizontal(id="idea-box-row"):
-                        yield ActivityStatus("Chat ready", id="activity-status")
-                        yield IdeaBox("Idea box\nCapture an idea · Ctrl+Shift+Enter", id="idea-box", markup=False)
-                        yield ShellBox("ShellBox · no processes", id="shell-box", markup=False)
-                        yield Static("", id="usage-status")
+                        yield ActivityStatus(tr("Chat ready"), id="activity-status")
+                        yield IdeaBox(tr("Idea box\nCapture an idea · Ctrl+Shift+Enter"), id="idea-box", markup=False)
+                        yield ShellBox(tr("ShellBox · no processes"), id="shell-box", markup=False)
+                        yield Static(tr(""), id="usage-status")
                     yield OptionList(id="slash-suggestions")
                     yield PromptArea(id="prompt-input")
-                    yield Static("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar", id="composer-hint")
+                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"), id="composer-hint")
                     with Horizontal(id="command-bar"):
-                        yield Button("Sidebar", id="sidebar-button")
-                        yield Button("Sessions", id="sessions-button")
-                        yield Button("Multi Harness", id="harness-button")
+                        yield Button(tr("Sidebar"), id="sidebar-button")
+                        yield Button(tr("Sessions"), id="sessions-button")
+                        yield Button(tr("Multi Harness"), id="harness-button")
                         # Preserve dynamic labels; these actions are in Settings.
-                        yield Button("Providers", id="providers-button")
-                        yield Button("Role", id="role-button")
-                        yield Button("Context", id="context-button")
-                        yield Button("Inject context", id="inject-context-button")
-                        yield Button("Model ▾", id="model-button")
+                        yield Button(tr("Providers"), id="providers-button")
+                        yield Button(tr("Role"), id="role-button")
+                        yield Button(tr("Context"), id="context-button")
+                        yield Button(tr("Inject context"), id="inject-context-button")
+                        yield Button(tr("Model ▾"), id="model-button")
                         yield BarSpacer(id="bar-spacer")
-                        yield Button("⚙", id="settings-button")
+                        yield Button(tr("⚙"), id="settings-button")
             yield SidePanel(id="side-panel")
         with Vertical(id="action-menu"):
             with Vertical(id="action-card"):
-                yield Static("Commands", id="action-title")
-                yield Input(placeholder="Filter this list…", id="action-search")
+                yield Static(tr("Commands"), id="action-title")
+                yield Input(placeholder=tr("Filter this list…"), id="action-search")
                 yield PreviewOptionList(id="action-list")
-                yield Static("", id="action-detail")
-                yield Static("↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search",
+                yield Static(tr(""), id="action-detail")
+                yield Static(tr("↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"),
                              id="action-hint")
                 with Vertical(id="key-entry"):
-                    yield Static("API key is stored outside this project.", id="key-entry-label")
-                    yield Input(placeholder="Paste API key…", password=True, id="provider-key-input")
+                    yield Static(tr("API key is stored outside this project."), id="key-entry-label")
+                    yield Input(placeholder=tr("Paste API key…"), password=True, id="provider-key-input")
                     with Horizontal(id="key-entry-buttons"):
-                        yield Button("Save key", id="save-provider-key", variant="primary")
-                        yield Button("Cancel", id="cancel-provider-key")
+                        yield Button(tr("Save key"), id="save-provider-key", variant="primary")
+                        yield Button(tr("Cancel"), id="cancel-provider-key")
         yield Footer(show_command_palette=False)
+
+    def _apply_locale_chrome(self) -> None:
+        """Refresh compose-time labels after the interface language changes."""
+        buttons = {
+            "#sidebar-button": "Sidebar",
+            "#sessions-button": "Sessions",
+            "#harness-button": "Multi Harness",
+            "#providers-button": "Providers",
+            "#role-button": "Role",
+            "#inject-context-button": "Inject context",
+            "#show-overview": "Overview",
+            "#show-files": "Files",
+            "#refresh-openisy": "Refresh integrations",
+            "#file-up": "↑ Up",
+            "#file-refresh": "Refresh",
+            "#workspace-folders": "Folders",
+            "#file-copy-path": "Copy path",
+            "#file-open-preview": "Open preview",
+            "#lsp-install-hint": "Install commands",
+            "#save-provider-key": "Save key",
+            "#cancel-provider-key": "Cancel",
+        }
+        for widget_id, msgid in buttons.items():
+            try:
+                self.query_one(widget_id, Button).label = tr(msgid)
+            except Exception:
+                continue
+        try:
+            self.query_one("#context-button", Button).label = self._context_button_label()
+        except Exception:
+            pass
+        statics = {
+            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar",
+            "#action-hint": "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search",
+            "#key-entry-label": "API key is stored outside this project.",
+            "#file-preview": "Select a file to preview it.",
+        }
+        for widget_id, msgid in statics.items():
+            try:
+                self.query_one(widget_id, Static).update(tr(msgid))
+            except Exception:
+                continue
+        try:
+            self.query_one("#action-search", Input).placeholder = tr("Filter this list…")
+        except Exception:
+            pass
+        try:
+            self.query_one("#provider-key-input", Input).placeholder = tr("Paste API key…")
+        except Exception:
+            pass
+        try:
+            self.query_one("#file-search", Input).placeholder = tr("Search workspace paths…")
+        except Exception:
+            pass
+        try:
+            self.query_one("#idea-box").update(
+                tr("Idea box\nCapture an idea · Ctrl+Shift+Enter"))
+        except Exception:
+            pass
+        try:
+            self.query_one("#shell-box").update(tr("ShellBox · no processes"))
+        except Exception:
+            pass
+        collapsibles = {
+            "#rail-sentinel": "IsySentinel",
+            "#rail-mcp": "MCPs",
+            "#rail-lsp": "LSPs",
+            "#rail-skills": "Skills",
+            "#rail-connections": "Connections · 4",
+            "#rail-gateway": "ISyCo Gateway",
+            "#rail-gateway-mcp": "Gateway MCP",
+            "#rail-mobile": "Mobile Host",
+            "#rail-bridge": "Bridge Coordination",
+            "#rail-workspace": "Workspace",
+        }
+        for widget_id, msgid in collapsibles.items():
+            try:
+                self.query_one(widget_id).title = tr(msgid)
+            except Exception:
+                continue
+        self._refresh_model_button()
 
     def on_mount(self) -> None:
         if self._high_contrast:
             self._apply_high_contrast(True)
         self._refresh_usage()
-        self._set_activity("Chat ready", MUTED)
+        self._apply_locale_chrome()
+        self._set_activity(tr("Chat ready"), MUTED)
         self.set_interval(1.0, self._paint_work_status)
         add_decision_listener(self._on_journal_decision)
         self.set_interval(5.0, self._paint_sentinel)   # permissions changed in Settings
@@ -1042,17 +1129,22 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     # ── semantic navigation and account menus ─────────────────────
 
     @staticmethod
-    def _entry(label: str, kind: str, value: str = "", detail: str = "") -> dict[str, str]:
-        return {"label": label, "kind": kind, "value": value, "detail": detail}
+    def _entry(label: str, kind: str, value: str = "", detail: str = "",
+               *, translate: bool = True) -> dict[str, str]:
+        return {"label": tr(label) if translate else label, "kind": kind,
+                "value": value,
+                "detail": tr(detail) if translate and detail else detail}
 
     @staticmethod
     def _capability_entry(label: str, value: str, enabled: bool,
                           detail: str = "") -> dict[str, str | bool]:
-        return {"label": label, "kind": "authority_toggle", "value": value,
-                "detail": detail, "enabled": enabled}
+        return {"label": tr(label), "kind": "authority_toggle", "value": value,
+                "detail": tr(detail) if detail else detail, "enabled": enabled}
 
     def _open_palette(self) -> None:
-        entries = [self._entry(f"{name}  ·  {description}", "branch", name)
+        entries = [self._entry(
+            tr("{name}  ·  {description}", name=tr(name), description=tr(description)),
+            "branch", name, translate=False)
                    for name, description in SEMANTIC_BRANCHES]
         self._menu_stack = []
         self._render_menu("palette_root", "Navigate", entries)
@@ -1065,29 +1157,44 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         ]
         if self._active_role:
             entries.insert(0, self._entry(
-                f"Current · {self._active_role['name']} ({self._active_role['kind']})",
-                "info", "", self._active_role.get("description", "")))
+                tr("Current · {name} ({kind})",
+                   name=self._active_role['name'], kind=self._active_role['kind']),
+                "info", "", self._active_role.get("description", ""),
+                translate=False))
         self._menu_stack = []
         self._render_menu("roles_root", "Role · choose a catalog", entries)
 
     def _open_settings_menu(self) -> None:
         from isycode.rtk_integration import Settings as RTKSettings
         try:
-            rtk_label = "on" if RTKSettings().load()["enabled"] else "off"
+            rtk_label = tr("on") if RTKSettings().load()["enabled"] else tr("off")
         except (OSError, ValueError):
-            rtk_label = "needs attention"
+            rtk_label = tr("needs attention")
+        on = tr("on")
+        off = tr("off")
         entries = [
-            self._entry("RTK compression · " + rtk_label, "rtk_settings", "",
+            self._entry(tr("RTK compression · {state}", state=rtk_label), "rtk_settings", "",
                         "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."),
-            self._entry("Providers & models", "providers_open", ""),
-            self._entry("Reasoning level", "reasoning_open", ""),
-            self._entry("Notification sounds · " + ("on" if self._notification_sounds else "off"), "sounds_toggle", "", "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
-            self._entry("High contrast display · " + ("on" if self._high_contrast else "off"), "contrast_toggle", "", "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."),
-            self._entry("ASCII-only display · " + ("on" if self._ascii_only else "off"), "ascii_toggle", "", "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
-            self._entry("Choose role", "roles_open", ""),
-            self._entry("Context", "context_menu", ""),
-            self._entry("My defaults · all workspaces", "user_defaults", ""),
-            self._entry("Compact text scroll · " + ("on" if self._compact_marquee_default else "off"),
+            self._entry(tr("Providers & models"), "providers_open", ""),
+            self._entry(tr("Reasoning level"), "reasoning_open", ""),
+            self._entry(tr("Notification sounds · {state}",
+                           state=on if self._notification_sounds else off), "sounds_toggle", "",
+                        "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
+            self._entry(tr("High contrast display · {state}",
+                           state=on if self._high_contrast else off), "contrast_toggle", "",
+                        "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."),
+            self._entry(tr("ASCII-only display · {state}",
+                           state=on if self._ascii_only else off), "ascii_toggle", "",
+                        "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
+            self._entry(tr("Language · {name}",
+                           name=tr(language_msgid(self._locale))),
+                        "locale_cycle", "",
+                        tr("Interface language for ISyCode. This does not change permissions or workspace files.")),
+            self._entry(tr("Choose role"), "roles_open", ""),
+            self._entry(tr("Context"), "context_menu", ""),
+            self._entry(tr("My defaults · all workspaces"), "user_defaults", ""),
+            self._entry(tr("Compact text scroll · {state}",
+                           state=on if self._compact_marquee_default else off),
                         "marquee_toggle", ""),
         ]
         if self._workspace_identity.workspace_root_source == "isyroot":
@@ -1100,20 +1207,20 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                             "Copies validated .isycode-commands/*.md files after diff approval; originals remain."),
             ])
         entries.extend([
-            self._entry("Authority & Security", "authority_open", ""),
-            self._entry("Multi Harness · settings & repair Compose", "harness_open", ""),
-            self._entry("Named API keys", "named_credentials", ""),
-            self._entry("Action journal · verify / inspect", "security_journal", ""),
-            self._entry("Choose context file (.md / .txt)", "context_inject", ""),
-            self._entry("Commands & shortcuts", "shortcuts", ""),
-            self._entry("Workspace files", "files", ""),
-            self._entry("Workspace folders & automatic edits", "folders_open", ""),
-            self._entry("Clear selected role", "clear_role", ""),
-            self._entry("Integrations · MCP, LSP, Gateway & remote access", "integrations_open", "",
+            self._entry(tr("Authority & Security"), "authority_open", ""),
+            self._entry(tr("Multi Harness · settings & repair Compose"), "harness_open", ""),
+            self._entry(tr("Named API keys"), "named_credentials", ""),
+            self._entry(tr("Action journal · verify / inspect"), "security_journal", ""),
+            self._entry(tr("Choose context file (.md / .txt)"), "context_inject", ""),
+            self._entry(tr("Commands & shortcuts"), "shortcuts", ""),
+            self._entry(tr("Workspace files"), "files", ""),
+            self._entry(tr("Workspace folders & automatic edits"), "folders_open", ""),
+            self._entry(tr("Clear selected role"), "clear_role", ""),
+            self._entry(tr("Integrations · MCP, LSP, Gateway & remote access"), "integrations_open", "",
                         "Optional connections and remote access. Permissions remain separate."),
         ])
         groups = {
-            "Conversation": (CYAN, {
+            tr("Conversation"): (CYAN, {
                 "providers_open": "Choose the provider and model used for this conversation.",
                 "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
                 "roles_open": "Choose instructions for how the agent should work.",
@@ -1121,7 +1228,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "context_menu": "Review the context available to the agent.",
                 "context_inject": "Choose a Markdown or text file to add to the conversation.",
             }),
-            "Preferences": ("#c7b8d4", {
+            tr("Preferences"): ("#c7b8d4", {
                 "rtk_settings": "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged.",
                 "user_defaults": "Personal defaults shared across your workspaces.",
                 "workspace_config_init": "Create workspace preferences after reviewing the proposed files.",
@@ -1132,14 +1239,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "contrast_toggle": "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black.",
                 "ascii_toggle": "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode.",
                 "marquee_toggle": "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it.",
+                "locale_cycle": tr("Interface language for ISyCode. This does not change permissions or workspace files."),
             }),
-            "Permissions": (YELLOW, {
+            tr("Permissions"): (YELLOW, {
                 "authority_open": "Inspect or change workspace permissions and approval settings.",
                 "named_credentials": "Manage named API credentials and their allowed uses.",
                 "security_journal": "Inspect recorded actions and verify their receipts.",
                 "folders_open": "Review workspace folders and per-folder automatic edit settings.",
             }),
-            "Connections": (CYAN, {
+            tr("Connections"): (CYAN, {
                 "harness_open": "Inspect other harness settings; copying requires a separate confirmation.",
                 "integrations_open": "Manage MCP, LSP, Gateway and remote connections with separate permissions.",
                 "files": "Browse workspace files.",
@@ -1151,17 +1259,17 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 if entry["kind"] in descriptions:
                     entry["category"] = category
                     entry["color"] = color
-                    entry["detail"] = descriptions[entry["kind"]]
+                    entry["detail"] = tr(descriptions[entry["kind"]])
                     ordered.append(entry)
         ordered.extend(entry for entry in entries if entry not in ordered)
         self._menu_stack = []
-        self._render_menu("settings", "Settings", ordered)
+        self._render_menu("settings", tr("Settings"), ordered)
 
     def _open_workspace_config_menu(self) -> None:
         if self._workspace_identity.workspace_root_source != "isyroot":
             self._render_menu("workspace_config", "Workspace preferences", [
                 self._entry("This folder has no .isyroot marker; preferences are not persisted here.", "info"),
-                self._entry("Back to Settings", "settings_back", ""),
+                self._entry(tr("Back to Settings"), "settings_back", ""),
             ])
             return
         try:
@@ -1171,22 +1279,29 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except (OSError, ValueError) as exc:
             parsed, issue = None, str(exc)
         if issue:
-            entries = [self._entry(f"Workspace preferences unavailable · {issue[:140]}", "info")]
+            entries = [self._entry(
+                tr("Workspace preferences unavailable · {error}", error=issue[:140]),
+                "info", translate=False)]
         elif parsed is None:
             entries = [self._entry("Initialize .isycode/ before saving preferences.", "info")]
         elif not parsed.valid:
-            entries = [self._entry(f"Config ignored · {parsed.error[:140]}", "info")]
+            entries = [self._entry(
+                tr("Config ignored · {error}", error=parsed.error[:140]),
+                "info", translate=False)]
         else:
-            entries = [self._entry(f"Config warning · {warning[:140]}", "info")
+            entries = [self._entry(
+                tr("Config warning · {error}", error=warning[:140]),
+                "info", translate=False)
                        for warning in parsed.warnings]
             if self._active_role:
                 entries.append(self._entry(
-                    f"Use {self._active_role['name']} as this workspace's default role",
-                    "workspace_pref_role", ""))
+                    tr("Use {name} as this workspace's default role",
+                       name=self._active_role['name']),
+                    "workspace_pref_role", "", translate=False))
             if parsed.values.get("default_role"):
                 entries.append(self._entry("Clear this workspace's default role",
                                            "workspace_pref_role_clear", ""))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "workspace_config":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("workspace_config", "Settings · Workspace preferences", entries)
@@ -1225,7 +1340,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if self._workspace_identity.workspace_root_source != "isyroot":
             self._render_menu("workspace_migration", "Workspace command migration", [
                 self._entry("Migration is available only in a workspace with its own .isyroot.", "info"),
-                self._entry("Back to Settings", "settings_back", ""),
+                self._entry(tr("Back to Settings"), "settings_back", ""),
             ])
             return
         try:
@@ -1235,14 +1350,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             names, issue = await asyncio.to_thread(owner.legacy_commands)
         except (OSError, ValueError) as exc:
             names, issue = [], str(exc)
-        entries = [self._entry(f"Migration unavailable · {issue[:140]}", "info")] if issue else []
-        entries.extend(self._entry(f"Copy /{name} into .isycode/commands/",
-                                   "workspace_config_migrate_item", name,
-                                   "The exact file is reviewed; the legacy original stays in place.")
+        entries = [self._entry(
+            tr("Migration unavailable · {error}", error=issue[:140]),
+            "info", translate=False)] if issue else []
+        entries.extend(self._entry(
+            tr("Copy /{name} into .isycode/commands/", name=name),
+            "workspace_config_migrate_item", name,
+            "The exact file is reviewed; the legacy original stays in place.",
+            translate=False)
                        for name in names)
         if not names and not issue:
             entries.append(self._entry("No valid legacy workspace commands found.", "info"))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "workspace_migration":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("workspace_migration", "Workspace command migration", entries)
@@ -1279,7 +1398,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry("Bridge coordination · blocked in Secure", "bridge_settings", ""),
             self._entry("Private access · Tailscale", "private_access", ""),
             self._entry("Refresh integration catalogs", "refresh", ""),
-            self._entry("Back to Settings", "settings_back", ""),
+            self._entry(tr("Back to Settings"), "settings_back", ""),
         ])
 
     def _folder_store(self) -> WorkspaceFolders:
@@ -1298,20 +1417,33 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     available = True
                 except (OSError, ValueError):
                     available = False
-                entries.append(self._entry(f"{'Browse' if available else 'Unavailable'} {alias} · {item['path']}", "folder_browse" if available else "info", alias))
+                status = tr("Browse") if available else tr("Unavailable")
+                entries.append(self._entry(
+                    tr("{status} {alias} · {path}", status=status, alias=alias, path=item['path']),
+                    "folder_browse" if available else "info", alias, translate=False))
                 if item['editable'] and available:
                     enabled = store.auto_edit_allowed(alias)
                     automatic_available = store.auto_edit_available(alias)
+                    if not automatic_available:
+                        state = tr("OFF · Security requires each review")
+                    elif enabled:
+                        state = tr("ON — dangerous; disable")
+                    else:
+                        state = tr("OFF — enable…")
                     entries.append(self._entry(
-                        f"{alias} · automatic edits " + ('OFF · Security requires each review' if not automatic_available
-                            else 'ON — dangerous; disable' if enabled else 'OFF — enable…'),
+                        tr("{alias} · automatic edits {state}", alias=alias, state=state),
                         'info' if not automatic_available else 'folder_auto_off' if enabled else 'folder_auto_on', alias,
-                        'Only file creation/edits. Authority and ISySentinel stay active.'))
+                        'Only file creation/edits. Authority and ISySentinel stay active.',
+                        translate=False))
                 if alias != 'main':
-                    entries.append(self._entry(f"Remove attachment · {alias}", "folder_remove", alias,
-                        'Files and standalone workspace settings are kept. This chat loses access.'))
+                    entries.append(self._entry(
+                        tr("Remove attachment · {alias}", alias=alias), "folder_remove", alias,
+                        'Files and standalone workspace settings are kept. This chat loses access.',
+                        translate=False))
         except (OSError, ValueError) as exc:
-            entries.append(self._entry(f"Folder settings unavailable · {str(exc)[:140]}", "info"))
+            entries.append(self._entry(
+                tr("Folder settings unavailable · {error}", error=str(exc)[:140]),
+                "info", translate=False))
         self._menu_stack = []
         self._render_menu('workspace_folders', 'Workspace folders · explicit access', entries)
 
@@ -1395,17 +1527,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         entries = [
             self._entry("These personal defaults follow you between workspaces.", "info"),
             self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
-            self._entry(f"Default model · {provider.get('label', provider_name)} · {model_name}",
-                        "info", "", "Change it from Providers; model selection is already saved globally."),
+            self._entry(
+                tr("Default model · {provider} · {model}",
+                   provider=provider.get('label', provider_name), model=model_name),
+                "info", "", "Change it from Providers; model selection is already saved globally.",
+                translate=False),
         ]
         role = defaults.get("default_role")
         entries.append(self._entry(
-            f"Default role · {role['name']}" if role else "Default role · none",
-            "info", "", "Role guidance is global preference only; it never grants permissions."))
+            tr("Default role · {name}", name=role['name']) if role else tr("Default role · none"),
+            "info", "", "Role guidance is global preference only; it never grants permissions.",
+            translate=False))
         if self._active_role:
             entries.append(self._entry(
-                f"Use current role ({self._active_role['name']}) as my default",
-                "user_default_role_save", ""))
+                tr("Use current role ({name}) as my default", name=self._active_role['name']),
+                "user_default_role_save", "", translate=False))
         if role:
             entries.append(self._entry("Clear my default role", "user_default_role_clear", ""))
         new_workspace = defaults.get("new_workspace", "ask")
@@ -1415,12 +1551,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             ("recurring", "Make new folders recurring by default"),
         )
         entries.extend(self._entry(
-            ("● " if new_workspace == value else "○ ") + label,
+            ("● " if new_workspace == value else "○ ") + tr(label),
             "user_default_workspace", value,
             ("A recurring workspace gets an empty .isyroot marker when first opened. "
              "This identifies the workspace; it does not grant file access. Home, its parents, "
              "temp and mount points still ask first.")
-            if value == "recurring" else "Applies only when this folder has no saved choice yet.")
+            if value == "recurring" else "Applies only when this folder has no saved choice yet.",
+            translate=False)
             for value, label in choices)
         new_mode = defaults.get("new_workspace_mode", "ask")
         mode_choices = (
@@ -1429,11 +1566,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             ("security", "Start new folders in Security · everything off until I allow it"),
         )
         entries.extend(self._entry(
-            ("● " if new_mode == value else "○ ") + label, "user_default_mode", value,
+            ("● " if new_mode == value else "○ ") + tr(label), "user_default_mode", value,
             "Applies only to folders opened for the first time; each workspace keeps its own "
-            "mode and you can switch it in Settings → Authority.")
+            "mode and you can switch it in Settings → Authority.",
+            translate=False)
             for value, label in mode_choices)
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "user_defaults":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("user_defaults", "Settings · My defaults", entries)
@@ -1662,7 +1800,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                          self._model_picker_result)
 
     def _render_menu(self, mode: str, title: str, entries: list[dict[str, str]]) -> None:
-        if mode == "branch" and title == "Models":
+        source_title = title
+        display_title = tr(title)
+        if mode == "branch" and source_title == "Models":
             # A provider-scoped picker loads that provider's catalog, not the active one.
             name = getattr(self, "_models_scope", None) or selected_provider_name()
             attempted = getattr(self, "_account_models_attempted", set())
@@ -1671,14 +1811,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self._account_models_loading = True
                 self.run_worker(self._load_account_models(name), exclusive=True, group="provider-models")
         self._menu_mode = mode
-        self._menu_title = title
+        self._menu_title = display_title
         self._menu_entries = entries
-        if (mode == "branch" and title == "Models") or mode == "model_account":
+        if (mode == "branch" and source_title == "Models") or mode == "model_account":
             existing = next((screen for screen in reversed(self.screen_stack)
                              if isinstance(screen, ModelsScreen)), None)
             if existing is not None:
                 existing.entries = entries
-                if mode == "branch" and title == "Models":
+                if mode == "branch" and source_title == "Models":
                     existing.provider_scope = getattr(self, "_models_scope", None)
                 existing.choices = {}
                 existing.refresh(recompose=True)
@@ -1702,9 +1842,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             card.remove_class("provider-menu")
         menu = self.query_one("#action-menu", Vertical)
         menu.display = True
-        heading = Text(title, style="bold #c7b8d4")
+        heading = Text(display_title, style="bold #c7b8d4")
         if mode == "settings":
-            heading.append("\nConversation · Preferences · Permissions · Connections", style=MUTED)
+            heading.append(
+                "\n" + " · ".join(tr(part) for part in
+                                  ("Conversation", "Preferences", "Permissions", "Connections")),
+                style=MUTED)
         self.query_one("#action-title", Static).update(heading)
         search = self.query_one("#action-search", Input)
         search.display = True
@@ -1712,9 +1855,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#action-list", OptionList).display = True
         self.query_one("#key-entry", Vertical).display = False
         self._render_options("")
-        hint = ("↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter"
+        hint = (tr("↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter")
                 if mode == "providers" else
-                "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search")
+                tr("↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"))
         self.query_one("#action-hint", Static).update(hint)
         self.query_one("#action-list", OptionList).focus()
 
@@ -1805,33 +1948,42 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             entries = [self._entry("Clear selected skills", "skill_clear", "",
                                   "Skills guide the current chat; they do not add tools or authority.")]
             entries.extend(self._entry(
-                f"{name}{' · active' if name in self._active_skills else ''}", "skill_use", name,
-                "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat")
+                tr("{name} · active", name=name) if name in self._active_skills else name,
+                "skill_use", name,
+                "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat",
+                translate=False)
                 for name in skills())
             snapshot = self._skill_snapshot
             if snapshot.state == "ready":
-                entries.extend(self._entry(f"{item['name']} · discovered", "info", "",
-                    item.get("description", "")) for item in snapshot.items)
+                entries.extend(self._entry(
+                    tr("{name} · discovered", name=item['name']), "info", "",
+                    item.get("description", ""), translate=False) for item in snapshot.items)
             return entries
         if key == "models":
             active_provider = selected_provider_name()
             current = selected_model_name()
             models = [self._entry(
-                f"Load account models · {active_provider}", "model_list", active_provider,
-                "Makes a read-only catalog request only after you select this item.")]
+                tr("Load account models · {provider}", provider=active_provider),
+                "model_list", active_provider,
+                "Makes a read-only catalog request only after you select this item.",
+                translate=False)]
             from isycode.providers import recent_models
-            models.extend(self._entry(f"Recent · {item['provider']} · {item['model']}  · recent",
+            models.extend(self._entry(
+                tr("Recent · {provider} · {model}  · recent",
+                   provider=item['provider'], model=item['model']),
                 "model", f"{item['provider']}|{item['model']}",
-                "Previously selected model; not verified against this account.")
+                "Previously selected model; not verified against this account.",
+                translate=False)
                 for item in recent_models())
             denied = getattr(self, "_account_model_denied", None)
             if denied:
                 models.append(self._entry(
-                    f"Grant network access to {PRESETS.get(denied, {}).get('label', denied)} "
-                    "and load its real catalog",
+                    tr("Grant network access to {label} and load its real catalog",
+                       label=PRESETS.get(denied, {}).get('label', denied)),
                     "provider_catalog_grant", denied,
                     "The live catalog request was denied; this asks once, saves the host grant "
-                    "for this workspace, and reloads the provider's real models."))
+                    "for this workspace, and reloads the provider's real models.",
+                    translate=False))
             for name, preset in PRESETS.items():
                 model = resolved_chat_model(name)
                 selected = name == active_provider and (not current or model == current)
@@ -1839,10 +1991,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     model = current
                     selected = True
                 models.append(self._entry(
-                    f"{preset['label']}  ·  {model}{'  ◂ current' if selected else ''}  · preset",
+                    tr("{label}  ·  {model}  ◂ current  · preset",
+                       label=preset['label'], model=model)
+                    if selected else
+                    tr("{label}  ·  {model}  · preset",
+                       label=preset['label'], model=model),
                     "model", f"{name}|{model}",
                     "Hardcoded preset model, not verified against this account; "
-                    "load the account catalog for the provider's real list."))
+                    "load the account catalog for the provider's real list.",
+                    translate=False))
             live_catalogs = getattr(self, "_account_model_catalogs", {})
             for name, catalog in live_catalogs.items():
                 models = [row for row in models
@@ -1859,20 +2016,24 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             if active_catalog and active_model not in listed:
                 # Never switch silently: the active model stays until the user picks another.
                 models.insert(0, self._entry(
-                    f"Current model {active_model} is not in the refreshed {PRESETS[active_provider]['label']} "
-                    "catalog · still selected · choose a replacement explicitly", "info"))
+                    tr("Current model {model} is not in the refreshed {label} "
+                       "catalog · still selected · choose a replacement explicitly",
+                       model=active_model, label=PRESETS[active_provider]['label']),
+                    "info", translate=False))
             from isycode.model_catalog import catalog_models
             for name in PRESETS:
                 if name in live_catalogs:
                     continue
                 for entry in catalog_models(name):
-                    marker = "" if entry["tool_call"] else "  ⚠ no tools"
+                    marker = "" if entry["tool_call"] else tr("  ⚠ no tools")
                     models.append(self._entry(
-                        f"{PRESETS[name]['label']}  ·  {entry['id']}{marker}  · catalog",
+                        tr("{label}  ·  {model}{marker}  · catalog",
+                           label=PRESETS[name]['label'], model=entry['id'], marker=marker),
                         "model", f"{name}|{entry['id']}",
                         f"models.dev snapshot (offline; not verified against this account). "
                         f"reasoning={'yes' if entry['reasoning'] else 'no'} · "
-                        f"context={entry['context'] or '?'} · tool_call={'yes' if entry['tool_call'] else 'NO — chat needs tools'}"))
+                        f"context={entry['context'] or '?'} · tool_call={'yes' if entry['tool_call'] else 'NO — chat needs tools'}",
+                        translate=False))
             if getattr(self, "_account_models_loading", False):
                 models.append(self._entry("Loading account catalog…", "info"))
             elif getattr(self, "_account_model_status", ""):
@@ -1888,7 +2049,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         continue
                 visible.append(row)
             if unavailable:
-                visible.append(self._entry(f"{len(unavailable)} unavailable in tested endpoint · retained in capability results", "info", "", "".join(row["value"] + "\n" for row in unavailable)))
+                visible.append(self._entry(
+                    tr("{count} unavailable in tested endpoint · retained in capability results",
+                       count=len(unavailable)),
+                    "info", "", "".join(row["value"] + "\n" for row in unavailable),
+                    translate=False))
             return visible
         if key == "mcp":
             snap = self._mcp_snapshot
@@ -1909,36 +2074,46 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             try:
                 for broker in BrokerRegistry().list_for_workspace(self._workspace_root):
                     entries.append(self._entry(
-                        f"Manage broker · {Path(broker['project_root']).name} · {broker['status']}",
+                        tr("Manage broker · {name} · {status}",
+                           name=Path(broker['project_root']).name, status=broker['status']),
                         "broker_manage", broker["project_root"],
                         f"{broker['container']} · 127.0.0.1:{broker['host_port']} · "
-                        f"recipe {broker['recipe_digest'][:12]}"))
+                        f"recipe {broker['recipe_digest'][:12]}",
+                        translate=False))
             except (OSError, RuntimeError, TypeError, ValueError):
                 entries.append(self._entry(
                     "Managed broker inventory unavailable", "info", "",
                     "Private state could not be read; no Docker action is available."))
             if snap.state == "ready":
                 entries.extend(self._entry(
-                    f"{item['name']}  ·  {item['status']}", "info", "",
-                    "Listed by the connected service; discovery does not authorize calls.")
+                    tr("{name}  ·  {status}", name=item['name'], status=item['status']),
+                    "info", "",
+                    "Listed by the connected service; discovery does not authorize calls.",
+                    translate=False)
                     for item in snap.items)
             elif snap.state not in {"not_checked", "not_configured"}:
                 entries.append(self._entry(
-                    f"Configured services · {snap.state.replace('_', ' ')}",
-                    "info", "", snap.detail))
+                    tr("Configured services · {state}",
+                       state=snap.state.replace('_', ' ')),
+                    "info", "", snap.detail, translate=False))
             gateway = self._gateway_mcp_snapshot
             if gateway.state == "ready":
                 entries.extend(self._entry(
-                    f"ISyCo Gateway · {item['name']}", "gateway_mcp_tool", item["name"],
+                    tr("ISyCo Gateway · {name}", name=item["name"]),
+                    "gateway_mcp_tool", item["name"],
                     (str(item.get("description", "No description supplied."))[:1200]
-                     + " · Enter to review arguments and request a one-use approval"))
+                     + " · Enter to review arguments and request a one-use approval"),
+                    translate=False)
                     for item in gateway.items)
             elif gateway.state not in {"not_checked", "not_configured"}:
                 entries.append(self._entry(
-                    f"ISyCo Gateway MCP · {gateway.state.replace('_', ' ')}",
-                    "info", "", gateway.detail))
+                    tr("ISyCo Gateway MCP · {state}",
+                       state=gateway.state.replace('_', ' ')),
+                    "info", "", gateway.detail, translate=False))
             from isycode.mcp_presets import PRESETS as MCP_PRESETS
-            entries.extend(self._entry(f"Add {name} preset", "mcp_preset", name, preset["description"])
+            entries.extend(self._entry(
+                tr("Add {name} preset", name=name), "mcp_preset", name, preset["description"],
+                translate=False)
                            for name, preset in MCP_PRESETS.items())
             return entries
         if key == "lsp":
@@ -1946,16 +2121,26 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             for server in self._lsp_inventory:
                 if server["state"] == "sandbox_ready":
                     entries.append(self._entry(
-                        f"{server['label']} · {status_phrase('workspace symbol search')}", "lsp_server", server["id"],
-                        "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."))
+                        tr("{label} · {status}",
+                           label=server['label'], status=tr("workspace symbol search")),
+                        "lsp_server", server["id"],
+                        "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval.",
+                        translate=False))
                 else:
                     entries.append(self._entry(
-                        f"{server['label']} · {status_phrase(server['state'].replace('_', ' '))}", "info", "",
-                        "Detected executable only; no safe LSP execution adapter is connected for this server."))
+                        tr("{label} · {status}",
+                           label=server['label'],
+                           status=tr(server['state'].replace('_', ' '))),
+                        "info", "",
+                        "Detected executable only; no safe LSP execution adapter is connected for this server.",
+                        translate=False))
             return entries or [self._entry("No LSP servers detected", "info", "", "Install or configure a supported language server.")]
         if key == "files":
             return [self._entry("Open workspace file browser", "files"),
-                    self._entry(f"Current Directory · {self._file_path or self._workspace_root}", "info")]
+                    self._entry(
+                        tr("Current Directory · {path}",
+                           path=self._file_path or self._workspace_root),
+                        "info", translate=False)]
         if key == "roles":
             return [self._entry("ISyCode agents", "role_category", "agents"),
                     self._entry("ISyCode specialists", "role_category", "subagents"),
@@ -1965,15 +2150,33 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     self._entry("OAuth methods", "oauth_info", "Provider accounts", self._provider_auth_snapshot.detail or self._provider_auth_snapshot.state)]
         if key == "session":
             return [self._entry("/help", "command", "help"),
-                    self._entry(f"Provider · {selected_provider_name()}", "providers_open"),
-                    self._entry(f"Role · {self._role_button_label()}", "info")]
+                    self._entry(
+                        tr("Provider · {name}", name=selected_provider_name()),
+                        "providers_open", translate=False),
+                    self._entry(
+                        tr("Role · {name}", name=self._role_button_label()),
+                        "info", translate=False)]
         if key == "workspace":
-            return [self._entry(f"Workspace Root · {self._workspace_root}", "info"),
-                    self._entry(f"Launch Directory · {self._launch_dir}", "info"),
-                    self._entry(f"Root Source · {self._workspace_identity.workspace_root_source}", "info"),
-                    self._entry(f"Gateway Binding · {gateway_workspace_id(self._workspace_root)}", "info", "",
-                                "Opaque workspace match label; it does not grant access."),
-                    self._entry(f"Current Folder · {self._file_path or self._workspace_root}", "info"),
+            return [self._entry(
+                        tr("Workspace Root · {path}", path=self._workspace_root),
+                        "info", translate=False),
+                    self._entry(
+                        tr("Launch Directory · {path}", path=self._launch_dir),
+                        "info", translate=False),
+                    self._entry(
+                        tr("Root Source · {source}",
+                           source=self._workspace_identity.workspace_root_source),
+                        "info", translate=False),
+                    self._entry(
+                        tr("Gateway Binding · {id}",
+                           id=gateway_workspace_id(self._workspace_root)),
+                        "info", "",
+                        "Opaque workspace match label; it does not grant access.",
+                        translate=False),
+                    self._entry(
+                        tr("Current Folder · {path}",
+                           path=self._file_path or self._workspace_root),
+                        "info", translate=False),
                     self._entry("Open Files view", "files")]
         if key == "commands":
             return self._command_entries + [self._entry("Keyboard shortcuts", "shortcuts")]
@@ -2532,7 +2735,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         for delay in PATTERNS.get(kind, PATTERNS["info"])[1:]:
             self.set_timer(delay, lambda: self.bell() if self._notification_sounds else None)
 
-    def notify(self, message, *, title="", severity="information", timeout=None,
+    def notify(self, message, *, title=tr(""), severity="information", timeout=None,
                markup=True):
         self._play_notification_sound({"warning": "warning", "error": "error"}.get(severity, "info"))
         return super().notify(message, title=title, severity=severity, timeout=timeout,
@@ -2568,7 +2771,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             elif self._last_plan is not None:
                 self._set_activity("Plan ready · review it in Overview", YELLOW)
             else:
-                self._set_activity("Chat ready", MUTED)
+                self._set_activity(tr("Chat ready"), MUTED)
             self._paint_idea_box()
             if self._idea_backlog:
                 self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")

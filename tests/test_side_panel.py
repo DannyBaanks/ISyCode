@@ -96,7 +96,7 @@ def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatc
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
 
     async def scenario():
         app = TUIApp()
@@ -131,7 +131,7 @@ def test_second_click_opens_a_selected_row_and_tree_node(tmp_path, monkeypatch, 
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
 
     async def scenario():
         app = TUIApp()
@@ -214,7 +214,7 @@ def test_install_commands_are_shown_and_nothing_is_launched(tmp_path, monkeypatc
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security")
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
     monkeypatch.setattr(tui_mod, "language_server_catalog", lambda discovered=None: [
         {"id": "gopls", "label": "gopls", "state": "not_installed",
          "install_hint": "go install golang.org/x/tools/gopls@latest", "presence": "missing"},

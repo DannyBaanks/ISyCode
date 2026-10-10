@@ -58,6 +58,7 @@ from isycode.shortcuts import APP_SHORTCUTS
 from textual.widgets import Button
 from isycode.tui_widgets import ExpandableBox, SidePanel
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
+from isycode.localization import configure_locale, next_locale, tr
 from isycode.user_defaults import UserDefaultsStore
 
 
@@ -75,23 +76,31 @@ class ProviderMixin:
             if key and key in PRESETS:
                 preset = PRESETS[key]
                 state = provider_credential_state(key)
-                status = {"environment": "key in environment", "saved": "key saved",
-                          "stored": "legacy key saved", "legacy": "legacy key",
-                          "optional": "no key required", "subscription": "subscription",
-                          "signed-in": "Grok sign-in",
-                          "missing": f"needs {preset['key_env']}",
-                          "unavailable": "credential store unavailable"}.get(state, state)
+                if state == "missing":
+                    status = tr("needs {env}", env=preset["key_env"])
+                else:
+                    status = tr({
+                        "environment": "key in environment", "saved": "key saved",
+                        "stored": "legacy key saved", "legacy": "legacy key",
+                        "optional": "no key required", "subscription": "subscription",
+                        "signed-in": "Grok sign-in",
+                        "unavailable": "credential store unavailable",
+                    }.get(state, state))
                 current = key == active or (key == "openai" and active == "chatgpt")
                 mark = "✓" if current else "○"
-                note = "  ← currently active" if current else f"  ·  {blurb}"
+                note = (tr("  ← currently active") if current
+                        else tr("  ·  {blurb}", blurb=tr(blurb)))
                 entries.append(self._entry(
-                    f"{mark}  {label}{note}",
+                    tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
-                    f"{blurb}. {status}. Default model: "
-                    f"{provider_default_model(key) or preset.get('default_model') or DEFAULT_MODEL}"))
+                    tr("{blurb}. {status}. Default model: {default}",
+                       blurb=tr(blurb), status=status,
+                       default=provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL),
+                    translate=False))
             else:
                 entries.append(self._entry(
-                    f"·  {label}  ·  {blurb}", "provider_unwired", label, blurb))
+                    tr("·  {label}  ·  {blurb}", label=label, blurb=tr(blurb)),
+                    "provider_unwired", label, blurb, translate=False))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
                         for item in snapshot.items} if snapshot.state == "ready" else {}
@@ -108,20 +117,25 @@ class ProviderMixin:
                     "This account is not connected to ISyCode inference yet."))
         else:
             entries.append(self._entry(
-                f"Additional provider catalog · {openisy_catalog.state.replace('_', ' ')}",
-                "info", "", openisy_catalog.detail))
+                tr("Additional provider catalog · {state}",
+                   state=openisy_catalog.state.replace('_', ' ')),
+                "info", "", openisy_catalog.detail, translate=False))
         if snapshot.state == "ready":
             catalog_ids = {provider["id"] for provider in openisy_catalog.items}
             for provider in snapshot.items:
                 if "oauth" in provider.get("methods", []) and provider["name"] not in catalog_ids:
                     entries.append(self._entry(
-                        f"{provider['name']}  ·  OAuth available, not connected",
+                        tr("{name}  ·  OAuth available, not connected",
+                           name=provider['name']),
                         "oauth_info", provider["name"],
-                        "ISyCode does not yet have an authorization flow for this provider."))
+                        "ISyCode does not yet have an authorization flow for this provider.",
+                        translate=False))
         elif snapshot.state != "ready":
             entries.append(self._entry(
-                f"OAuth discovery · {snapshot.state.replace('_', ' ')}",
-                "info", "", snapshot.detail or "No additional provider auth metadata is available."))
+                tr("OAuth discovery · {state}",
+                   state=snapshot.state.replace('_', ' ')),
+                "info", "", snapshot.detail or "No additional provider auth metadata is available.",
+                translate=False))
         self._menu_stack = []
         self._render_menu("providers", "Select provider", entries)
 
@@ -133,8 +147,9 @@ class ProviderMixin:
         self._render_menu("xai_auth", "xAI · use Grok in ISyCode", [
             self._entry("API key · console.x.ai", "xai_api_key", "",
                         "Saved in the OS keyring. Chat goes to api.x.ai."),
-            self._entry(f"Use Grok sign-in · {note}", "xai_session", "",
-                        "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."),
+            self._entry(tr("Use Grok sign-in · {note}", note=tr(note)), "xai_session", "",
+                        "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com.",
+                        translate=False),
             self._entry("Sign in with device code", "xai_device"),
             self._entry("Sign in with browser", "xai_browser"),
             self._entry("The sign-in stays in the grok CLI. ISyCode does not copy the token into the project.", "info"),
@@ -263,9 +278,11 @@ class ProviderMixin:
         entries = []
         if selected in PRESETS:
             entries.append(self._entry(
-                f"Add a key for {self._credential_label(selected)} · asks first",
+                tr("Add a key for {name} · asks first",
+                   name=self._credential_label(selected)),
                 "credential_add", selected,
-                "Saved in your OS keyring for your user; never in the project or logs."))
+                "Saved in your OS keyring for your user; never in the project or logs.",
+                translate=False))
         entries.append(self._entry("Add an ISyCo Gateway key · asks first", "credential_add",
                                    GATEWAY_SERVICE))
         try:
@@ -284,18 +301,26 @@ class ProviderMixin:
             if not displayed_on("credentials.use", use_grant,
                                 service in use_grant.get("targets", [])):
                 entries.append(self._entry(
-                    f"Allow using the saved {self._credential_label(service)} key here · asks first",
+                    tr("Allow using the saved {name} key here · asks first",
+                       name=self._credential_label(service)),
                     "credential_use_grant", service,
-                    "Each use is decided and recorded in this workspace's action journal."))
+                    "Each use is decided and recorded in this workspace's action journal.",
+                    translate=False))
         for item in credentials:
             if item["revoked"]:
                 entries.append(self._entry(
-                    f"{item['name']}  ·  {item['service']}  ·  removed",
-                    "credential_info", item["id"], f"Purpose: {item['purpose']}"))
+                    tr("{name}  ·  {service}  ·  removed",
+                       name=item['name'], service=item['service']),
+                    "credential_info", item["id"],
+                    tr("Purpose: {purpose}", purpose=item['purpose']),
+                    translate=False))
             else:
                 entries.append(self._entry(
-                    f"{item['name']}  ·  {item['service']}  ·  saved · value hidden · select to remove",
-                    "credential_revoke", item["id"], f"Purpose: {item['purpose']}"))
+                    tr("{name}  ·  {service}  ·  saved · value hidden · select to remove",
+                       name=item['name'], service=item['service']),
+                    "credential_revoke", item["id"],
+                    tr("Purpose: {purpose}", purpose=item['purpose']),
+                    translate=False))
         self._render_menu("named_credentials", "Settings · API keys", entries)
 
     def _model_picker_result(self, entry: dict | None) -> None:
@@ -350,7 +375,8 @@ class ProviderMixin:
         entries.extend(self._entry(level.capitalize(), "reasoning_select", f"{name}|{model}|{level}",
                                    descriptions[level]) for level in levels)
         from isycode.model_presentation import model_display_name
-        self._render_menu("reasoning", "Reasoning · " + model_display_name(model), entries)
+        self._render_menu("reasoning",
+                          tr("Reasoning · {model}", model=model_display_name(model)), entries)
 
     async def _load_account_models(self, name: str | None = None) -> None:
         """Opening Models requests the active catalog through its existing owner."""
@@ -361,7 +387,9 @@ class ProviderMixin:
                 api_key=load_provider_key(name) or None)
             if not provider.configured():
                 rows = [self._entry(
-                    f"Configure {provider.key_env} before listing account models.", "info")]
+                    tr("Configure {env} before listing account models.",
+                       env=provider.key_env),
+                    "info", translate=False)]
             else:
                 owner = ProviderNetworkOwner(
                     self._workspace_root, WorkspaceAuthority(self._workspace_root))
@@ -372,8 +400,11 @@ class ProviderMixin:
                 if result.decision != "ALLOW" or not isinstance(models, list):
                     self._account_model_denied = name
                     rows = [self._entry(
-                        f"Provider model request {result.decision.lower()}.", "info", "",
-                        result.reason or "Grant this provider host in Settings → Authority & Security.")]
+                        tr("Provider model request {decision}.",
+                           decision=result.decision.lower()),
+                        "info", "",
+                        result.reason or "Grant this provider host in Settings → Authority & Security.",
+                        translate=False)]
                 elif not models:
                     rows = [self._entry("The provider returned an empty model catalog.", "info")]
                 else:
@@ -411,9 +442,11 @@ class ProviderMixin:
                             "model", f"{name}|{model_id}") for model_id in ids]
                         family_variants[(name, family)] = variants
                         rows.append(self._entry(
-                            f"▸ {family} · {len(ids)} models",
+                            tr("▸ {family} · {count} models",
+                               family=family, count=len(ids)),
                             "model_family", f"{name}|{family}",
-                            "Open this family's variants."))
+                            "Open this family's variants.",
+                            translate=False))
                     self._account_family_variants = family_variants
         except ProviderError as error:
             rows = [self._entry(self._provider_failure(error, "Model catalog"), "info")]
@@ -421,8 +454,9 @@ class ProviderMixin:
             rows = [self._entry("Provider credential configuration could not be loaded.", "info")]
         except Exception as error:
             rows = [self._entry(
-                f"Model catalog unavailable ({type(error).__name__}); current selection is unchanged.",
-                "info")]
+                tr("Model catalog unavailable ({error}); current selection is unchanged.",
+                   error=type(error).__name__),
+                "info", translate=False)]
         if models_available := [row for row in rows if row["kind"] in {"model", "model_family"}]:
             catalogs = getattr(self, "_account_model_catalogs", {})
             catalogs[name] = models_available
@@ -766,6 +800,19 @@ class ProviderMixin:
         self._open_settings_menu()
         return
 
+    def _menu_locale_cycle(self, entry: dict[str, str | bool]) -> None:
+        chosen = next_locale(self._locale)
+        try:
+            UserDefaultsStore().update(locale=chosen)
+        except (OSError, ValueError):
+            self.notify(tr("Language preference could not be saved"), severity="warning")
+            return
+        self._locale = chosen
+        configure_locale(chosen)
+        self._apply_locale_chrome()
+        self._open_settings_menu()
+        return
+
     def _menu_ascii_toggle(self, entry: dict[str, str | bool]) -> None:
         enabled = not self._ascii_only
         try:
@@ -852,11 +899,13 @@ class ProviderMixin:
         visible = [row for row in variants if row not in unavailable]
         if unavailable:
             visible.append(self._entry(
-                f"{len(unavailable)} unavailable in tested endpoint · retained in capability results",
-                "info", "", "".join(row["value"] + "\n" for row in unavailable)))
+                tr("{count} unavailable in tested endpoint · retained in capability results",
+                   count=len(unavailable)),
+                "info", "", "".join(row["value"] + "\n" for row in unavailable),
+                translate=False))
         visible.append(self._entry("Back", "settings_back", ""))
         self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
-        self._render_menu("branch", f"Models · {family}", visible)
+        self._render_menu("branch", tr("Models · {family}", family=family), visible)
         return
 
     def _menu_model_list(self, entry: dict[str, str | bool]) -> None:

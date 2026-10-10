@@ -9,6 +9,7 @@ from rich.style import Style
 from textual.binding import Binding
 from textual.widgets import Button, OptionList, Static
 from isycode.tui_widgets import activate_on_second_click
+from isycode.localization import tr
 from textual.widgets.option_list import Option
 
 
@@ -140,7 +141,7 @@ class SessionMessageScreen(ModalScreen):
             yield Static(Text("Session · full last message", style="bold #d7a9ff"))
             with VerticalScroll(id="session-message-scroll"):
                 yield Static(Text(self.message), id="session-message-content")
-            yield Button("Close · Esc", id="session-message-close")
+            yield Button(tr("Close · Esc"), id="session-message-close")
 
     def on_mount(self):
         self.query_one("#session-message-scroll").focus()
@@ -206,23 +207,23 @@ class WorkList(Vertical):
     """
 
     def compose(self):
-        yield Static("", id="work-heading", markup=False)
+        yield Static(tr(""), id="work-heading", markup=False)
         with Horizontal():
-            yield Button("+ New conversation", id="work-new")
-            yield Button("Refresh", id="work-refresh")
-            yield Button("Bridge presence…", id="work-bridge")
-            yield Button("Hide", id="work-hide")
+            yield Button(tr("+ New conversation"), id="work-new")
+            yield Button(tr("Refresh"), id="work-refresh")
+            yield Button(tr("Bridge presence…"), id="work-bridge")
+            yield Button(tr("Hide"), id="work-hide")
         with Horizontal(id="work-filters"):
-            yield Button("All", id="work-filter-all", classes="filter-on")
-            yield Button("Working", id="work-filter-generating")
-            yield Button("Needs input", id="work-filter-waiting")
-            yield Button("Idle", id="work-filter-idle")
+            yield Button(tr("All"), id="work-filter-all", classes="filter-on")
+            yield Button(tr("Working"), id="work-filter-generating")
+            yield Button(tr("Needs input"), id="work-filter-waiting")
+            yield Button(tr("Idle"), id="work-filter-idle")
         with Horizontal(id="work-body"):
             listing = SessionOptionList(id="work-conversations")
-            listing.tooltip = "↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation"
+            listing.tooltip = tr("↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation")
             yield listing
-            yield SessionDetails("Select a conversation to inspect it.", id="work-details", markup=False)
-        yield Static("Bridge presence off", id="work-presence", markup=False)
+            yield SessionDetails(tr("Select a conversation to inspect it."), id="work-details", markup=False)
+        yield Static(tr("Bridge presence off"), id="work-presence", markup=False)
 
     def on_resize(self):
         if not self.is_mounted:
@@ -233,8 +234,8 @@ class WorkList(Vertical):
         if hasattr(self, "_rows"):
             self.call_after_refresh(self._refresh_rows)
         compact = self.content_size.width < 62
-        self.query_one("#work-new", Button).label = "+ New" if compact else "+ New conversation"
-        self.query_one("#work-bridge", Button).label = "Bridge" if compact else "Bridge presence…"
+        self.query_one("#work-new", Button).label = tr("+ New") if compact else tr("+ New conversation")
+        self.query_one("#work-bridge", Button).label = tr("Bridge") if compact else tr("Bridge presence…")
         paint = getattr(self.app, "_paint_bridge_presence", None)
         if callable(paint):
             self.call_after_refresh(paint)

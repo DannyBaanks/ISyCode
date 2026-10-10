@@ -1,0 +1,2006 @@
+# ISyCode en catalog. msgid is the stable English source identifier.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "ISyCode  ·  COMMAND BROWSER"
+msgstr "ISyCode  ·  COMMAND BROWSER"
+
+msgid "Categories"
+msgstr "Categories"
+
+msgid "Choose an action"
+msgstr "Choose an action"
+
+msgid "Agent · Workspace · Integrations · Providers · Session · Settings"
+msgstr "Agent · Workspace · Integrations · Providers · Session · Settings"
+
+msgid "Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands."
+msgstr "Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands."
+
+msgid "Open action · Ctrl+O"
+msgstr "Open action · Ctrl+O"
+
+msgid "Search commands…"
+msgstr "Search commands…"
+
+msgid "Copy selection / text"
+msgstr "Copy selection / text"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Add sibling folder"
+msgstr "Add sibling folder"
+
+msgid "Allow proposed file edits"
+msgstr "Allow proposed file edits"
+
+msgid "This grants reads/searches and optionally edits for this exact folder. Every edit asks until you explicitly enable automatic edits. Commands and other projects receive no new access."
+msgstr "This grants reads/searches and optionally edits for this exact folder. Every edit asks until you explicitly enable automatic edits. Commands and other projects receive no new access."
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Add folder"
+msgstr "Add folder"
+
+msgid "Danger: allow automatic file edits"
+msgstr "Danger: allow automatic file edits"
+
+msgid "The assistant may create or overwrite files here without showing each diff for approval. Model mistakes or malicious instructions in files can damage your work. Review changes with Git and keep backups."
+msgstr "The assistant may create or overwrite files here without showing each diff for approval. Model mistakes or malicious instructions in files can damage your work. Review changes with Git and keep backups."
+
+msgid "This setting persists for this workspace. Disable it from Files → Folders. Authority, ISySentinel, path protections and journaling stay active; they cannot guarantee that an allowed edit is correct. Commands, deletes, moves and commits still require their own approvals."
+msgstr "This setting persists for this workspace. Disable it from Files → Folders. Authority, ISySentinel, path protections and journaling stay active; they cannot guarantee that an allowed edit is correct. Commands, deletes, moves and commits still require their own approvals."
+
+msgid "Enable automatic edits"
+msgstr "Enable automatic edits"
+
+msgid "Alias, e.g. other-project"
+msgstr "Alias, e.g. other-project"
+
+msgid "Cancel sign-in"
+msgstr "Cancel sign-in"
+
+msgid "Sign in with ChatGPT"
+msgstr "Sign in with ChatGPT"
+
+msgid "Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines."
+msgstr "Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines."
+
+msgid "Waiting for sign-in… Your plan determines available models and usage limits. This does not add API credits."
+msgstr "Waiting for sign-in… Your plan determines available models and usage limits. This does not add API credits."
+
+msgid "Enter this one-use code: "
+msgstr "Enter this one-use code: "
+
+msgid "Native RTK · output compression"
+msgstr "Native RTK · output compression"
+
+msgid "Inspecting installation…"
+msgstr "Inspecting installation…"
+
+msgid "Checking the binary in the command sandbox…"
+msgstr "Checking the binary in the command sandbox…"
+
+msgid "Enable this binary"
+msgstr "Enable this binary"
+
+msgid "Disable"
+msgstr "Disable"
+
+msgid "Subagent · select a model from your providers"
+msgstr "Subagent · select a model from your providers"
+
+msgid "Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing."
+msgstr "Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing."
+
+msgid "Find a model or provider…"
+msgstr "Find a model or provider…"
+
+msgid "Launch selected model"
+msgstr "Launch selected model"
+
+msgid "Navigate"
+msgstr "Navigate"
+
+msgid "Role · choose a catalog"
+msgstr "Role · choose a catalog"
+
+msgid "on"
+msgstr "on"
+
+msgid "off"
+msgstr "off"
+
+msgid "Settings · Workspace preferences"
+msgstr "Settings · Workspace preferences"
+
+msgid "Workspace command migration"
+msgstr "Workspace command migration"
+
+msgid "Settings · Integrations"
+msgstr "Settings · Integrations"
+
+msgid "Workspace folders · explicit access"
+msgstr "Workspace folders · explicit access"
+
+msgid "Settings · My defaults"
+msgstr "Settings · My defaults"
+
+msgid "Filter this list…"
+msgstr "Filter this list…"
+
+msgid "Paste API key…"
+msgstr "Paste API key…"
+
+msgid "Search workspace paths…"
+msgstr "Search workspace paths…"
+
+msgid "Chat ready"
+msgstr "Chat ready"
+
+msgid "ISyCode agents"
+msgstr "ISyCode agents"
+
+msgid "ISyCode specialists"
+msgstr "ISyCode specialists"
+
+msgid "ISyCo CLI motors"
+msgstr "ISyCo CLI motors"
+
+msgid "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."
+msgstr "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."
+
+msgid "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."
+msgstr "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."
+
+msgid "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."
+msgstr "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."
+
+msgid "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."
+msgstr "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."
+
+msgid "Conversation"
+msgstr "Conversation"
+
+msgid "Preferences"
+msgstr "Preferences"
+
+msgid "Permissions"
+msgstr "Permissions"
+
+msgid "Connections"
+msgstr "Connections"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Workspace preferences"
+msgstr "Workspace preferences"
+
+msgid "These personal defaults follow you between workspaces."
+msgstr "These personal defaults follow you between workspaces."
+
+msgid "Access stays separate for each workspace; these defaults never turn on permissions."
+msgstr "Access stays separate for each workspace; these defaults never turn on permissions."
+
+msgid "Change it from Providers; model selection is already saved globally."
+msgstr "Change it from Providers; model selection is already saved globally."
+
+msgid "Role guidance is global preference only; it never grants permissions."
+msgstr "Role guidance is global preference only; it never grants permissions."
+
+msgid "↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter"
+msgstr "↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter"
+
+msgid "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"
+msgstr "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"
+
+msgid "Idea box\nCapture an idea · Ctrl+Shift+Enter"
+msgstr "Idea box\nCapture an idea · Ctrl+Shift+Enter"
+
+msgid "ShellBox · no processes"
+msgstr "ShellBox · no processes"
+
+msgid "{name}  ·  {description}"
+msgstr "{name}  ·  {description}"
+
+msgid "needs attention"
+msgstr "needs attention"
+
+msgid "RTK compression · {state}"
+msgstr "RTK compression · {state}"
+
+msgid "Providers & models"
+msgstr "Providers & models"
+
+msgid "Reasoning level"
+msgstr "Reasoning level"
+
+msgid "Notification sounds · {state}"
+msgstr "Notification sounds · {state}"
+
+msgid "High contrast display · {state}"
+msgstr "High contrast display · {state}"
+
+msgid "ASCII-only display · {state}"
+msgstr "ASCII-only display · {state}"
+
+msgid "Language · {name}"
+msgstr "Language · {name}"
+
+msgid "Interface language for ISyCode. This does not change permissions or workspace files."
+msgstr "Interface language for ISyCode. This does not change permissions or workspace files."
+
+msgid "Choose role"
+msgstr "Choose role"
+
+msgid "Context"
+msgstr "Context"
+
+msgid "My defaults · all workspaces"
+msgstr "My defaults · all workspaces"
+
+msgid "Compact text scroll · {state}"
+msgstr "Compact text scroll · {state}"
+
+msgid "Optional connections and remote access. Permissions remain separate."
+msgstr "Optional connections and remote access. Permissions remain separate."
+
+msgid "Back to Settings"
+msgstr "Back to Settings"
+
+msgid "The exact file is reviewed; the legacy original stays in place."
+msgstr "The exact file is reviewed; the legacy original stays in place."
+
+msgid "No valid legacy workspace commands found."
+msgstr "No valid legacy workspace commands found."
+
+msgid "Tool servers · MCP & Gateway"
+msgstr "Tool servers · MCP & Gateway"
+
+msgid "Language servers · LSP"
+msgstr "Language servers · LSP"
+
+msgid "Mobile host status"
+msgstr "Mobile host status"
+
+msgid "Bridge coordination · blocked in Secure"
+msgstr "Bridge coordination · blocked in Secure"
+
+msgid "Private access · Tailscale"
+msgstr "Private access · Tailscale"
+
+msgid "Refresh integration catalogs"
+msgstr "Refresh integration catalogs"
+
+msgid "Add sibling folder…"
+msgstr "Add sibling folder…"
+
+msgid "Default model · {provider} · {model}"
+msgstr "Default model · {provider} · {model}"
+
+msgid "Clear my default role"
+msgstr "Clear my default role"
+
+msgid "Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."
+msgstr "Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."
+
+msgid "Clear selected skills"
+msgstr "Clear selected skills"
+
+msgid "Skills guide the current chat; they do not add tools or authority."
+msgstr "Skills guide the current chat; they do not add tools or authority."
+
+msgid "Makes a read-only catalog request only after you select this item."
+msgstr "Makes a read-only catalog request only after you select this item."
+
+msgid "Gateway semantic operations · native HTTP"
+msgstr "Gateway semantic operations · native HTTP"
+
+msgid "One explicit read-only symbols/search request; this does not use MCP."
+msgstr "One explicit read-only symbols/search request; this does not use MCP."
+
+msgid "Semantic broker · choose folder and preview recipe"
+msgstr "Semantic broker · choose folder and preview recipe"
+
+msgid "Inspects the fixed ISyCo semantic broker recipe, checks a read grant for the chosen subtree, and shows a hashed, read-only plan. Docker is not started by this preview."
+msgstr "Inspects the fixed ISyCo semantic broker recipe, checks a read grant for the chosen subtree, and shows a hashed, read-only plan. Docker is not started by this preview."
+
+msgid "Build + Start semantic broker…"
+msgstr "Build + Start semantic broker…"
+
+msgid "Shows the exact recipe, network effects, root and sandbox; asks before Docker build/start, then verifies health on a loopback-only port."
+msgstr "Shows the exact recipe, network effects, root and sandbox; asks before Docker build/start, then verifies health on a loopback-only port."
+
+msgid "Open workspace file browser"
+msgstr "Open workspace file browser"
+
+msgid "Open provider selector"
+msgstr "Open provider selector"
+
+msgid "OAuth methods"
+msgstr "OAuth methods"
+
+msgid "/help"
+msgstr "/help"
+
+msgid "Opaque workspace match label; it does not grant access."
+msgstr "Opaque workspace match label; it does not grant access."
+
+msgid "Open Files view"
+msgstr "Open Files view"
+
+msgid "Current · {name} ({kind})"
+msgstr "Current · {name} ({kind})"
+
+msgid "Initialize this workspace's .isycode/"
+msgstr "Initialize this workspace's .isycode/"
+
+msgid "Keeps non-security preferences local; file writes still need a separate review."
+msgstr "Keeps non-security preferences local; file writes still need a separate review."
+
+msgid "Overrides personal defaults for this .isyroot only; permissions are unaffected."
+msgstr "Overrides personal defaults for this .isyroot only; permissions are unaffected."
+
+msgid "Copy legacy workspace commands…"
+msgstr "Copy legacy workspace commands…"
+
+msgid "Copies validated .isycode-commands/*.md files after diff approval; originals remain."
+msgstr "Copies validated .isycode-commands/*.md files after diff approval; originals remain."
+
+msgid "Authority & Security"
+msgstr "Authority & Security"
+
+msgid "Multi Harness · settings & repair Compose"
+msgstr "Multi Harness · settings & repair Compose"
+
+msgid "Named API keys"
+msgstr "Named API keys"
+
+msgid "Action journal · verify / inspect"
+msgstr "Action journal · verify / inspect"
+
+msgid "Choose context file (.md / .txt)"
+msgstr "Choose context file (.md / .txt)"
+
+msgid "Commands & shortcuts"
+msgstr "Commands & shortcuts"
+
+msgid "Workspace files"
+msgstr "Workspace files"
+
+msgid "Workspace folders & automatic edits"
+msgstr "Workspace folders & automatic edits"
+
+msgid "Clear selected role"
+msgstr "Clear selected role"
+
+msgid "Integrations · MCP, LSP, Gateway & remote access"
+msgstr "Integrations · MCP, LSP, Gateway & remote access"
+
+msgid "This folder has no .isyroot marker; preferences are not persisted here."
+msgstr "This folder has no .isyroot marker; preferences are not persisted here."
+
+msgid "Workspace preferences unavailable · {error}"
+msgstr "Workspace preferences unavailable · {error}"
+
+msgid "Initialize .isycode/ before saving preferences."
+msgstr "Initialize .isycode/ before saving preferences."
+
+msgid "Migration is available only in a workspace with its own .isyroot."
+msgstr "Migration is available only in a workspace with its own .isyroot."
+
+msgid "Migration unavailable · {error}"
+msgstr "Migration unavailable · {error}"
+
+msgid "Copy /{name} into .isycode/commands/"
+msgstr "Copy /{name} into .isycode/commands/"
+
+msgid "Browse"
+msgstr "Browse"
+
+msgid "Unavailable"
+msgstr "Unavailable"
+
+msgid "Default role · {name}"
+msgstr "Default role · {name}"
+
+msgid "Default role · none"
+msgstr "Default role · none"
+
+msgid "Use current role ({name}) as my default"
+msgstr "Use current role ({name}) as my default"
+
+msgid "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat"
+msgstr "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat"
+
+msgid "Load account models · {provider}"
+msgstr "Load account models · {provider}"
+
+msgid "Previously selected model; not verified against this account."
+msgstr "Previously selected model; not verified against this account."
+
+msgid "The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."
+msgstr "The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."
+
+msgid "Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."
+msgstr "Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."
+
+msgid "Loading account catalog…"
+msgstr "Loading account catalog…"
+
+msgid "No LSP servers detected"
+msgstr "No LSP servers detected"
+
+msgid "Install or configure a supported language server."
+msgstr "Install or configure a supported language server."
+
+msgid "Current Directory · {path}"
+msgstr "Current Directory · {path}"
+
+msgid "Provider · {name}"
+msgstr "Provider · {name}"
+
+msgid "Role · {name}"
+msgstr "Role · {name}"
+
+msgid "Workspace Root · {path}"
+msgstr "Workspace Root · {path}"
+
+msgid "Launch Directory · {path}"
+msgstr "Launch Directory · {path}"
+
+msgid "Root Source · {source}"
+msgstr "Root Source · {source}"
+
+msgid "Gateway Binding · {id}"
+msgstr "Gateway Binding · {id}"
+
+msgid "Current Folder · {path}"
+msgstr "Current Folder · {path}"
+
+msgid "Keyboard shortcuts"
+msgstr "Keyboard shortcuts"
+
+msgid "Commands"
+msgstr "Commands"
+
+msgid "{status} {alias} · {path}"
+msgstr "{status} {alias} · {path}"
+
+msgid "OFF · Security requires each review"
+msgstr "OFF · Security requires each review"
+
+msgid "Only file creation/edits. Authority and ISySentinel stay active."
+msgstr "Only file creation/edits. Authority and ISySentinel stay active."
+
+msgid "Files and standalone workspace settings are kept. This chat loses access."
+msgstr "Files and standalone workspace settings are kept. This chat loses access."
+
+msgid "Folder settings unavailable · {error}"
+msgstr "Folder settings unavailable · {error}"
+
+msgid "Recent · {provider} · {model}  · recent"
+msgstr "Recent · {provider} · {model}  · recent"
+
+msgid "Grant network access to {label} and load its real catalog"
+msgstr "Grant network access to {label} and load its real catalog"
+
+msgid "Current model {model} is not in the refreshed {label} catalog · still selected · choose a replacement explicitly"
+msgstr "Current model {model} is not in the refreshed {label} catalog · still selected · choose a replacement explicitly"
+
+msgid "  ⚠ no tools"
+msgstr "  ⚠ no tools"
+
+msgid "{count} unavailable in tested endpoint · retained in capability results"
+msgstr "{count} unavailable in tested endpoint · retained in capability results"
+
+msgid "Managed broker inventory unavailable"
+msgstr "Managed broker inventory unavailable"
+
+msgid "Private state could not be read; no Docker action is available."
+msgstr "Private state could not be read; no Docker action is available."
+
+msgid "Listed by the connected service; discovery does not authorize calls."
+msgstr "Listed by the connected service; discovery does not authorize calls."
+
+msgid "Add {name} preset"
+msgstr "Add {name} preset"
+
+msgid "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."
+msgstr "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."
+
+msgid "Detected executable only; no safe LSP execution adapter is connected for this server."
+msgstr "Detected executable only; no safe LSP execution adapter is connected for this server."
+
+msgid "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"
+msgstr "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"
+
+msgid "API key is stored outside this project."
+msgstr "API key is stored outside this project."
+
+msgid "Config ignored · {error}"
+msgstr "Config ignored · {error}"
+
+msgid "Config warning · {error}"
+msgstr "Config warning · {error}"
+
+msgid "Clear this workspace's default role"
+msgstr "Clear this workspace's default role"
+
+msgid "ON — dangerous; disable"
+msgstr "ON — dangerous; disable"
+
+msgid "OFF — enable…"
+msgstr "OFF — enable…"
+
+msgid "{alias} · automatic edits {state}"
+msgstr "{alias} · automatic edits {state}"
+
+msgid "Remove attachment · {alias}"
+msgstr "Remove attachment · {alias}"
+
+msgid "{name} · active"
+msgstr "{name} · active"
+
+msgid "{name} · discovered"
+msgstr "{name} · discovered"
+
+msgid "{label}  ·  {model}  ◂ current  · preset"
+msgstr "{label}  ·  {model}  ◂ current  · preset"
+
+msgid "{label}  ·  {model}  · preset"
+msgstr "{label}  ·  {model}  · preset"
+
+msgid "{label}  ·  {model}{marker}  · catalog"
+msgstr "{label}  ·  {model}{marker}  · catalog"
+
+msgid "Manage broker · {name} · {status}"
+msgstr "Manage broker · {name} · {status}"
+
+msgid "{name}  ·  {status}"
+msgstr "{name}  ·  {status}"
+
+msgid "Configured services · {state}"
+msgstr "Configured services · {state}"
+
+msgid "ISyCo Gateway · {name}"
+msgstr "ISyCo Gateway · {name}"
+
+msgid "ISyCo Gateway MCP · {state}"
+msgstr "ISyCo Gateway MCP · {state}"
+
+msgid "{label} · {status}"
+msgstr "{label} · {status}"
+
+msgid "Sidebar"
+msgstr "Sidebar"
+
+msgid "Sessions"
+msgstr "Sessions"
+
+msgid "Multi Harness"
+msgstr "Multi Harness"
+
+msgid "Providers"
+msgstr "Providers"
+
+msgid "Role"
+msgstr "Role"
+
+msgid "Inject context"
+msgstr "Inject context"
+
+msgid "Model ▾"
+msgstr "Model ▾"
+
+msgid "Save key"
+msgstr "Save key"
+
+msgid "Use {name} as this workspace's default role"
+msgstr "Use {name} as this workspace's default role"
+
+msgid "workspace symbol search"
+msgstr "workspace symbol search"
+
+msgid "Settings · Authority & Security"
+msgstr "Settings · Authority & Security"
+
+msgid "Security · Action journal (read-only)"
+msgstr "Security · Action journal (read-only)"
+
+msgid "Choose what ISyCode can do in this workspace. Everything else stays off."
+msgstr "Choose what ISyCode can do in this workspace. Everything else stays off."
+
+msgid "Some actions ask again before they run, even when turned on. Press ? on any option to see what it does."
+msgstr "Some actions ask again before they run, even when turned on. Press ? on any option to see what it does."
+
+msgid "Check ISyCo Gateway"
+msgstr "Check ISyCo Gateway"
+
+msgid "Checks whether your local ISyCo Gateway is available."
+msgstr "Checks whether your local ISyCo Gateway is available."
+
+msgid "Find Gateway tools"
+msgstr "Find Gateway tools"
+
+msgid "Shows which extra tools the Gateway offers. Finding a tool does not run it."
+msgstr "Shows which extra tools the Gateway offers. Finding a tool does not run it."
+
+msgid "Search and understand code with Gateway"
+msgstr "Search and understand code with Gateway"
+
+msgid "Sends a search you review first. Each search asks for approval before it runs."
+msgstr "Sends a search you review first. Each search asks for approval before it runs."
+
+msgid "Protection is always on"
+msgstr "Protection is always on"
+
+msgid "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, and sensitive actions still ask you first."
+msgstr "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, and sensitive actions still ask you first."
+
+msgid "File edits follow folder approval settings; other changes always ask."
+msgstr "File edits follow folder approval settings; other changes always ask."
+
+msgid "Turning a permission on lets the assistant propose that kind of action. Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."
+msgstr "Turning a permission on lets the assistant propose that kind of action. Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."
+
+msgid "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, and sandboxed commands where supported. Each edit, delete/move, command and commit still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."
+msgstr "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, and sandboxed commands where supported. Each edit, delete/move, command and commit still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."
+
+msgid "Turn on all coding tools…"
+msgstr "Turn on all coding tools…"
+
+msgid "One step for read, search, edit, move, delete, undo, sandboxed commands, git and Python checks (whatever this computer supports). Each change, command and commit still asks you first, and IsySentinel still checks every action."
+msgstr "One step for read, search, edit, move, delete, undo, sandboxed commands, git and Python checks (whatever this computer supports). Each change, command and commit still asks you first, and IsySentinel still checks every action."
+
+msgid "Read and search workspace files"
+msgstr "Read and search workspace files"
+
+msgid "Lets ISyCode list, read, and find files here. It cannot change or delete them."
+msgstr "Lets ISyCode list, read, and find files here. It cannot change or delete them."
+
+msgid "Edit workspace files · folder approval settings apply"
+msgstr "Edit workspace files · folder approval settings apply"
+
+msgid "The assistant can propose creating, changing, moving and deleting files here. You see the diff unless this folder is trusted for quiet Classic, or automatic edits are on. A trusted folder still stays inside the effect budget. /undo reverts the last change. Sensitive files stay off-limits."
+msgstr "The assistant can propose creating, changing, moving and deleting files here. You see the diff unless this folder is trusted for quiet Classic, or automatic edits are on. A trusted folder still stays inside the effect budget. /undo reverts the last change. Sensitive files stay off-limits."
+
+msgid "Copy selected text to the clipboard"
+msgstr "Copy selected text to the clipboard"
+
+msgid "Selecting text with the mouse (or Ctrl+C on a selection, or Copy path) copies it. Only your own gesture copies; the assistant cannot. The journal records the size, never the text. API keys are never copied."
+msgstr "Selecting text with the mouse (or Ctrl+C on a selection, or Copy path) copies it. Only your own gesture copies; the assistant cannot. The journal records the size, never the text. API keys are never copied."
+
+msgid "Read public web pages"
+msgstr "Read public web pages"
+
+msgid "Read-only HTTPS; no credentials, private hosts or redirects. Each new host asks first."
+msgstr "Read-only HTTPS; no credentials, private hosts or redirects. Each new host asks first."
+
+msgid "Browse optional integrations"
+msgstr "Browse optional integrations"
+
+msgid "Reads the optional integrations list. It does not enable their tools."
+msgstr "Reads the optional integrations list. It does not enable their tools."
+
+msgid "Allow git commits in this workspace?"
+msgstr "Allow git commits in this workspace?"
+
+msgid "Turn off git commits?"
+msgstr "Turn off git commits?"
+
+msgid "Let ISyCode see git status and diffs?"
+msgstr "Let ISyCode see git status and diffs?"
+
+msgid "Hide git status and diffs?"
+msgstr "Hide git status and diffs?"
+
+msgid "JOURNAL_INVALID · verifier unavailable"
+msgstr "JOURNAL_INVALID · verifier unavailable"
+
+msgid "Save conversations in this workspace"
+msgstr "Save conversations in this workspace"
+
+msgid "Keeps this workspace's chats in your private ISyCode state folder, outside the project, so you can resume them. Common secrets are redacted before saving."
+msgstr "Keeps this workspace's chats in your private ISyCode state folder, outside the project, so you can resume them. Common secrets are redacted before saving."
+
+msgid "Save conversations · recurring workspaces only"
+msgstr "Save conversations · recurring workspaces only"
+
+msgid "Temporary runs never keep chat history."
+msgstr "Temporary runs never keep chat history."
+
+msgid "See git status and diffs"
+msgstr "See git status and diffs"
+
+msgid "Lets the assistant see the branch, changed files and diffs. Sensitive files stay hidden, and repositories that configure their own programs are refused."
+msgstr "Lets the assistant see the branch, changed files and diffs. Sensitive files stay hidden, and repositories that configure their own programs are refused."
+
+msgid "Create git commits · asks before every commit"
+msgstr "Create git commits · asks before every commit"
+
+msgid "The assistant can propose a commit. You review the exact files, message and diff. Hooks never run and nothing is pushed."
+msgstr "The assistant can propose a commit. You review the exact files, message and diff. Hooks never run and nothing is pushed."
+
+msgid "Run commands in a sandbox"
+msgstr "Run commands in a sandbox"
+
+msgid "The assistant can propose programs like tests or a build. Each exact command asks unless this folder is trusted for quiet Classic. It runs without network, with sensitive files hidden, and can only change files inside this workspace. There is no unsandboxed fallback."
+msgstr "The assistant can propose programs like tests or a build. Each exact command asks unless this folder is trusted for quiet Classic. It runs without network, with sensitive files hidden, and can only change files inside this workspace. There is no unsandboxed fallback."
+
+msgid "Run commands · sandbox not available on this computer"
+msgstr "Run commands · sandbox not available on this computer"
+
+msgid "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off. There is no unsandboxed fallback."
+msgstr "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off. There is no unsandboxed fallback."
+
+msgid "Connect to the selected AI model"
+msgstr "Connect to the selected AI model"
+
+msgid "Sends your messages to the model you chose. A saved API key is kept separately."
+msgstr "Sends your messages to the model you chose. A saved API key is kept separately."
+
+msgid "Model connection · not ready yet"
+msgstr "Model connection · not ready yet"
+
+msgid "Choose a model provider in Settings first."
+msgstr "Choose a model provider in Settings first."
+
+msgid "Run a Gateway tool"
+msgstr "Run a Gateway tool"
+
+msgid "You will review the tool and its details, then approve each run separately."
+msgstr "You will review the tool and its details, then approve each run separately."
+
+msgid "Local code help"
+msgstr "Local code help"
+
+msgid "Uses the protected language helper to find code symbols on this computer."
+msgstr "Uses the protected language helper to find code symbols on this computer."
+
+msgid "Check Python files after edits"
+msgstr "Check Python files after edits"
+
+msgid "After you apply a change to a .py file, the protected Pyright helper reports errors and warnings to you and to the assistant. It cannot change files."
+msgstr "After you apply a change to a .py file, the protected Pyright helper reports errors and warnings to you and to the assistant. It cannot change files."
+
+msgid "Web pages · asks for each new host"
+msgstr "Web pages · asks for each new host"
+
+msgid "The webfetch tool requests a separate bounded host grant before reading a public HTTPS page."
+msgstr "The webfetch tool requests a separate bounded host grant before reading a public HTTPS page."
+
+msgid "Optional integrations · not set up"
+msgstr "Optional integrations · not set up"
+
+msgid "You can connect these later from Settings."
+msgstr "You can connect these later from Settings."
+
+msgid "Lets ISyCode start the loopback Mobile Host at {address} and accept one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; they cannot read files, run tools, or open sessions. Starting still asks first."
+msgstr "Lets ISyCode start the loopback Mobile Host at {address} and accept one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; they cannot read files, run tools, or open sessions. Starting still asks first."
+
+msgid "— Other saved permissions —"
+msgstr "— Other saved permissions —"
+
+msgid "Every other permission saved for this workspace."
+msgstr "Every other permission saved for this workspace."
+
+msgid "blocked · no Secure owner · saved grant ignored"
+msgstr "blocked · no Secure owner · saved grant ignored"
+
+msgid "Protection settings are unavailable · everything stays off"
+msgstr "Protection settings are unavailable · everything stays off"
+
+msgid "{label} · not ready yet"
+msgstr "{label} · not ready yet"
+
+msgid "Integrity · {status} · {records} records · {decisions} decisions · {receipts} receipts"
+msgstr "Integrity · {status} · {records} records · {decisions} decisions · {receipts} receipts"
+
+msgid "No durable decisions recorded for this workspace"
+msgstr "No durable decisions recorded for this workspace"
+
+msgid "Delete current conversation · asks every time"
+msgstr "Delete current conversation · asks every time"
+
+msgid "Lets you delete the saved conversation that is open right now. The permission covers only that conversation, and each deletion still asks you."
+msgstr "Lets you delete the saved conversation that is open right now. The permission covers only that conversation, and each deletion still asks you."
+
+msgid "Delete a conversation · open a saved one first"
+msgstr "Delete a conversation · open a saved one first"
+
+msgid "Deleting works one conversation at a time. Open a saved conversation from Sessions, then come back here to allow deleting that one."
+msgstr "Deleting works one conversation at a time. Open a saved conversation from Sessions, then come back here to allow deleting that one."
+
+msgid "Gateway tools · not ready yet"
+msgstr "Gateway tools · not ready yet"
+
+msgid "Finish setting up the local Gateway connection first."
+msgstr "Finish setting up the local Gateway connection first."
+
+msgid "Local code help · not ready yet"
+msgstr "Local code help · not ready yet"
+
+msgid "ISyCode will show this as an option when its protected helper is ready."
+msgstr "ISyCode will show this as an option when its protected helper is ready."
+
+msgid "Read-only local symbols; each request is reviewed before its protected process starts."
+msgstr "Read-only local symbols; each request is reviewed before its protected process starts."
+
+msgid "ON · asks before each use"
+msgstr "ON · asks before each use"
+
+msgid "ON"
+msgstr "ON"
+
+msgid "{label} · {state}"
+msgstr "{label} · {state}"
+
+msgid "Scope: {scope}. Select to remove this saved permission."
+msgstr "Scope: {scope}. Select to remove this saved permission."
+
+msgid "NOT_VERIFIABLE · {count} records lack an owner identity"
+msgstr "NOT_VERIFIABLE · {count} records lack an owner identity"
+
+msgid "Cancel review"
+msgstr "Cancel review"
+
+msgid "Iterate with this review"
+msgstr "Iterate with this review"
+
+msgid "Select provider"
+msgstr "Select provider"
+
+msgid "xAI · use Grok in ISyCode"
+msgstr "xAI · use Grok in ISyCode"
+
+msgid "OpenAI · choose connection method"
+msgstr "OpenAI · choose connection method"
+
+msgid "Settings · API keys"
+msgstr "Settings · API keys"
+
+msgid "Models"
+msgstr "Models"
+
+msgid "Models · account catalog"
+msgstr "Models · account catalog"
+
+msgid "Add an ISyCo Gateway key · asks first"
+msgstr "Add an ISyCo Gateway key · asks first"
+
+msgid "Default · provider decides"
+msgstr "Default · provider decides"
+
+msgid "Reasoning · {model}"
+msgstr "Reasoning · {model}"
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Models · {family}"
+msgstr "Models · {family}"
+
+msgid "— Additional provider accounts —"
+msgstr "— Additional provider accounts —"
+
+msgid "API key · console.x.ai"
+msgstr "API key · console.x.ai"
+
+msgid "Saved in the OS keyring. Chat goes to api.x.ai."
+msgstr "Saved in the OS keyring. Chat goes to api.x.ai."
+
+msgid "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."
+msgstr "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."
+
+msgid "Sign in with device code"
+msgstr "Sign in with device code"
+
+msgid "Sign in with browser"
+msgstr "Sign in with browser"
+
+msgid "The sign-in stays in the grok CLI. ISyCode does not copy the token into the project."
+msgstr "The sign-in stays in the grok CLI. ISyCode does not copy the token into the project."
+
+msgid "Manually enter API key · separate API quota"
+msgstr "Manually enter API key · separate API quota"
+
+msgid "ChatGPT Pro/Plus · browser"
+msgstr "ChatGPT Pro/Plus · browser"
+
+msgid "ChatGPT Pro/Plus · headless/device code"
+msgstr "ChatGPT Pro/Plus · headless/device code"
+
+msgid "Use saved ChatGPT sign-in · checked on request"
+msgstr "Use saved ChatGPT sign-in · checked on request"
+
+msgid "Disconnect ChatGPT account…"
+msgstr "Disconnect ChatGPT account…"
+
+msgid "Subscription needs official Codex CLI and an unlocked OS keyring. Plan limits apply."
+msgstr "Subscription needs official Codex CLI and an unlocked OS keyring. Plan limits apply."
+
+msgid "Saved in your OS keyring for your user; never in the project or logs."
+msgstr "Saved in your OS keyring for your user; never in the project or logs."
+
+msgid "Loading models from the selected provider…"
+msgstr "Loading models from the selected provider…"
+
+msgid "needs {env}"
+msgstr "needs {env}"
+
+msgid "  ← currently active"
+msgstr "  ← currently active"
+
+msgid "  ·  {blurb}"
+msgstr "  ·  {blurb}"
+
+msgid "This account is not connected to ISyCode inference yet."
+msgstr "This account is not connected to ISyCode inference yet."
+
+msgid "Additional provider catalog · {state}"
+msgstr "Additional provider catalog · {state}"
+
+msgid "Use Grok sign-in · {note}"
+msgstr "Use Grok sign-in · {note}"
+
+msgid "Add a key for {name} · asks first"
+msgstr "Add a key for {name} · asks first"
+
+msgid "Credential vault unavailable"
+msgstr "Credential vault unavailable"
+
+msgid "Check the user-private state directory and permissions."
+msgstr "Check the user-private state directory and permissions."
+
+msgid "Each use is decided and recorded in this workspace's action journal."
+msgstr "Each use is decided and recorded in this workspace's action journal."
+
+msgid "Provider credential configuration could not be loaded."
+msgstr "Provider credential configuration could not be loaded."
+
+msgid "Language preference could not be saved"
+msgstr "Language preference could not be saved"
+
+msgid "{mark}  {label}{note}"
+msgstr "{mark}  {label}{note}"
+
+msgid "{blurb}. {status}. Default model: {default}"
+msgstr "{blurb}. {status}. Default model: {default}"
+
+msgid "·  {label}  ·  {blurb}"
+msgstr "·  {label}  ·  {blurb}"
+
+msgid "ISyCode does not yet have an authorization flow for this provider."
+msgstr "ISyCode does not yet have an authorization flow for this provider."
+
+msgid "OAuth discovery · {state}"
+msgstr "OAuth discovery · {state}"
+
+msgid "Allow using the saved {name} key here · asks first"
+msgstr "Allow using the saved {name} key here · asks first"
+
+msgid "{name}  ·  {service}  ·  removed"
+msgstr "{name}  ·  {service}  ·  removed"
+
+msgid "Purpose: {purpose}"
+msgstr "Purpose: {purpose}"
+
+msgid "{name}  ·  {service}  ·  saved · value hidden · select to remove"
+msgstr "{name}  ·  {service}  ·  saved · value hidden · select to remove"
+
+msgid "Configure {env} before listing account models."
+msgstr "Configure {env} before listing account models."
+
+msgid "Model catalog unavailable ({error}); current selection is unchanged."
+msgstr "Model catalog unavailable ({error}); current selection is unchanged."
+
+msgid "{name}  ·  OAuth available, not connected"
+msgstr "{name}  ·  OAuth available, not connected"
+
+msgid "Provider model request {decision}."
+msgstr "Provider model request {decision}."
+
+msgid "The provider returned an empty model catalog."
+msgstr "The provider returned an empty model catalog."
+
+msgid "Open this family's variants."
+msgstr "Open this family's variants."
+
+msgid "▸ {family} · {count} models"
+msgstr "▸ {family} · {count} models"
+
+msgid "Settings · Private access"
+msgstr "Settings · Private access"
+
+msgid "Private access · Authority grants"
+msgstr "Private access · Authority grants"
+
+msgid "Settings · Bridge coordination"
+msgstr "Settings · Bridge coordination"
+
+msgid "Settings · Mobile host"
+msgstr "Settings · Mobile host"
+
+msgid "Blocked · no registered action owner"
+msgstr "Blocked · no registered action owner"
+
+msgid "Bridge leases are coordination signals, never Workspace Authority grants. Secure does not run hello, heartbeat, peek, send, lease, or wake until each path has an owner and gate."
+msgstr "Bridge leases are coordination signals, never Workspace Authority grants. Secure does not run hello, heartbeat, peek, send, lease, or wake until each path has an owner and gate."
+
+msgid "Checking local Tailscale status…"
+msgstr "Checking local Tailscale status…"
+
+msgid "Permissions and authority…"
+msgstr "Permissions and authority…"
+
+msgid "Refresh status"
+msgstr "Refresh status"
+
+msgid "Manual setup steps"
+msgstr "Manual setup steps"
+
+msgid "Tailscale · {status}"
+msgstr "Tailscale · {status}"
+
+msgid "Grant read-only Tailscale inventory"
+msgstr "Grant read-only Tailscale inventory"
+
+msgid "No supported Tailscale CLI or apt-get was found."
+msgstr "No supported Tailscale CLI or apt-get was found."
+
+msgid "New pairing PIN · asks first"
+msgstr "New pairing PIN · asks first"
+
+msgid "Replaces the current PIN and clears failed attempts. Needs the Mobile Host grant."
+msgstr "Replaces the current PIN and clears failed attempts. Needs the Mobile Host grant."
+
+msgid "Refresh host status"
+msgstr "Refresh host status"
+
+msgid "Start Mobile Host · local approval required"
+msgstr "Start Mobile Host · local approval required"
+
+msgid "Listener stopped · no pairing credentials issued"
+msgstr "Listener stopped · no pairing credentials issued"
+
+msgid "Route stays on after ISyCode exits · {url}"
+msgstr "Route stays on after ISyCode exits · {url}"
+
+msgid "Manual installation steps"
+msgstr "Manual installation steps"
+
+msgid "This permission is scoped to this workspace and exact executable. Mutations still need a fresh approval."
+msgstr "This permission is scoped to this workspace and exact executable. Mutations still need a fresh approval."
+
+msgid "Authority policy unavailable · all actions deny"
+msgstr "Authority policy unavailable · all actions deny"
+
+msgid "Host alive · http://{address}:{port}"
+msgstr "Host alive · http://{address}:{port}"
+
+msgid "One device exchange; token expires in one hour."
+msgstr "One device exchange; token expires in one hour."
+
+msgid "Install Tailscale · supported Ubuntu/Debian · three approvals"
+msgstr "Install Tailscale · supported Ubuntu/Debian · three approvals"
+
+msgid "Automated installation unavailable on this system"
+msgstr "Automated installation unavailable on this system"
+
+msgid "ISyCode automates only the reviewed Ubuntu/Debian package transaction."
+msgstr "ISyCode automates only the reviewed Ubuntu/Debian package transaction."
+
+msgid "{verb} {action} · {executable}"
+msgstr "{verb} {action} · {executable}"
+
+msgid "Pairing PIN · {pin} · expires in 5 minutes"
+msgstr "Pairing PIN · {pin} · expires in 5 minutes"
+
+msgid "Use the official manual instructions; ISyCode will not run an unverified installer."
+msgstr "Use the official manual instructions; ISyCode will not run an unverified installer."
+
+msgid "Log in to this tailnet…"
+msgstr "Log in to this tailnet…"
+
+msgid "Check browser login status"
+msgstr "Check browser login status"
+
+msgid "Cancel local login process"
+msgstr "Cancel local login process"
+
+msgid "Disable ISyCode Mobile Host route…"
+msgstr "Disable ISyCode Mobile Host route…"
+
+msgid "Revoke"
+msgstr "Revoke"
+
+msgid "Grant"
+msgstr "Grant"
+
+msgid "Enable private Mobile Host route…"
+msgstr "Enable private Mobile Host route…"
+
+msgid "Serve inventory is unavailable or conflicting"
+msgstr "Serve inventory is unavailable or conflicting"
+
+msgid "ISyCode will not change unknown or conflicting Serve configuration."
+msgstr "ISyCode will not change unknown or conflicting Serve configuration."
+
+msgid "Conversations"
+msgstr "Conversations"
+
+msgid "this conversation"
+msgstr "this conversation"
+
+msgid "Start a new conversation"
+msgstr "Start a new conversation"
+
+msgid "{title} · {count} messages · {when} · current"
+msgstr "{title} · {count} messages · {when} · current"
+
+msgid "{title} · {count} messages · {when}"
+msgstr "{title} · {count} messages · {when}"
+
+msgid "No saved conversations yet"
+msgstr "No saved conversations yet"
+
+msgid "Skills"
+msgstr "Skills"
+
+msgid "MCP"
+msgstr "MCP"
+
+msgid "Load workspace AGENTS.md"
+msgstr "Load workspace AGENTS.md"
+
+msgid "Reads only this workspace's AGENTS.md through its read permission."
+msgstr "Reads only this workspace's AGENTS.md through its read permission."
+
+msgid "Choose a document here or in a sibling project; external files ask for explicit permission."
+msgstr "Choose a document here or in a sibling project; external files ask for explicit permission."
+
+msgid "Context · workspace documents"
+msgstr "Context · workspace documents"
+
+msgid "Context: {name}"
+msgstr "Context: {name}"
+
+msgid "Remove injected context"
+msgstr "Remove injected context"
+
+msgid "Enter / Space / double-click expand"
+msgstr "Enter / Space / double-click expand"
+
+msgid "Queued"
+msgstr "Queued"
+
+msgid "Delete this iteration?"
+msgstr "Delete this iteration?"
+
+msgid "Delete iteration · y"
+msgstr "Delete iteration · y"
+
+msgid "This permanently removes this one iteration ledger."
+msgstr "This permanently removes this one iteration ledger."
+
+msgid "Delete this conversation?"
+msgstr "Delete this conversation?"
+
+msgid "Delete conversation · y"
+msgstr "Delete conversation · y"
+
+msgid "This permanently removes this one transcript."
+msgstr "This permanently removes this one transcript."
+
+msgid "Undo · move back"
+msgstr "Undo · move back"
+
+msgid "Move file"
+msgstr "Move file"
+
+msgid "Delete file"
+msgstr "Delete file"
+
+msgid "External model review · GPT 6 Luna · OpenAI API"
+msgstr "External model review · GPT 6 Luna · OpenAI API"
+
+msgid "Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."
+msgstr "Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."
+
+msgid "Remember permission for this exact file"
+msgstr "Remember permission for this exact file"
+
+msgid "Workspace context pack · review before reading"
+msgstr "Workspace context pack · review before reading"
+
+msgid "{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion."
+msgstr "{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion."
+
+msgid "Send this text"
+msgstr "Send this text"
+
+msgid "No · n"
+msgstr "No · n"
+
+msgid "Allow once · y"
+msgstr "Allow once · y"
+
+msgid "Cancel · n"
+msgstr "Cancel · n"
+
+msgid "{label} · y"
+msgstr "{label} · y"
+
+msgid "Undo · remove file"
+msgstr "Undo · remove file"
+
+msgid "Undo · restore file"
+msgstr "Undo · restore file"
+
+msgid "Create new file"
+msgstr "Create new file"
+
+msgid "Reject · n"
+msgstr "Reject · n"
+
+msgid "Apply change · y"
+msgstr "Apply change · y"
+
+msgid "Reject all · n"
+msgstr "Reject all · n"
+
+msgid "Review each · e"
+msgstr "Review each · e"
+
+msgid "Approve all {count} · a"
+msgstr "Approve all {count} · a"
+
+msgid "Run command · y"
+msgstr "Run command · y"
+
+msgid "Commit · y"
+msgstr "Commit · y"
+
+msgid "Read and send once · y"
+msgstr "Read and send once · y"
+
+msgid "Approve once · y"
+msgstr "Approve once · y"
+
+msgid "Keep · n"
+msgstr "Keep · n"
+
+msgid "Replace whole file"
+msgstr "Replace whole file"
+
+msgid "Change file"
+msgstr "Change file"
+
+msgid "Trust folder this session · s"
+msgstr "Trust folder this session · s"
+
+msgid "Always allow…"
+msgstr "Always allow…"
+
+msgid "Caution: {reason}. A marker here would make every folder below it without its own .isyroot share this workspace's grants and sessions. Your 'recurring' default is not applied here.\n\n"
+msgstr "Caution: {reason}. A marker here would make every folder below it without its own .isyroot share this workspace's grants and sessions. Your 'recurring' default is not applied here.\n\n"
+
+msgid "Your provider key is already in the environment, so chat works right away."
+msgstr "Your provider key is already in the environment, so chat works right away."
+
+msgid "No provider key detected yet; you can add one later in Settings → Providers."
+msgstr "No provider key detected yet; you can add one later in Settings → Providers."
+
+msgid "ISyCode will stop listing, reading, and searching files in this workspace. Your files and conversations stay where they are."
+msgstr "ISyCode will stop listing, reading, and searching files in this workspace. Your files and conversations stay where they are."
+
+msgid "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md to understand your project. It cannot edit or delete files, run commands, or access folders outside this workspace. You will still be asked before sensitive actions."
+msgstr "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md to understand your project. It cannot edit or delete files, run commands, or access folders outside this workspace. You will still be asked before sensitive actions."
+
+msgid "Set up this workspace?"
+msgstr "Set up this workspace?"
+
+msgid "Launch directory:\n{path}\n\n{warning}If this is a recurring project, Yes creates an empty .isyroot here and saves chat sessions in your private ISyCode state directory. .isyroot identifies the workspace; it does not grant filesystem access. Not now keeps this run temporary, and its chat history is removed when ISyCode exits."
+msgstr "Launch directory:\n{path}\n\n{warning}If this is a recurring project, Yes creates an empty .isyroot here and saves chat sessions in your private ISyCode state directory. .isyroot identifies the workspace; it does not grant filesystem access. Not now keeps this run temporary, and its chat history is removed when ISyCode exits."
+
+msgid "Use recurring mode for new folders?"
+msgstr "Use recurring mode for new folders?"
+
+msgid "When ISyCode first opens a folder without a saved choice, it will create an empty .isyroot marker there. This remembers the workspace identity only; it does not grant file access or copy permissions from another workspace. Broad folders such as your home directory, its parents, the temporary directory, or a mount point still ask first, so unrelated projects never share one workspace by accident."
+msgstr "When ISyCode first opens a folder without a saved choice, it will create an empty .isyroot marker there. This remembers the workspace identity only; it does not grant file access or copy permissions from another workspace. Broad folders such as your home directory, its parents, the temporary directory, or a mount point still ask first, so unrelated projects never share one workspace by accident."
+
+msgid "Welcome to ISyCode · how do you want to start?"
+msgstr "Welcome to ISyCode · how do you want to start?"
+
+msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
+msgstr "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
+
+msgid "How should ISyCode work in this folder?"
+msgstr "How should ISyCode work in this folder?"
+
+msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
+msgstr "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
+
+msgid "Allow semantic broker preview?"
+msgstr "Allow semantic broker preview?"
+
+msgid "Add a named API key"
+msgstr "Add a named API key"
+
+msgid "Saved in the operating system keyring and never shown after saving. Use service id `isyco-gateway` to supply the Gateway MCP."
+msgstr "Saved in the operating system keyring and never shown after saving. Use service id `isyco-gateway` to supply the Gateway MCP."
+
+msgid "Yes · recurring workspace"
+msgstr "Yes · recurring workspace"
+
+msgid "No · temporary run"
+msgstr "No · temporary run"
+
+msgid "Yes, remember this workspace"
+msgstr "Yes, remember this workspace"
+
+msgid "No, keep it temporary"
+msgstr "No, keep it temporary"
+
+msgid "Use for new folders · y"
+msgstr "Use for new folders · y"
+
+msgid "Quick Start · ready in under a minute"
+msgstr "Quick Start · ready in under a minute"
+
+msgid "Custom setup · choose each step"
+msgstr "Custom setup · choose each step"
+
+msgid "Classic · Ready To Use"
+msgstr "Classic · Ready To Use"
+
+msgid "Security · everything off until I allow it"
+msgstr "Security · everything off until I allow it"
+
+msgid "Turn off file reading?"
+msgstr "Turn off file reading?"
+
+msgid "Allow ISyCode to read workspace files?"
+msgstr "Allow ISyCode to read workspace files?"
+
+msgid "Turn off this option?"
+msgstr "Turn off this option?"
+
+msgid "Turn on this option?"
+msgstr "Turn on this option?"
+
+msgid "Turn off Gateway tools?"
+msgstr "Turn off Gateway tools?"
+
+msgid "Allow Gateway tools?"
+msgstr "Allow Gateway tools?"
+
+msgid "Turn off local code help?"
+msgstr "Turn off local code help?"
+
+msgid "Allow local code help?"
+msgstr "Allow local code help?"
+
+msgid "Grant preview · y"
+msgstr "Grant preview · y"
+
+msgid "Name shown in Settings"
+msgstr "Name shown in Settings"
+
+msgid "Service id, e.g. isyco-gateway"
+msgstr "Service id, e.g. isyco-gateway"
+
+msgid "Purpose / where this key is used"
+msgstr "Purpose / where this key is used"
+
+msgid "Turn off · y"
+msgstr "Turn off · y"
+
+msgid "Turn on · y"
+msgstr "Turn on · y"
+
+msgid "Copy reviewed Compose"
+msgstr "Copy reviewed Compose"
+
+msgid "Back · Esc"
+msgstr "Back · Esc"
+
+msgid "MULTI HARNESS  /  FIELD NOTES"
+msgstr "MULTI HARNESS  /  FIELD NOTES"
+
+msgid "Use folder"
+msgstr "Use folder"
+
+msgid "Save selection"
+msgstr "Save selection"
+
+msgid "Copy transcript"
+msgstr "Copy transcript"
+
+msgid "Find a model, id or family…"
+msgstr "Find a model, id or family…"
+
+msgid "Conversations  0"
+msgstr "Conversations  0"
+
+msgid "Copy model"
+msgstr "Copy model"
+
+msgid "No models listed for this provider yet · refresh its account catalog."
+msgstr "No models listed for this provider yet · refresh its account catalog."
+
+msgid "Choose folder…"
+msgstr "Choose folder…"
+
+msgid "Prepare repair Compose"
+msgstr "Prepare repair Compose"
+
+msgid "Refresh account catalog · "
+msgstr "Refresh account catalog · "
+
+msgid "Enter a JSON object; arguments are not sent until the next confirmation."
+msgstr "Enter a JSON object; arguments are not sent until the next confirmation."
+
+msgid "ISyCo Gateway · semantic operations"
+msgstr "ISyCo Gateway · semantic operations"
+
+msgid "Operation payload · JSON (fields are validated for the selected operation)"
+msgstr "Operation payload · JSON (fields are validated for the selected operation)"
+
+msgid "Confirm local LSP search"
+msgstr "Confirm local LSP search"
+
+msgid "Review semantic broker build + start"
+msgstr "Review semantic broker build + start"
+
+msgid "Manage semantic broker"
+msgstr "Manage semantic broker"
+
+msgid "Discovered input schema\n"
+msgstr "Discovered input schema\n"
+
+msgid "Review call…"
+msgstr "Review call…"
+
+msgid "Approve once and invoke · y"
+msgstr "Approve once and invoke · y"
+
+msgid "Review request…"
+msgstr "Review request…"
+
+msgid "Approve once and run · y"
+msgstr "Approve once and run · y"
+
+msgid "Symbol name…"
+msgstr "Symbol name…"
+
+msgid "Review search…"
+msgstr "Review search…"
+
+msgid "Approve once and search · y"
+msgstr "Approve once and search · y"
+
+msgid "Approve · Build + Start · y"
+msgstr "Approve · Build + Start · y"
+
+msgid "Health"
+msgstr "Health"
+
+msgid "Logs…"
+msgstr "Logs…"
+
+msgid "Start…"
+msgstr "Start…"
+
+msgid "Stop…"
+msgstr "Stop…"
+
+msgid "Remove…"
+msgstr "Remove…"
+
+msgid "Idea box · full note"
+msgstr "Idea box · full note"
+
+msgid "Close · Esc"
+msgstr "Close · Esc"
+
+msgid "ShellBox · sandbox processes · session lifetime"
+msgstr "ShellBox · sandbox processes · session lifetime"
+
+msgid "Read Bridge presence?"
+msgstr "Read Bridge presence?"
+
+msgid "This lists recent agent names only. It does not connect, claim a lease, send a message, or wake anyone. One confirmation, nothing remembered."
+msgstr "This lists recent agent names only. It does not connect, claim a lease, send a message, or wake anyone. One confirmation, nothing remembered."
+
+msgid "No matching conversations"
+msgstr "No matching conversations"
+
+msgid "Rename conversation"
+msgstr "Rename conversation"
+
+msgid "Search all conversations"
+msgstr "Search all conversations"
+
+msgid "Find in console"
+msgstr "Find in console"
+
+msgid "Type to search the current console"
+msgstr "Type to search the current console"
+
+msgid "Session changed elsewhere"
+msgstr "Session changed elsewhere"
+
+msgid "Select a process to inspect its output."
+msgstr "Select a process to inspect its output."
+
+msgid "Stop selected"
+msgstr "Stop selected"
+
+msgid "Read names"
+msgstr "Read names"
+
+msgid "Search titles and transcript…"
+msgstr "Search titles and transcript…"
+
+msgid "New session"
+msgstr "New session"
+
+msgid "Rename"
+msgstr "Rename"
+
+msgid "Fork"
+msgstr "Fork"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Conversation name"
+msgstr "Conversation name"
+
+msgid "Save name"
+msgstr "Save name"
+
+msgid "Type terms found in any title or message…"
+msgstr "Type terms found in any title or message…"
+
+msgid "Search this conversation…"
+msgstr "Search this conversation…"
+
+msgid "↑ Previous"
+msgstr "↑ Previous"
+
+msgid "Next ↓"
+msgstr "Next ↓"
+
+msgid "Save mine as a new conversation (Fork: …) · the saved one stays as it is"
+msgstr "Save mine as a new conversation (Fork: …) · the saved one stays as it is"
+
+msgid "Open the saved version · what exists only in this window is discarded"
+msgstr "Open the saved version · what exists only in this window is discarded"
+
+msgid "Continue without saving · Esc · nothing is written until you choose"
+msgstr "Continue without saving · Esc · nothing is written until you choose"
+
+msgid "No pending messages."
+msgstr "No pending messages."
+
+msgid "No captured ideas."
+msgstr "No captured ideas."
+
+msgid "Your answer"
+msgstr "Your answer"
+
+msgid "Send"
+msgstr "Send"
+
+msgid "Remove from draft"
+msgstr "Remove from draft"
+
+msgid "Remove pending message"
+msgstr "Remove pending message"
+
+msgid "Promote to message queue"
+msgstr "Promote to message queue"
+
+msgid "Discard idea"
+msgstr "Discard idea"
+
+msgid "ISYCODE  ·  WORKSPACE"
+msgstr "ISYCODE  ·  WORKSPACE"
+
+msgid "Overview"
+msgstr "Overview"
+
+msgid "Files"
+msgstr "Files"
+
+msgid "Refresh integrations"
+msgstr "Refresh integrations"
+
+msgid "No plan pending"
+msgstr "No plan pending"
+
+msgid "Workspace"
+msgstr "Workspace"
+
+msgid "↑ Up"
+msgstr "↑ Up"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Folders"
+msgstr "Folders"
+
+msgid "Copy path"
+msgstr "Copy path"
+
+msgid "Open preview"
+msgstr "Open preview"
+
+msgid "Select a file to preview it."
+msgstr "Select a file to preview it."
+
+msgid "IsySentinel"
+msgstr "IsySentinel"
+
+msgid "Reading Workspace Authority and the action journal…"
+msgstr "Reading Workspace Authority and the action journal…"
+
+msgid "MCPs"
+msgstr "MCPs"
+
+msgid "Tool service status has not been checked."
+msgstr "Tool service status has not been checked."
+
+msgid "LSPs"
+msgstr "LSPs"
+
+msgid "Checking installed language servers…"
+msgstr "Checking installed language servers…"
+
+msgid "Install commands"
+msgstr "Install commands"
+
+msgid "ISyCode skill catalog has not been checked."
+msgstr "ISyCode skill catalog has not been checked."
+
+msgid "ISyCode skills"
+msgstr "ISyCode skills"
+
+msgid "Connections · 4"
+msgstr "Connections · 4"
+
+msgid "ISyCo Gateway"
+msgstr "ISyCo Gateway"
+
+msgid "Gateway status has not been checked."
+msgstr "Gateway status has not been checked."
+
+msgid "Gateway MCP"
+msgstr "Gateway MCP"
+
+msgid "Tool catalog has not been checked."
+msgstr "Tool catalog has not been checked."
+
+msgid "Mobile Host"
+msgstr "Mobile Host"
+
+msgid "Starting local mobile host…"
+msgstr "Starting local mobile host…"
+
+msgid "No mobile clients connected."
+msgstr "No mobile clients connected."
+
+msgid "Bridge Coordination"
+msgstr "Bridge Coordination"
+
+msgid "Disabled · No Bridge Handshake"
+msgstr "Disabled · No Bridge Handshake"
+
+msgid "↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation"
+msgstr "↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation"
+
+msgid "+ New"
+msgstr "+ New"
+
+msgid "+ New conversation"
+msgstr "+ New conversation"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "Bridge presence…"
+msgstr "Bridge presence…"
+
+msgid "Bridge presence off"
+msgstr "Bridge presence off"
+
+msgid "Hide"
+msgstr "Hide"
+
+msgid "All"
+msgstr "All"
+
+msgid "Working"
+msgstr "Working"
+
+msgid "Needs input"
+msgstr "Needs input"
+
+msgid "Idle"
+msgstr "Idle"
+
+msgid "Select a conversation to inspect it."
+msgstr "Select a conversation to inspect it."
+
+msgid "Guidance available to ISyCode"
+msgstr "Guidance available to ISyCode"
+
+msgid "Current and available model IDs"
+msgstr "Current and available model IDs"
+
+msgid "Connected tool services and their status"
+msgstr "Connected tool services and their status"
+
+msgid "LSP"
+msgstr "LSP"
+
+msgid "Language server status"
+msgstr "Language server status"
+
+msgid "Workspace files and directories"
+msgstr "Workspace files and directories"
+
+msgid "Roles"
+msgstr "Roles"
+
+msgid "ISyCode agents and ISyCo motors"
+msgstr "ISyCode agents and ISyCo motors"
+
+msgid "Provider catalog and credentials"
+msgstr "Provider catalog and credentials"
+
+msgid "Session"
+msgstr "Session"
+
+msgid "Session actions and current state"
+msgstr "Session actions and current state"
+
+msgid "Workspace root and navigation"
+msgstr "Workspace root and navigation"
+
+msgid "Slash commands and keyboard shortcuts"
+msgstr "Slash commands and keyboard shortcuts"
+
+msgid "Spanish"
+msgstr "Spanish"
+
+msgid "English"
+msgstr "English"
+
+msgid "Chinese"
+msgstr "Chinese"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Ask me when I open a new folder"
+msgstr "Ask me when I open a new folder"
+
+msgid "Always use temporary mode for new folders"
+msgstr "Always use temporary mode for new folders"
+
+msgid "Make new folders recurring by default"
+msgstr "Make new folders recurring by default"
+
+msgid "Ask me which mode a new folder uses"
+msgstr "Ask me which mode a new folder uses"
+
+msgid "Start new folders in Classic · Ready To Use"
+msgstr "Start new folders in Classic · Ready To Use"
+
+msgid "Start new folders in Security · everything off until I allow it"
+msgstr "Start new folders in Security · everything off until I allow it"
+
+msgid "Grok is signed in on this machine"
+msgstr "Grok is signed in on this machine"
+
+msgid "Grok sign-in expired"
+msgstr "Grok sign-in expired"
+
+msgid "No Grok sign-in yet"
+msgstr "No Grok sign-in yet"
+
+msgid "Mode · Classic · Ready To Use; switch to Security…"
+msgstr "Mode · Classic · Ready To Use; switch to Security…"
+
+msgid "Mode · Security · nothing runs until you allow it; switch to Classic…"
+msgstr "Mode · Security · nothing runs until you allow it; switch to Classic…"
+
+msgid "Mobile Host on this computer"
+msgstr "Mobile Host on this computer"
+
+msgid "Mobile Host on this computer · partial saved grant"
+msgstr "Mobile Host on this computer · partial saved grant"
+
+msgid "Choose the provider and model used for this conversation."
+msgstr "Choose the provider and model used for this conversation."
+
+msgid "Choose supported reasoning settings for the active provider and model."
+msgstr "Choose supported reasoning settings for the active provider and model."
+
+msgid "Choose instructions for how the agent should work."
+msgstr "Choose instructions for how the agent should work."
+
+msgid "Remove the selected role from this conversation."
+msgstr "Remove the selected role from this conversation."
+
+msgid "Review the context available to the agent."
+msgstr "Review the context available to the agent."
+
+msgid "Choose a Markdown or text file to add to the conversation."
+msgstr "Choose a Markdown or text file to add to the conversation."
+
+msgid "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged."
+msgstr "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged."
+
+msgid "Personal defaults shared across your workspaces."
+msgstr "Personal defaults shared across your workspaces."
+
+msgid "Create workspace preferences after reviewing the proposed files."
+msgstr "Create workspace preferences after reviewing the proposed files."
+
+msgid "Preferences for this workspace; permissions are separate."
+msgstr "Preferences for this workspace; permissions are separate."
+
+msgid "Review and copy legacy commands; preserve their originals."
+msgstr "Review and copy legacy commands; preserve their originals."
+
+msgid "Browse commands and keyboard shortcuts."
+msgstr "Browse commands and keyboard shortcuts."
+
+msgid "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled."
+msgstr "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled."
+
+msgid "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black."
+msgstr "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black."
+
+msgid "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode."
+msgstr "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode."
+
+msgid "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it."
+msgstr "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it."
+
+msgid "Inspect or change workspace permissions and approval settings."
+msgstr "Inspect or change workspace permissions and approval settings."
+
+msgid "Manage named API credentials and their allowed uses."
+msgstr "Manage named API credentials and their allowed uses."
+
+msgid "Inspect recorded actions and verify their receipts."
+msgstr "Inspect recorded actions and verify their receipts."
+
+msgid "Review workspace folders and per-folder automatic edit settings."
+msgstr "Review workspace folders and per-folder automatic edit settings."
+
+msgid "Inspect other harness settings; copying requires a separate confirmation."
+msgstr "Inspect other harness settings; copying requires a separate confirmation."
+
+msgid "Manage MCP, LSP, Gateway and remote connections with separate permissions."
+msgstr "Manage MCP, LSP, Gateway and remote connections with separate permissions."
+
+msgid "Browse workspace files."
+msgstr "Browse workspace files."
+
+msgid "key in environment"
+msgstr "key in environment"
+
+msgid "key saved"
+msgstr "key saved"
+
+msgid "legacy key saved"
+msgstr "legacy key saved"
+
+msgid "legacy key"
+msgstr "legacy key"
+
+msgid "no key required"
+msgstr "no key required"
+
+msgid "subscription"
+msgstr "subscription"
+
+msgid "Grok sign-in"
+msgstr "Grok sign-in"
+
+msgid "credential store unavailable"
+msgstr "credential store unavailable"
+
+msgid "Nemotron via NVIDIA NIM"
+msgstr "Nemotron via NVIDIA NIM"
+
+msgid "API key or ChatGPT subscription"
+msgstr "API key or ChatGPT subscription"
+
+msgid "Claude models via API key"
+msgstr "Claude models via API key"
+
+msgid "OpenCode catalog, OpenAI-compatible"
+msgstr "OpenCode catalog, OpenAI-compatible"
+
+msgid "OpenCode Go endpoint"
+msgstr "OpenCode Go endpoint"
+
+msgid "ChatGPT Web via the local bridge on 127.0.0.1:8792"
+msgstr "ChatGPT Web via the local bridge on 127.0.0.1:8792"
+
+msgid "API key or Grok sign-in"
+msgstr "API key or Grok sign-in"
+
+msgid "Gemini, OpenAI-compatible endpoint"
+msgstr "Gemini, OpenAI-compatible endpoint"
+
+msgid "One key, many models"
+msgstr "One key, many models"
+
+msgid "Fast OpenAI-compatible inference"
+msgstr "Fast OpenAI-compatible inference"
+
+msgid "Direct API"
+msgstr "Direct API"
+
+msgid "Fireworks inference API"
+msgstr "Fireworks inference API"
+
+msgid "OpenAI-compatible inference"
+msgstr "OpenAI-compatible inference"
+
+msgid "Moonshot OpenAI-compatible API"
+msgstr "Moonshot OpenAI-compatible API"
+
+msgid "GLM coding endpoint"
+msgstr "GLM coding endpoint"
+
+msgid "Alibaba compatible-mode API"
+msgstr "Alibaba compatible-mode API"
+
+msgid "Router, OpenAI-compatible"
+msgstr "Router, OpenAI-compatible"
+
+msgid "OpenAI-compatible catalog"
+msgstr "OpenAI-compatible catalog"
+
+msgid "AI Gateway endpoint"
+msgstr "AI Gateway endpoint"
+
+msgid "OpenAI-compatible API"
+msgstr "OpenAI-compatible API"
+
+msgid "Scaleway Generative APIs"
+msgstr "Scaleway Generative APIs"
+
+msgid "Token Factory, OpenAI-compatible"
+msgstr "Token Factory, OpenAI-compatible"
+
+msgid "Local server"
+msgstr "Local server"
+
+msgid "Local server on 127.0.0.1:1234"
+msgstr "Local server on 127.0.0.1:1234"
+
+msgid "Local server on 127.0.0.1:8080"
+msgstr "Local server on 127.0.0.1:8080"
+
+msgid "No ISyCode transport yet"
+msgstr "No ISyCode transport yet"
+
+msgid "Set a preset, or ask for a base URL before one is added"
+msgstr "Set a preset, or ask for a base URL before one is added"

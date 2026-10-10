@@ -1,0 +1,2006 @@
+# ISyCode es catalog. msgid is the stable English source identifier.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "ISyCode  ·  COMMAND BROWSER"
+msgstr "ISyCode  ·  EXPLORADOR DE COMANDOS"
+
+msgid "Categories"
+msgstr "Categorías"
+
+msgid "Choose an action"
+msgstr "Elige una acción"
+
+msgid "Agent · Workspace · Integrations · Providers · Session · Settings"
+msgstr "Agente · Espacio · Integraciones · Proveedores · Sesión · Configuración"
+
+msgid "Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands."
+msgstr "Escribe para filtrar; Tab pasa a la lista. ↑/↓ y Enter inspeccionan una acción. Ctrl+O la abre; Esc limpia el filtro o vuelve. En el chat, escribe / para comandos rápidos."
+
+msgid "Open action · Ctrl+O"
+msgstr "Abrir acción · Ctrl+O"
+
+msgid "Search commands…"
+msgstr "Buscar comandos…"
+
+msgid "Copy selection / text"
+msgstr "Copiar selección / texto"
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "Add sibling folder"
+msgstr "Añadir carpeta hermana"
+
+msgid "Allow proposed file edits"
+msgstr "Permitir ediciones de archivo propuestas"
+
+msgid "This grants reads/searches and optionally edits for this exact folder. Every edit asks until you explicitly enable automatic edits. Commands and other projects receive no new access."
+msgstr "Esto concede lecturas/búsquedas y, si lo marcas, ediciones de esta carpeta exacta. Cada edición pregunta hasta que actives las ediciones automáticas. Los comandos y otros proyectos no ganan acceso."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Add folder"
+msgstr "Añadir carpeta"
+
+msgid "Danger: allow automatic file edits"
+msgstr "Peligro: permitir ediciones automáticas"
+
+msgid "The assistant may create or overwrite files here without showing each diff for approval. Model mistakes or malicious instructions in files can damage your work. Review changes with Git and keep backups."
+msgstr "El asistente puede crear o sobrescribir archivos aquí sin mostrar cada diff para aprobarlo. Errores del modelo o instrucciones maliciosas en archivos pueden dañar tu trabajo. Revisa los cambios con Git y guarda copias."
+
+msgid "This setting persists for this workspace. Disable it from Files → Folders. Authority, ISySentinel, path protections and journaling stay active; they cannot guarantee that an allowed edit is correct. Commands, deletes, moves and commits still require their own approvals."
+msgstr "Este ajuste permanece en este espacio. Desactívalo en Archivos → Carpetas. Authority, ISySentinel, las protecciones de ruta y el diario siguen activos; no garantizan que una edición permitida sea correcta. Comandos, borrados, movimientos y commits siguen pidiendo su propia aprobación."
+
+msgid "Enable automatic edits"
+msgstr "Activar ediciones automáticas"
+
+msgid "Alias, e.g. other-project"
+msgstr "Alias, p. ej. otro-proyecto"
+
+msgid "Cancel sign-in"
+msgstr "Cancelar inicio de sesión"
+
+msgid "Sign in with ChatGPT"
+msgstr "Entrar con ChatGPT"
+
+msgid "Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines."
+msgstr "Abre este enlace oficial en el navegador. El inicio en el navegador necesita el navegador en el mismo equipo que ISyCode; en máquinas remotas o sin pantalla usa el código de dispositivo."
+
+msgid "Waiting for sign-in… Your plan determines available models and usage limits. This does not add API credits."
+msgstr "Esperando el inicio de sesión… Tu plan determina los modelos disponibles y los límites de uso. Esto no añade créditos de API."
+
+msgid "Enter this one-use code: "
+msgstr "Introduce este código de un solo uso: "
+
+msgid "Native RTK · output compression"
+msgstr "RTK nativo · compresión de salida"
+
+msgid "Inspecting installation…"
+msgstr "Inspeccionando la instalación…"
+
+msgid "Checking the binary in the command sandbox…"
+msgstr "Comprobando el binario en el sandbox de comandos…"
+
+msgid "Enable this binary"
+msgstr "Activar este binario"
+
+msgid "Disable"
+msgstr "Desactivar"
+
+msgid "Subagent · select a model from your providers"
+msgstr "Subagente · elige un modelo de tus proveedores"
+
+msgid "Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing."
+msgstr "La tarea asignada y los archivos pedidos van a este proveedor. Las ediciones usan los permisos y aprobaciones actuales. El padre espera; Cancelar no envía nada."
+
+msgid "Find a model or provider…"
+msgstr "Buscar un modelo o proveedor…"
+
+msgid "Launch selected model"
+msgstr "Lanzar el modelo elegido"
+
+msgid "Navigate"
+msgstr "Navegar"
+
+msgid "Role · choose a catalog"
+msgstr "Rol · elige un catálogo"
+
+msgid "on"
+msgstr "activado"
+
+msgid "off"
+msgstr "desactivado"
+
+msgid "Settings · Workspace preferences"
+msgstr "Configuración · Preferencias del espacio"
+
+msgid "Workspace command migration"
+msgstr "Migración de comandos del espacio"
+
+msgid "Settings · Integrations"
+msgstr "Configuración · Integraciones"
+
+msgid "Workspace folders · explicit access"
+msgstr "Carpetas del espacio · acceso explícito"
+
+msgid "Settings · My defaults"
+msgstr "Configuración · Mis valores"
+
+msgid "Filter this list…"
+msgstr "Filtrar esta lista…"
+
+msgid "Paste API key…"
+msgstr "Pegar clave de API…"
+
+msgid "Search workspace paths…"
+msgstr "Buscar rutas del espacio…"
+
+msgid "Chat ready"
+msgstr "Chat listo"
+
+msgid "ISyCode agents"
+msgstr "Agentes ISyCode"
+
+msgid "ISyCode specialists"
+msgstr "Especialistas ISyCode"
+
+msgid "ISyCo CLI motors"
+msgstr "Motores CLI de ISyCo"
+
+msgid "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."
+msgstr "Compresión por RTK · https://github.com/rtk-ai/rtk · los permisos no cambian."
+
+msgid "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."
+msgstr "Ritmos de campana distintos para fin, aprobación, preguntas y errores; hace falta la campana del terminal."
+
+msgid "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."
+msgstr "Fondos negro puro con bordes y controles más claros; el texto llega al menos a 7:1."
+
+msgid "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."
+msgstr "Marcas [x]/[ ]/[ON]/[OFF] en lugar de glifos Unicode, para terminales sin Unicode."
+
+msgid "Conversation"
+msgstr "Conversación"
+
+msgid "Preferences"
+msgstr "Preferencias"
+
+msgid "Permissions"
+msgstr "Permisos"
+
+msgid "Connections"
+msgstr "Conexiones"
+
+msgid "Settings"
+msgstr "Configuración"
+
+msgid "Workspace preferences"
+msgstr "Preferencias del espacio"
+
+msgid "These personal defaults follow you between workspaces."
+msgstr "Estos valores personales te siguen entre espacios de trabajo."
+
+msgid "Access stays separate for each workspace; these defaults never turn on permissions."
+msgstr "El acceso sigue siendo distinto en cada espacio; estos valores nunca encienden permisos."
+
+msgid "Change it from Providers; model selection is already saved globally."
+msgstr "Cámbialo en Proveedores; la elección de modelo ya se guarda de forma global."
+
+msgid "Role guidance is global preference only; it never grants permissions."
+msgstr "La guía de rol es solo una preferencia global; nunca concede permisos."
+
+msgid "↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter"
+msgstr "↑↓ navegar  ·  Enter elegir  ·  Esc cancelar  ·  escribe para filtrar"
+
+msgid "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"
+msgstr "↑↓ mover · Enter abrir · Clic previsualizar · Doble clic abrir · Esc atrás · Mayús+Tab buscar"
+
+msgid "Idea box\nCapture an idea · Ctrl+Shift+Enter"
+msgstr "Caja de ideas\nCaptura una idea · Ctrl+Shift+Enter"
+
+msgid "ShellBox · no processes"
+msgstr "ShellBox · sin procesos"
+
+msgid "{name}  ·  {description}"
+msgstr "{name}  ·  {description}"
+
+msgid "needs attention"
+msgstr "necesita atención"
+
+msgid "RTK compression · {state}"
+msgstr "Compresión RTK · {state}"
+
+msgid "Providers & models"
+msgstr "Proveedores y modelos"
+
+msgid "Reasoning level"
+msgstr "Nivel de razonamiento"
+
+msgid "Notification sounds · {state}"
+msgstr "Sonidos de notificación · {state}"
+
+msgid "High contrast display · {state}"
+msgstr "Pantalla de alto contraste · {state}"
+
+msgid "ASCII-only display · {state}"
+msgstr "Pantalla solo ASCII · {state}"
+
+msgid "Language · {name}"
+msgstr "Idioma · {name}"
+
+msgid "Interface language for ISyCode. This does not change permissions or workspace files."
+msgstr "Idioma de la interfaz de ISyCode. No cambia permisos ni archivos del espacio de trabajo."
+
+msgid "Choose role"
+msgstr "Elegir rol"
+
+msgid "Context"
+msgstr "Contexto"
+
+msgid "My defaults · all workspaces"
+msgstr "Mis valores · todos los espacios de trabajo"
+
+msgid "Compact text scroll · {state}"
+msgstr "Desplazamiento compacto de texto · {state}"
+
+msgid "Optional connections and remote access. Permissions remain separate."
+msgstr "Conexiones opcionales y acceso remoto. Los permisos siguen aparte."
+
+msgid "Back to Settings"
+msgstr "Volver a Configuración"
+
+msgid "The exact file is reviewed; the legacy original stays in place."
+msgstr "Se revisa el archivo exacto; el original legado se queda donde está."
+
+msgid "No valid legacy workspace commands found."
+msgstr "No se encontraron comandos heredados válidos."
+
+msgid "Tool servers · MCP & Gateway"
+msgstr "Servidores de herramientas · MCP y Gateway"
+
+msgid "Language servers · LSP"
+msgstr "Servidores de lenguaje · LSP"
+
+msgid "Mobile host status"
+msgstr "Estado del host móvil"
+
+msgid "Bridge coordination · blocked in Secure"
+msgstr "Coordinación Bridge · bloqueada en Secure"
+
+msgid "Private access · Tailscale"
+msgstr "Acceso privado · Tailscale"
+
+msgid "Refresh integration catalogs"
+msgstr "Actualizar catálogos de integración"
+
+msgid "Add sibling folder…"
+msgstr "Añadir carpeta hermana…"
+
+msgid "Default model · {provider} · {model}"
+msgstr "Modelo predeterminado · {provider} · {model}"
+
+msgid "Clear my default role"
+msgstr "Quitar mi rol por defecto"
+
+msgid "Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."
+msgstr "Solo aplica a carpetas abiertas por primera vez; cada espacio guarda su modo y puedes cambiarlo en Configuración → Authority."
+
+msgid "Clear selected skills"
+msgstr "Quitar skills seleccionadas"
+
+msgid "Skills guide the current chat; they do not add tools or authority."
+msgstr "Las skills guían el chat actual; no añaden herramientas ni autoridad."
+
+msgid "Makes a read-only catalog request only after you select this item."
+msgstr "Hace una petición de catálogo de solo lectura solo después de elegir este elemento."
+
+msgid "Gateway semantic operations · native HTTP"
+msgstr "Operaciones semánticas de Gateway · HTTP nativo"
+
+msgid "One explicit read-only symbols/search request; this does not use MCP."
+msgstr "Una petición explícita de símbolos/búsqueda de solo lectura; no usa MCP."
+
+msgid "Semantic broker · choose folder and preview recipe"
+msgstr "Broker semántico · elige carpeta y previsualiza la receta"
+
+msgid "Inspects the fixed ISyCo semantic broker recipe, checks a read grant for the chosen subtree, and shows a hashed, read-only plan. Docker is not started by this preview."
+msgstr "Inspecciona la receta fija del broker semántico ISyCo, comprueba un permiso de lectura del subárbol elegido y muestra un plan hasheado de solo lectura. Esta vista previa no arranca Docker."
+
+msgid "Build + Start semantic broker…"
+msgstr "Construir + arrancar broker semántico…"
+
+msgid "Shows the exact recipe, network effects, root and sandbox; asks before Docker build/start, then verifies health on a loopback-only port."
+msgstr "Muestra la receta exacta, efectos de red, raíz y sandbox; pregunta antes de Docker build/start y luego verifica salud en un puerto solo loopback."
+
+msgid "Open workspace file browser"
+msgstr "Abrir explorador de archivos del espacio"
+
+msgid "Open provider selector"
+msgstr "Abrir selector de proveedores"
+
+msgid "OAuth methods"
+msgstr "Métodos OAuth"
+
+msgid "/help"
+msgstr "/help"
+
+msgid "Opaque workspace match label; it does not grant access."
+msgstr "Etiqueta opaca de coincidencia del espacio; no concede acceso."
+
+msgid "Open Files view"
+msgstr "Abrir vista Archivos"
+
+msgid "Current · {name} ({kind})"
+msgstr "Actual · {name} ({kind})"
+
+msgid "Initialize this workspace's .isycode/"
+msgstr "Inicializar .isycode/ de este espacio"
+
+msgid "Keeps non-security preferences local; file writes still need a separate review."
+msgstr "Deja las preferencias no de seguridad en local; las escrituras siguen pidiendo revisión aparte."
+
+msgid "Overrides personal defaults for this .isyroot only; permissions are unaffected."
+msgstr "Sustituye los valores personales solo para este .isyroot; los permisos no cambian."
+
+msgid "Copy legacy workspace commands…"
+msgstr "Copiar comandos heredados del espacio…"
+
+msgid "Copies validated .isycode-commands/*.md files after diff approval; originals remain."
+msgstr "Copia archivos .isycode-commands/*.md validados tras aprobar el diff; los originales se quedan."
+
+msgid "Authority & Security"
+msgstr "Authority & Security"
+
+msgid "Multi Harness · settings & repair Compose"
+msgstr "Multi Harness · ajustes y reparar Compose"
+
+msgid "Named API keys"
+msgstr "Claves de API con nombre"
+
+msgid "Action journal · verify / inspect"
+msgstr "Diario de acciones · verificar / inspeccionar"
+
+msgid "Choose context file (.md / .txt)"
+msgstr "Elegir archivo de contexto (.md / .txt)"
+
+msgid "Commands & shortcuts"
+msgstr "Comandos y atajos"
+
+msgid "Workspace files"
+msgstr "Archivos del espacio de trabajo"
+
+msgid "Workspace folders & automatic edits"
+msgstr "Carpetas y ediciones automáticas"
+
+msgid "Clear selected role"
+msgstr "Quitar el rol seleccionado"
+
+msgid "Integrations · MCP, LSP, Gateway & remote access"
+msgstr "Integraciones · MCP, LSP, Gateway y acceso remoto"
+
+msgid "This folder has no .isyroot marker; preferences are not persisted here."
+msgstr "Esta carpeta no tiene marcador .isyroot; aquí no se guardan preferencias."
+
+msgid "Workspace preferences unavailable · {error}"
+msgstr "Preferencias del espacio no disponibles · {error}"
+
+msgid "Initialize .isycode/ before saving preferences."
+msgstr "Inicializa .isycode/ antes de guardar preferencias."
+
+msgid "Migration is available only in a workspace with its own .isyroot."
+msgstr "La migración solo está disponible en un espacio con su propio .isyroot."
+
+msgid "Migration unavailable · {error}"
+msgstr "Migración no disponible · {error}"
+
+msgid "Copy /{name} into .isycode/commands/"
+msgstr "Copiar /{name} a .isycode/commands/"
+
+msgid "Browse"
+msgstr "Explorar"
+
+msgid "Unavailable"
+msgstr "No disponible"
+
+msgid "Default role · {name}"
+msgstr "Rol predeterminado · {name}"
+
+msgid "Default role · none"
+msgstr "Rol predeterminado · ninguno"
+
+msgid "Use current role ({name}) as my default"
+msgstr "Usar el rol actual ({name}) como mi valor predeterminado"
+
+msgid "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat"
+msgstr "Superpowers · Markdown MIT anclado; elige para activar o quitar la guía de este chat"
+
+msgid "Load account models · {provider}"
+msgstr "Cargar modelos de la cuenta · {provider}"
+
+msgid "Previously selected model; not verified against this account."
+msgstr "Modelo elegido antes; no está verificado contra esta cuenta."
+
+msgid "The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."
+msgstr "La petición del catálogo en vivo fue denegada; esto pregunta una vez, guarda el permiso del host en este espacio y recarga los modelos reales del proveedor."
+
+msgid "Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."
+msgstr "Modelo preset fijo, no verificado contra esta cuenta; carga el catálogo de la cuenta para la lista real del proveedor."
+
+msgid "Loading account catalog…"
+msgstr "Cargando catálogo de la cuenta…"
+
+msgid "No LSP servers detected"
+msgstr "No se detectaron servidores LSP"
+
+msgid "Install or configure a supported language server."
+msgstr "Instala o configura un language server compatible."
+
+msgid "Current Directory · {path}"
+msgstr "Directorio actual · {path}"
+
+msgid "Provider · {name}"
+msgstr "Proveedor · {name}"
+
+msgid "Role · {name}"
+msgstr "Rol · {name}"
+
+msgid "Workspace Root · {path}"
+msgstr "Raíz del espacio · {path}"
+
+msgid "Launch Directory · {path}"
+msgstr "Directorio de arranque · {path}"
+
+msgid "Root Source · {source}"
+msgstr "Origen de la raíz · {source}"
+
+msgid "Gateway Binding · {id}"
+msgstr "Enlace Gateway · {id}"
+
+msgid "Current Folder · {path}"
+msgstr "Carpeta actual · {path}"
+
+msgid "Keyboard shortcuts"
+msgstr "Atajos de teclado"
+
+msgid "Commands"
+msgstr "Comandos"
+
+msgid "{status} {alias} · {path}"
+msgstr "{status} {alias} · {path}"
+
+msgid "OFF · Security requires each review"
+msgstr "OFF · Security exige cada revisión"
+
+msgid "Only file creation/edits. Authority and ISySentinel stay active."
+msgstr "Solo creación/edición de archivos. Authority e ISySentinel siguen activos."
+
+msgid "Files and standalone workspace settings are kept. This chat loses access."
+msgstr "Los archivos y ajustes independientes del espacio se conservan. Este chat pierde el acceso."
+
+msgid "Folder settings unavailable · {error}"
+msgstr "Ajustes de carpeta no disponibles · {error}"
+
+msgid "Recent · {provider} · {model}  · recent"
+msgstr "Reciente · {provider} · {model}  · reciente"
+
+msgid "Grant network access to {label} and load its real catalog"
+msgstr "Conceder acceso de red a {label} y cargar su catálogo real"
+
+msgid "Current model {model} is not in the refreshed {label} catalog · still selected · choose a replacement explicitly"
+msgstr "El modelo actual {model} no está en el catálogo actualizado de {label} · sigue seleccionado · elige un reemplazo"
+
+msgid "  ⚠ no tools"
+msgstr "  ⚠ sin herramientas"
+
+msgid "{count} unavailable in tested endpoint · retained in capability results"
+msgstr "{count} no disponibles en el endpoint probado · se conservan en los resultados de capacidad"
+
+msgid "Managed broker inventory unavailable"
+msgstr "Inventario de brokers gestionados no disponible"
+
+msgid "Private state could not be read; no Docker action is available."
+msgstr "No se pudo leer el estado privado; no hay acción Docker disponible."
+
+msgid "Listed by the connected service; discovery does not authorize calls."
+msgstr "Listado por el servicio conectado; descubrir no autoriza llamadas."
+
+msgid "Add {name} preset"
+msgstr "Añadir preset {name}"
+
+msgid "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."
+msgstr "LSP initialize + workspace/symbol real, montaje .isyroot de solo lectura, sin red; cada petición necesita permiso y una aprobación de un uso."
+
+msgid "Detected executable only; no safe LSP execution adapter is connected for this server."
+msgstr "Solo se detectó el ejecutable; no hay adaptador seguro de LSP para este servidor."
+
+msgid "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"
+msgstr "Enter enviar · Ctrl+J nueva línea · Esc atrás · Ctrl+P comandos · Ctrl+B barra lateral"
+
+msgid "API key is stored outside this project."
+msgstr "La clave de API se guarda fuera de este proyecto."
+
+msgid "Config ignored · {error}"
+msgstr "Configuración ignorada · {error}"
+
+msgid "Config warning · {error}"
+msgstr "Aviso de configuración · {error}"
+
+msgid "Clear this workspace's default role"
+msgstr "Quitar el rol por defecto de este espacio"
+
+msgid "ON — dangerous; disable"
+msgstr "ON — peligroso; desactivar"
+
+msgid "OFF — enable…"
+msgstr "OFF — activar…"
+
+msgid "{alias} · automatic edits {state}"
+msgstr "{alias} · ediciones automáticas {state}"
+
+msgid "Remove attachment · {alias}"
+msgstr "Quitar adjunto · {alias}"
+
+msgid "{name} · active"
+msgstr "{name} · activo"
+
+msgid "{name} · discovered"
+msgstr "{name} · descubierto"
+
+msgid "{label}  ·  {model}  ◂ current  · preset"
+msgstr "{label}  ·  {model}  ◂ actual  · preset"
+
+msgid "{label}  ·  {model}  · preset"
+msgstr "{label}  ·  {model}  · preset"
+
+msgid "{label}  ·  {model}{marker}  · catalog"
+msgstr "{label}  ·  {model}{marker}  · catálogo"
+
+msgid "Manage broker · {name} · {status}"
+msgstr "Gestionar broker · {name} · {status}"
+
+msgid "{name}  ·  {status}"
+msgstr "{name}  ·  {status}"
+
+msgid "Configured services · {state}"
+msgstr "Servicios configurados · {state}"
+
+msgid "ISyCo Gateway · {name}"
+msgstr "ISyCo Gateway · {name}"
+
+msgid "ISyCo Gateway MCP · {state}"
+msgstr "ISyCo Gateway MCP · {state}"
+
+msgid "{label} · {status}"
+msgstr "{label} · {status}"
+
+msgid "Sidebar"
+msgstr "Barra lateral"
+
+msgid "Sessions"
+msgstr "Sesiones"
+
+msgid "Multi Harness"
+msgstr "Multi Harness"
+
+msgid "Providers"
+msgstr "Proveedores"
+
+msgid "Role"
+msgstr "Rol"
+
+msgid "Inject context"
+msgstr "Inyectar contexto"
+
+msgid "Model ▾"
+msgstr "Modelo ▾"
+
+msgid "Save key"
+msgstr "Guardar clave"
+
+msgid "Use {name} as this workspace's default role"
+msgstr "Usar {name} como rol predeterminado de este espacio"
+
+msgid "workspace symbol search"
+msgstr "búsqueda de símbolos del espacio"
+
+msgid "Settings · Authority & Security"
+msgstr "Configuración · Authority & Security"
+
+msgid "Security · Action journal (read-only)"
+msgstr "Security · Diario de acciones (solo lectura)"
+
+msgid "Choose what ISyCode can do in this workspace. Everything else stays off."
+msgstr "Elige qué puede hacer ISyCode en este espacio. Todo lo demás sigue apagado."
+
+msgid "Some actions ask again before they run, even when turned on. Press ? on any option to see what it does."
+msgstr "Algunas acciones preguntan otra vez antes de ejecutarse, aunque estén activadas. Pulsa ? en una opción para ver qué hace."
+
+msgid "Check ISyCo Gateway"
+msgstr "Comprobar ISyCo Gateway"
+
+msgid "Checks whether your local ISyCo Gateway is available."
+msgstr "Comprueba si tu ISyCo Gateway local está disponible."
+
+msgid "Find Gateway tools"
+msgstr "Buscar herramientas Gateway"
+
+msgid "Shows which extra tools the Gateway offers. Finding a tool does not run it."
+msgstr "Muestra qué herramientas extra ofrece el Gateway. Encontrar una no la ejecuta."
+
+msgid "Search and understand code with Gateway"
+msgstr "Buscar y entender código con Gateway"
+
+msgid "Sends a search you review first. Each search asks for approval before it runs."
+msgstr "Envía una búsqueda que revisas primero. Cada búsqueda pide aprobación antes de correr."
+
+msgid "Protection is always on"
+msgstr "La protección siempre está activa"
+
+msgid "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, and sensitive actions still ask you first."
+msgstr "ISyCode comprueba cada acción antes de ejecutarla. Activar una opción nunca da acceso fuera de este espacio, y las acciones sensibles siguen preguntándote."
+
+msgid "File edits follow folder approval settings; other changes always ask."
+msgstr "Las ediciones de archivo siguen los ajustes de la carpeta; otros cambios siempre preguntan."
+
+msgid "Turning a permission on lets the assistant propose that kind of action. Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."
+msgstr "Activar un permiso deja que el asistente proponga ese tipo de acción. Archivos → Carpetas controla las ediciones automáticas. Comandos, movimientos, borrados y commits siguen pidiendo aprobación."
+
+msgid "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, and sandboxed commands where supported. Each edit, delete/move, command and commit still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."
+msgstr "Classic está listo para el bucle local de código: leer/editar, chat, sesiones, revisión Git y comandos en sandbox donde hay soporte. Cada edición, borrado/movimiento, comando y commit sigue preguntando. Security arranca con permisos apagados; usa permisos individuales o el paquete revisado de herramientas. Ambos mantienen Sentinel y el diario."
+
+msgid "Turn on all coding tools…"
+msgstr "Activar todas las herramientas de código…"
+
+msgid "One step for read, search, edit, move, delete, undo, sandboxed commands, git and Python checks (whatever this computer supports). Each change, command and commit still asks you first, and IsySentinel still checks every action."
+msgstr "Un paso para leer, buscar, editar, mover, borrar, deshacer, comandos en sandbox, git y comprobaciones Python (lo que este equipo soporte). Cada cambio, comando y commit sigue preguntándote, e IsySentinel sigue comprobando cada acción."
+
+msgid "Read and search workspace files"
+msgstr "Leer y buscar archivos del espacio de trabajo"
+
+msgid "Lets ISyCode list, read, and find files here. It cannot change or delete them."
+msgstr "Deja que ISyCode liste, lea y encuentre archivos aquí. No puede cambiarlos ni borrarlos."
+
+msgid "Edit workspace files · folder approval settings apply"
+msgstr "Editar archivos · aplican los ajustes de aprobación de carpeta"
+
+msgid "The assistant can propose creating, changing, moving and deleting files here. You see the diff unless this folder is trusted for quiet Classic, or automatic edits are on. A trusted folder still stays inside the effect budget. /undo reverts the last change. Sensitive files stay off-limits."
+msgstr "El asistente puede proponer crear, cambiar, mover y borrar archivos aquí. Ves el diff salvo que esta carpeta sea de confianza en Classic silencioso, o las ediciones automáticas estén on. Una carpeta de confianza sigue dentro del presupuesto de efectos. /undo revierte el último cambio. Los archivos sensibles siguen fuera de alcance."
+
+msgid "Copy selected text to the clipboard"
+msgstr "Copiar el texto seleccionado al portapapeles"
+
+msgid "Selecting text with the mouse (or Ctrl+C on a selection, or Copy path) copies it. Only your own gesture copies; the assistant cannot. The journal records the size, never the text. API keys are never copied."
+msgstr "Seleccionar texto con el ratón (o Ctrl+C sobre una selección, o Copiar ruta) lo copia. Solo tu gesto copia; el asistente no puede. El diario registra el tamaño, nunca el texto. Las claves API nunca se copian."
+
+msgid "Read public web pages"
+msgstr "Leer páginas web públicas"
+
+msgid "Read-only HTTPS; no credentials, private hosts or redirects. Each new host asks first."
+msgstr "HTTPS de solo lectura; sin credenciales, hosts privados ni redirecciones. Cada host nuevo pregunta primero."
+
+msgid "Browse optional integrations"
+msgstr "Explorar integraciones opcionales"
+
+msgid "Reads the optional integrations list. It does not enable their tools."
+msgstr "Lee la lista opcional de integraciones. No activa sus herramientas."
+
+msgid "Allow git commits in this workspace?"
+msgstr "¿Permitir commits de git en este espacio?"
+
+msgid "Turn off git commits?"
+msgstr "¿Desactivar los commits de git?"
+
+msgid "Let ISyCode see git status and diffs?"
+msgstr "¿Dejar que ISyCode vea git status y diffs?"
+
+msgid "Hide git status and diffs?"
+msgstr "¿Ocultar git status y diffs?"
+
+msgid "JOURNAL_INVALID · verifier unavailable"
+msgstr "JOURNAL_INVALID · verificador no disponible"
+
+msgid "Save conversations in this workspace"
+msgstr "Guardar conversaciones en este espacio"
+
+msgid "Keeps this workspace's chats in your private ISyCode state folder, outside the project, so you can resume them. Common secrets are redacted before saving."
+msgstr "Guarda los chats de este espacio en tu carpeta privada de estado de ISyCode, fuera del proyecto, para reanudarlos. Los secretos comunes se ocultan antes de guardar."
+
+msgid "Save conversations · recurring workspaces only"
+msgstr "Guardar conversaciones · solo espacios recurrentes"
+
+msgid "Temporary runs never keep chat history."
+msgstr "Las ejecuciones temporales nunca guardan historial de chat."
+
+msgid "See git status and diffs"
+msgstr "Ver git status y diffs"
+
+msgid "Lets the assistant see the branch, changed files and diffs. Sensitive files stay hidden, and repositories that configure their own programs are refused."
+msgstr "Deja que el asistente vea la rama, archivos cambiados y diffs. Los archivos sensibles se ocultan, y se rechazan repos que configuran sus propios programas."
+
+msgid "Create git commits · asks before every commit"
+msgstr "Crear commits de git · pregunta antes de cada commit"
+
+msgid "The assistant can propose a commit. You review the exact files, message and diff. Hooks never run and nothing is pushed."
+msgstr "El asistente puede proponer un commit. Revisas los archivos exactos, el mensaje y el diff. Los hooks no corren y no se hace push."
+
+msgid "Run commands in a sandbox"
+msgstr "Ejecutar comandos en un sandbox"
+
+msgid "The assistant can propose programs like tests or a build. Each exact command asks unless this folder is trusted for quiet Classic. It runs without network, with sensitive files hidden, and can only change files inside this workspace. There is no unsandboxed fallback."
+msgstr "El asistente puede proponer programas como tests o un build. Cada comando exacto pregunta salvo que esta carpeta sea de confianza en Classic silencioso. Corre sin red, con archivos sensibles ocultos, y solo puede cambiar archivos de este espacio. No hay fallback sin sandbox."
+
+msgid "Run commands · sandbox not available on this computer"
+msgstr "Ejecutar comandos · el sandbox no está disponible en este equipo"
+
+msgid "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off. There is no unsandboxed fallback."
+msgstr "Hace falta bubblewrap, libseccomp y python3 en Linux. Los comandos se quedan apagados. No hay fallback sin sandbox."
+
+msgid "Connect to the selected AI model"
+msgstr "Conectar con el modelo de IA seleccionado"
+
+msgid "Sends your messages to the model you chose. A saved API key is kept separately."
+msgstr "Envía tus mensajes al modelo que elegiste. Una clave API guardada se guarda aparte."
+
+msgid "Model connection · not ready yet"
+msgstr "Conexión del modelo · aún no está lista"
+
+msgid "Choose a model provider in Settings first."
+msgstr "Elige primero un proveedor de modelo en Configuración."
+
+msgid "Run a Gateway tool"
+msgstr "Ejecutar una herramienta Gateway"
+
+msgid "You will review the tool and its details, then approve each run separately."
+msgstr "Revisarás la herramienta y sus detalles, y aprobarás cada ejecución por separado."
+
+msgid "Local code help"
+msgstr "Ayuda de código local"
+
+msgid "Uses the protected language helper to find code symbols on this computer."
+msgstr "Usa el ayudante de lenguaje protegido para encontrar símbolos de código en este equipo."
+
+msgid "Check Python files after edits"
+msgstr "Revisar archivos Python tras las ediciones"
+
+msgid "After you apply a change to a .py file, the protected Pyright helper reports errors and warnings to you and to the assistant. It cannot change files."
+msgstr "Cuando aplicas un cambio a un .py, el ayudante Pyright protegido informa errores y avisos a ti y al asistente. No puede cambiar archivos."
+
+msgid "Web pages · asks for each new host"
+msgstr "Páginas web · pregunta por cada host nuevo"
+
+msgid "The webfetch tool requests a separate bounded host grant before reading a public HTTPS page."
+msgstr "La herramienta webfetch pide un permiso de host acotado aparte antes de leer una página HTTPS pública."
+
+msgid "Optional integrations · not set up"
+msgstr "Integraciones opcionales · no configuradas"
+
+msgid "You can connect these later from Settings."
+msgstr "Puedes conectarlas más tarde desde Configuración."
+
+msgid "Lets ISyCode start the loopback Mobile Host at {address} and accept one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; they cannot read files, run tools, or open sessions. Starting still asks first."
+msgstr "Deja que ISyCode arranque el Mobile Host en loopback en {address} y acepte emparejamiento con PIN de un uso. Los dispositivos emparejados pueden leer la lista de runtime y enviar heartbeats; no pueden leer archivos, correr herramientas ni abrir sesiones. Arrancar sigue preguntando."
+
+msgid "— Other saved permissions —"
+msgstr "— Otros permisos guardados —"
+
+msgid "Every other permission saved for this workspace."
+msgstr "Cualquier otro permiso guardado para este espacio."
+
+msgid "blocked · no Secure owner · saved grant ignored"
+msgstr "bloqueado · sin owner Secure · el permiso guardado se ignora"
+
+msgid "Protection settings are unavailable · everything stays off"
+msgstr "Los ajustes de protección no están disponibles · todo sigue apagado"
+
+msgid "{label} · not ready yet"
+msgstr "{label} · aún no está listo"
+
+msgid "Integrity · {status} · {records} records · {decisions} decisions · {receipts} receipts"
+msgstr "Integridad · {status} · {records} registros · {decisions} decisiones · {receipts} recibos"
+
+msgid "No durable decisions recorded for this workspace"
+msgstr "No hay decisiones duraderas registradas para este espacio"
+
+msgid "Delete current conversation · asks every time"
+msgstr "Eliminar la conversación actual · pregunta siempre"
+
+msgid "Lets you delete the saved conversation that is open right now. The permission covers only that conversation, and each deletion still asks you."
+msgstr "Te deja borrar la conversación guardada que está abierta ahora. El permiso cubre solo esa conversación, y cada borrado sigue preguntándote."
+
+msgid "Delete a conversation · open a saved one first"
+msgstr "Borrar una conversación · abre una guardada primero"
+
+msgid "Deleting works one conversation at a time. Open a saved conversation from Sessions, then come back here to allow deleting that one."
+msgstr "El borrado funciona de una conversación a la vez. Abre una conversación guardada en Sesiones y vuelve aquí para permitir borrar esa."
+
+msgid "Gateway tools · not ready yet"
+msgstr "Herramientas de Gateway · aún no están listas"
+
+msgid "Finish setting up the local Gateway connection first."
+msgstr "Termina primero de configurar la conexión local de Gateway."
+
+msgid "Local code help · not ready yet"
+msgstr "Ayuda de código local · aún no está lista"
+
+msgid "ISyCode will show this as an option when its protected helper is ready."
+msgstr "ISyCode mostrará esto como opción cuando su ayudante protegido esté listo."
+
+msgid "Read-only local symbols; each request is reviewed before its protected process starts."
+msgstr "Símbolos locales de solo lectura; cada petición se revisa antes de arrancar su proceso protegido."
+
+msgid "ON · asks before each use"
+msgstr "ON · pregunta antes de cada uso"
+
+msgid "ON"
+msgstr "ON"
+
+msgid "{label} · {state}"
+msgstr "{label} · {state}"
+
+msgid "Scope: {scope}. Select to remove this saved permission."
+msgstr "Ámbito: {scope}. Elige para quitar este permiso guardado."
+
+msgid "NOT_VERIFIABLE · {count} records lack an owner identity"
+msgstr "NOT_VERIFIABLE · {count} registros no tienen identidad de owner"
+
+msgid "Cancel review"
+msgstr "Cancelar revisión"
+
+msgid "Iterate with this review"
+msgstr "Iterar con esta revisión"
+
+msgid "Select provider"
+msgstr "Elegir proveedor"
+
+msgid "xAI · use Grok in ISyCode"
+msgstr "xAI · usar Grok en ISyCode"
+
+msgid "OpenAI · choose connection method"
+msgstr "OpenAI · elige el método de conexión"
+
+msgid "Settings · API keys"
+msgstr "Configuración · Claves de API"
+
+msgid "Models"
+msgstr "Modelos"
+
+msgid "Models · account catalog"
+msgstr "Modelos · catálogo de la cuenta"
+
+msgid "Add an ISyCo Gateway key · asks first"
+msgstr "Añadir una clave de ISyCo Gateway · pregunta primero"
+
+msgid "Default · provider decides"
+msgstr "Por defecto · lo decide el proveedor"
+
+msgid "Reasoning · {model}"
+msgstr "Razonamiento · {model}"
+
+msgid "Back"
+msgstr "Atrás"
+
+msgid "Models · {family}"
+msgstr "Modelos · {family}"
+
+msgid "— Additional provider accounts —"
+msgstr "— Cuentas de proveedor adicionales —"
+
+msgid "API key · console.x.ai"
+msgstr "Clave de API · console.x.ai"
+
+msgid "Saved in the OS keyring. Chat goes to api.x.ai."
+msgstr "Se guarda en el llavero del sistema. El chat va a api.x.ai."
+
+msgid "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."
+msgstr "Usa el inicio de grok CLI que ya está en este equipo. El chat va a cli-chat-proxy.grok.com."
+
+msgid "Sign in with device code"
+msgstr "Entrar con código de dispositivo"
+
+msgid "Sign in with browser"
+msgstr "Entrar con el navegador"
+
+msgid "The sign-in stays in the grok CLI. ISyCode does not copy the token into the project."
+msgstr "El inicio de sesión se queda en el CLI de grok. ISyCode no copia el token al proyecto."
+
+msgid "Manually enter API key · separate API quota"
+msgstr "Introducir clave de API a mano · cuota de API aparte"
+
+msgid "ChatGPT Pro/Plus · browser"
+msgstr "ChatGPT Pro/Plus · navegador"
+
+msgid "ChatGPT Pro/Plus · headless/device code"
+msgstr "ChatGPT Pro/Plus · sin pantalla / código de dispositivo"
+
+msgid "Use saved ChatGPT sign-in · checked on request"
+msgstr "Usar el inicio de ChatGPT guardado · se comprueba al pedirlo"
+
+msgid "Disconnect ChatGPT account…"
+msgstr "Desconectar cuenta de ChatGPT…"
+
+msgid "Subscription needs official Codex CLI and an unlocked OS keyring. Plan limits apply."
+msgstr "La suscripción necesita el Codex CLI oficial y un llavero del sistema desbloqueado. Aplican los límites del plan."
+
+msgid "Saved in your OS keyring for your user; never in the project or logs."
+msgstr "Se guarda en el llavero del sistema de tu usuario; nunca en el proyecto ni en los logs."
+
+msgid "Loading models from the selected provider…"
+msgstr "Cargando modelos del proveedor seleccionado…"
+
+msgid "needs {env}"
+msgstr "hace falta {env}"
+
+msgid "  ← currently active"
+msgstr "  ← activo ahora"
+
+msgid "  ·  {blurb}"
+msgstr "  ·  {blurb}"
+
+msgid "This account is not connected to ISyCode inference yet."
+msgstr "Esta cuenta aún no está conectada a la inferencia de ISyCode."
+
+msgid "Additional provider catalog · {state}"
+msgstr "Catálogo adicional de proveedores · {state}"
+
+msgid "Use Grok sign-in · {note}"
+msgstr "Usar inicio de Grok · {note}"
+
+msgid "Add a key for {name} · asks first"
+msgstr "Añadir una clave para {name} · pregunta primero"
+
+msgid "Credential vault unavailable"
+msgstr "La bóveda de credenciales no está disponible"
+
+msgid "Check the user-private state directory and permissions."
+msgstr "Revisa el directorio privado de estado y los permisos."
+
+msgid "Each use is decided and recorded in this workspace's action journal."
+msgstr "Cada uso se decide y se registra en el diario de acciones de este espacio."
+
+msgid "Provider credential configuration could not be loaded."
+msgstr "No se pudo cargar la configuración de credenciales del proveedor."
+
+msgid "Language preference could not be saved"
+msgstr "No se pudo guardar el idioma"
+
+msgid "{mark}  {label}{note}"
+msgstr "{mark}  {label}{note}"
+
+msgid "{blurb}. {status}. Default model: {default}"
+msgstr "{blurb}. {status}. Modelo predeterminado: {default}"
+
+msgid "·  {label}  ·  {blurb}"
+msgstr "·  {label}  ·  {blurb}"
+
+msgid "ISyCode does not yet have an authorization flow for this provider."
+msgstr "ISyCode aún no tiene un flujo de autorización para este proveedor."
+
+msgid "OAuth discovery · {state}"
+msgstr "Descubrimiento OAuth · {state}"
+
+msgid "Allow using the saved {name} key here · asks first"
+msgstr "Permitir usar aquí la clave guardada de {name} · pregunta primero"
+
+msgid "{name}  ·  {service}  ·  removed"
+msgstr "{name}  ·  {service}  ·  eliminada"
+
+msgid "Purpose: {purpose}"
+msgstr "Propósito: {purpose}"
+
+msgid "{name}  ·  {service}  ·  saved · value hidden · select to remove"
+msgstr "{name}  ·  {service}  ·  guardada · valor oculto · elige para quitar"
+
+msgid "Configure {env} before listing account models."
+msgstr "Configura {env} antes de listar los modelos de la cuenta."
+
+msgid "Model catalog unavailable ({error}); current selection is unchanged."
+msgstr "Catálogo de modelos no disponible ({error}); la selección actual no cambia."
+
+msgid "{name}  ·  OAuth available, not connected"
+msgstr "{name}  ·  OAuth disponible, no conectado"
+
+msgid "Provider model request {decision}."
+msgstr "Petición de modelos del proveedor {decision}."
+
+msgid "The provider returned an empty model catalog."
+msgstr "El proveedor devolvió un catálogo de modelos vacío."
+
+msgid "Open this family's variants."
+msgstr "Abrir las variantes de esta familia."
+
+msgid "▸ {family} · {count} models"
+msgstr "▸ {family} · {count} modelos"
+
+msgid "Settings · Private access"
+msgstr "Configuración · Acceso privado"
+
+msgid "Private access · Authority grants"
+msgstr "Acceso privado · permisos de Authority"
+
+msgid "Settings · Bridge coordination"
+msgstr "Configuración · Coordinación Bridge"
+
+msgid "Settings · Mobile host"
+msgstr "Configuración · Host móvil"
+
+msgid "Blocked · no registered action owner"
+msgstr "Bloqueado · no hay dueño de acción registrado"
+
+msgid "Bridge leases are coordination signals, never Workspace Authority grants. Secure does not run hello, heartbeat, peek, send, lease, or wake until each path has an owner and gate."
+msgstr "Los leases de Bridge son señales de coordinación, nunca permisos de Workspace Authority. Secure no corre hello, heartbeat, peek, send, lease ni wake hasta que cada camino tenga owner y gate."
+
+msgid "Checking local Tailscale status…"
+msgstr "Comprobando el estado local de Tailscale…"
+
+msgid "Permissions and authority…"
+msgstr "Permisos y autoridad…"
+
+msgid "Refresh status"
+msgstr "Actualizar estado"
+
+msgid "Manual setup steps"
+msgstr "Pasos de configuración manual"
+
+msgid "Tailscale · {status}"
+msgstr "Tailscale · {status}"
+
+msgid "Grant read-only Tailscale inventory"
+msgstr "Conceder inventario Tailscale de solo lectura"
+
+msgid "No supported Tailscale CLI or apt-get was found."
+msgstr "No se encontró un CLI de Tailscale compatible ni apt-get."
+
+msgid "New pairing PIN · asks first"
+msgstr "PIN de emparejado nuevo · pregunta primero"
+
+msgid "Replaces the current PIN and clears failed attempts. Needs the Mobile Host grant."
+msgstr "Sustituye el PIN actual y limpia los intentos fallidos. Hace falta el permiso de Mobile Host."
+
+msgid "Refresh host status"
+msgstr "Actualizar estado del host"
+
+msgid "Start Mobile Host · local approval required"
+msgstr "Arrancar Mobile Host · hace falta aprobación local"
+
+msgid "Listener stopped · no pairing credentials issued"
+msgstr "Receptor detenido · no se emitieron credenciales de emparejado"
+
+msgid "Route stays on after ISyCode exits · {url}"
+msgstr "La ruta sigue activa al salir de ISyCode · {url}"
+
+msgid "Manual installation steps"
+msgstr "Pasos de instalación manual"
+
+msgid "This permission is scoped to this workspace and exact executable. Mutations still need a fresh approval."
+msgstr "Este permiso está acotado a este espacio y al ejecutable exacto. Las mutaciones siguen pidiendo una aprobación nueva."
+
+msgid "Authority policy unavailable · all actions deny"
+msgstr "Política de Authority no disponible · todas las acciones se niegan"
+
+msgid "Host alive · http://{address}:{port}"
+msgstr "Host activo · http://{address}:{port}"
+
+msgid "One device exchange; token expires in one hour."
+msgstr "Un intercambio de dispositivo; el token caduca en una hora."
+
+msgid "Install Tailscale · supported Ubuntu/Debian · three approvals"
+msgstr "Instalar Tailscale · Ubuntu/Debian compatible · tres aprobaciones"
+
+msgid "Automated installation unavailable on this system"
+msgstr "La instalación automática no está disponible en este sistema"
+
+msgid "ISyCode automates only the reviewed Ubuntu/Debian package transaction."
+msgstr "ISyCode automatiza solo la transacción de paquetes Ubuntu/Debian revisada."
+
+msgid "{verb} {action} · {executable}"
+msgstr "{verb} {action} · {executable}"
+
+msgid "Pairing PIN · {pin} · expires in 5 minutes"
+msgstr "PIN de emparejamiento · {pin} · caduca en 5 minutos"
+
+msgid "Use the official manual instructions; ISyCode will not run an unverified installer."
+msgstr "Usa las instrucciones oficiales manuales; ISyCode no correrá un instalador no verificado."
+
+msgid "Log in to this tailnet…"
+msgstr "Entrar en este tailnet…"
+
+msgid "Check browser login status"
+msgstr "Comprobar el inicio en el navegador"
+
+msgid "Cancel local login process"
+msgstr "Cancelar el inicio de sesión local"
+
+msgid "Disable ISyCode Mobile Host route…"
+msgstr "Desactivar la ruta de ISyCode Mobile Host…"
+
+msgid "Revoke"
+msgstr "Revocar"
+
+msgid "Grant"
+msgstr "Conceder"
+
+msgid "Enable private Mobile Host route…"
+msgstr "Activar la ruta privada de Mobile Host…"
+
+msgid "Serve inventory is unavailable or conflicting"
+msgstr "El inventario de serve no está disponible o hay conflicto"
+
+msgid "ISyCode will not change unknown or conflicting Serve configuration."
+msgstr "ISyCode no cambiará una configuración Serve desconocida o en conflicto."
+
+msgid "Conversations"
+msgstr "Conversaciones"
+
+msgid "this conversation"
+msgstr "esta conversación"
+
+msgid "Start a new conversation"
+msgstr "Empezar una conversación nueva"
+
+msgid "{title} · {count} messages · {when} · current"
+msgstr "{title} · {count} mensajes · {when} · actual"
+
+msgid "{title} · {count} messages · {when}"
+msgstr "{title} · {count} mensajes · {when}"
+
+msgid "No saved conversations yet"
+msgstr "Aún no hay conversaciones guardadas"
+
+msgid "Skills"
+msgstr "Skills"
+
+msgid "MCP"
+msgstr "MCP"
+
+msgid "Load workspace AGENTS.md"
+msgstr "Cargar AGENTS.md del espacio"
+
+msgid "Reads only this workspace's AGENTS.md through its read permission."
+msgstr "Lee solo el AGENTS.md de este espacio con su permiso de lectura."
+
+msgid "Choose a document here or in a sibling project; external files ask for explicit permission."
+msgstr "Elige un documento aquí o en un proyecto hermano; los archivos externos piden permiso explícito."
+
+msgid "Context · workspace documents"
+msgstr "Contexto · documentos del espacio de trabajo"
+
+msgid "Context: {name}"
+msgstr "Contexto: {name}"
+
+msgid "Remove injected context"
+msgstr "Quitar contexto inyectado"
+
+msgid "Enter / Space / double-click expand"
+msgstr "Enter / Espacio / doble clic para ampliar"
+
+msgid "Queued"
+msgstr "En cola"
+
+msgid "Delete this iteration?"
+msgstr "¿Borrar esta iteración?"
+
+msgid "Delete iteration · y"
+msgstr "Borrar iteración · y"
+
+msgid "This permanently removes this one iteration ledger."
+msgstr "Esto elimina de forma permanente este libro de iteración."
+
+msgid "Delete this conversation?"
+msgstr "¿Borrar esta conversación?"
+
+msgid "Delete conversation · y"
+msgstr "Borrar conversación · y"
+
+msgid "This permanently removes this one transcript."
+msgstr "Esto elimina de forma permanente esta transcripción."
+
+msgid "Undo · move back"
+msgstr "Deshacer · devolver"
+
+msgid "Move file"
+msgstr "Mover archivo"
+
+msgid "Delete file"
+msgstr "Borrar archivo"
+
+msgid "External model review · GPT 6 Luna · OpenAI API"
+msgstr "Revisión de modelo externo · GPT 6 Luna · API de OpenAI"
+
+msgid "Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."
+msgstr "Solo se enviará el texto de abajo. El revisor no tiene herramientas. Una petición HTTP, máximo 1.200 tokens de salida; los reintentos automáticos están desactivados."
+
+msgid "Remember permission for this exact file"
+msgstr "Recordar el permiso para este archivo exacto"
+
+msgid "Workspace context pack · review before reading"
+msgstr "Paquete de contexto del espacio · revisar antes de leer"
+
+msgid "{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion."
+msgstr "{title}\n\n{detail} Antes de borrar se comprobará una aprobación de un solo uso, ligada a la sesión."
+
+msgid "Send this text"
+msgstr "Enviar este texto"
+
+msgid "No · n"
+msgstr "No · n"
+
+msgid "Allow once · y"
+msgstr "Permitir una vez · y"
+
+msgid "Cancel · n"
+msgstr "Cancelar · n"
+
+msgid "{label} · y"
+msgstr "{label} · y"
+
+msgid "Undo · remove file"
+msgstr "Deshacer · quitar archivo"
+
+msgid "Undo · restore file"
+msgstr "Deshacer · restaurar archivo"
+
+msgid "Create new file"
+msgstr "Crear archivo nuevo"
+
+msgid "Reject · n"
+msgstr "Rechazar · n"
+
+msgid "Apply change · y"
+msgstr "Aplicar cambio · y"
+
+msgid "Reject all · n"
+msgstr "Rechazar todo · n"
+
+msgid "Review each · e"
+msgstr "Revisar una a una · e"
+
+msgid "Approve all {count} · a"
+msgstr "Aprobar las {count} · a"
+
+msgid "Run command · y"
+msgstr "Ejecutar comando · y"
+
+msgid "Commit · y"
+msgstr "Hacer commit · y"
+
+msgid "Read and send once · y"
+msgstr "Leer y enviar una vez · y"
+
+msgid "Approve once · y"
+msgstr "Aprobar una vez · y"
+
+msgid "Keep · n"
+msgstr "Conservar · n"
+
+msgid "Replace whole file"
+msgstr "Reemplazar el archivo entero"
+
+msgid "Change file"
+msgstr "Cambiar archivo"
+
+msgid "Trust folder this session · s"
+msgstr "Confiar en la carpeta esta sesión · s"
+
+msgid "Always allow…"
+msgstr "Permitir siempre…"
+
+msgid "Caution: {reason}. A marker here would make every folder below it without its own .isyroot share this workspace's grants and sessions. Your 'recurring' default is not applied here.\n\n"
+msgstr "Cuidado: {reason}. Un marcador aquí haría que cada carpeta debajo sin su propio .isyroot comparta los permisos y sesiones de este espacio. Tu valor 'recurrente' no se aplica aquí.\n\n"
+
+msgid "Your provider key is already in the environment, so chat works right away."
+msgstr "La clave del proveedor ya está en el entorno, así que el chat funciona de inmediato."
+
+msgid "No provider key detected yet; you can add one later in Settings → Providers."
+msgstr "Aún no hay clave de proveedor; puedes añadirla después en Configuración → Proveedores."
+
+msgid "ISyCode will stop listing, reading, and searching files in this workspace. Your files and conversations stay where they are."
+msgstr "ISyCode dejará de listar, leer y buscar archivos en este espacio. Tus archivos y conversaciones se quedan donde están."
+
+msgid "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md to understand your project. It cannot edit or delete files, run commands, or access folders outside this workspace. You will still be asked before sensitive actions."
+msgstr "ISyCode puede listar carpetas, leer archivos de texto, encontrar nombres y usar un AGENTS.md elegido para entender tu proyecto. No puede editar ni borrar archivos, ejecutar comandos ni acceder a carpetas fuera de este espacio. Antes de acciones sensibles te seguirá preguntando."
+
+msgid "Set up this workspace?"
+msgstr "¿Configurar este espacio de trabajo?"
+
+msgid "Launch directory:\n{path}\n\n{warning}If this is a recurring project, Yes creates an empty .isyroot here and saves chat sessions in your private ISyCode state directory. .isyroot identifies the workspace; it does not grant filesystem access. Not now keeps this run temporary, and its chat history is removed when ISyCode exits."
+msgstr "Directorio de arranque:\n{path}\n\n{warning}Si este es un proyecto recurrente, Sí crea un .isyroot vacío aquí y guarda las sesiones de chat en tu directorio privado de estado de ISyCode. .isyroot identifica el espacio; no concede acceso al sistema de archivos. Ahora no deja esta ejecución temporal, y su historial se elimina al salir de ISyCode."
+
+msgid "Use recurring mode for new folders?"
+msgstr "¿Usar modo recurrente para carpetas nuevas?"
+
+msgid "When ISyCode first opens a folder without a saved choice, it will create an empty .isyroot marker there. This remembers the workspace identity only; it does not grant file access or copy permissions from another workspace. Broad folders such as your home directory, its parents, the temporary directory, or a mount point still ask first, so unrelated projects never share one workspace by accident."
+msgstr "Cuando ISyCode abre por primera vez una carpeta sin una elección guardada, crea ahí un marcador .isyroot vacío. Solo recuerda la identidad del espacio; no concede acceso a archivos ni copia permisos de otro espacio. Carpetas amplias como tu directorio de inicio, sus padres, el temporal o un punto de montaje siguen preguntando primero, para que proyectos distintos no compartan un espacio por accidente."
+
+msgid "Welcome to ISyCode · how do you want to start?"
+msgstr "Bienvenido a ISyCode · ¿cómo quieres empezar?"
+
+msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
+msgstr "{root}\n\n{provider_line}\n\nInicio rápido: esta carpeta pasa a ser un espacio recurrente en modo Classic — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más puede encender todas las herramientas de código, y las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\n\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
+
+msgid "How should ISyCode work in this folder?"
+msgstr "¿Cómo debe trabajar ISyCode en esta carpeta?"
+
+msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
+msgstr "{root}\n\nClassic: listo para programar. Lectura/búsqueda, propuestas de edición, chat, sesiones guardadas, revisión de Git y comandos en sandbox (cuando hay) están listos. Una confirmación aparte puede confiar en esta carpeta para que las ediciones normales y las pruebas aisladas dejen de preguntar una a una. Hasta que confirmes eso, cada edición, borrado/movimiento, comando y commit sigue preguntando. Los commits, secretos y cambios de autoridad preguntan igual.\nSecurity: no se permite nada hasta que lo actives en Configuración → Authority.\n\nLos dos modos usan IsySentinel y el diario de acciones. Nunca se implica un shell libre ni archivos sensibles. Cambia cuando quieras en Configuración → Authority."
+
+msgid "Allow semantic broker preview?"
+msgstr "¿Permitir la vista previa del broker semántico?"
+
+msgid "Add a named API key"
+msgstr "Añadir una clave de API con nombre"
+
+msgid "Saved in the operating system keyring and never shown after saving. Use service id `isyco-gateway` to supply the Gateway MCP."
+msgstr "Se guarda en el llavero del sistema y no se vuelve a mostrar. Usa el id de servicio `isyco-gateway` para el Gateway MCP."
+
+msgid "Yes · recurring workspace"
+msgstr "Sí · espacio recurrente"
+
+msgid "No · temporary run"
+msgstr "No · ejecución temporal"
+
+msgid "Yes, remember this workspace"
+msgstr "Sí, recordar este espacio"
+
+msgid "No, keep it temporary"
+msgstr "No, dejarlo temporal"
+
+msgid "Use for new folders · y"
+msgstr "Usar en carpetas nuevas · y"
+
+msgid "Quick Start · ready in under a minute"
+msgstr "Inicio rápido · listo en menos de un minuto"
+
+msgid "Custom setup · choose each step"
+msgstr "Configuración personalizada · elige cada paso"
+
+msgid "Classic · Ready To Use"
+msgstr "Classic · listo para usar"
+
+msgid "Security · everything off until I allow it"
+msgstr "Security · todo apagado hasta que yo lo permita"
+
+msgid "Turn off file reading?"
+msgstr "¿Desactivar la lectura de archivos?"
+
+msgid "Allow ISyCode to read workspace files?"
+msgstr "¿Permitir que ISyCode lea archivos del espacio?"
+
+msgid "Turn off this option?"
+msgstr "¿Desactivar esta opción?"
+
+msgid "Turn on this option?"
+msgstr "¿Activar esta opción?"
+
+msgid "Turn off Gateway tools?"
+msgstr "¿Desactivar las herramientas de Gateway?"
+
+msgid "Allow Gateway tools?"
+msgstr "¿Permitir herramientas de Gateway?"
+
+msgid "Turn off local code help?"
+msgstr "¿Desactivar la ayuda de código local?"
+
+msgid "Allow local code help?"
+msgstr "¿Permitir ayuda de código local?"
+
+msgid "Grant preview · y"
+msgstr "Conceder vista previa · y"
+
+msgid "Name shown in Settings"
+msgstr "Nombre que se ve en Configuración"
+
+msgid "Service id, e.g. isyco-gateway"
+msgstr "Id de servicio, p. ej. isyco-gateway"
+
+msgid "Purpose / where this key is used"
+msgstr "Para qué / dónde se usa esta clave"
+
+msgid "Turn off · y"
+msgstr "Desactivar · y"
+
+msgid "Turn on · y"
+msgstr "Activar · y"
+
+msgid "Copy reviewed Compose"
+msgstr "Copiar Compose revisado"
+
+msgid "Back · Esc"
+msgstr "Atrás · Esc"
+
+msgid "MULTI HARNESS  /  FIELD NOTES"
+msgstr "MULTI HARNESS  /  NOTAS DE CAMPO"
+
+msgid "Use folder"
+msgstr "Usar carpeta"
+
+msgid "Save selection"
+msgstr "Guardar selección"
+
+msgid "Copy transcript"
+msgstr "Copiar transcripción"
+
+msgid "Find a model, id or family…"
+msgstr "Buscar un modelo, id o familia…"
+
+msgid "Conversations  0"
+msgstr "Conversaciones  0"
+
+msgid "Copy model"
+msgstr "Copiar modelo"
+
+msgid "No models listed for this provider yet · refresh its account catalog."
+msgstr "Aún no hay modelos de este proveedor · actualiza el catálogo de su cuenta."
+
+msgid "Choose folder…"
+msgstr "Elegir carpeta…"
+
+msgid "Prepare repair Compose"
+msgstr "Preparar Compose de reparación"
+
+msgid "Refresh account catalog · "
+msgstr "Actualizar catálogo de la cuenta · "
+
+msgid "Enter a JSON object; arguments are not sent until the next confirmation."
+msgstr "Introduce un objeto JSON; los argumentos no se envían hasta la siguiente confirmación."
+
+msgid "ISyCo Gateway · semantic operations"
+msgstr "ISyCo Gateway · operaciones semánticas"
+
+msgid "Operation payload · JSON (fields are validated for the selected operation)"
+msgstr "Carga de la operación · JSON (los campos se validan para la operación elegida)"
+
+msgid "Confirm local LSP search"
+msgstr "Confirmar búsqueda LSP local"
+
+msgid "Review semantic broker build + start"
+msgstr "Revisar construcción + arranque del broker semántico"
+
+msgid "Manage semantic broker"
+msgstr "Gestionar broker semántico"
+
+msgid "Discovered input schema\n"
+msgstr "Esquema de entrada descubierto\n"
+
+msgid "Review call…"
+msgstr "Revisar llamada…"
+
+msgid "Approve once and invoke · y"
+msgstr "Aprobar una vez e invocar · y"
+
+msgid "Review request…"
+msgstr "Revisar petición…"
+
+msgid "Approve once and run · y"
+msgstr "Aprobar una vez y ejecutar · y"
+
+msgid "Symbol name…"
+msgstr "Nombre del símbolo…"
+
+msgid "Review search…"
+msgstr "Revisar búsqueda…"
+
+msgid "Approve once and search · y"
+msgstr "Aprobar una vez y buscar · y"
+
+msgid "Approve · Build + Start · y"
+msgstr "Aprobar · construir + arrancar · y"
+
+msgid "Health"
+msgstr "Salud"
+
+msgid "Logs…"
+msgstr "Registros…"
+
+msgid "Start…"
+msgstr "Arrancar…"
+
+msgid "Stop…"
+msgstr "Detener…"
+
+msgid "Remove…"
+msgstr "Quitar…"
+
+msgid "Idea box · full note"
+msgstr "Caja de ideas · nota completa"
+
+msgid "Close · Esc"
+msgstr "Cerrar · Esc"
+
+msgid "ShellBox · sandbox processes · session lifetime"
+msgstr "ShellBox · procesos del sandbox · dura la sesión"
+
+msgid "Read Bridge presence?"
+msgstr "¿Leer la presencia de Bridge?"
+
+msgid "This lists recent agent names only. It does not connect, claim a lease, send a message, or wake anyone. One confirmation, nothing remembered."
+msgstr "Solo lista nombres recientes de agentes. No conecta, no reclama un lease, no envía un mensaje ni despierta a nadie. Una confirmación, no se recuerda nada."
+
+msgid "No matching conversations"
+msgstr "No hay conversaciones coincidentes"
+
+msgid "Rename conversation"
+msgstr "Renombrar conversación"
+
+msgid "Search all conversations"
+msgstr "Buscar en todas las conversaciones"
+
+msgid "Find in console"
+msgstr "Buscar en consola"
+
+msgid "Type to search the current console"
+msgstr "Escribe para buscar en esta consola"
+
+msgid "Session changed elsewhere"
+msgstr "La sesión cambió en otro sitio"
+
+msgid "Select a process to inspect its output."
+msgstr "Elige un proceso para ver su salida."
+
+msgid "Stop selected"
+msgstr "Detener seleccionada"
+
+msgid "Read names"
+msgstr "Leer nombres"
+
+msgid "Search titles and transcript…"
+msgstr "Buscar títulos y transcripción…"
+
+msgid "New session"
+msgstr "Nueva sesión"
+
+msgid "Rename"
+msgstr "Renombrar"
+
+msgid "Fork"
+msgstr "Bifurcar"
+
+msgid "Delete"
+msgstr "Borrar"
+
+msgid "Conversation name"
+msgstr "Nombre de la conversación"
+
+msgid "Save name"
+msgstr "Guardar nombre"
+
+msgid "Type terms found in any title or message…"
+msgstr "Escribe términos de cualquier título o mensaje…"
+
+msgid "Search this conversation…"
+msgstr "Buscar en esta conversación…"
+
+msgid "↑ Previous"
+msgstr "↑ Anterior"
+
+msgid "Next ↓"
+msgstr "Siguiente ↓"
+
+msgid "Save mine as a new conversation (Fork: …) · the saved one stays as it is"
+msgstr "Guardar la mía como conversación nueva (Fork: …) · la guardada se queda igual"
+
+msgid "Open the saved version · what exists only in this window is discarded"
+msgstr "Abrir la versión guardada · se descarta lo que solo existe en esta ventana"
+
+msgid "Continue without saving · Esc · nothing is written until you choose"
+msgstr "Seguir sin guardar · Esc · no se escribe nada hasta que elijas"
+
+msgid "No pending messages."
+msgstr "No hay mensajes pendientes."
+
+msgid "No captured ideas."
+msgstr "No hay ideas capturadas."
+
+msgid "Your answer"
+msgstr "Tu respuesta"
+
+msgid "Send"
+msgstr "Enviar"
+
+msgid "Remove from draft"
+msgstr "Quitar del borrador"
+
+msgid "Remove pending message"
+msgstr "Quitar mensaje pendiente"
+
+msgid "Promote to message queue"
+msgstr "Pasar a la cola de mensajes"
+
+msgid "Discard idea"
+msgstr "Descartar idea"
+
+msgid "ISYCODE  ·  WORKSPACE"
+msgstr "ISYCODE  ·  ESPACIO"
+
+msgid "Overview"
+msgstr "Resumen"
+
+msgid "Files"
+msgstr "Archivos"
+
+msgid "Refresh integrations"
+msgstr "Actualizar integraciones"
+
+msgid "No plan pending"
+msgstr "Sin plan pendiente"
+
+msgid "Workspace"
+msgstr "Espacio de trabajo"
+
+msgid "↑ Up"
+msgstr "↑ Subir"
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "Folders"
+msgstr "Carpetas"
+
+msgid "Copy path"
+msgstr "Copiar ruta"
+
+msgid "Open preview"
+msgstr "Abrir vista previa"
+
+msgid "Select a file to preview it."
+msgstr "Elige un archivo para previsualizarlo."
+
+msgid "IsySentinel"
+msgstr "IsySentinel"
+
+msgid "Reading Workspace Authority and the action journal…"
+msgstr "Leyendo Workspace Authority y el diario de acciones…"
+
+msgid "MCPs"
+msgstr "MCPs"
+
+msgid "Tool service status has not been checked."
+msgstr "El estado de los servicios de herramientas no se ha comprobado."
+
+msgid "LSPs"
+msgstr "LSPs"
+
+msgid "Checking installed language servers…"
+msgstr "Comprobando servidores de lenguaje instalados…"
+
+msgid "Install commands"
+msgstr "Comandos de instalación"
+
+msgid "ISyCode skill catalog has not been checked."
+msgstr "El catálogo de skills de ISyCode no se ha comprobado."
+
+msgid "ISyCode skills"
+msgstr "Skills de ISyCode"
+
+msgid "Connections · 4"
+msgstr "Conexiones · 4"
+
+msgid "ISyCo Gateway"
+msgstr "ISyCo Gateway"
+
+msgid "Gateway status has not been checked."
+msgstr "El estado de Gateway no se ha comprobado."
+
+msgid "Gateway MCP"
+msgstr "Gateway MCP"
+
+msgid "Tool catalog has not been checked."
+msgstr "El catálogo de herramientas no se ha comprobado."
+
+msgid "Mobile Host"
+msgstr "Mobile Host"
+
+msgid "Starting local mobile host…"
+msgstr "Arrancando el host móvil local…"
+
+msgid "No mobile clients connected."
+msgstr "No hay clientes móviles conectados."
+
+msgid "Bridge Coordination"
+msgstr "Coordinación Bridge"
+
+msgid "Disabled · No Bridge Handshake"
+msgstr "Desactivado · sin handshake de Bridge"
+
+msgid "↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation"
+msgstr "↑/↓ elegir · Enter o doble clic abrir · Ctrl+D borrar la conversación"
+
+msgid "+ New"
+msgstr "+ Nueva"
+
+msgid "+ New conversation"
+msgstr "+ Nueva conversación"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "Bridge presence…"
+msgstr "Presencia Bridge…"
+
+msgid "Bridge presence off"
+msgstr "Presencia Bridge apagada"
+
+msgid "Hide"
+msgstr "Ocultar"
+
+msgid "All"
+msgstr "Todas"
+
+msgid "Working"
+msgstr "En curso"
+
+msgid "Needs input"
+msgstr "Espera respuesta"
+
+msgid "Idle"
+msgstr "Inactiva"
+
+msgid "Select a conversation to inspect it."
+msgstr "Elige una conversación para inspeccionarla."
+
+msgid "Guidance available to ISyCode"
+msgstr "Guía disponible para ISyCode"
+
+msgid "Current and available model IDs"
+msgstr "IDs de modelo actuales y disponibles"
+
+msgid "Connected tool services and their status"
+msgstr "Servicios de herramientas conectados y su estado"
+
+msgid "LSP"
+msgstr "LSP"
+
+msgid "Language server status"
+msgstr "Estado de los language servers"
+
+msgid "Workspace files and directories"
+msgstr "Archivos y directorios del espacio"
+
+msgid "Roles"
+msgstr "Roles"
+
+msgid "ISyCode agents and ISyCo motors"
+msgstr "Agentes ISyCode y motores ISyCo"
+
+msgid "Provider catalog and credentials"
+msgstr "Catálogo de proveedores y credenciales"
+
+msgid "Session"
+msgstr "Sesión"
+
+msgid "Session actions and current state"
+msgstr "Acciones de sesión y estado actual"
+
+msgid "Workspace root and navigation"
+msgstr "Raíz del espacio y navegación"
+
+msgid "Slash commands and keyboard shortcuts"
+msgstr "Comandos slash y atajos de teclado"
+
+msgid "Spanish"
+msgstr "Español"
+
+msgid "English"
+msgstr "Inglés"
+
+msgid "Chinese"
+msgstr "Chino"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "Ask me when I open a new folder"
+msgstr "Preguntarme al abrir una carpeta nueva"
+
+msgid "Always use temporary mode for new folders"
+msgstr "Usar siempre el modo temporal en carpetas nuevas"
+
+msgid "Make new folders recurring by default"
+msgstr "Hacer recurrentes las carpetas nuevas por defecto"
+
+msgid "Ask me which mode a new folder uses"
+msgstr "Preguntarme qué modo usa una carpeta nueva"
+
+msgid "Start new folders in Classic · Ready To Use"
+msgstr "Abrir carpetas nuevas en Classic · listo para usar"
+
+msgid "Start new folders in Security · everything off until I allow it"
+msgstr "Abrir carpetas nuevas en Security · todo apagado hasta que yo lo permita"
+
+msgid "Grok is signed in on this machine"
+msgstr "Grok está iniciado en este equipo"
+
+msgid "Grok sign-in expired"
+msgstr "El inicio de Grok caducó"
+
+msgid "No Grok sign-in yet"
+msgstr "Aún no hay inicio de Grok"
+
+msgid "Mode · Classic · Ready To Use; switch to Security…"
+msgstr "Modo · Classic · listo para usar; cambiar a Security…"
+
+msgid "Mode · Security · nothing runs until you allow it; switch to Classic…"
+msgstr "Modo · Security · no corre nada hasta que lo permitas; cambiar a Classic…"
+
+msgid "Mobile Host on this computer"
+msgstr "Mobile Host en este equipo"
+
+msgid "Mobile Host on this computer · partial saved grant"
+msgstr "Mobile Host en este equipo · permiso parcial guardado"
+
+msgid "Choose the provider and model used for this conversation."
+msgstr "Elige el proveedor y el modelo de esta conversación."
+
+msgid "Choose supported reasoning settings for the active provider and model."
+msgstr "Elige los ajustes de razonamiento compatibles del proveedor y modelo activos."
+
+msgid "Choose instructions for how the agent should work."
+msgstr "Elige instrucciones de cómo debe trabajar el agente."
+
+msgid "Remove the selected role from this conversation."
+msgstr "Quita el rol seleccionado de esta conversación."
+
+msgid "Review the context available to the agent."
+msgstr "Revisa el contexto disponible para el agente."
+
+msgid "Choose a Markdown or text file to add to the conversation."
+msgstr "Elige un archivo Markdown o de texto para añadir a la conversación."
+
+msgid "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged."
+msgstr "Compresión por RTK · https://github.com/rtk-ai/rtk · opt-in, los permisos no cambian."
+
+msgid "Personal defaults shared across your workspaces."
+msgstr "Valores personales compartidos entre tus espacios."
+
+msgid "Create workspace preferences after reviewing the proposed files."
+msgstr "Crea preferencias del espacio tras revisar los archivos propuestos."
+
+msgid "Preferences for this workspace; permissions are separate."
+msgstr "Preferencias de este espacio; los permisos van aparte."
+
+msgid "Review and copy legacy commands; preserve their originals."
+msgstr "Revisa y copia comandos legado; conserva los originales."
+
+msgid "Browse commands and keyboard shortcuts."
+msgstr "Explora comandos y atajos de teclado."
+
+msgid "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled."
+msgstr "Ritmos de campana distintos para fin, aprobación, preguntas y errores; la campana del terminal debe estar activa."
+
+msgid "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black."
+msgstr "Pasa las superficies de control a negro puro con bordes más claros; la paleta ya cumple WCAG AA sobre negro."
+
+msgid "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode."
+msgstr "Sustituye ✓/✗/●/○ y el arte del banner por marcas ASCII en terminales sin Unicode."
+
+msgid "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it."
+msgstr "Desplaza el texto terminado en cabeceras plegadas. Clic en el texto de cabecera alterna una caja; la flecha la abre."
+
+msgid "Inspect or change workspace permissions and approval settings."
+msgstr "Inspecciona o cambia permisos del espacio y ajustes de aprobación."
+
+msgid "Manage named API credentials and their allowed uses."
+msgstr "Gestiona credenciales API con nombre y sus usos permitidos."
+
+msgid "Inspect recorded actions and verify their receipts."
+msgstr "Inspecciona acciones registradas y verifica sus recibos."
+
+msgid "Review workspace folders and per-folder automatic edit settings."
+msgstr "Revisa carpetas del espacio y los ajustes de edición automática por carpeta."
+
+msgid "Inspect other harness settings; copying requires a separate confirmation."
+msgstr "Inspecciona ajustes de otros harness; copiar pide una confirmación aparte."
+
+msgid "Manage MCP, LSP, Gateway and remote connections with separate permissions."
+msgstr "Gestiona MCP, LSP, Gateway y conexiones remotas con permisos aparte."
+
+msgid "Browse workspace files."
+msgstr "Explora los archivos del espacio."
+
+msgid "key in environment"
+msgstr "clave en el entorno"
+
+msgid "key saved"
+msgstr "clave guardada"
+
+msgid "legacy key saved"
+msgstr "clave legado guardada"
+
+msgid "legacy key"
+msgstr "clave legado"
+
+msgid "no key required"
+msgstr "no hace falta clave"
+
+msgid "subscription"
+msgstr "suscripción"
+
+msgid "Grok sign-in"
+msgstr "inicio de Grok"
+
+msgid "credential store unavailable"
+msgstr "almacén de credenciales no disponible"
+
+msgid "Nemotron via NVIDIA NIM"
+msgstr "Nemotron por NVIDIA NIM"
+
+msgid "API key or ChatGPT subscription"
+msgstr "clave API o suscripción ChatGPT"
+
+msgid "Claude models via API key"
+msgstr "modelos Claude con clave API"
+
+msgid "OpenCode catalog, OpenAI-compatible"
+msgstr "catálogo OpenCode, compatible con OpenAI"
+
+msgid "OpenCode Go endpoint"
+msgstr "endpoint OpenCode Go"
+
+msgid "ChatGPT Web via the local bridge on 127.0.0.1:8792"
+msgstr "ChatGPT Web por el puente local en 127.0.0.1:8792"
+
+msgid "API key or Grok sign-in"
+msgstr "clave API o inicio de Grok"
+
+msgid "Gemini, OpenAI-compatible endpoint"
+msgstr "Gemini, endpoint compatible con OpenAI"
+
+msgid "One key, many models"
+msgstr "una clave, muchos modelos"
+
+msgid "Fast OpenAI-compatible inference"
+msgstr "inferencia rápida compatible con OpenAI"
+
+msgid "Direct API"
+msgstr "API directa"
+
+msgid "Fireworks inference API"
+msgstr "API de inferencia Fireworks"
+
+msgid "OpenAI-compatible inference"
+msgstr "inferencia compatible con OpenAI"
+
+msgid "Moonshot OpenAI-compatible API"
+msgstr "API Moonshot compatible con OpenAI"
+
+msgid "GLM coding endpoint"
+msgstr "endpoint de código GLM"
+
+msgid "Alibaba compatible-mode API"
+msgstr "API Alibaba en modo compatible"
+
+msgid "Router, OpenAI-compatible"
+msgstr "router, compatible con OpenAI"
+
+msgid "OpenAI-compatible catalog"
+msgstr "catálogo compatible con OpenAI"
+
+msgid "AI Gateway endpoint"
+msgstr "endpoint AI Gateway"
+
+msgid "OpenAI-compatible API"
+msgstr "API compatible con OpenAI"
+
+msgid "Scaleway Generative APIs"
+msgstr "APIs generativas Scaleway"
+
+msgid "Token Factory, OpenAI-compatible"
+msgstr "Token Factory, compatible con OpenAI"
+
+msgid "Local server"
+msgstr "servidor local"
+
+msgid "Local server on 127.0.0.1:1234"
+msgstr "servidor local en 127.0.0.1:1234"
+
+msgid "Local server on 127.0.0.1:8080"
+msgstr "servidor local en 127.0.0.1:8080"
+
+msgid "No ISyCode transport yet"
+msgstr "aún no hay transporte ISyCode"
+
+msgid "Set a preset, or ask for a base URL before one is added"
+msgstr "pon un preset, o pide una URL base antes de añadirla"

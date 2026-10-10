@@ -23,6 +23,7 @@ from isycode.tui_theme import (
     TEXT,
 )
 from isycode.tui_widgets import Collapsible, activate_on_second_click
+from isycode.localization import tr
 
 
 
@@ -51,8 +52,8 @@ class HarnessFolderConfirmScreen(ModalScreen[bool]):
                 "This does not grant workspace access, a network host, or a credential.")
             yield Static(str(self.path), id="harness-folder-path", markup=False)
             with Horizontal(id="harness-folder-actions"):
-                yield Button("Cancel", id="harness-folder-no")
-                yield Button("Use folder", id="harness-folder-yes", variant="primary")
+                yield Button(tr("Cancel"), id="harness-folder-no")
+                yield Button(tr("Use folder"), id="harness-folder-yes", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "harness-folder-yes")
@@ -87,8 +88,8 @@ class HarnessModelConfirmScreen(ModalScreen[bool]):
                 "and in preferences/provider.json? The open chat's state.model is not changed. "
                 "No API key is loaded. No network call is made.", markup=False)
             with Horizontal(id="harness-model-actions"):
-                yield Button("Cancel", id="harness-model-no")
-                yield Button("Save selection", id="harness-model-yes", variant="primary")
+                yield Button(tr("Cancel"), id="harness-model-no")
+                yield Button(tr("Save selection"), id="harness-model-yes", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "harness-model-yes")
@@ -126,8 +127,8 @@ class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
                 markup=False)
             yield Static(self.relative_path, id="harness-transcript-path", markup=False)
             with Horizontal(id="harness-transcript-actions"):
-                yield Button("Cancel", id="harness-transcript-no")
-                yield Button("Copy transcript", id="harness-transcript-yes", variant="primary")
+                yield Button(tr("Cancel"), id="harness-transcript-no")
+                yield Button(tr("Copy transcript"), id="harness-transcript-yes", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "harness-transcript-yes")
@@ -225,18 +226,18 @@ class ModelsScreen(ModalScreen):
                 if scope else "Expand a provider · click a model to read it · Enter uses it")
         with Vertical(id="models-card"):
             yield Static(Text.assemble((heading + "\n", "bold #c7b8d4"), (hint, MUTED)), id="models-title")
-            yield Input(value=self.search_query, placeholder="Find a model, id or family…", id="models-search")
+            yield Input(value=self.search_query, placeholder=tr("Find a model, id or family…"), id="models-search")
             with Horizontal(id="models-body"):
                 with VerticalScroll(id="models-scroll"):
                     for index, entry in enumerate(self.entries):
                         if entry["kind"] == "model_list" and (not scope or entry["value"] == scope):
                             key = f"model-catalog-{index}"
                             self.choices[key] = entry
-                            yield Button("Refresh account catalog · " + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
+                            yield Button(tr("Refresh account catalog · ") + PRESETS.get(entry["value"], {}).get("label", entry["value"]),
                                          id=key, classes="model-choice")
                     if scope:
                         if not groups[scope]:
-                            yield Static("No models listed for this provider yet · refresh its account catalog.",
+                            yield Static(tr("No models listed for this provider yet · refresh its account catalog."),
                                          classes="model-empty")
                         else:
                             for family, family_entries in self._by_family(groups[scope]):
@@ -254,8 +255,8 @@ class ModelsScreen(ModalScreen):
                     yield Static(Text("Click a model. Context, reasoning and tools show here.", style=MUTED),
                                  id="model-detail")
             notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
-            yield Static("\n".join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
-            yield Button("Back" if scope else "Close", id="models-close")
+            yield Static(tr("\n").join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
+            yield Button(tr("Back") if scope else tr("Close"), id="models-close")
 
     def _choice_button(self, entry: dict) -> ModelChoice:
         from isycode.model_presentation import model_display_name
@@ -412,8 +413,8 @@ class HarnessComposeScreen(ModalScreen[bool]):
             yield Static(Text("Repair Compose · review proposal", style=CYAN))
             with VerticalScroll(id="compose-scroll"):
                 yield Static(Text(self.brief), id="compose-body")
-            yield Button("Copy reviewed Compose", id="compose-copy")
-            yield Button("Back · Esc", id="compose-close")
+            yield Button(tr("Copy reviewed Compose"), id="compose-copy")
+            yield Button(tr("Back · Esc"), id="compose-close")
 
     def on_button_pressed(self, event):
         self.dismiss(event.button.id == "compose-copy")
@@ -456,10 +457,10 @@ class MultiHarnessScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="harness-card"):
-            yield Static("MULTI HARNESS  /  FIELD NOTES", id="harness-title")
+            yield Static(tr("MULTI HARNESS  /  FIELD NOTES"), id="harness-title")
             with Horizontal(id="harness-counts"):
                 yield Static(f"Folders  0/{len(CATALOG_IDS)}", id="harness-folders-count", classes="harness-count")
-                yield Static("Conversations  0", id="harness-sessions-count", classes="harness-count")
+                yield Static(tr("Conversations  0"), id="harness-sessions-count", classes="harness-count")
             yield Static(self._render_summary(), id="harness-summary")
             with VerticalScroll(id="harness-scroll"):
                 for harness_id in CATALOG_IDS:
@@ -469,12 +470,11 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                                      id=f"harness-section-text-{harness_id}",
                                      classes="harness-section-text")
                         with Horizontal(classes="harness-actions"):
-                            yield Button("Choose folder…", id=self._pick_button_id(harness_id))
-                            copy_button = Button("Copy model", id=self._copy_button_id(harness_id))
+                            yield Button(tr("Choose folder…"), id=self._pick_button_id(harness_id))
+                            copy_button = Button(tr("Copy model"), id=self._copy_button_id(harness_id))
                             copy_button.display = False
                             yield copy_button
-                            transcript_button = Button(
-                                "Copy transcript", id=self._transcript_button_id(harness_id))
+                            transcript_button = Button(tr("Copy transcript"), id=self._transcript_button_id(harness_id))
                             transcript_button.display = False
                             yield transcript_button
                 with Collapsible(title=self._gap_title(), collapsed=True, id="harness-gap-panel"):
@@ -482,8 +482,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                     for row in self._gap_rows():
                         with Collapsible(title=row["title"], collapsed=True):
                             yield Static(Text(SEED_OPTIONS[row["semantic_id"]].meaning))
-                            yield Button("Prepare repair Compose", id=f"harness-compose-{row['semantic_id']}")
-            yield Button("Close", id="harness-close")
+                            yield Button(tr("Prepare repair Compose"), id=f"harness-compose-{row['semantic_id']}")
+            yield Button(tr("Close"), id="harness-close")
 
     def _render_summary(self) -> Text:
         checking = sum(bool(section.get("checking")) for section in self.sections)
