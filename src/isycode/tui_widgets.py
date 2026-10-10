@@ -402,6 +402,8 @@ class ThoughtBlock(Collapsible):
 
     def __init__(self, title: str = "thinking...", **kwargs) -> None:
         self._full_text = ""
+        self._text_parts: list[str] = []
+        self._pending_text_paint = None
         self._base_title = title
         self._expanded = False
         body = SelectableText(Text("", style=MUTED))
@@ -417,12 +419,14 @@ class ThoughtBlock(Collapsible):
         self._started_at = _time.monotonic()
         self._update_elapsed_title()
         self._elapsed_timer = self.set_interval(1, self._update_elapsed_title)
+        if self._text_parts:
+            self._flush_pending_text()
 
     def _update_elapsed_title(self) -> None:
         if self._streaming:
             elapsed = _elapsed_label(_time.monotonic() - self._started_at)
             self._base_title = f"thinking · {elapsed}"
-            self._paint_preview()
+            self._paint_title()
 
     def scroll_visible(self, *args, **kwargs):
         # Collapsible schedules this on its initial expansion. During a live
@@ -433,8 +437,38 @@ class ThoughtBlock(Collapsible):
 
     def set_text(self, text: str) -> None:
         """Thread-safe entry: replace the reasoning body."""
+        if self._pending_text_paint is not None:
+            self._pending_text_paint.stop()
+            self._pending_text_paint = None
+        self._text_parts = [text] if text else []
         self._full_text = text
         self._paint_preview()
+
+    def append_text(self, chunk: str) -> None:
+        """Buffer a stream fragment and repaint at most once per frame window."""
+        if not chunk:
+            return
+        self._text_parts.append(chunk)
+        if self.is_mounted and self._pending_text_paint is None:
+            self._pending_text_paint = self.set_timer(0.08, self._flush_pending_text)
+
+    def _flush_pending_text(self) -> None:
+        timer = self._pending_text_paint
+        self._pending_text_paint = None
+        if timer is not None:
+            timer.stop()
+        self._full_text = "".join(self._text_parts)
+        self._paint_preview()
+        if self.is_mounted and hasattr(self.parent, "follow_tail"):
+            self.parent.follow_tail()
+
+    def _paint_title(self) -> None:
+        if self.collapsed:
+            preview = " ".join(self._full_text.split())
+            budget = max(1, self.content_size.width - cell_len(self._base_title) - 9)
+            self.title = self._base_title + ("     " + _fit_cells(preview, budget) if preview else "")
+        else:
+            self.title = self._base_title
 
     def _paint_preview(self) -> None:
         if not hasattr(self, "_body"):
@@ -449,12 +483,7 @@ class ThoughtBlock(Collapsible):
         self._preview_more = more
         if not self._expanded and more:
             text = Text("\n").join(lines[:2])
-        if self.collapsed:
-            preview = " ".join(self._full_text.split())
-            budget = max(1, self.content_size.width - cell_len(self._base_title) - 9)
-            self.title = self._base_title + ("     " + _fit_cells(preview, budget) if preview else "")
-        else:
-            self.title = self._base_title
+        self._paint_title()
         self._body.set_selectable_content(text, text.plain)
         self.border_subtitle = (Text("Enter / Space " + ("collapse" if self._expanded and not self.collapsed else "expand"), style=MUTED)
                                 if more and (self.has_focus or self.has_focus_within) else "")
@@ -492,6 +521,8 @@ class ThoughtBlock(Collapsible):
 
     def collapse_to(self, seconds: float) -> None:
         """Collapse with the elapsed-time title."""
+        if self._pending_text_paint is not None:
+            self._flush_pending_text()
         self._base_title = f"thought for {_elapsed_label(seconds)}"
         self._streaming = False
         if self._elapsed_timer is not None:

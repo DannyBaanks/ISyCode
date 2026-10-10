@@ -593,6 +593,7 @@ class ChatMixin:
                 lane = self._active_lane()
                 lane.stream_block = None
                 lane.partial_reason = ""
+                lane.partial_reason_chunks = []
 
             def discard_failed_step(content_mark: int, reason_mark: int) -> None:
                 """Drop what a failed step streamed: shown text, reasoning, buffers.
@@ -614,6 +615,7 @@ class ChatMixin:
                 lane.stream_block = None
                 lane.partial = ""
                 lane.partial_reason = ""
+                lane.partial_reason_chunks = []
                 block = None
 
             def on_chunk(kind: str, chunk: str) -> None:
@@ -622,23 +624,29 @@ class ChatMixin:
                     return
                 lane = self._active_lane()
                 if kind == "reasoning":
-                    if block is None:
-                        if self._lane_on_screen():
-                            block, _ = self._mount_thought()
-                            thought_started = _time.monotonic()
-                            lane.stream_block = block
-                        else:
-                            block = None
                     reason_buf.append(chunk)
                     step_reason.append(chunk)
-                    lane.partial_reason = "".join(step_reason)
+                    lane.partial_reason_chunks = step_reason
+                    if (block is None or block.parent is None
+                            or getattr(block, "_pruning", False)):
+                        if self._lane_on_screen():
+                            live = lane.stream_block
+                            chat = self.query_one(ChatArea)
+                            if (live is not None and live.parent is chat
+                                    and not getattr(live, "_pruning", False)):
+                                block = live
+                            else:
+                                block, _ = self._mount_thought()
+                                thought_started = _time.monotonic()
+                                lane.stream_block = block
+                        else:
+                            block = None
                     if not self._lane_on_screen():
                         lane.stream_block = None
                         block = None
                         return
                     if block is not None:
-                        block.set_text(lane.partial_reason)
-                        self.query_one(ChatArea).follow_tail()
+                        block.append_text(chunk)
                 elif kind == "content":
                     if not step_content and content_buf:
                         content_buf.append("\n\n")
@@ -942,6 +950,7 @@ class ChatMixin:
                 done_lane = self._active_lane()
                 done_lane.partial = ""
                 done_lane.partial_reason = ""
+                done_lane.partial_reason_chunks = []
                 if step_reason:
                     done_lane.lines.append(("reasoning", "".join(step_reason),
                                             _time.monotonic() - thought_started))
