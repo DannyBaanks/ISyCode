@@ -22,6 +22,9 @@ msgstr "Español"
 msgid "English"
 msgstr "Inglés"
 
+msgid "Chinese"
+msgstr "Chino"
+
 msgid "Language · {name}"
 msgstr "Idioma · {name}"
 

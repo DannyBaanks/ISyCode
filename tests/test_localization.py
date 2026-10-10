@@ -8,6 +8,7 @@ from isycode.localization import (
     catalog_diagnostic,
     configure_locale,
     current_locale,
+    next_locale,
     tr,
     validate_catalogs,
 )
@@ -30,6 +31,22 @@ def test_english_catalog_selection():
     assert tr("Settings") == "Settings"
     assert tr("Context") == "Context"
     assert tr("Language · {name}", name=tr("English")) == "Language · English"
+
+
+def test_chinese_catalog_selection():
+    configure_locale("zh")
+    assert current_locale() == "zh"
+    assert tr("Settings") == "设置"
+    assert tr("Context") == "上下文"
+    assert tr("Authority & Security") == "Authority & Security"
+    assert tr("Context: {name}", name="AGENT.txt") == "上下文: AGENT.txt"
+    assert tr("Language · {name}", name=tr("Chinese")) == "语言 · 中文"
+
+
+def test_locale_cycle_order():
+    assert next_locale("es") == "en"
+    assert next_locale("en") == "zh"
+    assert next_locale("zh") == "es"
 
 
 def test_missing_catalog_entry_uses_english_and_reports_diagnostic(tmp_path):
@@ -101,6 +118,10 @@ def test_spanish_settings_title_and_english_switch(tmp_path, monkeypatch, capsys
             await pilot.pause()
             assert app._menu_title == "Settings"
             assert UserDefaultsStore().load()["locale"] == "en"
+            app._menu_locale_cycle({})
+            await pilot.pause()
+            assert app._menu_title == "设置"
+            assert UserDefaultsStore().load()["locale"] == "zh"
             assert any(entry["kind"] == "authority_open"
                        and entry["label"] == "Authority & Security"
                        for entry in app._menu_entries)

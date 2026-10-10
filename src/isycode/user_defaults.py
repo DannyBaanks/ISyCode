@@ -31,7 +31,7 @@ class UserDefaultsStore:
     # policy, and "ask" shows the mode screen.
     NEW_WORKSPACE_MODES = {"ask", "classic", "security"}
     ROLE_KINDS = {"agents", "subagents", "motors"}
-    LOCALES = {"es", "en"}
+    LOCALES = {"es", "en", "zh"}
     DEFAULT_LOCALE = "es"
 
     def __init__(self, directory: Path | None = None) -> None:

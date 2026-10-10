@@ -4,8 +4,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-SUPPORTED_LOCALES = ("es", "en")
+SUPPORTED_LOCALES = ("es", "en", "zh")
 DEFAULT_LOCALE = "es"
+LANGUAGE_LABELS = {"es": "Spanish", "en": "English", "zh": "Chinese"}
 DOMAIN = "isycode"
 PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}|%\(([A-Za-z_][A-Za-z0-9_]*)\)s")
 
@@ -23,8 +24,19 @@ def catalog_diagnostic() -> str:
     return _DIAGNOSTIC
 
 
+def next_locale(current: str) -> str:
+    """Cycle es → en → zh → es. Unknown values start at English."""
+    if current not in SUPPORTED_LOCALES:
+        return "en"
+    return SUPPORTED_LOCALES[(SUPPORTED_LOCALES.index(current) + 1) % len(SUPPORTED_LOCALES)]
+
+
+def language_msgid(locale: str) -> str:
+    return LANGUAGE_LABELS.get(locale, "Spanish")
+
+
 def configure_locale(locale: str, *, catalog_root: Path | None = None) -> None:
-    """Load a packaged catalog. A missing Spanish catalog falls back to English."""
+    """Load a packaged catalog. A missing non-English catalog falls back to English."""
     global _LOCALE, _CATALOG, _DIAGNOSTIC, _CATALOG_ROOT
     _CATALOG_ROOT = catalog_root
     wanted = locale if locale in SUPPORTED_LOCALES else DEFAULT_LOCALE
@@ -32,17 +44,19 @@ def configure_locale(locale: str, *, catalog_root: Path | None = None) -> None:
         catalog = _load_catalog(wanted)
     except (OSError, ValueError, UnicodeDecodeError):
         catalog = {}
-    if wanted == "es" and not catalog:
+    if wanted != "en" and not catalog:
+        names = {"es": "Spanish", "zh": "Chinese"}
+        label = names.get(wanted, wanted)
         try:
             catalog = _load_catalog("en")
             _LOCALE = "en"
-            _DIAGNOSTIC = "ISyCode could not load the Spanish catalog; showing English."
+            _DIAGNOSTIC = f"ISyCode could not load the {label} catalog; showing English."
             _CATALOG = catalog
             return
         except (OSError, ValueError, UnicodeDecodeError):
             _LOCALE = "en"
             _CATALOG = {}
-            _DIAGNOSTIC = "ISyCode could not load the Spanish catalog; showing English."
+            _DIAGNOSTIC = f"ISyCode could not load the {label} catalog; showing English."
             return
     _LOCALE = wanted
     _CATALOG = catalog
@@ -68,23 +82,31 @@ def validate_catalogs(catalog_root: Path | None = None) -> list[str]:
     root = catalog_root or _catalog_root()
     problems: list[str] = []
     try:
-        english = _parse_po(_po_path(root, "en").read_text(encoding="utf-8"))
-        spanish = _parse_po(_po_path(root, "es").read_text(encoding="utf-8"))
+        catalogs = {
+            code: _parse_po(_po_path(root, code).read_text(encoding="utf-8"))
+            for code in SUPPORTED_LOCALES
+        }
     except (OSError, ValueError, UnicodeDecodeError) as error:
         return [f"catalogs could not be read: {error}"]
-    english_ids = set(english)
-    spanish_ids = set(spanish)
-    for missing in sorted(english_ids - spanish_ids):
-        problems.append(f"missing Spanish entry {missing[0]!r} {missing[1]!r}")
-    for extra in sorted(spanish_ids - english_ids):
-        problems.append(f"extra Spanish entry {extra[0]!r} {extra[1]!r}")
-    for key in sorted(english_ids & spanish_ids):
-        source = _placeholders(key[1])
-        translated = _placeholders(spanish[key])
-        if source != translated:
-            problems.append(
-                f"placeholder mismatch {key[0]!r} {key[1]!r}: {sorted(source)} vs {sorted(translated)}"
-            )
+    english_ids = set(catalogs["en"])
+    labels = {"es": "Spanish", "zh": "Chinese"}
+    for code in SUPPORTED_LOCALES:
+        if code == "en":
+            continue
+        other_ids = set(catalogs[code])
+        label = labels.get(code, code)
+        for missing in sorted(english_ids - other_ids):
+            problems.append(f"missing {label} entry {missing[0]!r} {missing[1]!r}")
+        for extra in sorted(other_ids - english_ids):
+            problems.append(f"extra {label} entry {extra[0]!r} {extra[1]!r}")
+        for key in sorted(english_ids & other_ids):
+            source = _placeholders(key[1])
+            translated = _placeholders(catalogs[code][key])
+            if source != translated:
+                problems.append(
+                    f"placeholder mismatch {code} {key[0]!r} {key[1]!r}: "
+                    f"{sorted(source)} vs {sorted(translated)}"
+                )
     return problems
 
 

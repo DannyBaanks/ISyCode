@@ -58,7 +58,7 @@ from isycode.shortcuts import APP_SHORTCUTS
 from textual.widgets import Button
 from isycode.tui_widgets import ExpandableBox, SidePanel
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
-from isycode.localization import configure_locale, tr
+from isycode.localization import configure_locale, next_locale, tr
 from isycode.user_defaults import UserDefaultsStore
 
 
@@ -768,14 +768,14 @@ class ProviderMixin:
         return
 
     def _menu_locale_cycle(self, entry: dict[str, str | bool]) -> None:
-        next_locale = "en" if self._locale == "es" else "es"
+        chosen = next_locale(self._locale)
         try:
-            UserDefaultsStore().update(locale=next_locale)
+            UserDefaultsStore().update(locale=chosen)
         except (OSError, ValueError):
             self.notify(tr("Language preference could not be saved"), severity="warning")
             return
-        self._locale = next_locale
-        configure_locale(next_locale)
+        self._locale = chosen
+        configure_locale(chosen)
         self._open_settings_menu()
         return
 

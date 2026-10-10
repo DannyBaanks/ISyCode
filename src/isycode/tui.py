@@ -64,7 +64,7 @@ from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
 )
-from isycode.localization import configure_locale, tr
+from isycode.localization import configure_locale, language_msgid, tr
 from isycode.user_defaults import UserDefaultsStore
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
 from isycode.throughput import ThroughputMeter
@@ -1097,7 +1097,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                            state=on if self._ascii_only else off), "ascii_toggle", "",
                         "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
             self._entry(tr("Language · {name}",
-                           name=tr("Spanish") if self._locale == "es" else tr("English")),
+                           name=tr(language_msgid(self._locale))),
                         "locale_cycle", "",
                         tr("Interface language for ISyCode. This does not change permissions or workspace files.")),
             self._entry(tr("Choose role"), "roles_open", ""),

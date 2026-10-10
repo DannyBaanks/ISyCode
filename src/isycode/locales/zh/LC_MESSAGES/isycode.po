@@ -1,116 +1,116 @@
-# ISyCode English catalog. msgid is the stable source identifier.
+# ISyCode Chinese catalog. msgid stays English; msgstr is reviewed Simplified Chinese.
 msgid ""
 msgstr ""
-"Language: en\n"
+"Language: zh\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
 msgid "Settings"
-msgstr "Settings"
+msgstr "设置"
 
 msgid "Context"
-msgstr "Context"
+msgstr "上下文"
 
 msgid "Authority & Security"
 msgstr "Authority & Security"
 
 msgid "Language"
-msgstr "Language"
+msgstr "语言"
 
 msgid "Spanish"
-msgstr "Spanish"
+msgstr "西班牙语"
 
 msgid "English"
-msgstr "English"
+msgstr "英语"
 
 msgid "Chinese"
-msgstr "Chinese"
+msgstr "中文"
 
 msgid "Language · {name}"
-msgstr "Language · {name}"
+msgstr "语言 · {name}"
 
 msgid "Interface language for ISyCode. This does not change permissions or workspace files."
-msgstr "Interface language for ISyCode. This does not change permissions or workspace files."
+msgstr "ISyCode 的界面语言。这不会更改权限或工作区文件。"
 
 msgid "Back to Settings"
-msgstr "Back to Settings"
+msgstr "返回设置"
 
 msgid "Context: {name}"
-msgstr "Context: {name}"
+msgstr "上下文: {name}"
 
 msgid "Context · workspace documents"
-msgstr "Context · workspace documents"
+msgstr "上下文 · 工作区文档"
 
 msgid "Providers & models"
-msgstr "Providers & models"
+msgstr "提供商与模型"
 
 msgid "Reasoning level"
-msgstr "Reasoning level"
+msgstr "推理级别"
 
 msgid "Notification sounds · {state}"
-msgstr "Notification sounds · {state}"
+msgstr "通知声音 · {state}"
 
 msgid "High contrast display · {state}"
-msgstr "High contrast display · {state}"
+msgstr "高对比度显示 · {state}"
 
 msgid "ASCII-only display · {state}"
-msgstr "ASCII-only display · {state}"
+msgstr "仅 ASCII 显示 · {state}"
 
 msgid "Choose role"
-msgstr "Choose role"
+msgstr "选择角色"
 
 msgid "My defaults · all workspaces"
-msgstr "My defaults · all workspaces"
+msgstr "我的默认值 · 所有工作区"
 
 msgid "Compact text scroll · {state}"
-msgstr "Compact text scroll · {state}"
+msgstr "紧凑文本滚动 · {state}"
 
 msgid "on"
-msgstr "on"
+msgstr "开"
 
 msgid "off"
-msgstr "off"
+msgstr "关"
 
 msgid "Commands & shortcuts"
-msgstr "Commands & shortcuts"
+msgstr "命令与快捷键"
 
 msgid "Workspace files"
-msgstr "Workspace files"
+msgstr "工作区文件"
 
 msgid "Workspace folders & automatic edits"
-msgstr "Workspace folders & automatic edits"
+msgstr "文件夹与自动编辑"
 
 msgid "Clear selected role"
-msgstr "Clear selected role"
+msgstr "清除所选角色"
 
 msgid "Integrations · MCP, LSP, Gateway & remote access"
-msgstr "Integrations · MCP, LSP, Gateway & remote access"
+msgstr "集成 · MCP、LSP、Gateway 与远程访问"
 
 msgid "Named API keys"
-msgstr "Named API keys"
+msgstr "命名的 API 密钥"
 
 msgid "Action journal · verify / inspect"
-msgstr "Action journal · verify / inspect"
+msgstr "操作日志 · 验证 / 检查"
 
 msgid "Choose context file (.md / .txt)"
-msgstr "Choose context file (.md / .txt)"
+msgstr "选择上下文文件（.md / .txt）"
 
 msgid "Multi Harness · settings & repair Compose"
-msgstr "Multi Harness · settings & repair Compose"
+msgstr "Multi Harness · 设置与修复 Compose"
 
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "对话"
 
 msgid "Preferences"
-msgstr "Preferences"
+msgstr "偏好"
 
 msgid "Permissions"
-msgstr "Permissions"
+msgstr "权限"
 
 msgid "Connections"
-msgstr "Connections"
+msgstr "连接"
 
 msgid "RTK compression · {state}"
-msgstr "RTK compression · {state}"
+msgstr "RTK 压缩 · {state}"
 
 msgid "Language preference could not be saved"
-msgstr "Language preference could not be saved"
+msgstr "无法保存语言偏好"

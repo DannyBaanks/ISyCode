@@ -66,6 +66,12 @@ def test_locale_preference_persists_english(tmp_path):
     assert UserDefaultsStore(tmp_path).load()["locale"] == "en"
 
 
+def test_locale_preference_persists_chinese(tmp_path):
+    store = UserDefaultsStore(tmp_path)
+    store.update(locale="zh")
+    assert UserDefaultsStore(tmp_path).load()["locale"] == "zh"
+
+
 def test_invalid_locale_is_rejected(tmp_path):
     store = UserDefaultsStore(tmp_path)
     with pytest.raises(ValueError):
