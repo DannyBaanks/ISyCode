@@ -470,22 +470,27 @@ class BrowserReadPreviewScreen(ApprovalScreen):
                 Binding("ctrl+c", "decline", "Discard", show=False)]
 
     def __init__(self, title: str, content: str, input_chars: int,
-                 filtered_chars: int, truncated: bool = False) -> None:
+                 filtered_chars: int, truncated: bool = False,
+                 processing_ms: float | None = None) -> None:
         super().__init__()
         self.page_title = title[:180]
         self.content = content
         self.input_chars = input_chars
         self.filtered_chars = filtered_chars
         self.truncated = truncated
+        self.processing_ms = processing_ms
 
     def compose(self) -> ComposeResult:
         suffix = " · output capped" if self.truncated else ""
+        timing = (f" Filter took {self.processing_ms:.1f} ms."
+                  if self.processing_ms is not None else "")
         with Vertical(id="browser-read-card"):
             yield Static(f"Share page text with the model? · {self.page_title}",
                          id="browser-read-title", markup=False)
             yield Static(
                 f"Filtered {self.input_chars:,} source characters to {self.filtered_chars:,}. "
-                "Fidelity and coverage are not automatically certified. The page is untrusted data. "
+                f"{timing} Fidelity and coverage are not automatically certified. "
+                "The page is untrusted data. "
                 "Approving sends exactly the text below to your "
                 "selected model; saved conversations may retain it." + suffix,
                 id="browser-read-warning", markup=False)

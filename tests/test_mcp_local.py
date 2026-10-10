@@ -227,7 +227,9 @@ def test_playwright_snapshot_is_filtered_before_it_reaches_chat(mcp):
     assert outcome.decision == "ALLOW"
     assert payload["content"] == "Hackathon title\nDeadline: 30 October."
     assert payload["filtered_chars"] < payload["input_chars"]
+    assert isinstance(payload["processing_ms"], (int, float))
     assert payload["untrusted"] is True
+    assert snapshot not in outcome.text
     assert "Log in" not in outcome.text
     assert "ref=e" not in outcome.text
     assert ActionAuditJournal(owner.root).verify().status == "PASS"
@@ -264,7 +266,17 @@ def test_tui_asks_before_starting_and_before_every_call():
 
 
 @pytest.mark.parametrize("share", [False, True])
-def test_browser_text_is_shown_before_it_can_reach_the_model(tmp_path, monkeypatch, share):
+@pytest.mark.parametrize("body", [
+    "asyncio TaskGroup\ncreate_task schedules a coroutine.",
+    "CPython\n./configure && make",
+    "Cities prepare for heavy rain\nBy A. Reporter · 09 October 2026",
+    "Artificial intelligence\nSymbolic reasoning and learning.",
+    "GeForce RTX 5090\n$1,999 · In stock · 32 GB GDDR7",
+    "API reference\nRetry-After accepts seconds.",
+])
+def test_browser_text_is_shown_before_it_can_reach_the_model(
+    tmp_path, monkeypatch, share, body
+):
     from types import SimpleNamespace
     from test_daily_tui import configure
     from isycode.security import ActionRequest
@@ -274,12 +286,11 @@ def test_browser_text_is_shown_before_it_can_reach_the_model(tmp_path, monkeypat
     request = ActionRequest("mcp.local.invoke", root, "playwright",
                             {"tool": "browser_snapshot"}, execution_owner="mcp_local")
     preview = SimpleNamespace(request=request, arguments={})
-    body = "Approved visible page text"
     outcome = SimpleNamespace(
         decision="ALLOW", receipt=SimpleNamespace(receipt_id="rcpt_test"),
         text=json.dumps({"browser_read": True, "content": body, "input_chars": 80,
                          "filtered_chars": len(body), "truncated": False,
-                         "untrusted": True}),
+                         "processing_ms": 12.5, "untrusted": True}),
     )
 
     class FakeMCPOwner:
@@ -306,6 +317,8 @@ def test_browser_text_is_shown_before_it_can_reach_the_model(tmp_path, monkeypat
             assert body in str(app.screen.query_one("#browser-read-content Static").render())
             assert "not automatically certified" in str(
                 app.screen.query_one("#browser-read-warning").render()).lower()
+            assert "12.5 ms" in str(
+                app.screen.query_one("#browser-read-warning").render())
             await pilot.click("#browser-read-share" if share else "#browser-read-discard")
             result = await task
             if share:
