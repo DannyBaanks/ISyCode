@@ -55,6 +55,27 @@ def test_startup_uses_the_default_only_for_a_workspace_without_a_mode():
     assert startup.index("authority.mode() is None") < startup.index("authority.set_mode(chosen)")
 
 
+def test_locale_defaults_to_spanish(tmp_path):
+    store = UserDefaultsStore(tmp_path)
+    assert store.load()["locale"] == "es"
+
+
+def test_locale_preference_persists_english(tmp_path):
+    store = UserDefaultsStore(tmp_path)
+    store.update(locale="en")
+    assert UserDefaultsStore(tmp_path).load()["locale"] == "en"
+
+
+def test_invalid_locale_is_rejected(tmp_path):
+    store = UserDefaultsStore(tmp_path)
+    with pytest.raises(ValueError):
+        store.update(locale="fr")
+    assert store.load()["locale"] == "es"
+    store.path.write_text(json.dumps({"version": 1, "new_workspace": "ask", "locale": "fr"}))
+    store.path.chmod(0o600)
+    assert store.load()["locale"] == "es"
+
+
 def test_choosing_classic_as_the_default_asks_first():
     setter = _method("_set_global_mode_default")
     assert setter.index("TailscaleConfirmScreen(") < setter.index("update(new_workspace_mode=value)")

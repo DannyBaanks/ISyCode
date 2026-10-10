@@ -34,6 +34,7 @@ from isycode.tui_screens_grants import (
     GrantWorkspaceReadScreen,
 )
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
+from isycode.localization import tr
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 
 
@@ -341,7 +342,7 @@ class AuthorityMixin:
             "File edits follow folder approval settings; other changes always ask.",
             "info", "", "Turning a permission on lets the assistant propose that kind of action. "
             "Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("authority_settings", "Settings · Authority & Security", entries)
@@ -832,5 +833,5 @@ class AuthorityMixin:
                     "Target and successful Systembility details are not persisted; no secret or prompt is shown."))
             if not report.recent:
                 entries.append(self._entry("No durable decisions recorded for this workspace", "info"))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         self._render_menu("security_journal", "Security · Action journal (read-only)", entries)

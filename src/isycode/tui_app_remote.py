@@ -35,6 +35,7 @@ from isycode.tailscale_login import TailscaleLoginOwner
 from isycode.tailscale_install import TailscalePackageInstallOwner
 from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner, route_url
 from isycode.private_access import PrivateAccessStateStore
+from isycode.localization import tr
 from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, status_phrase
 from isycode.tui_widgets import ChatArea
 from isycode.tui_screens_approval import TailscaleConfirmScreen
@@ -128,7 +129,7 @@ class RemoteMixin:
             self._entry("Permissions and authority…", "tailscale_permissions", ""),
             self._entry("Refresh status", "tailscale_refresh", ""),
             self._entry("Manual setup steps", "tailscale_manual", ""),
-            self._entry("Back to Settings", "settings_back", ""),
+            self._entry(tr("Back to Settings"), "settings_back", ""),
         ])
         self.run_worker(self._refresh_private_access(), exclusive=True,
                         group="tailscale-status")
@@ -224,7 +225,7 @@ class RemoteMixin:
             self._entry("Permissions and authority…", "tailscale_permissions", ""),
             self._entry("Refresh status", "tailscale_refresh", ""),
             self._entry("Manual setup steps", "tailscale_manual", ""),
-            self._entry("Back to Settings", "settings_back", ""),
+            self._entry(tr("Back to Settings"), "settings_back", ""),
         ])
         self._render_menu("private_access", "Settings · Private access", entries)
 
@@ -481,7 +482,7 @@ class RemoteMixin:
             "Blocked · no registered action owner",
             "info", "", "Bridge leases are coordination signals, never Workspace Authority grants. "
             "Secure does not run hello, heartbeat, peek, send, lease, or wake until each path has an owner and gate."),
-            self._entry("Back to Settings", "settings_back", "")]
+            self._entry(tr("Back to Settings"), "settings_back", "")]
         if self._menu_mode != "bridge_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("bridge_settings", "Settings · Bridge coordination", entries)
@@ -591,7 +592,7 @@ class RemoteMixin:
             entries.append(self._entry("Start Mobile Host · local approval required",
                                        "mobile_host_start", ""))
             entries.append(self._entry("Listener stopped · no pairing credentials issued", "info"))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         self._render_menu("mobile_host_status", "Settings · Mobile host", entries)
 
     async def _open_gateway_mcp_tool(self, name: str) -> None:

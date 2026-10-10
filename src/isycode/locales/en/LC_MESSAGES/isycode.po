@@ -1,0 +1,113 @@
+# ISyCode English catalog. msgid is the stable source identifier.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Context"
+msgstr "Context"
+
+msgid "Authority & Security"
+msgstr "Authority & Security"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Spanish"
+msgstr "Spanish"
+
+msgid "English"
+msgstr "English"
+
+msgid "Language · {name}"
+msgstr "Language · {name}"
+
+msgid "Interface language for ISyCode. This does not change permissions or workspace files."
+msgstr "Interface language for ISyCode. This does not change permissions or workspace files."
+
+msgid "Back to Settings"
+msgstr "Back to Settings"
+
+msgid "Context: {name}"
+msgstr "Context: {name}"
+
+msgid "Context · workspace documents"
+msgstr "Context · workspace documents"
+
+msgid "Providers & models"
+msgstr "Providers & models"
+
+msgid "Reasoning level"
+msgstr "Reasoning level"
+
+msgid "Notification sounds · {state}"
+msgstr "Notification sounds · {state}"
+
+msgid "High contrast display · {state}"
+msgstr "High contrast display · {state}"
+
+msgid "ASCII-only display · {state}"
+msgstr "ASCII-only display · {state}"
+
+msgid "Choose role"
+msgstr "Choose role"
+
+msgid "My defaults · all workspaces"
+msgstr "My defaults · all workspaces"
+
+msgid "Compact text scroll · {state}"
+msgstr "Compact text scroll · {state}"
+
+msgid "on"
+msgstr "on"
+
+msgid "off"
+msgstr "off"
+
+msgid "Commands & shortcuts"
+msgstr "Commands & shortcuts"
+
+msgid "Workspace files"
+msgstr "Workspace files"
+
+msgid "Workspace folders & automatic edits"
+msgstr "Workspace folders & automatic edits"
+
+msgid "Clear selected role"
+msgstr "Clear selected role"
+
+msgid "Integrations · MCP, LSP, Gateway & remote access"
+msgstr "Integrations · MCP, LSP, Gateway & remote access"
+
+msgid "Named API keys"
+msgstr "Named API keys"
+
+msgid "Action journal · verify / inspect"
+msgstr "Action journal · verify / inspect"
+
+msgid "Choose context file (.md / .txt)"
+msgstr "Choose context file (.md / .txt)"
+
+msgid "Multi Harness · settings & repair Compose"
+msgstr "Multi Harness · settings & repair Compose"
+
+msgid "Conversation"
+msgstr "Conversation"
+
+msgid "Preferences"
+msgstr "Preferences"
+
+msgid "Permissions"
+msgstr "Permissions"
+
+msgid "Connections"
+msgstr "Connections"
+
+msgid "RTK compression · {state}"
+msgstr "RTK compression · {state}"
+
+msgid "Language preference could not be saved"
+msgstr "Language preference could not be saved"

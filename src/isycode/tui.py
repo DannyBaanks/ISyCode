@@ -64,6 +64,7 @@ from isycode.search import TextMatch, find_text_matches
 from isycode.workspace_setup import (
     WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
 )
+from isycode.localization import configure_locale, tr
 from isycode.user_defaults import UserDefaultsStore
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
 from isycode.throughput import ThroughputMeter
@@ -443,15 +444,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._session_auto_edits: set[str] = set()
         self._batch_decisions: dict[str, str] = {}
         try:
-            self._compact_marquee_default = UserDefaultsStore().load().get("compact_marquee", False)
-            self._notification_sounds = UserDefaultsStore().load().get("notification_sounds", True)
-            self._high_contrast = UserDefaultsStore().load().get("high_contrast", False)
-            self._ascii_only = UserDefaultsStore().load().get("ascii_only", False)
+            defaults = UserDefaultsStore().load()
+            self._compact_marquee_default = defaults.get("compact_marquee", False)
+            self._notification_sounds = defaults.get("notification_sounds", True)
+            self._high_contrast = defaults.get("high_contrast", False)
+            self._ascii_only = defaults.get("ascii_only", False)
+            self._locale = defaults.get("locale", "es")
         except (OSError, ValueError):
             self._compact_marquee_default = False
             self._notification_sounds = True
             self._high_contrast = False
             self._ascii_only = False
+            self._locale = "es"
+        configure_locale(self._locale)
         from isycode.tui_theme import set_ascii_only
         set_ascii_only(self._ascii_only)
         self._provider_env_override = bool(os.environ.get("ISYCODE_PROVIDER"))
@@ -1075,18 +1080,31 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             rtk_label = "on" if RTKSettings().load()["enabled"] else "off"
         except (OSError, ValueError):
             rtk_label = "needs attention"
+        on = tr("on")
+        off = tr("off")
         entries = [
-            self._entry("RTK compression · " + rtk_label, "rtk_settings", "",
+            self._entry(tr("RTK compression · {state}", state=rtk_label), "rtk_settings", "",
                         "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."),
-            self._entry("Providers & models", "providers_open", ""),
-            self._entry("Reasoning level", "reasoning_open", ""),
-            self._entry("Notification sounds · " + ("on" if self._notification_sounds else "off"), "sounds_toggle", "", "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
-            self._entry("High contrast display · " + ("on" if self._high_contrast else "off"), "contrast_toggle", "", "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."),
-            self._entry("ASCII-only display · " + ("on" if self._ascii_only else "off"), "ascii_toggle", "", "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
-            self._entry("Choose role", "roles_open", ""),
-            self._entry("Context", "context_menu", ""),
-            self._entry("My defaults · all workspaces", "user_defaults", ""),
-            self._entry("Compact text scroll · " + ("on" if self._compact_marquee_default else "off"),
+            self._entry(tr("Providers & models"), "providers_open", ""),
+            self._entry(tr("Reasoning level"), "reasoning_open", ""),
+            self._entry(tr("Notification sounds · {state}",
+                           state=on if self._notification_sounds else off), "sounds_toggle", "",
+                        "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
+            self._entry(tr("High contrast display · {state}",
+                           state=on if self._high_contrast else off), "contrast_toggle", "",
+                        "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."),
+            self._entry(tr("ASCII-only display · {state}",
+                           state=on if self._ascii_only else off), "ascii_toggle", "",
+                        "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
+            self._entry(tr("Language · {name}",
+                           name=tr("Spanish") if self._locale == "es" else tr("English")),
+                        "locale_cycle", "",
+                        tr("Interface language for ISyCode. This does not change permissions or workspace files.")),
+            self._entry(tr("Choose role"), "roles_open", ""),
+            self._entry(tr("Context"), "context_menu", ""),
+            self._entry(tr("My defaults · all workspaces"), "user_defaults", ""),
+            self._entry(tr("Compact text scroll · {state}",
+                           state=on if self._compact_marquee_default else off),
                         "marquee_toggle", ""),
         ]
         if self._workspace_identity.workspace_root_source == "isyroot":
@@ -1099,20 +1117,20 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                             "Copies validated .isycode-commands/*.md files after diff approval; originals remain."),
             ])
         entries.extend([
-            self._entry("Authority & Security", "authority_open", ""),
-            self._entry("Multi Harness · settings & repair Compose", "harness_open", ""),
-            self._entry("Named API keys", "named_credentials", ""),
-            self._entry("Action journal · verify / inspect", "security_journal", ""),
-            self._entry("Choose context file (.md / .txt)", "context_inject", ""),
-            self._entry("Commands & shortcuts", "shortcuts", ""),
-            self._entry("Workspace files", "files", ""),
-            self._entry("Workspace folders & automatic edits", "folders_open", ""),
-            self._entry("Clear selected role", "clear_role", ""),
-            self._entry("Integrations · MCP, LSP, Gateway & remote access", "integrations_open", "",
+            self._entry(tr("Authority & Security"), "authority_open", ""),
+            self._entry(tr("Multi Harness · settings & repair Compose"), "harness_open", ""),
+            self._entry(tr("Named API keys"), "named_credentials", ""),
+            self._entry(tr("Action journal · verify / inspect"), "security_journal", ""),
+            self._entry(tr("Choose context file (.md / .txt)"), "context_inject", ""),
+            self._entry(tr("Commands & shortcuts"), "shortcuts", ""),
+            self._entry(tr("Workspace files"), "files", ""),
+            self._entry(tr("Workspace folders & automatic edits"), "folders_open", ""),
+            self._entry(tr("Clear selected role"), "clear_role", ""),
+            self._entry(tr("Integrations · MCP, LSP, Gateway & remote access"), "integrations_open", "",
                         "Optional connections and remote access. Permissions remain separate."),
         ])
         groups = {
-            "Conversation": (CYAN, {
+            tr("Conversation"): (CYAN, {
                 "providers_open": "Choose the provider and model used for this conversation.",
                 "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
                 "roles_open": "Choose instructions for how the agent should work.",
@@ -1120,7 +1138,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "context_menu": "Review the context available to the agent.",
                 "context_inject": "Choose a Markdown or text file to add to the conversation.",
             }),
-            "Preferences": ("#c7b8d4", {
+            tr("Preferences"): ("#c7b8d4", {
                 "rtk_settings": "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged.",
                 "user_defaults": "Personal defaults shared across your workspaces.",
                 "workspace_config_init": "Create workspace preferences after reviewing the proposed files.",
@@ -1131,14 +1149,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "contrast_toggle": "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black.",
                 "ascii_toggle": "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode.",
                 "marquee_toggle": "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it.",
+                "locale_cycle": tr("Interface language for ISyCode. This does not change permissions or workspace files."),
             }),
-            "Permissions": (YELLOW, {
+            tr("Permissions"): (YELLOW, {
                 "authority_open": "Inspect or change workspace permissions and approval settings.",
                 "named_credentials": "Manage named API credentials and their allowed uses.",
                 "security_journal": "Inspect recorded actions and verify their receipts.",
                 "folders_open": "Review workspace folders and per-folder automatic edit settings.",
             }),
-            "Connections": (CYAN, {
+            tr("Connections"): (CYAN, {
                 "harness_open": "Inspect other harness settings; copying requires a separate confirmation.",
                 "integrations_open": "Manage MCP, LSP, Gateway and remote connections with separate permissions.",
                 "files": "Browse workspace files.",
@@ -1154,13 +1173,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     ordered.append(entry)
         ordered.extend(entry for entry in entries if entry not in ordered)
         self._menu_stack = []
-        self._render_menu("settings", "Settings", ordered)
+        self._render_menu("settings", tr("Settings"), ordered)
 
     def _open_workspace_config_menu(self) -> None:
         if self._workspace_identity.workspace_root_source != "isyroot":
             self._render_menu("workspace_config", "Workspace preferences", [
                 self._entry("This folder has no .isyroot marker; preferences are not persisted here.", "info"),
-                self._entry("Back to Settings", "settings_back", ""),
+                self._entry(tr("Back to Settings"), "settings_back", ""),
             ])
             return
         try:
@@ -1185,7 +1204,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             if parsed.values.get("default_role"):
                 entries.append(self._entry("Clear this workspace's default role",
                                            "workspace_pref_role_clear", ""))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "workspace_config":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("workspace_config", "Settings · Workspace preferences", entries)
@@ -1224,7 +1243,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if self._workspace_identity.workspace_root_source != "isyroot":
             self._render_menu("workspace_migration", "Workspace command migration", [
                 self._entry("Migration is available only in a workspace with its own .isyroot.", "info"),
-                self._entry("Back to Settings", "settings_back", ""),
+                self._entry(tr("Back to Settings"), "settings_back", ""),
             ])
             return
         try:
@@ -1241,7 +1260,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                        for name in names)
         if not names and not issue:
             entries.append(self._entry("No valid legacy workspace commands found.", "info"))
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "workspace_migration":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("workspace_migration", "Workspace command migration", entries)
@@ -1278,7 +1297,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry("Bridge coordination · blocked in Secure", "bridge_settings", ""),
             self._entry("Private access · Tailscale", "private_access", ""),
             self._entry("Refresh integration catalogs", "refresh", ""),
-            self._entry("Back to Settings", "settings_back", ""),
+            self._entry(tr("Back to Settings"), "settings_back", ""),
         ])
 
     def _folder_store(self) -> WorkspaceFolders:
@@ -1432,7 +1451,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "Applies only to folders opened for the first time; each workspace keeps its own "
             "mode and you can switch it in Settings → Authority.")
             for value, label in mode_choices)
-        entries.append(self._entry("Back to Settings", "settings_back", ""))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "user_defaults":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("user_defaults", "Settings · My defaults", entries)

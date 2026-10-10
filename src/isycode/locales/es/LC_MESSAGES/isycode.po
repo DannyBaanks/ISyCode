@@ -1,0 +1,113 @@
+# ISyCode Spanish catalog. msgid stays English; msgstr is reviewed Spanish.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Settings"
+msgstr "Configuración"
+
+msgid "Context"
+msgstr "Contexto"
+
+msgid "Authority & Security"
+msgstr "Authority & Security"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "Spanish"
+msgstr "Español"
+
+msgid "English"
+msgstr "Inglés"
+
+msgid "Language · {name}"
+msgstr "Idioma · {name}"
+
+msgid "Interface language for ISyCode. This does not change permissions or workspace files."
+msgstr "Idioma de la interfaz de ISyCode. No cambia permisos ni archivos del espacio de trabajo."
+
+msgid "Back to Settings"
+msgstr "Volver a Configuración"
+
+msgid "Context: {name}"
+msgstr "Contexto: {name}"
+
+msgid "Context · workspace documents"
+msgstr "Contexto · documentos del espacio de trabajo"
+
+msgid "Providers & models"
+msgstr "Proveedores y modelos"
+
+msgid "Reasoning level"
+msgstr "Nivel de razonamiento"
+
+msgid "Notification sounds · {state}"
+msgstr "Sonidos de notificación · {state}"
+
+msgid "High contrast display · {state}"
+msgstr "Pantalla de alto contraste · {state}"
+
+msgid "ASCII-only display · {state}"
+msgstr "Pantalla solo ASCII · {state}"
+
+msgid "Choose role"
+msgstr "Elegir rol"
+
+msgid "My defaults · all workspaces"
+msgstr "Mis valores · todos los espacios de trabajo"
+
+msgid "Compact text scroll · {state}"
+msgstr "Desplazamiento compacto de texto · {state}"
+
+msgid "on"
+msgstr "activado"
+
+msgid "off"
+msgstr "desactivado"
+
+msgid "Commands & shortcuts"
+msgstr "Comandos y atajos"
+
+msgid "Workspace files"
+msgstr "Archivos del espacio de trabajo"
+
+msgid "Workspace folders & automatic edits"
+msgstr "Carpetas y ediciones automáticas"
+
+msgid "Clear selected role"
+msgstr "Quitar el rol seleccionado"
+
+msgid "Integrations · MCP, LSP, Gateway & remote access"
+msgstr "Integraciones · MCP, LSP, Gateway y acceso remoto"
+
+msgid "Named API keys"
+msgstr "Claves de API con nombre"
+
+msgid "Action journal · verify / inspect"
+msgstr "Diario de acciones · verificar / inspeccionar"
+
+msgid "Choose context file (.md / .txt)"
+msgstr "Elegir archivo de contexto (.md / .txt)"
+
+msgid "Multi Harness · settings & repair Compose"
+msgstr "Multi Harness · ajustes y reparar Compose"
+
+msgid "Conversation"
+msgstr "Conversación"
+
+msgid "Preferences"
+msgstr "Preferencias"
+
+msgid "Permissions"
+msgstr "Permisos"
+
+msgid "Connections"
+msgstr "Conexiones"
+
+msgid "RTK compression · {state}"
+msgstr "Compresión RTK · {state}"
+
+msgid "Language preference could not be saved"
+msgstr "No se pudo guardar el idioma"
