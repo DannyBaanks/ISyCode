@@ -137,7 +137,7 @@ class BoxTitle(CollapsibleTitle):
         # handler in the class chain, and that base handler would toggle again.
         event.prevent_default()
         event.stop()
-        self.focus()
+        self.focus(scroll_visible=False)
         parent = self.parent
         box = parent if isinstance(parent, ExpandableBox) else self
         if activate_on_second_click(box, event, "title"):
@@ -259,7 +259,7 @@ class ExpandableBox(Collapsible):
         # and a second click there opens it the same way Space does.
         if event.widget is not self:
             return
-        self.focus()
+        self.focus(scroll_visible=False)
         if activate_on_second_click(self, event, "title"):
             self.action_toggle_box()
 
@@ -460,8 +460,22 @@ class ThoughtBlock(Collapsible):
                                 if more and (self.has_focus or self.has_focus_within) else "")
 
     def _watch_collapsed(self, collapsed: bool) -> None:
+        was_following = self._chat_following_tail()
         super()._watch_collapsed(collapsed)
         self._paint_preview()
+        if was_following:
+            self.call_after_refresh(self._reanchor_chat_tail)
+
+    def _chat_following_tail(self) -> bool:
+        # A focus-driven scroll_to_center releases the chat's tail anchor while
+        # the block toggles; re-arm it so the streaming answer stays reachable.
+        chat = self.parent
+        return isinstance(chat, ChatArea) and chat._following_tail()
+
+    def _reanchor_chat_tail(self) -> None:
+        chat = self.parent
+        if isinstance(chat, ChatArea) and chat.is_mounted:
+            chat.resume_tail()
 
     def action_toggle_box(self) -> None:
         # Cycle through every view: title -> preview -> full -> title.
@@ -480,7 +494,7 @@ class ThoughtBlock(Collapsible):
 
     def on_click(self, event) -> None:
         if isinstance(event.widget, SelectableText):
-            self.focus()
+            self.focus(scroll_visible=False)
             return
         super().on_click(event)
 
@@ -625,7 +639,7 @@ class SelectableText(Static):
                                content if isinstance(content, str) else "")
 
     def on_click(self) -> None:
-        self.focus()
+        self.focus(scroll_visible=False)
 
     def set_selectable_content(self, content, selection_text: str) -> None:
         self.selection_text = selection_text

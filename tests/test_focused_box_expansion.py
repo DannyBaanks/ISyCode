@@ -2,7 +2,6 @@ import asyncio
 from isycode.tui import TUIApp, ThoughtBlock, BoxTitle, plain_text
 from test_daily_tui import configure
 
-
 def test_thinking_preview_full_and_hidden_states_are_local_to_focus(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     async def scenario():
@@ -105,4 +104,39 @@ def test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly(tmp_path, mo
                 await pilot.pause()
                 assert block.collapsed and not block._expanded
                 assert "thought for 6s     One Two Three Four" in str(block.title)
+    asyncio.run(scenario())
+
+
+def test_clicking_expanded_thinking_keeps_chat_at_tail(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        from types import SimpleNamespace
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            # History above keeps the chat scrollable, so focusing a tall
+            # expanded block would otherwise centre it and release the tail.
+            for index in range(20):
+                app._append(f"history line {index}")
+                await pilot.pause()
+            block, chat = app._mount_thought()
+            await pilot.pause()
+            chat.resume_tail()
+            await pilot.pause()
+            block.set_text('\n'.join(f'Reasoning line {index}' for index in range(1, 60)))
+            block._expanded = True
+            block.collapsed = False
+            await pilot.pause()
+            await pilot.pause(0.3)
+            chat.resume_tail()
+            await pilot.pause()
+            assert chat.scroll_y >= chat.max_scroll_y and chat._following_tail()
+            # A click on the reasoning body focuses the block. Focusing it with
+            # the default scroll_visible=True releases the chat's tail anchor and
+            # scrolls the viewport up off the answer; the fix must not move it.
+            block.on_click(SimpleNamespace(widget=block._body))
+            await pilot.pause()
+            await pilot.pause(0.3)
+            assert chat._following_tail(), 'focusing the thinking block released the tail anchor'
+            assert chat.scroll_y >= chat.max_scroll_y, 'focusing the thinking block scrolled off the tail'
     asyncio.run(scenario())
