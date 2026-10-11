@@ -12,6 +12,12 @@
 - Preserve unrelated user changes. Inspect repository state before editing and keep changes scoped to the requested work.
 - Do not claim that commands, tests, integrations, or external services ran unless they actually ran.
 
+## ISyCode Design Skills
+
+- Before adding or changing ISyCode TUI screens, menus, panels, icons or text gestures, read [.agents/skills/isycode-design/SKILL.md](.agents/skills/isycode-design/SKILL.md), then only the component skill relevant to the task. The catalog is [.agents/skills/isycode-design/references/catalog.json](.agents/skills/isycode-design/references/catalog.json).
+- Follow the accepted visual direction and shared tokens unless the current user request changes them. The skills distinguish design targets from demonstrated runtime behavior; publishing a standard does not implement it or close an audit finding.
+- These skills guide development of this Textual repository. They do not modify terminal preferences, grant runtime authority or automatically enter the separately pinned application skill bundle.
+
 ## Classic/Security evolution gates
 
 - For changes advancing Classic autonomy, Security policy, or the associated UX, follow [the executable roadmap](docs/roadmap-classic-security-ux.md). Its target does not describe current behavior: the per-action approval rule above remains the baseline until the applicable gates authorize a tested transition.
