@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "file": "jetbrains.ttf",
+      "sha256": "d9a80146bbf2ff23b187316a3e82ee2a2ceab8220267fe09ac150ca46ab2c3bd",
+      "units_per_em": 1000,
+      "advance_units": 600,
+      "cell_width_at_16px": 9.6,
+      "mapped_icons": 21,
+      "missing_glyphs": [],
+      "icons_match_ascii_advance": true
+    },
+    {
+      "file": "cascadia.ttf",
+      "sha256": "4e1e371b188bca589ec1ee7df494ca7bbb187c1c38228c059e5705f4029a9dc0",
+      "units_per_em": 2048,
+      "advance_units": 1200,
+      "cell_width_at_16px": 9.375,
+      "mapped_icons": 21,
+      "missing_glyphs": [],
+      "icons_match_ascii_advance": true
+    },
+    {
+      "file": "iosevka.ttf",
+      "sha256": "a1cd7f03639dd9b8c8ba94d1a17fe3785623ed81f2ddf22f08d72f4f79e18c8c",
+      "units_per_em": 1000,
+      "advance_units": 500,
+      "cell_width_at_16px": 8.0,
+      "mapped_icons": 21,
+      "missing_glyphs": [],
+      "icons_match_ascii_advance": true
+    }
+  ],
+  "scope": "Font cmap presence and hmtx advances; actual terminal cell rendering remains NOT_DEMONSTRATED."
+}

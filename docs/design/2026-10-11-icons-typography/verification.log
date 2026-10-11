@@ -1,0 +1,10 @@
+FONT_TABLES: 21 Unicode roles covered by fallback; 17 absent from Ubuntu; terminal rendering NOT_DEMONSTRATED
+ASSET_HASHES: 47 preserved source/assets match manifests
+SVG_PARSE: 24 valid SVG files
+HTML_SOURCE: accepted profile, six motion samples, unique IDs and 31 local references checked
+JS_SYNTAX: inline comparator and hover-motion.js accepted by node --check
+PYTHON_SYNTAX: artifact helpers compile without creating cache files
+LOCAL_HTTP: 32 resources returned HTTP 200 and exact on-disk bytes
+PRODUCT_SCOPE: baseline hashes recorded; no product source edits in this design change
+NOT_DEMONSTRATED: updated browser rendering/interactions, native TUI animation, terminal font fallback, real clipboard, remote services
+BROWSER_LIMIT: browser control rejected binding existing error-page tab under URL protocol policy; no workaround attempted
