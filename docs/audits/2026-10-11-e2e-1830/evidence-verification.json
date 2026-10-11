@@ -1,0 +1,41 @@
+{
+  "checks": {
+    "suite_exit_zero": true,
+    "suite_no_failures_or_errors": true,
+    "real_sandbox_exit_zero": true,
+    "F1_security_policy_classic_banner": true,
+    "F1_classic_policy_security_banner": true,
+    "F2_settings_outside_main_after_f6": true,
+    "F2_click_did_not_open_menu": true,
+    "F3_hidden_button_owns_focus": true,
+    "F3_typed_abc_not_in_composer": true,
+    "F4_onboarding_card_exceeds_height": true,
+    "F5_inline_preview_exceeds_parent": true,
+    "F5_read_succeeded_but_text_clipped": true,
+    "F6_english_consent_in_spanish_ui": true,
+    "local_read_edit_run_diff_completed": true,
+    "cancel_preserves_new_draft": true,
+    "401_restores_original_prompt": true,
+    "security_does_not_call_provider": true,
+    "sensitive_canary_not_sent_to_provider": true,
+    "fixture-verification-isycode-e2e-audit-80itaaaf_journal_chain": true,
+    "fixture-verification-isycode-e2e-audit-r7dduhtt_journal_chain": true,
+    "fixture-verification-isycode-e2e-audit-1kuu9z_1_journal_chain": true
+  },
+  "all_confirmed": true,
+  "suite": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "3",
+    "tests": "1878",
+    "time": "511.386",
+    "timestamp": "2026-10-11T03:39:07.959775-06:00",
+    "hostname": "DannyISyCo"
+  },
+  "limits": [
+    "inference simulated",
+    "no live accounts or remote integrations",
+    "no screen reader certification"
+  ]
+}
