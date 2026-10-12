@@ -5,6 +5,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TextArea
+from isycode.tui_copy import CopyTextArea
 
 class FilePreviewScreen(ModalScreen[None]):
     CSS = '''
@@ -20,16 +21,22 @@ class FilePreviewScreen(ModalScreen[None]):
         super().__init__();self.path=path;self.text=text
     def compose(self) -> ComposeResult:
         with Vertical(id='preview-card'):
-            yield Static(f'{self.path}\nRead-only · select with mouse or Ctrl+A; Ctrl+C copies',id='preview-heading',markup=False)
-            yield TextArea(self.text,read_only=True,id='preview-text',show_line_numbers=True)
+            yield Static(f'{self.path}\n' + tr('Read-only · select with mouse or Ctrl+A; Ctrl+C copies'),id='preview-heading',markup=False)
+            yield CopyTextArea(self.text,read_only=True,id='preview-text',show_line_numbers=True)
             with Horizontal(id='preview-actions'):
-                yield Button(tr('Copy selection / text'),id='preview-copy')
+                yield Button(tr('Copy selection'),id='preview-copy',disabled=True)
+                yield Button(tr('Copy whole box'),id='preview-copy-whole')
                 yield Button(tr('Close'),id='preview-close')
+    def on_text_area_selection_changed(self,event):
+        self.query_one('#preview-copy',Button).disabled=not event.text_area.selected_text
     def on_mount(self):self.query_one(TextArea).focus()
     async def on_button_pressed(self,event):
         event.stop()
         if event.button.id=='preview-copy':
             editor=self.query_one(TextArea)
-            self.app.run_worker(self.app._request_clipboard_copy(editor.selected_text or self.text,'selection'), group='clipboard-user')
+            if editor.selected_text:
+                self.app.run_worker(self.app._request_clipboard_copy(editor.selected_text,'selection'), group='clipboard-user')
+        elif event.button.id=='preview-copy-whole':
+            self.app.run_worker(self.app._request_clipboard_copy(self.text,'content_box'),group='clipboard-user')
         else:self.dismiss(None)
     def action_close(self):self.dismiss(None)

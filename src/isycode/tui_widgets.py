@@ -33,8 +33,11 @@ from isycode.tui_theme import (
     _semantic_box_title,
     CYAN,
     plain_text,
+    static_content,
 )
 from isycode.localization import tr
+from isycode.tui_copy import extract_range, exact_selected_text, open_copy_menu, selectable_markdown, remember_copy_selection
+from rich.markdown import Markdown as RichMarkdown
 
 
 def activate_on_second_click(host, event, key) -> bool:
@@ -88,7 +91,7 @@ class Banner(Static):
                 mode = "Classic" if workspace_mode() == "classic" else "Security"
             except Exception:
                 mode = "Security"
-        mark = f"  ● {mode}"
+        mark = f"  {'[C]' if mode == 'Classic' else '[S]'} {mode}" if getattr(self.app, "_ascii_only", False) else f"  ◇ {mode}"
         # Two spaces are prepended to the path, and two more stay clear of the frame.
         available = max(1, width - 4 - cell_len(wordmark + mark))
         if cell_len(path) > available:
@@ -98,7 +101,7 @@ class Banner(Static):
             path = "…" + tail
         header.append(f"  {path}", style=MUTED)
         header.append(" " * max(0, width - 2 - cell_len(header.plain + mark)))
-        header.append(mark, style="#4ade80" if mode == "Classic" else "#fbbf24")
+        header.append(mark, style=CYAN if mode == "Classic" else MUTED)
         self.update(header)
 
 
@@ -125,12 +128,16 @@ class IdleBoard(Static):
             self.app._paint_idle()
 
 
-class BoxTitle(CollapsibleTitle):
-    BINDINGS = [Binding("enter,space", "toggle_collapsible", "Expand / collapse", show=False)]
+class BoxTitle(CollapsibleTitle, inherit_bindings=False):
+    BINDINGS = [Binding("space", "toggle_collapsible", "Expand / collapse", show=False)]
 
     def action_toggle_collapsible(self) -> None:
         if isinstance(self.parent, ExpandableBox):
             self.parent.action_toggle_box()
+
+    def on_mouse_down(self, event):
+        if isinstance(self.parent, ExpandableBox):
+            remember_copy_selection(self.parent)
 
     async def _on_click(self, event) -> None:
         # prevent_default skips CollapsibleTitle._on_click. Textual runs every
@@ -139,22 +146,15 @@ class BoxTitle(CollapsibleTitle):
         event.stop()
         self.focus(scroll_visible=False)
         parent = self.parent
-        box = parent if isinstance(parent, ExpandableBox) else self
-        if activate_on_second_click(box, event, "title"):
-            if isinstance(parent, ExpandableBox):
-                parent.action_toggle_box()
-            else:
-                self.post_message(self.Toggle())
-            return
-        if isinstance(parent, ThoughtBlock) and parent.collapsed and event.x >= 3:
-            parent.toggle_marquee()
+        if event.chain == 2 and isinstance(parent, ExpandableBox):
+            open_copy_menu(parent, parent.copy_text())
 
 
-class ExpandableBox(Collapsible):
+class ExpandableBox(Collapsible, inherit_bindings=False):
     """Local keyboard expansion, shared by chat cards and sidebar sections."""
 
     can_focus = True
-    BINDINGS = [Binding("enter,space", "toggle_box", "Expand / collapse", show=False)]
+    BINDINGS = [Binding("space", "toggle_box", "Expand / collapse", show=False)]
     DEFAULT_CSS = """
     ExpandableBox { border-bottom: solid #414650; border-subtitle-align: right; }
     ExpandableBox:focus-within { border-bottom: solid #bb8cff; }
@@ -173,8 +173,14 @@ class ExpandableBox(Collapsible):
                                expanded_symbol=self._title.expanded_symbol, collapsed=self.collapsed)
 
     def on_mount(self) -> None:
-        self._marquee_enabled = bool(getattr(self.app, "_compact_marquee_default", False))
-        self._marquee_timer = self.set_interval(0.18, self._marquee_tick)
+        self._marquee_enabled = bool(getattr(self.app, "_compact_marquee_default", False)) and not getattr(self.app, "_reduced_motion", False)
+        if self._marquee_enabled:
+            self._marquee_timer = self.set_interval(0.18, self._marquee_tick)
+
+    def on_unmount(self) -> None:
+        if self._marquee_timer is not None:
+            self._marquee_timer.stop()
+            self._marquee_timer = None
 
     def _watch_title(self, title: str) -> None:
         if not getattr(self, "_marquee_internal", False):
@@ -188,9 +194,14 @@ class ExpandableBox(Collapsible):
                         if not isinstance(widget, CollapsibleTitle))
 
     def toggle_marquee(self) -> None:
-        self._marquee_enabled = not self._marquee_enabled
+        self._marquee_enabled = not self._marquee_enabled and not getattr(self.app, "_reduced_motion", False)
         self._marquee_offset = 0
         self._marquee_direction = 1
+        if self._marquee_timer is not None:
+            self._marquee_timer.stop()
+            self._marquee_timer = None
+        if self._marquee_enabled and self.is_mounted:
+            self._marquee_timer = self.set_interval(0.18, self._marquee_tick)
         if not self._marquee_enabled:
             if hasattr(self, "_paint_preview"):
                 self._paint_preview()
@@ -249,19 +260,29 @@ class ExpandableBox(Collapsible):
         self.on_focus()
 
     def _paint_expand_hint(self) -> None:
-        self.border_subtitle = Text("Enter / Space " + ("expand" if self.collapsed else "collapse"), style=MUTED) if self.has_focus or self.has_focus_within else ""
+        self.border_subtitle = Text(tr("Space expand / collapse · double-click copy"), style=MUTED) if self.has_focus or self.has_focus_within else ""
+
+    def copy_text(self) -> str:
+        if hasattr(self, "_full_text"):
+            return self._full_text
+        return "\n".join(widget.selection_text for widget in self.query(SelectableText)) or "\n".join(
+            plain_text(widget) for widget in self.query(Static) if not isinstance(widget, CollapsibleTitle))
 
     def action_toggle_box(self) -> None:
         self.collapsed = not self.collapsed
 
+    def on_mouse_down(self, event):
+        if event.widget is self:
+            remember_copy_selection(self)
+
     def on_click(self, event) -> None:
-        # The title handles its own row. A click on the box padding selects it,
-        # and a second click there opens it the same way Space does.
         if event.widget is not self:
             return
         self.focus(scroll_visible=False)
-        if activate_on_second_click(self, event, "title"):
-            self.action_toggle_box()
+        if event.chain == 2:
+            event.prevent_default()
+            event.stop()
+            open_copy_menu(self, self.copy_text())
 
 
 # Keep native Collapsible composition and messages; unify our existing boxes.
@@ -340,12 +361,11 @@ class SidePanel(Vertical):
             with Horizontal(id="file-actions"):
                 yield Button(tr("Copy path"), id="file-copy-path", disabled=True)
                 yield Button(tr("Open preview"), id="file-open-preview", disabled=True)
+            yield Static("", id="file-preview-meta", markup=False)
             with VerticalScroll(id="file-preview-scroll"):
-                yield Static(tr("Select a file to preview it."), id="file-preview", classes="rail-copy")
+                yield SelectableText(tr("Select a file to preview it."), id="file-preview", classes="rail-copy", markup=False)
 
     def on_mount(self) -> None:
-        self.styles.background = "#17191f"
-        self.styles.border = ("round", "#414650")
         for button in self.query(Button):
             button.compact = True
         self.query_one("#show-overview", Button).add_class("rail-lit")
@@ -383,10 +403,10 @@ class ToolActivityGroup(ExpandableBox):
         self.title = label if len(self.leaves) == 1 else f"{self.operation} · {len(self.leaves)} calls"
 
 
-class ThoughtBlock(Collapsible):
+class ThoughtBlock(Collapsible, inherit_bindings=False):
     """A reasoning block: streams live, then collapses to 'thought for Xs'.
 
-    Click the title to expand/collapse — exactly the OpenCode/Crush UX,
+    Space cycles the focused view; double-click opens the copy menu,
     native via Textual's Collapsible. The body is passed as a CHILD, not
     via a compose override: Collapsible.compose() builds the internal
     Contents container that '-collapsed' CSS hides — overriding compose
@@ -395,7 +415,7 @@ class ThoughtBlock(Collapsible):
 
     can_focus = True
     BINDINGS = [
-        Binding("enter,space", "toggle_box", "Expand thinking", show=False),
+        Binding("space", "toggle_box", "Expand thinking", show=False),
         Binding("ctrl+a", "select_thought_all", "Select thinking", show=False, priority=True),
         Binding("ctrl+c", "copy_thought_selection", "Copy", show=False, priority=True),
     ]
@@ -421,8 +441,17 @@ class ThoughtBlock(Collapsible):
     def _update_elapsed_title(self) -> None:
         if self._streaming:
             elapsed = _elapsed_label(_time.monotonic() - self._started_at)
-            self._base_title = f"thinking · {elapsed}"
+            frame = int(_time.monotonic() - self._started_at) % 2
+            reduced = getattr(self.app, "_reduced_motion", False)
+            glyph = "*" if getattr(self.app, "_ascii_only", False) else ("◇" if reduced or not frame else "◆")
+            self._base_title = f"{glyph} {tr('Thinking…')} · {elapsed}"
             self._paint_preview()
+
+    def on_unmount(self) -> None:
+        super().on_unmount()
+        if self._elapsed_timer is not None:
+            self._elapsed_timer.stop()
+            self._elapsed_timer = None
 
     def scroll_visible(self, *args, **kwargs):
         # Collapsible schedules this on its initial expansion. During a live
@@ -447,8 +476,8 @@ class ThoughtBlock(Collapsible):
             lines = text.split("\n")
         more = len(lines) > 2
         self._preview_more = more
-        if not self._expanded and more:
-            text = Text("\n").join(lines[:2])
+        # Clip the view rather than inserting soft-wrap newlines into its copy source.
+        self._body.styles.max_height = 2 if not self._expanded and more else None
         if self.collapsed:
             preview = " ".join(self._full_text.split())
             budget = max(1, self.content_size.width - cell_len(self._base_title) - 9)
@@ -456,7 +485,7 @@ class ThoughtBlock(Collapsible):
         else:
             self.title = self._base_title
         self._body.set_selectable_content(text, text.plain)
-        self.border_subtitle = (Text("Enter / Space " + ("collapse" if self._expanded and not self.collapsed else "expand"), style=MUTED)
+        self.border_subtitle = (Text(tr("Space expand / collapse · double-click copy"), style=MUTED)
                                 if more and (self.has_focus or self.has_focus_within) else "")
 
     def _watch_collapsed(self, collapsed: bool) -> None:
@@ -494,7 +523,6 @@ class ThoughtBlock(Collapsible):
 
     def on_click(self, event) -> None:
         if isinstance(event.widget, SelectableText):
-            self.focus(scroll_visible=False)
             return
         super().on_click(event)
 
@@ -506,7 +534,7 @@ class ThoughtBlock(Collapsible):
 
     def collapse_to(self, seconds: float) -> None:
         """Collapse with the elapsed-time title."""
-        self._base_title = f"thought for {_elapsed_label(seconds)}"
+        self._base_title = tr("Thought for {elapsed}", elapsed=_elapsed_label(seconds))
         self._streaming = False
         if self._elapsed_timer is not None:
             self._elapsed_timer.stop()
@@ -633,37 +661,61 @@ class SelectableText(Static):
     ]
 
     def __init__(self, content="", *, selection_text: str | None = None, **kwargs) -> None:
+        if isinstance(content, str):
+            kwargs.setdefault("markup", False)
         super().__init__(content, **kwargs)
         self.selection_text = (selection_text if selection_text is not None else
                                content.plain if isinstance(content, Text) else
                                content if isinstance(content, str) else "")
 
-    def on_click(self) -> None:
+    def on_mouse_down(self, event):
+        remember_copy_selection(self)
+
+    async def _on_click(self, event) -> None:
+        event.prevent_default()
+        event.stop()
         self.focus(scroll_visible=False)
+        if event.chain == 2:
+            container = next((parent for parent in self.ancestors if isinstance(parent, (ExpandableBox, CommandOutputCard))), None)
+            self.render()
+            whole = container.copy_text() if container is not None else self._selection_plain
+            open_copy_menu(self, whole)
+
+    def render(self):
+        original = static_content(self)
+        content = super().render()
+        if isinstance(original, RichMarkdown):
+            if getattr(self, "_markdown_source", None) is not original:
+                self._markdown_source = original
+                self._markdown_text = selectable_markdown(original)
+            content = self._markdown_text
+        self._selection_plain = getattr(content, "plain", str(content))
+        return content
 
     def set_selectable_content(self, content, selection_text: str) -> None:
         self.selection_text = selection_text
         self.update(content)
 
     def get_selection(self, selection):
-        return selection.extract(self.selection_text), "\n"
+        self.render()
+        return extract_range(self._selection_plain, selection), "\n"
 
     def action_select_visible_all(self) -> None:
         self.text_select_all()
 
     def action_copy_visible_selection(self) -> None:
-        selected = self.screen.get_selected_text()
+        selected = exact_selected_text(self.screen)
         if selected:
             self.app.run_worker(
                 self.app._request_clipboard_copy(selected, "selection"),
                 group="clipboard-user")
 
 
-class CommandOutputCard(VerticalScroll):
-    """Two visible output rows; Enter/Space opens the retained command output."""
+class CommandOutputCard(VerticalScroll, inherit_bindings=False):
+    """Two visible output rows; Space opens the retained command output."""
 
     can_focus = True
-    BINDINGS = [Binding("enter,space", "toggle_output", "Expand output", show=False)]
+    BINDINGS = [Binding("space", "toggle_output", "Expand output", show=False)]
     DEFAULT_CSS = """
     CommandOutputCard { height: 4; width: 100%; padding: 0 1; margin: 1 0; border: round #414650; background: #17191f; }
     CommandOutputCard:focus-within { border: round #bb8cff; }
@@ -702,7 +754,7 @@ class CommandOutputCard(VerticalScroll):
     def _paint_output(self) -> None:
         note = " · output limit reached" if self.output_truncated else ""
         hint = "collapse" if self.expanded else "expand"
-        self.border_subtitle = Text(f"{self.status}{note} · Enter / Space / double-click {hint}", style=MUTED)
+        self.border_subtitle = Text(f"{tr(self.status)}{note} · {tr('Space expand / collapse · double-click copy')}", style=MUTED)
         if self.expanded:
             shown = self.output or "No output."
             if self.receipt:
@@ -714,7 +766,10 @@ class CommandOutputCard(VerticalScroll):
             if not shown:
                 shown = "Waiting for output…" if self.status == "Running" else "No output."
         self._body.set_selectable_content(
-            Text(shown, style=MUTED, no_wrap=not self.expanded, overflow="ellipsis"), shown)
+            Text(shown, style=MUTED), shown)
+
+    def copy_text(self) -> str:
+        return self.output
 
     def action_toggle_output(self) -> None:
         self.expanded = not self.expanded
@@ -722,13 +777,15 @@ class CommandOutputCard(VerticalScroll):
         self._paint_output()
         self.scroll_home(animate=False)
 
+    def on_mouse_down(self, event):
+        if event.widget is self:
+            remember_copy_selection(self)
+
     def on_click(self, event) -> None:
-        # The border and the output text share one row. The first click focuses
-        # the card. The next click opens it the same way Space does. A drag
-        # inside the text still selects; only a later click expands.
-        if event.widget is not self and not isinstance(event.widget, SelectableText):
+        if event.widget is not self:
             return
         self.focus()
-        if activate_on_second_click(self, event, "output"):
+        if event.chain == 2:
             event.prevent_default()
-            self.action_toggle_output()
+            event.stop()
+            open_copy_menu(self, self.copy_text())

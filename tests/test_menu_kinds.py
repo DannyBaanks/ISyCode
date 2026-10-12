@@ -70,6 +70,7 @@ EXPECTED = {
     "contrast_toggle",
     "ascii_toggle",
     "marquee_toggle",
+    "motion_toggle",
     "reasoning_open",
     "reasoning_select",
     "model",

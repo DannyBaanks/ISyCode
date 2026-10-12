@@ -2004,3 +2004,87 @@ msgstr "No ISyCode transport yet"
 
 msgid "Set a preset, or ask for a base URL before one is added"
 msgstr "Set a preset, or ask for a base URL before one is added"
+
+msgid "Copy text"
+msgstr "Copy text"
+
+msgid "Copy selection"
+msgstr "Copy selection"
+
+msgid "Copy whole box"
+msgstr "Copy whole box"
+
+msgid "Only the selected characters are copied. Whole-box copy is a separate choice."
+msgstr "Only the selected characters are copied. Whole-box copy is a separate choice."
+
+msgid "No text selected."
+msgstr "No text selected."
+
+msgid "Space expand / collapse · double-click copy"
+msgstr "Space expand / collapse · double-click copy"
+
+msgid "Reduced motion · {state}"
+msgstr "Reduced motion · {state}"
+
+msgid "Keep activity symbols static and disable compact text scrolling."
+msgstr "Keep activity symbols static and disable compact text scrolling."
+
+msgid "Thought for {elapsed}"
+msgstr "Thought for {elapsed}"
+
+msgid "Attachments · review before sending"
+msgstr "Attachments · review before sending"
+
+msgid "{label} · {count} characters"
+msgstr "{label} · {count} characters"
+
+msgid "Ctrl+C or Copy selection copies only the marked text. Copy whole box and Copy path are separate explicit choices. The assistant cannot copy. The journal records the size, never the text. API keys are never copied."
+msgstr "Ctrl+C or Copy selection copies only the marked text. Copy whole box and Copy path are separate explicit choices. The assistant cannot copy. The journal records the size, never the text. API keys are never copied."
+
+msgid "Switch this workspace to Classic?"
+msgstr "Switch this workspace to Classic?"
+
+msgid "Switch this workspace to Security?"
+msgstr "Switch this workspace to Security?"
+
+msgid "Use Classic"
+msgstr "Use Classic"
+
+msgid "Use Security"
+msgstr "Use Security"
+
+msgid "Everything starts off; you allow each capability in Settings → Authority. Permissions you granted explicitly stay as they are."
+msgstr "Everything starts off; you allow each capability in Settings → Authority. Permissions you granted explicitly stay as they are."
+
+msgid "Reading/searching, edit proposals, chat, sessions and Git review work without granting each capability. Sandbox commands are ready when supported. The next screen can trust this folder for ordinary edits and isolated tests. Until then, edits, delete/move, commands and commits still ask. Commits, secrets and authority changes keep asking. Integrations still need explicit permission; free shell and sensitive files stay unavailable."
+msgstr "Reading/searching, edit proposals, chat, sessions and Git review work without granting each capability. Sandbox commands are ready when supported. The next screen can trust this folder for ordinary edits and isolated tests. Until then, edits, delete/move, commands and commits still ask. Commits, secrets and authority changes keep asking. Integrations still need explicit permission; free shell and sensitive files stay unavailable."
+
+msgid "Folder: {root}\n"
+msgstr "Folder: {root}\n"
+
+msgid "+{added} / -{removed} lines. This puts the file back as it was before ISyCode's last change; nothing changes unless you apply it."
+msgstr "+{added} / -{removed} lines. This puts the file back as it was before ISyCode's last change; nothing changes unless you apply it."
+
+msgid "+{added} / -{removed} lines. The assistant proposed this change; nothing is written unless you apply it. If the file changes before it is applied, the change is refused."
+msgstr "+{added} / -{removed} lines. The assistant proposed this change; nothing is written unless you apply it. If the file changes before it is applied, the change is refused."
+
+msgid "Run a command · {cwd}"
+msgstr "Run a command · {cwd}"
+
+msgid "workspace root"
+msgstr "workspace root"
+
+msgid "Program: {program}\nStops after {timeout} s · network blocked · {hidden} sensitive paths hidden\nIt may change files in this workspace; those changes cannot be undone with /undo. Nothing runs unless you approve it."
+msgstr "Program: {program}\nStops after {timeout} s · network blocked · {hidden} sensitive paths hidden\nIt may change files in this workspace; those changes cannot be undone with /undo. Nothing runs unless you approve it."
+
+msgid "Command · review"
+msgstr "Command · review"
+
+msgid "Exact command"
+msgstr "Exact command"
+
+msgid "Brighten text and focused frames while keeping the shared black surfaces."
+msgstr "Brighten text and focused frames while keeping the shared black surfaces."
+
+msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
+msgstr "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."

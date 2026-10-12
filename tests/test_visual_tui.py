@@ -52,11 +52,11 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
             banner = app.query_one(Banner)
             header = plain_text(banner)
             assert cell_len(header) <= banner.content_size.width
-            assert ('● Classic' in header or '● Security' in header) and '日本語-project' in header
+            assert ('Classic' in header or 'Security' in header) and '日本語-project' in header
             app.action_toggle_sidebar()
             await pilot.pause()
             assert cell_len(plain_text(banner)) <= app.query_one(SidePanel).region.x - 1
-            assert '● Classic' in plain_text(banner) or '● Security' in plain_text(banner)
+            assert 'Classic' in plain_text(banner) or 'Security' in plain_text(banner)
 
     with capsys.disabled():
         asyncio.run(scenario())
@@ -330,6 +330,6 @@ def test_external_stylesheet_is_packaged_and_applied(tmp_path, monkeypatch):
             sources = {str(path) for path in app.stylesheet.source}
             assert any("isycode.tcss" in path for path in sources)
             prompt = app.query_one("#prompt-input")
-            assert prompt.styles.background.hex in {"#242529", "#292630"}
+            assert prompt.styles.background.hex == "#000000"
 
     asyncio.run(scenario())

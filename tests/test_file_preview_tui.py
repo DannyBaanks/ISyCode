@@ -29,7 +29,12 @@ def test_file_leaf_enables_preview_modal_and_copy_path(tmp_path,monkeypatch,caps
                 await p.pause(0.05)
             assert isinstance(app.screen, FilePreviewScreen)
             editor=app.screen.query_one(TextArea);assert editor.read_only and editor.text=='fn main() {}\n'
-            await p.click('#preview-copy');await p.pause();assert copied[-1]=='fn main() {}\n'
+            assert app.screen.query_one('#preview-copy').disabled
+            await p.click('#preview-copy');await p.pause();assert copied[-1]==str(file)
+            from textual.document._document import Selection
+            editor.selection=Selection((0,3),(0,7));await p.pause()
+            await p.click('#preview-copy');await p.pause();assert copied[-1]=='main'
+            await p.click('#preview-copy-whole');await p.pause();assert copied[-1]=='fn main() {}\n'
             await p.press('escape')
     with capsys.disabled():asyncio.run(run())
 

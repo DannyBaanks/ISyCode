@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pip",
+    "wheel",
+    "--no-deps",
+    "--no-build-isolation",
+    "--wheel-dir",
+    "/tmp/isycode-design-wheel-ghzekk2a",
+    "."
+  ],
+  "exit_code": 0,
+  "wheel": "/tmp/isycode-design-wheel-ghzekk2a/isycode-0.1.0-py3-none-any.whl",
+  "packaged_files": [
+    "isycode/design.tcss",
+    "isycode/assets/design-tokens.json",
+    "isycode/tui_copy.py"
+  ]
+}

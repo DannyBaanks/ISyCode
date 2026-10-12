@@ -1,4 +1,4 @@
-"""Copy on select: owned, granted, journaled without the text, never from the model."""
+"""Explicit copying: owned, granted, journaled without the text, never from the model."""
 import ast
 from pathlib import Path
 
@@ -25,18 +25,20 @@ def owner(tmp_path, monkeypatch):
             written, tmp_path / "clip.txt", root.resolve())
 
 
-def test_copy_needs_the_grant(owner):
+@pytest.mark.parametrize("source", ["selection", "file_path", "content_box"])
+def test_copy_needs_the_grant(owner, source):
     clipboard, authority, written, clip, _ = owner
-    outcome = clipboard.copy("hello", source="selection", terminal_write=written.append)
+    outcome = clipboard.copy("hello", source=source, terminal_write=written.append)
     assert outcome.decision == "DENY" and "grant" in outcome.reason
     assert written == [] and not clip.exists()
 
 
-def test_copy_uses_the_system_tool_and_never_journals_the_text(owner):
+@pytest.mark.parametrize("source", ["selection", "file_path", "content_box"])
+def test_copy_uses_the_system_tool_and_never_journals_the_text(owner, source):
     clipboard, authority, written, clip, root = owner
     authority.set_grant("clipboard.copy", enabled=True, targets=[CLIPBOARD_TARGET])
     secret_looking = "my selected text 12345"
-    outcome = clipboard.copy(secret_looking, source="selection", terminal_write=written.append)
+    outcome = clipboard.copy(secret_looking, source=source, terminal_write=written.append)
     assert outcome.decision == "ALLOW" and outcome.text == "fake-copy"
     assert clip.read_text() == secret_looking and written == [secret_looking]
     assert ActionAuditJournal(root).verify().receipts == 1
@@ -72,7 +74,7 @@ def _methods():
 def test_every_copy_goes_through_the_owner_and_never_copies_the_key_field():
     methods = _methods()
     assert "_copy_through_owner" in methods["copy_to_clipboard"]
-    assert "_copy_through_owner" in methods["on_text_selected"]
+    assert "_copy_through_owner" not in methods["on_text_selected"]
     helper = methods["_copy_through_owner"]
     assert helper.index('"#provider-key-input"') < helper.index("owner.copy(")
     assert "API keys are never copied" in helper

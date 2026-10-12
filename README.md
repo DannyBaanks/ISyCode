@@ -225,7 +225,7 @@ solo con su permiso. Ninguna saltea IsySentinel ni el journal.
 | MCP local | `mcp__<servidor>__<herramienta>` | al arrancar el servidor | sí: al arrancar y en cada llamada |
 | Diagnósticos Pyright tras editar `.py` | automático | Check Python files after edits | no |
 | Plan de trabajo | `update_tasks` | ninguno | no |
-| Copiar lo que **tú** seleccionas | ratón, Copy path | Copy selected text to the clipboard | no (el modelo no tiene esta herramienta) |
+| Copiar lo que **tú** seleccionas | marcar + Ctrl+C, menú de copia, Copy path | Copy selected text to the clipboard | no (el modelo no tiene esta herramienta) |
 
 Si una herramienta está apagada, el agente te dice dónde activarla.
 
@@ -427,7 +427,7 @@ Diseño: [fronteras de IsySentinel](docs/design/isysentinel-security-boundaries.
 | `Ctrl+T` | Plegar Tasks |
 | `y` / `n` | Aprobar / rechazar |
 | `?` | En Settings, explicar la opción |
-| Selección con el ratón | Copiar (con el permiso activo) |
+| Selección con el ratón + Ctrl+C | Copiar sólo lo marcado (con el permiso activo) |
 
 ## Qué está probado
 
@@ -488,6 +488,8 @@ abiertos.
 ## Documentación
 
 - [Guía rápida](docs/GUIA.md)
+- [TUI: estilo común, Settings y gestos de copia](docs/design/2026-10-11-tui-implementation/GUIA.md)
+- [Implementation evidence and visual gallery](docs/design/2026-10-11-tui-implementation/README.md)
 - [Roadmap](docs/ROADMAP.md) y [Classic/Security](docs/roadmap-classic-security-ux.md)
 - [Uso diario y límites de verificación](docs/daily-use-readiness.md)
 - [RTK](docs/rtk/GUIA.md)

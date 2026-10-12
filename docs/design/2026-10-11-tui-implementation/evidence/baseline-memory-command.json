@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_workspace_memory.py::test_memory_requests_are_bounded_approved_and_journaled",
+    "tests/test_workspace_memory.py::test_tui_memory_tools_require_confirmation_and_mark_recall_untrusted"
+  ],
+  "cwd": "/tmp/isycode-design-baseline-yk953tn6",
+  "source_commit": "ffd41bf63d1948a1716c6eae160df9f80acdfc76",
+  "exit_code": 0,
+  "utc": "2026-10-11T21:35:04.268023+00:00"
+}

@@ -7,7 +7,7 @@ from __future__ import annotations
 from textual.binding import Binding
 from textual.widgets import Button, Input, OptionList, Static
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets.option_list import Option
 from pathlib import Path
@@ -15,6 +15,13 @@ from isycode.workspace_setup import broad_workspace_reason
 from isycode.tui_screens_approval import ApprovalScreen
 from isycode.localization import tr
 
+
+
+class OnboardingCopy(VerticalScroll):
+    """Keyboard-scrollable explanation without pushing choices off-screen."""
+
+    def __init__(self, content, **kwargs):
+        super().__init__(Static(content, markup=False), **kwargs)
 
 
 class WorkspaceSetupScreen(ModalScreen[bool]):
@@ -44,7 +51,7 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
                       "'recurring' default is not applied here.\n\n", reason=broad))
         with Vertical(id="workspace-setup-card"):
             yield Static(tr("Set up this workspace?"), id="workspace-setup-title")
-            yield Static(
+            yield OnboardingCopy(
                 tr("Launch directory:\n{path}\n\n{warning}"
                    "If this is a recurring project, Yes creates an empty .isyroot here and saves chat "
                    "sessions in your private ISyCode state directory. .isyroot identifies the workspace; "
@@ -141,7 +148,7 @@ class QuickStartScreen(ModalScreen[str]):
         with Vertical(id="quick-start-card"):
             yield Static(tr("Welcome to ISyCode · how do you want to start?"),
                          id="quick-start-title")
-            yield Static(
+            yield OnboardingCopy(
                 tr("{root}\n\n{provider_line}\n\n"
                    "Quick Start: this folder becomes a recurring workspace in Classic mode — "
                    "read/search, edit proposals and chat are ready. One more confirmation can turn on "
@@ -184,7 +191,7 @@ class WorkspaceModeScreen(ModalScreen[str]):
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-mode-card"):
             yield Static(tr("How should ISyCode work in this folder?"), id="workspace-mode-title")
-            yield Static(
+            yield OnboardingCopy(
                 tr("{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
                    "A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. "
                    "Until you confirm that, each edit, delete/move, command and commit still asks. "

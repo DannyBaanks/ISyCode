@@ -142,16 +142,19 @@ def test_authority_menu_derives_every_on_state_from_the_runtime_registry():
     assert {"displayed_on", "mobile_host_enabled", "other_saved_grants"} <= calls
 
 
-def test_authority_capability_indicator_uses_clear_green_and_red_states():
+def test_authority_permission_states_have_distinct_text_and_neutral_off():
     from isycode.tui import _authority_capability_label
 
+    from isycode.localization import configure_locale
+    from isycode.tui_theme import GREEN, MUTED, set_ascii_only
+    configure_locale("en")
+    set_ascii_only(False)
     enabled = _authority_capability_label("Read workspace files", True)
     disabled = _authority_capability_label("Read workspace files", False)
-
-    assert enabled.plain == "Read workspace files  ● ON"
-    assert disabled.plain == "Read workspace files  ● OFF"
-    assert any("00ff00" in str(style).casefold() for _, _, style in enabled.spans)
-    assert any("ff0000" in str(style).casefold() for _, _, style in disabled.spans)
+    assert enabled.plain == "Read workspace files  ✓ on"
+    assert disabled.plain == "Read workspace files  − off"
+    assert any(GREEN in str(span.style) for span in enabled.spans)
+    assert any(MUTED in str(span.style) for span in disabled.spans)
 
 
 def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels():

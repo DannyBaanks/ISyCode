@@ -21,7 +21,7 @@ def test_harness_list_opens_collapsed_and_preserves_each_expansion(tmp_path, mon
             assert all(section.collapsed for section in sections)
             first = sections[0]
             first.query_one(CollapsibleTitle).focus()
-            await pilot.press('enter')
+            await pilot.press('space')
             await pilot.pause()
             assert not first.collapsed
             assert all(section.collapsed for section in sections[1:])
@@ -35,7 +35,7 @@ def test_harness_list_opens_collapsed_and_preserves_each_expansion(tmp_path, mon
             assert 'ready' in first.title
             assert all(section.collapsed for section in sections[1:])
             first.query_one(CollapsibleTitle).focus()
-            await pilot.press('enter')
+            await pilot.press('space')
             await pilot.pause()
             assert first.collapsed
             close = screen.query_one('#harness-close')

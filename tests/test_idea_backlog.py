@@ -18,7 +18,7 @@ def test_ideas_are_not_sent_until_explicit_promotion(tmp_path, monkeypatch):
             fold = app.screen.query_one("Collapsible")
             fold.collapsed = False
             await pilot.pause()
-            await pilot.click("#idea-promote-0")
+            await pilot.click("#idea-promote-0", offset=(2, 1))
             await pilot.pause()
             assert app._queued_messages == ["A new feature idea"]
             assert not app._idea_backlog and not app._history

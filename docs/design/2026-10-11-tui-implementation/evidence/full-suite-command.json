@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/usr/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-m",
+    "not integration",
+    "--junitxml=docs/design/2026-10-11-tui-implementation/evidence/full-suite.xml"
+  ],
+  "cwd": "/home/danny/Development/ISyCo Git/ISyCode",
+  "started_utc": "2026-10-11T21:11:46.754972+00:00",
+  "finished_utc": "2026-10-11T21:20:04.624460+00:00",
+  "exit_code": 1
+}

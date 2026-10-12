@@ -4,6 +4,8 @@ Moved verbatim from tui.py. TUIApp inherits RailMixin.
 """
 from __future__ import annotations
 
+from isycode.localization import tr
+
 import os
 import asyncio
 import json
@@ -194,7 +196,7 @@ class RailMixin:
             )
         count = len(snapshot.items)
         return (
-            switch_row(True, status_phrase(f"{count} available"), status_phrase("select one below for details")),
+            switch_row(False, status_phrase(f"{count} available"), status_phrase("select one below for details"), inactive=True),
             status_phrase(f"Skills · {count} available"),
         )
 
@@ -379,6 +381,7 @@ class RailMixin:
         if self._workspace is None:
             return
         self._selected_file_path = None
+        self.query_one("#file-preview-meta", Static).update("")
         self.query_one("#file-copy-path", Button).disabled = True
         self.query_one("#file-open-preview", Button).disabled = True
         self._workspace_generation += 1
@@ -447,6 +450,7 @@ class RailMixin:
         self._search_query = query
         self._search_mode = True
         self._selected_file_path = None
+        self.query_one("#file-preview-meta", Static).update("")
         self.query_one("#file-copy-path", Button).disabled = True
         self.query_one("#file-open-preview", Button).disabled = True
         tree = self.query_one("#workspace-tree", Tree)
@@ -539,7 +543,8 @@ class RailMixin:
             return
         self._workspace_generation += 1
         generation = self._workspace_generation
-        self.query_one("#file-preview", Static).update("Checking Workspace Authority and IsySentinel…")
+        self.query_one("#file-preview-meta", Static).update("")
+        self.query_one("#file-preview", Static).update(tr("Checking Workspace Authority and IsySentinel…"))
         try:
             browser_root = self._workspace_read_owner().root
             read = await asyncio.to_thread(self._workspace_read_owner().execute,
@@ -560,9 +565,9 @@ class RailMixin:
                 preview = preview[:8000] + "\n\n… preview truncated at 8,000 characters …"
             relative = Path(uri).relative_to(browser_root).as_posix() or browser_root.name
             size = len(result.get("text", "").encode("utf-8"))
-            self.query_one("#file-preview", Static).update(
-                f"{relative} · {size} bytes · UTF-8\n"
-                f"{verified_receipt_line(read.receipt.receipt_id)}\n\n{preview}")
+            self.query_one("#file-preview-meta", Static).update(
+                f"{relative} · {size} bytes · UTF-8\n{verified_receipt_line(read.receipt.receipt_id)}")
+            self.query_one("#file-preview", Static).set_selectable_content(Text(preview), preview)
             if modal:
                 from isycode.file_preview import FilePreviewScreen
                 await self._await_screen(FilePreviewScreen(uri, full_preview))
@@ -593,6 +598,7 @@ class RailMixin:
         self._rail_auto_hidden = False
         self.query_one(SidePanel).display = True
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._update_model_button_visibility)
         show_files = view == "files"
         self._rail_view = "files" if show_files else "overview"
         self.query_one("#overview-view").display = not show_files

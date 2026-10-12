@@ -124,7 +124,7 @@ def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatc
         asyncio.run(scenario())
 
 
-def test_second_click_opens_a_selected_row_and_tree_node(tmp_path, monkeypatch, capsys):
+def test_space_expands_content_and_second_click_activates_tree_node(tmp_path, monkeypatch, capsys):
     project = tmp_path / "project"
     project.mkdir()
     monkeypatch.chdir(project)
@@ -146,6 +146,8 @@ def test_second_click_opens_a_selected_row_and_tree_node(tmp_path, monkeypatch, 
             assert section.collapsed
             await pilot.click(title, offset=(max(0, title.size.width - 2), 0))
             await pilot.pause()
+            assert section.collapsed
+            await pilot.press("space")
             assert not section.collapsed
             connections = app.query_one("#rail-connections")
             connections.query_one(BoxTitle).focus()

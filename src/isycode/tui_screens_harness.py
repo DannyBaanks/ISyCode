@@ -225,7 +225,7 @@ class ModelsScreen(ModalScreen):
         hint = ("Click a model to read it · Enter or a second click uses it · Esc back"
                 if scope else "Expand a provider · click a model to read it · Enter uses it")
         with Vertical(id="models-card"):
-            yield Static(Text.assemble((heading + "\n", "bold #c7b8d4"), (hint, MUTED)), id="models-title")
+            yield Static(Text.assemble((heading + "\n", f"bold {TEXT}"), (hint, MUTED)), id="models-title")
             yield Input(value=self.search_query, placeholder=tr("Find a model, id or family…"), id="models-search")
             with Horizontal(id="models-body"):
                 with VerticalScroll(id="models-scroll"):
@@ -327,7 +327,7 @@ class ModelsScreen(ModalScreen):
         from isycode.model_card import model_facts
         card = Text()
         for fact in model_facts(provider, model):
-            card.append(fact.label + "\n", style="bold #c7b8d4")
+            card.append(fact.label + "\n", style=f"bold {TEXT}")
             card.append("  " + fact.value, style=TEXT)
             card.append(f"  · {fact.source}\n", style=MUTED)
         self.query_one("#model-detail", Static).update(card)

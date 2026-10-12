@@ -775,7 +775,7 @@ class ClipboardSystembility:
         params = request.parameters
         size, digest = params.get("size"), params.get("sha256")
         valid = (set(params) == {"source", "size", "sha256"} and request.target == "clipboard"
-                 and params.get("source") in {"selection", "file_path"}
+                 and params.get("source") in {"selection", "file_path", "content_box"}
                  and type(size) is int and 1 <= size <= 1024 * 1024
                  and isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest) is not None)
         return SystembilityResult(self.name, valid,

@@ -1,0 +1,89 @@
+/* Palette exported from ISyCode Design Skills tokens.json. */
+$isy-surface: #000000;
+$isy-selected-surface: #03252d;
+$isy-text: #edf1f5;
+$isy-muted: #a9b5c2;
+$isy-focus: #38e1ee;
+$isy-border: #718291;
+$isy-separator: #3f4d59;
+$isy-success: #7fe39d;
+$isy-warning: #f2c068;
+$isy-error: #f7888e;
+
+/* Shared ISyCode surfaces. Screen-specific layout and action semantics stay local. */
+Screen { background: $isy-surface; color: $isy-text; }
+Input, TextArea { background: $isy-surface !important; color: $isy-text !important; border: solid $isy-border !important; }
+Input:focus, TextArea:focus { border: solid $isy-focus !important; }
+ModalScreen > Vertical, ModalScreen > VerticalScroll {
+    background: $isy-surface !important; color: $isy-text;
+    border: solid $isy-border !important; max-height: 95%; max-width: 96%;
+}
+ModalScreen VerticalScroll, ModalScreen OptionList { background: $isy-surface !important; }
+ModalScreen Button {
+    border: solid $isy-border !important; background: $isy-surface !important; color: $isy-text !important;
+    background-tint: transparent; tint: transparent; min-width: 8;
+}
+ModalScreen Button:hover, ModalScreen Button:focus { border: solid $isy-focus !important; background: $isy-selected-surface !important; }
+ModalScreen Button.-primary { color: $isy-focus !important; }
+ModalScreen Button.-warning { color: $isy-warning !important; }
+ModalScreen Button.-error { color: $isy-error !important; }
+ModalScreen Button:disabled { color: $isy-muted !important; text-style: dim; }
+OptionList > .option-list--option-highlighted { background: $isy-selected-surface !important; color: $isy-focus !important; text-style: none; }
+OptionList > .option-list--option-disabled { color: $isy-muted; }
+Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-surface; color: $isy-focus; }
+#banner, #chat, #command-bar { background: $isy-surface !important; }
+#side-panel { background: $isy-surface !important; border: none !important; border-left: solid $isy-separator !important; padding: 1; }
+#rail-card { background: $isy-surface !important; border: none !important; padding: 0; }
+.panel-title, .section-title { color: $isy-text; }
+.rail-copy { color: $isy-muted; }
+#overview-view CollapsibleTitle { text-style: none; color: $isy-text; }
+#overview-view CollapsibleTitle:hover, #overview-view CollapsibleTitle:focus { background: $isy-selected-surface; color: $isy-focus; }
+#overview-view Collapsible:focus-within { border-bottom: solid $isy-focus; }
+#side-panel Button { color: $isy-text; }
+#side-panel Button:focus, #side-panel Button:hover, #side-panel Button.rail-lit { background: $isy-selected-surface; color: $isy-focus; }
+#rail-tabs { border: none !important; border-bottom: solid $isy-separator !important; height: 2; }
+#workspace-tree { border: none !important; background: $isy-surface !important; min-height: 2; height: 1fr; }
+#file-preview-scroll { border: none !important; border-top: solid $isy-separator !important; background: $isy-surface !important; height: 1fr; min-height: 5; }
+#file-preview { height: auto; }
+#file-preview-meta { height: auto; max-height: 2; color: $isy-muted; }
+#file-actions { height: 1; }
+#command-bar Button { color: $isy-text; background: $isy-surface !important; }
+#command-bar Button:hover, #command-bar Button:focus { background: $isy-selected-surface !important; color: $isy-focus; }
+#settings-button { width: 5; dock: right; }
+#model-button { max-width: 20; text-wrap: nowrap; text-overflow: ellipsis; }
+#prompt-input, #idea-box, #shell-box, #queued-box, #agent-tasks, .user-turn, .external-review, .tool-activity, CommandOutputCard {
+    background: $isy-surface !important; color: $isy-text; border: solid $isy-border;
+}
+#prompt-input:focus, #idea-box:focus, #shell-box:focus, ThoughtBlock:focus-within, ExpandableBox:focus-within, CommandOutputCard:focus-within { border: solid $isy-focus; }
+CollapsibleTitle { text-style: none; color: $isy-text; }
+#action-card { background: $isy-surface !important; border: solid $isy-border !important; height: 94%; padding: 1 2; }
+#action-title { height: 1; color: $isy-text; margin-bottom: 1; }
+#action-search { margin-bottom: 1; }
+#action-body { height: 1fr; min-height: 3; }
+#settings-categories { display: none; width: 20; height: 1fr; border: none; border-right: solid $isy-separator; padding: 0 1 0 0; margin-right: 1; }
+#action-results { width: 1fr; height: 1fr; }
+#action-list { height: 1fr; padding: 0; }
+#action-detail { height: auto; min-height: 2; max-height: 4; margin-top: 1; padding: 0; border-left: none; color: $isy-muted; }
+#action-hint { height: auto; max-height: 2; margin-top: 1; color: $isy-muted; }
+#action-card.provider-menu #action-list > .option-list--option-highlighted { background: $isy-selected-surface; color: $isy-focus; }
+#quick-start-card, #workspace-mode-card, #workspace-setup-card { height: 92% !important; max-height: 95% !important; }
+#quick-start-copy, #workspace-mode-copy, #workspace-setup-copy { height: 1fr !important; min-height: 1; overflow-y: auto; }
+#quick-start-title, #workspace-mode-title, #workspace-setup-title { height: auto !important; max-height: 3; color: $isy-text !important; }
+#quick-start-options, #workspace-mode-options { height: 4 !important; }
+#workspace-setup-options { height: 4 !important; }
+#workspace-setup-actions Button { width: 1fr; min-width: 0; height: 3 !important; text-wrap: nowrap; text-overflow: ellipsis; }
+#slash-suggestions { background: $isy-surface !important; border: solid $isy-border; }
+
+/* Shared inner surfaces and emphasis; no second chrome palette. */
+OptionList, Collapsible, Collapsible > Contents, Collapsible > CollapsibleTitle { background: $isy-surface; color: $isy-text; }
+#settings-categories, #action-list { background: $isy-surface !important; color: $isy-text; }
+#settings-categories > .option-list--option-highlighted { background: $isy-selected-surface !important; color: $isy-focus !important; }
+#queue-scroll { height: 1fr; }
+.queue-message { height: auto; }
+#write-approval-title, #command-approval-title, #tailscale-confirm-title, #models-title, #harness-title, #idea-note-heading { color: $isy-text !important; }
+ExpandableBox { border-bottom: solid $isy-separator; }
+
+ModalScreen { align: center middle; background: #000000 65%; }
+.model-choice { border: none !important; border-left: solid $isy-surface !important; padding: 0 1; }
+.model-choice:focus, .model-choice:hover { border-left: solid $isy-focus !important; }
+#model-detail-scroll { border-left: solid $isy-separator; }

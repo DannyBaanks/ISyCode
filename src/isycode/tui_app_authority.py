@@ -203,8 +203,8 @@ class AuthorityMixin:
                 "Copy selected text to the clipboard", "clipboard",
                 displayed_on("clipboard.copy", clipboard_grant,
                              CLIPBOARD_TARGET in clipboard_grant.get("targets", [])),
-                "Selecting text with the mouse (or Ctrl+C on a selection, or Copy path) copies "
-                "it. Only your own gesture copies; the assistant cannot. The journal records the "
+                "Ctrl+C or Copy selection copies only the marked text. Copy whole box and Copy path "
+                "are separate explicit choices. The assistant cannot copy. The journal records the "
                 "size, never the text. API keys are never copied."))
             command_sandbox = sandbox_executable()
             if command_sandbox:

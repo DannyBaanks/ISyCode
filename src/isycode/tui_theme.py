@@ -7,6 +7,9 @@ from __future__ import annotations
 from textual.widgets import Static
 from rich.text import Text
 from rich.cells import cell_len
+import json
+from pathlib import Path
+from isycode.localization import tr
 
 
 
@@ -28,65 +31,30 @@ def _authority_capability_label(label: str, enabled: bool) -> Text:
     rendered = Text(label + "  ")
     if _ASCII_ONLY:
         rendered.append("[ON]" if enabled else "[OFF]",
-                        style="bold #00ff00" if enabled else "bold #ff0000")
+                        style=f"bold {GREEN}" if enabled else MUTED)
     else:
-        rendered.append("● ON" if enabled else "● OFF",
-                        style="bold #00ff00" if enabled else "bold #ff0000")
+        rendered.append("✓ " + tr("on") if enabled else "− " + tr("off"),
+                        style=GREEN if enabled else MUTED)
     return rendered
 
 
-# ── Palette (Crush-inspired but softer) ───────────────────────────
-BG = "#1a1a2e"        # deep navy-black
-BG2 = "#292a2e"       # graphite rail background
-ACCENT = "#e94560"    # crush pink-red (softened)
-ACCENT2 = "#9b5de5"   # purple accent
-TEXT = "#e0e0e0"      # main text
-MUTED = "#9aa3ad"     # secondary text, readable on the dark surface
-GREEN = "#4ade80"     # success / granted
-YELLOW = "#fbbf24"    # warning / plan
-RED = "#f87171"       # error / denied
-CYAN = "#22d3ee"      # info / host
+# ── Accepted shared palette ─────────────────────────────────────
+# Packaged export of the accepted authoring palette, shared by rich text and TCSS.
+_PALETTE = json.loads((Path(__file__).with_name("assets") / "design-tokens.json").read_text())["colors"]
+BG = BG2 = _PALETTE["surface"]
+ACCENT = ACCENT2 = CYAN = _PALETTE["focus"]
+TEXT, MUTED = _PALETTE["text"], _PALETTE["muted"]
+GREEN, YELLOW, RED = _PALETTE["success"], _PALETTE["warning"], _PALETTE["error"]
 
 
 # ── High-contrast overrides (optional accessibility mode) ─────────
-# The semantic palette above already clears WCAG AA on pure black
-# (TEXT 13.7:1, MUTED 8.5:1, GREEN 10.8:1, YELLOW 11.6:1, RED 5.9:1),
-# so only the control surfaces and borders need restyling. Injected as
-# an extra stylesheet source at runtime; never mutates the base CSS.
+# Base controls already use the accepted black surface. Accessibility mode
+# strengthens text and frames without adding another color family.
 HIGH_CONTRAST_CSS = """
 Screen { background: #000000; color: #ffffff; }
-#banner { background: #000000; }
-#chat { background: #000000; }
-#command-bar { background: #000000; }
-#command-bar Button { background: #000000; }
-Footer { background: #000000; color: #9aa3ad; }
-Input { background: #000000; color: #ffffff; border: round #9aa3ad; }
-Input:focus { background: #000000; border: round #ffffff; }
-TextArea { background: #000000; border: round #9aa3ad; }
-TextArea:focus { border: round #ffffff; }
-#prompt-input { background: #000000; color: #ffffff; border: round #9aa3ad; }
-#prompt-input:focus { background: #000000; border: round #ffffff; }
-ModalScreen Button { background: #1a1a1a; color: #ffffff; }
-ModalScreen Button:hover { background: #2a2a2a; }
-ModalScreen Button:focus { background: #3a3a3a; text-style: bold; }
-ModalScreen Button.-primary { background: #7650a1; color: #ffffff; }
-#side-panel { background: #000000; border: round #9aa3ad; }
-#rail-card { background: #000000; border: round #9aa3ad; }
-#workspace-tree { background: #000000; border: round #9aa3ad; }
-#file-preview-scroll { background: #000000; border: round #9aa3ad; }
-#rail-tabs { border: round #9aa3ad; }
-#idea-box { background: #000000; border: round #9aa3ad; }
-#shell-box { background: #000000; border: round #9aa3ad; }
-#queued-box { background: #000000; }
-#agent-tasks { background: #000000; border-top: solid #9aa3ad; }
-#slash-suggestions { background: #000000; border: round #9aa3ad; }
-#action-card { background: #000000; border: round #9aa3ad; }
-.tool-activity { background: #000000; }
-.external-review { background: #000000; border: round #9aa3ad; }
-.user-turn { background: #000000; }
-ThoughtBlock { border: round #9aa3ad; }
+Input, TextArea, #prompt-input { color: #ffffff !important; }
+Input:focus, TextArea:focus, #prompt-input:focus { border: solid #ffffff !important; }
 """
-
 
 # ── Banner: literal, exact. Spells ISYCODE. ──────────────────────
 BANNER = r"""
@@ -166,7 +134,7 @@ def _semantic_box_title(title: str) -> Text:
         if index:
             result.append(" · ", style=MUTED)
         lowered = part.casefold()
-        if lowered in {"ready", "completed", "exit 0", "allow"}:
+        if lowered in {"completed", "exit 0", "allow"}:
             color = GREEN
         elif any(word in lowered for word in ("denied", "failed", "error", "exit 1")):
             color = RED
@@ -174,7 +142,7 @@ def _semantic_box_title(title: str) -> Text:
             color = YELLOW
         elif index == 0:
             from isycode.operation_style import operation_color
-            color = operation_color(part) or ("bold #c7b8d4" if "thinking" in lowered or "thought" in lowered else TEXT)
+            color = operation_color(part) or TEXT
         else:
             color = MUTED
         result.append(part, style=color)

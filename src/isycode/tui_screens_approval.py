@@ -149,8 +149,8 @@ class TailscaleConfirmScreen(ApprovalScreen):
 
     def __init__(self, title: str, details: str, confirm_label: str):
         super().__init__()
-        self.title_text = title
-        self.details = details
+        self.title_text = tr(title)
+        self.details = tr(details)
         self.confirm_label = confirm_label
 
     def compose(self) -> ComposeResult:
@@ -213,12 +213,13 @@ class WriteApprovalScreen(ApprovalScreen):
         with Vertical(id="write-approval-card"):
             yield Static(f"{kind} · {self.preview.path}", id="write-approval-title", markup=False)
             yield Static(
-                f"Folder: {self.preview.request.workspace_root}\n" +
-                (f"+{added} / -{removed} lines. This puts the file back as it was before ISyCode's "
-                 "last change; nothing changes unless you apply it."
+                tr("Folder: {root}\n", root=self.preview.request.workspace_root) +
+                (tr("+{added} / -{removed} lines. This puts the file back as it was before ISyCode's "
+                    "last change; nothing changes unless you apply it.", added=added, removed=removed)
                  if self.preview.is_undo else
-                 f"+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
-                 "unless you apply it. If the file changes before it is applied, the change is refused."),
+                 tr("+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
+                    "unless you apply it. If the file changes before it is applied, the change is refused.",
+                    added=added, removed=removed)),
                 id="write-approval-summary", markup=False)
             yield Static(tr(""), id="write-approval-peer", markup=False)
             with VerticalScroll(id="write-approval-diff"):
@@ -340,7 +341,7 @@ class CommandApprovalScreen(ApprovalScreen):
         preview = self.preview
         hidden = len(preview.masks)
         with Vertical(id="command-approval-card"):
-            yield Static(f"Run a command · {preview.cwd if preview.cwd != '.' else 'workspace root'}",
+            yield Static(tr("Run a command · {cwd}", cwd=preview.cwd if preview.cwd != "." else tr("workspace root")),
                          id="command-approval-title")
             with VerticalScroll(id="command-approval-argv"):
                 yield Static(Text(shlex.join(preview.argv)))
@@ -350,19 +351,18 @@ class CommandApprovalScreen(ApprovalScreen):
                     yield Static(Text("Executes the original once; output compression by native RTK pipe.\n"
                                       + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
             yield Static(
-                f"Program: {preview.program}\n"
-                f"Stops after {preview.timeout_s} s · network blocked · "
-                f"{hidden} sensitive path{'s' if hidden != 1 else ''} hidden\n"
-                "It may change files in this workspace; those changes cannot be undone with /undo. "
-                "Nothing runs unless you approve it.")
+                tr("Program: {program}\nStops after {timeout} s · network blocked · "
+                   "{hidden} sensitive paths hidden\nIt may change files in this workspace; those changes "
+                   "cannot be undone with /undo. Nothing runs unless you approve it.",
+                   program=preview.program, timeout=preview.timeout_s, hidden=hidden))
             with Horizontal(id="command-approval-actions"):
                 yield Button(tr("Reject · n"), id="command-approval-reject")
                 yield Button(tr("Run command · y"), id="command-approval-run", variant="warning")
 
     def on_mount(self) -> None:
         card = self.query_one("#command-approval-card")
-        card.border_title = "Command · review"
-        self.query_one("#command-approval-argv").border_title = "Exact command"
+        card.border_title = tr("Command · review")
+        self.query_one("#command-approval-argv").border_title = tr("Exact command")
         self.query_one("#command-approval-reject", Button).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

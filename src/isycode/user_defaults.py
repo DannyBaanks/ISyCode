@@ -52,7 +52,7 @@ class UserDefaultsStore:
                     "new_workspace_mode": "ask", "default_role": None,
                     "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
                     "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
-                    "high_contrast": False, "ascii_only": False,
+                    "high_contrast": False, "ascii_only": False, "reduced_motion": False,
                     "locale": self.DEFAULT_LOCALE}
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
             raise ValueError("ISyCode user settings file is unsafe")
@@ -99,6 +99,9 @@ class UserDefaultsStore:
         ascii_only = data.get("ascii_only", False)
         if type(ascii_only) is not bool:
             raise ValueError("ISyCode ASCII-only preference is invalid")
+        reduced_motion = data.get("reduced_motion", False)
+        if type(reduced_motion) is not bool:
+            raise ValueError("ISyCode reduced motion preference is invalid")
         steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
         tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
         budget = data.get("chat_token_budget", 0)
@@ -114,7 +117,7 @@ class UserDefaultsStore:
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
                 "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds,
-                "high_contrast": contrast, "ascii_only": ascii_only, "locale": locale}
+                "high_contrast": contrast, "ascii_only": ascii_only, "reduced_motion": reduced_motion, "locale": locale}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
@@ -122,8 +125,13 @@ class UserDefaultsStore:
                agent_steps: int | None = None, answer_tokens: int | None = None,
                chat_token_budget: int | None = None, compact_marquee: bool | None = None,
                notification_sounds: bool | None = None, high_contrast: bool | None = None,
-               ascii_only: bool | None = None, locale: str | None = None) -> None:
+               ascii_only: bool | None = None, locale: str | None = None,
+               reduced_motion: bool | None = None) -> None:
         current = self.load()
+        if reduced_motion is not None:
+            if type(reduced_motion) is not bool:
+                raise ValueError("ISyCode reduced motion preference is invalid")
+            current["reduced_motion"] = reduced_motion
         if locale is not None:
             if locale not in self.LOCALES:
                 raise ValueError("ISyCode interface language is invalid")

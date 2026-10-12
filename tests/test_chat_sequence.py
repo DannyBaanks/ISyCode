@@ -170,7 +170,7 @@ def test_reasoning_growth_and_collapse_keep_tail_visible(tmp_path, monkeypatch, 
             await pilot.pause()
             chat = app.query_one(ChatArea)
             try:
-                assert len(plain_text(app.query_one(ThoughtBlock)._body).splitlines()) == 2
+                assert app.query_one(ThoughtBlock)._body.region.height == 2
                 assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
             finally:
                 continue_stream.set()

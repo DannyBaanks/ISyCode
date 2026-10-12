@@ -304,15 +304,15 @@ class SessionMixin:
         for screen in self.screen_stack:
             if isinstance(screen, IdeaNoteScreen) and screen.is_mounted:
                 screen.query_one("#idea-note-content", Static).update(
-                    Text(self._idea_box or "Capture an idea · Ctrl+Shift+Enter"))
+                    Text(self._idea_box or tr("Capture an idea · Ctrl+Shift+Enter")))
         try:
             box = self.screen_stack[0].query_one("#idea-box", Static)
         except NoMatches:
             return
-        body = self._idea_box or "Capture an idea · Ctrl+Shift+Enter"
+        body = self._idea_box or tr("Capture an idea · Ctrl+Shift+Enter")
         busy = self._loop_task is not None and not self._loop_task.done()
-        label = "Idea box · ● Thinking…" if busy else "Idea box"
-        heading = Text(label, style="bold #c7b8d4")
+        label = tr("Idea box") + (" · " + tr("Thinking…") if busy else "")
+        heading = Text(label, style=f"bold {TEXT}")
         try:
             name = selected_provider_name()
             model = resolved_chat_model(name)
@@ -809,6 +809,7 @@ class SessionMixin:
         self._mount_idle_board()
 
     def _start_new_conversation(self) -> None:
+        self.call_after_refresh(self.query_one("#prompt-input", PromptArea).focus)
         current = self._foreground_lane()
         busy = current.loop_task is not None and current.loop_task is not asyncio.current_task() and not current.loop_task.done()
         if not busy and not current.history and not current.lines and not current.session_id:

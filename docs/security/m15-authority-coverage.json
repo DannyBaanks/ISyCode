@@ -1893,14 +1893,14 @@
     },
     {
       "file": "isycode/clipboard_owner.py",
-      "line": 102,
+      "line": 101,
       "callable": "isycode.clipboard_owner.ClipboardOwner.paste",
       "action": "clipboard.paste",
       "owner": "clipboard"
     },
     {
       "file": "isycode/clipboard_owner.py",
-      "line": 124,
+      "line": 123,
       "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
       "action": "clipboard.copy",
       "owner": "clipboard"
@@ -2138,14 +2138,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 931,
+      "line": 932,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 971,
+      "line": 972,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"

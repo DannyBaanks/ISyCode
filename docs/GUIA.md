@@ -62,7 +62,9 @@ Si el modelo todavía está respondiendo, **Enter** en un mensaje normal lo deja
 
 **Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Enter o Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
 
-Seleccionar texto con el ratón lo copia si en Authority está activo *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. El 2026-10-04, en este escritorio con X11 y `xclip`, la copia devolvió `ALLOW` y la lectura de vuelta coincidió. El journal guarda el tamaño, no el texto.
+Marca texto con el ratón y pulsa **Ctrl+C**, o usa **Copiar selección** en el menú de doble clic. Sólo se copia el rango marcado; sin selección no se sustituye por toda la caja. **Copiar caja completa** y **Copy path** son acciones aparte y requieren el permiso *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. **Space** expande las cajas; el doble clic abre el menú de copia. [Guía del cambio y límites comprobados](design/2026-10-11-tui-implementation/GUIA.md).
+
+Comprobación histórica del portapapeles (2026-10-04, gesto anterior): en este escritorio con X11 y `xclip`, la copia devolvió `ALLOW` y la lectura de vuelta coincidió. No certifica los nuevos gestos en una terminal física. El journal guarda el tamaño, no el texto.
 
 La Idea Box ocupa el 60% del ancho, encima del prompt. Mientras hay un turno, el gato de la izquierda camina; al terminar vuelve a dormir y la frase de estado queda en su última fila, sin tapar el dibujo. La barra lateral usa secciones plegables en cajas separadas.
 

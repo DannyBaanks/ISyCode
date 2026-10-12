@@ -13,7 +13,7 @@ from textual.widgets.option_list import Option
 from rich.text import Text
 import time as _time
 from isycode.tui_theme import _fit_cells, CYAN
-from isycode.tui_widgets import Collapsible, ChatArea
+from isycode.tui_widgets import Collapsible, ChatArea, SelectableText
 from isycode.tui_screens_approval import DeleteSessionScreen
 from isycode.localization import tr
 
@@ -40,7 +40,7 @@ class IdeaNoteScreen(ModalScreen):
         with Vertical(id="idea-note-card"):
             yield Static(tr("Idea box · full note"), id="idea-note-heading")
             with VerticalScroll(id="idea-note-scroll"):
-                yield Static(Text(self.note), id="idea-note-content")
+                yield SelectableText(Text(self.note), selection_text=self.note, id="idea-note-content")
             yield Button(tr("Close · Esc"), id="idea-note-close")
 
     def action_close(self):
@@ -130,11 +130,11 @@ class PastedTextScreen(ModalScreen):
 
     def compose(self):
         with Vertical(id="paste-review-card"):
-            yield Static(Text("Attachments · review before sending", style=CYAN))
+            yield Static(Text(tr("Attachments · review before sending"), style=CYAN))
             with VerticalScroll(id="paste-review-scroll"):
                 for index, (label, text) in enumerate(self.items):
-                    with Collapsible(title=f"{label} · {len(text)} characters", collapsed=False):
-                        yield Static(Text(text), classes="paste-full-text")
+                    with Collapsible(title=tr("{label} · {count} characters", label=label, count=len(text)), collapsed=False):
+                        yield SelectableText(Text(text), selection_text=text, classes="paste-full-text")
                         yield Button(tr("Remove from draft"), id=f"paste-remove-{index}")
             yield Button(tr("Close · Esc"), id="paste-review-close")
 
@@ -149,7 +149,7 @@ class PastedTextScreen(ModalScreen):
             label, _ = self.items[index]
             self.prompt.load_text(self.prompt.text.replace(label, ""))
             event.button.disabled = True
-            event.button.label = "Removed"
+            event.button.label = tr("Removed")
 
 
 class QueuedMessagesScreen(ModalScreen):
@@ -190,7 +190,7 @@ class QueuedMessagesScreen(ModalScreen):
                 self.host._queued_messages.remove(text)
                 self.host._paint_queued_messages()
             event.button.disabled = True
-            event.button.label = "Removed"
+            event.button.label = tr("Removed")
 
 
 class IdeaBacklogScreen(QueuedMessagesScreen):
