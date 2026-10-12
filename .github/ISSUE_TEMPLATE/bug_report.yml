@@ -1,0 +1,49 @@
+name: Reportar un error
+description: Ayúdanos a reproducir un problema de ISyCode.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Incluye solo datos que puedas compartir públicamente. Oculta claves, tokens, rutas privadas y contenido sensible de las capturas o logs.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qué ocurrió
+      description: Describe el problema y qué esperabas que hiciera ISyCode.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Cómo reproducirlo
+      description: Indica los pasos, el menú o comando y si ocurre siempre.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión de ISyCode o commit
+      description: Usa isycode --version; si trabajas desde el código, añade el commit.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Entorno
+      description: Sistema operativo, terminal y versión de Python si instalaste desde el código.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Modo del workspace
+      options:
+        - Classic
+        - Security
+        - No aplica o no lo sé
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Capturas o salida relevante
+      description: Añade evidencia sin secretos. Indica el provider y modelo si afecta al chat, sin incluir credenciales.
