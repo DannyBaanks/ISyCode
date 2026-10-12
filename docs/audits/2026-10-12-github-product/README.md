@@ -85,6 +85,13 @@ retains the full-suite failures and exact G8 mismatch.
 - Local Markdown links, referenced images, issue-form structure and whitespace
   are checked by the task's validation script/log. The global application
   suite was not rerun for this documentation/capture-helper change.
+- The full staged-change whitespace check reported trailing spaces in seven
+  native SVG exports. Those raw exports are preserved, including the exporter
+  formatting. The earlier working-tree check could not see newly added files.
+  Final validation therefore compares authored Markdown/forms/capture code
+  against the implementation base, including committed changes; it exits 0.
+  The raw-SVG warnings are retained in `evidence/svg-whitespace.log` and the
+  exact scopes/results in `evidence/final-validation-command.json`.
 
 `SHA256SUMS.txt` records the audit evidence, new reference, templates, changed
 README/capture script and screenshot artifacts. Historical application reports

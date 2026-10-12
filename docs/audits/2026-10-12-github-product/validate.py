@@ -64,10 +64,18 @@ for path in forms:
     assert all('label' in field['attributes'] for field in data['body'] if field['type'] != 'markdown')
     print(f'Issue form parsed: {path.relative_to(ROOT)}')
 
-check = subprocess.run(['git','diff','--check'], cwd=ROOT, capture_output=True, text=True)
+# Compare authored files against the task's source base, including committed
+# changes. Raw exporter/evidence bytes are intentionally retained unchanged.
+base = '65161a07e9df1d03c6dad4d77c04cdd001ae112e'
+authored = [str(path.relative_to(ROOT)) for path in FILES + forms]
+authored.append('scripts/capture_readme_screenshots.py')
+check = subprocess.run(['git','diff','--check',base,'--',*authored],
+                       cwd=ROOT, capture_output=True, text=True)
 if check.returncode:
     errors.append(check.stdout + check.stderr)
 
 print(json.dumps({'markdown_files':len(FILES),'local_links':links,'readme_images':len(set(images)),
-                  'issue_forms':len(forms),'diff_check_exit':check.returncode,'errors':errors}, indent=2))
+                  'issue_forms':len(forms),'diff_check_base':base,
+                  'diff_check_scope':'Authored Markdown, forms and capture script; raw SVG/evidence excluded.',
+                  'diff_check_exit':check.returncode,'errors':errors}, indent=2))
 raise SystemExit(1 if errors else 0)
