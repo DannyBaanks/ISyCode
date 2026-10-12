@@ -6,6 +6,7 @@ body:
     attributes:
       value: |
         Incluye solo datos que puedas compartir públicamente. Oculta claves, tokens, rutas privadas y contenido sensible de las capturas o logs.
+        Si el hallazgo puede comprometer a usuarios, consulta [SECURITY.md](https://github.com/DannyBaanks/ISyCode/blob/main/SECURITY.md) y solicita un canal privado sin publicar detalles de la vulnerabilidad.
   - type: textarea
     id: problem
     attributes:

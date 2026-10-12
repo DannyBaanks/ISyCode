@@ -113,5 +113,7 @@ Ambos modos conservan IsySentinel y el registro de acciones.
 - [Estándar visual y Design Skills](.agents/skills/isycode-design/SKILL.md):
   criterios compartidos para ampliar la TUI.
 - [Contribuir](CONTRIBUTING.md): preparar el entorno y presentar cambios.
+- [Seguridad e investigación](SECURITY.md): pruebas en entornos propios y
+  cómo reportar vulnerabilidades de forma privada.
 - [Issues](https://github.com/DannyBaanks/ISyCode/issues): errores y propuestas.
 - [Roadmap](docs/ROADMAP.md): evolución del producto.

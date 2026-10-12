@@ -17,6 +17,7 @@ getting started.
 - [Textual design implementation and evidence](../design/2026-10-11-tui-implementation/README.md)
 - [Screenshot reproduction guide](../screenshots/2026-10-12-product/GUIA.md)
 - [Contribution guide](../../CONTRIBUTING.md)
+- [Security research and vulnerability reporting](../../SECURITY.md)
 - [Architecture decisions](../decisions/)
 - [Product roadmap](../ROADMAP.md)
 - [Classic/Security evolution gates](../roadmap-classic-security-ux.md)
