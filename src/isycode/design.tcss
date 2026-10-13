@@ -24,6 +24,12 @@ Widget {
 Input, TextArea { background: $isy-surface !important; color: $isy-text !important; border: solid $isy-border !important; }
 Input:focus, TextArea:focus { border: solid $isy-focus !important; }
 Input > .input--placeholder { color: $isy-muted; text-style: none; }
+Select > SelectCurrent, Select > SelectOverlay {
+    background: $isy-surface !important; color: $isy-text;
+    border: solid $isy-border !important; background-tint: transparent;
+}
+Select:focus > SelectCurrent, Select > SelectOverlay:focus { border: solid $isy-focus !important; }
+SelectCurrent > Static#label { color: $isy-text; }
 ModalScreen > Vertical, ModalScreen > VerticalScroll {
     background: $isy-surface !important; color: $isy-text;
     border: solid $isy-border !important; max-height: 95%; max-width: 96%;

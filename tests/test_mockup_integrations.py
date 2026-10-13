@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 from textual.app import App
-from textual.widgets import Button, TextArea, Static
+from textual.widgets import Button, TextArea, Static, Select
 
 from isycode.tui_screens_mcp import (
     MCPArgumentsScreen, MCPInvocationConfirmScreen, GatewaySemanticQueryScreen,
@@ -85,4 +85,28 @@ def test_forms_and_management_keep_actions_reachable(factory, editor_id):
                 assert screen.query_one("#" + editor_id).region.height >= 3
             await pilot.press("escape")
             assert app.screen is not screen
+    asyncio.run(scenario())
+
+
+def test_gateway_operation_overlay_closes_without_losing_json_draft():
+    from isycode.tui import TUIApp
+    class StyledHost(App):
+        CSS_PATH = TUIApp.CSS_PATH
+    async def scenario():
+        app = StyledHost()
+        async with app.run_test(size=(80, 24)) as pilot:
+            screen = GatewaySemanticQueryScreen("https://gateway.example", "workspace-1")
+            await app.push_screen(screen)
+            await pilot.pause()
+            editor = screen.query_one("#semantic-payload", TextArea)
+            draft = editor.text
+            selector = screen.query_one("#semantic-operation", Select)
+            await pilot.click("#semantic-operation SelectCurrent", offset=(3, 1))
+            await pilot.pause()
+            assert selector.expanded
+            await pilot.press("escape")
+            assert app.screen is screen and not selector.expanded
+            assert editor.text == draft
+            assert screen.region.contains_region(screen.query_one("#semantic-query-review").region)
+            await pilot.press("escape")
     asyncio.run(scenario())
