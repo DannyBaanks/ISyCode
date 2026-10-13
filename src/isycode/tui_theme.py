@@ -151,14 +151,22 @@ def _semantic_box_title(title: str) -> Text:
 
 def _fit_cells(text: str, width: int) -> str:
     """Keep one label inside a column without breaking a wide character."""
-    if width <= 0 or cell_len(text) <= width:
+    if width <= 0:
+        return ""
+    if cell_len(text) <= width:
         return text
     if width == 1:
         return "…"
-    kept = text
-    while kept and cell_len(kept) > width - 1:
+    budget = width - 1
+    kept = text[:budget]
+    while kept and cell_len(kept) > budget:
         kept = kept[:-1]
+    idx = len(kept)
+    while idx < len(text) and cell_len(kept + text[idx]) <= budget:
+        kept += text[idx]
+        idx += 1
     return kept + "…"
+
 
 
 def _elapsed_label(seconds: float) -> str:

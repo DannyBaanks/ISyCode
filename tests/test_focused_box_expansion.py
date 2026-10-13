@@ -143,3 +143,82 @@ def test_clicking_expanded_thinking_keeps_chat_at_tail(tmp_path, monkeypatch):
             assert chat._following_tail(), 'focusing the thinking block released the tail anchor'
             assert chat.scroll_y >= chat.max_scroll_y, 'focusing the thinking block scrolled off the tail'
     asyncio.run(scenario())
+
+
+def test_clicking_and_collapsing_large_reasoning_text(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            block, chat = app._mount_thought()
+            await pilot.pause()
+            
+            # 35 lines of detailed reasoning text (large text block)
+            big_text = '\n'.join([f'Line {i}: This is reasoning step number {i} with some detailed thoughts and explanations.' for i in range(1, 35)])
+            block.set_text(big_text)
+            await pilot.pause()
+            
+            # Cycle 1: Focus container and cycle states
+            block.focus()
+            await pilot.pause()
+            assert not block._expanded and not block.collapsed
+            assert block._body.region.height == 2
+            
+            # 1. Expand to full
+            await pilot.press('space')
+            await pilot.pause()
+            assert block._expanded and not block.collapsed
+            assert block._body.region.height > 2
+            
+            # 2. Minimize to collapsed
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and block.collapsed
+            assert app.focused is block
+            
+            # 3. Press space again (to preview)
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and not block.collapsed
+            assert block._body.region.height == 2
+            
+            # 4. Press space again (to full)
+            await pilot.press('space')
+            await pilot.pause()
+            assert block._expanded and not block.collapsed
+            
+            # Cycle 2: User clicks inside the body text (SelectableText)
+            block._body.focus()
+            await pilot.pause()
+            assert app.focused == block._body
+            
+            # User presses space to minimize from focused body
+            # Crucial regression: Focus must transfer to container, not be lost to None
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and block.collapsed
+            assert app.focused is block
+            
+            # Now user can immediately press space to re-expand without focus loss
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and not block.collapsed
+            assert block._body.region.height == 2
+            
+            # Massive text stress test (20,000 characters) - must not block or freeze
+            giant_text = ('Detailed reasoning step for large multi-modal plan. ' * 400) + '\nEnd of thought.'
+            block.set_text(giant_text)
+            await pilot.pause()
+            await pilot.press('space')
+            await pilot.pause()
+            assert block._expanded and not block.collapsed
+            await pilot.press('space')
+            await pilot.pause()
+            assert block.collapsed and not block._expanded
+            assert app.focused is block
+    asyncio.run(scenario())
+
+
+
+

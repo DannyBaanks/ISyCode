@@ -189,7 +189,7 @@ class ExpandableBox(Collapsible, inherit_bindings=False):
 
     def _compact_preview(self) -> str:
         if hasattr(self, "_full_text"):
-            return " ".join(self._full_text.split())
+            return " ".join(self._full_text[:500].split())
         return " ".join(" ".join(plain_text(widget).split()) for widget in self.query(Static)
                         if not isinstance(widget, CollapsibleTitle))
 
@@ -236,10 +236,13 @@ class ExpandableBox(Collapsible, inherit_bindings=False):
             self._marquee_offset += self._marquee_direction
 
     def _watch_collapsed(self, collapsed: bool) -> None:
+        if collapsed and (self.has_focus_within or self.has_focus):
+            self.focus(scroll_visible=False)
         super()._watch_collapsed(collapsed)
         if not collapsed and not hasattr(self, "_full_text"):
             self._set_marquee_title(self._marquee_base_title)
         self._paint_expand_hint()
+
 
     def on_descendant_focus(self, event) -> None:
         self._paint_expand_hint()
@@ -471,16 +474,17 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
         text = Text(self._full_text, style=MUTED)
         width = self._body.content_size.width or max(1, self.content_size.width - 6)
         if self.is_mounted:
-            lines = text.wrap(self.app.console, max(1, width))
+            wrap_sample = Text(self._full_text[:max(1, width) * 4], style=MUTED)
+            lines = wrap_sample.wrap(self.app.console, max(1, width))
         else:
-            lines = text.split("\n")
-        more = len(lines) > 2
+            lines = self._full_text[:max(1, width) * 4].split("\n")
+        more = len(lines) > 2 or self._full_text.count("\n") >= 2 or len(self._full_text) > max(1, width) * 2
         self._preview_more = more
         # Clip the view rather than inserting soft-wrap newlines into its copy source.
         self._body.styles.max_height = 2 if not self._expanded and more else None
         if self.collapsed:
-            preview = " ".join(self._full_text.split())
             budget = max(1, self.content_size.width - cell_len(self._base_title) - 9)
+            preview = " ".join(self._full_text[:budget * 4].split())
             self.title = self._base_title + ("     " + _fit_cells(preview, budget) if preview else "")
         else:
             self.title = self._base_title
@@ -490,10 +494,13 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
 
     def _watch_collapsed(self, collapsed: bool) -> None:
         was_following = self._chat_following_tail()
+        if collapsed and (self.has_focus_within or self.has_focus):
+            self.focus(scroll_visible=False)
         super()._watch_collapsed(collapsed)
         self._paint_preview()
         if was_following:
             self.call_after_refresh(self._reanchor_chat_tail)
+
 
     def _chat_following_tail(self) -> bool:
         # A focus-driven scroll_to_center releases the chat's tail anchor while
