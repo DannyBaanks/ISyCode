@@ -1,0 +1,2 @@
+Preserved legacy launcher at /home/danny/.local/bin/isycode.backup.20261013T030508Z.814965
+Installed ISyCode launcher at /home/danny/.local/bin/isycode

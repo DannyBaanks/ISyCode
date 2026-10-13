@@ -60,9 +60,11 @@ Dentro del prompt, **Enter** envía. **Shift+Enter**, **Ctrl+J** y **Alt+Enter**
 
 Si el modelo todavía está respondiendo, **Enter** en un mensaje normal lo deja en la cola (máximo 8). Con el envío vacío, **Enter** sobre el mensaje seleccionado de la cola intenta steer: si el proveedor no lo confirma, el texto vuelve a su sitio. **Esc** devuelve el texto de la cola al borrador y no pisa un borrador que ya tenías.
 
-**Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Enter o Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
+**Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
 
-Marca texto con el ratón y pulsa **Ctrl+C**, o usa **Copiar selección** en el menú de doble clic. Sólo se copia el rango marcado; sin selección no se sustituye por toda la caja. **Copiar caja completa** y **Copy path** son acciones aparte y requieren el permiso *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. **Space** expande las cajas; el doble clic abre el menú de copia. [Guía del cambio y límites comprobados](design/2026-10-11-tui-implementation/GUIA.md).
+Marca texto con el ratón y pulsa **Ctrl+C**, o usa **Copiar selección** en el menú de doble clic. Sólo se copia el rango marcado; sin selección no se sustituye por toda la caja. **Copiar caja completa** y **Copy path** son acciones aparte y requieren el permiso *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. **Space** expande las cajas; el doble clic abre el menú de copia. [Menús integrados, capturas y gestos](design/2026-10-12-mockup-e2e/GUIA.md).
+
+Configuración muestra **Conversación**, **Preferencias**, **Permisos** y **Conexiones**. Cada fila separa la opción, su valor actual y la ayuda. En terminales estrechas, la ayuda completa aparece debajo de la lista. Buscar encuentra opciones de todas las categorías. **Proveedor** y **Modelo** tienen entradas propias; un clic en un modelo previsualiza sus detalles y **Usar modelo** confirma. Refrescar el catálogo conserva la identidad del modelo previsualizado; si desaparece o queda oculto por el filtro, el botón se desactiva.
 
 Comprobación histórica del portapapeles (2026-10-04, gesto anterior): en este escritorio con X11 y `xclip`, la copia devolvió `ALLOW` y la lectura de vuelta coincidió. No certifica los nuevos gestos en una terminal física. El journal guarda el tamaño, no el texto.
 
@@ -108,6 +110,12 @@ isycode
 La búsqueda de la ruta vecina por defecto corresponde a este layout de desarrollo; en otra instalación configura `ISYCODE_ROOT`.
 
 ## Actualizar ISyCode
+
+El launcher del checkout usa el código de `src/` y conserva el directorio desde
+el que lo abres como workspace. En la instalación local de Danny, `isycode`
+apunta a `ISyCode/scripts/isycode` en main. Si una sesión seguía abierta antes
+de actualizar, ciérrala y vuelve a ejecutar `isycode` para cargar los cambios.
+No hace falta borrar preferencias ni conversaciones.
 
 Desde cualquier carpeta:
 
@@ -220,6 +228,7 @@ Exits: passthrough del motor | 2 uso/gate | 3 motor pendiente.
 | La cola dice que el modelo no permite steer | El intento no se confirmó. | El texto vuelve a la cola. Esc lo recupera si el borrador está vacío. |
 | ShellBox dice que no hay sandbox | Falta bubblewrap, libseccomp o python3. | Los comandos siguen apagados. No hay ejecución sin sandbox. |
 | Una imagen se rechaza | El modelo guardado tiene una observación `images=false`. | Elige un modelo con visión o quita la imagen. El default del catálogo no decide. |
+| Settings sigue mostrando una lista antigua después de actualizar main | La sesión conserva el código anterior o el comando apunta a otra instalación. | Cierra y vuelve a abrir `isycode`; consulta la [guía de la integración](design/2026-10-12-mockup-e2e/GUIA.md). |
 | LSP muestra que no hay adapters | ISyCode todavía no tiene adapter LSP configurado. | No indica una falla del TUI; los MCP aparecen por separado. |
 
 Trampas frecuentes: ejecuta `isycode` o `isycode cli` desde el workspace correcto para que Files capture ese directorio; un MCP/skill visible sigue sin permiso de ejecución; y `isyco` sin más argumentos sigue siendo el CLI de motores OpenISy.
@@ -228,12 +237,13 @@ Trampas frecuentes: ejecuta `isycode` o `isycode cli` desde el workspace correct
 
 Los comandos nuevos del chat muestran dos filas de salida en una tarjeta.
 El borde superior identifica el comando y el inferior muestra su estado.
-Pulsa Enter o Espacio con la tarjeta enfocada, o haz clic en su borde, para
-ver la salida retenida completa y el recibo. La búsqueda abre las tarjetas
+Pulsa Espacio con la tarjeta enfocada para ver la salida retenida completa y
+el recibo. Un doble clic abre las opciones de copia. La búsqueda abre las tarjetas
 con coincidencias ocultas. Un aviso de límite significa que el owner no
 retuvo más salida; expandir no recupera esos bytes.
 
-La confirmación usa opciones grandes: Rechazar está enfocado inicialmente.
+La confirmación deja el contenido en una zona desplazable y las acciones
+siempre visibles: Rechazar está enfocado inicialmente.
 Las tarjetas cambian la presentación; no conceden permisos ni ejecutan
 comandos por sí mismas.
 

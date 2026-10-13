@@ -19,11 +19,19 @@ This task did not rerun the global application suite or certify another OS.
 
 ## TUI implementation evidence
 
-The [2026-10-12 design implementation report](../design/2026-10-11-tui-implementation/README.md)
-holds raw focused regressions, PTY startup, wheel inspection and full-suite
-attempts, including failures. Focused UI checks do not mean the whole suite
-passed. A historical G8 hash/declared-commit association remains unresolved;
-the validator, historical witness and approval state were preserved.
+The [completed native menu integration](../design/2026-10-12-mockup-e2e/REPORT.md)
+records the primary-main source, native captures at three terminal sizes,
+independent review, full hermetic-suite runs, real installed-command PTY startup
+and isolated wheel checks. Raw failures remain preserved alongside the later
+verification. Its [Spanish guide](../design/2026-10-12-mockup-e2e/GUIA.md)
+explains the current menu and text gestures.
+
+The historical G8 manifest was restored byte-for-byte to the originally reviewed
+version after an independent provenance review. That correction does not approve
+the current source or a release: the current strict validator still rejects
+the M8 source associations. Details and negative results are in the integration
+report. The [earlier TUI implementation report](../design/2026-10-11-tui-implementation/README.md)
+remains a dated record of its original attempts and limits.
 
 Physical-terminal mouse/clipboard roundtrip after the new gestures, terminal
 font fallback, live services and release acceptance were NOT_DEMONSTRATED by
@@ -64,6 +72,6 @@ They were not re-executed here and are not an all-provider/platform guarantee.
 
 The [Classic/Security roadmap](../roadmap-classic-security-ux.md) and
 [product roadmap](../ROADMAP.md) track acceptance. The previous README's broad
-M0–M8 approval sentence must not be read as overriding the unresolved G8
-association or approving a new release. No installer release was published
+M0–M8 approval sentence must not be read as approving the current source or
+a new release. No installer release was published
 when the repository was inspected on 2026-10-12.

@@ -10,9 +10,9 @@ conserva tus sesiones localmente y controla qué puede hacer en cada proyecto.
 [Documentación](docs/reference/README.md) ·
 [Reportar un problema](https://github.com/DannyBaanks/ISyCode/issues)
 
-![ISyCode: inicio con paisaje y panel lateral del proyecto](docs/screenshots/2026-10-12-product/complete/01-overview.png)
+![ISyCode: inicio con paisaje y panel lateral del proyecto](docs/design/2026-10-12-mockup-e2e/screens-reviewed-140x40/01-overview.png)
 
-*TUI real en un proyecto de ejemplo. [Capturas y reproducción](docs/screenshots/2026-10-12-product/GUIA.md).*
+*TUI real en un proyecto de ejemplo. [Menús, gestos y capturas](docs/design/2026-10-12-mockup-e2e/GUIA.md).*
 
 ## Trabaja sin salir de la terminal
 
@@ -52,7 +52,7 @@ Para Claude nativo, instala también el extra con
 
 1. Elige un workspace **recurrente** para guardar conversaciones o **temporal**
    para una sesión puntual, y selecciona Classic o Security.
-2. Abre **Configuración → Conversación → Proveedores y modelos** y configura
+2. Abre **Configuración → Conversación → Proveedor** y configura
    el provider que usarás.
 3. Pide una tarea concreta: «Explícame este módulo» o «Añade esta prueba».
    Revisa las propuestas y habilita las capacidades que necesites.
@@ -70,12 +70,12 @@ de depender de una integración o plataforma específica.
 **Configuración** reúne Conversación, Preferencias, Permisos y Conexiones.
 Busca una opción y consulta su explicación sin recorrer una lista interminable.
 
-![Configuración de ISyCode con categorías y preferencias](docs/screenshots/2026-10-12-product/complete/03-settings.png)
+![Configuración de ISyCode con categorías y valores actuales](docs/design/2026-10-12-mockup-e2e/screens-reviewed-140x40/03-settings-conversation.png)
 
 **Archivos** combina navegación, búsqueda y vista previa del proyecto con el
 estado de la lectura.
 
-![Panel de Archivos con un archivo en vista previa y recibo de lectura](docs/screenshots/2026-10-12-product/complete/02-files.png)
+![Panel de Archivos con un archivo en vista previa y recibo de lectura](docs/design/2026-10-12-mockup-e2e/screens-reviewed-140x40/02-files.png)
 
 ## Elige cómo trabaja el agente
 

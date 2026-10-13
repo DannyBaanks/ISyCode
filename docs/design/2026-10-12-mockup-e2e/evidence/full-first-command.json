@@ -1,0 +1,14 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "-m",
+    "not integration",
+    "--tb=short",
+    "--junitxml=/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-12-mockup-e2e/evidence/full-first.xml"
+  ],
+  "cwd": "/home/danny/Development/ISyCo Git/ISyCode",
+  "isolation": "Temporary XDG directories, inherited ISYCODE_STATE_HOME removed, fixture-owned provider transports."
+}

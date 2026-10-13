@@ -1,0 +1,274 @@
+FFFFFFFFFFFFF.F                                                          [100%]
+=================================== FAILURES ===================================
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size0] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on MCPInvocationConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size1] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on MCPInvocationConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size0] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on GatewaySemanticConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size1] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on GatewaySemanticConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size0] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on LSPConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size1] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on LSPConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size0] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:37: in scenario
+    assert screen.region.contains_region(button.region)
+E   AssertionError: assert False
+E    +  where False = contains_region(Region(x=29, y=22, width=16, height=3))
+E    +    where contains_region = Region(x=0, y=0, width=80, height=24).contains_region
+E    +      where Region(x=0, y=0, width=80, height=24) = BrokerProvisionConfirmScreen().region
+E    +    and   Region(x=29, y=22, width=16, height=3) = Button(id='broker-provision-cancel', classes='-style-default').region
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size1] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:37: in scenario
+    assert screen.region.contains_region(button.region)
+E   AssertionError: assert False
+E    +  where False = contains_region(Region(x=71, y=38, width=16, height=3))
+E    +    where contains_region = Region(x=0, y=0, width=140, height=40).contains_region
+E    +      where Region(x=0, y=0, width=140, height=40) = BrokerProvisionConfirmScreen().region
+E    +    and   Region(x=71, y=38, width=16, height=3) = Button(id='broker-provision-cancel', classes='-style-default').region
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size0] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on BrokerOperationConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size1] _
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:38: in scenario
+    assert screen.query_one(".isy-dialog").region.contains_region(button.region)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '.isy-dialog' on BrokerOperationConfirmScreen()
+_________ test_mcp_invalid_json_keeps_draft_then_returns_exact_object __________
+tests/test_mockup_integrations.py:65: in test_mcp_invalid_json_keeps_draft_then_returns_exact_object
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:55: in scenario
+    assert editor.region.height >= 3
+E   AssertionError: assert 2 >= 3
+E    +  where 2 = Region(x=5, y=18, width=70, height=2).height
+E    +    where Region(x=5, y=18, width=70, height=2) = TextArea(id='mcp-arguments-input').region
+_ test_forms_and_management_keep_actions_reachable[<lambda>-semantic-payload] __
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:82: in scenario
+    assert screen.region.contains_region(button.region)
+E   AssertionError: assert False
+E    +  where False = contains_region(Region(x=41, y=27, width=16, height=3))
+E    +    where contains_region = Region(x=0, y=0, width=80, height=24).contains_region
+E    +      where Region(x=0, y=0, width=80, height=24) = GatewaySemanticQueryScreen().region
+E    +    and   Region(x=41, y=27, width=16, height=3) = Button(id='semantic-query-cancel', classes='-style-default').region
+_ test_forms_and_management_keep_actions_reachable[<lambda>-mcp-arguments-input] _
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:82: in scenario
+    assert screen.region.contains_region(button.region)
+E   AssertionError: assert False
+E    +  where False = contains_region(Region(x=42, y=22, width=16, height=3))
+E    +    where contains_region = Region(x=0, y=0, width=80, height=24).contains_region
+E    +      where Region(x=0, y=0, width=80, height=24) = MCPArgumentsScreen().region
+E    +    and   Region(x=42, y=22, width=16, height=3) = Button(id='mcp-arguments-cancel', classes='-style-default').region
+_______ test_forms_and_management_keep_actions_reachable[<lambda>-None1] _______
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:82: in scenario
+    assert screen.region.contains_region(button.region)
+E   AssertionError: assert False
+E    +  where False = contains_region(Region(x=75, y=19, width=16, height=3))
+E    +    where contains_region = Region(x=0, y=0, width=80, height=24).contains_region
+E    +      where Region(x=0, y=0, width=80, height=24) = BrokerManagementScreen().region
+E    +    and   Region(x=75, y=19, width=16, height=3) = Button(id='broker-manage-stop', classes='-warning -style-default', variant='warning').region
+=========================== short test summary info ============================
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size1]
+FAILED tests/test_mockup_integrations.py::test_mcp_invalid_json_keeps_draft_then_returns_exact_object
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-semantic-payload]
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-mcp-arguments-input]
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-None1]
+14 failed, 1 passed in 2.26s

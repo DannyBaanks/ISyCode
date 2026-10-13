@@ -1,0 +1,2 @@
+OK: 5 skills; fingerprints, references and palette consistent
+Scope: authoring catalog integrity; runtime TUI behavior is not checked
