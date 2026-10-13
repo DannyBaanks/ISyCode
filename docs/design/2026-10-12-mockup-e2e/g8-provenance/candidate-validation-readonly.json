@@ -1,0 +1,50 @@
+{
+  "timestamp_utc": "2026-10-12T23:18:49.189847+00:00",
+  "root": "/home/danny/Development/ISyCo Git/ISyCode",
+  "unchanged_validator_sha256": "3b381d10bcc068498b46d8f8fc62ffa79d29c5e787123a075cbad8e1f3a86422",
+  "baseline_errors": [
+    "/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml: artifact 'tests/test_visual_tui.py' sha256 mismatch"
+  ],
+  "variants": {
+    "A-correct-substituted-test-fingerprint": {
+      "candidate_sha256": "fe1fba9ffad79d56a801e1345b1796dcbeae4bf0e0a3f40e45b5ef62f813a511",
+      "schema_errors": [],
+      "historical_artifact_errors": [],
+      "current_artifact_errors": [
+        "artifact 'tests/test_approval_keys.py' sha256 mismatch",
+        "artifact 'tests/test_side_panel.py' sha256 mismatch",
+        "artifact 'tests/test_visual_tui.py' sha256 mismatch"
+      ],
+      "approval_fields_unchanged": {
+        "estado": "APROBADO",
+        "sha_evaluado": "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+        "revision": "aceptada",
+        "revisor": "Danny Baanks",
+        "revision_fecha_utc": "2026-10-06T21:42:22Z",
+        "revision_declaracion": "Re-aceptaci\u00f3n tras renovaci\u00f3n por regla 8 (recibo dentro de la tarjeta); casos, artefactos y hashes verificados con scripts/validate_gates.py"
+      }
+    },
+    "B-restore-original-reviewed-artifact": {
+      "candidate_sha256": "89438dcae9dbb202fb68780afc10e23bb1daf9ec47d17760a88c773b97ff080b",
+      "schema_errors": [],
+      "historical_artifact_errors": [],
+      "current_artifact_errors": [
+        "artifact 'tests/test_approval_keys.py' sha256 mismatch",
+        "artifact 'tests/test_side_panel.py' sha256 mismatch",
+        "artifact 'src/isycode/tui_app_tools.py' sha256 mismatch"
+      ],
+      "approval_fields_unchanged": {
+        "estado": "APROBADO",
+        "sha_evaluado": "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+        "revision": "aceptada",
+        "revisor": "Danny Baanks",
+        "revision_fecha_utc": "2026-10-06T21:42:22Z",
+        "revision_declaracion": "Re-aceptaci\u00f3n tras renovaci\u00f3n por regla 8 (recibo dentro de la tarjeta); casos, artefactos y hashes verificados con scripts/validate_gates.py"
+      }
+    }
+  },
+  "evaluated_artifacts": {
+    "src/isycode/tui_app_tools.py": "e322aa1010aa1a5f6c8357910789e9ab81f71b2fecaaaad09c931efbe37f6d31",
+    "tests/test_visual_tui.py": "e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5"
+  }
+}

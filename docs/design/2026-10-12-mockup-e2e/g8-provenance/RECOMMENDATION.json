@@ -1,0 +1,33 @@
+{
+  "status": "READ_ONLY_INVESTIGATION_COMPLETE; NO_REPO_FILES_CHANGED",
+  "recommended_correction": {
+    "path": "/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml",
+    "lines": [
+      84,
+      85
+    ],
+    "artifact": "src/isycode/tui_app_tools.py",
+    "sha256": "e322aa1010aa1a5f6c8357910789e9ab81f71b2fecaaaad09c931efbe37f6d31",
+    "candidate_manifest_sha256": "89438dcae9dbb202fb68780afc10e23bb1daf9ec47d17760a88c773b97ff080b",
+    "reviewed_manifest_commit": "db697b6302e8374ad0be8a3082fedb6cf4079ab2",
+    "review_requirement": "Independent review of byte-exact historic restoration and impact report before applying; no fresh approval is asserted"
+  },
+  "root_cause_chain": [
+    "db697b6: acceptance on original runtime source artifact at evaluated32aa6cc",
+    "2d7d8a0: later artifact substitution to visual test; acceptance unchanged",
+    "1871ab4: add external stylesheet test, producing f8d259 file fingerprint",
+    "da9a13b: refresh substituted test hash but retain evaluated32aa6cc; historical mismatch later exposed after test file source drift"
+  ],
+  "evidence_scope": [
+    "Original31-test summary log byte/hash unchanged",
+    "Fresh archived32aa6cc replay passes31 tests; named XML/log and exact command retained",
+    "Baseline current validator negative retained",
+    "Current release checks still reject source drift for either candidate",
+    "No new product source, tests, validation logic, gate approval or original raw output modified"
+  ],
+  "not_demonstrated": [
+    "Original31-test process ran exactly declaredSHA; summary-only original output cannot independently prove that binding",
+    "Original1497-test whole-suite regression not rerun",
+    "Physical terminal, real providers, live integrations and current-code release acceptance not tested by this task"
+  ]
+}

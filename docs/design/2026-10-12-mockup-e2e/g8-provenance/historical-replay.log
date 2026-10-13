@@ -1,0 +1,44 @@
+SOURCE_PACKAGE: /tmp/isycode-g8-provenance-20261012-eusmindl/source/src/isycode/__init__.py
+TEXTUAL_VERSION: 8.2.8
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python
+rootdir: /tmp/isycode-g8-provenance-20261012-eusmindl/source
+configfile: pyproject.toml
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 31 items
+
+tests/test_ux_polish.py::test_reject_button_is_the_default_focus PASSED  [  3%]
+tests/test_ux_polish.py::test_resize_200x60_and_back_keeps_composer_and_draft PASSED [  6%]
+tests/test_ux_polish.py::test_thousand_tool_events_keep_order_and_failed_stays_failed PASSED [  9%]
+tests/test_ux_polish.py::test_receipt_expands_decision_scope_budget_recovery_without_canary PASSED [ 12%]
+tests/test_approval_keys.py::test_keys_decide_every_approval_screen[y-True] PASSED [ 16%]
+tests/test_approval_keys.py::test_keys_decide_every_approval_screen[n-False] PASSED [ 19%]
+tests/test_approval_keys.py::test_keys_decide_every_approval_screen[escape-False] PASSED [ 22%]
+tests/test_approval_keys.py::test_keys_decide_every_approval_screen[enter-False] PASSED [ 25%]
+tests/test_approval_keys.py::test_every_boolean_approval_screen_uses_the_shared_keys PASSED [ 29%]
+tests/test_side_panel.py::test_switch_rows_are_green_when_on_and_red_when_off PASSED [ 32%]
+tests/test_side_panel.py::test_switch_row_states_are_distinguishable_without_color PASSED [ 35%]
+tests/test_side_panel.py::test_palette_meets_wcag_aa_for_its_actual_uses PASSED [ 38%]
+tests/test_side_panel.py::test_mcp_snapshot_counts_healthy_services PASSED [ 41%]
+tests/test_side_panel.py::test_status_chips_use_title_case_and_leave_names_alone PASSED [ 45%]
+tests/test_side_panel.py::test_command_bar_labels_survive_hover_and_sections_fold PASSED [ 48%]
+tests/test_side_panel.py::test_second_click_opens_a_selected_row_and_tree_node PASSED [ 51%]
+tests/test_side_panel.py::test_catalog_lists_missing_servers_that_discovery_skips PASSED [ 54%]
+tests/test_side_panel.py::test_install_commands_are_shown_and_nothing_is_launched PASSED [ 58%]
+tests/test_integrated_layout.py::test_composer_and_idea_note_fit_beside_sidebar[size0] PASSED [ 61%]
+tests/test_integrated_layout.py::test_composer_and_idea_note_fit_beside_sidebar[size1] PASSED [ 64%]
+tests/test_integrated_layout.py::test_history_restores_draft_and_multiline_keyboard_editing PASSED [ 67%]
+tests/test_visual_tui.py::test_narrow_sidebar_files_tab_is_visible_and_clickable PASSED [ 70%]
+tests/test_visual_tui.py::test_long_workspace_header_keeps_status_and_path_end PASSED [ 74%]
+tests/test_visual_tui.py::test_settings_groups_integrations_and_returns_without_actions PASSED [ 77%]
+tests/test_visual_tui.py::test_owned_read_keeps_receipt_in_expandable_detail PASSED [ 80%]
+tests/test_visual_tui.py::test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet PASSED [ 83%]
+tests/test_visual_tui.py::test_blocked_menu_choices_stay_out_of_the_chat PASSED [ 87%]
+tests/test_visual_tui.py::test_image_failure_retries_the_question_as_text PASSED [ 90%]
+tests/test_visual_tui.py::test_startup_splash_remains_in_chat_and_scrolls_away PASSED [ 93%]
+tests/test_visual_tui.py::test_composer_help_is_visible_without_covering_input_or_navigation PASSED [ 96%]
+tests/test_visual_tui.py::test_panoramic_header_fills_chat_and_leaves_composer_visible PASSED [100%]
+
+- generated xml file: /tmp/isycode-g8-provenance-20261012-eusmindl/evidence/historical-replay.xml -
+============================= 31 passed in 33.36s ==============================
+INTERNET_CONNECTION_ATTEMPTS_BLOCKED: 0

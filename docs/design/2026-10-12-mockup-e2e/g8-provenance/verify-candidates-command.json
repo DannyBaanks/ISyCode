@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/usr/bin/python3",
+    "/tmp/isycode-g8-provenance-20261012-eusmindl/evidence/verify-candidates-executed.py"
+  ],
+  "cwd": "/tmp/isycode-g8-provenance-20261012-eusmindl/evidence",
+  "started_utc": "2026-10-12T23:19:31.617533+00:00",
+  "finished_utc": "2026-10-12T23:19:31.675829+00:00",
+  "exit_code": 0,
+  "log_sha256": "a41c4c8535760ade204d36e31a084cb376f38b23d52ed3c679be6181fb43ac36",
+  "script_sha256": "cc266972269d0eedba81dc545fcf827e996c628762d47ffe748d029568c2be91",
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}
