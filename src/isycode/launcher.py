@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             current = version("isycode")
         except PackageNotFoundError:
-            current = "0.1.0 (source checkout)"
+            current = "1.0.0rc1 (source checkout)"
         print(f"ISyCode {current}")
         return 0
     print(f"Unknown command: {' '.join(arguments)}\n\n{USAGE}", file=sys.stderr, end="")

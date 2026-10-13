@@ -61,7 +61,7 @@ La ejecución aislada de comandos requiere **bubblewrap y libseccomp en Linux**.
 Consulta [instalación y actualización](docs/reference/installation.md) para
 configuración, diagnóstico y plataformas.
 
-**v0.1.0 · desarrollo activo.** La instalación desde el código es la vía disponible;
+**v1.0.0-rc.1 · candidato a release (pre-release).** La instalación desde el código es la vía disponible;
 consulta [compatibilidad y verificación](docs/reference/verification.md) antes
 de depender de una integración o plataforma específica.
 
@@ -117,3 +117,12 @@ Ambos modos conservan IsySentinel y el registro de acciones.
   cómo reportar vulnerabilidades de forma privada.
 - [Issues](https://github.com/DannyBaanks/ISyCode/issues): errores y propuestas.
 - [Roadmap](docs/ROADMAP.md): evolución del producto.
+
+## Estado de versión y Release Readiness (v1.0.0-rc.1)
+
+ISyCode se encuentra en **v1.0.0-rc.1** (Release Candidate 1).
+
+El núcleo de seguridad, los contratos de ISySentinel, los Execution Owners y la interfaz TUI están completamente demostrados y verificados mediante más de 1,900 pruebas automáticas.
+
+El cierre formal hacia la versión **v1.0.0 final** permanece explícitamente supeditado a la ejecución de la prueba de usabilidad con 5 usuarios reales (Gate **G9-05** del roadmap, según el protocolo en [docs/usability-g9/GUIA.md](docs/usability-g9/GUIA.md)), manteniendo el principio *fail-closed* del proyecto hasta contar con los participantes.
+
