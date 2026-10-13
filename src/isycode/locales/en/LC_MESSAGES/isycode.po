@@ -2088,3 +2088,176 @@ msgstr "Brighten text and focused frames while keeping the shared black surfaces
 
 msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
 msgstr "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
+
+# Accepted menu layout and exact decision chrome.
+
+msgid "Provider"
+msgstr "Provider"
+
+msgid "Context file"
+msgstr "Context file"
+
+msgid "RTK compression"
+msgstr "RTK compression"
+
+msgid "Notification sounds"
+msgstr "Notification sounds"
+
+msgid "Reduced motion"
+msgstr "Reduced motion"
+
+msgid "High contrast display"
+msgstr "High contrast display"
+
+msgid "ASCII-only display"
+msgstr "ASCII-only display"
+
+msgid "My defaults"
+msgstr "My defaults"
+
+msgid "Compact text scroll"
+msgstr "Compact text scroll"
+
+msgid "Workspace folders"
+msgstr "Workspace folders"
+
+msgid "Action journal"
+msgstr "Action journal"
+
+msgid "All workspaces"
+msgstr "All workspaces"
+
+msgid "This workspace"
+msgstr "This workspace"
+
+msgid "Personalize ISyCode for this workspace."
+msgstr "Personalize ISyCode for this workspace."
+
+msgid "Choose the model used for this conversation."
+msgstr "Choose the model used for this conversation."
+
+msgid "Choose model"
+msgstr "Choose model"
+
+msgid "Continue"
+msgstr "Continue"
+
+msgid "Custom setup"
+msgstr "Custom setup"
+
+msgid "Idea backlog · captured ideas are not instructions"
+msgstr "Idea backlog · captured ideas are not instructions"
+
+msgid "Inspect"
+msgstr "Inspect"
+
+msgid "Inspect a harness · Gap map prepares repair proposals for review."
+msgstr "Inspect a harness · Gap map prepares repair proposals for review."
+
+msgid "Loaded"
+msgstr "Loaded"
+
+msgid "Manage"
+msgstr "Manage"
+
+msgid "Message queue · Select queued + empty Send steers · Esc restores draft"
+msgstr "Message queue · Select queued + empty Send steers · Esc restores draft"
+
+msgid "Multi Harness · inspection"
+msgstr "Multi Harness · inspection"
+
+msgid "No matching models"
+msgstr "No matching models"
+
+msgid "No models available."
+msgstr "No models available."
+
+msgid "No session processes."
+msgstr "No session processes."
+
+msgid "None"
+msgstr "None"
+
+msgid "None configured"
+msgstr "None configured"
+
+msgid "OFF"
+msgstr "OFF"
+
+msgid "Open"
+msgstr "Open"
+
+msgid "Question"
+msgstr "Question"
+
+msgid "Removed"
+msgstr "Removed"
+
+msgid "Repair Compose · review proposal"
+msgstr "Repair Compose · review proposal"
+
+msgid "Review"
+msgstr "Review"
+
+msgid "Scope: {scope}"
+msgstr "Scope: {scope}"
+
+msgid "Security"
+msgstr "Security"
+
+msgid "Selected"
+msgstr "Selected"
+
+msgid "Selected · {model} · {provider}"
+msgstr "Selected · {model} · {provider}"
+
+msgid "Session · full last message"
+msgstr "Session · full last message"
+
+msgid "Sources"
+msgstr "Sources"
+
+msgid "[?]"
+msgstr "[?]"
+
+msgid "current"
+msgstr "current"
+
+msgid "messages"
+msgstr "messages"
+
+msgid "ready"
+msgstr "ready"
+
+msgid "{count} checking…"
+msgstr "{count} checking…"
+
+msgid "↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search"
+msgstr "↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search"
+
+msgid "↑↓ move · Enter choose · Esc back · Tab search"
+msgstr "↑↓ move · Enter choose · Esc back · Tab search"
+
+msgid "↑↓ move · Enter inspect · Esc back"
+msgstr "↑↓ move · Enter inspect · Esc back"
+
+msgid "↑↓ move · Enter open · Esc back"
+msgstr "↑↓ move · Enter open · Esc back"
+
+msgid "↑↓ move · Esc back"
+msgstr "↑↓ move · Esc back"
+
+msgid "↑↓ scroll · Tab actions · Enter choose · Esc cancel"
+msgstr "↑↓ scroll · Tab actions · Enter choose · Esc cancel"
+
+msgid "⚙"
+msgstr "⚙"
+
+msgid "Search results"
+msgstr "Search results"
+
+msgid "Models · {provider}"
+msgstr "Models · {provider}"
+
+msgid "↑↓ move · Enter open · Esc back · Shift+Tab search"
+msgstr "↑↓ move · Enter open · Esc back · Shift+Tab search"

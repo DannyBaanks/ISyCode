@@ -113,7 +113,8 @@ def test_spanish_settings_title_and_english_switch(tmp_path, monkeypatch, capsys
             app._open_settings_menu()
             await pilot.pause()
             assert app._menu_title == "Configuración"
-            assert any(entry["label"].startswith("Idioma ·") for entry in app._menu_entries)
+            language = next(entry for entry in app._menu_entries if entry["kind"] == "locale_cycle")
+            assert language["label"] == "Idioma" and language["display_value"] == "Español"
             app._menu_locale_cycle({})
             await pilot.pause()
             assert app._menu_title == "Settings"

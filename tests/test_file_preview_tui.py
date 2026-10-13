@@ -24,7 +24,8 @@ def test_file_leaf_enables_preview_modal_and_copy_path(tmp_path,monkeypatch,caps
             # Opening the preview runs in a Textual worker. A single pause
             # does not guarantee that its screen has been pushed on slow CI.
             for _ in range(40):
-                if isinstance(app.screen, FilePreviewScreen):
+                if (isinstance(app.screen, FilePreviewScreen) and app.screen.is_mounted
+                        and app.screen.query('#preview-copy')):
                     break
                 await p.pause(0.05)
             assert isinstance(app.screen, FilePreviewScreen)

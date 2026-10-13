@@ -12,7 +12,7 @@ from textual.screen import ModalScreen
 from textual.widgets.option_list import Option
 from pathlib import Path
 from isycode.workspace_setup import broad_workspace_reason
-from isycode.tui_screens_approval import ApprovalScreen
+from isycode.tui_screens_approval import ApprovalScreen, DECISION_CSS, decision_hint
 from isycode.localization import tr
 
 
@@ -27,14 +27,10 @@ class OnboardingCopy(VerticalScroll):
 class WorkspaceSetupScreen(ModalScreen[bool]):
     """Ask once before marking this launch directory as a recurring workspace."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     WorkspaceSetupScreen { align: center middle; background: #000000 58%; }
-    #workspace-setup-card { width: 76; max-width: 90%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #workspace-setup-title { height: 2; color: #bb8cff; text-style: bold; }
-    #workspace-setup-copy { height: auto; margin-bottom: 1; color: #d7d5dc; }
-    #workspace-setup-options { height: 5; margin-bottom: 1; }
-    #workspace-setup-actions { height: 3; align-horizontal: right; }
-    #workspace-setup-actions Button { margin-left: 1; }
+    #workspace-setup-card { width: 76; }
+    #workspace-setup-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "decline", "Not now"),
                 Binding("ctrl+c", "decline", "Not now", show=False)]
@@ -49,8 +45,8 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
                    tr("Caution: {reason}. A marker here would make every folder below it without "
                       "its own .isyroot share this workspace's grants and sessions. Your "
                       "'recurring' default is not applied here.\n\n", reason=broad))
-        with Vertical(id="workspace-setup-card"):
-            yield Static(tr("Set up this workspace?"), id="workspace-setup-title")
+        with Vertical(id="workspace-setup-card", classes="isy-dialog"):
+            yield Static(tr("Set up this workspace?"), id="workspace-setup-title", classes="isy-dialog-title")
             yield OnboardingCopy(
                 tr("Launch directory:\n{path}\n\n{warning}"
                    "If this is a recurring project, Yes creates an empty .isyroot here and saves chat "
@@ -58,14 +54,15 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
                    "it does not grant filesystem access. Not now keeps this run temporary, and its chat "
                    "history is removed when ISyCode exits.",
                    path=str(self.launch_dir), warning=warning),
-                id="workspace-setup-copy")
+                id="workspace-setup-copy", classes="isy-dialog-body")
             yield OptionList(
                 Option(tr("Yes · recurring workspace"), id="yes"),
                 Option(tr("No · temporary run"), id="no"),
-                id="workspace-setup-options")
-            with Horizontal(id="workspace-setup-actions"):
+                id="workspace-setup-options", classes="isy-dialog-options")
+            with Horizontal(id="workspace-setup-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Yes, remember this workspace"), id="workspace-setup-yes", variant="primary")
                 yield Button(tr("No, keep it temporary"), id="workspace-setup-no")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#workspace-setup-options", OptionList).focus()
@@ -89,28 +86,27 @@ class WorkspaceSetupScreen(ModalScreen[bool]):
 class GlobalRecurringDefaultScreen(ApprovalScreen):
     """Confirm a user-wide preference that creates .isyroot in future folders."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     GlobalRecurringDefaultScreen { align: center middle; background: #000000 58%; }
-    #global-recurring-card { width: 76; max-width: 90%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #global-recurring-title { height: 2; color: #bb8cff; text-style: bold; }
-    #global-recurring-copy { height: auto; margin-bottom: 1; }
-    #global-recurring-actions { height: 3; align-horizontal: right; }
-    #global-recurring-actions Button { margin-left: 1; }
+    #global-recurring-card { width: 76; }
+    #global-recurring-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="global-recurring-card"):
-            yield Static(tr("Use recurring mode for new folders?"), id="global-recurring-title")
-            yield Static(tr("When ISyCode first opens a folder without a saved choice, it will create an empty "
-                ".isyroot marker there. This remembers the workspace identity only; it does not "
-                "grant file access or copy permissions from another workspace. Broad folders such as "
-                "your home directory, its parents, the temporary directory, or a mount point still ask "
-                "first, so unrelated projects never share one workspace by accident."),
-                id="global-recurring-copy")
-            with Horizontal(id="global-recurring-actions"):
+        with Vertical(id="global-recurring-card", classes="isy-dialog"):
+            yield Static(tr("Use recurring mode for new folders?"), id="global-recurring-title", classes="isy-dialog-title")
+            with VerticalScroll(id="global-recurring-body", classes="isy-dialog-body"):
+                yield Static(tr("When ISyCode first opens a folder without a saved choice, it will create an empty "
+                    ".isyroot marker there. This remembers the workspace identity only; it does not "
+                    "grant file access or copy permissions from another workspace. Broad folders such as "
+                    "your home directory, its parents, the temporary directory, or a mount point still ask "
+                    "first, so unrelated projects never share one workspace by accident."),
+                    id="global-recurring-copy")
+            with Horizontal(id="global-recurring-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="global-recurring-cancel")
                 yield Button(tr("Use for new folders · y"), id="global-recurring-confirm", variant="primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "global-recurring-confirm")
@@ -127,12 +123,10 @@ class QuickStartScreen(ModalScreen[str]):
     re-asking the mode and recurrence questions it already answered.
     """
 
-    CSS = """
+    CSS = DECISION_CSS + """
     QuickStartScreen { align: center middle; background: #000000 58%; }
-    #quick-start-card { width: 84; max-width: 94%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #quick-start-title { height: 2; color: #bb8cff; text-style: bold; }
-    #quick-start-copy { height: auto; margin-bottom: 1; }
-    #quick-start-options { height: 4; }
+    #quick-start-card { width: 84; }
+    #quick-start-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "custom", "Custom setup")]
 
@@ -145,9 +139,9 @@ class QuickStartScreen(ModalScreen[str]):
         provider_line = (tr("Your provider key is already in the environment, so chat works right away.")
                          if self.provider_ready else
                          tr("No provider key detected yet; you can add one later in Settings → Providers."))
-        with Vertical(id="quick-start-card"):
+        with Vertical(id="quick-start-card", classes="isy-dialog"):
             yield Static(tr("Welcome to ISyCode · how do you want to start?"),
-                         id="quick-start-title")
+                         id="quick-start-title", classes="isy-dialog-title")
             yield OnboardingCopy(
                 tr("{root}\n\n{provider_line}\n\n"
                    "Quick Start: this folder becomes a recurring workspace in Classic mode — "
@@ -156,17 +150,30 @@ class QuickStartScreen(ModalScreen[str]):
                    "Custom setup: choose recurrence, Classic or Security, and each tool step by step.\n\n"
                    "Both paths keep IsySentinel and the action journal on everything.",
                    root=str(self.root), provider_line=provider_line),
-                id="quick-start-copy")
+                id="quick-start-copy", classes="isy-dialog-body")
             yield OptionList(
                 Option(tr("Quick Start · ready in under a minute"), id="quick"),
                 Option(tr("Custom setup · choose each step"), id="custom"),
-                id="quick-start-options")
+                id="quick-start-options", classes="isy-dialog-options")
+            with Horizontal(id="quick-start-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Custom setup"), id="quick-start-custom")
+                yield Button(tr("Continue"), id="quick-start-continue", variant="primary")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#quick-start-options", OptionList).focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         self.dismiss("quick" if event.option.id == "quick" else "custom")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        if event.button.id == "quick-start-custom":
+            self.dismiss("custom")
+        elif event.button.id == "quick-start-continue":
+            options = self.query_one("#quick-start-options", OptionList)
+            choice = options.get_option_at_index(options.highlighted or 0)
+            self.dismiss("quick" if choice.id == "quick" else "custom")
 
     def action_custom(self) -> None:
         self.dismiss("custom")
@@ -175,12 +182,10 @@ class QuickStartScreen(ModalScreen[str]):
 class WorkspaceModeScreen(ModalScreen[str]):
     """Choose how a new workspace starts: Classic (ready to use) or Security."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     WorkspaceModeScreen { align: center middle; background: #000000 58%; }
-    #workspace-mode-card { width: 84; max-width: 94%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #workspace-mode-title { height: 2; color: #bb8cff; text-style: bold; }
-    #workspace-mode-copy { height: auto; margin-bottom: 1; }
-    #workspace-mode-options { height: 4; }
+    #workspace-mode-card { width: 84; }
+    #workspace-mode-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "security", "Security")]
 
@@ -189,8 +194,8 @@ class WorkspaceModeScreen(ModalScreen[str]):
         self.root = root
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="workspace-mode-card"):
-            yield Static(tr("How should ISyCode work in this folder?"), id="workspace-mode-title")
+        with Vertical(id="workspace-mode-card", classes="isy-dialog"):
+            yield Static(tr("How should ISyCode work in this folder?"), id="workspace-mode-title", classes="isy-dialog-title")
             yield OnboardingCopy(
                 tr("{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
                    "A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. "
@@ -200,17 +205,30 @@ class WorkspaceModeScreen(ModalScreen[str]):
                    "Both modes use IsySentinel and the action journal. "
                    "Free shell and sensitive files are never implied. Switch any time "
                    "in Settings → Authority.", root=str(self.root)),
-                id="workspace-mode-copy")
+                id="workspace-mode-copy", classes="isy-dialog-body")
             yield OptionList(
                 Option(tr("Classic · Ready To Use"), id="classic"),
                 Option(tr("Security · everything off until I allow it"), id="security"),
-                id="workspace-mode-options")
+                id="workspace-mode-options", classes="isy-dialog-options")
+            with Horizontal(id="workspace-mode-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Security"), id="workspace-mode-security")
+                yield Button(tr("Continue"), id="workspace-mode-continue", variant="primary")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#workspace-mode-options", OptionList).focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         self.dismiss("classic" if event.option.id == "classic" else "security")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        if event.button.id == "workspace-mode-security":
+            self.dismiss("security")
+        elif event.button.id == "workspace-mode-continue":
+            options = self.query_one("#workspace-mode-options", OptionList)
+            choice = options.get_option_at_index(options.highlighted or 0)
+            self.dismiss("classic" if choice.id == "classic" else "security")
 
     def action_security(self) -> None:
         self.dismiss("security")
@@ -219,13 +237,10 @@ class WorkspaceModeScreen(ModalScreen[str]):
 class GrantWorkspaceReadScreen(ApprovalScreen):
     """Explicitly grant only bounded, read-only workspace tools."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     GrantWorkspaceReadScreen { align: center middle; background: #000000 58%; }
-    #workspace-read-card { width: 82; max-width: 92%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #workspace-read-title { height: 2; color: #bb8cff; text-style: bold; }
-    #workspace-read-copy { height: auto; margin-bottom: 1; }
-    #workspace-read-actions { height: 3; align-horizontal: right; }
-    #workspace-read-actions Button { margin-left: 1; }
+    #workspace-read-card { width: 82; }
+    #workspace-read-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -235,20 +250,23 @@ class GrantWorkspaceReadScreen(ApprovalScreen):
         self.revoke = revoke
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="workspace-read-card"):
+        with Vertical(id="workspace-read-card", classes="isy-dialog"):
             yield Static(tr("Turn off file reading?") if self.revoke
-                         else tr("Allow ISyCode to read workspace files?"), id="workspace-read-title")
-            copy = (tr("ISyCode will stop listing, reading, and searching files in this workspace. "
-                       "Your files and conversations stay where they are.")
-                    if self.revoke else
-                    tr("ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md "
-                       "to understand your project. It cannot edit or delete files, run commands, or access "
-                       "folders outside this workspace. You will still be asked before sensitive actions."))
-            yield Static(copy, id="workspace-read-copy")
-            with Horizontal(id="workspace-read-actions"):
+                         else tr("Allow ISyCode to read workspace files?"), id="workspace-read-title", classes="isy-dialog-title")
+            with VerticalScroll(id="workspace-read-body", classes="isy-dialog-body"):
+                yield Static(tr("Folder: {root}\n", root=self.root), markup=False)
+                copy = (tr("ISyCode will stop listing, reading, and searching files in this workspace. "
+                           "Your files and conversations stay where they are.")
+                        if self.revoke else
+                        tr("ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md "
+                           "to understand your project. It cannot edit or delete files, run commands, or access "
+                           "folders outside this workspace. You will still be asked before sensitive actions."))
+                yield Static(copy, id="workspace-read-copy")
+            with Horizontal(id="workspace-read-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="workspace-read-cancel")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"),
                              id="workspace-read-grant", variant="error" if self.revoke else "primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "workspace-read-grant")
@@ -260,13 +278,10 @@ class GrantWorkspaceReadScreen(ApprovalScreen):
 class GrantProviderNetworkScreen(ApprovalScreen):
     """Confirm network authority for one provider endpoint host."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     GrantProviderNetworkScreen { align: center middle; background: #000000 58%; }
-    #provider-network-card { width: 82; max-width: 92%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #provider-network-title { height: 2; color: #bb8cff; text-style: bold; }
-    #provider-network-copy { height: auto; margin-bottom: 1; }
-    #provider-network-actions { height: 3; align-horizontal: right; }
-    #provider-network-actions Button { margin-left: 1; }
+    #provider-network-card { width: 82; }
+    #provider-network-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -285,14 +300,16 @@ class GrantProviderNetworkScreen(ApprovalScreen):
             copy += " Finding tools does not run them."
         if self.label == "Search and understand code with Gateway" and not self.revoke:
             copy += " You review each search and approve it before it runs."
-        with Vertical(id="provider-network-card"):
+        with Vertical(id="provider-network-card", classes="isy-dialog"):
             yield Static(tr("Turn off this option?") if self.revoke else tr("Turn on this option?"),
-                         id="provider-network-title")
-            yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy")
-            with Horizontal(id="provider-network-actions"):
+                         id="provider-network-title", classes="isy-dialog-title")
+            with VerticalScroll(id="provider-network-body", classes="isy-dialog-body"):
+                yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy", markup=False)
+            with Horizontal(id="provider-network-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="provider-network-cancel")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="provider-network-confirm",
                              variant="error" if self.revoke else "primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "provider-network-confirm")
@@ -304,13 +321,10 @@ class GrantProviderNetworkScreen(ApprovalScreen):
 class GrantMCPInvocationScreen(ApprovalScreen):
     """Grant the Gateway MCP server as a target; every call still needs approval."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     GrantMCPInvocationScreen { align: center middle; background: #000000 58%; }
-    #mcp-grant-card { width: 82; max-width: 92%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #mcp-grant-title { height: 2; color: #bb8cff; text-style: bold; }
-    #mcp-grant-copy { height: auto; margin-bottom: 1; }
-    #mcp-grant-actions { height: 3; align-horizontal: right; }
-    #mcp-grant-actions Button { margin-left: 1; }
+    #mcp-grant-card { width: 82; }
+    #mcp-grant-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -324,14 +338,17 @@ class GrantMCPInvocationScreen(ApprovalScreen):
                 if self.revoke else
                 "ISyCode can run a tool you choose from your Gateway. You will see what it wants to do "
                 "and approve every run before it starts.")
-        with Vertical(id="mcp-grant-card"):
+        with Vertical(id="mcp-grant-card", classes="isy-dialog"):
             yield Static(tr("Turn off Gateway tools?") if self.revoke else tr("Allow Gateway tools?"),
-                         id="mcp-grant-title")
-            yield Static(copy, id="mcp-grant-copy")
-            with Horizontal(id="mcp-grant-actions"):
+                         id="mcp-grant-title", classes="isy-dialog-title")
+            with VerticalScroll(id="mcp-grant-body", classes="isy-dialog-body"):
+                yield Static("Host: " + self.host, markup=False)
+                yield Static(copy, id="mcp-grant-copy")
+            with Horizontal(id="mcp-grant-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="mcp-grant-cancel")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="mcp-grant-confirm",
                              variant="error" if self.revoke else "primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "mcp-grant-confirm")
@@ -343,13 +360,10 @@ class GrantMCPInvocationScreen(ApprovalScreen):
 class GrantLSPProcessScreen(ApprovalScreen):
     """Consent to the fixed bubblewrap LSP owner and its exact executable."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     GrantLSPProcessScreen { align: center middle; background: #000000 58%; }
-    #lsp-grant-card { width: 84; max-width: 92%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #lsp-grant-title { height: 2; color: #bb8cff; text-style: bold; }
-    #lsp-grant-copy { height: auto; margin-bottom: 1; }
-    #lsp-grant-actions { height: 3; align-horizontal: right; }
-    #lsp-grant-actions Button { margin-left: 1; }
+    #lsp-grant-card { width: 84; }
+    #lsp-grant-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -365,14 +379,18 @@ class GrantLSPProcessScreen(ApprovalScreen):
                 "ISyCode can use its protected local helper to find code symbols in this workspace. "
                 "The helper cannot access the internet or run general commands. Reading files still "
                 "follows the separate file access option.")
-        with Vertical(id="lsp-grant-card"):
+        with Vertical(id="lsp-grant-card", classes="isy-dialog"):
             yield Static(tr("Turn off local code help?") if self.revoke else tr("Allow local code help?"),
-                         id="lsp-grant-title")
-            yield Static(copy, id="lsp-grant-copy")
-            with Horizontal(id="lsp-grant-actions"):
+                         id="lsp-grant-title", classes="isy-dialog-title")
+            with VerticalScroll(id="lsp-grant-body", classes="isy-dialog-body"):
+                yield Static(tr("Folder: {root}\n", root=self.root), markup=False)
+                yield Static(self.sandbox_executable, markup=False)
+                yield Static(copy, id="lsp-grant-copy")
+            with Horizontal(id="lsp-grant-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="lsp-grant-cancel")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="lsp-grant-confirm",
                              variant="error" if self.revoke else "primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "lsp-grant-confirm")
@@ -384,13 +402,10 @@ class GrantLSPProcessScreen(ApprovalScreen):
 class BrokerPreviewGrantScreen(ApprovalScreen):
     """Ask before persisting the narrow permission to inspect a broker plan."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     BrokerPreviewGrantScreen { align: center middle; background: #000000 58%; }
-    #broker-grant-card { width: 82; max-width: 92%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #broker-grant-title { height: 2; color: #bb8cff; text-style: bold; }
-    #broker-grant-copy { height: auto; margin-bottom: 1; }
-    #broker-grant-actions { height: 3; align-horizontal: right; }
-    #broker-grant-actions Button { margin-left: 1; }
+    #broker-grant-card { width: 82; }
+    #broker-grant-card { max-height: 30; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -399,16 +414,18 @@ class BrokerPreviewGrantScreen(ApprovalScreen):
         self.root = root
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="broker-grant-card"):
-            yield Static(tr("Allow semantic broker preview?"), id="broker-grant-title")
-            yield Static(
-                f"Workspace: {self.root}\n\nThis stores only the broker.preview grant for this .isyroot. "
-                "The selected project still needs its own workspace.files.read grant. "
-                "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
-                id="broker-grant-copy")
-            with Horizontal(id="broker-grant-actions"):
+        with Vertical(id="broker-grant-card", classes="isy-dialog"):
+            yield Static(tr("Allow semantic broker preview?"), id="broker-grant-title", classes="isy-dialog-title")
+            with VerticalScroll(id="broker-grant-body", classes="isy-dialog-body"):
+                yield Static(
+                    f"Workspace: {self.root}\n\nThis stores only the broker.preview grant for this .isyroot. "
+                    "The selected project still needs its own workspace.files.read grant. "
+                    "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
+                    id="broker-grant-copy")
+            with Horizontal(id="broker-grant-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="broker-grant-cancel")
                 yield Button(tr("Grant preview · y"), id="broker-grant-confirm", variant="primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "broker-grant-confirm")
@@ -420,30 +437,28 @@ class BrokerPreviewGrantScreen(ApprovalScreen):
 class AddCredentialScreen(ModalScreen[dict[str, str] | None]):
     """Capture a labelled API key without echoing it into the chat history."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     AddCredentialScreen { align: center middle; background: #000000 58%; }
-    #credential-form { width: 76; max-width: 92%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #credential-form-title { height: 2; color: #c7b8d4; text-style: bold; }
-    #credential-form-help { height: auto; color: #b8b8bd; padding-bottom: 1; }
-    #credential-form Input { height: 3; margin-bottom: 1; }
-    #credential-form-actions { height: 3; align-horizontal: right; }
-    #credential-form-actions Button { margin-left: 1; }
+    #credential-form { width: 76; }
+    #credential-form Input { height: 3; margin-bottom: 1; background: #000000; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="credential-form"):
-            yield Static(tr("Add a named API key"), id="credential-form-title")
-            yield Static(tr("Saved in the operating system keyring and never shown after saving. "
-                "Use service id `isyco-gateway` to supply the Gateway MCP."),
-                id="credential-form-help")
-            yield Input(placeholder=tr("Name shown in Settings"), id="credential-name")
-            yield Input(placeholder=tr("Service id, e.g. isyco-gateway"), id="credential-service")
-            yield Input(placeholder=tr("Purpose / where this key is used"), id="credential-purpose")
-            yield Input(placeholder=tr("Paste API key…"), password=True, id="credential-secret")
-            with Horizontal(id="credential-form-actions"):
+        with Vertical(id="credential-form", classes="isy-dialog"):
+            yield Static(tr("Add a named API key"), id="credential-form-title", classes="isy-dialog-title")
+            with VerticalScroll(id="credential-body", classes="isy-dialog-body"):
+                yield Static(tr("Saved in the operating system keyring and never shown after saving. "
+                    "Use service id `isyco-gateway` to supply the Gateway MCP."),
+                    id="credential-form-help")
+                yield Input(placeholder=tr("Name shown in Settings"), id="credential-name")
+                yield Input(placeholder=tr("Service id, e.g. isyco-gateway"), id="credential-service")
+                yield Input(placeholder=tr("Purpose / where this key is used"), id="credential-purpose")
+                yield Input(placeholder=tr("Paste API key…"), password=True, id="credential-secret")
+            with Horizontal(id="credential-form-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="credential-cancel")
                 yield Button(tr("Save key"), id="credential-save", variant="primary")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#credential-name", Input).focus()

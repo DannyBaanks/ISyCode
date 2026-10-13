@@ -2088,3 +2088,176 @@ msgstr "Aumentar el contraste del texto y los bordes enfocados conservando las s
 
 msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
 msgstr "Desplazar texto terminado en títulos contraídos. Usa Space para expandir una caja. Movimiento reducido desactiva este desplazamiento."
+
+# Accepted menu layout and exact decision chrome.
+
+msgid "Provider"
+msgstr "Proveedor"
+
+msgid "Context file"
+msgstr "Archivo de contexto"
+
+msgid "RTK compression"
+msgstr "Compresión RTK"
+
+msgid "Notification sounds"
+msgstr "Sonidos de notificación"
+
+msgid "Reduced motion"
+msgstr "Movimiento reducido"
+
+msgid "High contrast display"
+msgstr "Alto contraste"
+
+msgid "ASCII-only display"
+msgstr "Solo caracteres ASCII"
+
+msgid "My defaults"
+msgstr "Mis valores por defecto"
+
+msgid "Compact text scroll"
+msgstr "Desplazamiento compacto"
+
+msgid "Workspace folders"
+msgstr "Carpetas del workspace"
+
+msgid "Action journal"
+msgstr "Registro de acciones"
+
+msgid "All workspaces"
+msgstr "Todos los workspaces"
+
+msgid "This workspace"
+msgstr "Este workspace"
+
+msgid "Personalize ISyCode for this workspace."
+msgstr "Personaliza ISyCode para este workspace."
+
+msgid "Choose the model used for this conversation."
+msgstr "Elige el modelo usado en esta conversación."
+
+msgid "Choose model"
+msgstr "Usar modelo"
+
+msgid "Continue"
+msgstr "Continuar"
+
+msgid "Custom setup"
+msgstr "Configuración personalizada"
+
+msgid "Idea backlog · captured ideas are not instructions"
+msgstr "Ideas pendientes · las ideas capturadas no son instrucciones"
+
+msgid "Inspect"
+msgstr "Inspeccionar"
+
+msgid "Inspect a harness · Gap map prepares repair proposals for review."
+msgstr "Inspecciona un harness · el mapa de diferencias prepara propuestas de reparación."
+
+msgid "Loaded"
+msgstr "Cargado"
+
+msgid "Manage"
+msgstr "Administrar"
+
+msgid "Message queue · Select queued + empty Send steers · Esc restores draft"
+msgstr "Cola de mensajes · selecciona y envía sin texto para orientar · Esc restaura el borrador"
+
+msgid "Multi Harness · inspection"
+msgstr "Multi Harness · inspección"
+
+msgid "No matching models"
+msgstr "No hay modelos coincidentes"
+
+msgid "No models available."
+msgstr "No hay modelos disponibles."
+
+msgid "No session processes."
+msgstr "Esta sesión no tiene procesos."
+
+msgid "None"
+msgstr "Ninguno"
+
+msgid "None configured"
+msgstr "Sin configurar"
+
+msgid "OFF"
+msgstr "OFF"
+
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Question"
+msgstr "Pregunta"
+
+msgid "Removed"
+msgstr "Eliminado"
+
+msgid "Repair Compose · review proposal"
+msgstr "Reparar Compose · revisar propuesta"
+
+msgid "Review"
+msgstr "Revisar"
+
+msgid "Scope: {scope}"
+msgstr "Alcance: {scope}"
+
+msgid "Security"
+msgstr "Security"
+
+msgid "Selected"
+msgstr "Seleccionado"
+
+msgid "Selected · {model} · {provider}"
+msgstr "Seleccionado · {model} · {provider}"
+
+msgid "Session · full last message"
+msgstr "Sesión · último mensaje completo"
+
+msgid "Sources"
+msgstr "Fuentes"
+
+msgid "[?]"
+msgstr "[?]"
+
+msgid "current"
+msgstr "actual"
+
+msgid "messages"
+msgstr "mensajes"
+
+msgid "ready"
+msgstr "listo"
+
+msgid "{count} checking…"
+msgstr "{count} en revisión…"
+
+msgid "↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search"
+msgstr "↑↓ mover · Enter elegir · Clic vista previa · Esc volver · Mayús+Tab buscar"
+
+msgid "↑↓ move · Enter choose · Esc back · Tab search"
+msgstr "↑↓ mover · Enter elegir · Esc volver · Tab buscar"
+
+msgid "↑↓ move · Enter inspect · Esc back"
+msgstr "↑↓ mover · Enter inspeccionar · Esc volver"
+
+msgid "↑↓ move · Enter open · Esc back"
+msgstr "↑↓ mover · Enter abrir · Esc volver"
+
+msgid "↑↓ move · Esc back"
+msgstr "↑↓ mover · Esc volver"
+
+msgid "↑↓ scroll · Tab actions · Enter choose · Esc cancel"
+msgstr "↑↓ desplazar · Tab acciones · Enter elegir · Esc cancelar"
+
+msgid "⚙"
+msgstr "⚙"
+
+msgid "Search results"
+msgstr "Resultados de búsqueda"
+
+msgid "Models · {provider}"
+msgstr "Modelos · {provider}"
+
+msgid "↑↓ move · Enter open · Esc back · Shift+Tab search"
+msgstr "↑↓ mover · Enter abrir · Esc volver · Mayús+Tab buscar"

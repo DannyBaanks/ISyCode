@@ -130,8 +130,8 @@ class CopyMenuScreen(ModalScreen[tuple[str, str] | None]):
     #copy-note { height: auto; }
     #copy-preview { height: auto; max-height: 6; margin: 1 0; }
     #copy-preview Static { height: auto; }
-    #copy-actions { height: auto; }
-    #copy-actions Button { width: 1fr; min-width: 0; height: 4; }
+    #copy-actions { height: 3; }
+    #copy-actions Button { width: 1fr; min-width: 0; height: 3; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -141,12 +141,12 @@ class CopyMenuScreen(ModalScreen[tuple[str, str] | None]):
         self.whole = whole
 
     def compose(self):
-        with Vertical(id="copy-card"):
-            yield Static(tr("Copy text"), id="copy-heading")
+        with Vertical(id="copy-card", classes="isy-dialog"):
+            yield Static(tr("Copy text"), id="copy-heading", classes="isy-dialog-title")
             yield Static(tr("Only the selected characters are copied. Whole-box copy is a separate choice."), id="copy-note")
             with VerticalScroll(id="copy-preview"):
                 yield Static(Text(self.selected) if self.selected else tr("No text selected."), markup=False)
-            with Horizontal(id="copy-actions"):
+            with Horizontal(id="copy-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Copy selection"), id="copy-selection", disabled=not self.selected)
                 yield Button(tr("Copy whole box"), id="copy-whole", disabled=not self.whole)
                 yield Button(tr("Cancel"), id="copy-cancel")

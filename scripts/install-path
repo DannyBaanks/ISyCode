@@ -6,6 +6,16 @@ ISYCODE_REPOSITORY=$(CDPATH= cd -- "$SCRIPT_DIRECTORY/.." && pwd)
 ISYCODE_LAUNCHER="$ISYCODE_REPOSITORY/scripts/isycode"
 ISYCODE_BIN_DIR=${ISYCODE_BIN_DIR:-"${HOME:?HOME is not set}/.local/bin"}
 ISYCODE_COMMAND="$ISYCODE_BIN_DIR/isycode"
+ISYCODE_REPLACE_OWNED=false
+case "${1:-}" in
+    '') ;;
+    --replace-owned) ISYCODE_REPLACE_OWNED=true ;;
+    *) printf 'Usage: install-path [--replace-owned]\n' >&2; exit 2 ;;
+esac
+if [ "$#" -gt 1 ]; then
+    printf 'Usage: install-path [--replace-owned]\n' >&2
+    exit 2
+fi
 
 mkdir -p -- "$ISYCODE_BIN_DIR"
 if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
@@ -14,11 +24,33 @@ if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
         printf 'ISyCode launcher already installed at %s\n' "$ISYCODE_COMMAND"
         exit 0
     fi
-    printf 'Refusing to replace existing command: %s\n' "$ISYCODE_COMMAND" >&2
-    exit 1
+    ISYCODE_LEGACY_OWNED=false
+    if [ -L "$ISYCODE_COMMAND" ]; then
+        ISYCODE_OLD_TARGET=$(readlink -- "$ISYCODE_COMMAND")
+        if [ "$ISYCODE_OLD_TARGET" = "$ISYCODE_REPOSITORY/.venv/bin/isycode" ]; then
+            ISYCODE_LEGACY_OWNED=true
+        elif [ "$ISYCODE_OLD_TARGET" = "${HOME:?HOME is not set}/.local/share/isycode-mainline/.venv/bin/isycode" ] \
+            && [ "$(readlink -f -- "$ISYCODE_COMMAND")" = "$(readlink -f -- "$ISYCODE_REPOSITORY/.venv/bin/isycode")" ]; then
+            ISYCODE_LEGACY_OWNED=true
+        fi
+    fi
+    if [ "$ISYCODE_REPLACE_OWNED" = true ] && [ "$ISYCODE_LEGACY_OWNED" = true ]; then
+        ISYCODE_BACKUP="$ISYCODE_COMMAND.backup.$(date -u +%Y%m%dT%H%M%SZ).$$"
+        # Move the link, never its target. The old runtime and user state stay intact.
+        mv -- "$ISYCODE_COMMAND" "$ISYCODE_BACKUP"
+        printf 'Preserved legacy launcher at %s\n' "$ISYCODE_BACKUP"
+    else
+        printf 'Refusing to replace existing command: %s\n' "$ISYCODE_COMMAND" >&2
+        exit 1
+    fi
 fi
 
-ln -s -- "$ISYCODE_LAUNCHER" "$ISYCODE_COMMAND"
+if ! ln -s -- "$ISYCODE_LAUNCHER" "$ISYCODE_COMMAND"; then
+    if [ -n "${ISYCODE_BACKUP:-}" ] && [ ! -e "$ISYCODE_COMMAND" ] && [ ! -L "$ISYCODE_COMMAND" ]; then
+        mv -- "$ISYCODE_BACKUP" "$ISYCODE_COMMAND"
+    fi
+    exit 1
+fi
 printf 'Installed ISyCode launcher at %s\n' "$ISYCODE_COMMAND"
 case ":${PATH:-}:" in
     *":$ISYCODE_BIN_DIR:"*) ;;

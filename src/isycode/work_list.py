@@ -126,7 +126,7 @@ class SessionOptionList(OptionList):
 class SessionMessageScreen(ModalScreen):
     CSS = """
     SessionMessageScreen { align: center middle; background: #000000 58%; }
-    #session-message-card { width: 90%; max-width: 110; height: 80%; padding: 1 2; border: round #514d5a; background: #242529; }
+    #session-message-card { width: 90%; max-width: 110; height: 90%; padding: 0 1; border: solid #718291; background: #000000; }
     #session-message-scroll { height: 1fr; margin: 1 0; }
     #session-message-content { height: auto; }
     """
@@ -137,9 +137,9 @@ class SessionMessageScreen(ModalScreen):
         self.message = message
 
     def compose(self):
-        with Vertical(id="session-message-card"):
-            yield Static(Text("Session · full last message", style="bold #d7a9ff"))
-            with VerticalScroll(id="session-message-scroll"):
+        with Vertical(id="session-message-card", classes="isy-dialog"):
+            yield Static(Text(tr("Session · full last message"), style="bold #edf1f5"), classes="isy-dialog-title")
+            with VerticalScroll(id="session-message-scroll", classes="isy-dialog-body"):
                 yield Static(Text(self.message), id="session-message-content")
             yield Button(tr("Close · Esc"), id="session-message-close")
 

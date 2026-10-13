@@ -122,6 +122,7 @@ EXPECTED = {
     "openisy_provider",
     "info",
     "locale_cycle",
+    "models_open",
 }
 
 def test_menu_dispatch_keeps_every_extracted_kind():

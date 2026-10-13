@@ -66,6 +66,7 @@ from isycode.workspace_setup import (
 )
 from isycode.localization import configure_locale, language_msgid, tr
 from isycode.user_defaults import UserDefaultsStore
+from isycode.tui_presentation import MenuHeading, SettingRow
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
 from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
@@ -535,6 +536,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         with Vertical(id="action-menu"):
             with Vertical(id="action-card"):
                 yield Static(tr("Commands"), id="action-title")
+                yield Static("", id="action-description")
                 yield Input(placeholder=tr("Filter this list…"), id="action-search")
                 with Horizontal(id="action-body"):
                     yield OptionList(id="settings-categories")
@@ -889,6 +891,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
         self.call_after_refresh(self._update_model_button_visibility)
         self.call_after_refresh(self._paint_idle)
+        if getattr(self, "_menu_mode", ""):
+            card = self.query_one("#action-card", Vertical)
+            card.set_class(event.size.width >= 100 and self._menu_mode == "providers", "wide-detail-menu")
+            card.set_class(event.size.width < 100, "compact-menu")
+            self._size_action_menu()
 
     async def _initialize_workspace(self) -> None:
         # .isyroot identifies the Files tree; only explicit Workspace Authority
@@ -1162,7 +1169,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _capability_entry(label: str, value: str, enabled: bool,
                           detail: str = "") -> dict[str, str | bool]:
         return {"label": tr(label), "kind": "authority_toggle", "value": value,
-                "detail": tr(detail) if detail else detail, "enabled": enabled}
+                "detail": tr(detail) if detail else detail, "enabled": enabled,
+                "display_value": tr("ON") if enabled else tr("OFF")}
 
     def _open_palette(self) -> None:
         entries = [self._entry(
@@ -1199,6 +1207,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry(tr("RTK compression · {state}", state=rtk_label), "rtk_settings", "",
                         "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."),
             self._entry(tr("Providers & models"), "providers_open", ""),
+            self._entry("Model", "models_open", ""),
             self._entry(tr("Reasoning level"), "reasoning_open", ""),
             self._entry(tr("Notification sounds · {state}",
                            state=on if self._notification_sounds else off), "sounds_toggle", "",
@@ -1247,6 +1256,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         groups = {
             tr("Conversation"): (CYAN, {
                 "providers_open": "Choose the provider and model used for this conversation.",
+                "models_open": "Choose the model used for this conversation.",
                 "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
                 "roles_open": "Choose instructions for how the agent should work.",
                 "clear_role": "Remove the selected role from this conversation.",
@@ -1292,6 +1302,44 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 entry["category"] = tr("Preferences")
                 entry["category_id"] = "Preferences"
                 ordered.append(entry)
+        from isycode.reasoning_options import reasoning_label
+        from isycode.model_presentation import model_display_name
+        provider = selected_provider_name()
+        model = resolved_chat_model(provider)
+        provider_label = next((label for _, key, label, _ in PROVIDER_SCREEN if key == provider), provider)
+        context = getattr(self, "_agent_context", None)
+        values = {
+            "providers_open": ("Provider", provider_label),
+            "models_open": ("Model", model_display_name(model)),
+            "reasoning_open": ("Reasoning level", tr(reasoning_label(provider, model))),
+            "roles_open": ("Role", self._active_role["name"] if self._active_role else tr("None")),
+            "context_menu": ("Context", tr("Loaded") if context else tr("None")),
+            "context_inject": ("Context file", context["path"] if context else tr("None")),
+            "clear_role": ("Clear selected role", tr("Selected") if self._active_role else tr("None")),
+            "rtk_settings": ("RTK compression", rtk_label),
+            "sounds_toggle": ("Notification sounds", on if self._notification_sounds else off),
+            "motion_toggle": ("Reduced motion", on if self._reduced_motion else off),
+            "contrast_toggle": ("High contrast display", on if self._high_contrast else off),
+            "ascii_toggle": ("ASCII-only display", on if self._ascii_only else off),
+            "locale_cycle": ("Language", tr(language_msgid(self._locale))),
+            "marquee_toggle": ("Compact text scroll", off if self._reduced_motion else on if self._compact_marquee_default else off),
+            "user_defaults": ("My defaults", tr("All workspaces")),
+            "workspace_config_preferences": ("Workspace preferences", tr("This workspace")),
+            "authority_open": ("Authority & Security", self._workspace_mode().title()),
+            "shortcuts": ("Commands & shortcuts", tr("Browse")),
+            "named_credentials": ("Named API keys", tr("Manage")),
+            "security_journal": ("Action journal", tr("Inspect")),
+            "folders_open": ("Workspace folders", tr("Review")),
+            "harness_open": ("Multi Harness", tr("Inspect")),
+            "files": ("Workspace files", tr("Browse")),
+            "integrations_open": ("Integrations", "MCP / LSP / Gateway"),
+        }
+        for entry in ordered:
+            name, current = values.get(entry["kind"], (entry["label"], tr("Review")))
+            entry["label"] = tr(name)
+            entry["display_value"] = current
+            if entry["kind"] == "models_open":
+                entry["search_value"] = model
         self._menu_stack = []
         self._render_menu("settings", tr("Settings"), ordered)
 
@@ -1867,6 +1915,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         card = self.query_one("#action-card", Vertical)
         card.set_class(mode == "settings", "settings-menu")
+        card.set_class(self.size.width >= 100 and mode == "providers", "wide-detail-menu")
+        card.set_class(self.size.width < 100, "compact-menu")
         categories = self.query_one("#settings-categories", OptionList)
         categories.display = mode == "settings"
         if mode == "settings":
@@ -1883,21 +1933,27 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             card.remove_class("provider-menu")
         menu = self.query_one("#action-menu", Vertical)
         menu.display = True
-        heading = Text(display_title, style=f"bold {TEXT}")
+        heading = MenuHeading(display_title, tr(self._settings_category) if mode == "settings" else "")
         self.query_one("#action-title", Static).update(heading)
+        description = self.query_one("#action-description", Static)
+        description.display = mode == "settings"
+        description.update(tr("Personalize ISyCode for this workspace."))
         search = self.query_one("#action-search", Input)
         search.display = True
         search.value = ""
         self.query_one("#action-list", OptionList).display = True
         self.query_one("#key-entry", Vertical).display = False
         self._render_options("")
-        hint = (tr("↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter")
+        hint = (tr("↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search")
                 if mode == "providers" else
-                tr("↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"))
+                tr("↑↓ move · Enter open · Esc back · Shift+Tab search"))
         self.query_one("#action-hint", Static).update(hint)
         self.query_one("#action-list", OptionList).focus()
 
     def _render_options(self, query: str) -> None:
+        if self._menu_mode == "settings":
+            self.query_one("#action-title", Static).update(MenuHeading(
+                self._menu_title, tr("Search results") if query else tr(self._settings_category)))
         if query and self._menu_mode == "providers":
             filtered: list[dict[str, str]] = []
             pending = None
@@ -1917,15 +1973,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         else:
             self._menu_filtered = [entry for entry in self._menu_entries
                                    if query in entry["label"].casefold()
-                                   or query in entry.get("detail", "").casefold()]
+                                   or query in entry.get("detail", "").casefold()
+                                   or query in str(entry.get("display_value", "")).casefold()
+                                   or query in str(entry.get("search_value", "")).casefold()]
         if self._menu_mode == "settings" and not query:
             self._menu_filtered = [entry for entry in self._menu_filtered
                                    if entry.get("category_id", "Preferences") == self._settings_category]
         options = self.query_one("#action-list", OptionList)
         options.clear_options()
         for entry in self._menu_filtered:
-            if entry.get("category"):
-                label = Text(entry["label"], style=TEXT)
+            if entry.get("category") or "display_value" in entry and self._menu_mode != "providers":
+                label = SettingRow(entry["label"].split(" · ", 1)[0],
+                                   str(entry.get("display_value", "")), entry.get("detail", ""),
+                                   GREEN if entry.get("enabled") else MUTED if "enabled" in entry else TEXT)
             elif "enabled" in entry:
                 label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
             elif entry.get("kind") == "section":
@@ -1945,6 +2005,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                               if entry.get("kind") != "section"), 0)
         options.highlighted = highlight
         self._show_menu_detail(highlight or 0)
+        self._size_action_menu()
+
+    def _size_action_menu(self) -> None:
+        """Bound short menus by their contents; long lists scroll inside the frame."""
+        rows = max(4, len(getattr(self, "_menu_filtered", [])))
+        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode == "settings" else 13
+        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
 
     def _show_menu_detail(self, index: int | None) -> None:
         """Describe the highlighted entry so choices are clear before pressing Enter."""
@@ -1965,7 +2032,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         panel.display = bool(detail)
         if self._menu_mode == "settings" and index is not None and 0 <= index < len(entries):
-            detail = entries[index].get("category", tr("Preferences")) + "\n" + tr(str(detail))
+            detail = entries[index]["label"] + " · " + str(entries[index].get("display_value", "")) + "\n" + tr(str(detail))
+        elif index is not None and 0 <= index < len(entries) and "enabled" in entries[index]:
+            detail = entries[index]["label"] + " · " + str(entries[index]["display_value"]) + "\n" + tr(str(detail))
+        elif self._menu_mode == "providers" and index is not None and 0 <= index < len(entries):
+            detail = entries[index].get("display_name", entries[index]["label"]) + "\n\n" + tr(str(detail))
         panel.update(Text(tr(str(detail))))
 
     def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
@@ -1983,6 +2054,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._menu_stack = []
         self._menu_mode = ""
         self._models_scope = None
+        self._models_return_settings = False
         self.query_one("#prompt-input", PromptArea).focus()
 
 

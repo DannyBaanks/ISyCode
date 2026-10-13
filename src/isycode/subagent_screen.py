@@ -11,15 +11,16 @@ from textual.widgets import Static, Button, Input
 class SubagentModelScreen(ModalScreen[dict | None]):
     CSS = '''
     SubagentModelScreen { align: center middle; background: #000000 58%; }
-    #child-card { width: 95; max-width: 96%; height: 85%; padding: 1 1; border: round #514d5a; background: #17191f; }
+    #child-card { width: 95; max-width: 96%; height: 92%; padding: 0 1; border: solid #718291; background: #000000; }
+    #child-heading { height: 1; text-style: bold; color: #edf1f5; }
     #child-task { height: 2; }
-    #child-copy { height: auto; max-height: 3; }
-    #child-search { height: 3; margin: 1 0; }
-    #child-models { height: 1fr; }
+    #child-copy { height: auto; max-height: 2; color: #a9b5c2; }
+    #child-search { height: 3; margin: 0; }
+    #child-models { height: 1fr; min-height: 2; }
     .child-group { height: auto; background: transparent; }
     .child-model-choice { width: 100%; height: auto; min-height: 1; border: none; background: transparent; padding: 0 1; margin: 0; text-align: left; }
-    .child-model-choice:focus, .child-model-choice:hover { background: #30303c; }
-    #child-selected { height: auto; margin: 1 0; color: #77d8b0; }
+    .child-model-choice:focus, .child-model-choice:hover, .child-model-choice.-selected { background: #03252d; color: #38e1ee; }
+    #child-selected { height: auto; max-height: 3; margin: 0; color: #a9b5c2; border-top: solid #3f4d59; }
     #child-buttons { height: 3; dock: bottom; align-horizontal: right; }
     #child-buttons Button { width: auto; min-width: 18; margin-left: 1; }
     '''
@@ -32,8 +33,8 @@ class SubagentModelScreen(ModalScreen[dict | None]):
         self.models = [dict(item) for item in models]
         self.selected = dict(self.models[0]) if self.models else None
     def compose(self) -> ComposeResult:
-        with Vertical(id='child-card'):
-            yield Static(tr('Subagent · select a model from your providers'),markup=False)
+        with Vertical(id='child-card', classes='isy-dialog'):
+            yield Static(tr('Subagent · select a model from your providers'), id='child-heading', classes='isy-dialog-title', markup=False)
             if self.error:
                 yield Static(Text(self.error["provider_hint"] + "\nChoose another model or Cancel. Completed effects remain; retry may repeat work.", style="#e9c778"), id="child-error")
             with VerticalScroll(id='child-task'):
@@ -51,11 +52,10 @@ class SubagentModelScreen(ModalScreen[dict | None]):
                     with ExpandableBox(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(items)} models",
                                        collapsed=True, classes='child-group'):
                         for index, item in items:
-                            label = Text(model_display_name(item['model']), style='#e0e0e0')
-                            label.append(' / ' + item['model'], style='#9aa3ad')
+                            label = Text(model_display_name(item['model']), style='#edf1f5')
                             yield Button(label, id=f'child-choice-{index}', classes='child-model-choice')
             yield Static(self._selected_label(), id='child-selected', markup=False)
-            with Horizontal(id='child-buttons'):
+            with Horizontal(id='child-buttons', classes='isy-dialog-actions'):
                 yield Button(tr('Cancel'),id='child-cancel')
                 yield Button(tr('Launch selected model'),id='child-launch',disabled=not self.models,variant='primary')
     def on_mount(self):
@@ -69,18 +69,20 @@ class SubagentModelScreen(ModalScreen[dict | None]):
         elif event.button.id and event.button.id.startswith('child-choice-'):
             index = int(event.button.id.removeprefix('child-choice-'))
             self.selected = dict(self.models[index])
+            for button in self.query('.child-model-choice'):
+                button.set_class(button.id == event.button.id, '-selected')
             self.query_one('#child-selected', Static).update(self._selected_label())
         else:
             self.dismiss(None)
 
     def _selected_label(self):
         if self.selected is None:
-            return 'No models available.'
+            return tr('No models available.')
         from isycode.providers import PRESETS
         from isycode.model_presentation import model_display_name
         item = self.selected
         provider = PRESETS.get(item['provider'], {}).get('label', item['provider'])
-        return f"Selected · {model_display_name(item['model'])} · {provider}"
+        return tr('Selected · {model} · {provider}', model=model_display_name(item['model']), provider=provider) + '\n' + item['model']
 
     def on_input_changed(self, event: Input.Changed):
         if event.input.id != 'child-search':

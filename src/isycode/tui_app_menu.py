@@ -439,6 +439,7 @@ MENU_DISPATCH: dict[str, str] = {
     "auth_logout": "_menu_auth_browser",
     "auth_saved": "_menu_auth_saved",
     "providers_open": "_menu_providers_open",
+    "models_open": "_menu_models_open",
     "roles_open": "_menu_roles_open",
     "rtk_settings": "_menu_rtk_settings",
     "sounds_toggle": "_menu_sounds_toggle",

@@ -87,9 +87,8 @@ class ProviderMixin:
                         "unavailable": "credential store unavailable",
                     }.get(state, state))
                 current = key == active or (key == "openai" and active == "chatgpt")
-                mark = "✓" if current else "○"
-                note = (tr("  ← currently active") if current
-                        else tr("  ·  {blurb}", blurb=tr(blurb)))
+                mark = "*" if current else " "
+                note = tr("  ·  Current") if current else ""
                 entries.append(self._entry(
                     tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
@@ -97,6 +96,7 @@ class ProviderMixin:
                        blurb=tr(blurb), status=status,
                        default=provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL),
                     translate=False))
+                entries[-1]["display_name"] = label
             else:
                 entries.append(self._entry(
                     tr("·  {label}  ·  {blurb}", label=label, blurb=tr(blurb)),
@@ -326,6 +326,10 @@ class ProviderMixin:
     def _model_picker_result(self, entry: dict | None) -> None:
         if entry is not None:
             self._select_menu_entry(entry)
+        elif getattr(self, "_models_return_settings", False):
+            self._models_return_settings = False
+            self._models_scope = None
+            self._open_settings_menu()
         elif getattr(self, "_models_scope", None):
             # Esc from a provider's models walks back to the provider list; the
             # active provider/model was never changed on the way here.
@@ -770,6 +774,10 @@ class ProviderMixin:
     def _menu_providers_open(self, entry: dict[str, str | bool]) -> None:
         self._open_provider_menu()
         return
+
+    def _menu_models_open(self, entry: dict[str, str | bool]) -> None:
+        self._models_return_settings = True
+        self._open_scoped_models(selected_provider_name())
 
     def _menu_roles_open(self, entry: dict[str, str | bool]) -> None:
         self._open_role_menu()

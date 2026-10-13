@@ -6,27 +6,30 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TextArea
 from isycode.tui_copy import CopyTextArea
+from isycode.tui_screens_approval import DECISION_CSS
 
 class FilePreviewScreen(ModalScreen[None]):
-    CSS = '''
+    CSS = DECISION_CSS + '''
     FilePreviewScreen { align: center middle; background: #000000 58%; }
-    #preview-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #preview-card { width: 110; }
     #preview-heading { height: auto; max-height: 4; }
-    #preview-text { height: 1fr; }
-    #preview-actions { height: 3; dock: bottom; align-horizontal: right; }
-    #preview-actions Button { width: auto; min-width: 18; margin-left: 1; }
+    #preview-text { height: 1fr; background: #000000; border: none; }
+    #preview-text .text-area--gutter { background: #000000; color: #718291; }
+    #preview-text .text-area--selection { background: #002c36; }
     '''
     BINDINGS = [Binding('escape','close','Close')]
     def __init__(self,path,text):
         super().__init__();self.path=path;self.text=text
     def compose(self) -> ComposeResult:
-        with Vertical(id='preview-card'):
-            yield Static(f'{self.path}\n' + tr('Read-only · select with mouse or Ctrl+A; Ctrl+C copies'),id='preview-heading',markup=False)
+        with Vertical(id='preview-card', classes='isy-dialog'):
+            yield Static(str(self.path),id='preview-heading',classes='isy-dialog-title',markup=False)
             yield CopyTextArea(self.text,read_only=True,id='preview-text',show_line_numbers=True)
-            with Horizontal(id='preview-actions'):
+            with Horizontal(id='preview-actions', classes='isy-dialog-actions'):
                 yield Button(tr('Copy selection'),id='preview-copy',disabled=True)
                 yield Button(tr('Copy whole box'),id='preview-copy-whole')
                 yield Button(tr('Close'),id='preview-close')
+            yield Static(tr('Read-only · select with mouse or Ctrl+A; Ctrl+C copies'),
+                         classes='isy-dialog-hint',markup=False)
     def on_text_area_selection_changed(self,event):
         self.query_one('#preview-copy',Button).disabled=not event.text_area.selected_text
     def on_mount(self):self.query_one(TextArea).focus()

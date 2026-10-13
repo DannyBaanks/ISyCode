@@ -23,7 +23,7 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
                     break
                 await pilot.pause(0.05)
             screen = app.screen
-            assert all(group.collapsed for group in screen.query(Collapsible))
+            assert not screen.query_one('#model-provider-openai', Collapsible).collapsed
             screen.query_one('#models-search').value = 'nemotron-3-ultra'
             # Searching expands the NVIDIA group, which loads the account catalog in a
             # worker and may rebuild this screen when it finishes. Use the button only
@@ -40,7 +40,8 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
                         stable, button = 0, None
                         continue
                     found = next((item for item in current.query('.model-choice')
-                                  if 'nvidia/nemotron-3-ultra' in str(item.label)), None)
+                                  if current.choices.get(item.id, {}).get('value') ==
+                                  'nvidia|nvidia/nemotron-3-ultra-550b-a55b'), None)
                 stable = stable + 1 if found is not None and found is button else 0
                 button = found
                 if stable >= 10:

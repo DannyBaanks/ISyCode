@@ -161,9 +161,13 @@ async def test_models_screen_renders_family_variants(tmp_path, monkeypatch):
         screen = ModelsScreen(entries)
         await app.push_screen(screen)
         await pilot.pause()
-        rendered = str(app.screen.query_one("#models-scroll").content) if hasattr(app.screen.query_one("#models-scroll"), "content") else ""
         labels = [str(button.label) for button in app.screen.query(".model-choice")]
-        assert any("glm-5.3-flash" in label for label in labels), labels
+        assert any("GLM 5.3 Flash" in label for label in labels), labels
+        key = next(key for key, entry in screen.choices.items()
+                   if entry.get("value") == "openai|glm-5.3-flash")
+        screen.query_one("#" + key).focus()
+        await pilot.pause()
+        assert "glm-5.3-flash" in str(screen.query_one("#model-detail").render())
 
 
 @pytest.mark.asyncio

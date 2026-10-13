@@ -430,7 +430,10 @@ class RailMixin:
             if not name:
                 continue
             child_path = str(Path(logical_path) / name)
-            label = f"📁 {name}/" if entry.get("kind") == "directory" else f"📄 {name}"
+            from isycode.operation_style import operation_icon
+            from isycode.tui_theme import ascii_only
+            label = (f"{name}/" if entry.get("kind") == "directory"
+                     else operation_icon("workspace_read", ascii_only=ascii_only()) + f" {name}")
             tree.root.add(label, allow_expand=entry.get("kind") == "directory", data={"path": child_path, "kind": entry.get("kind"),
                                        "bytes": entry.get("bytes", 0)})
         self._search_mode = False
@@ -567,7 +570,12 @@ class RailMixin:
             size = len(result.get("text", "").encode("utf-8"))
             self.query_one("#file-preview-meta", Static).update(
                 f"{relative} · {size} bytes · UTF-8\n{verified_receipt_line(read.receipt.receipt_id)}")
-            self.query_one("#file-preview", Static).set_selectable_content(Text(preview), preview)
+            from rich.syntax import Syntax
+            lexer = Syntax.guess_lexer(uri, code=preview)
+            highlighted = Syntax(preview, lexer, background_color="default").highlight(preview)
+            # Syntax must never normalize whitespace used by exact-range copy.
+            self.query_one("#file-preview", Static).set_selectable_content(
+                highlighted if highlighted.plain == preview else Text(preview), preview)
             if modal:
                 from isycode.file_preview import FilePreviewScreen
                 await self._await_screen(FilePreviewScreen(uri, full_preview))

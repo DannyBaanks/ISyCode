@@ -20,17 +20,54 @@ import shlex
 
 
 
+# Shared local structure for exact decisions; authority stays in the owners.
+DECISION_CSS = """
+.isy-dialog { width: 100; max-width: 96%; height: 90%; max-height: 38; padding: 0 1; border: solid #718291; background: #000000; color: #ffffff; }
+.isy-dialog-title { height: auto; max-height: 3; margin-bottom: 1; color: #ffffff; text-style: bold; }
+.isy-dialog-body { height: 1fr; min-height: 1; border: none; padding: 0; background: #000000; overflow-y: auto; }
+.isy-dialog-body Static { height: auto; margin-bottom: 1; color: #ffffff; text-style: none; }
+.isy-dialog-detail { height: auto; border: none; padding: 0; background: #000000; }
+.isy-dialog-actions { height: 3; margin-top: 1; align-horizontal: right; }
+.isy-dialog-actions Button { width: 1fr; min-width: 0; height: 3; margin-left: 1; padding: 0 1; border: solid #718291; background: #000000; color: #ffffff; text-style: none; }
+.isy-dialog-actions Button.-primary, .isy-dialog-actions Button.-warning, .isy-dialog-actions Button.-error { border: solid #00d7ff; color: #00d7ff; background: #000000; }
+.isy-dialog-actions Button:focus { border: solid #00d7ff; color: #00d7ff; background: #002c36; text-style: bold; }
+.isy-dialog-actions Button:disabled { border: solid #46545f; color: #718291; background: #000000; }
+.isy-dialog-hint { height: 2; margin-top: 1; border-top: solid #718291; color: #a8b7c5; text-style: none; }
+.isy-dialog-options { height: 4; min-height: 4; border: none; background: #000000; }
+.isy-dialog-options > .option-list--option { text-style: none; }
+.isy-dialog-options > .option-list--option-highlighted { color: #00d7ff; background: #002c36; text-style: none; }
+"""
+
+
+def decision_hint() -> Static:
+    return Static(tr("↑↓ scroll · Tab actions · Enter choose · Esc cancel"),
+                  classes="isy-dialog-hint", markup=False)
+
+
+def review_diff(diff: str) -> Text:
+    """Keep every diff character reviewable, including long changed lines.
+
+    The compact side-by-side summary truncates source lines before rendering.
+    Consent needs the full retained diff, so use one wrapping column here.
+    """
+    text = Text(overflow="fold")
+    for line in diff.splitlines(keepends=True):
+        if line.startswith("-") and not line.startswith("---"):
+            style = "#ffffff on #3a1d24"
+        elif line.startswith("+") and not line.startswith("+++"):
+            style = "#ffffff on #1d3324"
+        else:
+            style = "#a8b7c5" if line.startswith(("@@", "---", "+++")) else "#ffffff"
+        text.append(line, style=style)
+    return text
+
+
 class ReviewConsentScreen(ModalScreen[bool]):
     """Show the exact user-provided text before sending it to a reviewer API."""
 
-    CSS = """
-ReviewConsentScreen { align: center middle; background: #000000 58%; }
-    #review-consent { width: 90%; max-width: 100; height: 85%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #review-consent-title { height: 2; color: #9b5de5; text-style: bold; }
-    #review-consent-warning { height: 3; color: #fbbf24; }
-    #review-consent-artifact { height: 1fr; border: none; background: #242529; padding: 1; overflow-y: auto; }
-    #review-consent-actions { height: 3; align-horizontal: right; }
-    #review-consent-actions Button { margin-left: 1; }
+    CSS = DECISION_CSS + """
+    ReviewConsentScreen { align: center middle; background: #000000 58%; }
+    #review-consent { width: 90; }
     """
     BINDINGS = [Binding("escape", "cancel_review", "Cancel"),
                 Binding("ctrl+c", "cancel_review", "Cancel", show=False)]
@@ -40,17 +77,22 @@ ReviewConsentScreen { align: center middle; background: #000000 58%; }
         self.artifact = artifact
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="review-consent"):
-            yield Static(tr("External model review · GPT 6 Luna · OpenAI API"), id="review-consent-title")
-            yield Static(tr("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."), id="review-consent-warning")
-            with VerticalScroll(id="review-consent-artifact"):
-                yield Static(Text(self.artifact))
-            with Horizontal(id="review-consent-actions"):
+        with Vertical(id="review-consent", classes="isy-dialog"):
+            yield Static(tr("External model review · GPT 6 Luna · OpenAI API"), id="review-consent-title", classes="isy-dialog-title")
+            with VerticalScroll(id="review-consent-body", classes="isy-dialog-body"):
+                yield Static(tr("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."), id="review-consent-warning")
+                with Vertical(id="review-consent-artifact", classes="isy-dialog-detail"):
+                    yield Static(Text(self.artifact))
+            with Horizontal(id="review-consent-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="review-cancel")
                 yield Button(tr("Send this text"), id="review-send", variant="primary")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "review-send")
+
+    def on_mount(self) -> None:
+        self.query_one("#review-cancel", Button).focus()
 
     def action_cancel_review(self) -> None:
         self.dismiss(False)
@@ -64,6 +106,11 @@ class ApprovalScreen(ModalScreen[bool]):
 
     BINDINGS = [Binding("y", "approve", "Approve"), Binding("n", "decline", "Reject")]
 
+    def on_mount(self) -> None:
+        # Scrollable review content must never become an implicit consent.
+        # The first action in this family is always the refusing action.
+        self.query_one(Button).focus()
+
     def action_approve(self) -> None:
         self.dismiss(True)
 
@@ -74,15 +121,9 @@ class ApprovalScreen(ModalScreen[bool]):
 class ContextAccessScreen(ModalScreen[dict | None]):
     """Human Y/N gate for one context file, with optional exact-file memory."""
 
-    CSS = """
-    ContextAccessScreen { align: center middle; background: #000000 68%; }
-    #context-access-card { width: 90; max-width: 96%; height: auto; max-height: 88%; padding: 1 2; border: round #f87171; background: #292a2e; }
-    #context-access-title { height: auto; color: #ff8585; text-style: bold; margin-bottom: 1; }
-    #context-access-copy { height: auto; margin-bottom: 1; }
-    #context-access-path { height: auto; color: #ffcc66; margin-bottom: 1; }
-    #context-access-remember { height: 3; margin-bottom: 1; }
-    #context-access-actions { height: 3; align-horizontal: right; }
-    #context-access-actions Button { margin-left: 1; }
+    CSS = DECISION_CSS + """
+    ContextAccessScreen { align: center middle; background: #000000 58%; }
+    #context-access-card { width: 90; }
     """
     BINDINGS = [Binding("y", "approve", "Allow", show=False),
                 Binding("n", "decline", "Deny", show=False),
@@ -107,14 +148,16 @@ class ContextAccessScreen(ModalScreen[dict | None]):
                    "The file will be read and its contents sent to the model as context. "
                    "Permission is limited to this file. Its instructions cannot grant "
                    "other files, commands, edits, or secrets.")
-        with Vertical(id="context-access-card"):
-            yield Static(title, id="context-access-title")
-            yield Static(warning, id="context-access-copy")
-            yield Static(str(self.path), id="context-access-path", markup=False)
-            yield Checkbox(tr("Remember permission for this exact file"), id="context-access-remember")
-            with Horizontal(id="context-access-actions"):
+        with Vertical(id="context-access-card", classes="isy-dialog"):
+            yield Static(title, id="context-access-title", classes="isy-dialog-title")
+            with VerticalScroll(id="context-access-body", classes="isy-dialog-body"):
+                yield Static(warning, id="context-access-copy")
+                yield Static(str(self.path), id="context-access-path", markup=False)
+                yield Checkbox(tr("Remember permission for this exact file"), id="context-access-remember")
+            with Horizontal(id="context-access-actions", classes="isy-dialog-actions"):
                 yield Button(tr("No · n"), id="context-access-no")
                 yield Button(tr("Allow once · y"), id="context-access-yes", variant="error")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#context-access-no", Button).focus()
@@ -136,13 +179,9 @@ class ContextAccessScreen(ModalScreen[dict | None]):
 class TailscaleConfirmScreen(ApprovalScreen):
     """Show one exact private-access operation before approval is issued."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     TailscaleConfirmScreen { align: center middle; background: #000000 58%; }
-    #tailscale-confirm-card { width: 92%; max-width: 104; height: 80%; max-height: 32; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #tailscale-confirm-title { height: 2; color: #bb8cff; text-style: bold; }
-    #tailscale-confirm-copy { height: 1fr; border: none; background: #242529; padding: 1; overflow-y: auto; }
-    #tailscale-confirm-actions { height: 3; align-horizontal: right; }
-    #tailscale-confirm-actions Button { margin-left: 1; }
+    #tailscale-confirm-card { width: 92; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
@@ -154,14 +193,16 @@ class TailscaleConfirmScreen(ApprovalScreen):
         self.confirm_label = confirm_label
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="tailscale-confirm-card"):
-            yield Static(self.title_text, id="tailscale-confirm-title")
-            with VerticalScroll(id="tailscale-confirm-copy"):
-                yield Static(Text(self.details))
-            with Horizontal(id="tailscale-confirm-actions"):
+        with Vertical(id="tailscale-confirm-card", classes="isy-dialog"):
+            yield Static(self.title_text, id="tailscale-confirm-title", classes="isy-dialog-title")
+            with VerticalScroll(id="tailscale-confirm-body", classes="isy-dialog-body"):
+                with Vertical(id="tailscale-confirm-copy", classes="isy-dialog-detail"):
+                    yield Static(Text(self.details))
+            with Horizontal(id="tailscale-confirm-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="tailscale-cancel")
                 yield Button(tr("{label} · y", label=tr(self.confirm_label)),
                              id="tailscale-confirm", variant="primary")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#tailscale-cancel", Button).focus()
@@ -176,15 +217,12 @@ class TailscaleConfirmScreen(ApprovalScreen):
 class WriteApprovalScreen(ApprovalScreen):
     """Show the exact diff of one proposed file change; Reject is the default."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     WriteApprovalScreen { align: center middle; background: #000000 58%; }
-    #write-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #write-approval-title { height: 2; color: #bb8cff; text-style: bold; }
-    #write-approval-summary { height: auto; margin-bottom: 1; }
-    #write-approval-peer { height: auto; margin-bottom: 1; color: #e9c778; display: none; }
-    #write-approval-diff { height: 1fr; border: none; background: #202126; }
-    #write-approval-actions { height: 3; dock: bottom; align-horizontal: right; }
-    #write-approval-actions Button { margin-left: 1; width: 1fr; min-width: 0; padding: 0 1; }
+    #write-approval-card { width: 110; }
+    #write-approval-peer { display: none; }
+    #write-approval-actions { height: auto; }
+    #write-approval-actions Horizontal { height: 3; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
 
@@ -210,29 +248,36 @@ class WriteApprovalScreen(ApprovalScreen):
             kind = tr("Create new file")
         else:
             kind = tr("Replace whole file") if self.replaces_whole_file else tr("Change file")
-        with Vertical(id="write-approval-card"):
-            yield Static(f"{kind} · {self.preview.path}", id="write-approval-title", markup=False)
-            yield Static(
-                tr("Folder: {root}\n", root=self.preview.request.workspace_root) +
-                (tr("+{added} / -{removed} lines. This puts the file back as it was before ISyCode's "
-                    "last change; nothing changes unless you apply it.", added=added, removed=removed)
-                 if self.preview.is_undo else
-                 tr("+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
-                    "unless you apply it. If the file changes before it is applied, the change is refused.",
-                    added=added, removed=removed)),
-                id="write-approval-summary", markup=False)
-            yield Static(tr(""), id="write-approval-peer", markup=False)
-            with VerticalScroll(id="write-approval-diff"):
-                from isycode.diff_view import side_by_side_table
-                yield Static(side_by_side_table(self.preview.diff, self.preview.path))
-            with Horizontal(id="write-approval-actions"):
-                yield Button(tr("Reject · n"), id="write-approval-reject")
-                yield Button(tr("Apply change · y"), id="write-approval-apply", variant="warning")
-                if self.allow_session_trust and self.preview.kind == "write" and not self.preview.is_undo:
-                    yield Button(tr("Trust folder this session · s"), id="write-approval-session",
-                                 variant="primary")
-                if self.allow_automatic_edits and self.preview.kind == "write" and not self.preview.is_undo:
-                    yield Button(tr("Always allow…"), id="write-approval-always", variant="error")
+        with Vertical(id="write-approval-card", classes="isy-dialog"):
+            yield Static(kind, id="write-approval-title", classes="isy-dialog-title", markup=False)
+            with VerticalScroll(id="write-approval-body", classes="isy-dialog-body"):
+                yield Static(self.preview.path, id="write-approval-path", markup=False)
+                if self.preview.destination:
+                    yield Static(self.preview.destination, id="write-approval-destination", markup=False)
+                yield Static(
+                    tr("Folder: {root}\n", root=self.preview.request.workspace_root) +
+                    (tr("+{added} / -{removed} lines. This puts the file back as it was before ISyCode's "
+                        "last change; nothing changes unless you apply it.", added=added, removed=removed)
+                     if self.preview.is_undo else
+                     tr("+{added} / -{removed} lines. The assistant proposed this change; nothing is written "
+                        "unless you apply it. If the file changes before it is applied, the change is refused.",
+                        added=added, removed=removed)),
+                    id="write-approval-summary", markup=False)
+                yield Static(tr(""), id="write-approval-peer", markup=False)
+                with Vertical(id="write-approval-diff", classes="isy-dialog-detail"):
+                    yield Static(review_diff(self.preview.diff), markup=False)
+            with Vertical(id="write-approval-actions", classes="isy-dialog-actions"):
+                with Horizontal():
+                    yield Button(tr("Reject · n"), id="write-approval-reject")
+                    yield Button(tr("Apply change · y"), id="write-approval-apply", variant="warning")
+                if (self.allow_session_trust or self.allow_automatic_edits) and self.preview.kind == "write" and not self.preview.is_undo:
+                    with Horizontal():
+                        if self.allow_session_trust:
+                            yield Button(tr("Trust folder this session · s"), id="write-approval-session",
+                                         variant="primary")
+                        if self.allow_automatic_edits:
+                            yield Button(tr("Always allow…"), id="write-approval-always", variant="error")
+            yield decision_hint()
 
     async def on_mount(self) -> None:
         self.query_one("#write-approval-reject", Button).focus()
@@ -269,14 +314,9 @@ class BatchApprovalScreen(ModalScreen[str]):
     per-file review flow) or "reject" (nothing is written).
     """
 
-    CSS = """
+    CSS = DECISION_CSS + """
     BatchApprovalScreen { align: center middle; background: #000000 58%; }
-    #batch-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #batch-approval-title { height: 2; color: #bb8cff; text-style: bold; }
-    #batch-approval-summary { height: auto; margin-bottom: 1; }
-    #batch-approval-diffs { height: 1fr; border: none; background: #202126; }
-    #batch-approval-actions { height: 3; dock: bottom; align-horizontal: right; }
-    #batch-approval-actions Button { margin-left: 1; width: 1fr; min-width: 0; padding: 0 1; }
+    #batch-approval-card { width: 110; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject all")]
 
@@ -290,23 +330,25 @@ class BatchApprovalScreen(ModalScreen[str]):
             lines = preview.diff.splitlines()
             added += sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
             removed += sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
-        with Vertical(id="batch-approval-card"):
+        with Vertical(id="batch-approval-card", classes="isy-dialog"):
             yield Static(f"Review {len(self.previews)} proposed changes in one go",
-                         id="batch-approval-title")
-            yield Static(
-                f"Total +{added} / -{removed} lines across {len(self.previews)} files. "
-                "Approving here issues one single-use, digest-bound approval per change — "
-                "no lasting permission is created, and a file that changes before it is "
-                "applied is refused.", id="batch-approval-summary", markup=False)
-            with VerticalScroll(id="batch-approval-diffs"):
-                from isycode.diff_view import side_by_side_table
-                for preview in self.previews:
-                    yield Static(side_by_side_table(preview.diff, preview.path))
-            with Horizontal(id="batch-approval-actions"):
+                         id="batch-approval-title", classes="isy-dialog-title")
+            with VerticalScroll(id="batch-approval-body", classes="isy-dialog-body"):
+                yield Static(
+                    f"Total +{added} / -{removed} lines across {len(self.previews)} files. "
+                    "Approving here issues one single-use, digest-bound approval per change — "
+                    "no lasting permission is created, and a file that changes before it is "
+                    "applied is refused.", id="batch-approval-summary", markup=False)
+                with Vertical(id="batch-approval-diffs", classes="isy-dialog-detail"):
+                    for preview in self.previews:
+                        yield Static(preview.path, markup=False)
+                        yield Static(review_diff(preview.diff), markup=False)
+            with Horizontal(id="batch-approval-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Reject all · n"), id="batch-approval-reject")
                 yield Button(tr("Review each · e"), id="batch-approval-each")
                 yield Button(tr("Approve all {count} · a", count=len(self.previews)),
                              id="batch-approval-all", variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#batch-approval-reject", Button).focus()
@@ -322,14 +364,10 @@ class BatchApprovalScreen(ModalScreen[str]):
 class CommandApprovalScreen(ApprovalScreen):
     """Show the exact argv of one sandboxed command; Reject is the default."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     CommandApprovalScreen { align: center middle; background: #000000 58%; }
-    #command-approval-card { width: 100; max-width: 96%; height: auto; max-height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #command-approval-title { height: 1; color: #bb8cff; text-style: bold; }
-    #command-approval-argv { height: auto; max-height: 6; border: round #414650; background: #17191f; padding: 0 1; margin-bottom: 1; }
-    #command-approval-actions { height: 5; align-horizontal: right; margin-top: 1; }
-    #command-approval-actions Button { width: 1fr; height: 5; margin-left: 1; border: round #414650; background: #202126; }
-    #command-approval-actions Button:focus { border: round #bb8cff; }
+    #command-approval-card { width: 100; }
+    #command-approval-argv { border: solid #718291; padding: 0 1; margin: 1 0; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
 
@@ -340,28 +378,33 @@ class CommandApprovalScreen(ApprovalScreen):
     def compose(self) -> ComposeResult:
         preview = self.preview
         hidden = len(preview.masks)
-        with Vertical(id="command-approval-card"):
-            yield Static(tr("Run a command · {cwd}", cwd=preview.cwd if preview.cwd != "." else tr("workspace root")),
-                         id="command-approval-title")
-            with VerticalScroll(id="command-approval-argv"):
-                yield Static(Text(shlex.join(preview.argv)))
-                if "rtk" in preview.request.parameters:
-                    rtk = preview.request.parameters["rtk"]
-                    yield Static(Text("RTK suggestion: " + shlex.join(rtk["rewrite_argv"])))
-                    yield Static(Text("Executes the original once; output compression by native RTK pipe.\n"
-                                      + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
-            yield Static(
-                tr("Program: {program}\nStops after {timeout} s · network blocked · "
-                   "{hidden} sensitive paths hidden\nIt may change files in this workspace; those changes "
-                   "cannot be undone with /undo. Nothing runs unless you approve it.",
-                   program=preview.program, timeout=preview.timeout_s, hidden=hidden))
-            with Horizontal(id="command-approval-actions"):
+        with Vertical(id="command-approval-card", classes="isy-dialog"):
+            yield Static(tr("Command · review"),
+                         id="command-approval-title", classes="isy-dialog-title")
+            with VerticalScroll(id="command-approval-body", classes="isy-dialog-body"):
+                yield Static(tr("Folder: {root}\n", root=preview.request.workspace_root) +
+                             tr("Run a command · {cwd}", cwd=preview.cwd if preview.cwd != "." else tr("workspace root")),
+                             id="command-approval-location", markup=False)
+                with Vertical(id="command-approval-argv", classes="isy-dialog-detail"):
+                    yield Static(Text(shlex.join(preview.argv)))
+                    if "rtk" in preview.request.parameters:
+                        rtk = preview.request.parameters["rtk"]
+                        yield Static(Text("RTK suggestion: " + shlex.join(rtk["rewrite_argv"])))
+                        yield Static(Text("Executes the original once; output compression by native RTK pipe.\n"
+                                          + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
+                yield Static(tr("Scope: {scope}", scope=preview.scope),
+                             id="command-approval-scope", markup=False)
+                yield Static(
+                    tr("Program: {program}\nStops after {timeout} s · network blocked · "
+                       "{hidden} sensitive paths hidden\nIt may change files in this workspace; those changes "
+                       "cannot be undone with /undo. Nothing runs unless you approve it.",
+                       program=preview.program, timeout=preview.timeout_s, hidden=hidden), markup=False)
+            with Horizontal(id="command-approval-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Reject · n"), id="command-approval-reject")
                 yield Button(tr("Run command · y"), id="command-approval-run", variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
-        card = self.query_one("#command-approval-card")
-        card.border_title = tr("Command · review")
         self.query_one("#command-approval-argv").border_title = tr("Exact command")
         self.query_one("#command-approval-reject", Button).focus()
 
@@ -375,14 +418,9 @@ class CommandApprovalScreen(ApprovalScreen):
 class CommitApprovalScreen(ApprovalScreen):
     """Show the exact message, files and diff of one proposed commit; Reject is the default."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     CommitApprovalScreen { align: center middle; background: #000000 58%; }
-    #commit-approval-card { width: 110; max-width: 96%; height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #commit-approval-title { height: 2; color: #bb8cff; text-style: bold; }
-    #commit-approval-summary { height: auto; max-height: 10; margin-bottom: 1; }
-    #commit-approval-diff { height: 1fr; border: none; background: #202126; }
-    #commit-approval-actions { height: 3; align-horizontal: right; margin-top: 1; }
-    #commit-approval-actions Button { margin-left: 1; }
+    #commit-approval-card { width: 110; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
 
@@ -392,20 +430,21 @@ class CommitApprovalScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         preview = self.preview
-        files = ", ".join(preview.paths[:12]) + (f" and {len(preview.paths) - 12} more"
-                                                  if len(preview.paths) > 12 else "")
-        with Vertical(id="commit-approval-card"):
+        files = "\n".join(preview.paths)
+        with Vertical(id="commit-approval-card", classes="isy-dialog"):
             yield Static(f"Commit {len(preview.paths)} file{'s' if len(preview.paths) != 1 else ''}",
-                         id="commit-approval-title")
-            yield Static(Text(f"{preview.message}\n\nFiles: {files}\nHooks do not run and "
-                              "nothing is pushed. If a file changes before you approve, the "
-                              "commit is refused."), id="commit-approval-summary")
-            with VerticalScroll(id="commit-approval-diff"):
-                yield Static(Syntax(preview.diff or "(no content changes)", "diff",
-                                    theme="monokai", word_wrap=True))
-            with Horizontal(id="commit-approval-actions"):
+                         id="commit-approval-title", classes="isy-dialog-title")
+            with VerticalScroll(id="commit-approval-body", classes="isy-dialog-body"):
+                yield Static(tr("Folder: {root}\n", root=preview.request.workspace_root), markup=False)
+                yield Static(Text(f"{preview.message}\n\nFiles: {files}\nHooks do not run and "
+                                  "nothing is pushed. If a file changes before you approve, the "
+                                  "commit is refused."), id="commit-approval-summary")
+                with Vertical(id="commit-approval-diff", classes="isy-dialog-detail"):
+                    yield Static(review_diff(preview.diff or "(no content changes)"), markup=False)
+            with Horizontal(id="commit-approval-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Reject · n"), id="commit-approval-reject")
                 yield Button(tr("Commit · y"), id="commit-approval-apply", variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#commit-approval-reject", Button).focus()
@@ -420,13 +459,9 @@ class CommitApprovalScreen(ApprovalScreen):
 class LocalMCPConfirmScreen(ApprovalScreen):
     """Show exactly what a local MCP server start or tool call will do; Cancel is the default."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     LocalMCPConfirmScreen { align: center middle; background: #000000 58%; }
-    #local-mcp-card { width: 96; max-width: 96%; height: auto; max-height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #local-mcp-title { height: 2; color: #fbbf24; text-style: bold; }
-    #local-mcp-payload { height: auto; max-height: 20; border: none; background: #242529; padding: 0 1; margin: 1 0; }
-    #local-mcp-actions { height: 3; align-horizontal: right; }
-    #local-mcp-actions Button { margin-left: 1; }
+    #local-mcp-card { width: 96; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -435,15 +470,17 @@ class LocalMCPConfirmScreen(ApprovalScreen):
         self.title_text, self.body, self.payload, self.approve_label = title, body, payload, approve_label
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="local-mcp-card"):
-            yield Static(self.title_text, id="local-mcp-title")
-            yield Static(Text(self.body))
-            with VerticalScroll(id="local-mcp-payload"):
-                yield Static(Text(self.payload))
-            with Horizontal(id="local-mcp-actions"):
+        with Vertical(id="local-mcp-card", classes="isy-dialog"):
+            yield Static(self.title_text, id="local-mcp-title", classes="isy-dialog-title")
+            with VerticalScroll(id="local-mcp-body", classes="isy-dialog-body"):
+                yield Static(Text(self.body))
+                with Vertical(id="local-mcp-payload", classes="isy-dialog-detail"):
+                    yield Static(Text(self.payload))
+            with Horizontal(id="local-mcp-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="local-mcp-cancel")
                 yield Button(tr("{label} · y", label=tr(self.approve_label)),
                              id="local-mcp-approve", variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#local-mcp-cancel", Button).focus()
@@ -458,14 +495,9 @@ class LocalMCPConfirmScreen(ApprovalScreen):
 class BrowserReadPreviewScreen(ApprovalScreen):
     """Review the exact filtered page text before exposing it to the model."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     BrowserReadPreviewScreen { align: center middle; background: #000000 58%; }
-    #browser-read-card { width: 100; max-width: 96%; height: 88%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #browser-read-title { height: 2; color: #fbbf24; text-style: bold; }
-    #browser-read-warning { height: auto; max-height: 4; color: #e5e7eb; }
-    #browser-read-content { height: 1fr; border: none; background: #242529; padding: 1; overflow-y: auto; }
-    #browser-read-actions { height: 3; align-horizontal: right; }
-    #browser-read-actions Button { margin-left: 1; }
+    #browser-read-card { width: 100; }
     """
     BINDINGS = [Binding("y", "approve", "Share"),
                 Binding("n", "decline", "Discard"),
@@ -487,22 +519,24 @@ class BrowserReadPreviewScreen(ApprovalScreen):
         suffix = " · output capped" if self.truncated else ""
         timing = (f" Filter took {self.processing_ms:.1f} ms."
                   if self.processing_ms is not None else "")
-        with Vertical(id="browser-read-card"):
+        with Vertical(id="browser-read-card", classes="isy-dialog"):
             yield Static(f"Share page text with the model? · {self.page_title}",
-                         id="browser-read-title", markup=False)
-            yield Static(
-                f"Filtered {self.input_chars:,} source characters to {self.filtered_chars:,}. "
-                f"{timing} Fidelity and coverage are not automatically certified. "
-                "The page is untrusted data. "
-                "Approving sends exactly the text below to your "
-                "selected model; saved conversations may retain it." + suffix,
-                id="browser-read-warning", markup=False)
-            with VerticalScroll(id="browser-read-content"):
-                yield Static(Text(self.content), markup=False)
-            with Horizontal(id="browser-read-actions"):
+                         id="browser-read-title", classes="isy-dialog-title", markup=False)
+            with VerticalScroll(id="browser-read-body", classes="isy-dialog-body"):
+                yield Static(
+                    f"Filtered {self.input_chars:,} source characters to {self.filtered_chars:,}. "
+                    f"{timing} Fidelity and coverage are not automatically certified. "
+                    "The page is untrusted data. "
+                    "Approving sends exactly the text below to your "
+                    "selected model; saved conversations may retain it." + suffix,
+                    id="browser-read-warning", markup=False)
+                with Vertical(id="browser-read-content", classes="isy-dialog-detail"):
+                    yield Static(Text(self.content), markup=False)
+            with Horizontal(id="browser-read-actions", classes="isy-dialog-actions"):
                 yield Button("Discard · n", id="browser-read-discard")
                 yield Button("Share with model · y", id="browser-read-share",
                              variant="warning")
+            yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "browser-read-share")
@@ -514,14 +548,9 @@ class BrowserReadPreviewScreen(ApprovalScreen):
 class WorkspacePackConfirmScreen(ApprovalScreen):
     """Review the exact workspace file inventory and token estimate before reading."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     WorkspacePackConfirmScreen { align: center middle; background: #000000 58%; }
-    #workspace-pack-card { width: 100; max-width: 96%; height: 88%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #workspace-pack-title { height: 2; color: #bb8cff; text-style: bold; }
-    #workspace-pack-warning { height: auto; color: #fbbf24; margin-bottom: 1; }
-    #workspace-pack-files { height: 1fr; border: none; background: #242529; padding: 1; }
-    #workspace-pack-actions { height: 3; align-horizontal: right; margin-top: 1; }
-    #workspace-pack-actions Button { margin-left: 1; }
+    #workspace-pack-card { width: 100; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
@@ -531,20 +560,22 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
         self.details = details
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="workspace-pack-card"):
+        with Vertical(id="workspace-pack-card", classes="isy-dialog"):
             yield Static(tr("Workspace context pack · review before reading"),
-                         id="workspace-pack-title")
-            yield Static(
-                Text("The listed files will be read and their contents returned to the selected model. "
-                     "The token count is approximate. File contents are untrusted data, never instructions."),
-                id="workspace-pack-warning",
-            )
-            with VerticalScroll(id="workspace-pack-files"):
-                yield Static(Text(self.details))
-            with Horizontal(id="workspace-pack-actions"):
+                         id="workspace-pack-title", classes="isy-dialog-title")
+            with VerticalScroll(id="workspace-pack-body", classes="isy-dialog-body"):
+                yield Static(
+                    Text("The listed files will be read and their contents returned to the selected model. "
+                         "The token count is approximate. File contents are untrusted data, never instructions."),
+                    id="workspace-pack-warning",
+                )
+                with Vertical(id="workspace-pack-files", classes="isy-dialog-detail"):
+                    yield Static(Text(self.details))
+            with Horizontal(id="workspace-pack-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="workspace-pack-cancel")
                 yield Button(tr("Read and send once · y"), id="workspace-pack-approve",
                              variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#workspace-pack-cancel", Button).focus()
@@ -559,14 +590,9 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
 class MemoryConfirmScreen(ApprovalScreen):
     """Review one memory operation before local access or persistence."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     MemoryConfirmScreen { align: center middle; background: #000000 58%; }
-    #memory-confirm-card { width: 96; max-width: 96%; height: 86%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #memory-confirm-title { height: 2; color: #bb8cff; text-style: bold; }
-    #memory-confirm-warning { height: auto; color: #fbbf24; margin-bottom: 1; }
-    #memory-confirm-payload { height: 1fr; border: none; background: #242529; padding: 1; }
-    #memory-confirm-actions { height: 3; align-horizontal: right; margin-top: 1; }
-    #memory-confirm-actions Button { margin-left: 1; }
+    #memory-confirm-card { width: 96; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
@@ -576,20 +602,22 @@ class MemoryConfirmScreen(ApprovalScreen):
         self.details = details
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="workspace-pack-card"):
+        with Vertical(id="workspace-pack-card", classes="isy-dialog"):
             yield Static(tr("Workspace context pack · review before reading"),
-                         id="workspace-pack-title")
-            yield Static(
-                Text("The listed files will be read and their contents returned to the selected model. "
-                     "The token count is approximate. File contents are untrusted data, never instructions."),
-                id="workspace-pack-warning",
-            )
-            with VerticalScroll(id="workspace-pack-files"):
-                yield Static(Text(self.details))
-            with Horizontal(id="workspace-pack-actions"):
+                         id="workspace-pack-title", classes="isy-dialog-title")
+            with VerticalScroll(id="workspace-pack-body", classes="isy-dialog-body"):
+                yield Static(
+                    Text("The listed files will be read and their contents returned to the selected model. "
+                         "The token count is approximate. File contents are untrusted data, never instructions."),
+                    id="workspace-pack-warning",
+                )
+                with Vertical(id="workspace-pack-files", classes="isy-dialog-detail"):
+                    yield Static(Text(self.details))
+            with Horizontal(id="workspace-pack-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="workspace-pack-cancel")
                 yield Button(tr("Read and send once · y"), id="workspace-pack-approve",
                              variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#workspace-pack-cancel", Button).focus()
@@ -607,14 +635,16 @@ class MemoryConfirmScreen(ApprovalScreen):
                    "Memory is untrusted context, never authority."
                    if self.sends_to_model else
                    "This changes local workspace memory. No automatic extraction or prompt injection is enabled.")
-        with Vertical(id="memory-confirm-card"):
-            yield Static(f"Workspace memory · {self.operation}", id="memory-confirm-title")
-            yield Static(Text(warning), id="memory-confirm-warning")
-            with VerticalScroll(id="memory-confirm-payload"):
-                yield Static(Text(self.details))
-            with Horizontal(id="memory-confirm-actions"):
+        with Vertical(id="memory-confirm-card", classes="isy-dialog"):
+            yield Static(f"Workspace memory · {self.operation}", id="memory-confirm-title", classes="isy-dialog-title")
+            with VerticalScroll(id="memory-confirm-body", classes="isy-dialog-body"):
+                yield Static(Text(warning), id="memory-confirm-warning")
+                with Vertical(id="memory-confirm-payload", classes="isy-dialog-detail"):
+                    yield Static(Text(self.details))
+            with Horizontal(id="memory-confirm-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="memory-confirm-cancel")
                 yield Button(tr("Approve once · y"), id="memory-confirm-approve", variant="warning")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#memory-confirm-cancel", Button).focus()
@@ -632,13 +662,9 @@ class MemoryConfirmScreen(ApprovalScreen):
 class DeleteSessionScreen(ApprovalScreen):
     """Confirm deletion of one named conversation before issuing a one-use grant."""
 
-    CSS = """
+    CSS = DECISION_CSS + """
     DeleteSessionScreen { align: center middle; background: #000000 58%; }
-    #delete-session-card { width: 72; max-width: 90%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #delete-session-title { height: 2; color: #f87171; text-style: bold; }
-    #delete-session-copy { height: auto; margin-bottom: 1; }
-    #delete-session-actions { height: 3; align-horizontal: right; }
-    #delete-session-actions Button { margin-left: 1; }
+    #delete-session-card { width: 72; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -656,14 +682,16 @@ class DeleteSessionScreen(ApprovalScreen):
             heading = tr("Delete this conversation?")
             button = tr("Delete conversation · y")
             detail = tr("This permanently removes this one transcript.")
-        with Vertical(id="delete-session-card"):
-            yield Static(heading, id="delete-session-title")
-            yield Static(tr("{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion.",
-                            title=self.title_text, detail=detail),
-                         id="delete-session-copy")
-            with Horizontal(id="delete-session-actions"):
+        with Vertical(id="delete-session-card", classes="isy-dialog"):
+            yield Static(heading, id="delete-session-title", classes="isy-dialog-title")
+            with VerticalScroll(id="delete-session-body", classes="isy-dialog-body"):
+                yield Static(tr("{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion.",
+                                title=self.title_text, detail=detail),
+                             id="delete-session-copy")
+            with Horizontal(id="delete-session-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Keep · n"), id="delete-session-cancel")
                 yield Button(button, id="delete-session-confirm", variant="error")
+            yield decision_hint()
 
     def on_mount(self) -> None:
         self.query_one("#delete-session-cancel", Button).focus()

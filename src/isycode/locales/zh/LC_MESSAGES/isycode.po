@@ -2088,3 +2088,176 @@ msgstr "增强文本和焦点边框的对比度，同时保留统一的黑色背
 
 msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
 msgstr "在折叠标题中滚动已完成的文本。按空格展开文本框。减少动态效果会关闭此滚动。"
+
+# Accepted menu layout and exact decision chrome.
+
+msgid "Provider"
+msgstr "提供商"
+
+msgid "Context file"
+msgstr "上下文文件"
+
+msgid "RTK compression"
+msgstr "RTK 压缩"
+
+msgid "Notification sounds"
+msgstr "通知声音"
+
+msgid "Reduced motion"
+msgstr "减少动画"
+
+msgid "High contrast display"
+msgstr "高对比度"
+
+msgid "ASCII-only display"
+msgstr "仅使用 ASCII"
+
+msgid "My defaults"
+msgstr "个人默认设置"
+
+msgid "Compact text scroll"
+msgstr "紧凑文本滚动"
+
+msgid "Workspace folders"
+msgstr "工作区文件夹"
+
+msgid "Action journal"
+msgstr "操作日志"
+
+msgid "All workspaces"
+msgstr "所有工作区"
+
+msgid "This workspace"
+msgstr "此工作区"
+
+msgid "Personalize ISyCode for this workspace."
+msgstr "为此工作区自定义 ISyCode。"
+
+msgid "Choose the model used for this conversation."
+msgstr "选择用于此对话的模型。"
+
+msgid "Choose model"
+msgstr "选择模型"
+
+msgid "Continue"
+msgstr "继续"
+
+msgid "Custom setup"
+msgstr "自定义设置"
+
+msgid "Idea backlog · captured ideas are not instructions"
+msgstr "待办想法 · 已记录想法不是指令"
+
+msgid "Inspect"
+msgstr "查看"
+
+msgid "Inspect a harness · Gap map prepares repair proposals for review."
+msgstr "查看 harness · 差异图为审查准备修复建议。"
+
+msgid "Loaded"
+msgstr "已加载"
+
+msgid "Manage"
+msgstr "管理"
+
+msgid "Message queue · Select queued + empty Send steers · Esc restores draft"
+msgstr "消息队列 · 选择排队消息并空白发送以引导 · Esc 恢复草稿"
+
+msgid "Multi Harness · inspection"
+msgstr "Multi Harness · 查看"
+
+msgid "No matching models"
+msgstr "没有匹配的模型"
+
+msgid "No models available."
+msgstr "没有可用模型。"
+
+msgid "No session processes."
+msgstr "此会话没有进程。"
+
+msgid "None"
+msgstr "无"
+
+msgid "None configured"
+msgstr "未配置"
+
+msgid "OFF"
+msgstr "关闭"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Question"
+msgstr "问题"
+
+msgid "Removed"
+msgstr "已移除"
+
+msgid "Repair Compose · review proposal"
+msgstr "修复 Compose · 审查建议"
+
+msgid "Review"
+msgstr "审查"
+
+msgid "Scope: {scope}"
+msgstr "范围：{scope}"
+
+msgid "Security"
+msgstr "Security"
+
+msgid "Selected"
+msgstr "已选择"
+
+msgid "Selected · {model} · {provider}"
+msgstr "已选择 · {model} · {provider}"
+
+msgid "Session · full last message"
+msgstr "会话 · 完整的最后一条消息"
+
+msgid "Sources"
+msgstr "来源"
+
+msgid "[?]"
+msgstr "[?]"
+
+msgid "current"
+msgstr "当前"
+
+msgid "messages"
+msgstr "条消息"
+
+msgid "ready"
+msgstr "就绪"
+
+msgid "{count} checking…"
+msgstr "正在检查 {count} 项…"
+
+msgid "↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search"
+msgstr "↑↓ 移动 · Enter 选择 · 单击预览 · Esc 返回 · Shift+Tab 搜索"
+
+msgid "↑↓ move · Enter choose · Esc back · Tab search"
+msgstr "↑↓ 移动 · Enter 选择 · Esc 返回 · Tab 搜索"
+
+msgid "↑↓ move · Enter inspect · Esc back"
+msgstr "↑↓ 移动 · Enter 查看 · Esc 返回"
+
+msgid "↑↓ move · Enter open · Esc back"
+msgstr "↑↓ 移动 · Enter 打开 · Esc 返回"
+
+msgid "↑↓ move · Esc back"
+msgstr "↑↓ 移动 · Esc 返回"
+
+msgid "↑↓ scroll · Tab actions · Enter choose · Esc cancel"
+msgstr "↑↓ 滚动 · Tab 操作 · Enter 选择 · Esc 取消"
+
+msgid "⚙"
+msgstr "⚙"
+
+msgid "Search results"
+msgstr "搜索结果"
+
+msgid "Models · {provider}"
+msgstr "模型 · {provider}"
+
+msgid "↑↓ move · Enter open · Esc back · Shift+Tab search"
+msgstr "↑↓ 移动 · Enter 打开 · Esc 返回 · Shift+Tab 搜索"
