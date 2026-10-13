@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from textual.app import App, ComposeResult
 from textual.widgets import Button, Input, Static
+from textual.geometry import Region
 
 from isycode.chat_sessions import ChatSession
 from isycode.tui_screens_harness import ModelChoice, ModelsScreen, MultiHarnessScreen
@@ -32,6 +33,26 @@ def isolated_state(tmp_path, monkeypatch):
 SIZES = [(80, 24), (100, 30), (140, 40)]
 MODELS = [{"kind": "model", "value": f"openai|{model}", "label": model}
           for model in ("gpt-6-luna", "gpt-6-sol", "gpt-6-astra")]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("size", SIZES)
+async def test_model_row_text_stays_visible_when_focused_or_hovered(size):
+    app = SelectorProbe()
+    async with app.run_test(size=size) as pilot:
+        screen = ModelsScreen(MODELS, provider_scope="openai")
+        await app.push_screen(screen)
+        await pilot.pause()
+        current = screen.query_one("#model-choice-0", ModelChoice)
+        other = screen.query_one("#model-choice-1", ModelChoice)
+        for row, name in ((current, "GPT 6 Luna"), (other, "GPT 6 Sol")):
+            row.focus()
+            await pilot.hover(row)
+            await pilot.pause()
+            # Check compositor output, not the stored label or CSS declaration:
+            # a top/bottom button border can consume the only content row.
+            strips = row.render_lines(Region(0, 0, row.size.width, row.size.height))
+            assert name in "\n".join(strip.text for strip in strips)
 
 
 @pytest.mark.asyncio

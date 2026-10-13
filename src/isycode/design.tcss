@@ -113,8 +113,14 @@ OptionList, Collapsible, Collapsible > Contents, Collapsible > CollapsibleTitle 
 ExpandableBox { border-bottom: solid $isy-separator; }
 
 ModalScreen { align: center middle; background: #000000 65%; }
-.model-choice { border: none !important; border-left: solid $isy-surface !important; padding: 0 1; }
-.model-choice:focus, .model-choice:hover, .model-choice.-selected { border-left: solid $isy-focus !important; }
+.model-choice, .child-model-choice {
+    border: none !important; border-left: solid $isy-surface !important;
+    padding: 0 1; text-style: none !important; content-align: left top;
+}
+.model-choice:focus, .model-choice:hover, .model-choice.-selected,
+.child-model-choice:focus, .child-model-choice:hover, .child-model-choice.-selected {
+    border: none !important; border-left: solid $isy-focus !important;
+}
 #model-detail-scroll { border-left: solid $isy-separator; }
 
 /* Reusable menu anatomy, also used by approvals and selectors. */
