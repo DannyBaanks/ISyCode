@@ -67,6 +67,29 @@ def test_model_setting_opens_current_provider_picker_without_changing_selection(
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("provider, model", [("anthropic", "claude-opus-4-6"),
+                                            ("openai", "gpt-6-sol")])
+def test_reasoning_setting_matches_provider_default(tmp_path, monkeypatch, provider, model):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setenv("ISYCODE_PROVIDER", provider)
+    monkeypatch.setenv("ISYCODE_MODEL", model)
+    monkeypatch.delenv("ISYCODE_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ISYMOTRON_REASONING_EFFORT", raising=False)
+    for cache in ("_SELECTIONS", "_CATALOG_DEFAULTS"):
+        monkeypatch.setattr(f"isycode.reasoning_options.{cache}", {})
+    from isycode.providers import Provider
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            app._open_settings_menu()
+            await pilot.pause()
+            row = next(e for e in app._menu_entries if e["kind"] == "reasoning_open")
+            assert Provider(provider, model=model).reasoning_effort == "medium"
+            assert row["display_value"].lower() == "medium"
+    asyncio.run(scenario())
+
+
 def test_provider_single_click_previews_and_resizes_without_switching_provider(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     async def scenario():

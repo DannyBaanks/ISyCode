@@ -1311,7 +1311,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         values = {
             "providers_open": ("Provider", provider_label),
             "models_open": ("Model", model_display_name(model)),
-            "reasoning_open": ("Reasoning level", tr(reasoning_label(provider, model))),
+            "reasoning_open": ("Reasoning level", tr(reasoning_label(
+                provider, model, PRESETS.get(provider, {}).get("reasoning_effort")))),
             "roles_open": ("Role", self._active_role["name"] if self._active_role else tr("None")),
             "context_menu": ("Context", tr("Loaded") if context else tr("None")),
             "context_inject": ("Context file", context["path"] if context else tr("None")),

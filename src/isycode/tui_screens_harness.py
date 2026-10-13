@@ -12,7 +12,7 @@ from isycode.harness_graph import CATALOG_IDS, SEED_OPTIONS, gap_status
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from isycode.providers import PRESETS, selected_model_name, selected_provider_name
+from isycode.providers import PRESETS, resolved_chat_model, selected_provider_name
 from pathlib import Path
 from rich.text import Text
 from isycode.tui_theme import (
@@ -199,9 +199,12 @@ class ModelsScreen(ModalScreen):
         self.choices: dict[str, dict] = {}
         self.expanded_providers: set[str] = {provider_scope or selected_provider_name()}
         self.search_query = ""
-        self.selected_choice: str | None = None
+        # Widget IDs change when a live catalog is recomposed. Retain the
+        # provider/model payload, never a positional row ID, as the preview.
+        self.selected_model_value: str | None = None
 
     def compose(self) -> ComposeResult:
+        self.choices = {}
         groups: dict[str, list[dict]] = {}
         families: dict[str, list[dict]] = {}
         for entry in self.entries:
@@ -267,7 +270,7 @@ class ModelsScreen(ModalScreen):
         key = f"model-choice-{len(self.choices)}"
         self.choices[key] = entry
         label = Text(model_display_name(model), style=TEXT)
-        if provider == selected_provider_name() and model == selected_model_name():
+        if provider == selected_provider_name() and model == resolved_chat_model(provider):
             label.append("  · " + tr("current"), style=GREEN)
         return ModelChoice(label, id=key, classes="model-choice")
 
@@ -297,19 +300,20 @@ class ModelsScreen(ModalScreen):
         idle. A query in that gap finds the choice recorded and the widget
         not yet in the tree.
         """
-        wanted = f"{selected_provider_name()}|{selected_model_name()}"
+        wanted = self.selected_model_value or f"{selected_provider_name()}|{resolved_chat_model()}"
         for key, entry in list(self.choices.items()):
             if entry.get("kind") != "model" or entry.get("value") != wanted:
                 continue
             try:
-                self.show_details(*wanted.split("|", 1))
                 button = self.query_one(f"#{key}", ModelChoice)
             except NoMatches:
                 if attempt < 3:
                     self.call_after_refresh(self._reveal_current, attempt + 1)
                 return
-            button.scroll_visible()
-            button.focus()
+            if button.display:
+                button.scroll_visible()
+                button.focus()
+                self.show_details(*wanted.split("|", 1))
             return
         if attempt < 3 and not self.choices:
             self.call_after_refresh(self._reveal_current, attempt + 1)
@@ -325,7 +329,7 @@ class ModelsScreen(ModalScreen):
         widget = event.widget
         entry = self.choices.get(getattr(widget, "id", None) or "")
         if entry is not None and entry["kind"] == "model":
-            self.selected_choice = widget.id
+            self.selected_model_value = entry["value"]
             for row in self.query(ModelChoice):
                 row.set_class(row is widget, "-selected")
             self.query_one("#models-use", Button).disabled = False
@@ -387,8 +391,7 @@ class ModelsScreen(ModalScreen):
             group.display = bool(matches)
             if query and matches:
                 group.collapsed = False
-        selected = next((row for row in self.query(ModelChoice)
-                         if row.id == self.selected_choice and row.display), None)
+        selected = self._selected_row()
         self.query_one("#models-use", Button).disabled = selected is None
         notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
         status = tr("No matching models") if not any(row.display for row in self.query(ModelChoice)) else "\n".join(notes)
@@ -401,12 +404,19 @@ class ModelsScreen(ModalScreen):
             if first is not None:
                 first.focus()
 
+    def _selected_row(self) -> ModelChoice | None:
+        return next((row for row in self.query(ModelChoice)
+                     if row.display and self.choices.get(row.id, {}).get("value")
+                     == self.selected_model_value), None)
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
         if event.button.id == "models-close":
             self.dismiss(None)
-        elif event.button.id == "models-use" and self.selected_choice:
-            self.dismiss(self.choices[self.selected_choice])
+        elif event.button.id == "models-use":
+            selected = self._selected_row()
+            if selected is not None:
+                self.dismiss(self.choices[selected.id])
         elif event.button.id in self.choices:
             self.dismiss(self.choices[event.button.id])
 

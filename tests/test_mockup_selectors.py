@@ -27,7 +27,6 @@ def isolated_state(tmp_path, monkeypatch):
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
     monkeypatch.setenv("ISYCODE_MODEL", "gpt-6-luna")
     monkeypatch.setattr("isycode.tui_screens_harness.selected_provider_name", lambda: "openai")
-    monkeypatch.setattr("isycode.tui_screens_harness.selected_model_name", lambda: "gpt-6-luna")
 
 
 SIZES = [(80, 24), (100, 30), (140, 40)]
@@ -111,6 +110,60 @@ async def test_model_filter_empty_state_never_applies_hidden_selection():
         await pilot.pause()
         assert app.focused.id == "opener"
     assert chosen == [None]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remove_preview", [False, True])
+async def test_catalog_refresh_keeps_model_identity_or_disables_removed_preview(remove_preview):
+    app, chosen = SelectorProbe(), []
+    entries = [{"kind": "model", "value": f"anthropic|{model}", "label": model}
+               for model in ("claude-sonnet-4-6", "claude-opus-4-6")]
+    async with app.run_test(size=(80, 24)) as pilot:
+        screen = ModelsScreen(entries, provider_scope="anthropic")
+        await app.push_screen(screen, chosen.append)
+        await pilot.pause()
+        preview = screen.query_one("#model-choice-1", ModelChoice)
+        await pilot.click(f"#{preview.id}")
+        await pilot.pause()
+        assert "claude-opus-4-6" in str(screen.query_one("#model-detail").render())
+        screen.query_one("#models-search", Input).focus()
+        # Mirror the live catalog update: rows are remounted with new positions.
+        screen.entries = [{"kind": "model", "value": "anthropic|claude-haiku-4-5",
+                           "label": "Haiku"}] + entries[:1 if remove_preview else 2]
+        screen.choices = {}
+        screen.refresh(recompose=True)
+        screen.call_after_refresh(screen._reveal_current)
+        await pilot.pause()
+        field = screen.query_one("#models-search", Input)
+        field.focus()
+        await pilot.press(*"claude")
+        await pilot.pause()
+        use = screen.query_one("#models-use", Button)
+        if remove_preview:
+            assert use.disabled
+            await pilot.click("#models-use")
+            assert chosen == []
+            await pilot.press("escape")
+        else:
+            assert not use.disabled
+            assert "claude-opus-4-6" in str(screen.query_one("#model-detail").render())
+            await pilot.click("#models-use")
+        await pilot.pause()
+    assert chosen == ([None] if remove_preview else [entries[1]])
+
+
+@pytest.mark.asyncio
+async def test_picker_marks_resolved_default_when_no_model_was_saved(monkeypatch):
+    monkeypatch.setattr("isycode.providers.selected_model_name", lambda: "")
+    app = SelectorProbe()
+    async with app.run_test(size=(100, 30)) as pilot:
+        screen = ModelsScreen(MODELS, provider_scope="openai")
+        await app.push_screen(screen)
+        await pilot.pause()
+        current = next(row for row in screen.query(ModelChoice)
+                       if screen.choices[row.id]["value"] == "openai|gpt-6-luna")
+        assert "current" in str(current.label)
+        assert screen.focused is current
 
 
 @pytest.mark.asyncio
