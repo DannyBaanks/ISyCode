@@ -520,7 +520,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield Static(tr(""), id="usage-status")
                     yield OptionList(id="slash-suggestions")
                     yield PromptArea(id="prompt-input")
-                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar · F1 help"), id="composer-hint")
+                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help"), id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button(tr("Sidebar"), id="sidebar-button")
                         yield Button(tr("Sessions"), id="sessions-button")
@@ -585,7 +585,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except Exception:
             pass
         statics = {
-            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar · F1 help",
+            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help",
             "#action-hint": "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search",
             "#key-entry-label": "API key is stored outside this project.",
             "#file-preview": "Select a file to preview it.",
@@ -672,7 +672,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._open_settings_menu()
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(self.size.width)
-        if self.size.width < 88 and self._rail_visibility_override is None:
+        if self.size.width < 80 or (self.size.width < 88 and self._rail_visibility_override is None):
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
@@ -879,19 +879,22 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         rail = self.query_one(SidePanel)
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(event.size.width)
-        if event.size.width < 88:
-            if self._rail_visible and self._rail_visibility_override is not True:
-                self._rail_auto_hidden = True
-                self._rail_visible = False
-                rail.display = False
+        if event.size.width < 80:
+            self._rail_auto_hidden = True
+            self._rail_visible = False
+            rail.display = False
+        elif self._rail_visibility_override is not None:
+            self._rail_visible = self._rail_visibility_override
+            rail.display = self._rail_visible
+        elif event.size.width < 88:
+            self._rail_auto_hidden = True
+            self._rail_visible = False
+            rail.display = False
         elif event.size.width > 90:
             if self._rail_auto_hidden:
                 self._rail_auto_hidden = False
                 self._rail_visible = True
-                rail.display = True
-            elif self._rail_visibility_override is not None:
-                self._rail_visible = self._rail_visibility_override
-                rail.display = self._rail_visible
+            rail.display = self._rail_visible
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
         self.call_after_refresh(self._update_model_button_visibility)
         self.call_after_refresh(self._paint_idle)
@@ -2044,7 +2047,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _size_action_menu(self) -> None:
         """Bound short menus by their contents; long lists scroll inside the frame."""
         rows = max(4, len(getattr(self, "_menu_filtered", [])))
-        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode == "settings" else 13
+        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority") else 13
         self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
 
     def _show_menu_detail(self, index: int | None) -> None:
