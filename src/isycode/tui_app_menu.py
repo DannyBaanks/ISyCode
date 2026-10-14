@@ -349,6 +349,10 @@ async def _keys_cmd(app: "TUIApp", arg: str) -> None:
 async def _retry_cmd(app: "TUIApp", arg: str) -> None:
     app._prepare_retry()
 
+async def _resume_cmd(app: "TUIApp", arg: str) -> None:
+    del arg
+    app.action_resume_interrupted_turn()
+
 async def _doctor_cmd(app: "TUIApp", arg: str) -> None:
     from isycode.diagnostics import collect_diagnostics, format_diagnostics
     report = await asyncio.to_thread(collect_diagnostics, app._workspace_root)
@@ -561,6 +565,7 @@ class MenuMixin:
                 PluginCommand("msg", "send your words to another conversation; it answers them as your message", _msg_cmd),
                 PluginCommand("harness", "open the read-only Multi Harness settings map", _harness_cmd),
                 PluginCommand("retry", "prepare interrupted prompt for review; never auto-replays tools", _retry_cmd),
+                PluginCommand("resume", "resume an interrupted turn without repeating completed tools", _resume_cmd),
                 PluginCommand("doctor", "local configuration and dependencies; no network requests", _doctor_cmd),
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
                 PluginCommand("usage", "show provider-reported chat token usage", _usage_cmd),

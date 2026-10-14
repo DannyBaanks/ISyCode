@@ -39,6 +39,10 @@ from isycode.localization import tr
 from isycode.tui_copy import extract_range, exact_selected_text, open_copy_menu, selectable_markdown, remember_copy_selection
 from rich.markdown import Markdown as RichMarkdown
 
+SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+SPINNER_FRAMES_ASCII = ("|", "/", "-", "\\")
+
+
 
 def activate_on_second_click(host, event, key) -> bool:
     """Return whether this click should open a row that is already selected.
@@ -380,30 +384,76 @@ class ToolActivityGroup(ExpandableBox):
     def __init__(self, operation: str, leaf: ExpandableBox, label: str):
         self.operation = operation
         self.leaves = [(leaf, label)]
+        self._running_leaves: set[int] = {id(leaf)}
+        self._spinner_idx = 0
+        self._spinner_timer = None
         super().__init__(leaf, title=label + " · Running", collapsed=True, classes="tool-activity")
         self._paint_branches()
+
+    def on_mount(self) -> None:
+        self._check_spinner()
+
+    def on_unmount(self) -> None:
+        self._stop_spinner()
+
+    def _check_spinner(self) -> None:
+        if bool(self._running_leaves):
+            if self._spinner_timer is None and self.is_mounted:
+                self._spinner_timer = self.set_interval(0.12, self._tick_spinner)
+        else:
+            self._stop_spinner()
+
+    def _stop_spinner(self) -> None:
+        if self._spinner_timer is not None:
+            self._spinner_timer.stop()
+            self._spinner_timer = None
+
+    def _tick_spinner(self) -> None:
+        if not bool(self._running_leaves):
+            self._stop_spinner()
+            return
+        from isycode.tui_theme import ascii_only
+        frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
+        self._spinner_idx = (self._spinner_idx + 1) % len(frames)
+        frame = frames[self._spinner_idx]
+        if len(self.leaves) == 1:
+            lbl = self.leaves[0][1]
+            base = lbl.split(" · Running")[0] if " · Running" in lbl else lbl
+            self.title = f"{base} · {frame} Running"
+        else:
+            self.title = f"{self.operation} · {len(self.leaves)} calls · {frame}"
 
     async def add_leaf(self, leaf: ExpandableBox, label: str) -> None:
         if len(self.leaves) == 1:
             self.leaves[0][0].collapsed = True
         self.leaves.append((leaf, label))
+        self._running_leaves.add(id(leaf))
         self.title = f"{self.operation} · {len(self.leaves)} calls"
         await self.query_one(self.Contents).mount(leaf)
         self._paint_branches()
+        self._check_spinner()
 
     def _paint_branches(self) -> None:
         for index, (leaf, label) in enumerate(self.leaves):
             prefix = "└─ " if index == len(self.leaves) - 1 else "├─ "
             multiple = len(self.leaves) > 1
-            leaf.title = prefix + label if multiple else label
-            leaf._title.display = multiple
-            if not multiple:
+            if hasattr(leaf, "title"):
+                leaf.title = prefix + label if multiple else label
+            elif hasattr(leaf, "border_title"):
+                leaf.border_title = Text(prefix + label if multiple else label, style=CYAN)
+            if hasattr(leaf, "_title"):
+                leaf._title.display = multiple
+            if not multiple and hasattr(leaf, "collapsed"):
                 leaf.collapsed = False
 
     def finish_leaf(self, leaf: ExpandableBox, label: str) -> None:
+        self._running_leaves.discard(id(leaf))
         self.leaves = [(item, label if item is leaf else old) for item, old in self.leaves]
         self._paint_branches()
-        self.title = label if len(self.leaves) == 1 else f"{self.operation} · {len(self.leaves)} calls"
+        self._check_spinner()
+        if not bool(self._running_leaves):
+            self._stop_spinner()
+            self.title = label if len(self.leaves) == 1 else f"{self.operation} · {len(self.leaves)} calls"
 
 
 class ThoughtBlock(Collapsible, inherit_bindings=False):
@@ -738,8 +788,31 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         self.receipt = ""
         self.output_truncated = False
         self.expanded = False
+        self._spinner_idx = 0
+        self._spinner_timer = None
         self._body = SelectableText(classes="command-output-body")
         self.border_title = Text(command, style=CYAN)
+        self._paint_output()
+
+    def on_mount(self) -> None:
+        if self.status == "Running" and self._spinner_timer is None:
+            self._spinner_timer = self.set_interval(0.12, self._tick_spinner)
+
+    def on_unmount(self) -> None:
+        self._stop_spinner()
+
+    def _stop_spinner(self) -> None:
+        if self._spinner_timer is not None:
+            self._spinner_timer.stop()
+            self._spinner_timer = None
+
+    def _tick_spinner(self) -> None:
+        if self.status != "Running":
+            self._stop_spinner()
+            return
+        from isycode.tui_theme import ascii_only
+        frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
+        self._spinner_idx = (self._spinner_idx + 1) % len(frames)
         self._paint_output()
 
     def compose(self) -> ComposeResult:
@@ -752,6 +825,7 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
     def finish(self, status: str, *, output: str | None = None,
                receipt: str = "", truncated: bool = False) -> None:
         self.status = status
+        self._stop_spinner()
         if output is not None:
             self.output = output
         self.receipt = receipt
@@ -760,8 +834,11 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
 
     def _paint_output(self) -> None:
         note = " · output limit reached" if self.output_truncated else ""
-        hint = "collapse" if self.expanded else "expand"
-        self.border_subtitle = Text(f"{tr(self.status)}{note} · {tr('Space expand / collapse · double-click copy')}", style=MUTED)
+        from isycode.tui_theme import ascii_only
+        frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
+        frame = frames[self._spinner_idx]
+        spinner_prefix = f"{frame} " if self.status == "Running" else ""
+        self.border_subtitle = Text(f"{spinner_prefix}{tr(self.status)}{note} · {tr('Space expand / collapse · double-click copy')}", style=MUTED)
         if self.expanded:
             shown = self.output or "No output."
             if self.receipt:
@@ -771,7 +848,7 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         else:
             shown = "\n".join(self.output.splitlines()[-2:])
             if not shown:
-                shown = "Waiting for output…" if self.status == "Running" else "No output."
+                shown = f"{frame} Waiting for output…" if self.status == "Running" else "No output."
         self._body.set_selectable_content(
             Text(shown, style=MUTED), shown)
 

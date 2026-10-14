@@ -20,6 +20,11 @@ def current_locale() -> str:
     return _LOCALE
 
 
+def ascii_only() -> bool:
+    from isycode.tui_theme import ascii_only as _ao
+    return _ao()
+
+
 def catalog_diagnostic() -> str:
     return _DIAGNOSTIC
 

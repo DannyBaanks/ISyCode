@@ -156,7 +156,7 @@ from textual.message import Message
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
-from textual.events import Click
+from textual.events import Click, Key
 from textual.widget import Widget
 from textual.widgets import (
     Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select, Checkbox,
@@ -483,7 +483,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._rail_view = "overview"
         self._rail_visible = False
         self._rail_auto_hidden = False
-        self._rail_visibility_override: bool | None = False
+        self._rail_visibility_override: bool | None = None
+        self._interrupted_turn: Any | None = None
         self._rail_width = 38
         self._rail_compact_width = 28
         self._work_rows: list[dict[str, Any]] = []
@@ -519,7 +520,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield Static(tr(""), id="usage-status")
                     yield OptionList(id="slash-suggestions")
                     yield PromptArea(id="prompt-input")
-                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"), id="composer-hint")
+                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar · F1 help"), id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button(tr("Sidebar"), id="sidebar-button")
                         yield Button(tr("Sessions"), id="sessions-button")
@@ -584,7 +585,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except Exception:
             pass
         statics = {
-            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar",
+            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar · F1 help",
             "#action-hint": "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search",
             "#key-entry-label": "API key is stored outside this project.",
             "#file-preview": "Select a file to preview it.",
@@ -671,7 +672,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._open_settings_menu()
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(self.size.width)
-        if self.size.width < 100 and self._rail_visibility_override is None:
+        if self.size.width < 88 and self._rail_visibility_override is None:
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
@@ -864,6 +865,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
 
 
+    def on_key(self, event: Key) -> None:
+        if (event.key == "question_mark" or getattr(event, "character", None) == "?") and not isinstance(self.focused, (Input, TextArea)):
+            event.stop()
+            event.prevent_default()
+            self.action_quick_help()
+
     def on_resize(self, event) -> None:
         if not self.is_mounted:
             return
@@ -872,22 +879,19 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         rail = self.query_one(SidePanel)
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(event.size.width)
-        if event.size.width < 80:
-            self._rail_auto_hidden = True
-            self._rail_visible = False
-            rail.display = False
-        elif self._rail_visibility_override is not None:
-            self._rail_visible = self._rail_visibility_override
-            rail.display = self._rail_visible
-        elif event.size.width < 100:
-            self._rail_auto_hidden = True
-            self._rail_visible = False
-            rail.display = False
-        else:
+        if event.size.width < 88:
+            if self._rail_visible and self._rail_visibility_override is not True:
+                self._rail_auto_hidden = True
+                self._rail_visible = False
+                rail.display = False
+        elif event.size.width > 90:
             if self._rail_auto_hidden:
                 self._rail_auto_hidden = False
                 self._rail_visible = True
-            rail.display = self._rail_visible
+                rail.display = True
+            elif self._rail_visibility_override is not None:
+                self._rail_visible = self._rail_visibility_override
+                rail.display = self._rail_visible
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
         self.call_after_refresh(self._update_model_button_visibility)
         self.call_after_refresh(self._paint_idle)
@@ -1029,6 +1033,35 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     def action_focus_input(self) -> None:
         self.query_one("#prompt-input", PromptArea).focus()
+
+    def action_quick_help(self) -> None:
+        from isycode.tui_screens_help import QuickHelpScreen
+        self.push_screen(QuickHelpScreen())
+
+    def notify_semantic(
+        self,
+        message: str,
+        kind: str = "info",
+        *,
+        title: str = "",
+        timeout: float | None = None,
+    ) -> None:
+        """Present a semantic toast notification with unified severity prefixes and calibrated timeouts."""
+        from isycode.tui_theme import ascii_only
+        use_ascii = ascii_only()
+
+        semantics = {
+            "success": ("✓ ", "[OK] ", "information", 3.0),
+            "authorized": ("⚡ ", "[AUTH] ", "information", 3.0),
+            "info": ("ℹ ", "[INFO] ", "information", 3.0),
+            "warning": ("! ", "[WARN] ", "warning", 4.5),
+            "denied": ("× ", "[DENY] ", "error", 5.5),
+            "error": ("× ", "[ERROR] ", "error", 5.5),
+        }
+        u_pfx, a_pfx, def_sev, def_timeout = semantics.get(kind, ("ℹ ", "[INFO] ", "information", 3.0))
+        prefix = a_pfx if use_ascii else u_pfx
+        calibrated_timeout = timeout if timeout is not None else def_timeout
+        self.notify(f"{prefix}{message}", title=title, severity=def_sev, timeout=calibrated_timeout)
 
     def action_escape_to_chat(self) -> None:
         """Cancel active model output; otherwise back out and keep the draft."""
@@ -3116,27 +3149,27 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except Exception:  # noqa: BLE001 - the field only exists in the main screen
             key_field = None
         if key_field is not None and self.focused is key_field:
-            self.notify("API keys are never copied.", severity="warning")
+            self.notify_semantic("API keys are never copied.", kind="warning")
             return
         try:
             owner = ClipboardOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
             outcome = owner.copy(text, source=source,
                                  terminal_write=super().copy_to_clipboard)
         except (WorkspaceAuthorityError, OSError, ValueError):
-            self.notify("Copy failed · Workspace Authority is unavailable.", severity="error")
+            self.notify_semantic("Copy failed · Workspace Authority is unavailable.", kind="denied")
             return
         if outcome.decision == "ALLOW":
             where = ("terminal clipboard" if outcome.text == "terminal"
                      else f"clipboard via {outcome.text}")
             if outcome.text == 'terminal':
-                self.notify('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', timeout=8)
+                self.notify_semantic('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', kind="info", timeout=8)
             else:
-                self.notify(f"Copied {len(text)} characters to the {where}.", timeout=2)
+                self.notify_semantic(f"Copied {len(text)} characters to the {where}.", kind="success", timeout=2.5)
         elif "grant" in outcome.reason:
-            self.notify("Copying is off for this workspace · turn on “Copy selected text” in "
-                        "Settings → Authority.", severity="warning", timeout=5)
+            self.notify_semantic("Copying is off for this workspace · turn on “Copy selected text” in "
+                                 "Settings → Authority.", kind="denied", timeout=5)
         else:
-            self.notify(f"Nothing copied · {outcome.reason[:120]}", severity="warning")
+            self.notify_semantic(f"Nothing copied · {outcome.reason[:120]}", kind="denied")
 
 
 
