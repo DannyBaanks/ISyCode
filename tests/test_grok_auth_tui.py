@@ -39,13 +39,17 @@ def test_xai_signin_confirms_then_runs_only_through_the_owner(
         async with app.run_test(size=(80, 24)) as p:
             await p.pause()
             from isycode.action_audit import ActionAuditJournal
-            baseline = ActionAuditJournal(project).verify()
             task = asyncio.create_task(app._connect_xai_login("device"))
             for _ in range(100):
                 await p.pause(0.01)
                 if isinstance(app.screen, TailscaleConfirmScreen):
                     break
             assert isinstance(app.screen, TailscaleConfirmScreen)
+            # Capture the baseline only after the confirm modal is up. On slow
+            # CI runners a single pause() does not drain startup work; a late
+            # background receipt would otherwise appear after a baseline taken
+            # too early and pollute the cancel-path equality check.
+            baseline = ActionAuditJournal(project).verify()
             if cancel:
                 await p.press("escape")
             else:
