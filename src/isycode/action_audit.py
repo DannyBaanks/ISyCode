@@ -139,6 +139,19 @@ class ActionAuditJournal:
             raise ValueError("journal file is unsafe or exceeds its size limit")
         fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
+            try:
+                import fcntl
+            except ImportError:          # non-POSIX: stability check alone
+                fcntl = None
+            if fcntl is not None:
+                # F-03: hold a shared lock for the whole read so a cooperating
+                # writer (LOCK_EX in the append path) cannot append mid-verify
+                # and trip the stability check below. The lock is taken BEFORE
+                # the reference fstat so a writer cannot slip a whole append
+                # between the reference snapshot and the lock acquisition.
+                # Non-cooperating writers are still caught by the
+                # size/mtime/ctime comparison.
+                fcntl.flock(fd, fcntl.LOCK_SH)
             opened = os.fstat(fd)
             if (not stat.S_ISREG(opened.st_mode) or opened.st_ino != info.st_ino
                     or opened.st_dev != info.st_dev or opened.st_size > self.MAX_BYTES):
@@ -154,6 +167,11 @@ class ActionAuditJournal:
                     or after.st_ctime_ns != opened.st_ctime_ns):
                 raise ValueError("journal changed during verification")
         finally:
+            if fcntl is not None:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                except OSError:
+                    pass
             os.close(fd)
         raw = b"".join(chunks)
         if len(raw) > self.MAX_BYTES or (raw and not raw.endswith(b"\n")):
@@ -432,10 +450,12 @@ class ActionAuditJournal:
                     or info.st_size > self.MAX_BYTES
                     or (os.name == "posix" and info.st_uid != os.getuid())):
                 raise ActionAuditError("private action journal is unsafe or full")
-            if os.name == "posix":
-                os.fchmod(fd, 0o600)
             if fcntl is not None:
                 fcntl.flock(fd, fcntl.LOCK_EX)
+            if os.name == "posix":
+                # F-03: fchmod inside LOCK_EX so it cannot sneak a ctime update
+                # between a concurrent reader's two fstat calls (LOCK_SH).
+                os.fchmod(fd, 0o600)
             try:
                 current = self.path.lstat()
             except FileNotFoundError:
