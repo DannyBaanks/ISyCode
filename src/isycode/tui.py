@@ -353,6 +353,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._initial_view = initial_view
         self._initial_prompt = initial_prompt
         self._openisy_refresh_generation = 0
+        # F-01 readiness: set once _startup_workspace finishes (success or failure)
+        # so tests and callers never have to guess with blind pilot.pause() loops.
+        self._ready_event = asyncio.Event()
         self._history: list[dict] = []
         self._last_context_input_tokens = None
         self._tool_history: list[dict] = []
@@ -718,6 +721,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if self._mobile_host_owner is not None:
             await self._mobile_host_owner.shutdown()
 
+    @property
+    def ready(self) -> bool:
+        """True once _startup_workspace has finished (successfully or not)."""
+        return self._ready_event.is_set()
+
+    async def wait_for_ready(self, timeout: float = 10.0) -> None:
+        """Block until startup completes; TimeoutError means startup never finished."""
+        await asyncio.wait_for(self._ready_event.wait(), timeout)
+
     async def _startup_workspace(self) -> None:
         """Offer recurrence once, then choose persistent or temporary chat storage."""
         try:
@@ -833,6 +845,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self._append_startup(f"  Workspace startup failed ({type(exc).__name__}).", RED)
             except (NoMatches, NoScreen):
                 return
+        finally:
+            # F-01: release waiters even when startup failed partway through.
+            self._ready_event.set()
 
     def _register_saved_key_reader(self) -> None:
         """Security mode: every saved-key read is its own owned, journaled decision."""

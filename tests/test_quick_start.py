@@ -27,6 +27,7 @@ async def test_quick_start_screen_defaults_to_quick_and_escape_is_custom(tmp_pat
     configure(tmp_path, monkeypatch)
     app = TUIApp()
     async with app.run_test(size=(100, 30)) as pilot:
+        await app.wait_for_ready()
         await app.push_screen(QuickStartScreen(app._workspace_root, provider_ready=True))
         await pilot.pause()
         screen = app.screen
@@ -39,7 +40,9 @@ async def test_quick_start_screen_defaults_to_quick_and_escape_is_custom(tmp_pat
 async def test_quick_start_chains_recurring_classic_and_toolkit_offer(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     from isycode.user_defaults import UserDefaultsStore
-    UserDefaultsStore().update(new_workspace="ask", new_workspace_mode="ask")
+    # Park the mount-time startup on a non-interactive path so it cannot race
+    # the manual startup below; then switch to "ask" and drive it by hand.
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="classic")
     seen = []
     grants_holder = {}
 
@@ -54,8 +57,9 @@ async def test_quick_start_chains_recurring_classic_and_toolkit_offer(tmp_path, 
         return True
 
     async with app.run_test(size=(120, 40)) as pilot:
+        await app.wait_for_ready()
+        UserDefaultsStore().update(new_workspace="ask", new_workspace_mode="ask")
         app._await_screen = fake_screen
-        await pilot.pause()
         _clear_saved_recurrence(app)
         await app._startup_workspace()
         await pilot.pause()
@@ -74,7 +78,9 @@ async def test_quick_start_chains_recurring_classic_and_toolkit_offer(tmp_path, 
 async def test_custom_setup_keeps_the_step_by_step_chain(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     from isycode.user_defaults import UserDefaultsStore
-    UserDefaultsStore().update(new_workspace="ask", new_workspace_mode="ask")
+    # Park the mount-time startup on a non-interactive path so it cannot race
+    # the manual startup below; then switch to "ask" and drive it by hand.
+    UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="classic")
     seen = []
     app = TUIApp()
 
@@ -89,8 +95,9 @@ async def test_custom_setup_keeps_the_step_by_step_chain(tmp_path, monkeypatch):
         return True
 
     async with app.run_test(size=(120, 40)) as pilot:
+        await app.wait_for_ready()
+        UserDefaultsStore().update(new_workspace="ask", new_workspace_mode="ask")
         app._await_screen = fake_screen
-        await pilot.pause()
         _clear_saved_recurrence(app)
         await app._startup_workspace()
         await pilot.pause()
@@ -113,8 +120,8 @@ async def test_saved_preferences_skip_the_quick_start_screen(tmp_path, monkeypat
         return True
 
     async with app.run_test(size=(120, 40)) as pilot:
+        await app.wait_for_ready()
         app._await_screen = fake_screen
-        await pilot.pause()
         await app._startup_workspace()
         await pilot.pause()
         assert "QuickStartScreen" not in [type(s).__name__ for s in seen]
@@ -127,7 +134,7 @@ async def test_help_tour_prints_the_tour(tmp_path, monkeypatch):
     from isycode.tui_app_menu import _help_cmd, _TOUR_LINES
     app = TUIApp()
     async with app.run_test(size=(120, 40)) as pilot:
-        await pilot.pause()
+        await app.wait_for_ready()
         await _help_cmd(app, "tour")
         text = "\n".join(line for kind, line, *_ in app._active_lane().lines)
         assert "Tour · the lay of the land" in text
@@ -143,7 +150,7 @@ async def test_banner_mode_chip_repaints_after_startup(tmp_path, monkeypatch):
     UserDefaultsStore().update(new_workspace="recurring", new_workspace_mode="classic")
     app = TUIApp()
     async with app.run_test(size=(120, 40)) as pilot:
-        await pilot.pause()
+        await app.wait_for_ready()
         for _ in range(40):
             await pilot.pause(0.05)
             if "Classic" in plain_text(app.query_one(Banner)):
