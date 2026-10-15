@@ -1978,21 +1978,21 @@
     },
     {
       "file": "isycode/iteration.py",
-      "line": 197,
+      "line": 198,
       "callable": "isycode.iteration.IterationOwner.list_sessions",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/iteration.py",
-      "line": 63,
+      "line": 64,
       "callable": "isycode.iteration.IterationOwner._authorize",
       "action": "session.resume",
       "owner": "chat_sessions"
     },
     {
       "file": "isycode/iteration.py",
-      "line": 67,
+      "line": 68,
       "callable": "isycode.iteration.IterationOwner._authorize",
       "action": "session.create",
       "owner": "chat_sessions"

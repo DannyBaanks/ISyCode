@@ -15,7 +15,7 @@ from typing import Any
 from isycode.actions import ACTION_BY_ID
 from isycode.effect_policy import EFFECTS, POLICY_VERSION, effect_class
 from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
-from isycode.workspace_setup import state_root
+from isycode.state_index import get_state_index
 
 
 # In-process observers of journaled decisions (the IsySentinel rail). They get
@@ -88,8 +88,8 @@ class ActionAuditJournal:
 
     def __init__(self, workspace_root: Path, *, state_directory: Path | None = None):
         root = Path(workspace_root).expanduser().resolve(strict=True)
-        root_id = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
-        directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
+        root_id = get_state_index().workspace_digest(root, length=32)
+        directory = get_state_index().journal_directory(state_directory=state_directory)
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         if directory.is_symlink() or not directory.is_dir():
             raise ActionAuditError("private action journal directory is unsafe")
@@ -104,8 +104,8 @@ class ActionAuditJournal:
                                  *, state_directory: Path | None = None) -> "ActionAuditJournal":
         """Build a verifier handle without creating or changing state files."""
         root = Path(workspace_root).expanduser().resolve(strict=True)
-        root_id = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
-        directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
+        root_id = get_state_index().workspace_digest(root, length=32)
+        directory = get_state_index().journal_directory(state_directory=state_directory)
         instance = cls.__new__(cls)
         instance.path = directory / f"actions-{root_id}.jsonl"
         instance.root_id = root_id

@@ -22,9 +22,9 @@ from isycode.action_runtime import (
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest, AuthorityDecision, SystembilityResult
+from isycode.state_index import get_state_index
 from isycode.tool_history import sanitize_historical_text
 from isycode.workspace_authority import WorkspaceAuthority
-from isycode.workspace_setup import state_root
 
 OWNER_ID = "workspace_memory"
 MAX_ARGUMENT_BYTES = 64 * 1024
@@ -197,9 +197,9 @@ class MemoryStore:
         self.workspace = workspace_root.expanduser().resolve(strict=True)
         if not self.workspace.is_dir():
             raise ValueError("memory workspace root must be a directory")
-        state = Path(state_directory) if state_directory else state_root() / "memory"
+        state = Path(state_directory) if state_directory else get_state_index().subsystem("memory")
         self._private_directory(state)
-        workspace_state = state / hashlib.sha256(str(self.workspace).encode()).hexdigest()[:32]
+        workspace_state = get_state_index().workspace_state(self.workspace, state)
         self._private_directory(workspace_state)
         self.path = workspace_state / "memory.sqlite3"
         try:

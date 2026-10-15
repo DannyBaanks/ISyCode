@@ -16,6 +16,7 @@ pytestmark = pytest.mark.skipif(os.name == "nt", reason="descriptor-safe writes 
 @pytest.fixture
 def writer(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state" / "isycode"))
     root = tmp_path / "workspace"
     (root / "src").mkdir(parents=True)
     (root / "src" / "app.py").write_text("print('hi')\n", encoding="utf-8")

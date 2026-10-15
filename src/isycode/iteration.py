@@ -26,8 +26,8 @@ from isycode.chat_sessions import ChatSessionStore
 from isycode.chat_transport import provider_complete
 from isycode.provider_errors import classify_provider_error
 from isycode.security import ActionRequest
+from isycode.state_index import get_state_index
 from isycode.subagents import run_child
-from isycode.workspace_setup import state_root
 
 
 class IterationDenied(ValueError):
@@ -55,7 +55,8 @@ class IterationOwner:
     def __init__(self, root, authority, *, directory=None):
         self.root = Path(root).resolve(strict=True)
         self.authority = authority
-        self.directory = Path(directory or state_root() / 'iterations' / digest(str(self.root))[:32])
+        self.directory = Path(directory or get_state_index().workspace_state(
+            self.root, get_state_index().subsystem('iterations')))
         self.gate = ProductActionGate(self.root, authority, owner_id='chat_sessions')
 
     def _authorize(self, sid, payload=None):

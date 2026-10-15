@@ -1,21 +1,18 @@
 """First-run recurrence choice and external per-workspace session locations."""
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import stat
 import tempfile
 from pathlib import Path
 
+from isycode.state_index import get_state_index
+
 
 def state_root() -> Path:
-    override = os.environ.get("ISYCODE_STATE_HOME")
-    if override:
-        return Path(override).expanduser()
-    if os.name == "nt":
-        return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "ISyCode"
-    return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "isycode"
+    """Backward-compatible alias of the single state resolver (F-10)."""
+    return get_state_index().state_root()
 
 
 def broad_workspace_reason(directory: Path) -> str | None:
@@ -156,6 +153,4 @@ class WorkspaceSetupStore:
                 os.unlink(temporary)
 
     def sessions_root(self, workspace_root: Path) -> Path:
-        canonical = workspace_root.expanduser().resolve(strict=True)
-        digest = hashlib.sha256(str(canonical).encode("utf-8")).hexdigest()[:24]
-        return self.root / "isyrcodesessions" / digest
+        return get_state_index().sessions_path(workspace_root, root=self.root)

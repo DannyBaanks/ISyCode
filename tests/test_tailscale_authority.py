@@ -32,6 +32,7 @@ DIGEST = "a" * 64
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state" / "isycode"))
     root = tmp_path / "workspace"
     root.mkdir()
     cli = tmp_path / "tailscale"

@@ -18,6 +18,7 @@ from typing import Any
 from isycode.actions import ACTION_BY_ID
 from isycode.effect_ledger import LIMITS_VERSION
 from isycode.effect_policy import POLICY_VERSION
+from isycode.state_index import get_state_index
 from isycode.workspace_setup import broad_workspace_reason, state_root
 
 TRUST_VERSION = 1
@@ -96,7 +97,7 @@ class WorkspaceTrust:
 
     def __init__(self, root: Path | None = None) -> None:
         self.root = Path(root or state_root())
-        self.directory = self.root / "workspace-trust"
+        self.directory = get_state_index().trust_directory(root=root)
 
     def trusted(self, authority) -> bool:
         record = self._matching(authority)
@@ -205,8 +206,7 @@ class WorkspaceTrust:
         return directory != root and root not in directory.parents and directory not in root.parents
 
     def _path_for(self, workspace: Path) -> Path:
-        digest = hashlib.sha256(str(workspace).encode("utf-8")).hexdigest()[:32]
-        return self.directory / f"trust-{digest}.json"
+        return get_state_index().trust_path(workspace, root=self.root)
 
     def _directory_is_real(self) -> bool:
         if not self.directory.exists() and not self.directory.is_symlink():
