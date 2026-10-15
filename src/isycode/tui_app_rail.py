@@ -290,7 +290,7 @@ class RailMixin:
             return journal.verify(recent_limit=40)
         try:
             report = await asyncio.to_thread(read)
-        except (ActionAuditError, OSError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - a background journal read must never kill the app
             self._sentinel_feed.journal = f"unreadable · {type(exc).__name__}"
         else:
             if report.status == "NOT_VERIFIABLE":

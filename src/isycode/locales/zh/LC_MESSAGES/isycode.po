@@ -1693,8 +1693,14 @@ msgstr "尚未检查工具目录。"
 msgid "Mobile Host"
 msgstr "移动主机"
 
-msgid "Starting local mobile host…"
-msgstr "正在启动本地移动主机…"
+msgid "Not started"
+msgstr "未启动"
+
+msgid "Loading…"
+msgstr "加载中…"
+
+msgid "Not checked"
+msgstr "未检查"
 
 msgid "No mobile clients connected."
 msgstr "没有已连接的移动客户端。"

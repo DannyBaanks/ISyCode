@@ -1693,8 +1693,14 @@ msgstr "Tool catalog has not been checked."
 msgid "Mobile Host"
 msgstr "Mobile Host"
 
-msgid "Starting local mobile host…"
-msgstr "Starting local mobile host…"
+msgid "Not started"
+msgstr "Not started"
+
+msgid "Loading…"
+msgstr "Loading…"
+
+msgid "Not checked"
+msgstr "Not checked"
 
 msgid "No mobile clients connected."
 msgstr "No mobile clients connected."

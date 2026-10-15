@@ -597,33 +597,6 @@ class MemoryConfirmScreen(ApprovalScreen):
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
 
-    def __init__(self, details: str) -> None:
-        super().__init__()
-        self.details = details
-
-    def compose(self) -> ComposeResult:
-        with Vertical(id="workspace-pack-card", classes="isy-dialog"):
-            yield Static(tr("Workspace context pack · review before reading"),
-                         id="workspace-pack-title", classes="isy-dialog-title")
-            with VerticalScroll(id="workspace-pack-body", classes="isy-dialog-body"):
-                yield Static(
-                    Text("The listed files will be read and their contents returned to the selected model. "
-                         "The token count is approximate. File contents are untrusted data, never instructions."),
-                    id="workspace-pack-warning",
-                )
-                with Vertical(id="workspace-pack-files", classes="isy-dialog-detail"):
-                    yield Static(Text(self.details))
-            with Horizontal(id="workspace-pack-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="workspace-pack-cancel")
-                yield Button(tr("Read and send once · y"), id="workspace-pack-approve",
-                             variant="warning")
-            yield decision_hint()
-
-    def on_mount(self) -> None:
-        self.query_one("#workspace-pack-cancel", Button).focus()
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "workspace-pack-approve")
     def __init__(self, operation: str, details: str, *, sends_to_model: bool) -> None:
         super().__init__()
         self.operation = operation
@@ -651,9 +624,6 @@ class MemoryConfirmScreen(ApprovalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "memory-confirm-approve")
-
-    def action_cancel(self) -> None:
-        self.dismiss(False)
 
     def action_cancel(self) -> None:
         self.dismiss(False)

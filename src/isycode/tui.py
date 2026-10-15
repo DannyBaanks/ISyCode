@@ -652,7 +652,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.set_interval(1.0, self._paint_work_status)
         add_decision_listener(self._on_journal_decision)
         self.set_interval(5.0, self._paint_sentinel)   # permissions changed in Settings
-        self.run_worker(self._load_sentinel_journal(), group="sentinel-journal")
+        self.run_worker(self._load_sentinel_journal(), group="sentinel-journal",
+                        exit_on_error=False)
         prompt = self.query_one("#prompt-input", PromptArea)
         self.query_one("#role-button", Button).label = self._role_button_label()
         self._refresh_model_button()
@@ -693,7 +694,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         # every start reads like an error. The reason stays available in Settings.
         if self._workspace_config_warning and "grant" not in self._workspace_config_warning:
             self._append_startup(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
-        self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup")
+        self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup",
+                        exit_on_error=False)
         # Mobile Host and Bridge have catalog actions but no product execution owners yet.
         # A saved preference is not an Authority grant, approval, or Sentinel decision.
         self._bridge_enabled = False
@@ -723,6 +725,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._workspace_setup = setup_store
             recurring = self._workspace_identity.workspace_root_source == "isyroot"
             self._quick_start = False
+            # Register the journalled key reader before any provider probe so the
+            # QuickStart readiness check can see vault-stored keys (F-11). It is
+            # registered again below, once the workspace root is final.
+            self._register_saved_key_reader()
             if not recurring:
                 choice = setup_store.recurrent_choice(self._launch_dir)
                 if choice is None:
@@ -810,9 +816,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._register_saved_key_reader()
             await self._initialize_workspace()
             self._refresh_lsp_status()
-            self.run_worker(self._refresh_openisy(), exclusive=False)
-            self.run_worker(self._check_gateway_async(), exclusive=False)
-            self.run_worker(self._check_model(), exclusive=False)
+            self.run_worker(self._refresh_openisy(), exclusive=False, exit_on_error=False)
+            self.run_worker(self._check_gateway_async(), exclusive=False, exit_on_error=False)
+            self.run_worker(self._check_model(), exclusive=False, exit_on_error=False)
             if not recurring:
                 self._append_startup("  Temporary workspace · this folder is the workspace; .isyroot is optional. "
                                      "File access follows the selected mode and grants. Chat history is not saved.", MUTED)
@@ -2433,7 +2439,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         """Model line, the blank under it, the status columns, and board padding."""
         columns = [
             self._idle_column("LSPs", self._idle_lsp_rows()),
-            self._idle_column("MCPs", self._idle_mcp_rows()),
+            self._idle_column("MCPs", self._idle_mcp_rows(),
+                              empty_label=self._idle_mcp_empty_label()),
             self._idle_column("Skills", self._idle_skill_rows()),
         ]
         return 2 + max(len(column) for column in columns) + 1
@@ -2457,7 +2464,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
         columns = [
             self._idle_column("LSPs", self._idle_lsp_rows()),
-            self._idle_column("MCPs", self._idle_mcp_rows()),
+            self._idle_column("MCPs", self._idle_mcp_rows(),
+                              empty_label=self._idle_mcp_empty_label()),
             self._idle_column("Skills", self._idle_skill_rows()),
         ]
         gap = 2
@@ -2498,11 +2506,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         return clipped
 
     @staticmethod
-    def _idle_column(title: str, rows: list[tuple[str, str]]) -> list[Text]:
+    def _idle_column(title: str, rows: list[tuple[str, str]], *,
+                     empty_label: str = "None configured") -> list[Text]:
         from isycode.tui_theme import ascii_only
         lines = [Text(tr(title), style=f"bold {TEXT}")]
         if not rows:
-            lines.append(Text(("- " if ascii_only() else "− ") + tr("None configured"), style=MUTED))
+            lines.append(Text(("- " if ascii_only() else "− ") + tr(empty_label), style=MUTED))
             return lines
         shown = rows[:14]
         for color, name in shown:
@@ -2543,6 +2552,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             color = GREEN if healthy else YELLOW if starting or status else MUTED
             rows.append((color, str(item.get("name") or "mcp")))
         return rows
+
+    def _idle_mcp_empty_label(self) -> str:
+        """Honest empty-state for the MCP column: loading is not 'none configured' (F-06)."""
+        state = self._mcp_snapshot.state
+        if state == "ready":
+            return "None configured"
+        if state in {"error", "denied", "unavailable"}:
+            return "Not checked"
+        return "Loading…"
 
     def _idle_skill_rows(self) -> list[tuple[str, str]]:
         names: list[str] = []
@@ -2662,10 +2680,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             else:
                 message = "Unavailable. Local Files remains independent; no Gateway fallback is active."
                 color = YELLOW
-        except (ValueError, OSError) as exc:
-            message = f"Gateway configuration error: {exc}"
+        except Exception as exc:  # noqa: BLE001 - a background probe must never kill the app
+            message = f"Gateway configuration error: {type(exc).__name__}"
             color = RED
-        self.query_one("#gateway-status", Static).update(Text(message, style=color))
+        if self.is_mounted:
+            self.query_one("#gateway-status", Static).update(Text(message, style=color))
 
     async def _check_gateway_mcp_async(self) -> None:
         status = self.query_one("#gateway-mcp-status", Static)
