@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 83,
-    "effectful": 62,
-    "owner_valid": 56,
+    "actions": 84,
+    "effectful": 63,
+    "owner_valid": 57,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 24,
@@ -325,6 +325,22 @@
       "authority": "Workspace Authority",
       "sentinel": [
         "ProviderNetworkBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "grok.login",
+      "effect": "process",
+      "approval_required": true,
+      "owners": [
+        "grok_auth"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "GrokAuthBoundary"
       ],
       "variants": [],
       "status": "OWNER_VALID",
@@ -1376,6 +1392,12 @@
       "status": "COVERED"
     },
     {
+      "action": "grok.login",
+      "callsite": "GrokAuthOwner.begin",
+      "owner": "grok_auth",
+      "status": "COVERED"
+    },
+    {
       "action": "workspace.files.read",
       "callsite": "LocalWorkspaceReadOwner.execute",
       "owner": "workspace_read",
@@ -1767,77 +1789,77 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2122,
+      "line": 2156,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2248,
+      "line": 2282,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "workspace.files.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1903,
+      "line": 1937,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1975,
+      "line": 2009,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2045,
+      "line": 2079,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2131,
+      "line": 2165,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2182,
+      "line": 2216,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2190,
+      "line": 2224,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2256,
+      "line": 2290,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "grit.claims.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2318,
+      "line": 2352,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2399,
+      "line": 2433,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -1939,6 +1961,13 @@
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
+    },
+    {
+      "file": "isycode/grok_auth.py",
+      "line": 38,
+      "callable": "isycode.grok_auth.GrokAuthOwner.request",
+      "action": "grok.login",
+      "owner": "grok_auth"
     },
     {
       "file": "isycode/inspection_cli.py",
@@ -2224,7 +2253,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2399,
+      "line": 2433,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"

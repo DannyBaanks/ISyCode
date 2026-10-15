@@ -37,6 +37,10 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     assert callsites["file_picker.choose_workspace_file"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["file_picker.choose_workspace_directory"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["CredentialOwner.add"]["status"] == "COVERED"
+    assert callsites["GrokAuthOwner.begin"] == {
+        "action": "grok.login", "callsite": "GrokAuthOwner.begin",
+        "owner": "grok_auth", "status": "COVERED",
+    }
     assert set(report["unowned_effectful_actions"]) <= EXPLICIT_DENY_ACTIONS
 
 
@@ -120,6 +124,37 @@ def test_secure_tui_direct_api_audit_fails_closed_for_unparseable_source():
 
     assert issues
     assert "SyntaxError" in issues[0]["reason"]
+
+
+def test_secure_tui_direct_api_audit_finds_destructive_filesystem_calls():
+    source = '''
+import shutil
+from pathlib import Path
+class TUIApp:
+    def action_clean(self):
+        shutil.rmtree("/tmp/scratch", ignore_errors=True)
+    def action_purge(self):
+        Path("/tmp/one.txt").unlink()
+        Path("/tmp/two").rmdir()
+    def action_remove(self):
+        os.remove("/tmp/three.txt")
+    def action_write(self):
+        with open("/tmp/out.txt", "w") as stream:
+            stream.write("x")
+    def action_read(self):
+        with open("/tmp/in.txt") as stream:
+            stream.read()
+'''
+
+    issues = action_coverage.secure_tui_direct_api_bypasses(source)
+    callsites = [item["callsite"] for item in issues]
+
+    assert any(name.endswith("shutil.rmtree") for name in callsites)
+    assert any(name.endswith(":unlink") for name in callsites)
+    assert any(name.endswith(":rmdir") for name in callsites)
+    assert any(name.endswith("os.remove") for name in callsites)
+    # Exactly the write-mode open counts; the read-only one stays allowed.
+    assert sum(name.endswith(":open") for name in callsites) == 1
 
 
 def test_secure_tui_direct_api_audit_finds_no_current_direct_bypasses():

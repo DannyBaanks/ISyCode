@@ -95,6 +95,12 @@ _SECURE_DIRECT_API_METHODS = {
 _SECURE_DIRECT_FUNCTIONS = frozenset({
     "choose_context_file", "choose_workspace_file", "choose_workspace_directory",
 })
+# Destructive filesystem methods and the write-capable open() spellings: content
+# removal and file writes belong to the workspace.* execution owners, never to a
+# Secure TUI surface. "os.remove" is matched by its exact receiver below.
+_SECURE_DIRECT_DESTRUCTIVE_FS_METHODS = frozenset({
+    "rmtree", "rmdir", "removedirs", "unlink",
+})
 
 # Low-level effect primitives and the only product functions allowed to call
 # them ("module.Class.function"). Any other call in src/isycode (including
@@ -234,6 +240,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("tailscale.serve.disable", "TailscaleServeOwner.disable", "tailscale_serve", "COVERED"),
     ("provider.request", "ProviderNetworkOwner.execute", "provider_network", "COVERED"),
     ("provider.authenticate", "ProviderAuthOwner.begin", "provider_auth", "COVERED"),
+    ("grok.login", "GrokAuthOwner.begin", "grok_auth", "COVERED"),
     ("workspace.files.read", "LocalWorkspaceReadOwner.execute", "workspace_read", "COVERED"),
     ("workspace.config.read", "WorkspaceConfigOwner.read_config", "workspace_config", "COVERED"),
     ("workspace.config.list", "WorkspaceConfigOwner.commands", "workspace_config", "COVERED"),
@@ -566,6 +573,9 @@ def _issues_from_trees(trees: Sequence[ast.Module]) -> list[dict[str, Any]]:
                 for alias_receiver in alias_receivers)
             direct |= method in {"create_subprocess_exec", "Popen", "run", "call", "check_call", "check_output"} \
                 and any(token in receiver.casefold() for token in ("asyncio", "subprocess"))
+            direct |= method in _SECURE_DIRECT_DESTRUCTIVE_FS_METHODS
+            direct |= method == "remove" and receiver == "os"
+            direct |= method == "open" and _is_write_mode_call(call)
             if direct:
                 issues.append({
                     "callsite": f"{scope}:{getattr(call, 'lineno', 0)}:{target}",
@@ -628,6 +638,15 @@ def _ast_name(node: ast.AST) -> str:
         prefix = _ast_name(node.value)
         return f"{prefix}.{node.attr}" if prefix else node.attr
     return ""
+
+
+def _is_write_mode_call(call: ast.Call) -> bool:
+    """True when ``open()``/``Path.open()`` got a write-capable mode literal."""
+    modes: list[ast.AST] = list(call.args[1:])
+    modes.extend(keyword.value for keyword in call.keywords
+                 if keyword.arg == "mode")
+    return any(isinstance(mode, ast.Constant) and isinstance(mode.value, str)
+               and set(mode.value) & {"w", "a", "x", "+"} for mode in modes)
 
 
 def unclassified_effectful_actions(rows: list[dict[str, Any]]) -> list[str]:

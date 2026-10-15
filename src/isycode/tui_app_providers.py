@@ -183,22 +183,41 @@ class ProviderMixin:
         self._select_provider("xai", SESSION_MODEL)
 
     async def _connect_xai_login(self, method: str) -> None:
-        from isycode.grok_session import SESSION_MODEL, run_login, set_xai_auth_mode, status
-        if not await self._await_screen(TailscaleConfirmScreen(
-                "Sign in to Grok for ISyCode?",
-                "Runs the official grok login. The sign-in stays in the grok CLI. "
-                "After it finishes, ISyCode can send chat with that sign-in. "
-                "The token is not copied into this project or the chat.",
-                "Sign in")):
-            return
-        self._append("  Starting grok login.", MUTED)
+        from isycode.grok_auth import GrokAuthOwner
+        from isycode.grok_session import SESSION_MODEL, grok_executable, set_xai_auth_mode
         try:
-            code = await run_login(method, lambda line: self._append(f"  {line}", CYAN))
-        except (OSError, ValueError) as exc:
+            grok_executable()
+        except ValueError:
+            self._append("  Grok CLI not found. Install the official grok CLI first.", YELLOW)
+            return
+        try:
+            authority = WorkspaceAuthority(self._workspace_root)
+            owner = GrokAuthOwner(self._workspace_root, authority, self._action_approvals)
+            request = owner.request(method)
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    "Sign in to Grok for ISyCode?",
+                    "Runs the official grok login. The sign-in stays in the grok CLI. "
+                    "After it finishes, ISyCode can send chat with that sign-in. "
+                    "The token is not copied into this project or the chat.",
+                    "Sign in")):
+                return
+            authority.set_grant("grok.login", enabled=True, targets=["grok"],
+                                executables=[request.parameters["executable"]])
+            self._append("  Starting grok login.", MUTED)
+            outcome = await owner.begin(request, self._action_approvals.issue(request),
+                                        on_line=lambda line: self._append(f"  {line}", CYAN))
+        except (OSError, ValueError, WorkspaceAuthorityError) as exc:
             self._append(f"  Grok login did not start ({type(exc).__name__}).", YELLOW)
             return
-        if code != 0 or status() != "signed-in":
-            self._append("  Grok sign-in did not finish. The API key path is unchanged.", YELLOW)
+        if outcome.decision != "ALLOW":
+            if outcome.reason == "official grok login failed to launch":
+                self._append("  Grok login did not start. The API key path is unchanged.", YELLOW)
+            elif outcome.decision == "ERROR":
+                self._append("  Grok sign-in did not finish. The API key path is unchanged.", YELLOW)
+            elif outcome.decision == "NOT_VERIFIABLE":
+                self._append(f"  Grok sign-in not verifiable · {outcome.reason[:160]}", YELLOW)
+            else:
+                self._append(f"  Grok sign-in blocked · {outcome.reason[:160]}", YELLOW)
             return
         if not await self._allow_grok_session_host():
             self._append("  Signed in with grok, but ISyCode was not allowed to use it.", YELLOW)
