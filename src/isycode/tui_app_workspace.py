@@ -21,7 +21,7 @@ from isycode.security import ActionRequest
 from rich.syntax import Syntax
 from textual.widgets import Button, Static
 from isycode.tui_widgets import Collapsible
-from isycode.tui_theme import MUTED, GREEN, YELLOW, RED, CYAN
+from isycode.tui_theme import MUTED, GREEN, YELLOW, RED, CYAN, SECURITY
 from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.tui_composer import IdeaBox, ShellBox
 from isycode.tui_screens_approval import ContextAccessScreen, WriteApprovalScreen, CommandApprovalScreen, CommitApprovalScreen
@@ -74,7 +74,7 @@ class WorkspaceMixin:
             if ContextFilePickerOwner(self._workspace_root).project_root_for(selected) != source_root:
                 raise ValueError("the selected project folder changed")
         except (FilePickerUnavailable, OSError, ValueError) as exc:
-            self._append(f"  Context request denied · {str(exc)[:180]}", YELLOW)
+            self._append(f"  Context request denied · {str(exc)[:180]}", SECURITY)
             return None
         consent = await self._await_screen(ContextAccessScreen(
             selected, requested_by_agent=requested_by_agent))
@@ -188,7 +188,7 @@ class WorkspaceMixin:
         if outcome.decision == "ALLOW":
             self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
         else:
-            self._append(f"  Undo {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            self._append(f"  Undo {outcome.decision} · {outcome.reason[:180]}", SECURITY)
 
     def _workspace_write_tool_enabled(self, root: Path | None = None) -> bool:
         """The write tool needs read tools plus a root-scoped write grant."""
@@ -243,7 +243,7 @@ class WorkspaceMixin:
             outcome = await asyncio.to_thread(owner.commit, preview, approval)
         action = {"git_status": "git.status", "git_diff": "git.diff"}.get(name, "git.commit")
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  Git {outcome.decision} · {action} · {outcome.reason[:180]}", YELLOW)
+            self._append(f"  Git {outcome.decision} · {action} · {outcome.reason[:180]}", SECURITY)
             return json.dumps({"error": "ISyCode denied the git action", "reason": outcome.reason[:300]})
         if action == "git.status":
             result = json.loads(outcome.text)
@@ -293,7 +293,7 @@ class WorkspaceMixin:
                           "There is no unsandboxed fallback.")
             else:
                 reason = "commands are off here"
-            self._append(f"  Command denied · workspace.command.run · {reason}", YELLOW)
+            self._append(f"  Command denied · workspace.command.run · {reason}", SECURITY)
             return json.dumps({"error": "sandboxed commands are not enabled for this workspace",
                                "reason": reason})
         background = arguments.get("background", False)
@@ -309,7 +309,7 @@ class WorkspaceMixin:
                 arguments.get("timeout_s", 120), scope=arguments.get("scope", "."))
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
-            self._append(f"  Command denied · {reason}", YELLOW)
+            self._append(f"  Command denied · {reason}", SECURITY)
             return json.dumps({"error": "command cannot run", "reason": reason})
         shown = shlex.join(preview.argv)
         quiet = self._request_is_quiet(preview.request)
@@ -399,7 +399,7 @@ class WorkspaceMixin:
         """Delete or move one file after the user approves exactly that change."""
         action = "workspace.files.delete" if name == DELETE_TOOL_NAME else "workspace.files.move"
         if not self._workspace_write_tool_enabled() or not self._file_action_enabled(action):
-            self._append(f"  Tool denied · {action} · not enabled for this workspace", YELLOW)
+            self._append(f"  Tool denied · {action} · not enabled for this workspace", SECURITY)
             return json.dumps({"error": f"{action} is not enabled for this workspace",
                                "how_to_enable": "Settings → Authority → Turn on all coding tools…"})
         path, destination = arguments.get("path"), arguments.get("to")
@@ -414,7 +414,7 @@ class WorkspaceMixin:
                 preview = await asyncio.to_thread(owner.preview_move, path, destination)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
-            self._append(f"  Tool denied · {action} · {reason}", YELLOW)
+            self._append(f"  Tool denied · {action} · {reason}", SECURITY)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         quiet = self._request_is_quiet(preview.request)
         if quiet:
@@ -436,7 +436,7 @@ class WorkspaceMixin:
             return json.dumps({"status": "done", "approved_by_user": not quiet,
                                "approval_mode": "quiet-profile" if quiet else "reviewed",
                                "result": outcome.text, "receipt": outcome.receipt.receipt_id})
-        self._append(f"  Tool {outcome.decision} · {action} · {outcome.reason[:180]}", YELLOW)
+        self._append(f"  Tool {outcome.decision} · {action} · {outcome.reason[:180]}", SECURITY)
         return json.dumps({"error": "change was not applied", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
 
@@ -477,19 +477,19 @@ class WorkspaceMixin:
         except (OSError, ValueError) as exc:
             return json.dumps({"error": str(exc)[:180]})
         if not self._workspace_write_tool_enabled(root):
-            self._append("  Tool denied · workspace.files.write · file editing is off", YELLOW)
+            self._append("  Tool denied · workspace.files.write · file editing is off", SECURITY)
             return json.dumps({"error": "file editing is not enabled for this workspace"})
         if edit:
             old_text, new_text = arguments.get("old_text"), arguments.get("new_text")
             replace_all = arguments.get("replace_all", False)
             if (not isinstance(path, str) or not isinstance(old_text, str)
                     or not isinstance(new_text, str) or not isinstance(replace_all, bool)):
-                self._append("  Tool denied · workspace_edit · invalid arguments", YELLOW)
+                self._append("  Tool denied · workspace_edit · invalid arguments", SECURITY)
                 return json.dumps({"error": "path, old_text and new_text must be strings"})
         else:
             content = arguments.get("content")
             if not isinstance(path, str) or not isinstance(content, str):
-                self._append("  Tool denied · workspace.files.write · invalid arguments", YELLOW)
+                self._append("  Tool denied · workspace.files.write · invalid arguments", SECURITY)
                 return json.dumps({"error": "path and content must be strings"})
         owner = WorkspaceWriteOwner(root, WorkspaceAuthority(root),
                                     self._action_approvals)
@@ -501,7 +501,7 @@ class WorkspaceMixin:
                 preview = await asyncio.to_thread(owner.preview, path, content)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
-            self._append(f"  Tool denied · workspace.files.write · {reason}", YELLOW)
+            self._append(f"  Tool denied · workspace.files.write · {reason}", SECURITY)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
         verb = "create" if preview.created else "replace whole file" if replaces else "edit"
@@ -612,7 +612,7 @@ class WorkspaceMixin:
                 result["peer_advisory"] = advisory
             return json.dumps(result)
         self._append(f"  Tool {outcome.decision} · workspace.files.write · "
-                     f"{outcome.reason[:180]}", YELLOW)
+                     f"{outcome.reason[:180]}", SECURITY)
         return json.dumps({"error": "change was not written", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
 

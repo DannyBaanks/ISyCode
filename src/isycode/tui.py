@@ -1075,7 +1075,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "authorized": ("⚡ ", "[AUTH] ", "information", 3.0),
             "info": ("ℹ ", "[INFO] ", "information", 3.0),
             "warning": ("! ", "[WARN] ", "warning", 4.5),
-            "denied": ("× ", "[DENY] ", "error", 5.5),
+            # F-07: security-policy DENY gets its own severity so the toast is
+            # orange, distinct from operational errors (severity "error").
+            "denied": ("× ", "[DENY] ", "security-denied", 5.5),
             "error": ("× ", "[ERROR] ", "error", 5.5),
         }
         u_pfx, a_pfx, def_sev, def_timeout = semantics.get(kind, ("ℹ ", "[INFO] ", "information", 3.0))

@@ -43,7 +43,7 @@ from rich.markdown import Markdown as RichMarkdown
 from isycode.providers import PRESETS, Provider, ProviderError, load_provider_key, selected_provider_name
 from isycode.streaming import StreamError
 import time as _time
-from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, _elapsed_label
+from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, SECURITY, _elapsed_label
 from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import (
@@ -184,11 +184,11 @@ class ToolMixin:
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
                                  ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
             outcome = {"error": "tool is not registered by ISyCode"}
-            self._append("  Tool denied · unregistered tool name", YELLOW)
+            self._append("  Tool denied · unregistered tool name", SECURITY)
             return tool_call_id, json.dumps(outcome)
         if not isinstance(raw_arguments, str) or len(raw_arguments) > 64 * 1024:
             outcome = {"error": "tool arguments are malformed or too large"}
-            self._append(f"  Tool denied · {name} · invalid arguments", YELLOW)
+            self._append(f"  Tool denied · {name} · invalid arguments", SECURITY)
             return tool_call_id, json.dumps(outcome)
         try:
             arguments = json.loads(raw_arguments)
@@ -196,7 +196,7 @@ class ToolMixin:
             arguments = None
         if not isinstance(arguments, dict):
             outcome = {"error": "tool arguments must be a JSON object"}
-            self._append(f"  Tool denied · {name} · invalid arguments", YELLOW)
+            self._append(f"  Tool denied · {name} · invalid arguments", SECURITY)
             return tool_call_id, json.dumps(outcome)
         if name == CONTEXT_ACCESS_TOOL_NAME:
             if (set(arguments) != {"path"} or not isinstance(arguments.get("path"), str)
@@ -292,11 +292,11 @@ class ToolMixin:
                 root, WorkspaceAuthority(root))
             result = await asyncio.to_thread(owner.execute, action_id, arguments)
         except Exception:
-            self._append(f"  Tool denied · {action_id} · authority/owner unavailable", YELLOW)
+            self._append(f"  Tool denied · {action_id} · authority/owner unavailable", SECURITY)
             return tool_call_id, json.dumps({"error": "ISyCode authorization or read owner unavailable"})
         if result.decision != "ALLOW" or result.receipt is None:
             reason = result.reason or result.decision
-            self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", YELLOW)
+            self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", SECURITY)
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
         # The outcome and its receipt live inside the tool's own card; no
         # separate box per call.
@@ -636,7 +636,7 @@ class ToolMixin:
             self._append(f"  MCP {name} started · {len(tools)} tools · receipt "
                          f"{outcome.receipt.receipt_id}", GREEN)
         else:
-            self._append(f"  MCP {name} {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            self._append(f"  MCP {name} {outcome.decision} · {outcome.reason[:180]}", SECURITY)
 
     async def _call_local_mcp(self, function: str, arguments) -> str:
         mcp_owner = self._local_mcp_owner()
@@ -657,7 +657,7 @@ class ToolMixin:
             return json.dumps({"status": "rejected_by_user"})
         outcome = await mcp_owner.call(preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  MCP {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            self._append(f"  MCP {outcome.decision} · {outcome.reason[:180]}", SECURITY)
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
         try:
             payload = json.loads(outcome.text)
@@ -742,7 +742,7 @@ class ToolMixin:
         except (OSError, RuntimeError, ValueError):
             return json.dumps({"error": "workspace memory authority is unavailable"})
         if configured.get("enabled") is False:
-            self._append("  Memory action denied · explicitly revoked in workspace authority", YELLOW)
+            self._append("  Memory action denied · explicitly revoked in workspace authority", SECURITY)
             return json.dumps({"error": "workspace memory action was explicitly revoked",
                                "decision": "DENY"})
         sends_to_model = operation in {

@@ -14,6 +14,7 @@
     "separator": "#3f4d59",
     "success": "#7fe39d",
     "warning": "#f2c068",
+    "security": "#f2955e",
     "error": "#f7888e"
   },
   "typography_reference": {

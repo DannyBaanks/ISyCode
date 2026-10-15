@@ -293,7 +293,7 @@ def test_area_e_semantic_toasts(tmp_path, monkeypatch):
 
             app.notify_semantic("Sentinel denied", kind="denied")
             assert notifications[-1][0].startswith("× ")
-            assert notifications[-1][1]["severity"] == "error"
+            assert notifications[-1][1]["severity"] == "security-denied"
             assert notifications[-1][1]["timeout"] == 5.5
 
             app.notify_semantic("Review warning", kind="warning")
