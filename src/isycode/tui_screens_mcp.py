@@ -130,6 +130,10 @@ class MCPInvocationConfirmScreen(ApprovalScreen):
         with Vertical(id="mcp-confirm-card", classes="isy-dialog"):
             yield Static(f"Confirm Gateway MCP call · {self.tool_name}", id="mcp-confirm-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="mcp-confirm-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="Gateway MCP tool", scope=self.tool_name,
+                    duration="one-use approval",
+                    not_granted="no other MCP calls, no local filesystem access")
                 yield Static(
                     f"{self.description[:800]}\nEndpoint: {self.endpoint}\nThis sends the exact arguments below to the Gateway MCP. "
                     "A one-use approval is required; the remote Gateway validates its own key and operation policy.",
@@ -137,7 +141,7 @@ class MCPInvocationConfirmScreen(ApprovalScreen):
                 with Vertical(id="mcp-confirm-payload", classes="isy-dialog-detail"):
                     yield Static(payload, markup=False)
             with Horizontal(id="mcp-confirm-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="mcp-confirm-cancel")
+                yield Button(tr("Cancel · n"), id="mcp-confirm-cancel", classes="-refuse")
                 yield Button(tr("Approve once and invoke · y"), id="mcp-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -240,6 +244,10 @@ class GatewaySemanticConfirmScreen(ApprovalScreen):
         with Vertical(id="semantic-confirm-card", classes="isy-dialog"):
             yield Static(f"Confirm native Gateway · {self.operation}", id="semantic-confirm-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="semantic-confirm-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="Gateway semantic HTTP", scope=self.operation,
+                    duration="one-use approval",
+                    not_granted="no writes, no commands, no model context")
                 yield Static(
                     f"POST {self.endpoint}/v1/{self.operation}\nExpected workspace ID: {self.workspace_id}\n\n"
                     "Exact payload:\n" + payload +
@@ -248,7 +256,7 @@ class GatewaySemanticConfirmScreen(ApprovalScreen):
                     "not added to model context. A one-use local approval is required.",
                     id="semantic-confirm-copy", markup=False)
             with Horizontal(id="semantic-confirm-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="semantic-confirm-cancel")
+                yield Button(tr("Cancel · n"), id="semantic-confirm-cancel", classes="-refuse")
                 yield Button(tr("Approve once and run · y"), id="semantic-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -325,6 +333,10 @@ class LSPConfirmScreen(ApprovalScreen):
         with Vertical(id="lsp-confirm-card", classes="isy-dialog"):
             yield Static(tr("Confirm local LSP search"), id="lsp-confirm-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="lsp-confirm-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="local LSP search", scope=self.query_text,
+                    duration="one-use approval",
+                    not_granted="no writes, no network, no Gateway")
                 yield Static(
                     f"Server: {self.label} · operation: workspace/symbol\nQuery: {self.query_text}\nWorkspace root: {self.root}\n\n"
                     "ISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. "
@@ -332,7 +344,7 @@ class LSPConfirmScreen(ApprovalScreen):
                     "and output/time limits apply. No Gateway or provider receives this query.",
                     id="lsp-confirm-copy", markup=False)
             with Horizontal(id="lsp-confirm-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="lsp-confirm-cancel")
+                yield Button(tr("Cancel · n"), id="lsp-confirm-cancel", classes="-refuse")
                 yield Button(tr("Approve once and search · y"), id="lsp-confirm-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -366,6 +378,10 @@ class BrokerProvisionConfirmScreen(ApprovalScreen):
         with Vertical(id="broker-provision-card", classes="isy-dialog"):
             yield Static(tr("Review semantic broker build + start"), id="broker-provision-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="broker-provision-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="semantic broker provision", scope=str(self.project),
+                    duration="one-use, grants revoked after attempt",
+                    not_granted="no credentials, no host network, no other containers")
                 yield Static(
                     f"Project root: {self.project}\nRecipe root: {self.recipe.source_root}\n"
                     f"Recipe SHA-256: {self.recipe.digest}\nImage: {self.image}\nFiles:\n{file_rows}\n\n"
@@ -377,7 +393,7 @@ class BrokerProvisionConfirmScreen(ApprovalScreen):
                     "this root and recipe digest, then revoke those grants after the attempt. Failed health checks "
                     "remove only the container/network created by this request.", id="broker-provision-copy", markup=False)
             with Horizontal(id="broker-provision-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="broker-provision-cancel")
+                yield Button(tr("Cancel · n"), id="broker-provision-cancel", classes="-refuse")
                 yield Button(tr("Approve · Build + Start · y"), id="broker-provision-confirm", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -458,12 +474,16 @@ class BrokerOperationConfirmScreen(ApprovalScreen):
                 "remove": "Force-remove this container and its dedicated network. The shared image is retained.",
             }.get(self.operation, "Perform the selected operation.")
             with VerticalScroll(id="broker-operation-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="broker operation", scope=f"{self.operation} · {self.container}",
+                    duration="one-use, grant revoked after operation",
+                    not_granted="no provision, no other containers, no host access")
                 yield Static(
                     f"Project: {self.project}\nContainer: {self.container}\n\n{effect}\n"
                     "This grants only the exact Docker executable and broker target for this single operation; "
                     "the temporary grant is revoked afterward.", id="broker-operation-copy", markup=False)
             with Horizontal(id="broker-operation-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="broker-operation-cancel")
+                yield Button(tr("Cancel · n"), id="broker-operation-cancel", classes="-refuse")
                 yield Button(tr("Approve once · y"), id="broker-operation-approve", variant="warning")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
