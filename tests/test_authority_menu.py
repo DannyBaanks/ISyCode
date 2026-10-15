@@ -101,8 +101,17 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
         async with app.run_test(size=(160, 45)) as pilot:
             await pilot.pause()
             app._open_authority_menu()
-            await pilot.pause()
-            card = app.query_one("#action-card")
+            # Wait for the card to mount and settle at its layout height;
+            # one pause can catch it mid-layout on slower CI runners.
+            card = None
+            for _ in range(100):
+                await pilot.pause(0.05)
+                matches = app.query("#action-card")
+                if matches:
+                    card = matches.first()
+                    if card.size.height >= 30:
+                        break
+            assert card is not None
             assert card.size.width >= 100 and card.size.height >= 30
             detail = app.query_one("#action-detail")
             labels = [entry["label"] for entry in app._menu_filtered]

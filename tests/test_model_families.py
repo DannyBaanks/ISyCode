@@ -181,7 +181,12 @@ async def test_models_screen_click_after_immediate_open_does_not_crash(tmp_path,
         await pilot.pause()
         entries = app._branch_entries("models")
         app._render_menu("model_account", "Models · account catalog", entries)
-        await pilot.pause()
+        # Wait for the screen to compose before clicking; a single pause can
+        # catch it mid-mount on slower CI runners.
+        for _ in range(100):
+            await pilot.pause(0.05)
+            if app.screen.query("#models-search"):
+                break
         await pilot.click("#models-search")
         await pilot.pause()
         assert isinstance(app.screen, ModelsScreen)
