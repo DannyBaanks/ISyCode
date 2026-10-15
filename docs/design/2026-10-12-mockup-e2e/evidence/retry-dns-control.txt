@@ -1,0 +1,3 @@
+.                                                                        [100%]
+1 passed in 1.03s
+{"mode": "public", "resolver_calls": [{"host": "api.openai.com", "port": 443, "mode": "public"}], "exit": 0}

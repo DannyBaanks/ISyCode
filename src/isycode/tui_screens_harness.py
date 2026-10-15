@@ -12,7 +12,7 @@ from isycode.harness_graph import CATALOG_IDS, SEED_OPTIONS, gap_status
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from isycode.providers import PRESETS, selected_model_name, selected_provider_name
+from isycode.providers import PRESETS, resolved_chat_model, selected_provider_name
 from pathlib import Path
 from rich.text import Text
 from isycode.tui_theme import (
@@ -30,8 +30,8 @@ from isycode.localization import tr
 class HarnessFolderConfirmScreen(ModalScreen[bool]):
     CSS = """
     HarnessFolderConfirmScreen { align: center middle; background: #000000 68%; }
-    #harness-folder-confirm { width: 86; max-width: 94%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #harness-folder-path { height: auto; color: #ffcc66; margin: 1 0; }
+    #harness-folder-confirm { width: 86; max-width: 94%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
+    #harness-folder-path { height: auto; color: #edf1f5; margin: 1 0; }
     #harness-folder-actions { height: 3; align-horizontal: right; }
     #harness-folder-actions Button { margin-left: 1; }
     """
@@ -46,12 +46,12 @@ class HarnessFolderConfirmScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         label = self.harness_id.title()
-        with Vertical(id="harness-folder-confirm"):
+        with Vertical(id="harness-folder-confirm", classes="isy-dialog"):
             yield Static(
                 f"Use this folder for {label}? ISyCode will read option names only. "
                 "This does not grant workspace access, a network host, or a credential.")
             yield Static(str(self.path), id="harness-folder-path", markup=False)
-            with Horizontal(id="harness-folder-actions"):
+            with Horizontal(id="harness-folder-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="harness-folder-no")
                 yield Button(tr("Use folder"), id="harness-folder-yes", variant="primary")
 
@@ -68,7 +68,7 @@ class HarnessFolderConfirmScreen(ModalScreen[bool]):
 class HarnessModelConfirmScreen(ModalScreen[bool]):
     CSS = """
     HarnessModelConfirmScreen { align: center middle; background: #000000 68%; }
-    #harness-model-confirm { width: 92; max-width: 95%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #harness-model-confirm { width: 92; max-width: 95%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
     #harness-model-actions { height: 3; align-horizontal: right; margin-top: 1; }
     #harness-model-actions Button { margin-left: 1; }
     """
@@ -82,12 +82,12 @@ class HarnessModelConfirmScreen(ModalScreen[bool]):
         self.model = model
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="harness-model-confirm"):
+        with Vertical(id="harness-model-confirm", classes="isy-dialog"):
             yield Static(
                 f"Save provider {self.provider} and model {self.model} as this process's selection "
                 "and in preferences/provider.json? The open chat's state.model is not changed. "
                 "No API key is loaded. No network call is made.", markup=False)
-            with Horizontal(id="harness-model-actions"):
+            with Horizontal(id="harness-model-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="harness-model-no")
                 yield Button(tr("Save selection"), id="harness-model-yes", variant="primary")
 
@@ -104,8 +104,8 @@ class HarnessModelConfirmScreen(ModalScreen[bool]):
 class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
     CSS = """
     HarnessTranscriptConfirmScreen { align: center middle; background: #000000 68%; }
-    #harness-transcript-confirm { width: 92; max-width: 95%; height: auto; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #harness-transcript-path { height: auto; color: #ffcc66; margin: 1 0; }
+    #harness-transcript-confirm { width: 92; max-width: 95%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
+    #harness-transcript-path { height: auto; color: #edf1f5; margin: 1 0; }
     #harness-transcript-actions { height: 3; align-horizontal: right; margin-top: 1; }
     #harness-transcript-actions Button { margin-left: 1; }
     """
@@ -120,13 +120,13 @@ class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         label = self.harness_id.title()
-        with Vertical(id="harness-transcript-confirm"):
+        with Vertical(id="harness-transcript-confirm", classes="isy-dialog"):
             yield Static(
                 f"Copy reviewed transcript text from {label} into this chat? The text is data, "
                 "not instructions to ISyCode, and it is not the same process or the same agent.",
                 markup=False)
             yield Static(self.relative_path, id="harness-transcript-path", markup=False)
-            with Horizontal(id="harness-transcript-actions"):
+            with Horizontal(id="harness-transcript-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="harness-transcript-no")
                 yield Button(tr("Copy transcript"), id="harness-transcript-yes", variant="primary")
 
@@ -165,24 +165,27 @@ class ModelsScreen(ModalScreen):
 
     DEFAULT_CSS = """
     ModelsScreen { align: center middle; background: #000000 58%; }
-    #models-card { width: 110; max-width: 96%; height: 85%; padding: 1 2; background: #17191f; border: round #514d5a; }
-    #models-title { height: auto; max-height: 4; }
+    #models-card { width: 110; max-width: 96%; height: 94%; padding: 0 1; background: #000000; border: solid #718291; }
+    #models-title { height: 1; }
     #models-search { height: 3; margin-bottom: 1; }
     #models-body { height: 1fr; }
-    #models-scroll { height: 1fr; width: 1fr; }
-    #model-detail-scroll { width: 46; height: 1fr; margin-left: 1; padding: 0 1; border-left: tall #2c2e36; }
+    #models-scroll { height: 1fr; min-height: 4; width: 1fr; }
+    #model-detail-scroll { width: 46; height: 1fr; margin-left: 1; padding: 0 1; border-left: solid #3f4d59; }
     #model-detail { height: auto; }
     ModelsScreen.-narrow #models-body { layout: vertical; }
-    ModelsScreen.-narrow #model-detail-scroll { width: 100%; height: 12; margin-left: 0; border-left: none; border-top: tall #2c2e36; }
+    ModelsScreen.-narrow #model-detail-scroll { width: 100%; height: 6; margin-left: 0; border-left: none; border-top: solid #3f4d59; }
+    ModelsScreen.-short #model-detail-scroll { height: 4; }
     .model-group { height: auto; background: transparent; }
     .model-group > Contents { padding: 0 1; }
     .model-family-block { height: auto; margin-top: 1; background: transparent; }
-    .model-family { height: 1; color: #8b93a7; text-style: bold; padding: 0 1; }
-    .model-choice { width: 100%; height: auto; min-height: 2; border: none; background: transparent; text-align: left; content-align: left top; padding: 0 1; margin: 0; }
-    .model-choice:focus { background: #1e3a5f; }
-    .model-choice:hover { background: #242630; }
-    #models-status { height: auto; color: #9aa3ad; margin: 1 0; }
-    #models-close { height: 3; width: 16; }
+    .model-family { height: 1; color: #a9b5c2; padding: 0 1; }
+    .model-choice { width: 100%; height: 1; min-height: 1; border: none; background: transparent; text-align: left; content-align: left top; padding: 0 1; margin: 0; text-style: none; text-wrap: nowrap; text-overflow: ellipsis; }
+    .model-choice:focus, .model-choice.-selected { background: #03252d; }
+    .model-choice:hover { background: #03252d; }
+    #models-status { height: auto; max-height: 2; color: #a9b5c2; }
+    #models-actions { height: 3; align-horizontal: right; }
+    #models-actions Button { height: 3; width: auto; margin-left: 1; }
+    #models-hint { height: 1; color: #a9b5c2; }
     """
     BINDINGS = [Binding("escape", "close", "Close"),
                 Binding("down", "focus_next", "Next", show=False),
@@ -194,10 +197,14 @@ class ModelsScreen(ModalScreen):
         self.provider_scope = provider_scope
         self.entries = entries
         self.choices: dict[str, dict] = {}
-        self.expanded_providers: set[str] = set()
+        self.expanded_providers: set[str] = {provider_scope or selected_provider_name()}
         self.search_query = ""
+        # Widget IDs change when a live catalog is recomposed. Retain the
+        # provider/model payload, never a positional row ID, as the preview.
+        self.selected_model_value: str | None = None
 
     def compose(self) -> ComposeResult:
+        self.choices = {}
         groups: dict[str, list[dict]] = {}
         families: dict[str, list[dict]] = {}
         for entry in self.entries:
@@ -221,13 +228,12 @@ class ModelsScreen(ModalScreen):
         if scope:
             groups = {scope: groups.get(scope, [])}
             self.expanded_providers.add(scope)
-        heading = ("Models · " + PRESETS.get(scope, {}).get("label", scope)) if scope else "Models"
-        hint = ("Click a model to read it · Enter or a second click uses it · Esc back"
-                if scope else "Expand a provider · click a model to read it · Enter uses it")
-        with Vertical(id="models-card"):
-            yield Static(Text.assemble((heading + "\n", "bold #c7b8d4"), (hint, MUTED)), id="models-title")
+        heading = (tr("Models · {provider}", provider=PRESETS.get(scope, {}).get("label", scope))
+                   if scope else tr("Models"))
+        with Vertical(id="models-card", classes="isy-dialog"):
+            yield Static(Text(heading, style=f"bold {TEXT}"), id="models-title", classes="isy-dialog-title")
             yield Input(value=self.search_query, placeholder=tr("Find a model, id or family…"), id="models-search")
-            with Horizontal(id="models-body"):
+            with Horizontal(id="models-body", classes="isy-dialog-body"):
                 with VerticalScroll(id="models-scroll"):
                     for index, entry in enumerate(self.entries):
                         if entry["kind"] == "model_list" and (not scope or entry["value"] == scope):
@@ -240,11 +246,8 @@ class ModelsScreen(ModalScreen):
                             yield Static(tr("No models listed for this provider yet · refresh its account catalog."),
                                          classes="model-empty")
                         else:
-                            for family, family_entries in self._by_family(groups[scope]):
-                                with Vertical(classes="model-family-block"):
-                                    yield Static(family, classes="model-family")
-                                    for entry in family_entries:
-                                        yield self._choice_button(entry)
+                            for entry in groups[scope]:
+                                yield self._choice_button(entry)
                     else:
                         for provider, entries in groups.items():
                             with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
@@ -255,18 +258,20 @@ class ModelsScreen(ModalScreen):
                     yield Static(Text("Click a model. Context, reasoning and tools show here.", style=MUTED),
                                  id="model-detail")
             notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
-            yield Static(tr("\n").join(notes) or "Search opens matching providers. Esc closes.", id="models-status")
-            yield Button(tr("Back") if scope else tr("Close"), id="models-close")
+            yield Static("\n".join(notes), id="models-status", classes="isy-dialog-hint")
+            with Horizontal(id="models-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Back") if scope else tr("Close"), id="models-close")
+                yield Button(tr("Choose model"), id="models-use", variant="primary", disabled=True)
+            yield Static(tr("↑↓ move · Enter choose · Esc back · Tab search"), id="models-hint", classes="isy-dialog-hint")
 
     def _choice_button(self, entry: dict) -> ModelChoice:
         from isycode.model_presentation import model_display_name
         provider, model = entry["value"].split("|", 1)
         key = f"model-choice-{len(self.choices)}"
         self.choices[key] = entry
-        label = Text(model_display_name(model), style="bold")
-        if provider == selected_provider_name() and model == selected_model_name():
-            label.append("  · current", style=GREEN)
-        label.append("\n" + model, style=MUTED)
+        label = Text(model_display_name(model), style=TEXT)
+        if provider == selected_provider_name() and model == resolved_chat_model(provider):
+            label.append("  · " + tr("current"), style=GREEN)
         return ModelChoice(label, id=key, classes="model-choice")
 
     def _by_family(self, entries: list[dict]) -> list[tuple[str, list[dict]]]:
@@ -283,6 +288,7 @@ class ModelsScreen(ModalScreen):
 
     def on_mount(self) -> None:
         self._apply_width(self.app.size.width)
+        self.set_class(self.app.size.height <= 26, "-short")
         # The row is registered during compose, before nested containers finish
         # mounting. Querying it here crashes the screen.
         self.call_after_refresh(self._reveal_current)
@@ -294,25 +300,27 @@ class ModelsScreen(ModalScreen):
         idle. A query in that gap finds the choice recorded and the widget
         not yet in the tree.
         """
-        wanted = f"{selected_provider_name()}|{selected_model_name()}"
+        wanted = self.selected_model_value or f"{selected_provider_name()}|{resolved_chat_model()}"
         for key, entry in list(self.choices.items()):
             if entry.get("kind") != "model" or entry.get("value") != wanted:
                 continue
             try:
-                self.show_details(*wanted.split("|", 1))
                 button = self.query_one(f"#{key}", ModelChoice)
             except NoMatches:
                 if attempt < 3:
                     self.call_after_refresh(self._reveal_current, attempt + 1)
                 return
-            button.scroll_visible()
-            button.focus()
+            if button.display:
+                button.scroll_visible()
+                button.focus()
+                self.show_details(*wanted.split("|", 1))
             return
         if attempt < 3 and not self.choices:
             self.call_after_refresh(self._reveal_current, attempt + 1)
 
     def on_resize(self, event) -> None:
         self._apply_width(event.size.width)
+        self.set_class(event.size.height <= 26, "-short")
 
     def _apply_width(self, width: int) -> None:
         self.set_class(width < self.NARROW_WIDTH, "-narrow")
@@ -321,15 +329,22 @@ class ModelsScreen(ModalScreen):
         widget = event.widget
         entry = self.choices.get(getattr(widget, "id", None) or "")
         if entry is not None and entry["kind"] == "model":
+            self.selected_model_value = entry["value"]
+            for row in self.query(ModelChoice):
+                row.set_class(row is widget, "-selected")
+            self.query_one("#models-use", Button).disabled = False
             self.show_details(*entry["value"].split("|", 1))
 
     def show_details(self, provider: str, model: str) -> None:
         from isycode.model_card import model_facts
         card = Text()
-        for fact in model_facts(provider, model):
-            card.append(fact.label + "\n", style="bold #c7b8d4")
-            card.append("  " + fact.value, style=TEXT)
-            card.append(f"  · {fact.source}\n", style=MUTED)
+        facts = model_facts(provider, model)
+        for fact in facts:
+            card.append(tr(fact.label) + ": ", style=MUTED)
+            card.append(fact.value + "\n", style=TEXT)
+        card.append("\n" + tr("Sources") + "\n", style=MUTED)
+        for fact in facts:
+            card.append(f"{tr(fact.label)}: {tr(fact.source)}\n", style=MUTED)
         self.query_one("#model-detail", Static).update(card)
 
     def _haystack(self, provider: str, model: str) -> str:
@@ -358,19 +373,12 @@ class ModelsScreen(ModalScreen):
             return
         self.search_query = event.value
         query = event.value.casefold().strip()
-        blocks = list(self.query(".model-family-block"))
-        if blocks:
-            for block in blocks:
-                matches = 0
-                for button in block.query(".model-choice"):
-                    entry = self.choices.get(button.id or "")
-                    if not entry or entry.get("kind") != "model":
-                        continue
-                    provider, model = entry["value"].split("|", 1)
-                    button.display = not query or query in self._haystack(provider, model)
-                    matches += bool(button.display)
-                block.display = bool(matches)
-            return
+        matches = 0
+        for button in self.query(ModelChoice):
+            entry = self.choices[button.id]
+            provider, model = entry["value"].split("|", 1)
+            button.display = not query or query in self._haystack(provider, model)
+            matches += bool(button.display)
         for group in self.query(".model-group"):
             matches = 0
             for button in group.query(Button):
@@ -383,11 +391,32 @@ class ModelsScreen(ModalScreen):
             group.display = bool(matches)
             if query and matches:
                 group.collapsed = False
+        selected = self._selected_row()
+        self.query_one("#models-use", Button).disabled = selected is None
+        notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
+        status = tr("No matching models") if not any(row.display for row in self.query(ModelChoice)) else "\n".join(notes)
+        self.query_one("#models-status", Static).update(status)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "models-search":
+            event.stop()
+            first = next((row for row in self.query(ModelChoice) if row.display), None)
+            if first is not None:
+                first.focus()
+
+    def _selected_row(self) -> ModelChoice | None:
+        return next((row for row in self.query(ModelChoice)
+                     if row.display and self.choices.get(row.id, {}).get("value")
+                     == self.selected_model_value), None)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
         if event.button.id == "models-close":
             self.dismiss(None)
+        elif event.button.id == "models-use":
+            selected = self._selected_row()
+            if selected is not None:
+                self.dismiss(self.choices[selected.id])
         elif event.button.id in self.choices:
             self.dismiss(self.choices[event.button.id])
 
@@ -398,9 +427,11 @@ class ModelsScreen(ModalScreen):
 class HarnessComposeScreen(ModalScreen[bool]):
     CSS = """
     HarnessComposeScreen { align: center middle; background: #000000 58%; }
-    #compose-card { width: 90%; height: 80%; padding: 1 2; border: round #6c557e; background: #24232b; }
+    #compose-card { width: 90%; height: 94%; padding: 0 1; border: solid #718291; background: #000000; }
     #compose-scroll { height: 1fr; }
     #compose-body { height: auto; }
+    #compose-actions { height: 3; align-horizontal: right; }
+    #compose-actions Button { height: 3; width: auto; margin-left: 1; }
     """
     BINDINGS = [Binding("escape", "close", "Close")]
 
@@ -409,12 +440,13 @@ class HarnessComposeScreen(ModalScreen[bool]):
         self.brief = brief
 
     def compose(self):
-        with Vertical(id="compose-card"):
-            yield Static(Text("Repair Compose · review proposal", style=CYAN))
-            with VerticalScroll(id="compose-scroll"):
+        with Vertical(id="compose-card", classes="isy-dialog"):
+            yield Static(Text(tr("Repair Compose · review proposal"), style=f"bold {TEXT}"), classes="isy-dialog-title")
+            with VerticalScroll(id="compose-scroll", classes="isy-dialog-body"):
                 yield Static(Text(self.brief), id="compose-body")
-            yield Button(tr("Copy reviewed Compose"), id="compose-copy")
-            yield Button(tr("Back · Esc"), id="compose-close")
+            with Horizontal(id="compose-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Back · Esc"), id="compose-close")
+                yield Button(tr("Copy reviewed Compose"), id="compose-copy", variant="primary")
 
     def on_button_pressed(self, event):
         self.dismiss(event.button.id == "compose-copy")
@@ -428,20 +460,22 @@ class MultiHarnessScreen(ModalScreen[str | None]):
 
     CSS = """
     MultiHarnessScreen { align: center middle; background: #000000 58%; }
-    #harness-card { width: 100; max-width: 95%; height: 88%; padding: 1 2; border: round #6c557e; background: #24232b; }
-    #harness-title { height: 1; color: #d7a9ff; text-style: bold; }
-    #harness-counts { height: 3; margin-bottom: 1; }
-    .harness-count { width: auto; height: 3; padding: 0 1; margin-right: 2; border: round #514d5a; background: #24232b; color: #c2b9ce; }
-    #harness-summary { height: auto; color: #aeb6c5; margin-bottom: 1; }
-    #harness-scroll { height: 1fr; margin-bottom: 1; scrollbar-color: #7b4f9c; }
+    #harness-card { width: 100; max-width: 95%; height: 94%; padding: 0 1; border: solid #718291; background: #000000; }
+    #harness-title { height: 1; color: #edf1f5; text-style: bold; }
+    #harness-counts { height: 1; margin-bottom: 1; }
+    .harness-count { width: auto; height: 1; margin-right: 2; border: none; background: #000000; color: #a9b5c2; }
+    #harness-summary { height: auto; max-height: 2; color: #a9b5c2; margin-bottom: 1; }
+    #harness-scroll { height: 1fr; scrollbar-color: #718291; }
     .harness-section { width: 100%; height: auto; padding: 0; margin: 0; background: transparent; border: none; }
-    .harness-section > Contents { padding: 1 2; background: #2d2934; }
-    .harness-section-text { width: 100%; height: auto; color: #e0e0e0; }
-    .harness-actions { width: 100%; height: auto; margin-top: 1; }
-    .harness-actions Button { margin-right: 1; }
+    .harness-section > Contents { padding: 0 1; background: #000000; }
+    .harness-section-text { width: 100%; height: auto; color: #edf1f5; }
+    .harness-actions { width: 100%; height: 3; margin-top: 1; }
+    .harness-actions Button { width: 1fr; min-width: 0; height: 3; margin-right: 1; text-wrap: nowrap; text-overflow: ellipsis; }
     #harness-gap-panel { width: 100%; margin-top: 1; }
     #harness-gap-content { height: auto; }
-    #harness-close { width: 16; margin-top: 1; }
+    #harness-footer { height: 3; align-horizontal: right; }
+    #harness-close { width: auto; height: 3; }
+    #harness-hint { height: 1; color: #a9b5c2; }
     """
     BINDINGS = [Binding("escape", "close", "Close")]
 
@@ -456,13 +490,13 @@ class MultiHarnessScreen(ModalScreen[str | None]):
         self.transcript_sources: dict[str, tuple[str, str]] = {}
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="harness-card"):
-            yield Static(tr("MULTI HARNESS  /  FIELD NOTES"), id="harness-title")
+        with Vertical(id="harness-card", classes="isy-dialog"):
+            yield Static(tr("Multi Harness · inspection"), id="harness-title", classes="isy-dialog-title")
             with Horizontal(id="harness-counts"):
                 yield Static(f"Folders  0/{len(CATALOG_IDS)}", id="harness-folders-count", classes="harness-count")
                 yield Static(tr("Conversations  0"), id="harness-sessions-count", classes="harness-count")
             yield Static(self._render_summary(), id="harness-summary")
-            with VerticalScroll(id="harness-scroll"):
+            with VerticalScroll(id="harness-scroll", classes="isy-dialog-body"):
                 for harness_id in CATALOG_IDS:
                     with Collapsible(title=self._section_title(harness_id), collapsed=True,
                                      id=f"harness-fold-{harness_id}", classes="harness-section"):
@@ -483,14 +517,16 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                         with Collapsible(title=row["title"], collapsed=True):
                             yield Static(Text(SEED_OPTIONS[row["semantic_id"]].meaning))
                             yield Button(tr("Prepare repair Compose"), id=f"harness-compose-{row['semantic_id']}")
-            yield Button(tr("Close"), id="harness-close")
+            with Horizontal(id="harness-footer", classes="isy-dialog-actions"):
+                yield Button(tr("Close"), id="harness-close")
+            yield Static(tr("↑↓ move · Enter inspect · Esc back"), id="harness-hint", classes="isy-dialog-hint")
 
     def _render_summary(self) -> Text:
         checking = sum(bool(section.get("checking")) for section in self.sections)
         summary = Text()
         if checking:
-            summary.append(f"{checking} checking…", style="#f6c77b")
-        summary.append("Inspect a harness · Gap map prepares repair proposals for review.", style="#9097a7")
+            summary.append(tr("{count} checking…", count=checking) + " · ", style=YELLOW)
+        summary.append(tr("Inspect a harness · Gap map prepares repair proposals for review."), style=MUTED)
         return summary
 
     def _section_title(self, harness_id: str) -> str:
@@ -502,15 +538,14 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     def _render_harness(self, harness_id: str) -> Text:
         section = next((item for item in self.sections if item["harness_id"] == harness_id), None)
         note = Text()
-        note.append("◆ ", style="bold #d7a9ff")
-        note.append(harness_id.upper(), style="bold #f0e9f5")
+        note.append(harness_id.upper(), style=TEXT)
         if section is None or section.get("checking"):
             note.append("  ·  checking…", style="#f6c77b")
             return note
         if not section.get("unlocked"):
             note.append("  ·  folder unavailable", style="#9295a2")
             return note
-        note.append("  ·  ready", style="bold #77d8b0")
+        note.append("  ·  " + tr("ready"), style=CYAN)
         version = section.get("version_line") or "version answered"
         note.append("\n" + str(version), style="#a5a9ba")
         settings = section.get("settings", [])
@@ -521,8 +556,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
             title = SEED_OPTIONS[semantic].title if semantic in SEED_OPTIONS else semantic.replace("_", " ").title()
             edge = str(setting.get("edge", "unmapped"))
             color = "#77d8b0" if edge == "same" else "#f6c77b" if edge == "non_equivalent" else "#9295a2"
-            note.append("\n  • ", style="#8153a0")
-            note.append(title, style="bold #e0e0e0")
+            note.append("\n  · ", style=MUTED)
+            note.append(title, style=TEXT)
             note.append(f"  {edge} · N={setting.get('n', 0)}", style=color)
             note.append(f"\n    {setting.get('display_value', '')}", style="#aeb6c5")
         return note

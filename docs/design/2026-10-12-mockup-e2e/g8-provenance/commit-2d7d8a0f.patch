@@ -1,0 +1,29 @@
+commit 2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8
+Author:     DannyBaanks <danielbaanksyy@gmail.com>
+AuthorDate: Tue Oct 6 17:25:33 2026 -0600
+Commit:     DannyBaanks <danielbaanksyy@gmail.com>
+CommitDate: Tue Oct 6 17:25:33 2026 -0600
+
+    chore(evidence): point M8 G8-05 artifact at the test file + regen coverage snapshot
+    
+    The M8 package hashed tui_app_tools.py, which churns with every UX
+    change and re-breaks the gate. The receipt contract artifact now points
+    at tests/test_visual_tui.py (the contract test); product code stays
+    pinned by the package's sha_evaluado itself. Authority coverage
+    snapshot regenerated for today's line drift.
+
+diff --git a/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml b/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml
+index 1051199..a47f7d8 100644
+--- a/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml
++++ b/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml
+@@ -81,8 +81,8 @@ casos:
+     artefactos:
+       - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+         sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+-      - src/isycode/tui_app_tools.py
+-        sha256: e322aa1010aa1a5f6c8357910789e9ab81f71b2fecaaaad09c931efbe37f6d31
++      - tests/test_visual_tui.py
++        sha256: e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5
+ sin_evidencia_real:
+   - revisión en terminal física real (los snapshots son pilot/Textual)
+   - widget del sidebar de agentes M6A renderizado en la TUI viva

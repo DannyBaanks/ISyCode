@@ -1,0 +1,5 @@
+interface:
+  display_name: "ISyCode · Cajas y opciones"
+  short_description: "Cajas de opciones, menús y formularios coherentes"
+policy:
+  allow_implicit_invocation: true

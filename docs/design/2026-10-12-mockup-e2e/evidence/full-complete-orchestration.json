@@ -1,0 +1,6 @@
+{
+  "pytest_subprocess_exit": 0,
+  "exec_session_reported_exit": 143,
+  "timing": "Session poll returned 143 after complete pytest log and final result JSON had been written.",
+  "scope": "JUnit/raw pytest summary and parent subprocess return code confirm suite completion; cause of outer session termination NOT_DEMONSTRATED."
+}

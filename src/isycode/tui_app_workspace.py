@@ -320,7 +320,9 @@ class WorkspaceMixin:
             self._append(f"  Command requested · {shown[:160]} · review it", CYAN)
             if not await self._await_screen(CommandApprovalScreen(preview)):
                 self._append("  Command rejected · nothing ran", MUTED)
+                self.notify_semantic("Command denied by user", kind="denied")
                 return json.dumps({"status": "rejected_by_user", "argv": list(preview.argv)})
+            self.notify_semantic("Command authorized", kind="authorized")
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         self._dismiss_idle()
         chat = self.query_one(ChatArea)
@@ -374,6 +376,7 @@ class WorkspaceMixin:
             raise
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             card.finish(outcome.decision, output=outcome.reason[:300])
+            self.notify_semantic(f"Sentinel decision · {outcome.decision}", kind="denied")
             return json.dumps({"error": "command did not run", "decision": outcome.decision,
                                "reason": outcome.reason[:300]})
         result = json.loads(outcome.text)

@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "isycode.launcher",
+    "tui"
+  ],
+  "cwd": "/tmp/isycode-cli-smoke-87lpv380/project",
+  "environment": {
+    "PYTHONPATH": "/home/danny/Development/ISyCo Git/ISyCode/src",
+    "XDG_STATE_HOME": "/tmp/isycode-cli-smoke-87lpv380/state",
+    "XDG_CONFIG_HOME": "/tmp/isycode-cli-smoke-87lpv380/config",
+    "TERM": "xterm-256color",
+    "provider_keys": "unset in child"
+  },
+  "terminal_size": [
+    80,
+    24
+  ],
+  "exit_code": 0,
+  "bounded_stop": false,
+  "bytes_captured": 30161
+}

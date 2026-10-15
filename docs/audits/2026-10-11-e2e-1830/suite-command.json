@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "-m",
+    "not integration",
+    "--junitxml=/home/danny/Development/ISyCo Git/ISyCode/docs/audits/2026-10-11-e2e-1830/suite.xml"
+  ],
+  "cwd": "/home/danny/Development/ISyCo Git/ISyCode",
+  "isolated_home": "/tmp/isycode-audit-suite-xhy31by8",
+  "removed_credentials": true
+}

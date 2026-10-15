@@ -1,0 +1,5 @@
+interface:
+  display_name: "ISyCode · Design"
+  short_description: "Estándar visual y rutas de diseño de ISyCode"
+policy:
+  allow_implicit_invocation: true

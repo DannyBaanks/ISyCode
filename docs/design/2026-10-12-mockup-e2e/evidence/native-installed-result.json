@@ -1,0 +1,13 @@
+{
+  "command": "/home/danny/.local/bin/isycode",
+  "resolved_source_launcher": "/home/danny/Development/ISyCo Git/ISyCode/scripts/isycode",
+  "size": [
+    80,
+    24
+  ],
+  "temporary_security_state": true,
+  "settings_after_real_sgr_mouse_click": true,
+  "exit": 0,
+  "traceback": false,
+  "sha256": "7abcefc1d72a8f4c3148003e3fe84c5e3faabcac3bea8d4b3a2bd7ea15688485"
+}

@@ -1,0 +1,12 @@
+{
+  "exit": 0,
+  "name": "isycode-0.1.0-py3-none-any.whl",
+  "sha256": "08b9845b2be906eeca6ce78e92dbe0fad84d8f5708ae79402b2b1c6244fbba4f",
+  "required_assets_present": [
+    "isycode/tui_presentation.py",
+    "isycode/design.tcss",
+    "isycode/locales/es/LC_MESSAGES/isycode.po",
+    "isycode/locales/zh/LC_MESSAGES/isycode.po"
+  ],
+  "scope": "Isolated build from committed main; declared build dependencies fetched from PyPI. Runtime/user virtualenv and checkout build directory unchanged."
+}

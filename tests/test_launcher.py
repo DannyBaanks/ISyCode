@@ -52,6 +52,55 @@ def test_installer_refuses_to_replace_an_existing_command(tmp_path: Path):
     assert command.read_text(encoding="utf-8") == "user-owned"
 
 
+def test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup(tmp_path: Path):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    command = bin_dir / "isycode"
+    legacy = ROOT / ".venv" / "bin" / "isycode"
+    command.symlink_to(legacy)
+    env = dict(os.environ, ISYCODE_BIN_DIR=str(bin_dir))
+    result = subprocess.run([str(ROOT / "scripts/install-path"), "--replace-owned"],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert command.resolve() == (ROOT / "scripts/isycode").resolve()
+    backups = list(bin_dir.glob("isycode.backup.*"))
+    assert len(backups) == 1 and os.readlink(backups[0]) == str(legacy)
+    again = subprocess.run([str(ROOT / "scripts/install-path"), "--replace-owned"],
+                           env=env, capture_output=True, text=True)
+    assert again.returncode == 0 and list(bin_dir.glob("isycode.backup.*")) == backups
+
+
+def test_installer_migration_keeps_unknown_symlinks_and_regular_files(tmp_path: Path):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    command = bin_dir / "isycode"
+    command.symlink_to(tmp_path / "someone-elses-tool")
+    env = dict(os.environ, ISYCODE_BIN_DIR=str(bin_dir))
+    result = subprocess.run([str(ROOT / "scripts/install-path"), "--replace-owned"],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert os.readlink(command) == str(tmp_path / "someone-elses-tool")
+    assert not list(bin_dir.glob("isycode.backup.*"))
+
+
+def test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv(tmp_path: Path):
+    task_home = tmp_path / "home"
+    legacy_dir = task_home / ".local/share/isycode-mainline"
+    legacy_dir.mkdir(parents=True)
+    (legacy_dir / ".venv").symlink_to(ROOT / ".venv", target_is_directory=True)
+    bin_dir = task_home / ".local/bin"
+    bin_dir.mkdir()
+    command = bin_dir / "isycode"
+    command.symlink_to(legacy_dir / ".venv/bin/isycode")
+    env = dict(os.environ, HOME=str(task_home), ISYCODE_BIN_DIR=str(bin_dir))
+    result = subprocess.run([str(ROOT / "scripts/install-path"), "--replace-owned"],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert command.resolve() == (ROOT / "scripts/isycode").resolve()
+    backups = list(bin_dir.glob("isycode.backup.*"))
+    assert len(backups) == 1 and os.readlink(backups[0]) == str(legacy_dir / ".venv/bin/isycode")
+
+
 def test_launcher_prefers_repository_virtualenv(tmp_path: Path):
     repository = tmp_path / "repo"
     launcher = repository / "scripts" / "isycode"

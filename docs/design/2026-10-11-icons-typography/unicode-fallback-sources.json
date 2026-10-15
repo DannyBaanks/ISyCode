@@ -1,0 +1,19 @@
+{
+  "source": "Installed DejaVu Sans Mono, unmodified copy",
+  "purpose": "Unicode symbols missing in Ubuntu Sans Mono; preview-only size-adjust",
+  "license": "Bitstream Vera + public-domain DejaVu changes; packaged notices retained",
+  "assets": [
+    {
+      "source": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+      "path": "fonts/unicode-fallback.ttf",
+      "sha256": "c805f9436dbc268644c1d9584f01a601a653e028e08fd74b9b949f6cf8304d88",
+      "bytes": 343140
+    },
+    {
+      "source": "/usr/share/doc/fonts-dejavu-core/copyright",
+      "path": "licenses/dejavu-font-copyright.txt",
+      "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9",
+      "bytes": 3859
+    }
+  ]
+}

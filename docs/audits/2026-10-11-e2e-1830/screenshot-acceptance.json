@@ -1,0 +1,160 @@
+{
+  "rejected": [
+    {
+      "name": "01-first-run-140x40",
+      "reason": "PNG vacío de ImageMagick; SVG preservado"
+    }
+  ],
+  "auxiliary": [
+    {
+      "name": "02-first-run-80x24",
+      "reason": "Ensayo monocromo, rasterizado con librsvg; no duplica pasos del informe"
+    }
+  ],
+  "accepted": [
+    {
+      "step": 1,
+      "name": "03-first-run-narrow",
+      "description": "Bienvenida en 80×24",
+      "note": "F4: la tarjeta mide 26 filas; el borde inferior se recorta. Captura monocroma."
+    },
+    {
+      "step": 2,
+      "name": "04-recurrence",
+      "description": "Espacio recurrente",
+      "note": "La elección funciona y explica .isyroot. Captura monocroma."
+    },
+    {
+      "step": 3,
+      "name": "05-mode-narrow",
+      "description": "Elegir modo",
+      "note": "F4: 27 filas en un terminal de 24; Esc sí seleccionó Security. Captura monocroma."
+    },
+    {
+      "step": 4,
+      "name": "06-security-files",
+      "description": "Archivos sin grant",
+      "note": "Listado denegado en Security; el rail recorta el mensaje. Captura monocroma."
+    },
+    {
+      "step": 5,
+      "name": "07-classic-overview-140x40",
+      "description": "Overview Classic",
+      "note": "Paisaje, compositor y estados en 140×40. La sonda de modelo se suprimió en el fixture."
+    },
+    {
+      "step": 6,
+      "name": "08-settings",
+      "description": "Configuración",
+      "note": "El filtro y agrupación permiten encontrar Authority."
+    },
+    {
+      "step": 7,
+      "name": "09-authority-classic",
+      "description": "Permisos en Classic",
+      "note": "ON/OFF se comunica con texto y color; estados de las integraciones diferenciados."
+    },
+    {
+      "step": 8,
+      "name": "10-edit-approval",
+      "description": "Aprobar edición",
+      "note": "Diff real y rechazo enfocado por defecto. F6: resumen sin traducir."
+    },
+    {
+      "step": 9,
+      "name": "11-edit-approval-80x24",
+      "description": "Aprobación estrecha",
+      "note": "El diff y acción principal caben; la etiqueta de confianza se parte y pierde su atajo visible."
+    },
+    {
+      "step": 10,
+      "name": "12-command-approval",
+      "description": "Consentimiento de comando",
+      "note": "Comando exacto y riesgos antes de ejecutar. F6: título y explicación en inglés."
+    },
+    {
+      "step": 11,
+      "name": "13-chat-complete",
+      "description": "E2E local completado",
+      "note": "Lectura, edición, unittest con exit 0 y diff real; inferencia simulada. F6: IdeaBox perdió su traducción."
+    },
+    {
+      "step": 12,
+      "name": "14-sessions",
+      "description": "Lista de sesiones",
+      "note": "Selección y detalle legibles en 140×40; F6: varios estados sin traducir."
+    },
+    {
+      "step": 13,
+      "name": "15-new-chat-lost-focus",
+      "description": "Conversación nueva",
+      "note": "F3: el foco está en work-refresh oculto; abc no aparece en el editor."
+    },
+    {
+      "step": 14,
+      "name": "16-files-80x24-settings-hidden",
+      "description": "F6 y barra inferior",
+      "note": "F2: el engranaje queda fuera del área principal y no se abre con clic."
+    },
+    {
+      "step": 15,
+      "name": "17-file-preview-clipped",
+      "description": "Lectura en el rail",
+      "note": "F5: el archivo se leyó, pero solo aparece metadata; código y receipt están recortados."
+    },
+    {
+      "step": 16,
+      "name": "18-full-file-preview",
+      "description": "Vista ampliada",
+      "note": "Control positivo: el modal sí muestra el código; lectura y cierre funcionales."
+    },
+    {
+      "step": 17,
+      "name": "19-live-queue",
+      "description": "Streaming y cola",
+      "note": "El segundo mensaje queda en cola mientras el primero sigue pendiente en el fixture."
+    },
+    {
+      "step": 18,
+      "name": "20-cancel-keeps-draft",
+      "description": "Cancelación",
+      "note": "Borrador nuevo y cola preservados; el parcial no se agregó a historial. F6: explicación en inglés."
+    },
+    {
+      "step": 19,
+      "name": "21-provider-error-recovery",
+      "description": "HTTP 401 simulado",
+      "note": "Original restaurado, sin reenvío automático. F6: diagnóstico y recuperación en inglés."
+    },
+    {
+      "step": 20,
+      "name": "22-security-switch-confirm",
+      "description": "Cambiar a Security",
+      "note": "Confirmación explícita con cancelar como foco inicial. F6: consentimiento sin traducir."
+    },
+    {
+      "step": 21,
+      "name": "23-security-grants-off",
+      "description": "Authority en Security",
+      "note": "Modo y política cambiados; los OFF constan en el JSON. En 80×24 el menú requiere desplazarse."
+    },
+    {
+      "step": 22,
+      "name": "24-security-blocked-chat",
+      "description": "Security deniega",
+      "note": "No hubo llamada adicional al fixture; prompt preservado. F1: cabecera conserva Classic."
+    },
+    {
+      "step": 23,
+      "name": "25-classic-shown-as-security",
+      "description": "Cambiar de Security a Classic",
+      "note": "F1: texto informa Classic y política classic, pero cabecera continúa Security."
+    },
+    {
+      "step": 24,
+      "name": "26-chat-allowed-with-security-banner",
+      "description": "Chat con indicador desactualizado",
+      "note": "F1: una solicitud autorizada en Classic llega al fixture mientras el indicador dice Security."
+    }
+  ]
+}

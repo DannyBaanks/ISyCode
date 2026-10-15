@@ -1,0 +1,52 @@
+Traceback (most recent call last):
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/app.py", line 2210, in run_test
+    yield pilot
+  File "/home/danny/Development/ISyCo Git/ISyCode/scripts/capture_readme_screenshots.py", line 94, in _capture
+    assert "def greeting" in str(preview.render())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/danny/Development/ISyCo Git/ISyCode/scripts/capture_readme_screenshots.py", line 147, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/danny/Development/ISyCo Git/ISyCode/scripts/capture_readme_screenshots.py", line 137, in main
+    written = asyncio.run(_capture(args.out, args.columns, args.rows))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/danny/Development/ISyCo Git/ISyCode/scripts/capture_readme_screenshots.py", line 76, in _capture
+    async with app.run_test(size=(columns, rows)) as pilot:
+  File "/usr/lib/python3.12/contextlib.py", line 231, in __aexit__
+    await self.gen.athrow(value)
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/app.py", line 2218, in run_test
+    raise self._exception
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/message_pump.py", line 663, in _process_messages_loop
+    await self._dispatch_message(message)
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/message_pump.py", line 739, in _dispatch_message
+    await self._on_message(message)
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/message_pump.py", line 829, in _on_message
+    await invoke(method, message)
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/_callback.py", line 96, in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/_callback.py", line 58, in _invoke
+    result = await result
+             ^^^^^^^^^^^^
+  File "/home/danny/Development/ISyCo Git/ISyCode/src/isycode/tui_app_rail.py", line 539, in on_tree_node_selected
+    await self._preview_file(uri)
+  File "/home/danny/Development/ISyCo Git/ISyCode/src/isycode/tui_app_rail.py", line 568, in _preview_file
+    self.query_one("#file-preview-meta", Static).update(
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/dom.py", line 1505, in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+textual.css.query.NoMatches: No nodes match '#file-preview-meta' on Screen(id='_default')

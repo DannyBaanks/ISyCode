@@ -4,6 +4,10 @@ Gracias por ayudar a mejorar ISyCode. Los cambios deben mantener claro qué
 puede hacer el agente, quién autoriza cada acción y qué evidencia respalda una
 afirmación.
 
+Si encontraste una posible vulnerabilidad, consulta [SECURITY.md](SECURITY.md)
+antes de abrir un issue o PR. Los detalles sensibles se reportan en privado;
+la invitación a investigar se limita a entornos propios o autorizados.
+
 ## Preparar el entorno
 
 Se requiere Python 3.10 o posterior. Desde la raíz del repositorio:

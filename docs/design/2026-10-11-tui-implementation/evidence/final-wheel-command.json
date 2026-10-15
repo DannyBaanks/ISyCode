@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pip",
+    "wheel",
+    "--no-deps",
+    "--no-build-isolation",
+    "--wheel-dir",
+    "/tmp/isycode-final-wheel-i164zqtm",
+    "."
+  ],
+  "exit_code": 0,
+  "wheel": "/tmp/isycode-final-wheel-i164zqtm/isycode-0.1.0-py3-none-any.whl",
+  "sha256": "1bb093e0c23391d446f4a37ab5cb495b244076b395fb93578db701f77a3ba747",
+  "source_matching_files": [
+    "isycode/design.tcss",
+    "isycode/assets/design-tokens.json",
+    "isycode/tui_copy.py",
+    "isycode/tui_screens_grants.py",
+    "isycode/tui_composer.py"
+  ]
+}

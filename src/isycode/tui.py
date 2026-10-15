@@ -66,6 +66,7 @@ from isycode.workspace_setup import (
 )
 from isycode.localization import configure_locale, language_msgid, tr
 from isycode.user_defaults import UserDefaultsStore
+from isycode.tui_presentation import MenuHeading, SettingRow
 from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
 from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
@@ -155,7 +156,7 @@ from textual.message import Message
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
-from textual.events import Click
+from textual.events import Click, Key
 from textual.widget import Widget
 from textual.widgets import (
     Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select, Checkbox,
@@ -327,7 +328,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     ENABLE_COMMAND_PALETTE = False
     ALLOW_SELECT = True
 
-    CSS_PATH = Path(__file__).with_name("isycode.tcss")
+    CSS_PATH = [Path(__file__).with_name("isycode.tcss"),
+                Path(__file__).with_name("design.tcss")]
 
     BINDINGS = [Binding(
         item.key, item.action, item.label,
@@ -427,6 +429,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._menu_stack: list[tuple[str, str, list[dict[str, str]]]] = []
         self._menu_mode = ""
         self._menu_title = ""
+        self._settings_category = ""
         self._provider_key_target = ""
         self._active_role: dict[str, str] | None = self._load_global_default_role()
         self._review_used = False
@@ -449,12 +452,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._compact_marquee_default = defaults.get("compact_marquee", False)
             self._notification_sounds = defaults.get("notification_sounds", True)
             self._high_contrast = defaults.get("high_contrast", False)
+            self._reduced_motion = defaults.get("reduced_motion", False)
             self._ascii_only = defaults.get("ascii_only", False)
             self._locale = defaults.get("locale", "es")
         except (OSError, ValueError):
             self._compact_marquee_default = False
             self._notification_sounds = True
             self._high_contrast = False
+            self._reduced_motion = False
             self._ascii_only = False
             self._locale = "es"
         configure_locale(self._locale)
@@ -478,7 +483,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._rail_view = "overview"
         self._rail_visible = False
         self._rail_auto_hidden = False
-        self._rail_visibility_override: bool | None = False
+        self._rail_visibility_override: bool | None = None
+        self._interrupted_turn: Any | None = None
         self._rail_width = 38
         self._rail_compact_width = 28
         self._work_rows: list[dict[str, Any]] = []
@@ -514,7 +520,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield Static(tr(""), id="usage-status")
                     yield OptionList(id="slash-suggestions")
                     yield PromptArea(id="prompt-input")
-                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"), id="composer-hint")
+                    yield Static(tr("Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help"), id="composer-hint")
                     with Horizontal(id="command-bar"):
                         yield Button(tr("Sidebar"), id="sidebar-button")
                         yield Button(tr("Sessions"), id="sessions-button")
@@ -531,9 +537,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         with Vertical(id="action-menu"):
             with Vertical(id="action-card"):
                 yield Static(tr("Commands"), id="action-title")
+                yield Static("", id="action-description")
                 yield Input(placeholder=tr("Filter this list…"), id="action-search")
-                yield PreviewOptionList(id="action-list")
-                yield Static(tr(""), id="action-detail")
+                with Horizontal(id="action-body"):
+                    yield OptionList(id="settings-categories")
+                    with Vertical(id="action-results"):
+                        yield PreviewOptionList(id="action-list")
+                        yield Static(tr(""), id="action-detail")
                 yield Static(tr("↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"),
                              id="action-hint")
                 with Vertical(id="key-entry"):
@@ -575,16 +585,23 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except Exception:
             pass
         statics = {
-            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar",
+            "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help",
             "#action-hint": "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search",
             "#key-entry-label": "API key is stored outside this project.",
             "#file-preview": "Select a file to preview it.",
         }
         for widget_id, msgid in statics.items():
             try:
+                if widget_id == "#file-preview" and self._selected_file_path is not None:
+                    continue
                 self.query_one(widget_id, Static).update(tr(msgid))
             except Exception:
                 continue
+        try:
+            self.query_one(PromptArea).placeholder = tr(PromptArea.DEFAULT_PLACEHOLDER)
+            self.query_one("#idea-box").border_title = tr("Space expand / collapse · double-click copy")
+        except (NoMatches, NoScreen):
+            pass
         try:
             self.query_one("#action-search", Input).placeholder = tr("Filter this list…")
         except Exception:
@@ -624,6 +641,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             except Exception:
                 continue
         self._refresh_model_button()
+        self._paint_idea_box()
+        if self.query("#idle-board"):
+            self._paint_idle()
 
     def on_mount(self) -> None:
         if self._high_contrast:
@@ -652,7 +672,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._open_settings_menu()
         self.query_one(Banner).set_compact(True)
         self._apply_rail_width(self.size.width)
-        if self.size.width < 100 and self._rail_visibility_override is None:
+        if self.size.width < 80 or (self.size.width < 88 and self._rail_visibility_override is None):
             self._rail_auto_hidden = True
             self._rail_visible = False
             self.query_one(SidePanel).display = False
@@ -662,6 +682,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
         self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
+        self.query_one(Banner).set_compact(True)
         self.query_one("#workspace-authority-label", Static).update(
             "Filesystem Authority · loading ISyCode grants…")
         commands = self._plugins.command_items()
@@ -840,8 +861,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
         self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
+        self.query_one(Banner).set_compact(True)
 
 
+
+    def on_key(self, event: Key) -> None:
+        if (event.key == "question_mark" or getattr(event, "character", None) == "?") and not isinstance(self.focused, (Input, TextArea)):
+            event.stop()
+            event.prevent_default()
+            self.action_quick_help()
 
     def on_resize(self, event) -> None:
         if not self.is_mounted:
@@ -858,11 +886,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         elif self._rail_visibility_override is not None:
             self._rail_visible = self._rail_visibility_override
             rail.display = self._rail_visible
-        elif event.size.width < 100:
+        elif event.size.width < 88:
             self._rail_auto_hidden = True
             self._rail_visible = False
             rail.display = False
-        else:
+        elif event.size.width > 90:
             if self._rail_auto_hidden:
                 self._rail_auto_hidden = False
                 self._rail_visible = True
@@ -870,6 +898,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
         self.call_after_refresh(self._update_model_button_visibility)
         self.call_after_refresh(self._paint_idle)
+        if getattr(self, "_menu_mode", ""):
+            card = self.query_one("#action-card", Vertical)
+            card.set_class(event.size.width >= 100 and self._menu_mode == "providers", "wide-detail-menu")
+            card.set_class(event.size.width < 100, "compact-menu")
+            self._size_action_menu()
 
     async def _initialize_workspace(self) -> None:
         # .isyroot identifies the Files tree; only explicit Workspace Authority
@@ -1004,6 +1037,35 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def action_focus_input(self) -> None:
         self.query_one("#prompt-input", PromptArea).focus()
 
+    def action_quick_help(self) -> None:
+        from isycode.tui_screens_help import QuickHelpScreen
+        self.push_screen(QuickHelpScreen())
+
+    def notify_semantic(
+        self,
+        message: str,
+        kind: str = "info",
+        *,
+        title: str = "",
+        timeout: float | None = None,
+    ) -> None:
+        """Present a semantic toast notification with unified severity prefixes and calibrated timeouts."""
+        from isycode.tui_theme import ascii_only
+        use_ascii = ascii_only()
+
+        semantics = {
+            "success": ("✓ ", "[OK] ", "information", 3.0),
+            "authorized": ("⚡ ", "[AUTH] ", "information", 3.0),
+            "info": ("ℹ ", "[INFO] ", "information", 3.0),
+            "warning": ("! ", "[WARN] ", "warning", 4.5),
+            "denied": ("× ", "[DENY] ", "error", 5.5),
+            "error": ("× ", "[ERROR] ", "error", 5.5),
+        }
+        u_pfx, a_pfx, def_sev, def_timeout = semantics.get(kind, ("ℹ ", "[INFO] ", "information", 3.0))
+        prefix = a_pfx if use_ascii else u_pfx
+        calibrated_timeout = timeout if timeout is not None else def_timeout
+        self.notify(f"{prefix}{message}", title=title, severity=def_sev, timeout=calibrated_timeout)
+
     def action_escape_to_chat(self) -> None:
         """Cancel active model output; otherwise back out and keep the draft."""
         if self.query_one('#slash-suggestions').display:
@@ -1050,6 +1112,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one(PromptArea).focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if event.option_list.id == "settings-categories":
+            event.stop()
+            self.query_one("#action-list", OptionList).focus()
+            return
         if event.option_list.id == "queued-options":
             self._select_queued_message(event.option_index)
             return
@@ -1139,7 +1205,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _capability_entry(label: str, value: str, enabled: bool,
                           detail: str = "") -> dict[str, str | bool]:
         return {"label": tr(label), "kind": "authority_toggle", "value": value,
-                "detail": tr(detail) if detail else detail, "enabled": enabled}
+                "detail": tr(detail) if detail else detail, "enabled": enabled,
+                "display_value": tr("ON") if enabled else tr("OFF")}
 
     def _open_palette(self) -> None:
         entries = [self._entry(
@@ -1176,13 +1243,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry(tr("RTK compression · {state}", state=rtk_label), "rtk_settings", "",
                         "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."),
             self._entry(tr("Providers & models"), "providers_open", ""),
+            self._entry("Model", "models_open", ""),
             self._entry(tr("Reasoning level"), "reasoning_open", ""),
             self._entry(tr("Notification sounds · {state}",
                            state=on if self._notification_sounds else off), "sounds_toggle", "",
                         "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."),
+            self._entry(tr("Reduced motion · {state}", state=on if self._reduced_motion else off), "motion_toggle", "",
+                        "Keep activity symbols static and disable compact text scrolling."),
             self._entry(tr("High contrast display · {state}",
                            state=on if self._high_contrast else off), "contrast_toggle", "",
-                        "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."),
+                        "Brighten text and focused frames while keeping the shared black surfaces."),
             self._entry(tr("ASCII-only display · {state}",
                            state=on if self._ascii_only else off), "ascii_toggle", "",
                         "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."),
@@ -1222,6 +1292,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         groups = {
             tr("Conversation"): (CYAN, {
                 "providers_open": "Choose the provider and model used for this conversation.",
+                "models_open": "Choose the model used for this conversation.",
                 "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
                 "roles_open": "Choose instructions for how the agent should work.",
                 "clear_role": "Remove the selected role from this conversation.",
@@ -1236,9 +1307,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "workspace_config_migrate": "Review and copy legacy commands; preserve their originals.",
                 "shortcuts": "Browse commands and keyboard shortcuts.",
                 "sounds_toggle": "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled.",
-                "contrast_toggle": "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black.",
+                "contrast_toggle": "Brighten text and focused frames while keeping the shared black surfaces.",
                 "ascii_toggle": "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode.",
-                "marquee_toggle": "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it.",
+                "marquee_toggle": "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling.",
                 "locale_cycle": tr("Interface language for ISyCode. This does not change permissions or workspace files."),
             }),
             tr("Permissions"): (YELLOW, {
@@ -1258,10 +1329,54 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             for entry in entries:
                 if entry["kind"] in descriptions:
                     entry["category"] = category
+                    entry["category_id"] = next(part for part in ("Conversation", "Preferences", "Permissions", "Connections") if tr(part) == category)
                     entry["color"] = color
                     entry["detail"] = tr(descriptions[entry["kind"]])
                     ordered.append(entry)
-        ordered.extend(entry for entry in entries if entry not in ordered)
+        for entry in entries:
+            if entry not in ordered:
+                entry["category"] = tr("Preferences")
+                entry["category_id"] = "Preferences"
+                ordered.append(entry)
+        from isycode.reasoning_options import reasoning_label
+        from isycode.model_presentation import model_display_name
+        provider = selected_provider_name()
+        model = resolved_chat_model(provider)
+        provider_label = next((label for _, key, label, _ in PROVIDER_SCREEN if key == provider), provider)
+        context = getattr(self, "_agent_context", None)
+        values = {
+            "providers_open": ("Provider", provider_label),
+            "models_open": ("Model", model_display_name(model)),
+            "reasoning_open": ("Reasoning level", tr(reasoning_label(
+                provider, model, PRESETS.get(provider, {}).get("reasoning_effort")))),
+            "roles_open": ("Role", self._active_role["name"] if self._active_role else tr("None")),
+            "context_menu": ("Context", tr("Loaded") if context else tr("None")),
+            "context_inject": ("Context file", context["path"] if context else tr("None")),
+            "clear_role": ("Clear selected role", tr("Selected") if self._active_role else tr("None")),
+            "rtk_settings": ("RTK compression", rtk_label),
+            "sounds_toggle": ("Notification sounds", on if self._notification_sounds else off),
+            "motion_toggle": ("Reduced motion", on if self._reduced_motion else off),
+            "contrast_toggle": ("High contrast display", on if self._high_contrast else off),
+            "ascii_toggle": ("ASCII-only display", on if self._ascii_only else off),
+            "locale_cycle": ("Language", tr(language_msgid(self._locale))),
+            "marquee_toggle": ("Compact text scroll", off if self._reduced_motion else on if self._compact_marquee_default else off),
+            "user_defaults": ("My defaults", tr("All workspaces")),
+            "workspace_config_preferences": ("Workspace preferences", tr("This workspace")),
+            "authority_open": ("Authority & Security", self._workspace_mode().title()),
+            "shortcuts": ("Commands & shortcuts", tr("Browse")),
+            "named_credentials": ("Named API keys", tr("Manage")),
+            "security_journal": ("Action journal", tr("Inspect")),
+            "folders_open": ("Workspace folders", tr("Review")),
+            "harness_open": ("Multi Harness", tr("Inspect")),
+            "files": ("Workspace files", tr("Browse")),
+            "integrations_open": ("Integrations", "MCP / LSP / Gateway"),
+        }
+        for entry in ordered:
+            name, current = values.get(entry["kind"], (entry["label"], tr("Review")))
+            entry["label"] = tr(name)
+            entry["display_value"] = current
+            if entry["kind"] == "models_open":
+                entry["search_value"] = model
         self._menu_stack = []
         self._render_menu("settings", tr("Settings"), ordered)
 
@@ -1836,32 +1951,46 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self.call_after_refresh(self._push_models_screen, entries)
             return
         card = self.query_one("#action-card", Vertical)
+        card.set_class(mode == "settings", "settings-menu")
+        card.set_class(self.size.width >= 100 and mode == "providers", "wide-detail-menu")
+        card.set_class(self.size.width < 100, "compact-menu")
+        categories = self.query_one("#settings-categories", OptionList)
+        categories.display = mode == "settings"
+        if mode == "settings":
+            names = list(dict.fromkeys(entry.get("category_id", "Preferences") for entry in entries))
+            self._settings_categories = names
+            if self._settings_category not in names:
+                self._settings_category = names[0] if names else ""
+            categories.clear_options()
+            categories.add_options([tr(name) for name in names])
+            categories.highlighted = names.index(self._settings_category) if names else None
         if mode == "providers":
             card.add_class("provider-menu")
         else:
             card.remove_class("provider-menu")
         menu = self.query_one("#action-menu", Vertical)
         menu.display = True
-        heading = Text(display_title, style="bold #c7b8d4")
-        if mode == "settings":
-            heading.append(
-                "\n" + " · ".join(tr(part) for part in
-                                  ("Conversation", "Preferences", "Permissions", "Connections")),
-                style=MUTED)
+        heading = MenuHeading(display_title, tr(self._settings_category) if mode == "settings" else "")
         self.query_one("#action-title", Static).update(heading)
+        description = self.query_one("#action-description", Static)
+        description.display = mode == "settings"
+        description.update(tr("Personalize ISyCode for this workspace."))
         search = self.query_one("#action-search", Input)
         search.display = True
         search.value = ""
         self.query_one("#action-list", OptionList).display = True
         self.query_one("#key-entry", Vertical).display = False
         self._render_options("")
-        hint = (tr("↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter")
+        hint = (tr("↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search")
                 if mode == "providers" else
-                tr("↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"))
+                tr("↑↓ move · Enter open · Esc back · Shift+Tab search"))
         self.query_one("#action-hint", Static).update(hint)
         self.query_one("#action-list", OptionList).focus()
 
     def _render_options(self, query: str) -> None:
+        if self._menu_mode == "settings":
+            self.query_one("#action-title", Static).update(MenuHeading(
+                self._menu_title, tr("Search results") if query else tr(self._settings_category)))
         if query and self._menu_mode == "providers":
             filtered: list[dict[str, str]] = []
             pending = None
@@ -1881,23 +2010,29 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         else:
             self._menu_filtered = [entry for entry in self._menu_entries
                                    if query in entry["label"].casefold()
-                                   or query in entry.get("detail", "").casefold()]
+                                   or query in entry.get("detail", "").casefold()
+                                   or query in str(entry.get("display_value", "")).casefold()
+                                   or query in str(entry.get("search_value", "")).casefold()]
+        if self._menu_mode == "settings" and not query:
+            self._menu_filtered = [entry for entry in self._menu_filtered
+                                   if entry.get("category_id", "Preferences") == self._settings_category]
         options = self.query_one("#action-list", OptionList)
         options.clear_options()
         for entry in self._menu_filtered:
-            if entry.get("category"):
-                label = Text(entry["category"].ljust(14) + "  ", style=entry["color"])
-                label.append(entry["label"], style=TEXT)
+            if entry.get("category") or "display_value" in entry and self._menu_mode != "providers":
+                label = SettingRow(entry["label"].split(" · ", 1)[0],
+                                   str(entry.get("display_value", "")), entry.get("detail", ""),
+                                   GREEN if entry.get("enabled") else MUTED if "enabled" in entry else TEXT)
             elif "enabled" in entry:
                 label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
             elif entry.get("kind") == "section":
-                label = Text(entry["label"], style="bold #c7b8d4")
+                label = Text(entry["label"], style=f"bold {TEXT}")
             elif entry.get("kind") == "info":
-                label = Text(entry["label"], style="#8a8d96")
+                label = Text(entry["label"], style=MUTED)
             elif entry.get("kind") == "provider_unwired":
-                label = Text(entry["label"], style="#8a8d96")
+                label = Text(entry["label"], style=MUTED)
             elif str(entry.get("label", "")).startswith("✓"):
-                label = Text(entry["label"], style="bold #f0f0f2")
+                label = Text(entry["label"], style=TEXT)
             else:
                 label = Text(entry["label"])
             options.add_option(label)
@@ -1907,6 +2042,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                               if entry.get("kind") != "section"), 0)
         options.highlighted = highlight
         self._show_menu_detail(highlight or 0)
+        self._size_action_menu()
+
+    def _size_action_menu(self) -> None:
+        """Bound short menus by their contents; long lists scroll inside the frame."""
+        rows = max(4, len(getattr(self, "_menu_filtered", [])))
+        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority") else 13
+        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
 
     def _show_menu_detail(self, index: int | None) -> None:
         """Describe the highlighted entry so choices are clear before pressing Enter."""
@@ -1926,9 +2068,20 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             # A queued highlight may arrive after the menu unmounts at shutdown.
             return
         panel.display = bool(detail)
-        panel.update(Text(str(detail)))
+        if self._menu_mode == "settings" and index is not None and 0 <= index < len(entries):
+            detail = entries[index]["label"] + " · " + str(entries[index].get("display_value", "")) + "\n" + tr(str(detail))
+        elif index is not None and 0 <= index < len(entries) and "enabled" in entries[index]:
+            detail = entries[index]["label"] + " · " + str(entries[index]["display_value"]) + "\n" + tr(str(detail))
+        elif self._menu_mode == "providers" and index is not None and 0 <= index < len(entries):
+            detail = entries[index].get("display_name", entries[index]["label"]) + "\n\n" + tr(str(detail))
+        panel.update(Text(tr(str(detail))))
 
     def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
+        if event.option_list.id == "settings-categories" and self._menu_mode == "settings":
+            names = getattr(self, "_settings_categories", [])
+            if 0 <= event.option_index < len(names) and self._settings_category != names[event.option_index]:
+                self._settings_category = names[event.option_index]
+                self._render_options(self.query_one("#action-search", Input).value.casefold())
         if event.option_list.id == "action-list":
             self._show_menu_detail(event.option_index)
 
@@ -1938,6 +2091,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._menu_stack = []
         self._menu_mode = ""
         self._models_scope = None
+        self._models_return_settings = False
         self.query_one("#prompt-input", PromptArea).focus()
 
 
@@ -2349,14 +2503,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     @staticmethod
     def _idle_column(title: str, rows: list[tuple[str, str]]) -> list[Text]:
-        lines = [Text(title, style="bold #c7b8d4")]
+        from isycode.tui_theme import ascii_only
+        lines = [Text(tr(title), style=f"bold {TEXT}")]
         if not rows:
-            lines.append(Text("○ None configured", style=MUTED))
+            lines.append(Text(("- " if ascii_only() else "− ") + tr("None configured"), style=MUTED))
             return lines
         shown = rows[:14]
         for color, name in shown:
             line = Text()
-            line.append("● ", style=color)
+            glyph = ("[x]" if ascii_only() else "✓") if color == GREEN else (("[!]" if ascii_only() else "!") if color in {YELLOW, RED} else ("[]" if ascii_only() else "▣"))
+            line.append(glyph + " ", style=color)
             line.append(name, style=TEXT)
             lines.append(line)
         extra = len(rows) - len(shown)
@@ -2371,7 +2527,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             ready = state == "sandbox_ready"
             name = str(server.get("label") or server.get("id") or "language server")
             if ready:
-                color = GREEN
+                color = MUTED
             elif state in {"installed_unavailable", "installed_unsupported"}:
                 color = RED
             else:
@@ -2404,7 +2560,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 name = str(item.get("name") or "")
                 if name and name not in names:
                     names.append(name)
-        return [(GREEN, name) for name in names]
+        return [(MUTED, name) for name in names]
 
     def action_find_console(self) -> None:
         """Open console-wide search regardless of which main view has focus."""
@@ -2716,7 +2872,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         timer = getattr(self, "_activity_timer", None)
         if timer is not None:
             timer.stop()
-        self._activity_timer = self.set_interval(0.12, self._animate_activity)
+        self._activity_timer = None if self._reduced_motion else self.set_interval(0.12, self._animate_activity)
         task = self._pin_task(coroutine)
         self._loop_task = task
         self._animate_activity()
@@ -2831,7 +2987,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         return await future
 
     def _animate_activity(self) -> None:
-        if self._loop_task is None or self._loop_task.done():
+        if self._reduced_motion or self._loop_task is None or self._loop_task.done():
             return
         from isycode.cat_activity import walking_cat
         self._activity_frame += 1
@@ -2951,11 +3107,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._copy_through_owner(text, "selection")
 
     def on_text_selected(self, event) -> None:
-        """Copy on select: releasing the mouse after selecting text copies it."""
-        get_selected = getattr(self.screen, "get_selected_text", None)
-        text = get_selected() if callable(get_selected) else None
-        if text:
-            self._copy_through_owner(text, "selection")
+        """Selection marks a range. Ctrl+C or an explicit menu choice copies it."""
 
     async def _request_clipboard_paste(self, prompt):
         authority = WorkspaceAuthority(self._workspace_root)
@@ -3000,27 +3152,27 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except Exception:  # noqa: BLE001 - the field only exists in the main screen
             key_field = None
         if key_field is not None and self.focused is key_field:
-            self.notify("API keys are never copied.", severity="warning")
+            self.notify_semantic("API keys are never copied.", kind="warning")
             return
         try:
             owner = ClipboardOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
             outcome = owner.copy(text, source=source,
                                  terminal_write=super().copy_to_clipboard)
         except (WorkspaceAuthorityError, OSError, ValueError):
-            self.notify("Copy failed · Workspace Authority is unavailable.", severity="error")
+            self.notify_semantic("Copy failed · Workspace Authority is unavailable.", kind="denied")
             return
         if outcome.decision == "ALLOW":
             where = ("terminal clipboard" if outcome.text == "terminal"
                      else f"clipboard via {outcome.text}")
             if outcome.text == 'terminal':
-                self.notify('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', timeout=8)
+                self.notify_semantic('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', kind="info", timeout=8)
             else:
-                self.notify(f"Copied {len(text)} characters to the {where}.", timeout=2)
+                self.notify_semantic(f"Copied {len(text)} characters to the {where}.", kind="success", timeout=2.5)
         elif "grant" in outcome.reason:
-            self.notify("Copying is off for this workspace · turn on “Copy selected text” in "
-                        "Settings → Authority.", severity="warning", timeout=5)
+            self.notify_semantic("Copying is off for this workspace · turn on “Copy selected text” in "
+                                 "Settings → Authority.", kind="denied", timeout=5)
         else:
-            self.notify(f"Nothing copied · {outcome.reason[:120]}", severity="warning")
+            self.notify_semantic(f"Nothing copied · {outcome.reason[:120]}", kind="denied")
 
 
 

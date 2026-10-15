@@ -1,0 +1,13 @@
+PNG docs/screenshots/2026-10-12-product/complete/01-overview.png: 1482x1026
+PNG docs/screenshots/2026-10-12-product/complete/02-files.png: 1482x1026
+PNG docs/screenshots/2026-10-12-product/complete/03-settings.png: 1482x1026
+Issue form parsed: .github/ISSUE_TEMPLATE/bug_report.yml
+Issue form parsed: .github/ISSUE_TEMPLATE/feature_request.yml
+{
+  "markdown_files": 9,
+  "local_links": 57,
+  "readme_images": 3,
+  "issue_forms": 2,
+  "diff_check_exit": 0,
+  "errors": []
+}

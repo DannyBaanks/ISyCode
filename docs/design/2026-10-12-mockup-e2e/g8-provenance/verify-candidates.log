@@ -1,0 +1,3 @@
+{"candidate": "A-correct-substituted-test-fingerprint", "historical_commit": "1871ab422d02d0145475460b1c6a911f5f0da8d1", "identical_to_commit_manifest": true, "candidate_sha256": "fe1fba9ffad79d56a801e1345b1796dcbeae4bf0e0a3f40e45b5ef62f813a511", "historical_validation_errors": []}
+{"candidate": "B-restore-original-reviewed-artifact", "historical_commit": "db697b6302e8374ad0be8a3082fedb6cf4079ab2", "identical_to_commit_manifest": true, "candidate_sha256": "89438dcae9dbb202fb68780afc10e23bb1daf9ec47d17760a88c773b97ff080b", "historical_validation_errors": []}
+Read-only candidate verification completed; no repository edit or new acceptance.

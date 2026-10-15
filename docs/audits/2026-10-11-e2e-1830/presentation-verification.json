@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-10-11T10:10:24.642370+00:00",
+  "images_in_html": 24,
+  "png_decoding": "PASS",
+  "browser": "Codex in-app browser",
+  "browser_image_loads": 24,
+  "browser_mode_anchor_visible": true,
+  "note": "Browser DOM image completion and screenshot were inspected via cua_repl."
+}

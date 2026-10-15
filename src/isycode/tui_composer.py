@@ -12,29 +12,33 @@ from isycode.tui_widgets import BoxTitle, ExpandableBox, activate_on_second_clic
 from isycode.tui_theme import MUTED
 from isycode.tui_screens_sessions import PastedTextScreen
 from isycode.localization import tr
+from isycode.tui_copy import open_copy_menu, remember_copy_selection
 
 
 
-class IdeaBox(Static):
+class IdeaBox(Static, inherit_bindings=False):
     can_focus = True
-    BINDINGS = [Binding("enter,space", "expand", "Expand note", show=False)]
+    BINDINGS = [Binding("space", "expand", "Expand note", show=False)]
 
     def on_mount(self):
-        self.border_title = tr("Enter / Space / double-click expand")
+        self.border_title = tr("Space expand / collapse · double-click copy")
 
-    def on_click(self, event) -> None:
+    def on_mouse_down(self, event):
+        remember_copy_selection(self)
+
+    async def _on_click(self, event) -> None:
+        event.prevent_default()
+        event.stop()
         self.focus()
-        if activate_on_second_click(self, event, "idea"):
-            self.action_expand()
+        if event.chain == 2:
+            whole = self.app._idea_box if self.id == "idea-box" else str(self.content)
+            open_copy_menu(self, whole)
 
     def action_expand(self):
         self.app._open_idea_note()
 
 
 class ShellBox(IdeaBox):
-    def on_click(self, event):
-        self.action_expand()
-
     def action_expand(self):
         self.app._open_shell_box()
 
@@ -69,6 +73,9 @@ class QueuedBox(ExpandableBox):
         if self.app._queued_messages and self.app._selected_queued_message is None:
             self.app._select_queued_message(0)
         super().on_click(event)
+
+    def copy_text(self):
+        return "\n".join(self.app._queued_messages)
 
     def _paint_expand_hint(self):
         self.border_subtitle = Text("Enter: steer · Space: expand · Esc: undo", style=MUTED) if self.has_focus or self.has_focus_within else ""

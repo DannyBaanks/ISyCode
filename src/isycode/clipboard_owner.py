@@ -1,7 +1,6 @@
-"""Copy text the user selected (or a file path the user picked) to the system clipboard.
+"""Copy an explicitly chosen text range, complete box or file path.
 
-``clipboard.copy`` runs only from a user gesture in the TUI — a mouse selection,
-Ctrl+C on a selection, or the Copy path button — never from a model tool. It
+``clipboard.copy`` runs only from a user gesture in the TUI — Ctrl+C on a selection, a copy-menu choice, or the Copy path button — never from a model tool. It
 needs a ``clipboard.copy`` grant for the ``clipboard`` target and passes
 IsySentinel like every other effect. Requests and receipts carry only the
 source, size and a digest; the copied text never enters the journal.
@@ -27,7 +26,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 
 OWNER_ID = "clipboard"
 CLIPBOARD_TARGET = "clipboard"
-CLIPBOARD_SOURCES = frozenset({"selection", "file_path"})
+CLIPBOARD_SOURCES = frozenset({"selection", "file_path", "content_box"})
 MAX_COPY_BYTES = 1024 * 1024
 TOOL_TIMEOUT_S = 3
 

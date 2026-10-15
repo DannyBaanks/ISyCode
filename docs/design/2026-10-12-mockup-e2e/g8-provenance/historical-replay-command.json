@@ -1,0 +1,43 @@
+{
+  "command": [
+    "/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python",
+    "/tmp/isycode-g8-provenance-20261012-eusmindl/guarded-pytest.py",
+    "-p",
+    "pytest_asyncio.plugin",
+    "-p",
+    "no:cacheprovider",
+    "tests/test_ux_polish.py",
+    "tests/test_approval_keys.py",
+    "tests/test_side_panel.py",
+    "tests/test_integrated_layout.py",
+    "tests/test_visual_tui.py",
+    "-vv",
+    "-ra",
+    "--tb=short",
+    "--junitxml=/tmp/isycode-g8-provenance-20261012-eusmindl/evidence/historical-replay.xml"
+  ],
+  "cwd": "/tmp/isycode-g8-provenance-20261012-eusmindl/source",
+  "env": {
+    "PATH": "/home/danny/.qoder/entry:/home/danny/.local/bin:/home/danny/.local/bin:/home/danny/.codex/tmp/arg0/codex-arg0C1LJWG:/home/danny/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/home/danny/.local/bin:/home/danny/.local/bin:/home/danny/.local/share/pnpm:/home/danny/.local/bin:/home/danny/.local/bin:/home/danny/.local/bin:/home/danny/.local/node-v24.21.0-linux-x64/bin:/home/danny/.grok/bin:/home/danny/.local/node-v22.20.0-linux-x64/bin:/home/danny/.local/node-v24.21.0-linux-x64/lib/node_modules/corepack/shims:/home/danny/.kimi-code/bin:/usr/local/cuda/bin:/home/danny/.bun/bin:/home/danny/.ghcup/bin:/home/danny/.local/bin:/home/danny/.local/bin:/home/danny/.opencode/bin:/home/danny/.local/bin:/home/danny/.cargo/bin:/home/danny/.local/bin:/home/danny/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/danny/.dotnet/tools:/home/danny/.lmstudio/bin:/home/danny/.lmstudio/bin:/home/danny/.lmstudio/bin:/home/danny/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/usr/lib/chatgpt/resources:/home/danny/.lmstudio/bin",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "TERM": "dumb",
+    "PYTHONPATH": "/tmp/isycode-g8-provenance-20261012-eusmindl/source/src:/tmp/isycode-g8-provenance-20261012-eusmindl/source/tests",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONNOUSERSITE": "1",
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+    "XDG_STATE_HOME": "/tmp/isycode-g8-provenance-20261012-eusmindl/xdg/state",
+    "XDG_CONFIG_HOME": "/tmp/isycode-g8-provenance-20261012-eusmindl/xdg/config",
+    "XDG_CACHE_HOME": "/tmp/isycode-g8-provenance-20261012-eusmindl/xdg/cache",
+    "XDG_DATA_HOME": "/tmp/isycode-g8-provenance-20261012-eusmindl/xdg/data",
+    "ISYCO_ROOT": "/tmp/isycode-g8-provenance-20261012-eusmindl/isyco-stand-in"
+  },
+  "started_utc": "2026-10-12T23:18:13.614009+00:00",
+  "finished_utc": "2026-10-12T23:18:49.041282+00:00",
+  "duration_seconds": 35.4271388759953,
+  "exit_code": 0,
+  "log_sha256": "961ea2ddbcb36b0bc6a3051db00598b5e954c26ebb98fec7fa2bf777c9bbd0c3",
+  "guard_script_sha256": "ef999bffe5e8f78d673ebf2dd408a0c439f921646c5e2e24fcc9061742aef1c1",
+  "evaluated_commit": "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+  "scope": "fresh historical replay; not the original run and not current-code acceptance"
+}

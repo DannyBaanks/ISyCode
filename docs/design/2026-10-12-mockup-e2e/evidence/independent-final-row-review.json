@@ -1,0 +1,13 @@
+{
+  "reviewer": "/root/final_ui_review",
+  "reviewed_revision": "8c668a307daf475bbc4ed14dc639b425a7f7d061",
+  "scope": [
+    "src/isycode/design.tcss",
+    "tests/test_mockup_selectors.py",
+    "tests/test_turn_control.py"
+  ],
+  "result": "APPROVED: no actionable findings",
+  "tests": "4 focused tests passed in 2.33s; child model rendered-text and border probes passed at 80x24, 100x30 and 140x40.",
+  "policy_review": "Only model-choice and child-model-choice rows change; action button frames remain. DNS witness confined to fake-stream retry fixture; review_destination and ProviderNetworkOwner policy path preserved.",
+  "mutation": "None; read-only review."
+}

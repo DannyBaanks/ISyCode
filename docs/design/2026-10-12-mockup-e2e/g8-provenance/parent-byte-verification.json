@@ -1,0 +1,12 @@
+{
+  "historical_manifest_restored_exactly": true,
+  "artifact_at_evaluated_commit_verified": true,
+  "original_invalid_manifest_preserved": true,
+  "review_status": "Independent historical restoration review completed; no current release approval.",
+  "scope": "Historic recovery only. No release or HEAD approval.",
+  "review_history": [
+    "Independent reviewer invocation failed due to account usage limit; no independent approval claimed.",
+    "Independent read-only review completed; two-line restoration approved as historical recovery only."
+  ],
+  "review_report_sha256": "924a58b0b1d4ec17975a339b5ca6aa8d47d3af20d24e50528f08278fc6b061b3"
+}

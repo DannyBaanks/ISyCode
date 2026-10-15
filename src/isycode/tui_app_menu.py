@@ -349,6 +349,10 @@ async def _keys_cmd(app: "TUIApp", arg: str) -> None:
 async def _retry_cmd(app: "TUIApp", arg: str) -> None:
     app._prepare_retry()
 
+async def _resume_cmd(app: "TUIApp", arg: str) -> None:
+    del arg
+    app.action_resume_interrupted_turn()
+
 async def _doctor_cmd(app: "TUIApp", arg: str) -> None:
     from isycode.diagnostics import collect_diagnostics, format_diagnostics
     report = await asyncio.to_thread(collect_diagnostics, app._workspace_root)
@@ -439,6 +443,7 @@ MENU_DISPATCH: dict[str, str] = {
     "auth_logout": "_menu_auth_browser",
     "auth_saved": "_menu_auth_saved",
     "providers_open": "_menu_providers_open",
+    "models_open": "_menu_models_open",
     "roles_open": "_menu_roles_open",
     "rtk_settings": "_menu_rtk_settings",
     "sounds_toggle": "_menu_sounds_toggle",
@@ -446,6 +451,7 @@ MENU_DISPATCH: dict[str, str] = {
     "ascii_toggle": "_menu_ascii_toggle",
     "locale_cycle": "_menu_locale_cycle",
     "marquee_toggle": "_menu_marquee_toggle",
+    "motion_toggle": "_menu_motion_toggle",
     "reasoning_open": "_menu_reasoning_open",
     "reasoning_select": "_menu_reasoning_select",
     "model": "_menu_model",
@@ -499,6 +505,22 @@ MENU_DISPATCH: dict[str, str] = {
 }
 
 class MenuMixin:
+    def _menu_motion_toggle(self, entry):
+        from isycode.user_defaults import UserDefaultsStore
+        self._reduced_motion = not self._reduced_motion
+        UserDefaultsStore().update(reduced_motion=self._reduced_motion)
+        timer = getattr(self, "_activity_timer", None)
+        if self._reduced_motion and timer is not None:
+            timer.stop()
+            self._activity_timer = None
+        elif not self._reduced_motion and timer is None and self._loop_task is not None and not self._loop_task.done():
+            self._activity_timer = self.set_interval(0.12, self._animate_activity)
+        for screen in self.screen_stack:
+            for box in screen.query(ExpandableBox):
+                if self._reduced_motion and box._marquee_enabled:
+                    box.toggle_marquee()
+        self._open_settings_menu()
+
     def _menu_rtk_settings(self, entry):
         from isycode.rtk_tui import RTKSettingsScreen
         self.push_screen(RTKSettingsScreen())
@@ -543,6 +565,7 @@ class MenuMixin:
                 PluginCommand("msg", "send your words to another conversation; it answers them as your message", _msg_cmd),
                 PluginCommand("harness", "open the read-only Multi Harness settings map", _harness_cmd),
                 PluginCommand("retry", "prepare interrupted prompt for review; never auto-replays tools", _retry_cmd),
+                PluginCommand("resume", "resume an interrupted turn without repeating completed tools", _resume_cmd),
                 PluginCommand("doctor", "local configuration and dependencies; no network requests", _doctor_cmd),
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
                 PluginCommand("usage", "show provider-reported chat token usage", _usage_cmd),

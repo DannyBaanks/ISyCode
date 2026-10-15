@@ -1,0 +1,23 @@
+name: Proponer una mejora
+description: Describe un flujo o una capacidad que mejorarías.
+title: "[Idea]: "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Qué necesitas hacer
+      description: Explica el flujo actual y dónde se vuelve incómodo.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Qué cambiarías
+      description: Describe el comportamiento esperado. Para cambios visuales, puedes añadir una captura o referencia sin datos privados.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas o contexto
+      description: Indica cómo lo resuelves hoy y cualquier restricción que importe.

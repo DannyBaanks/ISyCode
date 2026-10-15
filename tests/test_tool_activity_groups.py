@@ -1,11 +1,11 @@
 import asyncio
 import json
 from isycode.tui import TUIApp, ToolActivityGroup
-from isycode.operation_style import operation_color
+from isycode.operation_style import operation_icon
 from test_daily_tui import configure
 
 
-def test_consecutive_same_tools_group_as_tree_with_distinct_operation_colors(tmp_path, monkeypatch):
+def test_consecutive_same_tools_group_as_tree_with_distinct_operation_icons(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     async def impl(self, call):
         return call["id"], json.dumps({"status": "ok"})
@@ -31,5 +31,5 @@ def test_consecutive_same_tools_group_as_tree_with_distinct_operation_colors(tmp
                 assert "└─" not in leaf.title
                 single.collapsed = False
             assert "file1.py" in groups[0].leaves[1][0].title
-            assert len({operation_color(n) for n in ("workspace_read", "workspace_grep", "workspace_run", "workspace_write")}) == 4
+            assert len({operation_icon(n) for n in ("workspace_read", "workspace_grep", "workspace_run", "workspace_write")}) == 4
     asyncio.run(scenario())

@@ -2004,3 +2004,260 @@ msgstr "aún no hay transporte ISyCode"
 
 msgid "Set a preset, or ask for a base URL before one is added"
 msgstr "pon un preset, o pide una URL base antes de añadirla"
+
+msgid "Copy text"
+msgstr "Copiar texto"
+
+msgid "Copy selection"
+msgstr "Copiar selección"
+
+msgid "Copy whole box"
+msgstr "Copiar caja completa"
+
+msgid "Only the selected characters are copied. Whole-box copy is a separate choice."
+msgstr "Solo se copian los caracteres marcados. Copiar la caja completa es una opción aparte."
+
+msgid "No text selected."
+msgstr "No hay texto seleccionado."
+
+msgid "Space expand / collapse · double-click copy"
+msgstr "Space expandir / contraer · doble clic copiar"
+
+msgid "Reduced motion · {state}"
+msgstr "Movimiento reducido · {state}"
+
+msgid "Keep activity symbols static and disable compact text scrolling."
+msgstr "Mantener estáticos los símbolos de actividad y desactivar el desplazamiento de texto compacto."
+
+msgid "Thought for {elapsed}"
+msgstr "Pensó durante {elapsed}"
+
+msgid "Attachments · review before sending"
+msgstr "Adjuntos · revisar antes de enviar"
+
+msgid "{label} · {count} characters"
+msgstr "{label} · {count} caracteres"
+
+msgid "Ctrl+C or Copy selection copies only the marked text. Copy whole box and Copy path are separate explicit choices. The assistant cannot copy. The journal records the size, never the text. API keys are never copied."
+msgstr "Ctrl+C o Copiar selección copia solo el texto marcado. Copiar caja completa y Copiar ruta son opciones explícitas aparte. El asistente no puede copiar. El registro guarda el tamaño, nunca el texto. Las claves API nunca se copian."
+
+msgid "Switch this workspace to Classic?"
+msgstr "¿Cambiar este espacio de trabajo a Classic?"
+
+msgid "Switch this workspace to Security?"
+msgstr "¿Cambiar este espacio de trabajo a Security?"
+
+msgid "Use Classic"
+msgstr "Usar Classic"
+
+msgid "Use Security"
+msgstr "Usar Security"
+
+msgid "Everything starts off; you allow each capability in Settings → Authority. Permissions you granted explicitly stay as they are."
+msgstr "Todo empieza apagado; puedes permitir cada capacidad en Ajustes → Autoridad. Los permisos que concediste explícitamente se conservan."
+
+msgid "Reading/searching, edit proposals, chat, sessions and Git review work without granting each capability. Sandbox commands are ready when supported. The next screen can trust this folder for ordinary edits and isolated tests. Until then, edits, delete/move, commands and commits still ask. Commits, secrets and authority changes keep asking. Integrations still need explicit permission; free shell and sensitive files stay unavailable."
+msgstr "La lectura, las búsquedas, las propuestas de edición, el chat, las sesiones y la revisión de Git funcionan sin permitir cada capacidad por separado. Los comandos aislados están disponibles cuando el sistema los admite. En la siguiente pantalla puedes confiar en esta carpeta para ediciones normales y pruebas aisladas. Hasta entonces, editar, eliminar, mover, ejecutar comandos y crear commits sigue pidiendo confirmación. Los commits, secretos y cambios de autoridad siguen preguntando. Las integraciones necesitan permiso explícito; la consola libre y los archivos sensibles permanecen bloqueados."
+
+msgid "Folder: {root}\n"
+msgstr "Carpeta: {root}\n"
+
+msgid "+{added} / -{removed} lines. This puts the file back as it was before ISyCode's last change; nothing changes unless you apply it."
+msgstr "+{added} / -{removed} líneas. Restaura el archivo al estado anterior al último cambio de ISyCode; nada cambia hasta que lo apliques."
+
+msgid "+{added} / -{removed} lines. The assistant proposed this change; nothing is written unless you apply it. If the file changes before it is applied, the change is refused."
+msgstr "+{added} / -{removed} líneas. El asistente propuso este cambio; nada se escribe hasta que lo apliques. Si el archivo cambia antes de aplicarlo, se rechaza la propuesta."
+
+msgid "Run a command · {cwd}"
+msgstr "Ejecutar un comando · {cwd}"
+
+msgid "workspace root"
+msgstr "raíz del espacio de trabajo"
+
+msgid "Program: {program}\nStops after {timeout} s · network blocked · {hidden} sensitive paths hidden\nIt may change files in this workspace; those changes cannot be undone with /undo. Nothing runs unless you approve it."
+msgstr "Programa: {program}\nSe detiene tras {timeout} s · red bloqueada · {hidden} rutas sensibles ocultas\nPuede cambiar archivos de este espacio de trabajo; esos cambios no se pueden deshacer con /undo. Nada se ejecuta hasta que lo apruebes."
+
+msgid "Command · review"
+msgstr "Comando · revisión"
+
+msgid "Exact command"
+msgstr "Comando exacto"
+
+msgid "Brighten text and focused frames while keeping the shared black surfaces."
+msgstr "Aumentar el contraste del texto y los bordes enfocados conservando las superficies negras comunes."
+
+msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
+msgstr "Desplazar texto terminado en títulos contraídos. Usa Space para expandir una caja. Movimiento reducido desactiva este desplazamiento."
+
+# Accepted menu layout and exact decision chrome.
+
+msgid "Provider"
+msgstr "Proveedor"
+
+msgid "Context file"
+msgstr "Archivo de contexto"
+
+msgid "RTK compression"
+msgstr "Compresión RTK"
+
+msgid "Notification sounds"
+msgstr "Sonidos de notificación"
+
+msgid "Reduced motion"
+msgstr "Movimiento reducido"
+
+msgid "High contrast display"
+msgstr "Alto contraste"
+
+msgid "ASCII-only display"
+msgstr "Solo caracteres ASCII"
+
+msgid "My defaults"
+msgstr "Mis valores por defecto"
+
+msgid "Compact text scroll"
+msgstr "Desplazamiento compacto"
+
+msgid "Workspace folders"
+msgstr "Carpetas del workspace"
+
+msgid "Action journal"
+msgstr "Registro de acciones"
+
+msgid "All workspaces"
+msgstr "Todos los workspaces"
+
+msgid "This workspace"
+msgstr "Este workspace"
+
+msgid "Personalize ISyCode for this workspace."
+msgstr "Personaliza ISyCode para este workspace."
+
+msgid "Choose the model used for this conversation."
+msgstr "Elige el modelo usado en esta conversación."
+
+msgid "Choose model"
+msgstr "Usar modelo"
+
+msgid "Continue"
+msgstr "Continuar"
+
+msgid "Custom setup"
+msgstr "Configuración personalizada"
+
+msgid "Idea backlog · captured ideas are not instructions"
+msgstr "Ideas pendientes · las ideas capturadas no son instrucciones"
+
+msgid "Inspect"
+msgstr "Inspeccionar"
+
+msgid "Inspect a harness · Gap map prepares repair proposals for review."
+msgstr "Inspecciona un harness · el mapa de diferencias prepara propuestas de reparación."
+
+msgid "Loaded"
+msgstr "Cargado"
+
+msgid "Manage"
+msgstr "Administrar"
+
+msgid "Message queue · Select queued + empty Send steers · Esc restores draft"
+msgstr "Cola de mensajes · selecciona y envía sin texto para orientar · Esc restaura el borrador"
+
+msgid "Multi Harness · inspection"
+msgstr "Multi Harness · inspección"
+
+msgid "No matching models"
+msgstr "No hay modelos coincidentes"
+
+msgid "No models available."
+msgstr "No hay modelos disponibles."
+
+msgid "No session processes."
+msgstr "Esta sesión no tiene procesos."
+
+msgid "None"
+msgstr "Ninguno"
+
+msgid "None configured"
+msgstr "Sin configurar"
+
+msgid "OFF"
+msgstr "OFF"
+
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Question"
+msgstr "Pregunta"
+
+msgid "Removed"
+msgstr "Eliminado"
+
+msgid "Repair Compose · review proposal"
+msgstr "Reparar Compose · revisar propuesta"
+
+msgid "Review"
+msgstr "Revisar"
+
+msgid "Scope: {scope}"
+msgstr "Alcance: {scope}"
+
+msgid "Security"
+msgstr "Security"
+
+msgid "Selected"
+msgstr "Seleccionado"
+
+msgid "Selected · {model} · {provider}"
+msgstr "Seleccionado · {model} · {provider}"
+
+msgid "Session · full last message"
+msgstr "Sesión · último mensaje completo"
+
+msgid "Sources"
+msgstr "Fuentes"
+
+msgid "[?]"
+msgstr "[?]"
+
+msgid "current"
+msgstr "actual"
+
+msgid "messages"
+msgstr "mensajes"
+
+msgid "ready"
+msgstr "listo"
+
+msgid "{count} checking…"
+msgstr "{count} en revisión…"
+
+msgid "↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search"
+msgstr "↑↓ mover · Enter elegir · Clic vista previa · Esc volver · Mayús+Tab buscar"
+
+msgid "↑↓ move · Enter choose · Esc back · Tab search"
+msgstr "↑↓ mover · Enter elegir · Esc volver · Tab buscar"
+
+msgid "↑↓ move · Enter inspect · Esc back"
+msgstr "↑↓ mover · Enter inspeccionar · Esc volver"
+
+msgid "↑↓ move · Enter open · Esc back"
+msgstr "↑↓ mover · Enter abrir · Esc volver"
+
+msgid "↑↓ move · Esc back"
+msgstr "↑↓ mover · Esc volver"
+
+msgid "↑↓ scroll · Tab actions · Enter choose · Esc cancel"
+msgstr "↑↓ desplazar · Tab acciones · Enter elegir · Esc cancelar"
+
+msgid "⚙"
+msgstr "⚙"
+
+msgid "Search results"
+msgstr "Resultados de búsqueda"
+
+msgid "Models · {provider}"
+msgstr "Modelos · {provider}"
+
+msgid "↑↓ move · Enter open · Esc back · Shift+Tab search"
+msgstr "↑↓ mover · Enter abrir · Esc volver · Mayús+Tab buscar"

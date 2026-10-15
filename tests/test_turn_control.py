@@ -339,6 +339,10 @@ def test_g6_04_retry_keeps_the_new_draft_and_transcript_order(tmp_path, monkeypa
     monkeypatch.setenv("ISYCODE_PROVIDER", "openai")
     monkeypatch.setenv("ISYCODE_MODEL", "gpt-6-luna")
     monkeypatch.setenv("OPENAI_API_KEY", "test-not-real")
+    # The streaming callback is fake, but the real provider owner still reviews
+    # its destination first. Keep that policy path and isolate its DNS witness
+    # so network availability cannot prevent the cancellation fixture starting.
+    monkeypatch.setattr("isycode.egress._ips", lambda _host, _port: ("93.184.216.34",))
     UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="classic")
     authority = WorkspaceAuthority(project)
     authority.set_mode("classic")

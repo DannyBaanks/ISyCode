@@ -19,10 +19,10 @@ from isycode.localization import tr
 class RTKSettingsScreen(ModalScreen):
     CSS = """
     RTKSettingsScreen { align: center middle; background: #000000 58%; }
-    #rtk-settings-card { width: 100; max-width: 96%; height: auto; max-height: 90%; padding: 1 2; border: round #514d5a; background: #292a2e; }
-    #rtk-settings-body { height: auto; max-height: 26; }
+    #rtk-settings-card { width: 100; max-width: 96%; height: 90%; max-height: 36; padding: 0 1; border: solid #718291; background: #000000; }
+    #rtk-settings-body { height: 1fr; }
     #rtk-identity { height: auto; margin: 1 0; }
-    #rtk-state { height: auto; color: #bb8cff; }
+    #rtk-state { height: auto; color: #edf1f5; }
     #rtk-settings-actions { height: 3; margin-top: 1; }
     #rtk-settings-actions Button { width: 1fr; margin-right: 1; }
     """
@@ -33,9 +33,9 @@ class RTKSettingsScreen(ModalScreen):
         self.candidate: dict | None = None
 
     def compose(self) -> ComposeResult:
-        with Vertical(id='rtk-settings-card'):
-            with VerticalScroll(id='rtk-settings-body'):
-                yield Static(tr('Native RTK · output compression'), markup=False)
+        with Vertical(id='rtk-settings-card', classes='isy-dialog'):
+            yield Static(tr('Native RTK · output compression'), classes='isy-dialog-title', markup=False)
+            with VerticalScroll(id='rtk-settings-body', classes='isy-dialog-body'):
                 yield Static(tr('Inspecting installation…'), id='rtk-state', markup=False)
                 yield Static(tr('Checking the binary in the command sandbox…'), id='rtk-identity', markup=False)
                 yield Static(Text('Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\n'
@@ -45,7 +45,7 @@ class RTKSettingsScreen(ModalScreen):
                                   'Original output stays private and is linked by SHA-256 to the command receipt. '
                                   'Savings are byte/4 estimates, not provider billing or tokenizer measurements. '
                                   'A changed binary needs a new explicit opt-in.'))
-            with Horizontal(id='rtk-settings-actions'):
+            with Horizontal(id='rtk-settings-actions', classes='isy-dialog-actions'):
                 yield Button(tr('Enable this binary'), id='rtk-enable', disabled=True, variant='success')
                 yield Button(tr('Disable'), id='rtk-disable')
                 yield Button(tr('Close'), id='rtk-close')
@@ -99,7 +99,7 @@ class RTKSettingsScreen(ModalScreen):
 class RTKRawOutputScreen(ModalScreen):
     CSS = """
     RTKRawOutputScreen { align: center middle; background: #000000 58%; }
-    #rtk-raw-card { width: 110; max-width: 96%; height: 85%; padding: 1 2; border: round #514d5a; background: #292a2e; }
+    #rtk-raw-card { width: 110; max-width: 96%; height: 90%; padding: 0 1; border: solid #718291; background: #000000; }
     #rtk-raw-body { height: 1fr; }
     """
     BINDINGS = [Binding('escape', 'close', 'Close')]

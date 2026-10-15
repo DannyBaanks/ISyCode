@@ -1,0 +1,73 @@
+FFF..................F.                                                  [100%]
+=================================== FAILURES ===================================
+_ test_settings_show_actual_values_and_keep_category_search_back_reachable[size0] _
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:52: in test_settings_show_actual_values_and_keep_category_search_back_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:34: in scenario
+    assert "gpt-6-luna" in rendered(options.get_option_at_index(rows["models_open"]).prompt, 44)
+E   AssertionError: assert 'gpt-6-luna' in 'Model                      GPT 6 Luna / None · Ope… Choose the model used for t…\n'
+E    +  where 'Model                      GPT 6 Luna / None · Ope… Choose the model used for t…\n' = rendered(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.'), 44)
+E    +    where SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.') = Option(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.')).prompt
+E    +      where Option(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.')) = get_option_at_index(1)
+E    +        where get_option_at_index = PreviewOptionList(id='action-list').get_option_at_index
+_ test_settings_show_actual_values_and_keep_category_search_back_reachable[size1] _
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:52: in test_settings_show_actual_values_and_keep_category_search_back_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:34: in scenario
+    assert "gpt-6-luna" in rendered(options.get_option_at_index(rows["models_open"]).prompt, 44)
+E   AssertionError: assert 'gpt-6-luna' in 'Model                      GPT 6 Luna / None · Ope… Choose the model used for t…\n'
+E    +  where 'Model                      GPT 6 Luna / None · Ope… Choose the model used for t…\n' = rendered(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.'), 44)
+E    +    where SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.') = Option(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.')).prompt
+E    +      where Option(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.')) = get_option_at_index(1)
+E    +        where get_option_at_index = PreviewOptionList(id='action-list').get_option_at_index
+_ test_settings_show_actual_values_and_keep_category_search_back_reachable[size2] _
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:52: in test_settings_show_actual_values_and_keep_category_search_back_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:34: in scenario
+    assert "gpt-6-luna" in rendered(options.get_option_at_index(rows["models_open"]).prompt, 44)
+E   AssertionError: assert 'gpt-6-luna' in 'Model                      GPT 6 Luna / None · Ope… Choose the model used for t…\n'
+E    +  where 'Model                      GPT 6 Luna / None · Ope… Choose the model used for t…\n' = rendered(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.'), 44)
+E    +    where SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.') = Option(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.')).prompt
+E    +      where Option(SettingRow(label='Model', value='GPT 6 Luna / None · OpenAI API', help='Choose the model used for this conversation.')) = get_option_at_index(1)
+E    +        where get_option_at_index = PreviewOptionList(id='action-list').get_option_at_index
+________________ test_menu_dispatch_keeps_every_extracted_kind _________________
+tests/test_menu_kinds.py:128: in test_menu_dispatch_keeps_every_extracted_kind
+    assert set(MENU_DISPATCH) == EXPECTED
+E   AssertionError: assert {'ascii_toggl...h_saved', ...} == {'ascii_toggl...h_saved', ...}
+E     
+E     Extra items in the left set:
+E     'models_open'
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_mockup_settings.py::test_settings_show_actual_values_and_keep_category_search_back_reachable[size0]
+FAILED tests/test_mockup_settings.py::test_settings_show_actual_values_and_keep_category_search_back_reachable[size1]
+FAILED tests/test_mockup_settings.py::test_settings_show_actual_values_and_keep_category_search_back_reachable[size2]
+FAILED tests/test_menu_kinds.py::test_menu_dispatch_keeps_every_extracted_kind
+4 failed, 19 passed in 17.74s

@@ -37,7 +37,10 @@ def test_full_idea_note_opens_updates_and_closes_without_resizing_box(tmp_path, 
             assert not isinstance(app.screen, IdeaNoteScreen)
             await pilot.click(box, offset=(4, 0))
             await pilot.pause()
-            assert isinstance(app.screen, IdeaNoteScreen)
+            assert not isinstance(app.screen, IdeaNoteScreen)
+            await pilot.click(box, offset=(4, 0), times=2)
+            from isycode.tui_copy import CopyMenuScreen
+            assert isinstance(app.screen, CopyMenuScreen)
             await pilot.press('escape')
             await pilot.pause()
             assert not isinstance(app.screen, IdeaNoteScreen)

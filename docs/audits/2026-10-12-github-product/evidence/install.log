@@ -1,0 +1,138 @@
+{"argv": ["git", "clone", "--depth", "1", "https://github.com/DannyBaanks/ISyCode.git", "/tmp/isycode-readme-install-yf2b83a9/ISyCode"], "cwd": "/tmp/isycode-readme-install-yf2b83a9"}
+Cloning into '/tmp/isycode-readme-install-yf2b83a9/ISyCode'...
+{"argv": ["python3", "-m", "venv", ".venv"], "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode"}
+{"argv": ["/tmp/isycode-readme-install-yf2b83a9/ISyCode/.venv/bin/python", "-m", "pip", "install", "-e", "."], "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode"}
+Obtaining file:///tmp/isycode-readme-install-yf2b83a9/ISyCode
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Collecting rich<15,>=13.7 (from isycode==0.1.0)
+  Using cached rich-14.3.4-py3-none-any.whl.metadata (18 kB)
+Collecting pathspec<2,>=0.12 (from isycode==0.1.0)
+  Using cached pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+Collecting textual==8.2.8 (from isycode==0.1.0)
+  Using cached textual-8.2.8-py3-none-any.whl.metadata (9.1 kB)
+Collecting aiohttp<4,>=3.9 (from isycode==0.1.0)
+  Downloading aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.3 kB)
+Collecting keyring<26,>=25.7 (from isycode==0.1.0)
+  Using cached keyring-25.7.0-py3-none-any.whl.metadata (21 kB)
+Collecting markdown-it-py>=2.1.0 (from markdown-it-py[linkify]>=2.1.0->textual==8.2.8->isycode==0.1.0)
+  Using cached markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting mdit-py-plugins (from textual==8.2.8->isycode==0.1.0)
+  Using cached mdit_py_plugins-0.6.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting platformdirs<5,>=3.6.0 (from textual==8.2.8->isycode==0.1.0)
+  Downloading platformdirs-4.13.0-py3-none-any.whl.metadata (5.5 kB)
+Collecting pygments<3.0.0,>=2.19.2 (from textual==8.2.8->isycode==0.1.0)
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting typing-extensions<5.0.0,>=4.4.0 (from textual==8.2.8->isycode==0.1.0)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting attrs>=17.3.0 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+Collecting multidict<8.0,>=4.5 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Downloading multidict-7.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (6.2 kB)
+Collecting propcache>=0.2.0 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (25 kB)
+Collecting yarl<2.0,>=1.25.1 (from aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (111 kB)
+Collecting SecretStorage>=3.2 (from keyring<26,>=25.7->isycode==0.1.0)
+  Using cached secretstorage-3.5.0-py3-none-any.whl.metadata (4.0 kB)
+Collecting jeepney>=0.4.2 (from keyring<26,>=25.7->isycode==0.1.0)
+  Using cached jeepney-0.9.0-py3-none-any.whl.metadata (1.2 kB)
+Collecting jaraco.classes (from keyring<26,>=25.7->isycode==0.1.0)
+  Using cached jaraco.classes-3.4.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting jaraco.functools (from keyring<26,>=25.7->isycode==0.1.0)
+  Using cached jaraco_functools-4.6.0-py3-none-any.whl.metadata (2.9 kB)
+Collecting jaraco.context (from keyring<26,>=25.7->isycode==0.1.0)
+  Using cached jaraco_context-6.1.2-py3-none-any.whl.metadata (4.2 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.1.0->markdown-it-py[linkify]>=2.1.0->textual==8.2.8->isycode==0.1.0)
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting linkify-it-py<3,>=1 (from markdown-it-py[linkify]>=2.1.0->textual==8.2.8->isycode==0.1.0)
+  Using cached linkify_it_py-2.2.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting cryptography>=2.0 (from SecretStorage>=3.2->keyring<26,>=25.7->isycode==0.1.0)
+  Using cached cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (4.4 kB)
+Collecting idna>=2.0 (from yarl<2.0,>=1.25.1->aiohttp<4,>=3.9->isycode==0.1.0)
+  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting more-itertools (from jaraco.classes->keyring<26,>=25.7->isycode==0.1.0)
+  Using cached more_itertools-11.1.0-py3-none-any.whl.metadata (41 kB)
+Collecting cffi>=2.0.0 (from cryptography>=2.0->SecretStorage>=3.2->keyring<26,>=25.7->isycode==0.1.0)
+  Using cached cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=2.0->SecretStorage>=3.2->keyring<26,>=25.7->isycode==0.1.0)
+  Using cached pycparser-3.11-py3-none-any.whl.metadata (8.2 kB)
+Using cached textual-8.2.8-py3-none-any.whl (731 kB)
+Downloading aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 1.5 MB/s eta 0:00:00
+Using cached keyring-25.7.0-py3-none-any.whl (39 kB)
+Using cached pathspec-1.1.1-py3-none-any.whl (57 kB)
+Using cached rich-14.3.4-py3-none-any.whl (310 kB)
+Using cached aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+Using cached aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
+Using cached frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (242 kB)
+Using cached jeepney-0.9.0-py3-none-any.whl (49 kB)
+Using cached markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Downloading multidict-7.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (483 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 483.0/483.0 kB 3.3 MB/s eta 0:00:00
+Downloading platformdirs-4.13.0-py3-none-any.whl (32 kB)
+Using cached propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (250 kB)
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Using cached secretstorage-3.5.0-py3-none-any.whl (15 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Using cached yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (117 kB)
+Using cached jaraco.classes-3.4.0-py3-none-any.whl (6.8 kB)
+Using cached jaraco_context-6.1.2-py3-none-any.whl (7.9 kB)
+Using cached jaraco_functools-4.6.0-py3-none-any.whl (11 kB)
+Using cached mdit_py_plugins-0.6.1-py3-none-any.whl (66 kB)
+Using cached cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl (4.8 MB)
+Using cached idna-3.20-py3-none-any.whl (69 kB)
+Using cached linkify_it_py-2.2.0-py3-none-any.whl (21 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Using cached more_itertools-11.1.0-py3-none-any.whl (72 kB)
+Using cached cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (221 kB)
+Using cached pycparser-3.11-py3-none-any.whl (51 kB)
+Building wheels for collected packages: isycode
+  Building editable for isycode (pyproject.toml): started
+  Building editable for isycode (pyproject.toml): finished with status 'done'
+  Created wheel for isycode: filename=isycode-0.1.0-0.editable-py3-none-any.whl size=1690 sha256=a58f7570d93614199a7d0a45324c945dfba0430a1f1dc2555abb50820a91f383
+  Stored in directory: /tmp/pip-ephem-wheel-cache-20jtcf63/wheels/3a/12/9d/cb783655f46a0b28a2131299c7365008d0c1f9d3e4dac3f297
+Successfully built isycode
+Installing collected packages: typing-extensions, pygments, pycparser, propcache, platformdirs, pathspec, multidict, more-itertools, mdurl, linkify-it-py, jeepney, jaraco.context, idna, frozenlist, attrs, aiohappyeyeballs, yarl, markdown-it-py, jaraco.functools, jaraco.classes, cffi, aiosignal, rich, mdit-py-plugins, cryptography, aiohttp, textual, SecretStorage, keyring, isycode
+Successfully installed SecretStorage-3.5.0 aiohappyeyeballs-2.7.1 aiohttp-3.14.5 aiosignal-1.4.0 attrs-26.1.0 cffi-2.1.1 cryptography-50.0.2 frozenlist-1.8.0 idna-3.20 isycode-0.1.0 jaraco.classes-3.4.0 jaraco.context-6.1.2 jaraco.functools-4.6.0 jeepney-0.9.0 keyring-25.7.0 linkify-it-py-2.2.0 markdown-it-py-4.2.0 mdit-py-plugins-0.6.1 mdurl-0.1.2 more-itertools-11.1.0 multidict-7.1.0 pathspec-1.1.1 platformdirs-4.13.0 propcache-0.5.4 pycparser-3.11 pygments-2.21.0 rich-14.3.4 textual-8.2.8 typing-extensions-4.16.0 yarl-1.25.1
+{"argv": ["/tmp/isycode-readme-install-yf2b83a9/ISyCode/.venv/bin/isycode", "--version"], "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode"}
+ISyCode 0.1.0
+{"argv": ["/tmp/isycode-readme-install-yf2b83a9/ISyCode/.venv/bin/isycode", "--help"], "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode"}
+ISyCode · terminal workspace agent
+
+Usage:
+  isycode                 Start the chat TUI in the current directory
+  isycode tui              Start the chat TUI
+  isycode cli              Browse actions by semantic category
+  isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
+  isycode sessions ...      List/show/search/rename/delete local conversations; add --json
+  isycode models [--json]   Show local provider/model metadata; no network calls
+  isycode stats [--json]    Aggregate locally recorded session usage
+  isycode dirs [--json]     Show config/state locations and precedence, never values
+  isycode completion SHELL  Print bash, zsh or fish completion
+  isycode update           Update this ISyCode installation (alias: actualizar)
+  isycode update --check   Check for updates without installing or advancing
+  isycode update --yes     Pre-approve the stash/merge confirmation
+  isycode actualizar       Actualizar el checkout limpio o preparar una instalación
+  isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
+  isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
+  isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
+                           add --json for machine-readable output. Only read-only
+                           tools that were granted run; nothing asks for approval.
+  isycode --help           Show this help
+  isycode --version        Show the installed version
+
+The CLI browser groups actions by purpose. It does not run arbitrary shell commands.
