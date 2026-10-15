@@ -475,6 +475,8 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
 
     def __init__(self, title: str = "thinking...", **kwargs) -> None:
         self._full_text = ""
+        self._text_parts: list[str] = []
+        self._pending_text_paint = None
         self._base_title = title
         self._expanded = False
         body = SelectableText(Text("", style=MUTED))
@@ -490,6 +492,8 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
         self._started_at = _time.monotonic()
         self._update_elapsed_title()
         self._elapsed_timer = self.set_interval(1, self._update_elapsed_title)
+        if self._text_parts:
+            self._flush_pending_text()
 
     def _update_elapsed_title(self) -> None:
         if self._streaming:
@@ -515,8 +519,30 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
 
     def set_text(self, text: str) -> None:
         """Thread-safe entry: replace the reasoning body."""
+        if self._pending_text_paint is not None:
+            self._pending_text_paint.stop()
+            self._pending_text_paint = None
+        self._text_parts = [text] if text else []
         self._full_text = text
         self._paint_preview()
+
+    def append_text(self, chunk: str) -> None:
+        """Buffer a stream fragment and repaint at most once per frame window."""
+        if not chunk:
+            return
+        self._text_parts.append(chunk)
+        if self.is_mounted and self._pending_text_paint is None:
+            self._pending_text_paint = self.set_timer(0.08, self._flush_pending_text)
+
+    def _flush_pending_text(self) -> None:
+        timer = self._pending_text_paint
+        self._pending_text_paint = None
+        if timer is not None:
+            timer.stop()
+        self._full_text = "".join(self._text_parts)
+        self._paint_preview()
+        if self.is_mounted and hasattr(self.parent, "follow_tail"):
+            self.parent.follow_tail()
 
     def _paint_preview(self) -> None:
         if not hasattr(self, "_body"):
@@ -591,6 +617,8 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
 
     def collapse_to(self, seconds: float) -> None:
         """Collapse with the elapsed-time title."""
+        if self._pending_text_paint is not None:
+            self._flush_pending_text()
         self._base_title = tr("Thought for {elapsed}", elapsed=_elapsed_label(seconds))
         self._streaming = False
         if self._elapsed_timer is not None:

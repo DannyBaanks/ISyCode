@@ -802,6 +802,7 @@ class SessionMixin:
         lane.lines.clear()
         lane.partial = ""
         lane.partial_reason = ""
+        lane.partial_reason_chunks = []
         lane.stream_widget = None
         lane.stream_block = None
         self.query_one(ChatArea).remove_children()
@@ -883,6 +884,7 @@ class SessionMixin:
         lane.draft_text = state.get("draft", "")
         lane.partial = ""
         lane.partial_reason = ""
+        lane.partial_reason_chunks = []
         lane.stream_widget = None
         lane.stream_block = None
         lane.lines = []
@@ -1259,7 +1261,8 @@ class SessionMixin:
             return
         chat.remove_children()
         lane = self._foreground_lane()
-        if not lane.lines and not lane.partial and not lane.partial_reason and not lane.tool_history:
+        partial_reason = "".join(lane.partial_reason_chunks) or lane.partial_reason
+        if not lane.lines and not lane.partial and not partial_reason and not lane.tool_history:
             self._mount_idle_board()
             return
         for kind, text, extra in list(lane.lines):
@@ -1293,9 +1296,10 @@ class SessionMixin:
                 collapsed=True,
                 classes="tool-history",
             ))
-        if lane.partial_reason:
+        if partial_reason:
+            lane.partial_reason = partial_reason
             block = ThoughtBlock()
-            block.set_text(lane.partial_reason)
+            block.set_text(partial_reason)
             chat.mount(block)
             lane.stream_block = block
         else:
@@ -1404,6 +1408,7 @@ class SessionMixin:
         lane.draft_text = state.get("draft", "") or ""
         lane.partial = ""
         lane.partial_reason = ""
+        lane.partial_reason_chunks = []
         lane.stream_widget = None
         lane.stream_block = None
         lane.lines = []
