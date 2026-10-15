@@ -247,6 +247,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
                                 "WorkspaceConfigBoundary"}),
     "provider_auth": frozenset({"ProviderAuthBoundary"}),
     "provider_network": frozenset({"ProviderNetworkBoundary"}),
+    "grok_auth": frozenset({"GrokAuthBoundary"}),
     "web_fetch": frozenset({"RemoteReadBoundary"}),
     "remote_catalog": frozenset({"RemoteReadBoundary"}),
     "session_delete": frozenset({"SessionDeleteBoundary"}),
@@ -287,6 +288,7 @@ OWNER_ACTIONS = {
     CONFIG_OWNER_ID: CONFIG_ACTIONS,
     "provider_auth": frozenset({"provider.authenticate"}),
     "provider_network": frozenset({"provider.request"}),
+    "grok_auth": frozenset({"grok.login"}),
     "web_fetch": frozenset({"web.fetch"}),
     "remote_catalog": frozenset({"gateway.files.read", "mcp.discover", "catalog.external.read"}),
     "session_delete": frozenset({"session.delete"}),
@@ -818,6 +820,37 @@ class ProviderAuthSystembility:
                  and params.get("method") in {"browser", "device"}
                  and self.identity_valid(params.get("connector", {})))
         return SystembilityResult(self.name, valid, "authentication binds official executable, private keyring and fixed hosts")
+
+
+class GrokAuthSystembility:
+    """Pure validation of the official grok CLI sign-in, no token access."""
+    name = "GrokAuthBoundary"
+
+    @staticmethod
+    def executable_valid(executable):
+        from isycode.grok_session import grok_executable
+        try:
+            if not isinstance(executable, str):
+                return False
+            expected = grok_executable()
+            if expected is None or executable != expected:
+                return False
+            path = Path(executable).resolve(strict=True)
+            return path.is_file() and os.access(path, os.X_OK)
+        except (OSError, TypeError, ValueError):
+            return False
+
+    def evaluate(self, request, authority):
+        if request.action_id != "grok.login":
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        valid = (request.target == "grok"
+                 and set(params) == {"executable", "operation", "method"}
+                 and params.get("operation") == "login"
+                 and params.get("method") in {"device", "browser"}
+                 and self.executable_valid(params.get("executable")))
+        return SystembilityResult(self.name, valid,
+                                  "sign-in binds the official grok CLI executable and a fixed login operation")
 
 
 class ProviderNetworkSystembility:
@@ -1794,6 +1827,7 @@ class ProductActionGate:
             WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
             WorkspaceConfigBoundary(canonical),
             ProviderAuthSystembility(), ProviderNetworkSystembility(),
+            GrokAuthSystembility(),
             RemoteReadSystembility(), SessionStoreSystembility(), SessionDeleteSystembility(),
             CredentialBoundarySystembility(),
             MCPInvocationSystembility(),

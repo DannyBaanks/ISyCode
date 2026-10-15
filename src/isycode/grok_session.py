@@ -137,14 +137,22 @@ def session_transport() -> str | None:
     return None
 
 
-async def run_login(method: str, on_line) -> int:
-    """Run official ``grok login``. ``on_line`` sees status text, never a raw token."""
+async def run_login(method: str, on_line, executable: str | None = None) -> int:
+    """Run official ``grok login``. ``on_line`` sees status text, never a raw token.
+
+    ``executable`` is the exact program the execution owner already bound to
+    the authorized request; it must still be the grok CLI discovered here, so
+    a stale or swapped path fails closed before the process starts.
+    """
     import asyncio
     if method not in {"device", "browser"}:
         raise ValueError("unsupported grok login")
+    program = executable if executable is not None else grok_executable()
+    if program != grok_executable():
+        raise ValueError("grok executable changed after authorization")
     flag = "--device-auth" if method == "device" else "--oauth"
     proc = await asyncio.create_subprocess_exec(
-        grok_executable(), "login", flag,
+        program, "login", flag,
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.PIPE)
 

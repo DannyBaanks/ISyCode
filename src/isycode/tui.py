@@ -32,7 +32,6 @@ from isycode.asyncio_compat import note_cancel_requested
 import hashlib
 import json
 import shlex
-import shutil
 import tempfile
 import uuid
 import urllib.request
@@ -410,7 +409,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._active_chat_session_id: str | None = None
         self._chat_session_owner: ChatSessionOwner | None = None
         self._session_save_warned = False
-        self._temporary_chat_root: Path | None = None
         self._workspace_generation = 0
         self._file_path = ""
         self._file_browser_alias = "main"
@@ -717,8 +715,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             await self._mcp_local.stop_all()
         if self._mobile_host_owner is not None:
             await self._mobile_host_owner.shutdown()
-        if self._temporary_chat_root is not None:
-            shutil.rmtree(self._temporary_chat_root, ignore_errors=True)
 
     async def _startup_workspace(self) -> None:
         """Offer recurrence once, then choose persistent or temporary chat storage."""
