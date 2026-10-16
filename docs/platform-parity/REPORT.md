@@ -966,4 +966,11 @@ grants. It now waits for `_sessions_enabled()` before measuring failed-request
 usage persistence. The test passes locally both normally and with startup
 delayed by two seconds. Its CI excerpt and reproduction are recorded in the
 same evidence file. These are test synchronization fixes and do not change
-application behavior; a full CI rerun containing all six fixes is pending.
+application behavior. Windows CI on `f5cb709` then found two more fixed-delay
+assumptions: the Grok login test captured its audit baseline before the
+workspace-startup worker finished, and the question selector test asserted
+visibility after a fixed 350 ms pause. The login test now awaits startup; the
+selector test waits until the focused option is inside its card. Both pass
+locally, including the login test with startup delayed by two seconds and three
+consecutive selector runs. The evidence file records the failures and local
+results. A full CI rerun with all eight synchronization fixes is pending.

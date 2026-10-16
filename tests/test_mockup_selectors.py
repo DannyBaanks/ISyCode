@@ -1,4 +1,5 @@
 """Selector interactions and bounded actions at the accepted terminal sizes."""
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -83,6 +84,21 @@ def visible_inside(screen, card_id, widget_id):
     card, widget = screen.query_one(card_id), screen.query_one(widget_id)
     assert widget.region.height > 0
     assert card.region.contains_region(widget.region), (card.region, widget.region)
+
+
+async def wait_until_visible_inside(pilot, screen, card_id, widget_id, timeout=10.0):
+    deadline = asyncio.get_running_loop().time() + timeout
+    card, widget = screen.query_one(card_id), screen.query_one(widget_id)
+    while True:
+        if widget.region.height > 0 and card.region.contains_region(widget.region):
+            return
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise AssertionError(
+                f"Timed out waiting for {widget_id} to be visible inside {card_id}: "
+                f"{card.region}, {widget.region}"
+            )
+        await pilot.pause(min(0.05, remaining))
 
 
 @pytest.mark.asyncio
@@ -236,8 +252,8 @@ async def test_question_choices_scroll_without_hiding_cancel(size):
         visible_inside(screen, "#agent-question-card", "#ask-cancel")
         last = screen.query_one("#ask-choice-11", Button)
         last.focus()
-        await pilot.pause(0.35)
-        visible_inside(screen, "#agent-question-card", "#ask-choice-11")
+        await wait_until_visible_inside(
+            pilot, screen, "#agent-question-card", "#ask-choice-11")
         await pilot.press("enter")
         await pilot.pause()
     assert chosen == [{"status": "answered", "choice": "Option 11"}]
