@@ -694,9 +694,10 @@ Current local Windows verification after those fixes:
   adjacent `.json` record.
 - Gate validator: **14 passed, 2 skipped**.
 
-The follow-up GitHub full-matrix run is still pending. These targeted results do
-not replace that run or close the separately listed NOT_DEMONSTRATED items. The
-five-user matrix remains waived; `NATIVE_ACCEPTED=False` remains unchanged.
+The next GitHub full-matrix run was still pending at the time of this section.
+These targeted results do not replace that run or close the separately listed
+NOT_DEMONSTRATED items. The five-user matrix remains waived;
+`NATIVE_ACCEPTED=False` remains unchanged.
 
 ## Hosted Git policy regression — 2026-10-15
 
@@ -706,6 +707,38 @@ checks, so the product correctly omits every `git_*` chat tool. The test now
 derives its expected actions from `git_executable()` and asserts that all Git
 tools remain hidden when discovery rejects the installation. The local Windows
 selection passes **129 tests, 2 skipped, 1 integration deselected** in 138.76s;
-the changed chat flow also passes locally with trusted Git available. A new
-hosted full-matrix run is pending after this correction. This test fix does not
-change the trusted-Git policy or close any NOT_DEMONSTRATED platform gates.
+the changed chat flow also passes locally with trusted Git available. This test
+fix does not change the trusted-Git policy or close any NOT_DEMONSTRATED platform
+gates.
+
+## Hosted Windows correction pass — 2026-10-15
+
+The next hosted run (`38842048911`, native contracts `38842048896`) still failed
+on commit `b2e800bb6ba3c7c4aa34670fb1d7c4d226b1bd41`: the full Windows job had
+51 failed tests and 36 setup errors; the native-contract job had 24 failures and
+36 setup errors. The main causes were a Python `python3.exe` app-execution alias
+being mistaken for a runtime file, tests attempting to repair the shared pytest
+temporary root instead of creating a private child, several child-process tests
+starting outside the source import path, and updater assertions that hardcoded
+the POSIX launcher name. Existing regression tests also assumed trusted Git was
+available on the hosted runner, and two pinned Markdown receipts were subject to
+Git newline conversion.
+
+The correction now stages only the selected `python.exe` plus runtime DLLs,
+creates private child roots in the tests without weakening ACL checks, gives
+subprocess controls the source import path, checks the platform's installed
+launcher, and follows the product's fail-closed trusted-Git behavior. It also
+preserves the two gate-pinned Markdown files byte-for-byte and checks operator
+elevation before VHD inspection. Local Windows results on these corrections:
+
+- Native sandbox selection: **115 passed, 13 skipped, 1 expected failure** in
+  461.69s; the skips are explicit host/operator controls.
+- Updater module: **36 passed, 1 skipped** in 129.24s.
+- Extended hosted-regression selection: **76 passed, 6 skipped** in 25.15s.
+- The separate native storage/Git/audit/session selection remains **129 passed,
+  2 skipped, 1 integration deselected**.
+
+The new full GitHub run is triggered by the correction commit and must pass
+before the Windows CI gate can be called green. These local selections do not
+replace it. The five-user matrix remains waived; `NATIVE_ACCEPTED=False` remains
+unchanged, and the other NOT_DEMONSTRATED gates in INVENTORY.md are still open.

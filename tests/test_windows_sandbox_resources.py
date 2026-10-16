@@ -10,6 +10,17 @@ import pytest
 pytestmark = pytest.mark.skipif(os.name != 'nt', reason='native Windows isolation')
 
 
+def test_runtime_copy_ignores_optional_python_launcher_alias(tmp_path):
+    from isycode.platform_windows_sandbox_resources import runtime_files
+    runtime = tmp_path / 'cpython'
+    runtime.mkdir()
+    (runtime / 'python.exe').write_bytes(b'python-control')
+    # Actions Windows may install python3.exe as an app-execution alias rather
+    # than a regular executable. It is not the interpreter this backend runs.
+    (runtime / 'python3.exe').mkdir()
+    assert [name for name, _ in runtime_files(runtime)] == ['python.exe']
+
+
 @pytest.fixture
 def prepared(tmp_path):
     from isycode.platform_windows_sandbox_resources import WindowsSandboxResources

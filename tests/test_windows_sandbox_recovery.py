@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import secrets
 import subprocess
 import sys
 
@@ -38,13 +39,12 @@ def test_schema2_recovery_requires_volume_before_deletion(tmp_path):
 
 
 def test_schema2_recovery_refuses_wrong_volume(tmp_path, monkeypatch):
-    import tempfile
     from isycode.platform_windows_sandbox_recovery import write_ownership, recover_owned_scratch, PROFILE_PREFIX
     from isycode.platform_windows_sandbox_resources import _profile_sid
     from isycode.platform_windows_sandbox_volume import StorageIdentity, BoundedStorageProvider, StorageUnavailableError
     from isycode.platform_windows_storage import WindowsStorage
-    root = Path(tempfile.mkdtemp(prefix='isycode-lpac-', dir=tmp_path.anchor))
-    WindowsStorage().ensure_directory(root, repair=True)
+    root = Path(tmp_path.anchor) / ('isycode-lpac-' + secrets.token_hex(4))
+    WindowsStorage().ensure_directory(root)
     identity = StorageIdentity('synthetic', 1, 'image', 'file', 536870912, 536870912)
     name = PROFILE_PREFIX + '1' * 32
     write_ownership(root, name, _profile_sid(name), storage_identity=identity)
@@ -98,7 +98,7 @@ print(json.dumps({'root':str(r.scratch_root)}),flush=True)
 os._exit(0)
 '''
     process = subprocess.run([sys.executable, '-c', code, str(source)],
-        capture_output=True, text=True, timeout=60)
+        capture_output=True, text=True, timeout=60, cwd=Path(__file__).resolve().parents[1] / 'src')
     assert process.returncode == 0, process.stderr
     root = Path(json.loads(process.stdout)['root'])
     assert root.exists()
@@ -145,7 +145,7 @@ else:
 native.WindowsSandboxResources.prepare(Path(sys.argv[1]),Path(sys.base_prefix),())
 '''
     process = subprocess.run([sys.executable, '-c', code, str(source), crash],
-        capture_output=True, text=True, timeout=60)
+        capture_output=True, text=True, timeout=60, cwd=Path(__file__).resolve().parents[1] / 'src')
     assert process.returncode == 0, process.stderr
     root = Path(json.loads(process.stdout)['root'])
     assert recover_owned_scratch(root) == 'RECOVERED'

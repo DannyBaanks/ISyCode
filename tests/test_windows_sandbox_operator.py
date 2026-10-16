@@ -8,24 +8,30 @@ import pytest
 pytestmark = pytest.mark.skipif(os.name != 'nt', reason='PowerShell operator parser')
 
 
-def test_attach_parameters_match_sdk_union_alignment():
-    import ctypes
+def _operator_module():
     script=Path(__file__).resolve().parents[1]/'scripts/attach-windows-sandbox-volume.py'
     spec=importlib.util.spec_from_file_location('operator_attach',script)
     module=importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def test_attach_parameters_match_sdk_union_alignment():
+    import ctypes
+    module=_operator_module()
     assert module.AttachParameters.data.offset==8
     assert ctypes.sizeof(module.AttachParameters)==24
 
 
-def test_operator_attach_refuses_unelevated_before_image_access(tmp_path):
-    import sys
-    script=Path(__file__).resolve().parents[1]/'scripts/attach-windows-sandbox-volume.py'
+def test_operator_attach_refuses_unelevated_before_image_access(tmp_path, monkeypatch):
+    module=_operator_module()
     image=tmp_path/'never-created.vhd'
-    result=subprocess.run([sys.executable,str(script),'--image',str(image),
-                           '--expected-image-id','synthetic'],capture_output=True,text=True,timeout=20)
-    assert result.returncode!=0
-    assert 'Administrative operator required' in result.stderr
+    inspected=[]
+    monkeypatch.setattr(module,'_is_elevated',lambda:False)
+    monkeypatch.setattr(module.api,'inspect_image',lambda path: inspected.append(path))
+    with pytest.raises(OSError,match='Administrative operator required'):
+        module.main(['--image',str(image),'--expected-image-id','synthetic'])
+    assert inspected==[]
     assert not image.exists()
 
 

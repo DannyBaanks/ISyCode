@@ -662,7 +662,9 @@ def test_bootstrap_installs_source_without_replacing_foreign_launcher(tmp_path, 
     destination = data_home / "isycode" / "source"
 
     assert report.status == "updated"
-    assert (destination / "scripts" / "isycode").is_file()
+    launcher = (destination / ".venv" / "Scripts" / "isycode.exe" if os.name == "nt"
+                else destination / "scripts" / "isycode")
+    assert launcher.is_file()
     python_path = destination / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     assert python_path.is_file()
     assert foreign.read_text(encoding="utf-8") == "another application\n"

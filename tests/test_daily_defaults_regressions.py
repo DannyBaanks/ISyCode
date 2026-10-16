@@ -6,7 +6,7 @@ from isycode.user_defaults import UserDefaultsStore
 
 
 def test_unlimited_default_survives_an_unrelated_settings_update(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     assert store.load()['answer_tokens'] is None
     store.update(new_workspace_mode='classic')
     assert store.load()['answer_tokens'] is None
@@ -15,7 +15,7 @@ def test_unlimited_default_survives_an_unrelated_settings_update(tmp_path):
 
 @pytest.mark.parametrize('invalid', [True, 1.5, '8192', [], {}, -1, 999])
 def test_invalid_answer_limits_still_fail_closed(tmp_path, invalid):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     data = store.load()
     data['answer_tokens'] = invalid
     store.path.write_text(json.dumps(data))

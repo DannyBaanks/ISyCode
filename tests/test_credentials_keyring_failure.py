@@ -29,7 +29,7 @@ def _panic():
 def test_native_keyring_panic_becomes_a_closed_vault_error(tmp_path, monkeypatch):
     _fake_keyring(monkeypatch, _panic)
     with pytest.raises(CredentialVaultError):
-        CredentialVault(tmp_path / "credentials.sqlite3")
+        CredentialVault(tmp_path / "vault" / "credentials.sqlite3")
 
 
 def test_provider_state_degrades_instead_of_crashing(tmp_path, monkeypatch):
@@ -48,4 +48,4 @@ def test_keyboard_interrupt_still_propagates(tmp_path, monkeypatch):
 
     _fake_keyring(monkeypatch, interrupt)
     with pytest.raises(KeyboardInterrupt):
-        CredentialVault(tmp_path / "credentials.sqlite3")
+        CredentialVault(tmp_path / "vault" / "credentials.sqlite3")

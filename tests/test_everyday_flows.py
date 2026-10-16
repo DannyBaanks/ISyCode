@@ -17,7 +17,7 @@ import pytest
 from isycode.action_runtime import LocalWorkspaceReadOwner
 from isycode.approvals import ActionApprovalStore
 from isycode.command_runner import CommandRunOwner
-from isycode.git_owner import GitOwner
+from isycode.git_owner import GitOwner, git_executable
 from isycode.headless import available_tools
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_trust import ACCEPT_PHRASE, WorkspaceTrust, modal_required
@@ -87,8 +87,11 @@ def test_g7_01_dirty_repo_diagnose_edit_test_diff_undo(repo, monkeypatch):
         preview = runner.prepare(["echo", "tests-pass"])
         assert asyncio.run(runner.run(preview, None)).decision == "ALLOW"
     diff = GitOwner(root, authority, approvals).diff()
-    assert diff.decision == "ALLOW"
-    assert "helper():\n-    return 1\n+    return 2" in diff.text.replace("\\n", "\n") or "return 2" in diff.text
+    if git_executable() is None:
+        assert diff.decision == "DENY"
+    else:
+        assert diff.decision == "ALLOW"
+        assert "helper():\n-    return 1\n+    return 2" in diff.text.replace("\\n", "\n") or "return 2" in diff.text
     undo = writer.preview_undo()
     assert writer.apply(undo, None).decision == "ALLOW"
     assert not (root / "notes.md").exists()
@@ -136,6 +139,8 @@ def test_g7_03_security_partial_grants_explain_exact_enable(repo):
 
 
 def test_g7_04_commit_selects_authorized_keeps_human_staged_no_hooks(repo):
+    if git_executable() is None:
+        pytest.skip("trusted Git is unavailable; fail-closed tool discovery is tested separately")
     authority, root = repo
     approvals = ActionApprovalStore()
     (root / "hooks-proof").write_text("", encoding="utf-8")

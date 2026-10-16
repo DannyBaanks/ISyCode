@@ -50,7 +50,7 @@ def test_vault_refuses_unsafe_existing_metadata(tmp_path,fake_keyring):
         with pytest.raises((CredentialVaultError,ValueError),match='private|unsafe'):
             CredentialVault(path)
         assert path.read_bytes()==before
-    finally:storage.protect(path)
+    finally:path.unlink(missing_ok=True)
 
 
 def test_real_windows_keyring_synthetic_roundtrip(tmp_path):

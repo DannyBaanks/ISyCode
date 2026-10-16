@@ -11,7 +11,7 @@ from isycode.user_defaults import UserDefaultsStore
 
 
 def test_high_contrast_defaults_off_and_round_trips(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     assert store.load()["high_contrast"] is False
     store.update(high_contrast=True)
     assert store.load()["high_contrast"] is True
@@ -20,7 +20,7 @@ def test_high_contrast_defaults_off_and_round_trips(tmp_path):
 
 
 def test_high_contrast_rejects_non_bool(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     with pytest.raises(ValueError):
         store.update(high_contrast="yes")
     assert store.load()["high_contrast"] is False

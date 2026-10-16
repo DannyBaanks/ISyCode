@@ -9,8 +9,9 @@ pytestmark = pytest.mark.skipif(os.name != 'nt', reason='native private storage 
 @pytest.fixture
 def private_dir(tmp_path):
     from isycode.platform_windows_storage import WindowsStorage
-    WindowsStorage().ensure_directory(tmp_path, repair=True)
-    return tmp_path
+    private = tmp_path / 'operator-private'
+    WindowsStorage().ensure_directory(private)
+    return private
 
 
 def test_failed_inspection_never_writes_config(private_dir, monkeypatch):

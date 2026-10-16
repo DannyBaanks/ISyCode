@@ -15,11 +15,11 @@ def test_mcp_presets_preserve_private_config_and_never_replace(tmp_path):
     from isycode.mcp_presets import add_preset
     from isycode.mcp_local import load_config
     from isycode.platform_storage import storage
-    path=tmp_path/'mcp.json'
+    private=tmp_path/'private'
+    storage.ensure_directory(private)
+    path=private/'mcp.json'
     path.write_text(json.dumps({'servers':{'mine':{'command':['custom'], 'env':{'PRIVATE':'secret'}}}}))
     path.chmod(0o600)
-    if os.name == 'nt':
-        storage.protect(path)
     add_preset('playwright',path)
     configs=load_config(path)
     assert configs['mine'].env==(('PRIVATE','secret'),)

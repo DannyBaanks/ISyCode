@@ -21,18 +21,21 @@ class AttachParameters(c.Structure):
     _fields_=[('version',w.DWORD),('data',AttachData)]
 
 
-def main():
+def _is_elevated():
+    token=security.OpenProcessToken(win32api.GetCurrentProcess(),win32con.TOKEN_QUERY)
+    try:
+        return bool(security.GetTokenInformation(token,security.TokenElevation))
+    finally:
+        token.Close()
+
+
+def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--image',type=Path,required=True)
     parser.add_argument('--expected-image-id',required=True)
     parser.add_argument('--new-attachment',action='store_true')
-    args=parser.parse_args()
-    token=security.OpenProcessToken(win32api.GetCurrentProcess(),win32con.TOKEN_QUERY)
-    try:
-        elevated=bool(security.GetTokenInformation(token,security.TokenElevation))
-    finally:
-        token.Close()
-    if not elevated:
+    args=parser.parse_args(argv)
+    if not _is_elevated():
         raise OSError('Administrative operator required')
     observed=api.inspect_image(args.image)
     if (not observed.fixed or observed.device_id!=2 or observed.virtual_bytes!=512*1024**2

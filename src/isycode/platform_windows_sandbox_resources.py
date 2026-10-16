@@ -98,7 +98,11 @@ def runtime_files(runtime: Path):
         raise ValueError('unsafe runtime root')
     selected = []
     for path in runtime.iterdir():
-        if path.suffix.lower() in {'.exe', '.dll'}:
+        # The sandbox runs the exact CPython interpreter, not optional
+        # launchers such as python3.exe. Windows Python installs may ship that
+        # alias as a non-regular app-execution shim, so copying every root EXE
+        # would reject an otherwise valid runtime or stage an unused launcher.
+        if path.name.casefold() == 'python.exe' or path.suffix.lower() == '.dll':
             selected.append(path)
     for subtree in (runtime / 'Lib', runtime / 'DLLs'):
         if is_link(subtree):

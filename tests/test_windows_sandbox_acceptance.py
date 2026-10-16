@@ -37,7 +37,8 @@ time.sleep(1)
 os._exit(0)
 '''
     owner = subprocess.Popen([sys.executable, '-c', code], stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        cwd=Path(__file__).resolve().parents[1] / 'src')
     try:
         owner.stdin.write(json.dumps(payload))
         owner.stdin.close()
