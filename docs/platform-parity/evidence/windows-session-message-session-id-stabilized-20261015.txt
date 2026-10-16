@@ -1,0 +1,31 @@
+Windows session message regression repetitions — 2026-10-15
+=== repetition 1/10 ===
+.                                                                        [100%]
+1 passed in 6.82s
+=== repetition 2/10 ===
+.                                                                        [100%]
+1 passed in 6.84s
+=== repetition 3/10 ===
+.                                                                        [100%]
+1 passed in 7.92s
+=== repetition 4/10 ===
+.                                                                        [100%]
+1 passed in 6.68s
+=== repetition 5/10 ===
+.                                                                        [100%]
+1 passed in 6.94s
+=== repetition 6/10 ===
+.                                                                        [100%]
+1 passed in 6.94s
+=== repetition 7/10 ===
+.                                                                        [100%]
+1 passed in 6.59s
+=== repetition 8/10 ===
+.                                                                        [100%]
+1 passed in 7.32s
+=== repetition 9/10 ===
+.                                                                        [100%]
+1 passed in 7.08s
+=== repetition 10/10 ===
+.                                                                        [100%]
+1 passed in 6.18s

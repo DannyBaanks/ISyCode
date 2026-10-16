@@ -45,10 +45,8 @@ def test_xai_signin_confirms_then_runs_only_through_the_owner(
                 if isinstance(app.screen, TailscaleConfirmScreen):
                     break
             assert isinstance(app.screen, TailscaleConfirmScreen)
-            # Capture the baseline only after the confirm modal is up. On slow
-            # CI runners a single pause() does not drain startup work; a late
-            # background receipt would otherwise appear after a baseline taken
-            # too early and pollute the cancel-path equality check.
+            # Startup is complete before the login flow begins, so its receipts
+            # cannot arrive after the audit baseline and pollute the cancel path.
             baseline = ActionAuditJournal(project).verify()
             if cancel:
                 await p.press("escape")

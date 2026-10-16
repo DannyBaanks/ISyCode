@@ -32,7 +32,7 @@ def test_presence_parser_keeps_fresh_public_names_only():
 
 
 def test_presence_button_never_reaches_bridge_client():
-    source = Path(__file__).resolve().parents[1].joinpath("src", "isycode", "tui.py").read_text()
+    source = Path(__file__).resolve().parents[1].joinpath("src", "isycode", "tui.py").read_text(encoding="utf-8")
     module = ast.parse(source)
     app = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
     methods = {node.name: ast.get_source_segment(source, node) for node in app.body
@@ -79,16 +79,28 @@ def test_presence_button_lists_names_only_after_confirmation(tmp_path, monkeypat
             await pilot.pause()
             await app._show_chat_sessions()
             await pilot.pause()
+
+            async def wait_for_button(selector):
+                for _ in range(200):
+                    if app.screen.id == "bridge-presence":
+                        matches = app.screen.query(selector)
+                        if matches:
+                            button = matches.first()
+                            if button.region.width and button.region.height:
+                                return button
+                    await pilot.pause(0.05)
+                raise AssertionError(f"{selector} did not become visible")
+
             cancelled = asyncio.create_task(app._show_bridge_presence())
-            await pilot.pause()
+            await wait_for_button("#bridge-presence-no")
             assert app.screen.id == "bridge-presence"
             await pilot.press("escape")
-            await cancelled
+            await asyncio.wait_for(cancelled, timeout=10)
             assert calls == []
             shown = asyncio.create_task(app._show_bridge_presence())
-            await pilot.pause()
-            await pilot.click("#bridge-presence-yes")
-            await shown
+            await wait_for_button("#bridge-presence-yes")
+            assert await pilot.click("#bridge-presence-yes")
+            await asyncio.wait_for(shown, timeout=10)
             widget = app.query_one("#work-presence")
             text = str(widget.content)
             assert "peer" in text and "idle" in text

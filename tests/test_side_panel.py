@@ -217,7 +217,7 @@ def test_install_commands_are_shown_and_nothing_is_launched(tmp_path, monkeypatc
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     UserDefaultsStore().update(new_workspace="temporary", new_workspace_mode="security", locale="en")
-    monkeypatch.setattr(tui_mod, "language_server_catalog", lambda discovered=None: [
+    monkeypatch.setattr("isycode.tui_app_rail.language_server_catalog", lambda discovered=None: [
         {"id": "gopls", "label": "gopls", "state": "not_installed",
          "install_hint": "go install golang.org/x/tools/gopls@latest", "presence": "missing"},
         {"id": "rust-analyzer", "label": "rust-analyzer", "state": "installed_unavailable",

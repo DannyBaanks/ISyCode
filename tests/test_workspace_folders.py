@@ -38,12 +38,12 @@ def test_read_only_attachment_caps_a_classic_workspace(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('bad', ['parent', 'child', 'missing', 'symlink'])
-def test_only_real_sibling_directories_can_be_attached(tmp_path, monkeypatch, bad):
+def test_only_real_sibling_directories_can_be_attached(tmp_path, monkeypatch, make_directory_link, bad):
     store, main, other = make_store(tmp_path, monkeypatch)
     child = main / 'child'
     child.mkdir()
     link = tmp_path / 'link'
-    link.symlink_to(other, target_is_directory=True)
+    make_directory_link(link, other)
     path = {'parent': tmp_path, 'child': child, 'missing': tmp_path / 'missing', 'symlink': link}[bad]
     with pytest.raises(ValueError):
         store.add('other', str(path), editable=True)

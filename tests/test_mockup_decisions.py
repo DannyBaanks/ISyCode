@@ -66,8 +66,16 @@ def test_long_command_review_scrolls_without_hiding_either_decision(tmp_path, si
             assert_visible(screen.query_one("#command-approval-run"), size)
             assert screen.focused.id == "command-approval-reject"
             body.focus()
+            for _ in range(100):
+                if screen.focused is body:
+                    break
+                await pilot.pause(.05)
+            assert screen.focused is body
             await pilot.press("end")
-            await pilot.pause()
+            for _ in range(100):
+                if body.scroll_y > 0:
+                    break
+                await pilot.pause(.05)
             assert body.scroll_y > 0
             await pilot.click("#command-approval-run")
             await pilot.pause()

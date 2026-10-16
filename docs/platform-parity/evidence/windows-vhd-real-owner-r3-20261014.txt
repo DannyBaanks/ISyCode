@@ -1,0 +1,55 @@
+F
+================================== FAILURES ===================================
+_________ test_real_volume_owner_promotes_unicode_with_exact_approval _________
+
+real_storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-763/test_real_volume_owner_promote0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000019D4CF3B9B0>
+
+    def test_real_volume_owner_promotes_unicode_with_exact_approval(real_storage, tmp_path, monkeypatch):
+        import asyncio
+        import isycode.platform_windows_sandbox as native
+        from isycode.command_runner import CommandRunOwner
+        from isycode.workspace_authority import WorkspaceAuthority
+        from isycode.approvals import ActionApprovalStore
+        monkeypatch.setattr(native, 'NATIVE_ACCEPTED', True)  # acceptance harness only
+        (tmp_path / '.isyroot').write_text('')
+        authority = WorkspaceAuthority(tmp_path)
+        authority.set_mode('classic')
+        owner = CommandRunOwner(tmp_path, authority, ActionApprovalStore())
+        preview = owner.prepare(['python', '-c',
+            'from pathlib import Path; Path("resultado � con espacios.txt").write_text("verificado",encoding="utf-8")'])
+        assert asyncio.run(owner.run(preview, None)).decision == 'DENY'
+        outcome = asyncio.run(owner.run(preview, owner.approvals.issue(preview.request)))
+        assert outcome.decision == 'ALLOW', outcome.text
+        assert outcome.receipt is not None
+>       assert (tmp_path / 'resultado � con espacios.txt').read_text(encoding='utf-8') == 'verificado'
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1027: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-763/test_real_volume_owner_promote0/resultado � con espacios.txt')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-763\\test_real_volume_owner_promote0\\resultado � con espacios.txt'
+
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1013: FileNotFoundError
+=========================== short test summary info ===========================
+FAILED tests/test_windows_sandbox_volume_acceptance.py::test_real_volume_owner_promotes_unicode_with_exact_approval
+1 failed, 12 deselected in 17.57s
+exit=1

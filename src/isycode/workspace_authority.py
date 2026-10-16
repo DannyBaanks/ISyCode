@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 from isycode.security import ACTION_BY_ID, ActionRequest, AuthorityDecision
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.workspace_setup import state_root
+from isycode.platform_storage import storage
 
 AUTHORITY_GRANT_ALIASES = {
     "workspace.config.read": "workspace.files.read",
@@ -111,7 +112,10 @@ class WorkspaceAuthority:
         if not self.root.is_dir():
             raise WorkspaceAuthorityError("Workspace root must be a directory.")
         self.state_directory = Path(state_directory or state_root()) / "workspace-authority"
-        self.state_directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            storage.ensure_directory(self.state_directory)
+        except ValueError as exc:
+            raise WorkspaceAuthorityError('Authority state directory is not private.') from exc
         if self.state_directory.is_symlink() or not self.state_directory.is_dir():
             raise WorkspaceAuthorityError("Authority state directory must be a real directory.")
         self.state_directory = self.state_directory.resolve(strict=True)
@@ -127,14 +131,14 @@ class WorkspaceAuthority:
             return {"version": self.VERSION, "workspace_root": str(self.root), "grants": {}}
         except OSError as exc:
             raise WorkspaceAuthorityError("Workspace grant policy cannot be inspected.") from exc
-        if not self._policy_file_safe(info) or info.st_size > self.MAX_POLICY_BYTES:
+        if not self._policy_file_safe(info) or not storage.private(self.policy_path) or info.st_size > self.MAX_POLICY_BYTES:
             raise WorkspaceAuthorityError("Workspace grant policy is not a bounded regular file.")
         flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
         try:
             descriptor = os.open(self.policy_path, flags)
             try:
                 opened = os.fstat(descriptor)
-                if (not self._policy_file_safe(opened)
+                if (not self._policy_file_safe(opened) or not storage.private(self.policy_path, fd=descriptor)
                         or opened.st_dev != info.st_dev or opened.st_ino != info.st_ino
                         or opened.st_size > self.MAX_POLICY_BYTES):
                     raise WorkspaceAuthorityError("Workspace grant policy changed during inspection.")

@@ -36,7 +36,8 @@ OTHER_DIGEST = "cd" * 32
 
 def _isolate(monkeypatch, tmp_path: Path) -> Path:
     state = tmp_path / "state"
-    state.mkdir()
+    from isycode.platform_storage import storage
+    storage.ensure_directory(state)
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(state))
     monkeypatch.setenv("XDG_STATE_HOME", str(state / "xdg"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))

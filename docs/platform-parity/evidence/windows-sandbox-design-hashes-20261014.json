@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-14",
+  "scope": "Native DLL symbol discovery and proposed design; sandbox execution NOT_DEMONSTRATED",
+  "files": {
+    "evidence/windows-sandbox-api-probe-20261014.txt": "211452079c87f665d887d5a2a1bc397c4fcf360050ae41dcecb2f6d2267df9bd",
+    "WINDOWS-SANDBOX-DESIGN.md": "d981ed3de605755f582b59f613376ceca31a9defb78cb00412041f16718433e9"
+  }
+}

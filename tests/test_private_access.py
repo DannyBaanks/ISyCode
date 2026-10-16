@@ -50,7 +50,12 @@ def test_symlink_state_file_is_rejected(tmp_path):
     store = PrivateAccessStateStore(tmp_path / "state")
     target = tmp_path / "other"
     target.write_text("{}")
-    store.state_path.symlink_to(target)
+    try:
+        store.state_path.symlink_to(target)
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            pytest.skip("NOT_DEMONSTRATED: this Windows identity cannot create file symlinks")
+        raise
     with pytest.raises(ValueError):
         store.load()
 
@@ -101,11 +106,11 @@ def test_encoded_size_limit_is_enforced_before_replace(tmp_path, monkeypatch):
     assert store.load().owned_routes == (route(),)
 
 
-def test_symlinked_parent_directory_is_rejected(tmp_path):
+def test_symlinked_parent_directory_is_rejected(tmp_path, make_directory_link):
     real_parent = tmp_path / "real-parent"
     real_parent.mkdir()
     link = tmp_path / "linked-parent"
-    link.symlink_to(real_parent, target_is_directory=True)
+    make_directory_link(link, real_parent)
     with pytest.raises(ValueError):
         PrivateAccessStateStore(link / "state")
     assert not (real_parent / "state").exists()

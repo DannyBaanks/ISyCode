@@ -80,7 +80,7 @@ def test_summary_instructions_are_bounded_context_not_transcript_commands():
 
 
 def test_legacy_limits_remain_readable_without_imposing_automatic_caps(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     limits = AgentLimits.from_defaults(store.load())
     assert limits == AgentLimits(0, None) and limits.step_allowed(10_000)
     store.update(agent_steps=50, answer_tokens=16384)

@@ -25,7 +25,7 @@ async def test_settings_enable_pins_displayed_binary_then_disable(tmp_path, monk
     from isycode.rtk_tui import RTKSettingsScreen
     from isycode.rtk_integration import Settings
     configure(tmp_path, monkeypatch)
-    identity = {'enabled': True, 'path': '/usr/local/bin/rtk', 'sha256': 'a' * 64,
+    identity = {'enabled': True, 'path': str((tmp_path / 'rtk.exe').resolve()), 'sha256': 'a' * 64,
                 'version': 'rtk 0.51.0'}
     monkeypatch.setattr(Settings, 'inspect', lambda self: identity)
     app = TUIApp()

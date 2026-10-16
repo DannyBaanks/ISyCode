@@ -8,12 +8,13 @@ import sqlite3
 import time
 from pathlib import Path
 from typing import Any, Callable
+from isycode.platform_storage import storage
+from isycode.workspace_setup import state_root
+from isycode.winfs import is_link
 
 
 def _vault_path() -> Path:
-    state_root = os.environ.get("XDG_STATE_HOME")
-    root = Path(state_root).expanduser() if state_root else Path.home() / ".local" / "state"
-    return root / "isycode" / "credentials.sqlite3"
+    return state_root() / "credentials.sqlite3"
 
 
 class CredentialVault:
@@ -21,14 +22,21 @@ class CredentialVault:
 
     def __init__(self, path: Path | None = None):
         self.path = path or _vault_path()
-        self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if self.path.is_symlink():
-            raise ValueError("Refusing to open a symbolic-link credential vault")
-        if os.name != "nt":
-            self.path.parent.chmod(0o700)
-            nofollow = getattr(os, "O_NOFOLLOW", 0)
-            fd = os.open(self.path, os.O_CREAT | os.O_RDWR | nofollow, 0o600)
-            os.close(fd)
+        if self.path.exists() and (is_link(self.path) or not storage.private(self.path)
+                                   or self.path.stat().st_nlink != 1):
+            raise CredentialVaultError('Existing credential metadata is not private or is unsafe')
+        storage.ensure_directory(self.path.parent, repair=True)
+        if is_link(self.path):
+            raise ValueError("Refusing to open an unsafe linked credential vault")
+        try:
+            fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_RDWR
+                         | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_BINARY', 0), 0o600)
+        except FileExistsError:
+            if not storage.private(self.path) or self.path.stat().st_nlink != 1:
+                raise CredentialVaultError('Existing credential metadata is not private or is unsafe')
+        else:
+            try:storage.protect(self.path)
+            finally:os.close(fd)
         try:
             import keyring
             from keyring.backends.fail import Keyring as FailKeyring
@@ -62,13 +70,16 @@ class CredentialVault:
         self._secure_file()
 
     def _connect(self) -> sqlite3.Connection:
+        if (is_link(self.path) or not storage.private(self.path)
+                or self.path.stat().st_nlink != 1):
+            raise CredentialVaultError('Credential metadata is not private or is unsafe')
         db = sqlite3.connect(self.path, timeout=5)
         db.row_factory = sqlite3.Row
         return db
 
     def _secure_file(self) -> None:
-        if os.name != "nt" and self.path.exists():
-            self.path.chmod(0o600)
+        if self.path.exists() and not storage.private(self.path):
+            raise CredentialVaultError('Credential metadata is not private')
 
     @staticmethod
     def _validate_label(value: str, field: str) -> str:

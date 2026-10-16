@@ -12,7 +12,7 @@ SOURCE = Path(__file__).resolve().parents[1] / "src" / "isycode" / "tui.py"
 
 
 def test_default_mode_is_ask_and_round_trips(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     assert store.load()["new_workspace_mode"] == "ask"
     store.update(new_workspace_mode="classic")
     assert store.load()["new_workspace_mode"] == "classic"
@@ -23,7 +23,7 @@ def test_default_mode_is_ask_and_round_trips(tmp_path):
 
 
 def test_files_written_before_modes_still_load(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     store.path.write_text(json.dumps({"version": 1, "new_workspace": "ask", "default_role": None}))
     store.path.chmod(0o600)
     assert store.load()["new_workspace_mode"] == "ask"
@@ -56,24 +56,24 @@ def test_startup_uses_the_default_only_for_a_workspace_without_a_mode():
 
 
 def test_locale_defaults_to_spanish(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     assert store.load()["locale"] == "es"
 
 
 def test_locale_preference_persists_english(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     store.update(locale="en")
-    assert UserDefaultsStore(tmp_path).load()["locale"] == "en"
+    assert UserDefaultsStore(tmp_path / "preferences").load()["locale"] == "en"
 
 
 def test_locale_preference_persists_chinese(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     store.update(locale="zh")
-    assert UserDefaultsStore(tmp_path).load()["locale"] == "zh"
+    assert UserDefaultsStore(tmp_path / "preferences").load()["locale"] == "zh"
 
 
 def test_invalid_locale_is_rejected(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     with pytest.raises(ValueError):
         store.update(locale="fr")
     assert store.load()["locale"] == "es"

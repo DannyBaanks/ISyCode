@@ -4,11 +4,22 @@ import argparse
 import csv
 import json
 import math
+import os
 import statistics
+import stat
 from pathlib import Path
 
 FIELDS = ['participant_id', 'task_id', 'human_observed', 'credential_ready',
           'onboarding_seconds', 'completed_without_help', 'ordinary_modals_after_trust', 'evidence']
+
+
+def _is_link(path):
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return False
+    return (stat.S_ISLNK(info.st_mode)
+            or bool(getattr(info, 'st_file_attributes', 0) & 0x400))
 
 
 def evaluate(rows, base):
@@ -42,7 +53,7 @@ def evaluate(rows, base):
             target = base
             for part in path.parts:
                 target /= part
-                if target.is_symlink():
+                if _is_link(target):
                     raise ValueError('Evidence cannot follow symlinks')
             if not (base / path).is_file():
                 return {'status': 'BLOCKED', 'reason': 'Raw observation evidence missing.'}

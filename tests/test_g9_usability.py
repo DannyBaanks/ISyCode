@@ -1,5 +1,6 @@
 import copy
 import importlib.util
+import os
 from pathlib import Path
 
 import pytest
@@ -63,7 +64,12 @@ def test_fixture_is_new_and_tests_really_fail_initially(tmp_path):
 def test_evidence_cannot_escape_through_symlink(tmp_path):
     evaluate = load('evaluate_g9_usability').evaluate
     rows = observations(tmp_path)
-    (tmp_path / 'alias.txt').symlink_to(tmp_path / 'synthetic.txt')
+    try:
+        (tmp_path / 'alias.txt').symlink_to(tmp_path / 'synthetic.txt')
+    except OSError as exc:
+        if os.name == 'nt':
+            pytest.skip('NOT_DEMONSTRATED: Windows file symlink privilege unavailable')
+        raise
     rows[0]['evidence'] = 'alias.txt'
     with pytest.raises(ValueError, match='symlink'):
         evaluate(rows, tmp_path)

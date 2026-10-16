@@ -1,0 +1,13 @@
+exit -1073741515 output b''
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\docs\platform-parity\evidence\probe-vhd-device-traverse-20261014.py", line 43, in <module>
+    print('owned write:', (r.stage_root/'owned.txt').read_text(), flush=True)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-k0co5ydy\\workspace\\owned.txt'
+exit=1

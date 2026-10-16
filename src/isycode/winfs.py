@@ -92,15 +92,31 @@ class Entry:
 
 class VerifiedFS:
     def __init__(self, root: Path, final_path: Callable[[int], str] | None = None):
-        self.root = Path(os.path.realpath(root))
+        # Walk the caller's lexical namespace (including volume GUID paths).
+        # Compare opened handles against the independently canonicalized root.
+        self.root = Path(os.path.abspath(root))
         self._final_path = final_path or default_final_path
-        self._root_key = os.path.normcase(str(self.root))
+        self._root_key = self._path_key(os.path.realpath(root))
+
+    @staticmethod
+    def _path_key(path):
+        key = os.path.normcase(str(path))
+        if os.name == 'nt':
+            if key.startswith('\\\\?\\unc\\'):
+                key = '\\\\' + key[8:]
+            elif len(key) >= 7 and key.startswith('\\\\?\\') and key[5:7] == ':\\':
+                key = key[4:]
+        return key
 
     def _inside(self, real: str) -> bool:
-        key = os.path.normcase(os.path.realpath(real) if os.name != "nt" else real)
+        key = self._path_key(os.path.realpath(real) if os.name != "nt" else real)
         return key == self._root_key or key.startswith(self._root_key.rstrip(os.sep) + os.sep)
 
     def check_chain(self, path: Path) -> None:
+        if self._path_key(os.path.realpath(self.root)) != self._root_key:
+            raise OSError('workspace root alias changed')
+        if any(is_link(item) for item in (self.root, *self.root.parents)):
+            raise OSError('workspace root ancestry contains a symlink or junction')
         current = self.root
         for part in Path(path).relative_to(self.root).parts:
             current = current / part
@@ -160,6 +176,7 @@ class VerifiedFS:
         return data
 
     def ensure_folders(self, directory: Path, create: tuple[str, ...]) -> None:
+        self.check_chain(directory)
         current = self.root
         walked = Path()
         for part in Path(directory).relative_to(self.root).parts:
@@ -193,6 +210,8 @@ class VerifiedFS:
             self.check_chain(target.parent)
             if is_link(target):
                 raise OSError("symlinks and junctions are not followed inside the workspace")
+            if current_reader() != before:
+                raise ValueError('the file changed during approval; nothing was written')
             os.replace(temporary, target)
             created = False
         finally:

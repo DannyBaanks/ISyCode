@@ -28,6 +28,16 @@ def _read_indexed_source(root: Path, path: Path) -> str | None:
         return None
     if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
         return None
+    if os.name == "nt":
+        # Windows has no descriptor-relative open/no-follow flags. Reuse the
+        # same handle-verified path checks as workspace reads instead of
+        # passing POSIX-only dir_fd arguments to os.open.
+        try:
+            from isycode.winfs import VerifiedFS
+            data = VerifiedFS(root).read_file(path, MAX_INDEXED_SOURCE_BYTES)
+            return data.decode("utf-8") if data is not None else None
+        except (OSError, UnicodeError, ValueError):
+            return None
     directory_fd = file_fd = None
     try:
         directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)

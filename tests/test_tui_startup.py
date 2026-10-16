@@ -14,14 +14,18 @@ def test_tui_starts_in_a_temporary_security_workspace(tmp_path, monkeypatch, cap
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            assert isinstance(app.screen, QuickStartScreen)
+            async def wait_for(screen_type):
+                for _ in range(100):
+                    await pilot.pause(0.05)
+                    if isinstance(app.screen, screen_type):
+                        return
+                assert isinstance(app.screen, screen_type)
+
+            await wait_for(QuickStartScreen)
             await pilot.press("escape")
-            await pilot.pause()
-            assert isinstance(app.screen, WorkspaceSetupScreen)
+            await wait_for(WorkspaceSetupScreen)
             await pilot.press("escape")
-            await pilot.pause()
-            assert isinstance(app.screen, WorkspaceModeScreen)
+            await wait_for(WorkspaceModeScreen)
             await pilot.press("escape")
             await pilot.pause()
             prompt = app.query_one("#prompt-input", PromptArea)

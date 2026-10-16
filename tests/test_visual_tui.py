@@ -11,13 +11,32 @@ from isycode.tui import Banner, ChatArea, SidePanel, TUIApp, TailscaleConfirmScr
 from test_daily_tui import configure
 
 
+async def _wait_for_banner_to_fit(pilot, banner, panel):
+    deadline = asyncio.get_running_loop().time() + 10.0
+    while True:
+        if (panel.display and panel.region.width
+                and cell_len(plain_text(banner)) <= panel.region.x - 1):
+            return
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise AssertionError("workspace banner did not fit after sidebar layout")
+        await pilot.pause(min(0.05, remaining))
+
+
 def test_narrow_sidebar_files_tab_is_visible_and_clickable(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             assert not app.query_one(SidePanel).display
             app.action_toggle_sidebar()
             await pilot.pause()
@@ -44,8 +63,15 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             if isinstance(app.screen, TailscaleConfirmScreen):
                 await pilot.press("escape")
                 await pilot.pause()
@@ -54,8 +80,8 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
             assert cell_len(header) <= banner.content_size.width
             assert ('Classic' in header or 'Security' in header) and '日本語-project' in header
             app.action_toggle_sidebar()
-            await pilot.pause()
-            assert cell_len(plain_text(banner)) <= app.query_one(SidePanel).region.x - 1
+            panel = app.query_one(SidePanel)
+            await _wait_for_banner_to_fit(pilot, banner, panel)
             assert 'Classic' in plain_text(banner) or 'Security' in plain_text(banner)
 
     with capsys.disabled():
@@ -114,6 +140,17 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             widget = app.query_one("#idle-board")
+
+            def board_fits():
+                board_text = plain_text(widget)
+                return (widget._painted_width == widget.content_size.width
+                        and all(cell_len(line) <= widget.content_size.width
+                                for line in board_text.splitlines()))
+
+            for _ in range(100):
+                if board_fits():
+                    break
+                await pilot.pause(0.05)
             board = plain_text(widget)
             assert "LSPs" in board and "MCPs" in board and "Skills" in board
             assert "▀" in board
@@ -121,12 +158,16 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
             assert "|##|" not in board
             assert not list(app.query("#open-idle-art"))
             assert all(cell_len(line) <= widget.content_size.width for line in board.splitlines()), (
+                widget._painted_width,
                 widget.content_size.width,
                 [(cell_len(line), line[:70]) for line in board.splitlines()
                  if cell_len(line) > widget.content_size.width],
             )
             await pilot.resize_terminal(80, 24)
-            await pilot.pause()
+            for _ in range(100):
+                if board_fits():
+                    break
+                await pilot.pause(0.05)
             narrow = plain_text(widget)
             assert "▀" in narrow or "ISYCODE" in narrow
             assert "LSPs" in narrow
@@ -297,9 +338,16 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
             await pilot.pause()
             for width, height in [(200, 60), (120, 40), (80, 24), (200, 60)]:
                 await pilot.resize_terminal(width, height)
-                await pilot.pause()
                 board = app.query_one('#idle-board')
-                lines = [line for line in plain_text(board).splitlines() if '▀' in line]
+                # Resize dispatch and the app's post-layout repaint are separate
+                # refreshes on some Textual/platform combinations. Assert only
+                # after the current layout has a matching panorama.
+                lines = []
+                for _ in range(100):
+                    await pilot.pause(0.05)
+                    lines = [line for line in plain_text(board).splitlines() if '▀' in line]
+                    if lines and all(line.count('▀') == board.content_size.width for line in lines):
+                        break
                 assert lines
                 assert all(line.count('▀') == board.content_size.width for line in lines)
                 assert len(lines) <= 36
@@ -313,7 +361,9 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
                 assert board.region.y + len(board_lines) - 1 < composer.region.y
                 lsp = next(index for index, line in enumerate(board_lines) if 'LSPs' in line)
                 assert chat.region.y <= board.region.y + lsp < chat.region.bottom
-            app.save_screenshot('/tmp/isycode-header-tui.svg')
+            screenshot = tmp_path / 'isycode-header-tui.svg'
+            app.save_screenshot(str(screenshot))
+            assert screenshot.is_file()
 
     with capsys.disabled():
         asyncio.run(scenario())

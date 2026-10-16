@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,9 +13,19 @@ from isycode.broker import (
 from isycode.workspace_authority import WorkspaceAuthority
 
 
+def _configured_checkout() -> Path:
+    value = os.environ.get("ISYCO_ROOT", "").strip()
+    if not value:
+        pytest.skip("ISYCO_ROOT must name the sibling ISyCo checkout")
+    checkout = Path(value).expanduser()
+    if not checkout.is_dir() or not (checkout / ".iesyroot").is_file():
+        pytest.skip("ISYCO_ROOT must name an ISyCo checkout with .iesyroot")
+    return checkout.resolve()
+
+
 @pytest.mark.integration
 def test_recipe_is_fixed_to_configured_isyco_checkout(monkeypatch):
-    checkout = Path.home() / "Development" / "ISyCo"
+    checkout = _configured_checkout()
     monkeypatch.setenv("ISYCO_ROOT", str(checkout))
 
     recipe = load_reviewed_recipe()
@@ -29,7 +40,7 @@ def test_recipe_is_fixed_to_configured_isyco_checkout(monkeypatch):
 
 @pytest.mark.integration
 def test_preview_requires_read_authority_and_never_executes_docker(tmp_path, monkeypatch):
-    checkout = Path.home() / "Development" / "ISyCo"
+    checkout = _configured_checkout()
     monkeypatch.setenv("ISYCO_ROOT", str(checkout))
     workspace = tmp_path / "workspace"
     project = workspace / "chosen"
@@ -50,7 +61,14 @@ def test_preview_requires_read_authority_and_never_executes_docker(tmp_path, mon
 
 
 def test_preview_denies_selected_path_outside_isyroot(tmp_path, monkeypatch):
-    checkout = Path.home() / "Development" / "ISyCo"
+    checkout = tmp_path / "isyco-root"
+    recipe = checkout / "tools" / "semantic_gateway"
+    (recipe / "semantic_gateway").mkdir(parents=True)
+    (recipe / "Dockerfile").write_text("FROM scratch\n", encoding="utf-8")
+    (recipe / "requirements.txt").write_text("", encoding="utf-8")
+    (recipe / "semantic_gateway" / "app.py").write_text("app = None\n", encoding="utf-8")
+    (recipe / "semantic_gateway" / "manager.py").write_text("manager = None\n", encoding="utf-8")
+    (checkout / ".iesyroot").write_text("", encoding="utf-8")
     monkeypatch.setenv("ISYCO_ROOT", str(checkout))
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -71,9 +89,10 @@ def test_provision_owner_requires_grants_and_uses_bound_approvals(
         tmp_path, monkeypatch):
     import isycode.broker as broker_module
 
-    checkout = Path.home() / "Development" / "ISyCo"
+    checkout = _configured_checkout()
     monkeypatch.setenv("ISYCO_ROOT", str(checkout))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     workspace = tmp_path / "workspace"
     project = workspace / "chosen"
     project.mkdir(parents=True)

@@ -1,0 +1,215 @@
+cwd=C:\Development\ISyCo Git\ISyCode
+ISYCO_ROOT=D:\Development\ISyCo\windows-parity\runs\20261015\integration-all-r1\fixture
+Bridge state: isolated under fixture root; no shared Bridge files touched
+Gateway live integration disabled; tests require opt-in ISYCODE_LIVE_GATEWAY=1
+command=py -m pytest -p no:cacheprovider --basetemp D:\Development\ISyCo\windows-parity\runs\20261015\integration-all-r1\basetemp -m integration -q
+fixture_sha256[bridge_core\capabilities\cap.agent_bridge\handshake.py]=B062ACA8C66A7DFDB24185869D87A2CB58FFDCC42E60806CB864F592C3B47BD0
+fixture_sha256[tools\semantic_gateway\Dockerfile]=27128CC16E88834C69EBEE460684519457B5D943FD0F645217A1485B1B2D9CC2
+fixture_sha256[tools\semantic_gateway\requirements.txt]=729FC13D365DDFC1D238BA65C150C09A7B3E1ECB28EC2AB1E47B56A6313C3B16
+fixture_sha256[tools\semantic_gateway\semantic_gateway\app.py]=E757D1E46F2CCF837FDA358FB060C7908832164E8B29FAB50FF18BB3D23BC152
+fixture_sha256[tools\semantic_gateway\semantic_gateway\manager.py]=CF0F9F24AC5DEB5AFDD8D2393E0223EE771F3890A4B7FE3B9BCBA75C4998ECDA
+.....ssssss                                                              [100%]
+============================== warnings summary ===============================
+tests\test_ascii_only.py:58
+  C:\Development\ISyCo Git\ISyCode\tests\test_ascii_only.py:58: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:32
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:32: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:53
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:53: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:83
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:83: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:103
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:103: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:118
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:118: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:141
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:141: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:167
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:167: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:184
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:184: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_batch_and_session_trust.py:202
+  C:\Development\ISyCo Git\ISyCode\tests\test_batch_and_session_trust.py:202: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_diff_view.py:53
+  C:\Development\ISyCo Git\ISyCode\tests\test_diff_view.py:53: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:38
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:38: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:58
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:58: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:88
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:88: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:114
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:114: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:136
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:136: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:176
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:176: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:190
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:190: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:210
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:210: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:227
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:227: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:246
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:246: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:263
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:263: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_mockup_selectors.py:281
+  C:\Development\ISyCo Git\ISyCode\tests\test_mockup_selectors.py:281: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_button.py:11
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_button.py:11: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_button.py:22
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_button.py:22: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_button.py:33
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_button.py:33: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:30
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:30: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:59
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:59: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:82
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:82: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:97
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:97: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:130
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:130: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:147
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:147: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_model_families.py:176
+  C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:176: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_quick_start.py:25
+  C:\Development\ISyCo Git\ISyCode\tests\test_quick_start.py:25: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_quick_start.py:38
+  C:\Development\ISyCo Git\ISyCode\tests\test_quick_start.py:38: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_quick_start.py:73
+  C:\Development\ISyCo Git\ISyCode\tests\test_quick_start.py:73: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_quick_start.py:103
+  C:\Development\ISyCo Git\ISyCode\tests\test_quick_start.py:103: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_quick_start.py:124
+  C:\Development\ISyCo Git\ISyCode\tests\test_quick_start.py:124: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_quick_start.py:137
+  C:\Development\ISyCo Git\ISyCode\tests\test_quick_start.py:137: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_rtk_ui.py:21
+  C:\Development\ISyCo Git\ISyCode\tests\test_rtk_ui.py:21: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_session_search_screen.py:25
+  C:\Development\ISyCo Git\ISyCode\tests\test_session_search_screen.py:25: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_session_search_screen.py:41
+  C:\Development\ISyCo Git\ISyCode\tests\test_session_search_screen.py:41: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_session_search_screen.py:58
+  C:\Development\ISyCo Git\ISyCode\tests\test_session_search_screen.py:58: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_session_search_screen.py:70
+  C:\Development\ISyCo Git\ISyCode\tests\test_session_search_screen.py:70: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_session_search_screen.py:80
+  C:\Development\ISyCo Git\ISyCode\tests\test_session_search_screen.py:80: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_session_search_screen.py:91
+  C:\Development\ISyCo Git\ISyCode\tests\test_session_search_screen.py:91: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_ux_polish.py:20
+  C:\Development\ISyCo Git\ISyCode\tests\test_ux_polish.py:20: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_ux_polish.py:37
+  C:\Development\ISyCo Git\ISyCode\tests\test_ux_polish.py:37: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_ux_polish.py:59
+  C:\Development\ISyCo Git\ISyCode\tests\test_ux_polish.py:59: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_ux_polish.py:91
+  C:\Development\ISyCo Git\ISyCode\tests\test_ux_polish.py:91: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+5 passed, 6 skipped, 2151 deselected, 50 warnings in 9.41s
+EXIT_STATUS=0

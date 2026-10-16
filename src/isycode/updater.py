@@ -24,6 +24,10 @@ _DANGEROUS_CONFIG = re.compile(
     r"|(^|\.)(url\..*\.insteadof|http\..*\.extraheader)$",
     re.IGNORECASE,
 )
+_NETWORK_ENVIRONMENT_KEYS = frozenset({
+    "http_proxy", "https_proxy", "all_proxy", "no_proxy",
+    "ssl_cert_file", "ssl_cert_dir", "curl_ca_bundle", "git_ssl_cainfo",
+})
 
 
 @dataclass(frozen=True)
@@ -87,6 +91,18 @@ class SelfUpdater:
             "GIT_PAGER": "cat",
             "GIT_ATTR_NOSYSTEM": "1",
         }
+        if os.name == "nt":
+            # Native Windows programs such as Git need SystemRoot even when
+            # their environment is otherwise deliberately kept minimal.
+            system_root = os.environ.get("SystemRoot") or os.environ.get("WINDIR")
+            if system_root:
+                env["SYSTEMROOT"] = system_root
+        # Keep Git isolated from arbitrary user environment while allowing the
+        # standard proxy and trusted-CA settings needed on managed networks.
+        # Deliberately exclude variables that disable TLS verification.
+        for key, value in os.environ.items():
+            if key.casefold() in _NETWORK_ENVIRONMENT_KEYS:
+                env[key] = value
         return env
 
     def _git(self, *args: str, cwd: Path | None = None, check: bool = True,
@@ -145,7 +161,10 @@ class SelfUpdater:
             port = parsed.port
         except ValueError:
             return False
-        if self.allow_local_remotes and not parsed.scheme:
+        # A Windows absolute path such as ``C:\\...`` is parsed as URL scheme
+        # ``c``. The opt-in test/local-remotes mode must recognize that native
+        # filesystem path without weakening the production HTTPS allowlist.
+        if self.allow_local_remotes and (not parsed.scheme or Path(url).is_absolute()):
             return True
         if (parsed.scheme != "https" or parsed.hostname != "github.com" or parsed.username
                 or parsed.password or port not in (None, 443) or parsed.query or parsed.fragment):
@@ -583,10 +602,19 @@ class SelfUpdater:
     def _data_root(self) -> Path:
         if self.data_home is not None:
             base = self.data_home
+        elif os.name == "nt":
+            local_app_data = os.environ.get("LOCALAPPDATA", "")
+            base = (Path(local_app_data) if local_app_data and Path(local_app_data).is_absolute()
+                    else Path.home() / "AppData" / "Local") / "ISyCode"
         else:
             xdg = os.environ.get("XDG_DATA_HOME", "")
             base = Path(xdg) if xdg and Path(xdg).is_absolute() else Path.home() / ".local" / "share"
         return base / "isycode"
+
+    @staticmethod
+    def _environment_python(root: Path) -> Path:
+        scripts = "Scripts/python.exe" if os.name == "nt" else "bin/python"
+        return root / ".venv" / scripts
 
     def _bootstrap(self, check_only: bool) -> UpdateReport:
         destination = self._data_root() / "source"
@@ -646,7 +674,7 @@ class SelfUpdater:
     def _sync_environment(self, root: Path) -> UpdateReport | None:
         if not (root / "pyproject.toml").is_file():
             return None
-        environment_python = root / ".venv" / "bin" / "python"
+        environment_python = self._environment_python(root)
         try:
             if not environment_python.is_file():
                 created = self.command_runner([sys.executable, "-m", "venv", str(root / ".venv")],
@@ -670,6 +698,11 @@ class SelfUpdater:
 
     @staticmethod
     def _is_generated_pip_launcher(path: Path) -> bool:
+        # This matcher recognizes the small POSIX console-script wrapper. A
+        # Windows pip install publishes an executable pair under Scripts/;
+        # that native launcher is handled directly by _manage_launcher.
+        if os.name != "posix":
+            return False
         try:
             info = path.lstat()
             if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
@@ -702,6 +735,17 @@ class SelfUpdater:
         return False
 
     def _manage_launcher(self, root: Path, report: UpdateReport) -> UpdateReport:
+        if os.name == "nt":
+            command = root / ".venv" / "Scripts" / "isycode.exe"
+            if not command.is_file() or command.is_symlink():
+                return UpdateReport(report.status, (*report.lines,
+                    f"No se encontró el launcher nativo de Windows; entorno preparado en: {root / '.venv'}",
+                    f"Instálalo con: {self._environment_python(root)} -m pip install --upgrade -e {root}",
+                ))
+            return UpdateReport(report.status, (*report.lines,
+                f"Comando disponible: {command}",
+                "Activa el entorno .venv para usar `isycode`, o ejecuta el launcher indicado.",
+            ))
         bin_dir = Path.home() / ".local" / "bin"
         command = bin_dir / "isycode"
         launcher = root / "scripts" / "isycode"

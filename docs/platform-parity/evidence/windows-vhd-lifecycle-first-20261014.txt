@@ -1,0 +1,5 @@
+real schema2 recovery: copy RECOVERED
+.real schema2 recovery: profile-created RECOVERED
+.real schema2 recovery: running RECOVERED
+......
+8 passed in 98.16s (0:01:38)

@@ -17,6 +17,7 @@ import re
 import secrets
 import stat
 import subprocess
+from isycode.platform_git import git_platform
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -44,7 +45,7 @@ _DANGEROUS_KEYS = re.compile(
     r"|filter\..*|pager\..*|diff\..+\.(command|textconv)|merge\..+\.driver"
     r"|remote\..+\.(uploadpack|receivepack|vcs)|uploadpack\..*|receive\..*)$")
 _SAFE_OVERRIDES = (
-    "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat",
+    "-c", "core.fsmonitor=false", "-c", f"core.hooksPath={os.devnull}", "-c", "core.pager=cat",
     "-c", "diff.external=", "-c", "credential.helper=", "-c", "protocol.allow=never",
     "-c", "color.ui=false", "-c", "core.quotepath=false",
 )
@@ -82,11 +83,7 @@ GIT_TOOL_NAMES = frozenset({"git_status", "git_diff", "git_commit"})
 
 
 def git_executable() -> str | None:
-    for folder in COMMAND_SYSTEM_BIN_DIRS:
-        candidate = Path(folder) / "git"
-        if candidate.is_file() and os.access(candidate, os.X_OK):
-            return str(candidate)
-    return None
+    return git_platform.discover(COMMAND_SYSTEM_BIN_DIRS)
 
 
 def git_repository_available(root: Path) -> bool:
@@ -268,7 +265,7 @@ class GitOwner:
 
     def _environment(self) -> dict[str, str]:
         repo_root = self.repo_root
-        env = {"PATH": ":".join(COMMAND_SYSTEM_BIN_DIRS), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
+        env = {**git_platform.environment(COMMAND_SYSTEM_BIN_DIRS), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
                "GIT_DIR": str(repo_root / ".git"), "GIT_WORK_TREE": str(repo_root),
                "GIT_CEILING_DIRECTORIES": str(repo_root.parent), "GIT_CONFIG_NOSYSTEM": "1",
                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0", "GIT_PAGER": "cat",
@@ -428,7 +425,7 @@ class GitOwner:
             raise ValueError(f"more than {MAX_UNTRACKED_PREVIEW} new files; commit them in smaller groups")
         for path in new_files:
             text, truncated = self._git("diff", "--no-index", "--no-ext-diff", "--no-textconv",
-                                        "--no-color", "--", "/dev/null", path, ok_codes=(0, 1))
+                                        "--no-color", "--", os.devnull, path, ok_codes=(0, 1))
             if truncated:
                 raise ValueError(f"{path} is too large to review")
             parts.append(text)

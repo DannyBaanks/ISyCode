@@ -1,0 +1,27 @@
+ISyCode PR #52 physical Linux full-history suite
+Date: 2026-10-16 (America/Mexico_City)
+Host: physical Ubuntu 24.04.5 LTS machine; Python 3.12.3
+Checkout commit: fe88ac0e7eb3774dfcbc74b09e969f6de8878add
+Git history available in checkout: 471 commits
+
+Command:
+  .venv/bin/python -m pytest -q -m "not integration"
+
+Raw output:
+  linux-physical-suite-full-20261015.log
+SHA-256:
+  5060eef988797ca63771349f17802ac3582f047bea3f8421b506bf575c7c857d
+Result:
+  2025 passed, 153 skipped, 11 deselected in 595.54s (0:09:55)
+  EXIT_CODE=0
+
+The initial physical run used a depth-1 clone and produced one failure in
+test_historical_review_records_are_valid_but_do_not_approve_release because
+its historical evaluated commits were unavailable. That run's raw output is
+preserved losslessly as linux-physical-suite-shallow-20261015.log.gz. Its
+uncompressed SHA-256 is
+81a4f73aab88ef0dd50bb0d62e944ff63b82a8b85812db4edd343728a4c514cd; the
+compressed file SHA-256 is
+53034925faa249fe79303cb1e37f0db24f8f63a6bde3957cae8d041cc8314a3d.
+After fetching full history, the same commit and command passed. The shallow
+clone limitation is not hidden or counted as a passing run.

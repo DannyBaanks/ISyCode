@@ -14,6 +14,7 @@ import re
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
+from isycode.platform_storage import storage
 from isycode.providers import ProviderError
 
 
@@ -152,13 +153,9 @@ class CodexConnector:
 
     def _prepare_home(self) -> None:
         # Inspect directory topology only; never inspect an auth/keyring file.
-        for path in (self.home, *self.home.parents):
-            if path.is_symlink():
-                raise CodexConnectorError("Codex home must not contain symlinks")
-        self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if not self.home.is_dir():
-            raise CodexConnectorError("Codex home is unavailable")
-        self.home.chmod(0o700)
+        # Native storage applies a private DACL on Windows, where chmod(0700)
+        # does not restrict access.
+        storage.ensure_directory(self.home, repair=True)
         config = self.home / "config.toml"
         if config.is_symlink():
             raise CodexConnectorError("Codex configuration must not be a symlink")
@@ -175,7 +172,11 @@ class CodexConnector:
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 stream.write("\n".join(lines) + "\n")
-            os.replace(temporary, config)
+                stream.flush()
+                os.fsync(stream.fileno())
+            storage.protect(temporary)
+            storage.replace(temporary, config)
+            storage.sync_directory(self.home)
         finally:
             temporary.unlink(missing_ok=True)
 
@@ -187,8 +188,14 @@ class CodexConnector:
         proxies = {"http_proxy", "https_proxy", "all_proxy", "no_proxy"}
         env = {key: value for key, value in os.environ.items()
                if key in allowed or key.lower() in proxies}
+        if os.name == "nt":
+            system_root = next((value for key, value in os.environ.items()
+                                if key.upper() in {"SYSTEMROOT", "WINDIR"}), None)
+            env["PATH"] = str(Path(system_root) / "System32") if system_root else ""
+        else:
+            env["PATH"] = os.defpath
         env.update({"CODEX_HOME": str(self.home), "HOME": str(self.home),
-                    "USERPROFILE": str(self.home), "PATH": os.defpath,
+                    "USERPROFILE": str(self.home),
                     "XDG_CONFIG_HOME": str(self.home / ".config"),
                     "XDG_DATA_HOME": str(self.home / ".local/share"),
                     "XDG_CACHE_HOME": str(self.home / ".cache")})

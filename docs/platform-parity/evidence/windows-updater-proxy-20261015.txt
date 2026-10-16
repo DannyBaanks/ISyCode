@@ -1,0 +1,67 @@
+Windows standalone updater environment acceptance record
+Date: 2026-10-15 (America/Mexico_City)
+Host: Windows 11 10.0.26200-SP0, Python 3.12.10
+
+Source change
+=============
+SelfUpdater._env keeps the updater's fixed Git environment and adds only the
+case-insensitive proxy/trusted-CA allowlist: HTTP_PROXY, HTTPS_PROXY,
+ALL_PROXY, NO_PROXY, SSL_CERT_FILE, SSL_CERT_DIR, CURL_CA_BUNDLE, and
+GIT_SSL_CAINFO. GIT_SSL_NO_VERIFY and unrelated user environment are excluded.
+The regression uses fake .example.invalid values; it does not make a network
+request or print proxy values.
+
+Test command and result
+=======================
+Command: py -m pytest tests/test_updater.py -q
+Result: 36 passed, 1 skipped in 172.04 seconds; exit 0.
+The skipped test checks the POSIX pip launcher and is not applicable on Windows.
+The final capture used `py -` to stream the exact child command
+`sys.executable -m pytest tests/test_updater.py -q` into
+windows-updater-proxy-tests-r3-20261015.txt.
+SHA-256: EABDADD3D24B775C152AC4682332348B96C2794D44767B4590BF05270AD93ABD.
+Two earlier capture attempts, windows-updater-proxy-tests-20261015.txt and
+windows-updater-proxy-tests-r2-20261015.txt, ended at 12 tests with exit -1;
+they are retained as diagnostics and are not counted as passing runs.
+
+Clean packaged build
+====================
+Command: & 'D:\Development\ISyCo\windows-parity\runs\20261015\isycode-exe-clean-build\venv\Scripts\python.exe' -m PyInstaller --clean --noconfirm --onefile --name isycode --paths src --collect-all rich --collect-all textual --collect-all keyring --copy-metadata isycode --copy-metadata keyring --collect-data isycode --copy-metadata rich --copy-metadata textual --copy-metadata pathspec --copy-metadata aiohttp --distpath 'D:\Development\ISyCo\windows-parity\runs\20261015\isycode-exe-updater-proxy\dist' --workpath 'D:\Development\ISyCo\windows-parity\runs\20261015\isycode-exe-updater-proxy\build' --specpath 'D:\Development\ISyCo\windows-parity\runs\20261015\isycode-exe-updater-proxy\spec' packaging/isycode_entry.py
+Result: PyInstaller 6.22.3; BUILD_EXIT=0. Full build output is preserved at the D: build.log path named above.
+EXE SHA-256: 37656E981E042792CB6B879440D29E8D33EDF35EAF83BB665F98C6EC813DEE79
+Build log SHA-256: 780FCF1C50B56872218BA754983FD72CACF6193DEE6562E8DD8B82811A30F3C3
+
+Isolated one-file smoke
+=======================
+The EXE ran from `Smoke Unicode Final` under the build output, with a fresh
+.isyroot and isolated LOCALAPPDATA, ISYCODE_STATE_HOME, and XDG directories.
+No application state was directed into the source checkout. Results:
+  --version        exit 0
+  --help           exit 0
+  doctor --json    exit 0
+  dirs --json      exit 0
+  models --json    exit 0
+  update --check   exit 1; generic official-repository query error
+
+The update query was not accepted as a live networking witness. In this
+session, zero standard proxy environment keys were present; user and machine
+proxy environment key counts were zero; WinINET proxy and auto-config were
+disabled; WinHTTP reported direct access. The test therefore did not exercise
+a real proxy or trusted-CA override. It did verify packaged startup and that
+the updater fails closed with a generic message when the official lookup
+cannot complete. The query output SHA-256 is
+7EF8E04F7AED3518A2C49A0D9DA15C95B0257B45041E70355A347A59F9BA3667.
+The smoke summary SHA-256 is
+3E1440002A1422352E09009DCDAA7DA2C9D1183A4361F958AC64EED979F669CD.
+
+Current source SHA-256 values
+============================
+src/isycode/updater.py: EF045D0F1E0C99237E80C02842320C55441FCC40216E043CCD705628298BBBF4
+tests/test_updater.py: A10C7C43F67786B0A9FD8019211D68C9CAB8D8B94C43EB4A30780816404B10D3
+
+NOT_DEMONSTRATED
+================
+A successful live `git ls-remote` through a real configured proxy/TLS CA, a
+supported self-upgrade for the frozen EXE, and packaged install/uninstall.
+The existing updater bootstraps a source checkout when no checkout is found;
+it does not replace the frozen EXE. No mutating `update` invocation was run.

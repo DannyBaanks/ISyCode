@@ -166,7 +166,10 @@ async def test_models_screen_renders_family_variants(tmp_path, monkeypatch):
         key = next(key for key, entry in screen.choices.items()
                    if entry.get("value") == "openai|glm-5.3-flash")
         screen.query_one("#" + key).focus()
-        await pilot.pause()
+        for _ in range(100):
+            await pilot.pause(0.05)
+            if "glm-5.3-flash" in str(screen.query_one("#model-detail").render()):
+                break
         assert "glm-5.3-flash" in str(screen.query_one("#model-detail").render())
 
 
@@ -181,12 +184,13 @@ async def test_models_screen_click_after_immediate_open_does_not_crash(tmp_path,
         await pilot.pause()
         entries = app._branch_entries("models")
         app._render_menu("model_account", "Models · account catalog", entries)
-        # Wait for the screen to compose before clicking; a single pause can
-        # catch it mid-mount on slower CI runners.
+        # Textual 8 may push the ModalScreen before its composed children are
+        # mounted. Wait for the actual input before sending the first click.
         for _ in range(100):
-            await pilot.pause(0.05)
             if app.screen.query("#models-search"):
                 break
+            await pilot.pause(0.05)
+        assert app.screen.query("#models-search"), "models picker did not finish mounting"
         await pilot.click("#models-search")
         await pilot.pause()
         assert isinstance(app.screen, ModelsScreen)

@@ -9,7 +9,6 @@ unlinks that one ledger after session.delete is allowed.
 from __future__ import annotations
 
 import asyncio
-import fcntl
 import hashlib
 import json
 import os
@@ -27,6 +26,7 @@ from isycode.chat_transport import provider_complete
 from isycode.provider_errors import classify_provider_error
 from isycode.security import ActionRequest
 from isycode.state_index import get_state_index
+from isycode.platform_storage import storage
 from isycode.subagents import run_child
 
 
@@ -77,21 +77,21 @@ class IterationOwner:
     @contextmanager
     def _locked(self, sid, *, create=False):
         identifier(sid)
-        self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        storage.ensure_directory(self.directory)
         if self.directory.is_symlink() or not self.directory.is_dir():
             raise IterationDenied('unsafe private directory')
         info = self.directory.stat()
-        if info.st_uid != os.getuid() or info.st_mode & 0o077:
+        if not storage.private(self.directory):
             raise IterationDenied('directory is not private')
         path = self.directory / (sid + '.jsonl')
-        flags = os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0)
+        flags = os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_BINARY', 0)
         if create:
             flags |= os.O_CREAT | os.O_EXCL
         fd = os.open(path, flags, 0o600)
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX)
+            storage.lock(fd)
             info = os.fstat(fd)
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.getuid() or info.st_mode & 0o077 or info.st_size > self.MAX_BYTES:
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not storage.private(path, fd=fd) or info.st_size > self.MAX_BYTES:
                 raise IterationDenied('unsafe artifact')
             raw = os.read(fd, self.MAX_BYTES + 1)
             if raw and not raw.endswith(b'\n'):
@@ -209,30 +209,12 @@ class IterationOwner:
     def unlink_ledger(self, sid):
         """Remove one private ledger. Caller must already have passed session.delete."""
         identifier(sid)
-        directory = self.directory
-        if directory.is_symlink() or not directory.is_dir():
-            raise IterationDenied('unsafe private directory')
-        dir_flags = os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0) | getattr(os, 'O_NOFOLLOW', 0)
-        dir_fd = os.open(directory, dir_flags)
         try:
-            info = os.fstat(dir_fd)
-            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
-                raise IterationDenied('directory is not private')
-            fd = os.open(sid + '.jsonl', os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0), dir_fd=dir_fd)
-            try:
-                try:
-                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError as exc:
-                    raise IterationDenied('iteration is in use') from exc
-                st = os.fstat(fd)
-                if (not stat.S_ISREG(st.st_mode) or st.st_nlink != 1
-                        or st.st_uid != os.getuid() or st.st_mode & 0o077):
-                    raise IterationDenied('unsafe artifact')
-                os.unlink(sid + '.jsonl', dir_fd=dir_fd)
-            finally:
-                os.close(fd)
-        finally:
-            os.close(dir_fd)
+            storage.delete_private(self.directory / (sid + '.jsonl'))
+        except (BlockingIOError, PermissionError) as exc:
+            raise IterationDenied('iteration is in use') from exc
+        except ValueError as exc:
+            raise IterationDenied('unsafe private artifact') from exc
 
     def _content(self, text):
         if not isinstance(text, str) or not text.strip() or len(text.encode()) > self.MAX_CONTENT:

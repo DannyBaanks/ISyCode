@@ -88,7 +88,9 @@ def test_explicit_provider_uses_own_store_despite_generic_file(isolated_keys, mo
 
 @pytest.mark.parametrize('unsafe_state', ['corrupt', 'symlink', 'permissions', 'directory-symlink'])
 def test_unsafe_authority_returns_denied_diagnostics_json(
-        tmp_path, monkeypatch, capsys, unsafe_state):
+        tmp_path, monkeypatch, capsys, unsafe_state, make_directory_link):
+    if unsafe_state == 'symlink' and os.name == 'nt':
+        pytest.skip('NOT_DEMONSTRATED: file symlink control requires Windows symlink privilege')
     if unsafe_state == 'permissions' and os.name != 'posix':
         pytest.skip('POSIX policy permissions')
     workspace = tmp_path / 'workspace'
@@ -101,8 +103,7 @@ def test_unsafe_authority_returns_denied_diagnostics_json(
         # Construct a separate unsafe state root without replacing the real one.
         unsafe_root = tmp_path / 'unsafe-state'
         unsafe_root.mkdir()
-        (unsafe_root / 'workspace-authority').symlink_to(
-            authority.state_directory, target_is_directory=True)
+        make_directory_link(unsafe_root / 'workspace-authority', authority.state_directory)
         monkeypatch.setenv('ISYCODE_STATE_HOME', str(unsafe_root))
     elif unsafe_state == 'symlink':
         target = tmp_path / 'outside-policy.json'

@@ -8,6 +8,17 @@ from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_trust import ACCEPT_PHRASE, WorkspaceTrust
 
 
+async def _wait_for(pilot, predicate, description, timeout=10.0):
+    deadline = asyncio.get_running_loop().time() + timeout
+    while True:
+        if predicate():
+            return
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise AssertionError(f"Timed out waiting for {description}")
+        await pilot.pause(min(0.05, remaining))
+
+
 def test_quiet_classic_edit_and_delete_show_their_diff_in_the_chat(tmp_path, monkeypatch, capsys):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -24,13 +35,19 @@ def test_quiet_classic_edit_and_delete_show_their_diff_in_the_chat(tmp_path, mon
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(140, 45)) as pilot:
-            for _ in range(8):
-                await pilot.pause()
-                if isinstance(app.screen, TailscaleConfirmScreen):
-                    await pilot.press("y")  # trust this workspace (quiet Classic)
-                    break
-            await pilot.pause()
-            assert WorkspaceTrust().trusted(WorkspaceAuthority(project_dir.resolve()))
+            authority = WorkspaceAuthority(project_dir.resolve())
+            await _wait_for(
+                pilot,
+                lambda: isinstance(app.screen, TailscaleConfirmScreen)
+                or WorkspaceTrust().trusted(authority),
+                "quiet Classic trust prompt",
+            )
+            if isinstance(app.screen, TailscaleConfirmScreen):
+                await pilot.press("y")  # trust this workspace (quiet Classic)
+            await _wait_for(
+                pilot, lambda: WorkspaceTrust().trusted(authority),
+                "saved quiet Classic trust decision",
+            )
             edited = json.loads(await app._dispatch_write_tool(
                 {"path": "notes.txt", "old_text": "hola", "new_text": "hola mundo"}, edit=True))
             assert edited["status"] == "written" and edited["approval_mode"] == "quiet-profile"

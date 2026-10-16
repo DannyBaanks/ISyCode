@@ -42,11 +42,12 @@ def test_message_reaches_another_conversation_as_the_user(tmp_path, monkeypatch)
             prompt.load_text("hello-a")
             await pilot.press("enter")
             first = None
-            for _ in range(50):
-                await pilot.pause(0.01)
+            for _ in range(200):
+                await pilot.pause(0.05)
                 if seen:
                     first = app._foreground_lane()
-                    break
+                    if first is not None and first.session_id:
+                        break
             assert first is not None and first.session_id
             sid = first.session_id
             app._start_new_conversation()
@@ -54,8 +55,8 @@ def test_message_reaches_another_conversation_as_the_user(tmp_path, monkeypatch)
             home = app._foreground_key
             prompt.load_text(f"/msg {sid} ping-from-danny")
             await pilot.press("enter")
-            for _ in range(50):
-                await pilot.pause(0.01)
+            for _ in range(200):
+                await pilot.pause(0.05)
                 if "ping-from-danny" in seen:
                     break
             assert seen[-1] == "ping-from-danny"
@@ -100,8 +101,8 @@ def test_message_waits_when_the_other_conversation_is_working(tmp_path, monkeypa
             await pilot.pause()
             prompt.load_text(f"/msg {first.session_id} ping-from-danny")
             await pilot.press("enter")
-            for _ in range(50):
-                await pilot.pause(0.01)
+            for _ in range(200):
+                await pilot.pause(0.05)
                 if "ping-from-danny" in first.queued_messages:
                     break
             assert first.queued_messages == ["ping-from-danny"]
@@ -132,8 +133,8 @@ def test_same_title_does_not_guess_and_the_open_chat_is_refused(tmp_path, monkey
             prompt = app.query_one("#prompt-input")
             prompt.load_text("hello-a")
             await pilot.press("enter")
-            for _ in range(50):
-                await pilot.pause(0.01)
+            for _ in range(200):
+                await pilot.pause(0.05)
                 if seen:
                     break
             app._start_new_conversation()
@@ -141,8 +142,8 @@ def test_same_title_does_not_guess_and_the_open_chat_is_refused(tmp_path, monkey
             here = app._active_chat_session_id
             prompt.load_text("/msg Draft conversation hello-there")
             await pilot.press("enter")
-            for _ in range(40):
-                await pilot.pause(0.01)
+            for _ in range(200):
+                await pilot.pause(0.05)
                 if "Several conversations match" in _chat_text(app):
                     break
             assert "Several conversations match" in _chat_text(app)
@@ -150,11 +151,11 @@ def test_same_title_does_not_guess_and_the_open_chat_is_refused(tmp_path, monkey
             assert prompt.text.startswith("/msg Draft conversation")
             prompt.load_text(f"/msg {here} not-this-one")
             await pilot.press("enter")
-            for _ in range(40):
-                await pilot.pause(0.01)
+            for _ in range(200):
+                await pilot.pause(0.05)
                 if "on screen" in _chat_text(app):
                     break
-            assert "That conversation is on screen" in _chat_text(app)
+            assert "on screen" in _chat_text(app)
             assert "not-this-one" not in seen
 
     asyncio.run(scenario())

@@ -22,6 +22,8 @@ from collections import OrderedDict
 from pathlib import Path
 from collections.abc import Mapping
 
+from isycode.platform_storage import storage
+from isycode.winfs import is_link
 from isycode.workspace_setup import state_root
 
 MAX_BINARY_BYTES = 32 * 1024**2
@@ -36,21 +38,30 @@ def _directory(name: str) -> Path:
     path = base / name
     # Validate each parent before creating anything beneath it.
     for directory in (base, path):
-        directory.mkdir(mode=0o700, parents=directory == base, exist_ok=True)
+        try:
+            storage.ensure_directory(directory, repair=True)
+        except (OSError, ValueError) as exc:
+            raise ValueError('RTK private state directory is unsafe') from exc
         info = directory.lstat()
-        if (not stat.S_ISDIR(info.st_mode) or (os.name == 'posix' and
-                (info.st_uid != os.getuid() or info.st_mode & 0o077))):
+        if not stat.S_ISDIR(info.st_mode) or is_link(directory) or not storage.private(directory):
             raise ValueError('RTK private state directory is unsafe')
     return path
 
 
 def _read(path: Path, limit: int, *, private: bool = False) -> bytes:
+    if is_link(path):
+        raise ValueError('RTK file is unsafe or too large')
     fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0) | getattr(os, 'O_NONBLOCK', 0))
     try:
         info = os.fstat(fd)
+        try:
+            named = path.lstat()
+        except OSError as exc:
+            raise ValueError('RTK file changed during inspection') from exc
         if (not stat.S_ISREG(info.st_mode) or info.st_size > limit
-                or (private and (info.st_nlink != 1 or (os.name == 'posix' and
-                                 (info.st_uid != os.getuid() or info.st_mode & 0o077))))):
+                or info.st_nlink != 1 or is_link(path)
+                or (info.st_dev, info.st_ino) != (named.st_dev, named.st_ino)
+                or (private and not storage.private(path, fd=fd))):
             raise ValueError('RTK file is unsafe or too large')
         data = bytearray()
         while chunk := os.read(fd, min(65536, limit + 1 - len(data))):
@@ -147,11 +158,15 @@ class Settings:
         # Private, atomic replacement of our one settings file only.
         fd, temporary = tempfile.mkstemp(dir=self.path.parent, prefix='native-')
         try:
+            storage.protect(Path(temporary))
+            if not storage.private(Path(temporary), fd=fd):
+                raise ValueError('RTK temporary settings file is unsafe')
             with os.fdopen(fd, 'w') as stream:
                 json.dump(data, stream)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(temporary, self.path)
+            storage.replace(Path(temporary), self.path)
+            storage.sync_directory(self.path.parent)
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
@@ -252,10 +267,25 @@ def _artifact(data: bytes, suffix: str) -> Path:
         if _read(path, MAX_CAPTURE_BYTES, private=True) != data:
             raise ValueError('RTK output artifact failed verification')
     else:
-        with os.fdopen(fd, 'wb') as stream:
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
+        try:
+            storage.protect(path)
+            if not storage.private(path, fd=fd):
+                raise ValueError('RTK evidence file is not private')
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            storage.sync_directory(path.parent)
+        except BaseException:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            try:
+                storage.delete_private(path)
+            except (OSError, ValueError):
+                pass
+            raise
     return path
 
 

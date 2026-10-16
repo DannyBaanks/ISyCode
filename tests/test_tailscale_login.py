@@ -1,5 +1,6 @@
 """Offline tests for the explicitly approved interactive Tailscale login owner."""
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 import pytest
@@ -71,7 +72,7 @@ def login_fixture(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     root = tmp_path / "workspace"
     root.mkdir()
-    executable = tmp_path / "tailscale"
+    executable = tmp_path / ("tailscale.exe" if os.name == "nt" else "tailscale")
     executable.write_text("fake executable", encoding="utf-8")
     executable.chmod(0o700)
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
@@ -97,7 +98,7 @@ def test_login_preview_is_fixed_and_approval_precedes_launch(login_fixture):
     fixture = login_fixture
     request = fixture.owner.login_request()
     preview = fixture.owner.preview(request)
-    assert "tailscale login" in preview
+    assert Path(fixture.executable).name in preview and " login" in preview
     assert "login.tailscale.com" in preview
     assert "auth-key" not in preview
     assert fixture.owner.begin_login(request, None).decision == "DENY"

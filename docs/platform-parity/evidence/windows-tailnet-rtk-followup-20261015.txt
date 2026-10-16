@@ -1,0 +1,161 @@
+COMMAND: .\.venv\Scripts\python.exe -m pytest -vv tests/test_tailscale_authority.py tests/test_tailscale_login.py tests/test_tailscale_install.py tests/test_rtk_integration.py tests/test_rtk_authority.py
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 94 items
+
+tests/test_tailscale_authority.py::test_tailscale_catalog_effects_and_approval_contract PASSED [  1%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.inspect] PASSED [  2%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.prepare] PASSED [  3%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] FAILED [  4%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install] PASSED [  5%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.login] PASSED [  6%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.serve.enable] PASSED [  7%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.serve.disable] PASSED [  8%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.inspect] PASSED [  9%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.install.prepare] PASSED [ 10%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.install.stage] PASSED [ 11%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.install] PASSED [ 12%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.login] PASSED [ 13%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.serve.enable] PASSED [ 14%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.serve.disable] PASSED [ 15%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_matching_owned_live_route PASSED [ 17%]
+tests/test_tailscale_authority.py::test_tailscale_empty_serve_configuration_can_enable PASSED [ 18%]
+tests/test_tailscale_authority.py::test_tailscale_matching_but_unowned_existing_route_cannot_enable PASSED [ 19%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes0-False-True-ALLOW] PASSED [ 20%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes1-False-True-ALLOW] PASSED [ 21%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes2-False-True-DENY] PASSED [ 22%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes3-False-True-DENY] PASSED [ 23%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes4-True-True-DENY] PASSED [ 24%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[None-False-False-DENY] PASSED [ 25%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes6-False-False-DENY] PASSED [ 26%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[live_routes0-True] PASSED [ 27%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[live_routes1-True] PASSED [ 28%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[live_routes2-True] PASSED [ 29%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[None-False] PASSED [ 30%]
+tests/test_tailscale_authority.py::test_tailscale_missing_adapter_facts_deny_even_with_grant_and_approval PASSED [ 31%]
+tests/test_tailscale_authority.py::test_tailscale_approval_for_different_valid_route_digest_denies PASSED [ 32%]
+tests/test_tailscale_authority.py::test_serve_authority_binds_fixed_private_delta[serve_argv-value0] PASSED [ 34%]
+tests/test_tailscale_authority.py::test_serve_authority_binds_fixed_private_delta[serve_delta_digest-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb] PASSED [ 35%]
+tests/test_tailscale_authority.py::test_serve_authority_binds_fixed_private_delta[funnel-True] PASSED [ 36%]
+tests/test_tailscale_authority.py::test_tailscale_expired_approval_denies PASSED [ 37%]
+tests/test_tailscale_authority.py::test_tailscale_systembilities_use_supplied_facts_without_filesystem_probes PASSED [ 38%]
+tests/test_tailscale_login.py::test_login_preview_is_fixed_and_approval_precedes_launch FAILED [ 39%]
+tests/test_tailscale_login.py::test_login_url_and_cli_output_are_redacted_from_state_and_receipts PASSED [ 40%]
+tests/test_tailscale_login.py::test_login_completes_only_after_signed_in_inventory PASSED [ 41%]
+tests/test_tailscale_login.py::test_cli_failure_is_generic_and_does_not_expose_stderr PASSED [ 42%]
+tests/test_tailscale_login.py::test_login_timeout_kills_only_its_child PASSED [ 43%]
+tests/test_tailscale_login.py::test_cancel_discards_attempt_without_tailnet_logout PASSED [ 44%]
+tests/test_tailscale_login.py::test_new_owner_cannot_resume_in_memory_login_or_reuse_auth_material PASSED [ 45%]
+tests/test_tailscale_login.py::test_malformed_or_untrusted_login_url_is_not_exposed PASSED [ 46%]
+tests/test_tailscale_login.py::test_official_login_url_can_be_recognized_across_pipe_reads PASSED [ 47%]
+tests/test_tailscale_login.py::test_login_preview_reads_no_inventory_without_the_read_only_grant PASSED [ 48%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[fedora-noble] PASSED [ 50%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[ubuntu-oracular] PASSED [ 51%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[debian-buster] PASSED [ 52%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[ubuntu;id-noble] PASSED [ 53%]
+tests/test_tailscale_install.py::test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt SKIPPEDstaging) [ 54%]
+tests/test_tailscale_install.py::test_simulation_binds_single_package_version_hash_actions_and_service_effect SKIPPEDstaging) [ 55%]
+tests/test_tailscale_install.py::test_stage_request_and_preview_bind_every_privileged_operation SKIPPEDstaging) [ 56%]
+tests/test_tailscale_install.py::test_total_deadline_exhausts_across_multiple_privilege_prompts[stage] SKIPPEDstaging) [ 57%]
+tests/test_tailscale_install.py::test_total_deadline_exhausts_across_multiple_privilege_prompts[install] SKIPPEDstaging) [ 58%]
+tests/test_tailscale_install.py::test_install_requires_separate_verified_root_stage SKIPPEDstaging) [ 59%]
+tests/test_tailscale_install.py::test_stage_substituted_source_is_bounded_quarantined_and_never_installed SKIPPEDstaging) [ 60%]
+tests/test_tailscale_install.py::test_stage_rejects_existing_or_symlink_path_before_copy[directory] SKIPPEDstaging) [ 61%]
+tests/test_tailscale_install.py::test_stage_rejects_existing_or_symlink_path_before_copy[symbolic link] SKIPPEDstaging) [ 62%]
+tests/test_tailscale_install.py::test_stage_rejects_symlinked_root_prefix_before_copy SKIPPEDstaging) [ 63%]
+tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[owner] SKIPPEDstaging) [ 64%]
+tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[mode] SKIPPEDstaging) [ 65%]
+tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[hash] SKIPPEDstaging) [ 67%]
+tests/test_tailscale_install.py::test_exact_approved_install_uses_fixed_privilege_argv_and_receipt SKIPPEDstaging) [ 68%]
+tests/test_tailscale_install.py::test_dependency_transaction_routes_to_manual_without_privilege SKIPPEDstaging) [ 69%]
+tests/test_tailscale_install.py::test_drift_after_final_approval_records_failure_without_privilege SKIPPEDstaging) [ 70%]
+tests/test_tailscale_install.py::test_root_stage_drift_after_final_approval_stops_before_apt SKIPPEDstaging) [ 71%]
+tests/test_tailscale_install.py::test_prepare_rejects_host_apt_hook_before_update_and_records_failure SKIPPEDstaging) [ 72%]
+tests/test_tailscale_install.py::test_mutated_private_source_cannot_change_root_stage_install SKIPPEDstaging) [ 73%]
+tests/test_tailscale_install.py::test_mutated_private_archive_cannot_change_root_stage_install SKIPPEDstaging) [ 74%]
+tests/test_tailscale_install.py::test_wrong_key_records_redacted_prepare_failure SKIPPEDstaging) [ 75%]
+tests/test_tailscale_install.py::test_signing_key_inspection_rejects_second_primary_key PASSED [ 76%]
+tests/test_tailscale_install.py::test_simulation_rejects_summary_embedded_in_other_text PASSED [ 77%]
+tests/test_tailscale_install.py::test_atomic_publication_rejects_symlinked_parent SKIPPED [ 78%]
+tests/test_rtk_integration.py::test_native_adapter_exists PASSED         [ 79%]
+tests/test_rtk_integration.py::test_off_does_not_detect_or_execute_rtk PASSED [ 80%]
+tests/test_rtk_integration.py::test_opt_in_binds_path_hash_version_and_advisory SKIPPEDbox; Windows keeps the original command output) [ 81%]
+tests/test_rtk_integration.py::test_swapped_binary_does_not_inherit_opt_in SKIPPEDbox; Windows keeps the original command output) [ 82%]
+tests/test_rtk_integration.py::test_workspace_program_cannot_become_rtk_authorized PASSED [ 84%]
+tests/test_rtk_integration.py::test_unsupported_command_keeps_native_execution SKIPPEDbox; Windows keeps the original command output) [ 85%]
+tests/test_rtk_integration.py::test_rewrite_is_data_never_shell_code SKIPPEDbox; Windows keeps the original command output) [ 86%]
+tests/test_rtk_integration.py::test_compression_fallback_keeps_original_output_and_exit SKIPPEDbox; Windows keeps the original command output) [ 87%]
+tests/test_rtk_integration.py::test_raw_output_and_result_have_verifiable_private_artifacts SKIPPEDbox; Windows keeps the original command
+output)                                                                  [ 88%]
+tests/test_rtk_integration.py::test_filter_cannot_expand_output SKIPPEDbox; Windows keeps the original command output) [ 89%]
+tests/test_rtk_integration.py::test_settings_symlink_is_rejected SKIPPED [ 90%]
+tests/test_rtk_integration.py::test_real_owner_filters_once_keeps_exit_and_journal SKIPPEDbox; Windows keeps the original command output) [ 91%]
+tests/test_rtk_integration.py::test_raw_artifact_failure_prevents_promotion SKIPPEDbox; Windows keeps the original command output) [ 92%]
+tests/test_rtk_integration.py::test_enable_rejects_identity_changed_after_display SKIPPEDbox; Windows keeps the original command output) [ 93%]
+tests/test_rtk_integration.py::test_private_artifacts_reject_hardlinks PASSED [ 94%]
+tests/test_rtk_integration.py::test_evidence_links_receipt_hash_to_original_bytes SKIPPEDbox; Windows keeps the original command output) [ 95%]
+tests/test_rtk_integration.py::test_settings_fifo_is_rejected_without_opening_a_blocking_reader SKIPPED [ 96%]
+tests/test_rtk_authority.py::test_rtk_allow_cannot_replace_workspace_grant SKIPPEDbox; Windows keeps native output) [ 97%]
+tests/test_rtk_authority.py::test_rtk_ask_requires_explicit_approval_in_classic SKIPPEDbox; Windows keeps native output) [ 98%]
+tests/test_rtk_authority.py::test_rtk_replacement_after_approval_denies_before_execution SKIPPEDbox; Windows keeps native output) [100%]
+
+================================== FAILURES ===================================
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] _
+
+setup = (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-899/test_tailscale_actions_require2/workspace')...aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), <isycode.workspace_authority.WorkspaceAuthority object at 0x000001F93495B590>, ...)
+action_id = 'tailscale.install.stage'
+
+    @pytest.mark.parametrize("action_id", ACTION_OWNER)
+    def test_tailscale_actions_require_exact_grant_owner_and_fresh_approval(setup, action_id):
+        root, cli, apt, wrong, facts, authority, approvals = setup
+        request = request_for(setup, action_id)
+        assert authorize(setup, request).status == "DENY"  # No grant.
+        if action_id == "tailscale.inspect":
+            authority.set_grant(action_id, enabled=True)
+        else:
+            authority.set_grant(action_id, enabled=True, executables=[cli, apt, wrong])
+        assert authorize(setup, request).status == (
+            "ALLOW" if action_id == "tailscale.inspect" else "DENY")
+    
+        other_owner = "tailscale_login" if request.execution_owner != "tailscale_login" else "tailscale_read"
+        crossed = replace(request, execution_owner=other_owner)
+        gate = ProductActionGate(root, authority, owner_id=other_owner, tailscale_facts=facts)
+        crossed_approval = approvals.issue(crossed) if action_id != "tailscale.inspect" else None
+        assert gate.authorize(crossed, approvals=approvals, approval=crossed_approval)[1].status == "DENY"
+    
+        if action_id == "tailscale.inspect":
+            assert authorize(setup, request).status == "ALLOW"
+        else:
+            approval = approvals.issue(request)
+>           assert authorize(setup, request, approval=approval).status == "ALLOW"
+E           AssertionError: assert 'DENY' == 'ALLOW'
+E             
+E             - ALLOW
+E             + DENY
+
+tests\test_tailscale_authority.py:198: AssertionError
+__________ test_login_preview_is_fixed_and_approval_precedes_launch ___________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-899/test_login_preview_is_fixe...er object at 0x000001F934962B40>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000001F934961E80>)
+
+    def test_login_preview_is_fixed_and_approval_precedes_launch(login_fixture):
+        fixture = login_fixture
+        request = fixture.owner.login_request()
+        preview = fixture.owner.preview(request)
+>       assert "tailscale login" in preview
+E       AssertionError: assert 'tailscale login' in 'Run exactly: C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-899\\test_login_preview_is_fixed_an0\\tailscale.exe login\nTailscale may open its official login page at login.tailscale.com. You will authorize this device in your browser. ISyCode will not ask for or save a password, auth key, or OAuth token.\nThis adds the local device to your Tailscale network; it does not enable Serve or expose the Gateway.\n'
+
+tests\test_tailscale_login.py:101: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] - AssertionError: assert 'DENY' == 'ALLOW'
+  
+  - ALLOW
+  + DENY
+FAILED tests/test_tailscale_login.py::test_login_preview_is_fixed_and_approval_precedes_launch - AssertionError: assert 'tailscale login' in 'Run exactly: C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-899\\test_login_preview_is_fixed_an0\\tailscale.exe login\nTailscale may open its official login page at login.tailscale.com. You will authorize this device in your browser. ISyCode will not ask for or save a password, auth key, or OAuth token.\nThis adds the local device to your Tailscale network; it does not enable Serve or expose the Gateway.\n'
+================== 2 failed, 54 passed, 38 skipped in 7.74s ===================
+EXIT: 1

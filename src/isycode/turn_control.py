@@ -21,6 +21,7 @@ from pathlib import Path
 
 from isycode.effect_ledger import workspace_identity
 from isycode.workspace_setup import state_root
+from isycode.platform_storage import storage
 
 JOURNAL_VERSION = 1
 MAX_OPERATIONS = 500
@@ -153,19 +154,15 @@ class OperationJournal:
         if self._depth:
             self._depth += 1
             return
-        try:
-            import fcntl
-        except ImportError as exc:  # pragma: no cover - POSIX only
-            raise OperationError("operation journal lock is unavailable") from exc
-        self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        storage.ensure_directory(self.directory)
         if self.directory.is_symlink():
             raise OperationError("operation journal directory is a symlink")
-        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
         descriptor = os.open(self.lock_path, flags, 0o600)
         try:
             if os.name == "posix":
                 os.fchmod(descriptor, 0o600)
-            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            storage.lock(descriptor)
         except Exception:
             os.close(descriptor)
             raise
@@ -189,8 +186,7 @@ class OperationJournal:
         if descriptor is None:
             return
         try:
-            import fcntl
-            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            storage.unlock(descriptor)
         finally:
             os.close(descriptor)
 
@@ -219,7 +215,7 @@ class OperationJournal:
     def _read(self) -> dict:
         if not self.path.exists():
             return self._fresh()
-        if self.path.is_symlink() or not self.path.is_file():
+        if self.path.is_symlink() or not self.path.is_file() or not storage.private(self.path):
             raise OperationError("operation journal is not a regular file")
         try:
             loaded = json.loads(self.path.read_text(encoding="utf-8"))
@@ -235,20 +231,16 @@ class OperationJournal:
         payload = json.dumps(state, ensure_ascii=False, sort_keys=True).encode("utf-8")
         temporary = self.path.with_name(self.path.name + ".tmp")
         descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-                             | getattr(os, "O_NOFOLLOW", 0), 0o600)
+                             | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o600)
         try:
             os.write(descriptor, payload)
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
-        os.replace(temporary, self.path)
+        storage.replace(temporary, self.path)
         if os.name == "posix":
             os.chmod(self.path, 0o600)
-        directory = os.open(self.directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        storage.sync_directory(self.directory)
 
 
 class TransportRetry:

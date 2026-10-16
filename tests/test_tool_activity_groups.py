@@ -14,6 +14,12 @@ def test_consecutive_same_tools_group_as_tree_with_distinct_operation_icons(tmp_
         app = TUIApp()
         async with app.run_test(size=(100, 40)) as pilot:
             await pilot.pause()
+            startup_workers = tuple(
+                worker for worker in app.workers
+                if worker.group == "workspace-startup"
+            )
+            if startup_workers:
+                await app.workers.wait_for_complete(startup_workers)
             for index, name in enumerate(("workspace_read", "workspace_read", "workspace_grep", "workspace_read")):
                 await app._dispatch_chat_tool({"id": str(index), "function": {"name": name, "arguments": json.dumps({"path": f"file{index}.py"})}})
             await pilot.pause()

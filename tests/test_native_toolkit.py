@@ -1,4 +1,5 @@
 import json
+import os
 import pytest
 
 def test_bundled_skill_catalog_is_pinned_and_validated():
@@ -13,18 +14,24 @@ def test_bundled_skill_catalog_is_pinned_and_validated():
 def test_mcp_presets_preserve_private_config_and_never_replace(tmp_path):
     from isycode.mcp_presets import add_preset
     from isycode.mcp_local import load_config
-    path=tmp_path/'mcp.json'
+    from isycode.platform_storage import storage
+    private=tmp_path/'private'
+    storage.ensure_directory(private)
+    path=private/'mcp.json'
     path.write_text(json.dumps({'servers':{'mine':{'command':['custom'], 'env':{'PRIVATE':'secret'}}}}))
     path.chmod(0o600)
     add_preset('playwright',path)
     configs=load_config(path)
     assert configs['mine'].env==(('PRIVATE','secret'),)
     assert configs['playwright'].argv==('npx','-y','@playwright/mcp@0.0.83')
-    assert path.stat().st_mode&0o777==0o600
+    if os.name == 'posix':
+        assert path.stat().st_mode&0o777==0o600
+    else:
+        assert storage.private(path)
     before=path.read_bytes()
     with pytest.raises(ValueError):add_preset('playwright',path)
     assert path.read_bytes()==before
-    link=tmp_path/'link';link.symlink_to(path)
+    link=tmp_path/'link';os.link(path,link)
     with pytest.raises(ValueError):add_preset('context7',link)
     with pytest.raises(ValueError):add_preset('untrusted',path)
 
@@ -35,7 +42,10 @@ def test_native_lsp_catalog_and_read_only_runtime(tmp_path,monkeypatch):
     monkeypatch.setattr(lsp.shutil,'which',lambda name:str(binary) if name=='rust-analyzer' else str(bwrap) if name=='bwrap' else None)
     monkeypatch.setattr(lsp.ctypes.util,'find_library',lambda _: 'libseccomp.so.2')
     server=next(s for s in lsp.discover_servers() if s['id']=='rust-analyzer')
-    assert server['state']=='sandbox_ready'
+    expected_state = 'sandbox_ready' if os.name == 'posix' else 'installed_unavailable'
+    assert server['state']==expected_state
+    if os.name == 'nt':
+        return
     command=lsp._sandbox_command(tmp_path,server)
     assert '/runtime/server' in command
     assert str(binary) in command
@@ -43,18 +53,34 @@ def test_native_lsp_catalog_and_read_only_runtime(tmp_path,monkeypatch):
     assert str(tmp_path/'unrelated') not in command
     assert 'socket socketpair' in ' '.join(command)
 
-def test_lsp_source_index_skips_fifos_links_and_oversized_files(tmp_path):
-    import os
+def test_lsp_source_index_skips_oversized_files(tmp_path):
     from isycode.lsp import _read_indexed_source
     regular=tmp_path/'safe.ts';regular.write_text('export class Safe {}')
-    fifo=tmp_path/'blocked.ts';os.mkfifo(fifo)
-    target=tmp_path/'target.ts';target.write_text('private')
-    link=tmp_path/'linked.ts';link.symlink_to(target)
     large=tmp_path/'large.ts';large.write_bytes(b'x'*(64*1024+1))
     assert _read_indexed_source(tmp_path,regular)=='export class Safe {}'
-    assert _read_indexed_source(tmp_path,fifo) is None
-    assert _read_indexed_source(tmp_path,link) is None
     assert _read_indexed_source(tmp_path,large) is None
+
+def test_lsp_source_index_skips_fifos(tmp_path):
+    import os
+    if not hasattr(os, 'mkfifo'):
+        pytest.skip('NOT_DEMONSTRATED: Windows has no POSIX FIFO')
+    from isycode.lsp import _read_indexed_source
+    fifo=tmp_path/'blocked.ts';os.mkfifo(fifo)
+
+    assert _read_indexed_source(tmp_path,fifo) is None
+
+def test_lsp_source_index_skips_symlinks(tmp_path):
+    import os
+    from isycode.lsp import _read_indexed_source
+    target=tmp_path/'target.ts';target.write_text('private')
+    link=tmp_path/'linked.ts'
+    try:
+        link.symlink_to(target)
+    except OSError as exc:
+        if os.name == 'nt' and getattr(exc, 'winerror', None) == 1314:
+            pytest.skip('NOT_DEMONSTRATED: this Windows identity cannot create file symlinks')
+        raise
+    assert _read_indexed_source(tmp_path,link) is None
 
 def test_typescript_real_symbols_and_anonymous_ipc_still_deny_network_and_writes(tmp_path):
     import asyncio,subprocess

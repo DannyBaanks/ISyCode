@@ -1,0 +1,49 @@
+COMMAND: .\.venv\Scripts\python.exe -m pytest -vv tests/test_updater.py
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 36 items
+
+tests/test_updater.py::test_clean_checkout_advances_only_by_fast_forward PASSED [  2%]
+tests/test_updater.py::test_check_only_reports_incoming_changes_without_changing_checkout PASSED [  5%]
+tests/test_updater.py::test_current_checkout_retries_environment_sync PASSED [  8%]
+tests/test_updater.py::test_check_only_does_not_sync_environment_when_current PASSED [ 11%]
+tests/test_updater.py::test_detached_checkout_checks_remote_default_branch_without_moving_head PASSED [ 13%]
+tests/test_updater.py::test_detached_checkout_updates_by_fast_forward_and_remains_detached PASSED [ 16%]
+tests/test_updater.py::test_dirty_checkout_is_preserved_and_never_fast_forwarded[tracked] PASSED [ 19%]
+tests/test_updater.py::test_dirty_checkout_is_preserved_and_never_fast_forwarded[untracked] PASSED [ 22%]
+tests/test_updater.py::test_clean_divergence_merges_both_histories PASSED [ 25%]
+tests/test_updater.py::test_divergence_check_only_previews_merge_without_changing_checkout PASSED [ 27%]
+tests/test_updater.py::test_conflicted_divergence_is_reported_without_mutating_checkout PASSED [ 30%]
+tests/test_updater.py::test_divergence_regenerates_only_the_canonical_coverage_snapshot PASSED [ 33%]
+tests/test_updater.py::test_check_only_marks_canonical_coverage_conflict_regenerable_without_mutation PASSED [ 36%]
+tests/test_updater.py::test_failed_coverage_regeneration_aborts_the_merge_and_preserves_checkout PASSED [ 38%]
+tests/test_updater.py::test_dirty_generated_snapshot_is_regenerated_after_restoring_local_changes PASSED [ 41%]
+tests/test_updater.py::test_dirty_divergence_is_rejected_before_merge PASSED [ 44%]
+tests/test_updater.py::test_dirty_checkout_syncs_remote_and_restores_local_changes PASSED [ 47%]
+tests/test_updater.py::test_divergence_does_not_overwrite_an_ignored_local_file PASSED [ 50%]
+tests/test_updater.py::test_divergence_preflight_failure_stops_safely PASSED [ 52%]
+tests/test_updater.py::test_unsafe_remote_is_rejected_without_echoing_url[https://github.com/another-project/tool.git-] PASSED [ 55%]
+tests/test_updater.py::test_unsafe_remote_is_rejected_without_echoing_url[https://github.com/attacker/isycode.git-] PASSED [ 58%]
+tests/test_updater.py::test_unsafe_remote_is_rejected_without_echoing_url[https://github.com/someone/ISyCode-] PASSED [ 61%]
+tests/test_updater.py::test_unsafe_remote_is_rejected_without_echoing_url[https://user:private-token@github.com/DannyBaanks/ISyCode.git-private-token] PASSED [ 63%]
+tests/test_updater.py::test_fetch_failure_preserves_head_and_reports_safe_recovery PASSED [ 66%]
+tests/test_updater.py::test_missing_upstream_is_blocked_with_setup_guidance PASSED [ 69%]
+tests/test_updater.py::test_local_git_filter_is_blocked_before_fetch PASSED [ 72%]
+tests/test_updater.py::test_local_url_rewrite_is_blocked_before_fetch PASSED [ 75%]
+tests/test_updater.py::test_pip_launcher_recognition_requires_exact_entry_point SKIPPED [ 77%]
+tests/test_updater.py::test_git_policy_allows_https_but_denies_unspecified_protocols PASSED [ 80%]
+tests/test_updater.py::test_incoming_file_cannot_overwrite_an_ignored_local_file PASSED [ 83%]
+tests/test_updater.py::test_bootstrap_check_only_does_not_create_installation PASSED [ 86%]
+tests/test_updater.py::test_bootstrap_preserves_non_git_destination PASSED [ 88%]
+tests/test_updater.py::test_bootstrap_installs_source_without_replacing_foreign_launcher PASSED [ 91%]
+tests/test_updater.py::test_official_repository_is_accepted_case_insensitively PASSED [ 94%]
+tests/test_updater.py::test_declined_merge_leaves_the_branch_untouched PASSED [ 97%]
+tests/test_updater.py::test_without_anyone_to_ask_local_changes_are_never_stashed PASSED [100%]
+
+================== 35 passed, 1 skipped in 144.63s (0:02:24) ==================
+EXIT: 0

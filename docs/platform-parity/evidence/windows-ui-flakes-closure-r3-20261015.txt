@@ -1,0 +1,58 @@
+........FFF                                                              [100%]
+================================== FAILURES ===================================
+____ test_long_onboarding_keeps_choices_visible_at_80x24[QuickStartScreen] ____
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:231: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:221: in scenario
+    assert app.screen.focused is copy
+E   AssertionError: assert OptionList(id='quick-start-options', classes='isy-dialog-options') is OnboardingCopy(id='quick-start-copy', classes='isy-dialog-body')
+E    +  where OptionList(id='quick-start-options', classes='isy-dialog-options') = QuickStartScreen().focused
+E    +    where QuickStartScreen() = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+__ test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen] ___
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:231: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:221: in scenario
+    assert app.screen.focused is copy
+E   AssertionError: assert OptionList(id='workspace-mode-options', classes='isy-dialog-options') is OnboardingCopy(id='workspace-mode-copy', classes='isy-dialog-body')
+E    +  where OptionList(id='workspace-mode-options', classes='isy-dialog-options') = WorkspaceModeScreen().focused
+E    +    where WorkspaceModeScreen() = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+__ test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceSetupScreen] __
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:231: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:221: in scenario
+    assert app.screen.focused is copy
+E   AssertionError: assert OptionList(id='workspace-setup-options', classes='isy-dialog-options') is OnboardingCopy(id='workspace-setup-copy', classes='isy-dialog-body')
+E    +  where OptionList(id='workspace-setup-options', classes='isy-dialog-options') = WorkspaceSetupScreen().focused
+E    +    where WorkspaceSetupScreen() = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+=========================== short test summary info ===========================
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[QuickStartScreen]
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen]
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceSetupScreen]
+3 failed, 8 passed in 34.19s

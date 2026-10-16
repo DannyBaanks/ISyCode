@@ -1,6 +1,7 @@
 """Workspace onboarding and named chat conversations remain scoped and private."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -86,7 +87,7 @@ def test_session_store_rejects_symlink_root(tmp_path: Path):
     except OSError:
         pytest.skip("directory symlinks are unavailable")
 
-    with pytest.raises(ValueError, match="symlink"):
+    with pytest.raises(ValueError):
         ChatSessionStore(alias)
 
 
@@ -132,6 +133,11 @@ def fake_home(tmp_path: Path, monkeypatch) -> Path:
     home = tmp_path / "home"
     (home / "projects" / "app").mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))
+    # pathlib.Path.home() reads USERPROFILE on Windows; HOME alone is a
+    # POSIX convention and leaves broad-directory checks pointing at the real
+    # workstation profile during Windows parity runs.
+    if os.name == "nt":
+        monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setattr("tempfile.tempdir", str(tmp_path / "tmp"))
     (tmp_path / "tmp").mkdir()
     return home

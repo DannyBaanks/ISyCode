@@ -47,6 +47,11 @@ isycode
 ```
 
 Con el entorno activado, entra en la carpeta de tu proyecto y ejecuta `isycode`.
+En Windows, desde el checkout puedes usar `& .\scripts\install-windows.ps1`
+y arrancar `.venv\Scripts\isycode.exe`. La primera etapa de paridad incluye
+almacenamiento nativo y Git; el sandbox de comandos Windows sigue pendiente.
+Consulta [la guía de paridad](docs/platform-parity/GUIA.md) para pruebas y alcance.
+
 Para Claude nativo, instala también el extra con
 `python -m pip install -e '.[anthropic]'`.
 

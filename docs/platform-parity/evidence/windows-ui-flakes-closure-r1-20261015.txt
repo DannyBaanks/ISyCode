@@ -1,0 +1,5 @@
+
+no tests ran in 1.96s
+ERROR: not found: C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py::test_copy_button_copies_selected_text_exactly
+(no match in any of [<Module test_design_interactions.py>])
+

@@ -49,6 +49,29 @@ def test_composer_and_idea_note_fit_beside_sidebar(tmp_path, monkeypatch, capsys
         asyncio.run(scenario())
 
 
+def test_opening_narrow_sidebar_hides_model_button_before_refresh(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            rail = app.query_one(SidePanel)
+            if rail.display:
+                app.action_toggle_sidebar()
+                await pilot.pause()
+            assert not rail.display
+            model_button = app.query_one('#model-button')
+            assert model_button.display
+
+            app.action_toggle_sidebar()
+
+            assert rail.display
+            assert not model_button.display
+
+    asyncio.run(scenario())
+
+
 def test_history_restores_draft_and_multiline_keyboard_editing(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
 

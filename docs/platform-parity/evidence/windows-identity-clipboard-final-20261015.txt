@@ -1,0 +1,6 @@
+date=2026-10-15T18:46:43-06:00 command=py -m pytest -q tests/test_windows_clipboard.py tests/test_windows_private_identity.py
+python=Python 3.12.10
+platform=Windows-11-10.0.26200-SP0
+..s....                                                                  [100%]
+6 passed, 1 skipped in 0.60s
+exit_status=0

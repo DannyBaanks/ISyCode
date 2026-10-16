@@ -730,7 +730,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         """Block until startup completes; TimeoutError means startup never finished."""
         await asyncio.wait_for(self._ready_event.wait(), timeout)
 
-
     def _register_saved_key_reader(self) -> None:
         """Security mode: every saved-key read is its own owned, journaled decision."""
         try:
@@ -2030,7 +2029,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
             self.call_after_refresh(resolve_after_pop)
 
-        self.push_screen(screen, finished)
+        # Await both the modal and its descendants before the caller continues.
+        # Otherwise a fast second modal can receive input before its controls
+        # have mounted (the race is especially visible on Windows).
+        await self.push_screen(screen, finished)
         return await future
 
     def _animate_activity(self) -> None:
@@ -2244,10 +2246,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         choice = new_workspace_choice(self._launch_dir, None, preference)
                         if choice is None:
                             choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
-                    setup_store.choose_recurrent(self._launch_dir, choice)
+                    # Windows parity: keep the blocking marker write off the event loop.
+                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, choice)
                 elif choice:
                     # Re-create a marker if the user removed it after opting in.
-                    setup_store.choose_recurrent(self._launch_dir, True)
+                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, True)
                 recurring = choice
                 if recurring:
                     self._workspace_identity = discover_workspace_identity(self._launch_dir)

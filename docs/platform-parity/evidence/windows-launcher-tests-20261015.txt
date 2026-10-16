@@ -1,0 +1,81 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 11 items
+
+tests/test_launcher.py::test_installer_links_launcher_and_preserves_invocation_directory FAILED [  9%]
+tests/test_launcher.py::test_installer_refuses_to_replace_an_existing_command FAILED [ 18%]
+tests/test_launcher.py::test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup FAILED [ 27%]
+tests/test_launcher.py::test_installer_migration_keeps_unknown_symlinks_and_regular_files FAILED [ 36%]
+tests/test_launcher.py::test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv FAILED [ 45%]
+tests/test_launcher.py::test_launcher_prefers_repository_virtualenv FAILED [ 54%]
+tests/test_launcher.py::test_help_lists_spanish_self_update_commands PASSED [ 63%]
+tests/test_launcher.py::test_update_command_dispatches_check_and_exit_code PASSED [ 72%]
+tests/test_launcher.py::test_update_command_returns_failure_when_local_changes_need_resolution PASSED [ 81%]
+tests/test_launcher.py::test_update_asks_only_when_someone_can_answer PASSED [ 90%]
+tests/test_launcher.py::test_update_command_rejects_unknown_flags PASSED [100%]
+
+================================== FAILURES ===================================
+______ test_installer_links_launcher_and_preserves_invocation_directory _______
+tests\test_launcher.py:29: in test_installer_links_launcher_and_preserves_invocation_directory
+    subprocess.run([str(ROOT / "scripts" / "install-path")], cwd=tmp_path,
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:548: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1538: in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+E   OSError: [WinError 193] %1 no es una aplicaci�n Win32 v�lida
+____________ test_installer_refuses_to_replace_an_existing_command ____________
+tests\test_launcher.py:48: in test_installer_refuses_to_replace_an_existing_command
+    result = subprocess.run([str(ROOT / "scripts" / "install-path")], cwd=tmp_path,
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:548: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1538: in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+E   OSError: [WinError 193] %1 no es una aplicaci�n Win32 v�lida
+_ test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup _
+tests\test_launcher.py:60: in test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup
+    command.symlink_to(legacy)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Development\\ISyCo Git\\ISyCode\\.venv\\bin\\isycode' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_explicitly_migr0\\bin\\isycode'
+______ test_installer_migration_keeps_unknown_symlinks_and_regular_files ______
+tests\test_launcher.py:77: in test_installer_migration_keeps_unknown_symlinks_and_regular_files
+    command.symlink_to(tmp_path / "someone-elses-tool")
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_migration_keeps0\\someone-elses-tool' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_migration_keeps0\\bin\\isycode'
+_ test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv __
+tests\test_launcher.py:90: in test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv
+    (legacy_dir / ".venv").symlink_to(ROOT / ".venv", target_is_directory=True)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Development\\ISyCo Git\\ISyCode\\.venv' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_migrates_mainli0\\home\\.local\\share\\isycode-mainline\\.venv'
+_________________ test_launcher_prefers_repository_virtualenv _________________
+tests\test_launcher.py:122: in test_launcher_prefers_repository_virtualenv
+    subprocess.run([str(launcher), "--probe"], cwd=tmp_path, env=env,
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:548: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1538: in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+E   OSError: [WinError 193] %1 no es una aplicaci�n Win32 v�lida
+=========================== short test summary info ===========================
+FAILED tests/test_launcher.py::test_installer_links_launcher_and_preserves_invocation_directory - OSError: [WinError 193] %1 no es una aplicaci�n Win32 v�lida
+FAILED tests/test_launcher.py::test_installer_refuses_to_replace_an_existing_command - OSError: [WinError 193] %1 no es una aplicaci�n Win32 v�lida
+FAILED tests/test_launcher.py::test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup - OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Development\\ISyCo Git\\ISyCode\\.venv\\bin\\isycode' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_explicitly_migr0\\bin\\isycode'
+FAILED tests/test_launcher.py::test_installer_migration_keeps_unknown_symlinks_and_regular_files - OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_migration_keeps0\\someone-elses-tool' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_migration_keeps0\\bin\\isycode'
+FAILED tests/test_launcher.py::test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv - OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Development\\ISyCo Git\\ISyCode\\.venv' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-852\\test_installer_migrates_mainli0\\home\\.local\\share\\isycode-mainline\\.venv'
+FAILED tests/test_launcher.py::test_launcher_prefers_repository_virtualenv - OSError: [WinError 193] %1 no es una aplicaci�n Win32 v�lida
+========================= 6 failed, 5 passed in 0.79s =========================

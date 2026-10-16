@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from isycode.action_runtime import WorkspaceReadSystembility
+from isycode.winfs import is_link
 
 MAX_STAGE_BYTES = 512 * 1024 * 1024
 FREE_MARGIN_BYTES = 64 * 1024 * 1024
@@ -60,7 +61,7 @@ def prepare_staging(original: Path, *, scope: str = ".") -> Staging:
             or not _parents_are_real(source, source / scope)):
         raise StagingError("staging scope must be a real folder inside the workspace")
     selected = source / scope
-    if not selected.is_dir() or selected.is_symlink():
+    if not selected.is_dir() or is_link(selected):
         raise StagingError("staging scope is not an existing folder")
     size = _tree_bytes(selected)
     if size > MAX_STAGE_BYTES:
@@ -262,7 +263,7 @@ def _promote_reserved(book, staging: Staging, changes: list[dict[str, str]], ref
             if item["preimage"] is None:
                 continue
             source = _lexical(staging.original, item["path"])
-            if source is None or not source.is_file() or source.is_symlink():
+            if source is None or not source.is_file() or is_link(source):
                 raise LedgerDenied("preimage disappeared before backup")
             payload = source.read_bytes()
             if hashlib.sha256(payload).hexdigest() != item["preimage"]:
@@ -416,7 +417,7 @@ def _parents_are_real(root: Path, parent: Path) -> bool:
     walked = root
     for part in relative.parts:
         walked = walked / part
-        if walked.is_symlink():
+        if is_link(walked):
             return False
         if walked.exists() and not walked.is_dir():
             return False
@@ -464,7 +465,7 @@ def _tree_bytes(root: Path) -> int:
 def _copy_tree(source: Path, destination: Path) -> None:
     for entry in os.scandir(source):
         target = destination / entry.name
-        if entry.is_symlink():
+        if is_link(Path(entry.path)):
             os.symlink(os.readlink(entry.path), target)
             continue
         if entry.is_dir(follow_symlinks=False):
@@ -477,7 +478,7 @@ def _copy_tree(source: Path, destination: Path) -> None:
 
 def _walk_files(root: Path):
     for entry in os.scandir(root):
-        if entry.is_symlink():
+        if is_link(Path(entry.path)):
             continue
         if entry.is_dir(follow_symlinks=False):
             yield from _walk_files(Path(entry.path))
@@ -491,7 +492,7 @@ def _index(root: Path) -> dict[str, tuple]:
     def walk(current: Path) -> None:
         for entry in os.scandir(current):
             relative = Path(entry.path).relative_to(root).as_posix()
-            if entry.is_symlink():
+            if is_link(Path(entry.path)):
                 found[relative] = ("symlink", os.readlink(entry.path))
                 continue
             if entry.is_dir(follow_symlinks=False):

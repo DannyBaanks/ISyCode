@@ -21,7 +21,7 @@ class OnboardingCopy(VerticalScroll):
     """Keyboard-scrollable explanation without pushing choices off-screen."""
 
     def __init__(self, content, **kwargs):
-        super().__init__(Static(content, markup=False), **kwargs)
+        super().__init__(Static(content, markup=False), can_focus=True, **kwargs)
 
 
 class WorkspaceSetupScreen(ModalScreen[bool]):

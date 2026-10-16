@@ -46,17 +46,27 @@ def test_multi_harness_button_opens_and_escape_closes_without_blocking_app(tmp_p
         monkeypatch.setattr(app, "_multi_harness_snapshot", snapshot)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            await asyncio.wait_for(pilot.click("#harness-button"), timeout=2)
+            await asyncio.wait_for(pilot.click("#harness-button"), timeout=10)
+            async def wait_opened():
+                while not isinstance(app.screen, MultiHarnessScreen):
+                    await asyncio.sleep(0.01)
+            await asyncio.wait_for(wait_opened(), timeout=10)
             await pilot.pause()
             assert isinstance(app.screen, MultiHarnessScreen)
             assert len(app.screen.query(".harness-section")) == len(CATALOG_IDS)
-            await asyncio.wait_for(pilot.press("escape"), timeout=2)
+            await asyncio.wait_for(pilot.press("escape"), timeout=10)
+            async def wait_closed():
+                while isinstance(app.screen, MultiHarnessScreen):
+                    await asyncio.sleep(0.01)
+            await asyncio.wait_for(wait_closed(), timeout=10)
             await pilot.pause()
             assert not isinstance(app.screen, MultiHarnessScreen)
-            await asyncio.wait_for(pilot.click("#harness-button"), timeout=2)
+            await asyncio.wait_for(pilot.click("#harness-button"), timeout=10)
+            await asyncio.wait_for(wait_opened(), timeout=10)
             await pilot.pause()
             assert isinstance(app.screen, MultiHarnessScreen)
-            await asyncio.wait_for(pilot.click("#harness-close"), timeout=2)
+            await asyncio.wait_for(pilot.click("#harness-close"), timeout=10)
+            await asyncio.wait_for(wait_closed(), timeout=10)
             await pilot.pause()
             assert not isinstance(app.screen, MultiHarnessScreen)
 

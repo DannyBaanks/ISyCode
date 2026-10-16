@@ -1194,8 +1194,11 @@ class MenuMixin:
     def _size_action_menu(self) -> None:
         """Bound short menus by their contents; long lists scroll inside the frame."""
         rows = max(4, len(getattr(self, "_menu_filtered", [])))
-        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority") else 13
-        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
+        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority", "authority_settings") else 13
+        requested = rows + overhead
+        if self._menu_mode == "authority_settings" and self.size.height >= 36:
+            requested = max(34, requested)
+        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, requested))
 
     def _show_menu_detail(self, index: int | None) -> None:
         """Describe the highlighted entry so choices are clear before pressing Enter."""

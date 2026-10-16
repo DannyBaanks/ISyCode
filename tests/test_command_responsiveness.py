@@ -1,7 +1,16 @@
 """Slow command preparation must leave the TUI event loop responsive."""
 import asyncio
+import os
 import threading
+
+import pytest
 from test_command_runner import sandbox
+
+
+pytestmark = pytest.mark.skipif(
+    os.name != "posix",
+    reason="these staging assertions exercise the POSIX command sandbox; Windows stays gated",
+)
 
 
 def test_revalidation_does_not_block_event_loop(sandbox, monkeypatch):

@@ -27,6 +27,8 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
                     break
                 await pilot.pause(0.05)
             screen = app.screen
+            assert screen.query('#models-search')
+            assert screen.query('#model-provider-openai')
             assert not screen.query_one('#model-provider-openai', Collapsible).collapsed
             screen.query_one('#models-search').value = 'nemotron-3-ultra'
             # Searching expands the NVIDIA group, which loads the account catalog in a

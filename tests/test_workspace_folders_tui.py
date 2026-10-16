@@ -37,8 +37,8 @@ def test_sibling_read_and_native_approved_edit_use_its_own_root(tmp_path, monkey
             assert 'value = 1' in text and 'value = 10' not in text
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen):
                     break
             assert isinstance(app.screen, WriteApprovalScreen)
@@ -143,6 +143,13 @@ def test_file_browser_selection_keeps_primary_identity(tmp_path, monkeypatch, ca
         app = TUIApp()
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
+            startup_workers = tuple(
+                worker for worker in app.workers
+                if worker.group == 'workspace-startup'
+            )
+            if startup_workers:
+                await app.workers.wait_for_complete(startup_workers)
+            assert app._workspace is not None
             await app._browse_workspace_folder('sibling')
             assert app._workspace_root == root and app._file_path == str(sibling)
             await app._preview_file(str(sibling / 'file.py'))
@@ -163,8 +170,8 @@ def test_readded_alias_invalidates_pending_diff_and_warning(tmp_path, monkeypatc
             await pilot.pause()
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen):
                     break
             assert isinstance(app.screen, WriteApprovalScreen)
@@ -175,7 +182,10 @@ def test_readded_alias_invalidates_pending_diff_and_warning(tmp_path, monkeypatc
             assert 'error' in json.loads(result)
             assert (sibling / 'file.py').read_text() == 'value = 1\n'
             task = asyncio.create_task(app._set_folder_auto_edit('sibling', True))
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if isinstance(app.screen, AutomaticEditsWarningScreen):
+                    break
             assert isinstance(app.screen, AutomaticEditsWarningScreen)
             store.remove('sibling')
             sibling.rename(sibling.with_name('old-sibling'))
@@ -208,27 +218,38 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             task = asyncio.create_task(app._add_workspace_folder())
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if isinstance(app.screen, AddWorkspaceFolderScreen):
+                    button = app.screen.query_one('#folder-add')
+                    if button.region.width and button.region.height and not button.disabled:
+                        break
             assert isinstance(app.screen, AddWorkspaceFolderScreen)
             app.screen.query_one('#folder-alias', Input).value = 'sibling'
             button = app.screen.query_one('#folder-add')
             assert button.region.bottom <= 24
-            await pilot.click('#folder-add')
+            await pilot.pause(.1)
+            assert await pilot.click('#folder-add')
             await asyncio.wait_for(task, 10)
             assert store.resolve('sibling') == sibling
             app._close_menu()
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen):
                     break
             await pilot.pause()
             assert app.screen.query_one('#write-approval-always').region.bottom <= 24
             await pilot.click('#write-approval-always')
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if (isinstance(app.screen, AutomaticEditsWarningScreen)
+                        and app.screen.query('#auto-edit-enable')):
+                    break
             assert isinstance(app.screen, AutomaticEditsWarningScreen)
-            assert app.screen.query_one('#auto-edit-enable').region.bottom <= 24
+            enable = app.screen.query_one('#auto-edit-enable')
+            assert enable.region.bottom <= 24
             await pilot.click('#auto-edit-enable')
             _, result = await asyncio.wait_for(task, 10)
             assert json.loads(result)['approval_mode'] == 'delegated'
@@ -293,12 +314,22 @@ def test_security_requires_review_despite_saved_automatic_edits(tmp_path, monkey
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            # On Windows a cold ACL check + file preview can take longer than
+            # one second. Wait on the screen/task condition, with the same
+            # bounded window used by the sibling-attachment review below.
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen) or task.done():
                     break
             assert (sibling / 'file.py').read_text() == 'value = 1\n'
@@ -327,8 +358,8 @@ def test_security_parent_requires_review_for_trusted_classic_attachment(tmp_path
             await pilot.pause()
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen) or task.done():
                     break
             assert (sibling / 'file.py').read_text() == 'value = 1\n'

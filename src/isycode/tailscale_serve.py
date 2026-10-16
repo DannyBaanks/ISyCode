@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 import re
 import secrets
 import subprocess
@@ -26,6 +27,7 @@ from isycode.tailscale import (
 )
 from isycode.tailscale_read import TailscaleReadOwner
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.winfs import is_link
 
 
 ROUTE_ID = "isycode-gateway"
@@ -97,8 +99,11 @@ class TailscaleServeOwner:
         if not isinstance(executable, str) or not Path(executable).is_absolute():
             raise ValueError("canonical Tailscale executable is unavailable")
         executable_path = Path(executable).resolve(strict=True)
-        if (str(executable_path) != executable or executable_path.name != "tailscale"
-                or not executable_path.is_file() or not executable_path.stat().st_mode & 0o111):
+        expected_name = "tailscale.exe" if os.name == "nt" else "tailscale"
+        same_path = os.path.normcase(str(executable_path)) == os.path.normcase(executable)
+        if (not same_path or executable_path.name.casefold() != expected_name
+                or is_link(executable_path) or not executable_path.is_file()
+                or (os.name == "posix" and not executable_path.stat().st_mode & 0o111)):
             raise ValueError("canonical Tailscale executable is unavailable")
         host = snapshot.dns_name
         if not isinstance(host, str) or HOST_RE.fullmatch(host.rstrip(".")) is None:

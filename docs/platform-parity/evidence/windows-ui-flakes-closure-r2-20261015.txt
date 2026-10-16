@@ -1,0 +1,40 @@
+...............F...F...                                                  [100%]
+================================== FAILURES ===================================
+___ test_readonly_double_click_preserves_marked_range_until_copy_or_cancel ____
+tests\test_design_interactions.py:165: in test_readonly_double_click_preserves_marked_range_until_copy_or_cancel
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_design_interactions.py:164: in scenario
+    assert copied == [("one\ntwo\n", "selection")]
+E   AssertionError: assert [] == [('one\ntwo\n', 'selection')]
+E     
+E     Right contains one more item: ('one\ntwo\n', 'selection')
+E     Use -v to get more diff
+__ test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen] ___
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:213: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:209: in scenario
+    assert copy.scroll_y > 0
+E   AssertionError: assert 0.0 > 0
+E    +  where 0.0 = OnboardingCopy(id='workspace-mode-copy', classes='isy-dialog-body').scroll_y
+=========================== short test summary info ===========================
+FAILED tests/test_design_interactions.py::test_readonly_double_click_preserves_marked_range_until_copy_or_cancel
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen]
+2 failed, 21 passed in 56.98s

@@ -1,0 +1,4 @@
+running command: disappeared volume rejected, no promotion, original preserved ; recovery clean
+.
+1 passed, 12 deselected in 24.94s
+PYTEST_EXIT=0

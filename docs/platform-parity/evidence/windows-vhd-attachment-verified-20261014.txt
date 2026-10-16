@@ -1,0 +1,3 @@
+device characteristics: 0x20020
+root descriptor: O:S-1-5-21-1262463267-1333140832-2374598671-1001D:PAI(A;OICI;FA;;;S-1-5-21-1262463267-1333140832-2374598671-1001)(A;OICI;FA;;;SY)
+identity: {'volume_guid': '\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', 'volume_serial': 2588556390, 'image_identifier': '154f855d-026e-4cf4-988d-2c0428ae3042', 'backing_file_id': '44ace772ace75cc4:20000000117c2', 'capacity_bytes': 535752704, 'max_bytes': 536870912}

@@ -1,0 +1,164 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+tests/test_agent_questions.py::test_asking_the_user_is_not_an_authority_action PASSED
+tests/test_agent_questions.py::test_question_screen_returns_a_choice_text_or_cancellation FAILED
+
+================================== FAILURES ===================================
+_________ test_question_screen_returns_a_choice_text_or_cancellation __________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-874/test_question_screen_returns_a0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000246F7C81700>
+capsys = <_pytest.capture.CaptureFixture object at 0x00000246F7C81C10>
+
+    def test_question_screen_returns_a_choice_text_or_cancellation(tmp_path, monkeypatch, capsys):
+        configure(tmp_path, monkeypatch)
+    
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                choice = asyncio.create_task(app._dispatch_chat_tool({
+                    "id": "q1",
+                    "function": {"name": "ask_user", "arguments": json.dumps({
+                        "question": "Which fix?",
+                        "choices": ["Keep the sibling", "Stage only the probe"],
+                    })},
+                }))
+                await pilot.pause()
+                assert app.screen.id == "agent-question"
+                await asyncio.wait_for(pilot.click("#ask-choice-1"), timeout=5)
+                call_id, payload = await asyncio.wait_for(choice, timeout=5)
+                assert call_id == "q1"
+                assert json.loads(payload) == {
+                    "status": "answered", "choice": "Stage only the probe",
+                }
+    
+                typed = asyncio.create_task(app._dispatch_chat_tool({
+                    "id": "q2",
+                    "function": {"name": "ask_user", "arguments": json.dumps({
+                        "question": "Anything else?",
+                    })},
+                }))
+                await pilot.pause()
+                answer = app.screen.query_one("#ask-text")
+                assert answer.has_focus
+                answer.value = "ship it"
+                await asyncio.wait_for(pilot.click("#ask-submit"), timeout=5)
+                assert json.loads((await asyncio.wait_for(typed, timeout=5))[1]) == {
+                    "status": "answered", "text": "ship it",
+                }
+    
+                cancelled = asyncio.create_task(app._dispatch_chat_tool({
+                    "id": "q3",
+                    "function": {"name": "ask_user", "arguments": json.dumps({
+                        "question": "Continue?",
+                        "choices": ["Yes"],
+                    })},
+                }))
+                await pilot.pause()
+                await asyncio.wait_for(pilot.press("escape"), timeout=5)
+                body = json.loads((await asyncio.wait_for(cancelled, timeout=5))[1])
+                assert body == {"status": "cancelled"}
+                assert "choice" not in body and "text" not in body
+    
+        with capsys.disabled():
+>           asyncio.run(scenario())
+
+C:\Development\ISyCo Git\ISyCode\tests\test_agent_questions.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            choice = asyncio.create_task(app._dispatch_chat_tool({
+                "id": "q1",
+                "function": {"name": "ask_user", "arguments": json.dumps({
+                    "question": "Which fix?",
+                    "choices": ["Keep the sibling", "Stage only the probe"],
+                })},
+            }))
+            await pilot.pause()
+            assert app.screen.id == "agent-question"
+            await asyncio.wait_for(pilot.click("#ask-choice-1"), timeout=5)
+            call_id, payload = await asyncio.wait_for(choice, timeout=5)
+            assert call_id == "q1"
+            assert json.loads(payload) == {
+                "status": "answered", "choice": "Stage only the probe",
+            }
+    
+            typed = asyncio.create_task(app._dispatch_chat_tool({
+                "id": "q2",
+                "function": {"name": "ask_user", "arguments": json.dumps({
+                    "question": "Anything else?",
+                })},
+            }))
+            await pilot.pause()
+            answer = app.screen.query_one("#ask-text")
+>           assert answer.has_focus
+E           AssertionError: assert False
+E            +  where False = Input(id='ask-text').has_focus
+
+C:\Development\ISyCo Git\ISyCode\tests\test_agent_questions.py:45: AssertionError
+------------------------------ Captured log call ------------------------------
+ERROR    asyncio:base_events.py:1833 unhandled exception during asyncio.run() shutdown
+task: <Task finished name='Task-555' coro=<ToolMixin._dispatch_chat_tool() done, defined at C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py:61> exception=NoMatches("No nodes match 'ChatArea' on Screen(id='_default')")>
+Traceback (most recent call last):
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\tests\test_agent_questions.py", line 45, in scenario
+    assert answer.has_focus
+AssertionError: assert False
+ +  where False = Input(id='ask-text').has_focus
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 103, in _dispatch_chat_tool
+    result = await self._dispatch_chat_tool_impl(call)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 225, in _dispatch_chat_tool_impl
+    answer = await self._await_screen(AgentQuestionScreen(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py", line 2954, in _await_screen
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 129, in _dispatch_chat_tool
+    self.query_one(ChatArea).follow_tail()
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\dom.py", line 1533, in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+textual.css.query.NoMatches: No nodes match 'ChatArea' on Screen(id='_default')
+=========================== short test summary info ===========================
+FAILED tests/test_agent_questions.py::test_question_screen_returns_a_choice_text_or_cancellation - AssertionError: assert False
+ +  where False = Input(id='ask-text').has_focus
+========================= 1 failed, 1 passed in 5.87s =========================

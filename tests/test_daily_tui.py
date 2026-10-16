@@ -149,12 +149,13 @@ def test_inject_context_button_flow_uses_picker_owner_and_owned_workspace_read(t
 
 
 @pytest.mark.parametrize('real_command', [False, pytest.param(True, marks=pytest.mark.integration)])
-def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, capsys, real_command):
+def test_full_chat_read_edit_and_policy_gated_git_diff_uses_real_owners(tmp_path, monkeypatch, capsys, real_command):
     import json
     import subprocess
     from isycode.action_audit import ActionAuditJournal
     from isycode.tui import WriteApprovalScreen, CommandApprovalScreen
     from isycode.command_runner import sandbox_executable
+    from isycode.git_owner import git_executable
     root = configure(tmp_path, monkeypatch)
     (root / 'app.py').write_text('value = 1\n')
     subprocess.run(['git', 'init', '-q', str(root)], check=True)
@@ -163,8 +164,10 @@ def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, ca
                     'commit', '-q', '-m', 'baseline'], check=True)
     seen = []
     actions = [('workspace_read', {'path': 'app.py'}),
-               ('workspace_edit', {'path': 'app.py', 'old_text': 'value = 1', 'new_text': 'value = 2'}),
-               ('git_diff', {'path': 'app.py'})]
+               ('workspace_edit', {'path': 'app.py', 'old_text': 'value = 1', 'new_text': 'value = 2'})]
+    trusted_git = git_executable() is not None
+    if trusted_git:
+        actions.append(('git_diff', {'path': 'app.py'}))
     if real_command:
         if not sandbox_executable():
             pytest.skip('real Bubblewrap prerequisites are unavailable')
@@ -176,6 +179,11 @@ def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, ca
     async def complete(provider, messages, **kwargs):
         index = len(seen)
         seen.append([dict(m) for m in messages])
+        if index == 0:
+            offered_tools = [t['function']['name'] for t in kwargs['tools']]
+            assert ('git_diff' in offered_tools) is trusted_git
+            if not trusted_git:
+                assert not any(name.startswith('git_') for name in offered_tools)
         if index < len(actions):
             name, arguments = actions[index]
             assert any(t['function']['name'] == name for t in kwargs['tools'])
@@ -188,8 +196,18 @@ def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, ca
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        # This contract exercises chat tool ownership only. Do not let the
+        # unrelated on-mount onboarding worker contend for the same private
+        # action journal while the fake provider is stepping through calls.
+        app._startup_workspace = no_startup
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             if real_command:
                 from isycode.workspace_authority import WorkspaceAuthority
                 WorkspaceAuthority(root).set_grant('workspace.command.run', enabled=True,
@@ -210,10 +228,14 @@ def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, ca
                     task.cancel()
                     await asyncio.gather(task, return_exceptions=True)
             assert (root / 'app.py').read_text() == 'value = 2\n'
-            assert len(seen) == len(actions) + 1
+            assert len(seen) == len(actions) + 1, (
+                f"provider calls stopped early; startup notes={app._active_lane().lines[-8:]}; "
+                f"audit={ActionAuditJournal(root).verify().recent[-8:]}"
+            )
             tool_results = [json.loads(m['content']) for m in seen[-1] if m['role'] == 'tool']
             assert tool_results[1]['status'] == 'written'
-            assert '+value = 2' in json.dumps(tool_results[-1])
+            if trusted_git:
+                assert '+value = 2' in json.dumps(tool_results[-1])
             if real_command:
                 assert tool_results[2]['exit_code'] == 0
                 assert 'Ran 1 test' in tool_results[2]['output']

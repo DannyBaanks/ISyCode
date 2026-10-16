@@ -1,8 +1,17 @@
 """RTK opt-in and rewrite advice cannot confer workspace execution authority."""
 import asyncio
+import os
+
+import pytest
 
 from test_command_runner import sandbox
 from test_rtk_integration import adapter
+
+
+pytestmark = pytest.mark.skipif(
+    os.name != 'posix',
+    reason='NOT_DEMONSTRATED: RTK command rewriting uses the POSIX Bubblewrap sandbox; Windows keeps native output',
+)
 
 
 def test_rtk_allow_cannot_replace_workspace_grant(sandbox, adapter, monkeypatch):

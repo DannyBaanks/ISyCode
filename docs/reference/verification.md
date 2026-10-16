@@ -40,6 +40,19 @@ font-setting test.
 
 ## Earlier evidence
 
+### Native storage and Git migration, 2026-10-13
+
+The [platform parity report](../platform-parity/REPORT.md) records native Windows
+storage, ownership/DACL, process/thread exclusion, iteration/session recovery,
+approved edits and Git workflow tests, plus Linux container regression runs.
+The provider in the coding-flow test is simulated; filesystem/Git owners and
+their receipts are real. The PowerShell source installer is also verified.
+This evidence narrows the pending native Windows scope below; full product
+parity, native Windows command isolation, live inference, physical clipboard
+and packaged EXE behavior remain NOT_DEMONSTRATED.
+
+## Historical verification references
+
 These are dated records referenced by the previous README, not new runs in
 this task. Inspect the original commands and hashes before making a current
 claim.

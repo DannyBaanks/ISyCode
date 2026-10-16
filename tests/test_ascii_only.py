@@ -9,7 +9,7 @@ from isycode.user_defaults import UserDefaultsStore
 
 
 def test_ascii_only_defaults_off_and_round_trips(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    store = UserDefaultsStore(tmp_path / "preferences")
     assert store.load()["ascii_only"] is False
     store.update(ascii_only=True)
     assert store.load()["ascii_only"] is True

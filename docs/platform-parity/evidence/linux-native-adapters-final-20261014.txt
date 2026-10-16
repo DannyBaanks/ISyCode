@@ -1,0 +1,29 @@
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+
+[notice] A new release of pip is available: 24.0 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+...................................ssssss............................... [ 48%]
+...........s............................................................ [ 97%]
+..F                                                                      [100%]
+=================================== FAILURES ===================================
+___________ test_checked_in_snapshot_matches_live_catalog_and_owners ___________
+
+    def test_checked_in_snapshot_matches_live_catalog_and_owners():
+        import json
+        from pathlib import Path
+    
+        snapshot_path = Path(__file__).resolve().parents[1] / "docs" / "security" / "m15-authority-coverage.json"
+        checked_in = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    
+>       assert checked_in == action_coverage.authority_coverage_snapshot()
+E       AssertionError: assert {'format': 'i...hes': [], ...} == {'format': 'i...hes': [], ...}
+E         
+E         Omitting 14 identical items, use -vv to show
+E         Differing items:
+E         {'request_constructors': [{'file': 'isycode/action_runtime.py', 'line': 92, 'callable': 'isycode.action_runtime._works... 2055, 'callable': 'isycode.action_runtime.GatewaySemanticOwner.invoke', 'action': 'gateway.semantic.read', ...}, ...]} != {'request_constructors': [{'file': 'isycode/action_runtime.py', 'line': 92, 'callable': 'isycode.action_runtime._works... 2055, 'callable': 'isycode.action_runtime.GatewaySemanticOwner.invoke', 'action': 'gateway.semantic.read', ...}, ...]}
+E         Use -v to get more diff
+
+tests/test_action_coverage.py:318: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners
+1 failed, 139 passed, 7 skipped in 173.98s (0:02:53)

@@ -1,0 +1,51 @@
+..F                                                                      [100%]
+================================== FAILURES ===================================
+_______________ test_windows_clipboard_real_isolated_roundtrip ________________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-787/test_windows_clipboard_real_is0')
+
+    def test_windows_clipboard_real_isolated_roundtrip(tmp_path):
+        script=r'''
+    import ctypes as c,sys,uuid
+    from ctypes import wintypes as w
+    u=c.WinDLL('user32',use_last_error=True)
+    u.CreateWindowStationW.argtypes=[w.LPCWSTR,w.DWORD,w.DWORD,c.c_void_p];u.CreateWindowStationW.restype=w.HANDLE
+    u.SetProcessWindowStation.argtypes=[w.HANDLE];u.SetProcessWindowStation.restype=w.BOOL
+    u.CreateDesktopW.argtypes=[w.LPCWSTR,w.LPCWSTR,c.c_void_p,w.DWORD,w.DWORD,c.c_void_p];u.CreateDesktopW.restype=w.HANDLE
+    u.SetThreadDesktop.argtypes=[w.HANDLE];u.SetThreadDesktop.restype=w.BOOL
+    station=u.CreateWindowStationW('isycode-test-'+uuid.uuid4().hex,0,0x37f,None)
+    if not station:raise c.WinError(c.get_last_error())
+    if not u.SetProcessWindowStation(station):raise c.WinError(c.get_last_error())
+    desktop=u.CreateDesktopW('default',None,None,0,0x1ff,None)
+    if not desktop or not u.SetThreadDesktop(desktop):raise c.WinError(c.get_last_error())
+    # This process now has a separate clipboard; never open the user's WinSta0 clipboard.
+    from pathlib import Path
+    from isycode.clipboard_owner import ClipboardOwner
+    from isycode.workspace_authority import WorkspaceAuthority
+    root=Path(sys.argv[1]);root.mkdir()
+    authority=WorkspaceAuthority(root)
+    owner=ClipboardOwner(root,authority)
+    assert owner.paste()[0].decision=='DENY'
+    authority.set_grant('clipboard.copy',enabled=True,targets=['clipboard'])
+    authority.set_grant('clipboard.paste',enabled=True,targets=['clipboard'])
+    text='Unicode \xf1 \u6771\u4eac \U0001f600'
+    result=owner.copy(text,source='selection')
+    assert result.decision=='ALLOW',result
+    outcome,mime,data=owner.paste()
+    assert outcome.decision=='ALLOW',(outcome,mime)
+    assert mime=='text/plain' and data.decode('utf-8')==text,(mime,data)
+    print('isolated station: Unicode copy/paste, grants, receipts PASS')
+    '''
+        result=subprocess.run([sys.executable,'-c',script,str(tmp_path/'workspace')],capture_output=True,text=True,timeout=30)
+>       assert result.returncode==0,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 10, in <module>
+E         PermissionError: [WinError 5] Acceso denegado.
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['C:\\Development\\ISyCo Git\\ISyCode\\.venv\\Scripts\\python.exe', '-c', "\nimport ctypes as c,...k (most recent call last):\n  File "<string>", line 10, in <module>\nPermissionError: [WinError 5] Acceso denegado.\n').returncode
+
+tests\test_windows_clipboard.py:55: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_windows_clipboard.py::test_windows_clipboard_real_isolated_roundtrip
+1 failed, 2 passed in 0.56s

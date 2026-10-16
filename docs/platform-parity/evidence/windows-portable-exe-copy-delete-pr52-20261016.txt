@@ -1,0 +1,434 @@
+RECORDED_AT=2026-10-15T22:46:33.779750-06:00
+ENVIRONMENT=Windows-11-10.0.26200-SP0 | Python 3.12.10 | Windows x64 | isolated disposable D: paths
+
+$ py -m venv <temporary D: directory>\venv
+EXIT=0
+
+
+
+$ <temporary D: directory>\venv\Scripts\python.exe -m pip --isolated --disable-pip-version-check --no-cache-dir install --index-url https://pypi.org/simple C:\Development\ISyCode-worktrees\windows-parity pyinstaller==6.22.3
+EXIT=0
+Processing c:\development\isycode-worktrees\windows-parity
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting pyinstaller==6.22.3
+  Downloading pyinstaller-6.22.3-py3-none-win_amd64.whl.metadata (8.5 kB)
+Collecting altgraph (from pyinstaller==6.22.3)
+  Downloading altgraph-0.17.5-py2.py3-none-any.whl.metadata (7.5 kB)
+Collecting packaging>=22.0 (from pyinstaller==6.22.3)
+  Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting pefile>=2022.5.30 (from pyinstaller==6.22.3)
+  Downloading pefile-2024.8.26-py3-none-any.whl.metadata (1.4 kB)
+Collecting pyinstaller-hooks-contrib>=2026.7 (from pyinstaller==6.22.3)
+  Downloading pyinstaller_hooks_contrib-2026.8-py3-none-any.whl.metadata (16 kB)
+Collecting pywin32-ctypes>=0.2.1 (from pyinstaller==6.22.3)
+  Downloading pywin32_ctypes-0.2.3-py3-none-any.whl.metadata (3.9 kB)
+Collecting setuptools>=42.0.0 (from pyinstaller==6.22.3)
+  Downloading setuptools-84.0.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting rich<15,>=13.7 (from isycode==1.0.0rc1)
+  Downloading rich-14.3.4-py3-none-any.whl.metadata (18 kB)
+Collecting pathspec<2,>=0.12 (from isycode==1.0.0rc1)
+  Downloading pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+Collecting textual==8.2.8 (from isycode==1.0.0rc1)
+  Downloading textual-8.2.8-py3-none-any.whl.metadata (9.1 kB)
+Collecting aiohttp<4,>=3.9 (from isycode==1.0.0rc1)
+  Downloading aiohttp-3.14.5-cp312-cp312-win_amd64.whl.metadata (8.5 kB)
+Collecting keyring<26,>=25.7 (from isycode==1.0.0rc1)
+  Downloading keyring-25.7.0-py3-none-any.whl.metadata (21 kB)
+Collecting pywin32>=306 (from isycode==1.0.0rc1)
+  Downloading pywin32-312-cp312-cp312-win_amd64.whl.metadata (11 kB)
+Collecting markdown-it-py>=2.1.0 (from markdown-it-py[linkify]>=2.1.0->textual==8.2.8->isycode==1.0.0rc1)
+  Downloading markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting mdit-py-plugins (from textual==8.2.8->isycode==1.0.0rc1)
+  Downloading mdit_py_plugins-0.6.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting platformdirs<5,>=3.6.0 (from textual==8.2.8->isycode==1.0.0rc1)
+  Downloading platformdirs-4.13.3-py3-none-any.whl.metadata (5.5 kB)
+Collecting pygments<3.0.0,>=2.19.2 (from textual==8.2.8->isycode==1.0.0rc1)
+  Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting typing-extensions<5.0.0,>=4.4.0 (from textual==8.2.8->isycode==1.0.0rc1)
+  Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting attrs>=17.3.0 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading frozenlist-1.8.0-cp312-cp312-win_amd64.whl.metadata (21 kB)
+Collecting multidict<8.0,>=4.5 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading multidict-7.1.0-cp312-cp312-win_amd64.whl.metadata (6.4 kB)
+Collecting propcache>=0.2.0 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading propcache-0.5.4-cp312-cp312-win_amd64.whl.metadata (25 kB)
+Collecting yarl<2.0,>=1.25.1 (from aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading yarl-1.25.1-cp312-cp312-win_amd64.whl.metadata (115 kB)
+Collecting jaraco.classes (from keyring<26,>=25.7->isycode==1.0.0rc1)
+  Downloading jaraco.classes-3.4.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting jaraco.functools (from keyring<26,>=25.7->isycode==1.0.0rc1)
+  Downloading jaraco_functools-4.6.0-py3-none-any.whl.metadata (2.9 kB)
+Collecting jaraco.context (from keyring<26,>=25.7->isycode==1.0.0rc1)
+  Downloading jaraco_context-6.1.2-py3-none-any.whl.metadata (4.2 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.1.0->markdown-it-py[linkify]>=2.1.0->textual==8.2.8->isycode==1.0.0rc1)
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting linkify-it-py<3,>=1 (from markdown-it-py[linkify]>=2.1.0->textual==8.2.8->isycode==1.0.0rc1)
+  Downloading linkify_it_py-2.2.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting idna>=2.0 (from yarl<2.0,>=1.25.1->aiohttp<4,>=3.9->isycode==1.0.0rc1)
+  Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting more-itertools (from jaraco.classes->keyring<26,>=25.7->isycode==1.0.0rc1)
+  Downloading more_itertools-11.2.1-py3-none-any.whl.metadata (42 kB)
+Downloading pyinstaller-6.22.3-py3-none-win_amd64.whl (1.5 MB)
+   ---------------------------------------- 1.5/1.5 MB 1.5 MB/s eta 0:00:00
+Downloading textual-8.2.8-py3-none-any.whl (731 kB)
+   ---------------------------------------- 731.4/731.4 kB 1.4 MB/s eta 0:00:00
+Downloading aiohttp-3.14.5-cp312-cp312-win_amd64.whl (506 kB)
+Downloading keyring-25.7.0-py3-none-any.whl (39 kB)
+Downloading packaging-26.3-py3-none-any.whl (129 kB)
+Downloading pathspec-1.1.1-py3-none-any.whl (57 kB)
+Downloading pefile-2024.8.26-py3-none-any.whl (74 kB)
+Downloading pyinstaller_hooks_contrib-2026.8-py3-none-any.whl (462 kB)
+Downloading pywin32-312-cp312-cp312-win_amd64.whl (6.9 MB)
+   ---------------------------------------- 6.9/6.9 MB 1.1 MB/s eta 0:00:00
+Downloading pywin32_ctypes-0.2.3-py3-none-any.whl (30 kB)
+Downloading rich-14.3.4-py3-none-any.whl (310 kB)
+Downloading setuptools-84.0.0-py3-none-any.whl (818 kB)
+   -------------------------------------- 818.2/818.2 kB 889.7 kB/s eta 0:00:00
+Downloading altgraph-0.17.5-py2.py3-none-any.whl (21 kB)
+Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+Downloading frozenlist-1.8.0-cp312-cp312-win_amd64.whl (44 kB)
+Downloading markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Downloading multidict-7.1.0-cp312-cp312-win_amd64.whl (93 kB)
+Downloading platformdirs-4.13.3-py3-none-any.whl (32 kB)
+Downloading propcache-0.5.4-cp312-cp312-win_amd64.whl (46 kB)
+Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+   ---------------------------------------- 1.3/1.3 MB 1.5 MB/s eta 0:00:00
+Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading yarl-1.25.1-cp312-cp312-win_amd64.whl (102 kB)
+Downloading jaraco.classes-3.4.0-py3-none-any.whl (6.8 kB)
+Downloading jaraco_context-6.1.2-py3-none-any.whl (7.9 kB)
+Downloading jaraco_functools-4.6.0-py3-none-any.whl (11 kB)
+Downloading mdit_py_plugins-0.6.1-py3-none-any.whl (66 kB)
+Downloading idna-3.20-py3-none-any.whl (69 kB)
+Downloading linkify_it_py-2.2.0-py3-none-any.whl (21 kB)
+Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading more_itertools-11.2.1-py3-none-any.whl (74 kB)
+Building wheels for collected packages: isycode
+  Building wheel for isycode (pyproject.toml): started
+  Building wheel for isycode (pyproject.toml): finished with status 'done'
+  Created wheel for isycode: filename=isycode-1.0.0rc1-py3-none-any.whl size=9086686 sha256=4a97111e5d8c80437d71d9c1235cb79ecb1896bbd0402ea1add53e8491260acb
+  Stored in directory: D:\isycode-portable-exe-pr52-_f3qiyzm\pyi-temp\pip-ephem-wheel-cache-rqoj_hoi\wheels\f5\ae\57\6215ebf36e2bfae81c6b7b8eff2d793b95dae717126d591c8d
+Successfully built isycode
+Installing collected packages: altgraph, typing-extensions, setuptools, pywin32-ctypes, pywin32, pygments, propcache, platformdirs, pefile, pathspec, packaging, multidict, more-itertools, mdurl, linkify-it-py, jaraco.context, idna, frozenlist, attrs, aiohappyeyeballs, yarl, pyinstaller-hooks-contrib, markdown-it-py, jaraco.functools, jaraco.classes, aiosignal, rich, pyinstaller, mdit-py-plugins, keyring, aiohttp, textual, isycode
+Successfully installed aiohappyeyeballs-2.7.1 aiohttp-3.14.5 aiosignal-1.4.0 altgraph-0.17.5 attrs-26.1.0 frozenlist-1.8.0 idna-3.20 isycode-1.0.0rc1 jaraco.classes-3.4.0 jaraco.context-6.1.2 jaraco.functools-4.6.0 keyring-25.7.0 linkify-it-py-2.2.0 markdown-it-py-4.2.0 mdit-py-plugins-0.6.1 mdurl-0.1.2 more-itertools-11.2.1 multidict-7.1.0 packaging-26.3 pathspec-1.1.1 pefile-2024.8.26 platformdirs-4.13.3 propcache-0.5.4 pygments-2.21.0 pyinstaller-6.22.3 pyinstaller-hooks-contrib-2026.8 pywin32-312 pywin32-ctypes-0.2.3 rich-14.3.4 setuptools-84.0.0 textual-8.2.8 typing-extensions-4.16.0 yarl-1.25.1
+
+
+$ <temporary D: directory>\venv\Scripts\python.exe -m PyInstaller --version
+EXIT=0
+6.22.3
+
+
+$ <temporary D: directory>\venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --onefile --name isycode --paths C:\Development\ISyCode-worktrees\windows-parity\src --distpath <temporary D: directory>\dist --workpath <temporary D: directory>\build --specpath <temporary D: directory>\spec --collect-all rich --collect-all textual --collect-all keyring --copy-metadata isycode --copy-metadata keyring --collect-data isycode --copy-metadata rich --copy-metadata textual --copy-metadata pathspec --copy-metadata aiohttp C:\Development\ISyCode-worktrees\windows-parity\packaging\isycode_entry.py
+EXIT=0
+
+392 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.8
+393 INFO: Python: 3.12.10
+524 INFO: Platform: Windows-11-10.0.26200-SP0
+524 INFO: Python environment: D:\isycode-portable-exe-pr52-_f3qiyzm\venv
+526 INFO: wrote D:\isycode-portable-exe-pr52-_f3qiyzm\spec\isycode.spec
+535 INFO: Removing temporary files and cleaning cache in C:\Users\progr\AppData\Local\pyinstaller
+5499 INFO: Module search paths (PYTHONPATH):
+['C:\\Development\\ISyCode-worktrees\\windows-parity',
+ 'C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312\\python312.zip',
+ 'C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312\\DLLs',
+ 'C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312\\Lib',
+ 'C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312',
+ 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv',
+ 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages',
+ 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\win32',
+ 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\win32\\lib',
+ 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\pythonwin',
+ 'C:\\Development\\ISyCode-worktrees\\windows-parity\\packaging',
+ 'C:\\Development\\ISyCode-worktrees\\windows-parity\\src']
+6536 INFO: Appending 'datas' from .spec
+6561 INFO: checking Analysis
+6561 INFO: Building Analysis because Analysis-00.toc is non existent
+6561 INFO: Looking for Python shared library...
+6561 INFO: Using Python shared library: C:\Users\progr\AppData\Local\Programs\Python\Python312\python312.dll
+6561 INFO: Running Analysis Analysis-00.toc
+6561 INFO: Target bytecode optimization level: 0
+6561 INFO: Initializing module dependency graph...
+6567 INFO: Initializing module graph hook caches...
+6620 INFO: Analyzing modules for base_library.zip ...
+9928 INFO: Processing standard module hook 'hook-encodings.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+11101 INFO: Processing standard module hook 'hook-math.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+12540 INFO: Processing standard module hook 'hook-pickle.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+13724 INFO: Processing standard module hook 'hook-heapq.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+14349 INFO: Caching module dependency graph...
+14395 INFO: Analyzing C:\Development\ISyCode-worktrees\windows-parity\packaging\isycode_entry.py
+14849 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+15103 INFO: Processing standard module hook 'hook-xml.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+15392 INFO: Processing standard module hook 'hook-_ctypes.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+15926 INFO: Processing standard module hook 'hook-platform.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+16179 INFO: Processing standard module hook 'hook-rich.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+17690 INFO: Processing standard module hook 'hook-pygments.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+21494 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+21497 INFO: SetuptoolsInfo: initializing cached setuptools info...
+23341 INFO: Processing standard module hook 'hook-sysconfig.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+23487 INFO: Processing standard module hook 'hook-webbrowser.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+24081 INFO: Processing standard module hook 'hook-pywintypes.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+24366 INFO: Processing standard module hook 'hook-sqlite3.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+25292 INFO: Processing standard module hook 'hook-keyring.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+26932 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+26934 INFO: Setuptools: 'jaraco' appears to be a partial setuptools-vendored copy - extending search paths to ['D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\jaraco', 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\setuptools\\_vendor\\jaraco']!
+26936 INFO: Processing pre-safe-import-module hook 'hook-jaraco.context.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+26947 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+26949 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
+26955 INFO: Processing standard module hook 'hook-setuptools.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+26970 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+26999 INFO: Processing pre-safe-import-module hook 'hook-jaraco.functools.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27013 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27192 INFO: Processing standard module hook 'hook-_osx_support.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+27210 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27485 INFO: Processing pre-safe-import-module hook 'hook-jaraco.text.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27487 INFO: Setuptools: 'jaraco.text' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco.text'!
+27499 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+27502 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27947 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27947 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+28494 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+28496 INFO: Setuptools: 'wheel' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.wheel'!
+28668 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+28670 INFO: Setuptools: 'importlib_metadata' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.importlib_metadata'!
+28697 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+28724 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+28725 INFO: Setuptools: 'zipp' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.zipp'!
+29624 INFO: Processing standard module hook 'hook-difflib.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+30046 INFO: Processing pre-safe-import-module hook 'hook-platformdirs.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+30069 INFO: Processing standard module hook 'hook-platformdirs.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+32595 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+32600 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+34773 INFO: Processing standard module hook 'hook-_tkinter.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+37955 INFO: Analyzing hidden import 'rich._unicode_data.unicode10-0-0'
+37962 INFO: Analyzing hidden import 'rich._unicode_data.unicode11-0-0'
+37968 INFO: Analyzing hidden import 'rich._unicode_data.unicode12-0-0'
+37974 INFO: Analyzing hidden import 'rich._unicode_data.unicode12-1-0'
+37981 INFO: Analyzing hidden import 'rich._unicode_data.unicode13-0-0'
+37988 INFO: Analyzing hidden import 'rich._unicode_data.unicode14-0-0'
+37995 INFO: Analyzing hidden import 'rich._unicode_data.unicode15-0-0'
+38002 INFO: Analyzing hidden import 'rich._unicode_data.unicode15-1-0'
+38008 INFO: Analyzing hidden import 'rich._unicode_data.unicode16-0-0'
+38016 INFO: Analyzing hidden import 'rich._unicode_data.unicode17-0-0'
+38023 INFO: Analyzing hidden import 'rich._unicode_data.unicode4-1-0'
+38026 INFO: Analyzing hidden import 'rich._unicode_data.unicode5-0-0'
+38031 INFO: Analyzing hidden import 'rich._unicode_data.unicode5-1-0'
+38035 INFO: Analyzing hidden import 'rich._unicode_data.unicode5-2-0'
+38039 INFO: Analyzing hidden import 'rich._unicode_data.unicode6-0-0'
+38043 INFO: Analyzing hidden import 'rich._unicode_data.unicode6-1-0'
+38048 INFO: Analyzing hidden import 'rich._unicode_data.unicode6-2-0'
+38053 INFO: Analyzing hidden import 'rich._unicode_data.unicode6-3-0'
+38057 INFO: Analyzing hidden import 'rich._unicode_data.unicode7-0-0'
+38062 INFO: Analyzing hidden import 'rich._unicode_data.unicode8-0-0'
+38067 INFO: Analyzing hidden import 'rich._unicode_data.unicode9-0-0'
+38074 INFO: Analyzing hidden import 'rich.bar'
+38078 INFO: Analyzing hidden import 'rich.diagnose'
+38080 INFO: Analyzing hidden import 'rich.filesize'
+38082 INFO: Analyzing hidden import 'rich.layout'
+38097 INFO: Analyzing hidden import 'rich.logging'
+38105 INFO: Analyzing hidden import 'rich.progress'
+38163 INFO: Analyzing hidden import 'rich.prompt'
+38173 INFO: Analyzing hidden import 'textual.__main__'
+38238 INFO: Analyzing hidden import 'textual._binary_encode'
+38245 INFO: Analyzing hidden import 'textual._doc'
+38256 INFO: Analyzing hidden import 'textual._layout_resolve'
+38259 INFO: Analyzing hidden import 'textual._sleep'
+38263 INFO: Analyzing hidden import 'textual.drivers._byte_stream'
+38269 INFO: Analyzing hidden import 'textual.drivers._input_reader'
+38275 INFO: Analyzing hidden import 'textual.drivers.web_driver'
+38285 INFO: Analyzing hidden import 'textual.logging'
+38288 INFO: Analyzing hidden import 'textual.pad'
+38291 INFO: Analyzing hidden import 'textual.renderables.gradient'
+38298 INFO: Analyzing hidden import 'textual.widgets._markdown_viewer'
+38299 INFO: Analyzing hidden import 'textual.widgets._tab'
+38300 INFO: Analyzing hidden import 'textual.widgets._tab_pane'
+38300 INFO: Analyzing hidden import 'textual.widgets.button'
+38301 INFO: Analyzing hidden import 'textual.widgets.collapsible'
+38302 INFO: Analyzing hidden import 'textual.widgets.data_table'
+38303 INFO: Analyzing hidden import 'textual.widgets.directory_tree'
+38304 INFO: Analyzing hidden import 'textual.widgets.input'
+38304 INFO: Analyzing hidden import 'textual.widgets.markdown'
+38305 INFO: Analyzing hidden import 'textual.widgets.rule'
+38306 INFO: Analyzing hidden import 'textual.widgets.select'
+38306 INFO: Analyzing hidden import 'textual.widgets.selection_list'
+38307 INFO: Analyzing hidden import 'textual.widgets.tabbed_content'
+38308 INFO: Analyzing hidden import 'textual.widgets.text_area'
+38309 INFO: Analyzing hidden import 'textual.widgets.tree'
+38310 INFO: Analyzing hidden import 'keyring.__main__'
+38322 INFO: Analyzing hidden import 'keyring.backends.SecretService'
+38328 INFO: Analyzing hidden import 'keyring.backends.Windows'
+38346 INFO: Processing standard module hook 'hook-win32ctypes.core.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+39695 INFO: Analyzing hidden import 'keyring.backends.chainer'
+39698 INFO: Analyzing hidden import 'keyring.backends.kwallet'
+39705 INFO: Analyzing hidden import 'keyring.backends.libsecret'
+39711 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+39713 INFO: Analyzing hidden import 'keyring.backends.macOS'
+39726 INFO: Analyzing hidden import 'keyring.backends.null'
+39727 INFO: Analyzing hidden import 'keyring.devpi_client'
+39730 INFO: Analyzing hidden import 'keyring.http'
+39732 INFO: Analyzing hidden import 'keyring.testing'
+39732 INFO: Analyzing hidden import 'keyring.testing.backend'
+39744 INFO: Processing module hooks (post-graph stage)...
+42359 INFO: Processing standard module hook 'hook-_tkinter.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks'
+42390 INFO: Performing binary vs. data reclassification (1401 entries)
+70023 INFO: Looking for ctypes DLLs
+70115 INFO: Analyzing run-time hooks ...
+70123 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+70126 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+70129 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+70132 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+70133 INFO: Including run-time hook 'pyi_rth_pywintypes.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks'
+70135 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'D:\\isycode-portable-exe-pr52-_f3qiyzm\\venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+70218 INFO: Creating base_library.zip...
+70248 INFO: Looking for dynamic libraries
+72581 INFO: Extra DLL search directories (AddDllDirectory): []
+72581 INFO: Extra DLL search directories (PATH): []
+74981 INFO: Warnings written to D:\isycode-portable-exe-pr52-_f3qiyzm\build\isycode\warn-isycode.txt
+75132 INFO: Graph cross-reference written to D:\isycode-portable-exe-pr52-_f3qiyzm\build\isycode\xref-isycode.html
+75227 INFO: checking PYZ
+75227 INFO: Building PYZ because PYZ-00.toc is non existent
+75227 INFO: Building PYZ (ZlibArchive) D:\isycode-portable-exe-pr52-_f3qiyzm\build\isycode\PYZ-00.pyz
+76480 INFO: Building PYZ (ZlibArchive) D:\isycode-portable-exe-pr52-_f3qiyzm\build\isycode\PYZ-00.pyz completed successfully.
+76586 INFO: checking PKG
+76588 INFO: Building PKG because PKG-00.toc is non existent
+76588 INFO: Building PKG (CArchive) isycode.pkg
+83994 INFO: Building PKG (CArchive) isycode.pkg completed successfully.
+84029 INFO: Bootloader D:\isycode-portable-exe-pr52-_f3qiyzm\venv\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\run.exe
+84029 INFO: checking EXE
+84029 INFO: Building EXE because EXE-00.toc is non existent
+84029 INFO: Building EXE from EXE-00.toc
+84030 INFO: Copying bootloader EXE to D:\isycode-portable-exe-pr52-_f3qiyzm\dist\isycode.exe
+84171 INFO: Copying icon to EXE
+84251 INFO: Copying 0 resources to EXE
+84251 INFO: Embedding manifest in EXE
+84309 INFO: Appending PKG archive to EXE
+84450 INFO: Fixing EXE headers
+85028 INFO: Building EXE from EXE-00.toc completed successfully.
+85063 INFO: Build complete! The results are available in: D:\isycode-portable-exe-pr52-_f3qiyzm\dist
+
+$ <temporary D: directory>\ISyCode portátil prueba 52\isycode.exe --version
+EXIT=0
+ISyCode 1.0.0rc1
+
+
+$ <temporary D: directory>\ISyCode portátil prueba 52\isycode.exe --help
+EXIT=0
+ISyCode Â· terminal workspace agent
+
+Usage:
+  isycode                 Start the chat TUI in the current directory
+  isycode tui              Start the chat TUI
+  isycode cli              Browse actions by semantic category
+  isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
+  isycode sessions ...      List/show/search/rename/delete local conversations; add --json
+  isycode models [--json]   Show local provider/model metadata; no network calls
+  isycode stats [--json]    Aggregate locally recorded session usage
+  isycode dirs [--json]     Show config/state locations and precedence, never values
+  isycode completion SHELL  Print bash, zsh or fish completion
+  isycode update           Update this ISyCode installation (alias: actualizar)
+  isycode update --check   Check for updates without installing or advancing
+  isycode update --yes     Pre-approve the stash/merge confirmation
+  isycode actualizar       Actualizar el checkout limpio o preparar una instalaciÃ³n
+  isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
+  isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
+  isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
+                           add --json for machine-readable output. Only read-only
+                           tools that were granted run; nothing asks for approval.
+  isycode --help           Show this help
+  isycode --version        Show the installed version
+
+The CLI browser groups actions by purpose. It does not run arbitrary shell commands.
+
+
+$ <temporary D: directory>\ISyCode portátil prueba 52\isycode.exe doctor
+EXIT=0
+{
+  "command_sandbox": "the Windows LPAC command sandbox is pending native acceptance; commands stay disabled and there is no unsandboxed fallback",
+  "defaults": "valid",
+  "dependencies": {
+    "aiohttp": "3.14.5",
+    "anthropic": "not-installed",
+    "isycode": "1.0.0rc1",
+    "keyring": "25.7.0",
+    "python": "3.12.10",
+    "rich": "14.3.4",
+    "textual": "8.2.8"
+  },
+  "enabled_actions": [],
+  "network_tested": false,
+  "next_steps": [
+    "Use Settings â†’ Authority to inspect scoped permissions.",
+    "Use /context to read AGENTS.md with a workspace read grant.",
+    "Use /check only when a provider and its network permission are configured."
+  ],
+  "provider": {
+    "connection": "not-tested; use /check for an explicit owned request",
+    "credential": "environment-absent; saved keys require an authorized lookup",
+    "endpoint": "api.tokenfactory.us-central1.nebius.com",
+    "model_selected": false,
+    "name": "nebius"
+  },
+  "version": 1,
+  "workspace_mode": "security"
+}
+
+
+$ <temporary D: directory>\ISyCode portátil prueba 52\isycode.exe dirs
+EXIT=0
+{
+  "configuration": [
+    {
+      "exists": false,
+      "kind": "user-defaults",
+      "path": "D:\\isycode-portable-exe-pr52-_f3qiyzm\\isolated-state\\user-defaults.json",
+      "precedence": 1
+    },
+    {
+      "exists": false,
+      "kind": "workspace",
+      "path": "D:\\isycode-portable-exe-pr52-_f3qiyzm\\ISyCode portÃ¡til prueba 52\\.isycode\\config.json",
+      "precedence": 2
+    },
+    {
+      "exists": true,
+      "kind": "process-overrides",
+      "path": null,
+      "precedence": 3
+    }
+  ],
+  "rule": "higher precedence overrides lower precedence; values are not printed",
+  "state": "D:\\isycode-portable-exe-pr52-_f3qiyzm\\isolated-state",
+  "workspace": "D:\\isycode-portable-exe-pr52-_f3qiyzm\\ISyCode portÃ¡til prueba 52"
+}
+
+
+$ <temporary D: directory>\ISyCode portátil prueba 52\isycode.exe models
+EXIT=0
+{
+  "active": {
+    "model": "",
+    "provider": "nebius"
+  },
+  "network_tested": false,
+  "recent": [],
+  "slots": {
+    "small": null
+  }
+}
+
+
+PORTABLE_UNINSTALL=PASS; copied executable deleted and absence verified
+EXE_SHA256=dc7f095afda2775673d53eead2c5dcfdad2578026e6227f6e9da679d15dc04e6
+RESULT=PASS: built current Windows one-file executable, copied into a Unicode/space path, launched --version/--help/doctor/dirs/models, then deleted it

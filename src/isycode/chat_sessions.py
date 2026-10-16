@@ -16,6 +16,7 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from isycode.platform_storage import storage
 
 
 class ChatSessionError(ValueError):
@@ -52,7 +53,7 @@ class _DirectoryLock:
     Threads in this process serialize on the RLock (and may re-enter it); other
     processes block on the OS lock of ``.write.lock``. The kernel drops the OS
     lock if the holder dies, so a crash cannot leave the directory locked.
-    Linux/macOS use flock; Windows uses msvcrt.locking (not demonstrated there).
+    The native storage adapter supplies the interprocess lock on each host.
     """
 
     _registry: dict[str, "_DirectoryLock"] = {}
@@ -71,24 +72,13 @@ class _DirectoryLock:
             return cls._registry.setdefault(str(path), cls(path))
 
     def _acquire_os(self) -> None:
-        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
         descriptor = os.open(self.path, flags, 0o600)
         try:
             info = os.fstat(descriptor)
             if not stat.S_ISREG(info.st_mode):
                 raise ChatSessionError("session write lock is not a regular file")
-            try:
-                import fcntl
-            except ImportError:  # Windows
-                import msvcrt
-                while True:
-                    try:
-                        msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
-                        break
-                    except OSError:  # LK_LOCK gives up after ~10 s; keep waiting
-                        continue
-            else:
-                fcntl.flock(descriptor, fcntl.LOCK_EX)
+            storage.lock(descriptor)
         except BaseException:
             os.close(descriptor)
             raise
@@ -99,14 +89,7 @@ class _DirectoryLock:
         if descriptor is None:
             return
         try:
-            try:
-                import fcntl
-            except ImportError:  # Windows
-                import msvcrt
-                os.lseek(descriptor, 0, os.SEEK_SET)
-                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            storage.unlock(descriptor)
         finally:
             os.close(descriptor)
 
@@ -148,7 +131,7 @@ class ChatSessionStore:
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root).expanduser()
-        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        storage.ensure_directory(self.root)
         if self.root.is_symlink() or not self.root.is_dir():
             raise ValueError("chat session store root must be a real directory, not a symlink")
         self.root = self.root.resolve(strict=True)
@@ -249,7 +232,7 @@ class ChatSessionStore:
         path = self._path(session_id)
         # Opening a FIFO must not block before fstat can reject it. O_NONBLOCK
         # does not change regular-file reads and also closes the lstat/open race.
-        flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
         try:
             descriptor = os.open(path, flags)
         except FileNotFoundError:
@@ -257,6 +240,8 @@ class ChatSessionStore:
         with os.fdopen(descriptor, "rb") as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise ChatSessionError("chat session is not a bounded regular file")
+            if not storage.private_child(path, fd=stream.fileno()):
+                raise ChatSessionError('chat session is not private')
             return stream.read()
 
     def revision(self, session_id: str) -> str | None:

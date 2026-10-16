@@ -1,0 +1,43 @@
+{
+  "recorded_at": "2026-10-15T22:56:11.196385-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "shell": "PowerShell 7",
+    "temporary_volume": "D:"
+  },
+  "command": "copy pyproject.toml, src/ and scripts/install-windows.ps1 into <D: temporary path with spaces>; run install-windows.ps1; verify launcher; run -Uninstall; verify venv remains and launcher/metadata are absent; repeat uninstall",
+  "checks": [
+    {
+      "label": "checkout installer install",
+      "exit_code": 0,
+      "command": "pwsh -NoProfile -File <temporary D: directory>\\ISyCode checkout installer\\scripts\\install-windows.ps1"
+    },
+    {
+      "label": "installed launcher smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\ISyCode checkout installer\\.venv\\Scripts\\isycode.exe --help"
+    },
+    {
+      "label": "checkout installer uninstall",
+      "exit_code": 0,
+      "command": "pwsh -NoProfile -File <temporary D: directory>\\ISyCode checkout installer\\scripts\\install-windows.ps1 -Uninstall"
+    },
+    {
+      "label": "uninstall postcondition",
+      "exit_code": 0,
+      "venv_python_present": true,
+      "launcher_present": false,
+      "distribution_metadata_present": false
+    },
+    {
+      "label": "idempotent checkout uninstall",
+      "exit_code": 0,
+      "command": "pwsh -NoProfile -File <temporary D: directory>\\ISyCode checkout installer\\scripts\\install-windows.ps1 -Uninstall"
+    }
+  ],
+  "exit_code": 0,
+  "result": "checkout install, uninstall, retained venv, launcher/metadata removal and idempotent uninstall passed",
+  "output": "docs/platform-parity/evidence/windows-checkout-installer-uninstall-pr52-20261016.txt",
+  "output_sha256": "3b7f303d1115c201e4c646aab4d09efe61483ede71c1014bf7ddae10914fb74b"
+}

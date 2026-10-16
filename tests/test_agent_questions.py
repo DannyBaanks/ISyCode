@@ -18,6 +18,15 @@ def test_question_screen_returns_a_choice_text_or_cancellation(tmp_path, monkeyp
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+
+            async def wait_for_screen(screen_id):
+                async def wait_until_visible():
+                    while app.screen.id != screen_id:
+                        await asyncio.sleep(0.01)
+
+                await asyncio.wait_for(wait_until_visible(), timeout=10)
+                await pilot.pause()
+
             choice = asyncio.create_task(app._dispatch_chat_tool({
                 "id": "q1",
                 "function": {"name": "ask_user", "arguments": json.dumps({
@@ -25,10 +34,9 @@ def test_question_screen_returns_a_choice_text_or_cancellation(tmp_path, monkeyp
                     "choices": ["Keep the sibling", "Stage only the probe"],
                 })},
             }))
-            await pilot.pause()
-            assert app.screen.id == "agent-question"
-            await pilot.click("#ask-choice-1")
-            call_id, payload = await choice
+            await wait_for_screen("agent-question")
+            await asyncio.wait_for(pilot.click("#ask-choice-1"), timeout=10)
+            call_id, payload = await asyncio.wait_for(choice, timeout=10)
             assert call_id == "q1"
             assert json.loads(payload) == {
                 "status": "answered", "choice": "Stage only the probe",
@@ -40,10 +48,14 @@ def test_question_screen_returns_a_choice_text_or_cancellation(tmp_path, monkeyp
                     "question": "Anything else?",
                 })},
             }))
-            await pilot.pause()
-            app.screen.query_one("#ask-text").value = "ship it"
-            await pilot.click("#ask-submit")
-            assert json.loads((await typed)[1]) == {"status": "answered", "text": "ship it"}
+            await wait_for_screen("agent-question")
+            answer = app.screen.query_one("#ask-text")
+            assert answer.has_focus
+            answer.value = "ship it"
+            await asyncio.wait_for(pilot.click("#ask-submit"), timeout=10)
+            assert json.loads((await asyncio.wait_for(typed, timeout=10))[1]) == {
+                "status": "answered", "text": "ship it",
+            }
 
             cancelled = asyncio.create_task(app._dispatch_chat_tool({
                 "id": "q3",
@@ -52,9 +64,9 @@ def test_question_screen_returns_a_choice_text_or_cancellation(tmp_path, monkeyp
                     "choices": ["Yes"],
                 })},
             }))
-            await pilot.pause()
-            await pilot.press("escape")
-            body = json.loads((await cancelled)[1])
+            await wait_for_screen("agent-question")
+            await asyncio.wait_for(pilot.press("escape"), timeout=10)
+            body = json.loads((await asyncio.wait_for(cancelled, timeout=10))[1])
             assert body == {"status": "cancelled"}
             assert "choice" not in body and "text" not in body
 

@@ -68,6 +68,7 @@ def test_context_picker_runs_only_fixed_native_chooser_argv(tmp_path, monkeypatc
         calls.append((argv, timeout))
         return selected
     monkeypatch.setattr("isycode.file_picker._run_picker", fake_run)
+    monkeypatch.setattr("isycode.file_picker.os.name", "posix")
     monkeypatch.setattr("isycode.file_picker.sys.platform", "linux")
     monkeypatch.setattr("isycode.file_picker.shutil.which", lambda name: "/usr/bin/zenity" if name == "zenity" else None)
     assert asyncio.run(file_picker.choose_context_file(tmp_path)) == selected

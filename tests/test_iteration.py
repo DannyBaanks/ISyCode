@@ -218,7 +218,7 @@ def test_coordinator_cancel_leaves_valid_aborted_artifact(setup):
 
 
 def test_delete_removes_one_ledger_only_after_the_session_gate(setup):
-    import fcntl
+    from isycode.platform_storage import storage
     import os
     from isycode.action_runtime import SessionDeleteOwner
     from isycode.approvals import ActionApprovalStore
@@ -233,9 +233,9 @@ def test_delete_removes_one_ledger_only_after_the_session_gate(setup):
     denied = SessionDeleteOwner(owner.root, authority, ledger, approvals).delete(sid, 'A test', None)
     assert denied.decision != 'ALLOW'
     assert (owner.directory / (sid + '.jsonl')).is_file()
-    fd = os.open(owner.directory / (sid + '.jsonl'), os.O_RDONLY)
+    fd = os.open(owner.directory / (sid + '.jsonl'), os.O_RDWR | getattr(os, 'O_BINARY', 0))
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        storage.lock(fd)
         with pytest.raises(IterationDenied, match='in use'):
             owner.unlink_ledger(sid)
     finally:
@@ -251,11 +251,20 @@ def test_delete_removes_one_ledger_only_after_the_session_gate(setup):
     assert allowed.decision == 'ALLOW', allowed.reason
     assert not (owner.directory / (sid + '.jsonl')).exists()
     assert owner.inspect(kept)['title'] == 'Keep me'
+
+
+def test_delete_refuses_a_symlink_without_touching_its_target(setup):
+    owner, _, kept = setup
     outside = owner.directory.parent / 'secret-outside'
     outside.write_text('keep')
     link = owner.directory / (kept + '.jsonl')
     link.unlink()
-    link.symlink_to(outside)
+    try:
+        link.symlink_to(outside)
+    except OSError as exc:
+        if getattr(exc, 'winerror', None) == 1314:
+            pytest.skip('Windows file-symlink privilege unavailable; junction tested separately')
+        raise
     with pytest.raises(OSError):
         owner.unlink_ledger(kept)
     assert outside.read_text() == 'keep'

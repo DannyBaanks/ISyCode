@@ -26,6 +26,7 @@ import shutil
 import tempfile
 import hashlib
 from pathlib import Path
+import pytest
 
 ISYCODE_ROOT = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(ISYCODE_ROOT))
@@ -95,7 +96,12 @@ def test_witness_b_symlink_escape_deny():
 
         # Create symlink inside granted pointing outside
         link = granted / "link"
-        link.symlink_to(secret)
+        try:
+            link.symlink_to(secret)
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                pytest.skip("NOT_DEMONSTRATED: Windows file symlink privilege is unavailable")
+            raise
 
         policy = SafetyPolicy(granted_roots=[str(granted)])
         manifest = build_manifest("delete", [str(link)], str(granted))

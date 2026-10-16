@@ -147,6 +147,6 @@ def test_sessions_screen_forks_through_the_owner_and_the_journal(tmp_path, monke
     assert child and child != sid
     assert owner.resume(child)[1].messages[0]["content"] == "Original question"
     assert ActionAuditJournal(root).verify().receipts > before  # fork + reads are journaled
-    source = Path(action_coverage.__file__).with_name("tui_screens_sessions.py").read_text()
+    source = Path(action_coverage.__file__).with_name("tui_screens_sessions.py").read_text(encoding="utf-8")
     screen_source = source.split("class ChatSessionsScreen")[1].split("\nclass ")[0]
     assert "session_store" not in screen_source and "ChatSessionStore" not in screen_source
