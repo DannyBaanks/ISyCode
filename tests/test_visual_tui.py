@@ -326,9 +326,16 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
             await pilot.pause()
             for width, height in [(200, 60), (120, 40), (80, 24), (200, 60)]:
                 await pilot.resize_terminal(width, height)
-                await pilot.pause()
                 board = app.query_one('#idle-board')
-                lines = [line for line in plain_text(board).splitlines() if '▀' in line]
+                # Resize dispatch and the app's post-layout repaint are separate
+                # refreshes on some Textual/platform combinations. Assert only
+                # after the current layout has a matching panorama.
+                lines = []
+                for _ in range(100):
+                    await pilot.pause(0.05)
+                    lines = [line for line in plain_text(board).splitlines() if '▀' in line]
+                    if lines and all(line.count('▀') == board.content_size.width for line in lines):
+                        break
                 assert lines
                 assert all(line.count('▀') == board.content_size.width for line in lines)
                 assert len(lines) <= 36

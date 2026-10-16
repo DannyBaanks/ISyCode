@@ -795,3 +795,25 @@ A fresh hosted run is required to demonstrate this elevated-runner owner path.
 The Linux Textual 8 job in the same prior CI run also failed and is being
 inspected separately; neither result is represented as a passing latest run.
 `NATIVE_ACCEPTED=False` remains unchanged.
+
+## Textual 8 mount and Windows resize regressions — 2026-10-16
+
+The prior full run `38846076510` also found two timing assumptions in UI tests:
+the model picker test clicked its search field before Textual 8 had mounted the
+screen children (`NoMatches`), and the Windows resize test inspected the
+panorama before the post-layout repaint had caught up with the new content
+width. The tests now wait, with a bounded timeout, for the search field to be
+mounted and for the rendered panorama to match the measured width. They retain
+the original click, full-width, row-budget, chat and composer assertions.
+
+On Windows, the complete model-family and visual-TUI modules pass **21 tests in
+57.82s**; the two formerly failing cases also pass in a focused run (**2 tests
+in 17.84s**). Gate validation passes **14 tests, 2 expected skips**. Raw module
+output is `evidence/windows-ui-race-regressions-pr52-20261016.txt`.
+
+The native-contract run `38847818254` passed on both Ubuntu and Windows,
+including the hosted LPAC step. Full CI `38847818313` for the owner correction
+is still running, and predates these UI-test synchronization changes. The PR
+needs a fresh full run at its updated head; no full-suite pass is claimed here.
+The five-user matrix remains waived and `NATIVE_ACCEPTED=False` remains in
+force.

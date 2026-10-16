@@ -1,0 +1,20 @@
+{
+  "recorded_at": "2026-10-15T22:01:31.239-06:00",
+  "source_parent_commit": "c48b2c1b92f5b51e1bc3cb560084fa332dc6683a",
+  "environment": {
+    "system": "Windows 11",
+    "python": "Python 3.12.10"
+  },
+  "command": ".venv/Scripts/python.exe -m pytest -q tests/test_model_families.py tests/test_visual_tui.py",
+  "exit_code": 0,
+  "result": "21 passed in 57.82s",
+  "source_working_tree_sha256": {
+    "tests/test_model_families.py": "0d11abe5afdb1382de298ceac35eb116c941214d14efccf0f03515f9ace2f609",
+    "tests/test_visual_tui.py": "cfe4c2ebaece59ce02c9e083b15d1b9e97b2a28333b1bc309edbd037510daadf"
+  },
+  "output": {
+    "path": "docs/platform-parity/evidence/windows-ui-race-regressions-pr52-20261016.txt",
+    "sha256": "1e5904b200599c2616693d65400f4488fbdfc37ca916a94f71676da75104010c",
+    "bytes": 102
+  }
+}

@@ -184,7 +184,13 @@ async def test_models_screen_click_after_immediate_open_does_not_crash(tmp_path,
         await pilot.pause()
         entries = app._branch_entries("models")
         app._render_menu("model_account", "Models · account catalog", entries)
-        await pilot.pause()
+        # Textual 8 may push the ModalScreen before its composed children are
+        # mounted. Wait for the actual input before sending the first click.
+        for _ in range(100):
+            if app.screen.query("#models-search"):
+                break
+            await pilot.pause(0.05)
+        assert app.screen.query("#models-search"), "models picker did not finish mounting"
         await pilot.click("#models-search")
         await pilot.pause()
         assert isinstance(app.screen, ModelsScreen)
