@@ -37,6 +37,19 @@ def test_presence_button_never_reaches_bridge_client():
     app = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == "TUIApp")
     methods = {node.name: ast.get_source_segment(source, node) for node in app.body
                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    # The presence flow may live on any TUI mixin; the security contract
+    # (no BridgeClient, no subprocess, no bridge verbs) follows the method.
+    if "_show_bridge_presence" not in methods:
+        package = Path(__file__).resolve().parents[1] / "src" / "isycode"
+        for path in sorted(package.glob("tui_app_*.py")):
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text)
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef) and node.name.endswith("Mixin"):
+                    for item in node.body:
+                        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                                and item.name == "_show_bridge_presence":
+                            methods["_show_bridge_presence"] = ast.get_source_segment(text, item)
     body = methods["_show_bridge_presence"]
     assert "_show_bridge_presence" in (methods["on_button_pressed"] or "")
     assert "BridgeClient" not in body

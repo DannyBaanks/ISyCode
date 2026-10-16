@@ -47,8 +47,8 @@ def test_connection_check_binds_transport_settings(tmp_path, monkeypatch):
         async def execute(self, provider, material, send):
             captured.append((provider, material))
             return None, SimpleNamespace(decision='DENY', reason='test denies network')
-    monkeypatch.setattr('isycode.tui.ProviderNetworkOwner', DeniedOwner)
-    monkeypatch.setattr('isycode.tui.load_provider_key', lambda name: None)
+    monkeypatch.setattr('isycode.tui_app_providers.ProviderNetworkOwner', DeniedOwner)
+    monkeypatch.setattr('isycode.tui_app_providers.load_provider_key', lambda name: None)
     app = SimpleNamespace(_workspace_root=tmp_path, _append=lambda *args: None)
     asyncio.run(TUIApp._check_provider_connection(app))
     provider, material = captured[0]

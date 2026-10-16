@@ -11,7 +11,7 @@ import shlex
 import urllib.request
 from enum import Enum
 from typing import TYPE_CHECKING
-from textual.widgets import Button, Static
+from textual.widgets import Button, OptionList, Static
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, TEXT, YELLOW
 from isycode.tui_widgets import ChatArea, ExpandableBox, SelectableText
 from isycode.config import ConfigurationError
@@ -28,7 +28,15 @@ from rich.syntax import Syntax
 from rich.text import Text
 from isycode.user_defaults import UserDefaultsStore
 from isycode.prompt_expansion import WORKSPACE_COMMANDS_DIR, load_user_commands
-from isycode.workspace_authority import WorkspaceAuthority
+from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
+from textual.containers import Vertical
+from textual.css.query import NoMatches
+from textual.dom import NoScreen
+from textual.widgets import TextArea
+from textual.widgets.option_list import Option
+from isycode.catalog import SEMANTIC_BRANCHES
+from isycode.tui_presentation import MenuHeading, SettingRow
+from isycode.tui_theme import _authority_capability_label
 from isycode.localization import tr
 from urllib.parse import urlparse
 
@@ -665,6 +673,34 @@ class MenuMixin:
                 raise ValueError(f"menu kind must be a str, got {kind!r}")
         getattr(self, MENU_DISPATCH[action])(entry)
 
+    def _menu_folder_remove(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        try:
+            revoked = self._folder_store().remove(value)
+            self._append(f"  Folder removed · {value} · "
+                         + (f"revoked {len(revoked)} permission(s) ISyCode had given it"
+                            if revoked else "its own permissions were left as they were"), GREEN)
+            if self._file_browser_alias == value:
+                self._file_browser_alias = 'main'
+                self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
+        except (OSError, ValueError, WorkspaceAuthorityError) as exc:
+            self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
+        self._open_workspace_folders_menu()
+        return
+
+    def _model_picker_result(self, entry: dict | None) -> None:
+        if entry is not None:
+            self._select_menu_entry(entry)
+        elif getattr(self, "_models_return_settings", False):
+            self._models_return_settings = False
+            self._models_scope = None
+            self._open_settings_menu()
+        elif getattr(self, "_models_scope", None):
+            # Esc from a provider's models walks back to the provider list; the
+            # active provider/model was never changed on the way here.
+            self._models_scope = None
+            self._open_provider_menu()
+
     def _register_builtin_plugins(self) -> None:
         """Register ISyCode commands and the optional planning runtime."""
         self._plugins.register(Plugin(
@@ -1076,3 +1112,160 @@ class MenuMixin:
         if entry.get("value"):
             self._close_menu()
         return
+
+    def _open_palette(self) -> None:
+        entries = [self._entry(
+            tr("{name}  ·  {description}", name=tr(name), description=tr(description)),
+            "branch", name, translate=False)
+                   for name, description in SEMANTIC_BRANCHES]
+        self._menu_stack = []
+        self._render_menu("palette_root", "Navigate", entries)
+
+    def _open_integrations_menu(self) -> None:
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("integrations", "Settings · Integrations", [
+            self._entry("Tool servers · MCP & Gateway", "branch", "MCP"),
+            self._entry("Language servers · LSP", "branch", "LSP"),
+            self._entry("Mobile host status", "mobile_host_status", ""),
+            self._entry("Bridge coordination · blocked in Secure", "bridge_settings", ""),
+            self._entry("Private access · Tailscale", "private_access", ""),
+            self._entry("Refresh integration catalogs", "refresh", ""),
+            self._entry(tr("Back to Settings"), "settings_back", ""),
+        ])
+
+
+    def _render_options(self, query: str) -> None:
+        if self._menu_mode == "settings":
+            self.query_one("#action-title", Static).update(MenuHeading(
+                self._menu_title, tr("Search results") if query else tr(self._settings_category)))
+        if query and self._menu_mode == "providers":
+            filtered: list[dict[str, str]] = []
+            pending = None
+            used = False
+            for entry in self._menu_entries:
+                if entry.get("kind") == "section":
+                    pending = entry
+                    used = False
+                    continue
+                if (query in entry["label"].casefold()
+                        or query in entry.get("detail", "").casefold()):
+                    if pending is not None and not used:
+                        filtered.append(pending)
+                        used = True
+                    filtered.append(entry)
+            self._menu_filtered = filtered
+        else:
+            self._menu_filtered = [entry for entry in self._menu_entries
+                                   if query in entry["label"].casefold()
+                                   or query in entry.get("detail", "").casefold()
+                                   or query in str(entry.get("display_value", "")).casefold()
+                                   or query in str(entry.get("search_value", "")).casefold()]
+        if self._menu_mode == "settings" and not query:
+            self._menu_filtered = [entry for entry in self._menu_filtered
+                                   if entry.get("category_id", "Preferences") == self._settings_category]
+        options = self.query_one("#action-list", OptionList)
+        options.clear_options()
+        for entry in self._menu_filtered:
+            if entry.get("category") or "display_value" in entry and self._menu_mode != "providers":
+                label = SettingRow(entry["label"].split(" · ", 1)[0],
+                                   str(entry.get("display_value", "")), entry.get("detail", ""),
+                                   GREEN if entry.get("enabled") else MUTED if "enabled" in entry else TEXT)
+            elif "enabled" in entry:
+                label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
+            elif entry.get("kind") == "section":
+                label = Text(entry["label"], style=f"bold {TEXT}")
+            elif entry.get("kind") == "info":
+                label = Text(entry["label"], style=MUTED)
+            elif entry.get("kind") == "provider_unwired":
+                label = Text(entry["label"], style=MUTED)
+            elif str(entry.get("label", "")).startswith("✓"):
+                label = Text(entry["label"], style=TEXT)
+            else:
+                label = Text(entry["label"])
+            options.add_option(label)
+        highlight = 0 if self._menu_filtered else None
+        if self._menu_mode == "providers" and self._menu_filtered:
+            highlight = next((index for index, entry in enumerate(self._menu_filtered)
+                              if entry.get("kind") != "section"), 0)
+        options.highlighted = highlight
+        self._show_menu_detail(highlight or 0)
+        self._size_action_menu()
+
+    def _size_action_menu(self) -> None:
+        """Bound short menus by their contents; long lists scroll inside the frame."""
+        rows = max(4, len(getattr(self, "_menu_filtered", [])))
+        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority") else 13
+        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
+
+    def _show_menu_detail(self, index: int | None) -> None:
+        """Describe the highlighted entry so choices are clear before pressing Enter."""
+        entries = self._menu_filtered
+        if index is None or not 0 <= index < len(entries):
+            detail = ""
+        else:
+            entry = entries[index]
+            detail = entry.get("detail") or (
+                "Status only; this item does not run an action."
+                if entry.get("kind") == "info"
+                else "No extra summary is available. Press Enter or double-click to open."
+            )
+        try:
+            panel = self.screen_stack[0].query_one("#action-detail", Static)
+        except (NoMatches, NoScreen, IndexError):
+            # A queued highlight may arrive after the menu unmounts at shutdown.
+            return
+        panel.display = bool(detail)
+        if self._menu_mode == "settings" and index is not None and 0 <= index < len(entries):
+            detail = entries[index]["label"] + " · " + str(entries[index].get("display_value", "")) + "\n" + tr(str(detail))
+        elif index is not None and 0 <= index < len(entries) and "enabled" in entries[index]:
+            detail = entries[index]["label"] + " · " + str(entries[index]["display_value"]) + "\n" + tr(str(detail))
+        elif self._menu_mode == "providers" and index is not None and 0 <= index < len(entries):
+            detail = entries[index].get("display_name", entries[index]["label"]) + "\n\n" + tr(str(detail))
+        panel.update(Text(tr(str(detail))))
+
+    def _update_slash_suggestions(self, *, force: bool = False, prompt: TextArea | None = None) -> None:
+        # The composer lives on the base screen; a modal (or shutdown) may be on top,
+        # where newer Textual's app-level query no longer finds it.
+        try:
+            prompt = prompt or self.query_one(PromptArea)
+            panel = prompt.screen.query_one('#slash-suggestions', OptionList)
+        except (NoMatches, NoScreen):
+            return
+        text = prompt.text
+        eligible = text.startswith('/') and not any(c.isspace() for c in text)
+        query = text[1:].casefold() if eligible else ''
+        self._slash_matches = [entry for entry in self._command_entries
+                               if entry['value'].casefold().startswith(query)] if eligible or force else []
+        panel.clear_options()
+        panel.add_options([Option(Text(entry['label'])) for entry in self._slash_matches])
+        panel.display = bool(self._slash_matches)
+        if self._slash_matches: panel.highlighted = 0
+
+    def _move_slash(self, direction: int) -> bool:
+        panel = self.query_one('#slash-suggestions', OptionList)
+        if not panel.display: return False
+        if direction > 0: panel.action_cursor_down()
+        else: panel.action_cursor_up()
+        return True
+
+    def _complete_slash(self, index: int | None = None, *, submit_exact: bool = False) -> bool:
+        panel = self.query_one('#slash-suggestions', OptionList)
+        if not panel.display or not self._slash_matches:
+            return False
+        prompt = self.query_one(PromptArea)
+        highlighted = 0 if panel.highlighted is None else panel.highlighted
+        # Enter on a command that is already fully typed runs it. A prefix,
+        # or a different highlighted row, only fills the name so arguments fit.
+        if submit_exact and index is None and 0 <= highlighted < len(self._slash_matches):
+            typed = prompt.text[1:] if prompt.text.startswith('/') else ''
+            if typed.casefold() == self._slash_matches[highlighted]['value'].casefold():
+                panel.display = False
+                return False
+        index = highlighted if index is None else index
+        if index < 0 or index >= len(self._slash_matches):
+            return False
+        name = self._slash_matches[index]['value']
+        prompt.load_text('/' + name + ' ')
+        panel.display = False
+        prompt.focus()
+        return True

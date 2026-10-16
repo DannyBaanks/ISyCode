@@ -2138,6 +2138,13 @@
       "owner": "tailscale_serve"
     },
     {
+      "file": "isycode/tui_app_authority.py",
+      "line": 835,
+      "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
+      "action": null,
+      "owner": "remote_catalog"
+    },
+    {
       "file": "isycode/tui_app_remote.py",
       "line": 632,
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
@@ -2159,13 +2166,6 @@
       "owner": "lsp_symbols"
     },
     {
-      "file": "isycode/tui_app_remote.py",
-      "line": 856,
-      "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
-      "action": null,
-      "owner": "remote_catalog"
-    },
-    {
       "file": "isycode/tui_app_sessions.py",
       "line": 934,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
@@ -2181,14 +2181,14 @@
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 87,
+      "line": 106,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 171,
+      "line": 190,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -2280,15 +2280,15 @@
       "owner": "tailscale_serve"
     },
     {
-      "file": "isycode/tui_app_remote.py",
-      "line": 856,
-      "callable": "isycode.tui_app_remote.RemoteMixin._authorize_remote_read",
+      "file": "isycode/tui_app_authority.py",
+      "line": 835,
+      "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "action": null,
       "owner": "remote_catalog"
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 171,
+      "line": 190,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"

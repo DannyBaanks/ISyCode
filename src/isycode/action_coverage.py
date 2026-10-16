@@ -60,7 +60,7 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("workspace.files.list", "workspace.files.read",
                     "workspace.files.search", "workspace.context.inject"),
     },
-    "isycode.tui_app_remote.RemoteMixin._authorize_remote_read": {
+    "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read": {
         "owner": "remote_catalog",
         "actions": ("catalog.external.read", "gateway.files.read", "mcp.discover"),
     },

@@ -26,6 +26,25 @@ from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.tui_composer import IdeaBox, ShellBox
 from isycode.tui_screens_approval import ContextAccessScreen, WriteApprovalScreen, CommandApprovalScreen, CommitApprovalScreen
 from isycode.tui_screens_sessions import ShellProcessesScreen
+from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
+from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
+from isycode.config import ConfigurationError, discover_workspace_identity
+from isycode.file_picker import SiblingFolderPickerOwner
+from isycode.folder_screens import AddWorkspaceFolderScreen, AutomaticEditsWarningScreen
+from isycode.providers import Provider, ProviderError, load_provider_key, resolved_chat_model, selected_provider_name
+from isycode.session_owner import ChatSessionOwner
+from isycode.tui_composer import PromptArea
+from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_grants import GlobalRecurringDefaultScreen, QuickStartScreen, WorkspaceModeScreen, WorkspaceSetupScreen
+from isycode.tui_widgets import Banner
+from isycode.user_defaults import UserDefaultsStore
+from isycode.workspace_config_owner import WorkspaceConfigOwner
+from isycode.workspace_folders import WorkspaceFolders
+from isycode.workspace_setup import WorkspaceSetupStore, new_workspace_choice, shared_root_warning
+from textual.css.query import NoMatches
+from textual.dom import NoScreen
+from textual.widgets import Input, Tree
+from typing import Any
 
 
 class WorkspaceMixin:
@@ -631,21 +650,6 @@ class WorkspaceMixin:
         self.run_worker(self._browse_workspace_folder(value), group='files')
         return
 
-    def _menu_folder_remove(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
-        try:
-            revoked = self._folder_store().remove(value)
-            self._append(f"  Folder removed · {value} · "
-                         + (f"revoked {len(revoked)} permission(s) ISyCode had given it"
-                            if revoked else "its own permissions were left as they were"), GREEN)
-            if self._file_browser_alias == value:
-                self._file_browser_alias = 'main'
-                self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
-        except (OSError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
-        self._open_workspace_folders_menu()
-        return
-
     def _menu_folder_auto_on(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
         self._close_menu()
@@ -702,3 +706,192 @@ class WorkspaceMixin:
     def _menu_context_menu(self, entry: dict[str, str | bool]) -> None:
         self._open_context_menu()
         return
+
+    async def _change_workspace_preference(self, kind: str) -> None:
+        if kind == "workspace_pref_role":
+            key = "default_role"
+            value = {"kind": self._active_role["kind"], "name": self._active_role["name"]}
+        else:
+            key, value = "default_role", None
+        try:
+            owner = WorkspaceConfigOwner(self._workspace_root,
+                                         WorkspaceAuthority(self._workspace_root),
+                                         self._action_approvals)
+            preview = await asyncio.to_thread(owner.preview_update, {key: value})
+        except (OSError, ValueError) as exc:
+            self._append(f"  Workspace preference not prepared · {str(exc)[:180]}", YELLOW)
+            self._open_workspace_config_menu()
+            return
+        if not await self._await_screen(WriteApprovalScreen(preview)):
+            self._append(f"  Preference unchanged · {preview.path}", MUTED)
+            self._open_workspace_config_menu()
+            return
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        if outcome.decision == "ALLOW":
+            self._workspace_config_values = None
+            self._workspace_config_warning = ""
+            self._active_role = self._load_global_default_role()
+            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+        else:
+            self._append(f"  Preference not saved · {outcome.reason[:160]}", YELLOW)
+        self._open_workspace_config_menu()
+
+    async def _open_workspace_migration_menu(self) -> None:
+        if self._workspace_identity.workspace_root_source != "isyroot":
+            self._render_menu("workspace_migration", "Workspace command migration", [
+                self._entry("Migration is available only in a workspace with its own .isyroot.", "info"),
+                self._entry(tr("Back to Settings"), "settings_back", ""),
+            ])
+            return
+        try:
+            owner = WorkspaceConfigOwner(self._workspace_root,
+                                         WorkspaceAuthority(self._workspace_root),
+                                         self._action_approvals)
+            names, issue = await asyncio.to_thread(owner.legacy_commands)
+        except (OSError, ValueError) as exc:
+            names, issue = [], str(exc)
+        entries = [self._entry(
+            tr("Migration unavailable · {error}", error=issue[:140]),
+            "info", translate=False)] if issue else []
+        entries.extend(self._entry(
+            tr("Copy /{name} into .isycode/commands/", name=name),
+            "workspace_config_migrate_item", name,
+            "The exact file is reviewed; the legacy original stays in place.",
+            translate=False)
+                       for name in names)
+        if not names and not issue:
+            entries.append(self._entry("No valid legacy workspace commands found.", "info"))
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
+        if self._menu_mode != "workspace_migration":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("workspace_migration", "Workspace command migration", entries)
+
+    async def _copy_workspace_command(self, name: str) -> None:
+        try:
+            owner = WorkspaceConfigOwner(self._workspace_root,
+                                         WorkspaceAuthority(self._workspace_root),
+                                         self._action_approvals)
+            preview = await asyncio.to_thread(owner.preview_migrate_legacy, name)
+        except (OSError, ValueError) as exc:
+            self._append(f"  Command not copied · {str(exc)[:180]}", YELLOW)
+            await self._open_workspace_migration_menu()
+            return
+        if not await self._await_screen(WriteApprovalScreen(preview)):
+            self._append(f"  Command unchanged · /{name}", MUTED)
+            await self._open_workspace_migration_menu()
+            return
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        if outcome.decision == "ALLOW":
+            self._append(f"  Copied /{name} · legacy original kept · receipt "
+                         f"{outcome.receipt.receipt_id}", GREEN)
+        else:
+            self._append(f"  Command not copied · {outcome.reason[:160]}", YELLOW)
+        await self._open_workspace_migration_menu()
+
+
+    async def _add_workspace_folder(self) -> None:
+        try:
+            selected_path = await SiblingFolderPickerOwner(self._workspace_root).choose()
+        except (FilePickerUnavailable, OSError, ValueError) as exc:
+            self._append(f"  Folder picker unavailable · {str(exc)[:160]}", YELLOW)
+            self._open_workspace_folders_menu()
+            return
+        if selected_path is None:
+            self._open_workspace_folders_menu()
+            return
+        selected = await self._await_screen(
+            AddWorkspaceFolderScreen(self._workspace_root, selected_path))
+        if selected is not None:
+            try:
+                self._folder_store().add(selected['alias'], selected['path'], editable=selected['editable'])
+                self._append(f"  Folder added · {selected['alias']} · {selected['path']}", GREEN)
+            except (OSError, ValueError, WorkspaceAuthorityError) as exc:
+                self._append(f"  Folder not added · {str(exc)[:180]}", YELLOW)
+        self._open_workspace_folders_menu()
+
+    async def _set_folder_auto_edit(self, alias: str, enabled: bool) -> bool:
+        try:
+            store = self._folder_store()
+            root = store.resolve(alias, write=enabled)
+            binding = store.binding(alias)
+            if enabled and not store.auto_edit_available(alias):
+                raise ValueError('Security requires review of each edit')
+            if enabled and not await self._await_screen(AutomaticEditsWarningScreen(root)):
+                return False
+            if store.resolve(alias, write=enabled) != root or store.binding(alias) != binding:
+                raise ValueError('Folder changed during confirmation')
+            store.set_auto_edit(alias, enabled)
+        except (OSError, ValueError) as exc:
+            self._append(f"  Automatic edit setting unchanged · {str(exc)[:160]}", YELLOW)
+            return False
+        self._append(f"  Automatic file edits · {alias} · {'ON — dangerous' if enabled else 'OFF — each edit asks'}", YELLOW if enabled else GREEN)
+        return True
+
+
+    def _workspace_preference_values(self) -> dict[str, Any]:
+        if self._workspace_config_values is not None:
+            return self._workspace_config_values
+        self._workspace_config_values = {}
+        self._workspace_config_warning = ""
+        if self._workspace_identity.workspace_root_source != "isyroot":
+            return self._workspace_config_values
+        try:
+            owner = WorkspaceConfigOwner(self._workspace_root,
+                                         WorkspaceAuthority(self._workspace_root),
+                                         self._action_approvals)
+            parsed, issue = owner.read_config()
+            if parsed is not None and parsed.valid:
+                self._workspace_config_values = dict(parsed.values)
+                self._workspace_config_warning = "; ".join(parsed.warnings)
+            elif parsed is not None and parsed.error:
+                self._workspace_config_warning = f"ignored: {parsed.error}"
+            elif issue:
+                self._workspace_config_warning = f"unavailable: {issue}"
+        except (OSError, ValueError):
+            self._workspace_config_warning = "unavailable: settings could not be read safely"
+        return self._workspace_config_values
+
+
+    def _load_global_default_role(self) -> dict[str, str] | None:
+        try:
+            defaults = UserDefaultsStore().load()
+            defaults.update(self._workspace_preference_values())
+            role = defaults.get("default_role")
+        except (OSError, ValueError, json.JSONDecodeError):
+            return None
+        if not isinstance(role, dict):
+            return None
+        kind, name = role.get("kind"), role.get("name")
+        catalogs = {"agents": ISYCODE_AGENTS, "subagents": ISYCODE_SUBAGENTS,
+                    "motors": ISYCO_MOTORS}
+        selected = next((item for item in catalogs.get(kind, ())
+                         if item.get("name") == name), None)
+        if selected is None:
+            return None
+        return {"name": name, "kind": kind,
+                "description": str(selected.get("description", "")),
+                "engine": str(selected.get("engine", "ISyCode selected provider and model"))}
+
+
+    def _shared_root_warning(self) -> str | None:
+        return shared_root_warning(self._workspace_root,
+                                   self._workspace_identity.workspace_root_source,
+                                   self._launch_dir)
+
+
+    def _context_window(self) -> tuple[int | None, str]:
+        """Window of the selected model: the account catalog first, then the
+        vendored models.dev snapshot (exact id match), else unknown."""
+        from isycode.model_card import catalog_entry
+        from isycode.providers import model_context_limit, resolved_chat_model, selected_provider_name
+        provider, model = selected_provider_name(), resolved_chat_model()
+        limit, source = model_context_limit(provider, model)
+        if limit:
+            return limit, source
+        entry = catalog_entry(provider, model)
+        context = entry.get("context") if entry else None
+        if type(context) is int and 0 < context <= 10**9:
+            return context, "snapshot"
+        return None, "unknown"

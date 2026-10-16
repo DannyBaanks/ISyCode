@@ -41,6 +41,17 @@ from isycode.tui_widgets import (
     Collapsible,
     SidePanel,
 )
+from isycode.bridge_presence import BridgePresenceOwner
+from isycode.search import find_text_matches
+from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
+from isycode.tui_composer import PromptArea
+from isycode.tui_screens_sessions import BridgePresenceScreen, ConsoleSearchScreen
+from isycode.tui_theme import ACCENT, GREEN, RED, _fit_cells, static_content
+from isycode.tui_widgets import ChatArea, CommandOutputCard
+from isycode.workspace_authority import OneShotActionAuthority
+from rich.cells import cell_len
+from rich.console import Console
+from textual.widgets import Collapsible as TextualCollapsible
 
 
 class RailMixin:
@@ -640,3 +651,268 @@ class RailMixin:
         self.run_worker(self._refresh_openisy(), exclusive=False)
         self.run_worker(self._check_gateway_mcp_async(), exclusive=False, group="gateway-mcp")
         return
+
+    def _idle_status_rows(self) -> int:
+        """Model line, the blank under it, the status columns, and board padding."""
+        columns = [
+            self._idle_column("LSPs", self._idle_lsp_rows()),
+            self._idle_column("MCPs", self._idle_mcp_rows(),
+                              empty_label=self._idle_mcp_empty_label()),
+            self._idle_column("Skills", self._idle_skill_rows()),
+        ]
+        return 2 + max(len(column) for column in columns) + 1
+
+    def _landscape_row_budget(self) -> int:
+        """Panorama rows that still leave the model line and status columns visible."""
+        chat_h = self.query_one(ChatArea).content_size.height
+        if chat_h <= 0:
+            return 16
+        return max(1, min(MAX_SCENE_ROWS, chat_h - self._idle_status_rows()))
+
+    def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
+        """Cell-accurate landscape, model, and integration columns."""
+        width = measured_width or self._idle_content_width()
+        body = Text()
+        body.append(render_landscape(width, max_rows))
+        body.append("\n")
+        checking = not self._model_line
+        model = self._model_line or "Checking the configured model"
+        body.append("◇ ", style=MUTED if checking else ACCENT)
+        body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
+        columns = [
+            self._idle_column("LSPs", self._idle_lsp_rows()),
+            self._idle_column("MCPs", self._idle_mcp_rows(),
+                              empty_label=self._idle_mcp_empty_label()),
+            self._idle_column("Skills", self._idle_skill_rows()),
+        ]
+        gap = 2
+        budgets = [max(cell_len(line.plain) for line in column) for column in columns]
+        room = width - gap * (len(columns) - 1)
+        if sum(budgets) > room:
+            share = max(8, room // len(columns))
+            budgets = [min(budget, share) for budget in budgets]
+            columns = [[self._clip_idle_line(line, budget) for line in column]
+                       for column, budget in zip(columns, budgets)]
+        height = max(len(column) for column in columns)
+        for row in range(height):
+            for index, column in enumerate(columns):
+                line = column[row] if row < len(column) else Text("")
+                body.append(line)
+                pad = budgets[index] - cell_len(line.plain)
+                if index < len(columns) - 1:
+                    body.append(" " * (pad + gap))
+            if row < height - 1:
+                body.append("\n")
+        return body
+
+    @staticmethod
+    def _clip_idle_line(line: Text, width: int) -> Text:
+        if cell_len(line.plain) <= width:
+            return line
+        clipped = Text()
+        used = 0
+        for start, end, style in line._spans:
+            piece = line.plain[start:end]
+            room = width - used
+            if room <= 0:
+                break
+            if cell_len(piece) > room:
+                piece = _fit_cells(piece, room)
+            clipped.append(piece, style=style)
+            used += cell_len(piece)
+        return clipped
+
+    @staticmethod
+    def _idle_column(title: str, rows: list[tuple[str, str]], *,
+                     empty_label: str = "None configured") -> list[Text]:
+        from isycode.tui_theme import ascii_only
+        lines = [Text(tr(title), style=f"bold {TEXT}")]
+        if not rows:
+            lines.append(Text(("- " if ascii_only() else "− ") + tr(empty_label), style=MUTED))
+            return lines
+        shown = rows[:14]
+        for color, name in shown:
+            line = Text()
+            glyph = ("[x]" if ascii_only() else "✓") if color == GREEN else (("[!]" if ascii_only() else "!") if color in {YELLOW, RED} else ("[]" if ascii_only() else "▣"))
+            line.append(glyph + " ", style=color)
+            line.append(name, style=TEXT)
+            lines.append(line)
+        extra = len(rows) - len(shown)
+        if extra:
+            lines.append(Text(f"+{extra} more", style=MUTED))
+        return lines
+
+    def _idle_lsp_rows(self) -> list[tuple[str, str]]:
+        rows = []
+        for server in self._lsp_inventory:
+            state = server.get("state")
+            ready = state == "sandbox_ready"
+            name = str(server.get("label") or server.get("id") or "language server")
+            if ready:
+                color = MUTED
+            elif state in {"installed_unavailable", "installed_unsupported"}:
+                color = RED
+            else:
+                color = YELLOW
+            rows.append((color, name))
+        return rows
+
+    def _idle_mcp_rows(self) -> list[tuple[str, str]]:
+        snapshot = self._mcp_snapshot
+        if snapshot.state != "ready":
+            return []
+        rows = []
+        for item in snapshot.items:
+            status = str(item.get("status", "")).lower()
+            healthy = status in {"connected", "ready", "running", "ok", "active"} and not item.get("has_error")
+            starting = "start" in status or status in {"checking", "loading"}
+            color = GREEN if healthy else YELLOW if starting or status else MUTED
+            rows.append((color, str(item.get("name") or "mcp")))
+        return rows
+
+    def _idle_mcp_empty_label(self) -> str:
+        """Honest empty-state for the MCP column: loading is not 'none configured' (F-06)."""
+        state = self._mcp_snapshot.state
+        if state == "ready":
+            return "None configured"
+        if state in {"error", "denied", "unavailable"}:
+            return "Not checked"
+        return "Loading…"
+
+    def _idle_skill_rows(self) -> list[tuple[str, str]]:
+        names: list[str] = []
+        try:
+            from isycode.skill_catalog import skills
+            names.extend(str(name) for name in skills())
+        except (OSError, ValueError):
+            names = []
+        if self._skill_snapshot.state == "ready":
+            for item in self._skill_snapshot.items:
+                name = str(item.get("name") or "")
+                if name and name not in names:
+                    names.append(name)
+        return [(MUTED, name) for name in names]
+
+    def action_find_console(self) -> None:
+        """Open console-wide search regardless of which main view has focus."""
+        if isinstance(self.screen, ConsoleSearchScreen):
+            self.screen.query_one("#console-search-input", Input).focus()
+            return
+        self.push_screen(ConsoleSearchScreen())
+
+    @staticmethod
+    def _render_searchable_text(widget: Static) -> str:
+        console = Console(width=max(24, widget.size.width), color_system=None)
+        with console.capture() as capture:
+            console.print(static_content(widget))
+        return capture.get()
+
+    def _search_console(self, query: str, screen: ConsoleSearchScreen) -> None:
+        for widget, _ in self._console_search_hits:
+            if widget.is_mounted:
+                widget.remove_class("console-search-match", "console-search-current")
+        self._console_search_hits = []
+        self._console_search_index = -1
+        if query.strip():
+            chat = self.query_one(ChatArea)
+            for card in chat.query(CommandOutputCard):
+                if query.strip().casefold() in card.output.casefold() and not card.expanded:
+                    card.action_toggle_output()
+            for widget in chat.query(Static):
+                if not widget.display:
+                    continue
+                text = self._render_searchable_text(widget)
+                self._console_search_hits.extend(
+                    (widget, match) for match in find_text_matches(text, query.strip()))
+        if self._console_search_hits:
+            self._console_search_index = 0
+            self._show_console_search_match()
+        screen.update_results(
+            self._console_search_index,
+            len(self._console_search_hits),
+            self._console_search_hits[self._console_search_index][1].snippet
+            if self._console_search_hits else "",
+        )
+
+    def _move_console_search(self, direction: int) -> None:
+        if not self._console_search_hits:
+            return
+        self._console_search_index = (
+            self._console_search_index + direction) % len(self._console_search_hits)
+        self._show_console_search_match()
+        if isinstance(self.screen, ConsoleSearchScreen):
+            self.screen.update_results(
+                self._console_search_index, len(self._console_search_hits),
+                self._console_search_hits[self._console_search_index][1].snippet)
+
+    def _show_console_search_match(self) -> None:
+        for widget, _ in self._console_search_hits:
+            if widget.is_mounted:
+                widget.remove_class("console-search-current")
+                widget.add_class("console-search-match")
+        if not self._console_search_hits:
+            return
+        widget, _ = self._console_search_hits[self._console_search_index]
+        if widget.is_mounted:
+            widget.add_class("console-search-current")
+            chat = self.query_one(ChatArea)
+            chat.pause_tail()
+            for parent in widget.ancestors:
+                if isinstance(parent, TextualCollapsible):
+                    parent.collapsed = False
+            chat.call_after_refresh(chat.scroll_to_widget, widget, top=True, animate=False)
+
+    def _clear_console_search(self) -> None:
+        for widget, _ in self._console_search_hits:
+            if widget.is_mounted:
+                widget.remove_class("console-search-match", "console-search-current")
+        self._console_search_hits = []
+        self._console_search_index = -1
+        if self.is_mounted:
+            self.query_one("#prompt-input", PromptArea).focus()
+
+    def _refresh_activity(self) -> None:
+        if self._loop_task is not None and not self._loop_task.done():
+            self._animate_activity()
+        else:
+            self._set_activity(getattr(self, "_activity_message", "Chat ready"),
+                               getattr(self, "_activity_color", MUTED))
+
+    def _paint_bridge_presence(self) -> None:
+        rows = self._presence_rows
+        if rows is None:
+            return
+        try:
+            panel = self.query_one("#work-presence", Static)
+        except (NoMatches, NoScreen):
+            return
+        from isycode.bridge_presence import presence_line
+        width = panel.content_size.width or panel.size.width
+        panel.update(presence_line(rows, width))
+
+    async def _show_bridge_presence(self) -> None:
+        confirmed = await self._await_screen(BridgePresenceScreen())
+        panel = self.query_one("#work-presence", Static)
+        if not confirmed:
+            self._presence_rows = None
+            panel.update("Bridge presence off")
+            return
+        root = self._workspace_root
+        approvals = self._action_approvals
+        try:
+            base = WorkspaceAuthority(root)
+            request = BridgePresenceOwner(root, base, approvals).prepare()
+            owner = BridgePresenceOwner(
+                root, OneShotActionAuthority(base, request), approvals)
+            outcome, rows = await asyncio.to_thread(
+                owner.read, request, approvals.issue(request))
+        except (OSError, RuntimeError, ValueError):
+            self._presence_rows = None
+            panel.update("Presence unavailable")
+            return
+        if outcome.decision != "ALLOW":
+            self._presence_rows = None
+            panel.update("Presence unavailable")
+            return
+        self._presence_rows = rows
+        self._paint_bridge_presence()
