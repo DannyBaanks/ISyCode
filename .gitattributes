@@ -4,6 +4,11 @@
 *.sh text eol=lf
 *.ps1 text eol=lf
 .github/workflows/** text eol=lf
+# These top-level source documents use the same bytes in Windows and Linux clones.
+README.md text eol=lf
+docs/reference/installation.md text eol=lf
+docs/reference/verification.md text eol=lf
+pyproject.toml text eol=lf
 src/isycode/bundled_skills/** -text
 # Raw execution evidence is byte-preserved, including UTF-16 Windows logs.
 docs/platform-parity/evidence/** -text

@@ -855,8 +855,17 @@ tree. Raw output and command metadata are in
 `evidence/windows-clean-source-install-pr52-20261016.txt` and its adjacent
 `.json` record (output SHA-256
 `4b21df99bd0fb9008bdced373f8a68dfd8df060185f08b42b806b508a88939e4`). This
-closes the earlier clean-dependency-download gap. It does not add an uninstall
-switch to the checkout PowerShell installer.
+closes the earlier clean-dependency-download gap.
+
+The checkout PowerShell installer now supports `-Uninstall`. A disposable copy
+of the source tree under a D: path with spaces passed install, launcher
+`--help`, uninstall, metadata/launcher removal checks, and a repeated
+idempotent uninstall. The script retained the virtual environment and its
+dependencies. Raw output and metadata are in
+`evidence/windows-checkout-installer-uninstall-pr52-20261016.txt` and its
+adjacent `.json` record (output SHA-256
+`3b7f303d1115c201e4c646aab4d09efe61483ede71c1014bf7ddae10914fb74b`). The
+Windows package job repeats this source-installer lifecycle.
 
 PyInstaller 6.22.3 then built the current Windows one-file executable from that
 clean environment. The executable (SHA-256
@@ -869,10 +878,13 @@ output and metadata are in
 `d6c2b734a3350574f959fabf0a45e57aa687a12c57370e1cbc709deea96a9437`). This
 demonstrates portable copy/delete installation, not an autonomous EXE updater.
 
-The Windows package job now repeats the clean dependency install, five CLI
-smokes and uninstall, and copies the built executable into a Unicode/space
-path for the same smoke and delete checks. The workflow YAML and PowerShell
-step bodies parse locally. The currently running full suite predates these
-workflow additions; the updated PR head must pass its new hosted run. The live
-proxied Git update query and supported standalone self-upgrade remain
-NOT_DEMONSTRATED. `NATIVE_ACCEPTED=False` remains unchanged.
+The Windows package job runs the clean dependency install, both installation
+and uninstall paths, and the portable EXE copy/delete checks on each PR. The
+workflow YAML and PowerShell step bodies parse locally. The live proxied Git
+update query and supported standalone self-upgrade remain NOT_DEMONSTRATED.
+`NATIVE_ACCEPTED=False` remains unchanged.
+
+To keep the content-addressed manifest stable across Windows and Linux clones,
+`README.md`, the installation and verification references, and
+`pyproject.toml` are pinned to LF. The 479 manifest entries match their staged
+Git blobs after that normalization; raw platform evidence remains byte-pinned.

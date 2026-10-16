@@ -39,6 +39,10 @@ Use `-TestDependencies` to install the native contract test runner as well.
 The installer creates `.venv` using `py`, installs the same Python package,
 including the Windows-only pywin32 dependency, and verifies `--version`.
 Launch `.venv\Scripts\isycode.exe` from your chosen project.
+To remove ISyCode from that environment, run
+`& .\scripts\install-windows.ps1 -Uninstall`. This removes the package and
+launcher while keeping the virtual environment, its dependencies, and user
+state intact.
 
 Native storage, session and Git workflows have selected Windows evidence in
 [the platform parity report](../platform-parity/REPORT.md). Native command

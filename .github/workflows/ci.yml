@@ -205,9 +205,23 @@ jobs:
           & $python -m pip --isolated uninstall -y isycode
           if ($LASTEXITCODE -ne 0) { throw 'Uninstalling ISyCode failed.' }
           if (Test-Path -LiteralPath $isycode) { throw 'Uninstall left the isycode launcher behind.' }
-          $packages = & $python -m pip --isolated list --format=freeze
-          if ($LASTEXITCODE -ne 0) { throw 'Checking the clean environment after uninstall failed.' }
-          if ($packages -match '(?im)^isycode==') { throw 'Uninstall left ISyCode distribution metadata behind.' }
+          & $python -c "import importlib.metadata as m, sys; sys.exit(1 if any((d.metadata.get('Name') or '').lower() == 'isycode' for d in m.distributions()) else 0)"
+          if ($LASTEXITCODE -ne 0) { throw 'Uninstall left ISyCode distribution metadata behind.' }
+
+      - name: Verify Windows checkout installer uninstall
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:PIP_CONFIG_FILE = 'NUL'
+          $env:PIP_NO_CACHE_DIR = '1'
+          $installer = Join-Path $PWD.Path 'scripts\install-windows.ps1'
+          & $installer
+          if ($LASTEXITCODE -ne 0) { throw 'The Windows checkout installer failed.' }
+          & $installer -Uninstall
+          if ($LASTEXITCODE -ne 0) { throw 'The Windows checkout uninstaller failed.' }
+          $python = Join-Path $PWD.Path '.venv\Scripts\python.exe'
+          if (-not (Test-Path -LiteralPath $python)) { throw 'Uninstall removed the virtual environment.' }
 
       - name: Verify tag matches package version
         id: metadata
