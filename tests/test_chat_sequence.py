@@ -5,6 +5,7 @@ import json
 from textual.widgets import Static
 
 from isycode.tui import ChatArea, TUIApp, ThoughtBlock
+from isycode.conversation_lane import ConversationLane
 from test_daily_tui import configure
 
 
@@ -238,6 +239,84 @@ def test_fast_consecutive_reasoning_chunks_share_one_visible_block(tmp_path, mon
             blocks = list(app.query(ThoughtBlock))
             assert len(blocks) == 1
             assert plain_text(blocks[0]._body) == 'First thought. Second thought.'
+            assert blocks[0].collapsed
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_reasoning_stream_batches_expensive_thought_paints(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    chunks = [f"reasoning-{index:03d} " + ("detail " * 40) for index in range(80)]
+
+    async def complete(provider, messages, **kwargs):
+        for chunk in chunks:
+            kwargs["on_chunk"]("reasoning", chunk)
+            await asyncio.sleep(0.001)
+        kwargs["on_chunk"]("content", "Done.")
+        return {"text": "Done.", "tool_calls": []}
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+    paints = 0
+    original_paint = ThoughtBlock._paint_preview
+
+    def count_paints(block):
+        nonlocal paints
+        paints += 1
+        return original_paint(block)
+
+    monkeypatch.setattr(ThoughtBlock, "_paint_preview", count_paints)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            await app._run_chat("Explain this carefully.")
+            await pilot.pause()
+            block = app.query_one(ThoughtBlock)
+            assert block._full_text == "".join(chunks)
+            assert block.collapsed
+            assert paints < len(chunks) // 2
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_reasoning_stream_reuses_block_after_switching_lanes(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    first_chunk, continue_stream = asyncio.Event(), asyncio.Event()
+
+    async def complete(provider, messages, **kwargs):
+        kwargs["on_chunk"]("reasoning", "First thought. ")
+        first_chunk.set()
+        await continue_stream.wait()
+        kwargs["on_chunk"]("reasoning", "Second thought.")
+        kwargs["on_chunk"]("content", "Answer.")
+        return {"text": "Answer.", "tool_calls": []}
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            first = app._foreground_lane()
+            app._start_background_turn(first, "Explain this.")
+            await first_chunk.wait()
+
+            second = ConversationLane("memory-2")
+            app._lanes[second.key] = second
+            app._show_lane(second)
+            await pilot.pause()
+            app._show_lane(first)
+            await pilot.pause()
+            continue_stream.set()
+            await first.loop_task
+            await pilot.pause()
+
+            blocks = list(app.query(ThoughtBlock))
+            assert len(blocks) == 1
+            assert blocks[0]._full_text == "First thought. Second thought."
             assert blocks[0].collapsed
 
     with capsys.disabled():

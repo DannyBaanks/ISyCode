@@ -52,6 +52,7 @@ class ConversationLane:
         self.lines: list = []
         self.partial = ""
         self.partial_reason = ""
+        self.partial_reason_chunks: list[str] = []
         self.stream_widget = None
         self.stream_block = None
 

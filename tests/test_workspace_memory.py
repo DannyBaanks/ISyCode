@@ -96,7 +96,8 @@ def test_memoir_graph_and_search_are_workspace_local(tmp_path):
     }]
 
 
-def test_memory_requests_are_bounded_approved_and_journaled(tmp_path):
+def test_memory_requests_are_bounded_approved_and_journaled(tmp_path, monkeypatch):
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     workspace = tmp_path / "project"
     workspace.mkdir()
     state = tmp_path / "state"
@@ -163,9 +164,10 @@ def test_memory_confirmation_is_cancel_by_default():
     assert results == [False, True]
 
 
-def test_tui_memory_tools_require_confirmation_and_mark_recall_untrusted(tmp_path):
+def test_tui_memory_tools_require_confirmation_and_mark_recall_untrusted(tmp_path, monkeypatch):
     import json
 
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     from isycode.tui_app_tools import ToolMixin
 
     class Host(ToolMixin):

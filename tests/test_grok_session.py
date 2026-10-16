@@ -63,3 +63,55 @@ def test_login_lines_keep_the_code_and_drop_a_bare_token():
         "Open https://auth.x.ai/device and enter ABCD-EFGH")
     assert public_login_line("x" * 90) is None
     assert public_login_line("") is None
+
+
+def test_run_login_launches_only_the_authorized_grok_executable(tmp_path, monkeypatch):
+    import asyncio
+
+    from isycode.grok_session import run_login
+
+    executable = tmp_path / "grok"
+    executable.write_text("#!/bin/sh\nexit 0\n")
+    executable.chmod(0o700)
+    monkeypatch.setenv("ISYCODE_GROK_EXECUTABLE", str(executable))
+    calls = []
+
+    class _Stderr:
+        async def readline(self):
+            return b""
+
+    class _Proc:
+        stderr = _Stderr()
+
+        async def wait(self):
+            return 0
+
+        def kill(self):
+            raise AssertionError("kill must not run for a clean exit")
+
+    async def fake_exec(*args, **kwargs):
+        calls.append(args)
+        return _Proc()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+    code = asyncio.run(run_login("device", lambda line: None,
+                                 executable=str(executable.resolve())))
+    assert code == 0
+    assert calls and calls[0][0] == str(executable.resolve())
+
+    # A program swapped after authorization never starts.
+    try:
+        asyncio.run(run_login("device", lambda line: None, executable="/bin/sh"))
+    except ValueError as exc:
+        assert "grok executable changed" in str(exc)
+    else:
+        raise AssertionError("swapped executable must be refused")
+    assert len(calls) == 1
+
+    try:
+        asyncio.run(run_login("ssh", lambda line: None))
+    except ValueError as exc:
+        assert "unsupported grok login" in str(exc)
+    else:
+        raise AssertionError("unknown login method must be refused")

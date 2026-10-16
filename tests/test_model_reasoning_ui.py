@@ -18,7 +18,10 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
             await pilot.pause()
             screen = app.screen
             assert isinstance(screen, ModelsScreen)
-            for _ in range(200):  # wait until the screen and both controls are composed
+            # Wait for the screen to fully compose (search box AND provider
+            # groups) before querying; a single pause can catch it mid-mount
+            # on slower CI runners.
+            for _ in range(200):
                 if (app.screen.query('#models-search')
                         and app.screen.query('#model-provider-openai')):
                     break

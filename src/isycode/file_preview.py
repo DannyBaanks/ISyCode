@@ -1,4 +1,4 @@
-"""Selectable read-only file preview; all copying remains behind ClipboardOwner."""
+from pathlib import Path
 from textual.app import ComposeResult
 from isycode.localization import tr
 from textual.binding import Binding
@@ -7,6 +7,40 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TextArea
 from isycode.tui_copy import CopyTextArea
 from isycode.tui_screens_approval import DECISION_CSS
+
+
+def guess_syntax_language(path: str | Path | None) -> str | None:
+    """Map file extension to Textual's supported tree-sitter syntax languages."""
+    if not path:
+        return None
+    ext = Path(path).suffix.lower()
+    mapping = {
+        ".py": "python",
+        ".pyi": "python",
+        ".json": "json",
+        ".md": "markdown",
+        ".markdown": "markdown",
+        ".sh": "bash",
+        ".bash": "bash",
+        ".zsh": "bash",
+        ".yaml": "yaml",
+        ".yml": "yaml",
+        ".toml": "toml",
+        ".js": "javascript",
+        ".jsx": "javascript",
+        ".ts": "javascript",
+        ".tsx": "javascript",
+        ".html": "html",
+        ".htm": "html",
+        ".css": "css",
+        ".rs": "rust",
+        ".go": "go",
+        ".sql": "sql",
+        ".xml": "xml",
+        ".java": "java",
+    }
+    return mapping.get(ext)
+
 
 class FilePreviewScreen(ModalScreen[None]):
     CSS = DECISION_CSS + '''
@@ -21,9 +55,17 @@ class FilePreviewScreen(ModalScreen[None]):
     def __init__(self,path,text):
         super().__init__();self.path=path;self.text=text
     def compose(self) -> ComposeResult:
+        lang = guess_syntax_language(self.path)
         with Vertical(id='preview-card', classes='isy-dialog'):
             yield Static(str(self.path),id='preview-heading',classes='isy-dialog-title',markup=False)
-            yield CopyTextArea(self.text,read_only=True,id='preview-text',show_line_numbers=True)
+            yield CopyTextArea(
+                self.text,
+                language=lang,
+                theme="monokai",
+                read_only=True,
+                id='preview-text',
+                show_line_numbers=True,
+            )
             with Horizontal(id='preview-actions', classes='isy-dialog-actions'):
                 yield Button(tr('Copy selection'),id='preview-copy',disabled=True)
                 yield Button(tr('Copy whole box'),id='preview-copy-whole')
