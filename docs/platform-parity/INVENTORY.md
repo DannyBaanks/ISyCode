@@ -61,7 +61,9 @@ control against the private metadata DACLs: `test_windows_private_identity.py`
 passed without modifying the seeded files. The five-user acceptance matrix was
 not run, as requested. That control is not equivalent to a separately logged-in
 Windows account; the latter remains NOT_DEMONSTRATED. A full Windows 3.12
-non-integration test job now gates package builds. Its first hosted run failed;
-local correction selections now pass, and the follow-up hosted result remains
-pending. See the final correction pass in `REPORT.md`; the five-user matrix
-remains waived.
+non-integration test job now gates package builds. The first hosted run exposed
+ACL/runtime/UI/content-byte regressions; the follow-up exposed a test assumption
+about trusted Git discovery. That test now follows the product's fail-closed Git
+tool availability and the local native selection passes 129 tests (2 skipped,
+1 integration deselected). The next hosted run remains pending. See the final
+correction sections in `REPORT.md`; the five-user matrix remains waived.

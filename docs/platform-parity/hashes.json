@@ -1,21 +1,21 @@
 {
-  "recorded_at": "2026-10-15T20:27:05.439373-06:00",
+  "recorded_at": "2026-10-15T20:44:12.032080-06:00",
   "baseline_commit": "b80975517f8496b70b8f7c2d37f408cd839d6b27",
   "source_parent_commit": "a9914e8444881e9eae0e64d9b8cf6042fd1e9245",
   "environment": {
     "system": "Windows-11-10.0.26200-SP0",
     "python": "3.12.10"
   },
-  "scope": "PR #52 Windows correction pass: 100 regression tests passed (2 skipped, 1 integration deselected); LPAC resource controls 17 passed; native storage/Git/audit/session selection 129 passed (2 skipped, 1 integration deselected); gate validator 14 passed (2 skipped). Fresh GitHub full-matrix run pending. Five-user matrix waived; Windows native sandbox remains disabled.",
+  "scope": "PR #52 Windows correction pass plus trusted-Git availability regression: local Windows native storage/Git/audit/session selection passes 129 tests (2 skipped, 1 integration deselected); changed UI test passes with trusted Git. GitHub follow-up still pending. Five-user matrix waived; Windows native sandbox remains disabled; other NOT_DEMONSTRATED acceptance items remain open.",
   "files": {
     ".gitattributes": "a08869a43b080d607af540eafdd2b40e892e8fc6da0845b74e183d87a34024bd",
     ".github/workflows/platform-parity.yml": "589f2d0f61f34bba90abae1d89e512a6a3426734a67ee8ab58723e445fbf4c65",
     "README.md": "62295e92260cb5830037d7e592b2dd19f6075fe09600421acf631ffd1c4a476d",
     "docs/platform-parity/GUIA.md": "d3b8bc9f159d43f9d4e100d87ec49de162a862bc0e625cbc086aeffac7faeb9a",
-    "docs/platform-parity/INVENTORY.md": "bed9d1447a6247df1a652bedafa9dbc62a5f2b5e66e62ec91ec1b52c387cf691",
+    "docs/platform-parity/INVENTORY.md": "bacc8e880f01b8ec2ccf5f02e7a42acd1e74f68399d426b2890977885b68dff8",
     "docs/platform-parity/PLAN.md": "bb6a3222450f17b8979200898e0a42cb8f7fc8a82935a9e52280981528b32a1c",
     "docs/platform-parity/README.md": "20dc75ab73d00640de91522ef4c394b3cf18034f040a24807075432378ef2f22",
-    "docs/platform-parity/REPORT.md": "3fa4c6f9b7436513f409747e51e6e08dd13bbfb468ee0fface384b9b69672dc3",
+    "docs/platform-parity/REPORT.md": "652daf262e03bfe63cfdf21194d680a9d78c5f4e23c61ccaf50fe92f28e8eeea",
     "docs/platform-parity/WINDOWS-SANDBOX-DESIGN.md": "d981ed3de605755f582b59f613376ceca31a9defb78cb00412041f16718433e9",
     "docs/platform-parity/WINDOWS-SANDBOX-GUIA.md": "af9843a108553016d0cf7beb081c2b4161fd37afa1338a506c8c08af8846bd87",
     "docs/platform-parity/WINDOWS-STORAGE-DESIGN.md": "a8e8b98b689dfd21d59eac2893c01b04733bc658696e2cec4d19f2e45c3bf662",
@@ -440,7 +440,7 @@
     "tests/test_windows_sandbox_volume_acceptance.py": "53c91e3fb77e01e6195b17252eb7cf8c733fc679f6eddbe77272ea18eb84665d",
     "tests/test_windows_sandbox_volume_api.py": "d80b3460f58f837852e1983b3861bab5a6491464faf25c7678b61c316feb0fbe",
     "tests/test_windows_sandbox_volume_lifecycle.py": "77274a3fb99482ab6121bfe72b678f02242b98a58e2450aaf53563f50206ab9e",
-    "tests/test_daily_tui.py": "5e45c7d85085aad3331a486a5d7f055a82502a1412750a5b13cccc53f7253d63",
+    "tests/test_daily_tui.py": "f45b9cdffcbbe65bd395ade3b0afaa0a7d6cb271b56d364d6213d85fee61e120",
     "tests/test_file_preview_tui.py": "585caab1ac9df1b4ddfa13625a61c1e05766a3255a6e46d2eeea3da322065645",
     "tests/test_quick_start.py": "1d00d8ff2f739c8d3005552057ca8a35c759aade7f971e6c7a7413561c6a4be9",
     "tests/test_session_continuity_tui.py": "4fbed6e6f84da24b1651213654adaa830969188bc382c3965741245356a36547",
@@ -450,7 +450,9 @@
     "docs/platform-parity/evidence/windows-native-contracts-pr52-r2-20261015.txt": "456b4a7ac05f6c840a51373d4d64d64875715ec18c1eea5158a5459b621d4c6f",
     "docs/platform-parity/evidence/windows-native-contracts-pr52-r3-20261015.txt": "b358d5d3170ed958d1f05669bef346938c235a01ac4620c452073e775f1c78b8",
     "docs/platform-parity/evidence/windows-native-contracts-pr52-r3-20261015.json": "30f92964a21f027b7c8c1bcef945f5230e1a51fe4099d95405a7ca2ae5a31456",
-    "docs/platform-parity/evidence/windows-native-contracts-pr52-20261015.txt.gz": "97c8c2f6f9d45e9fe5902197a4e2e22ae833b57955f75c708497139a2191b60d"
+    "docs/platform-parity/evidence/windows-native-contracts-pr52-20261015.txt.gz": "97c8c2f6f9d45e9fe5902197a4e2e22ae833b57955f75c708497139a2191b60d",
+    "docs/platform-parity/evidence/windows-native-contracts-pr52-r4-20261015.txt": "2f973d100f32a607b4be7995e25b771454fac52ba1316e19bec72fbb77435926",
+    "docs/platform-parity/evidence/windows-native-contracts-pr52-r4-20261015.json": "2828a20d0fc355bd4744bae5b42116582073be4b2daebc00f18ff27b741ece19"
   },
   "compressed_raw_evidence": [
     {

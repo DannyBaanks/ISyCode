@@ -697,3 +697,15 @@ Current local Windows verification after those fixes:
 The follow-up GitHub full-matrix run is still pending. These targeted results do
 not replace that run or close the separately listed NOT_DEMONSTRATED items. The
 five-user matrix remains waived; `NATIVE_ACCEPTED=False` remains unchanged.
+
+## Hosted Git policy regression — 2026-10-15
+
+The follow-up native Windows job exposed a test assumption: GitHub's Windows
+runner has Git on `PATH`, but it does not satisfy ISyCode's trusted-installation
+checks, so the product correctly omits every `git_*` chat tool. The test now
+derives its expected actions from `git_executable()` and asserts that all Git
+tools remain hidden when discovery rejects the installation. The local Windows
+selection passes **129 tests, 2 skipped, 1 integration deselected** in 138.76s;
+the changed chat flow also passes locally with trusted Git available. A new
+hosted full-matrix run is pending after this correction. This test fix does not
+change the trusted-Git policy or close any NOT_DEMONSTRATED platform gates.
