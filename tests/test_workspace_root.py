@@ -1,6 +1,7 @@
 """Workspace marker discovery stays separate from IsyMotron authority."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -242,8 +243,8 @@ def test_gateway_workspace_id_honors_explicit_operator_override(tmp_path: Path, 
     assert config.gateway_workspace_id(tmp_path) == "operator-workspace"
 
 
-def test_state_index_honors_state_env_and_xdg_fallback(tmp_path: Path, monkeypatch):
-    """F-10: the single resolver keeps the historical env precedence."""
+def test_state_index_honors_state_env_and_platform_fallback(tmp_path: Path, monkeypatch):
+    """F-10: the resolver keeps the override and native platform fallback."""
     from isycode.state_index import StateIndex, get_state_index
 
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "explicit"))
@@ -251,10 +252,14 @@ def test_state_index_honors_state_env_and_xdg_fallback(tmp_path: Path, monkeypat
     assert get_state_index().state_root() == tmp_path / "explicit"
 
     monkeypatch.delenv("ISYCODE_STATE_HOME")
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
-    assert get_state_index().state_root() == tmp_path / "xdg" / "isycode"
+    if os.name == "nt":
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+        assert get_state_index().state_root() == tmp_path / "local" / "ISyCode"
+    else:
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+        assert get_state_index().state_root() == tmp_path / "xdg" / "isycode"
 
-    monkeypatch.delenv("XDG_STATE_HOME")
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
     assert get_state_index().state_root() == get_state_index().default_root()
 
 

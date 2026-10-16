@@ -87,7 +87,16 @@ class Banner(Static):
         launch = identity.launch_dir if identity else Path.cwd().resolve()
         path = str(launch)
         rail = self.screen.query_one(SidePanel)
-        width = self.app.size.width - (rail.region.width if rail.display else 0)
+        width = self.app.size.width
+        if rail.display and rail.region.width:
+            # Use the sidebar's measured left edge after layout. Subtracting its
+            # width from the terminal width can overestimate the main column
+            # when borders or platform-specific layout insets are present.
+            measured_width = rail.region.x - self.region.x
+            if measured_width > 0:
+                width = measured_width
+            else:
+                width -= rail.region.width
         mode = "Security"
         workspace_mode = getattr(self.app, "_workspace_mode", None)
         if callable(workspace_mode):

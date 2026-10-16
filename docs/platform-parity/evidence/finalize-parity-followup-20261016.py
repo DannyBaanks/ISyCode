@@ -32,6 +32,7 @@ paths.update({
     "tests/test_design_interactions.py",
     "tests/test_visual_tui.py",
     "tests/test_quiet_classic_diff.py",
+    "src/isycode/tui_widgets.py",
 })
 paths.discard("docs/platform-parity/hashes.json")
 missing = sorted(name for name in paths if not (root / name).is_file())
@@ -79,8 +80,20 @@ record.update({
         "Textual 8 Linux then found the workspace-folder browser test navigating "
         "before the workspace-startup worker initialized app._workspace; it now "
         "awaits that worker and passes locally with startup delayed by two "
-        "seconds. "
-        "A full CI rerun after all latest fixes is pending. "
+        "seconds. The newer Linux main push 86aee1d was integrated into this "
+        "PR as merge commit 99b0d56. A local full Windows invocation recorded "
+        "1861 passed, 323 skipped, 11 deselected, and 1 xfailed, plus 3 "
+        "failures and 2 errors because system Python was not editable-installed "
+        "with keyring and because the new state-index test expected XDG on "
+        "Windows. The test now asserts the documented LOCALAPPDATA fallback; "
+        "all five affected cases pass when rerun with project source and its "
+        "declared keyring dependency. The later main documentation commit "
+        "ff5ae84 was integrated by merge 7adcf0d. CI on head 0fb900a then "
+        "found the long-workspace banner exceeding the measured sidebar edge "
+        "on Windows. Banner sizing now uses the sidebar's actual left "
+        "coordinate (commit 3f030ba); the regression test passes three "
+        "consecutive local runs and the visual plus high-contrast modules "
+        "pass 19/19. Full CI for this sizing fix is pending. "
         "Five-user matrix waived; NATIVE_ACCEPTED=False and separate-user "
         "ACL, remaining IPC/device cases, runtime staging, power-loss, and "
         "interactive physical parity remain NOT_DEMONSTRATED."

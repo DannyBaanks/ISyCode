@@ -328,9 +328,8 @@ def test_a_legacy_decision_without_effect_identity_still_verifies(tmp_path):
 def test_journal_verify_survives_concurrent_appends(tmp_path):
     """F-03: verify() must not report JOURNAL_INVALID while a writer appends.
 
-    The reader holds LOCK_SH for the whole read and the writer holds LOCK_EX
-    for the whole append (including fchmod), so the size/mtime/ctime stability
-    check never trips on a cooperating writer.
+    Verification and append share a native sidecar lock across platforms;
+    POSIX also holds LOCK_SH/LOCK_EX on the journal while reading or appending.
     """
     import threading
 
