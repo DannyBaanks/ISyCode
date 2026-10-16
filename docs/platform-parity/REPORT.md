@@ -881,8 +881,10 @@ demonstrates portable copy/delete installation, not an autonomous EXE updater.
 The Windows package job runs the clean dependency install, both installation
 and uninstall paths, and the portable EXE copy/delete checks on each PR. The
 workflow YAML and PowerShell step bodies parse locally. The live proxied Git
-update query and supported standalone self-upgrade remain NOT_DEMONSTRATED.
-`NATIVE_ACCEPTED=False` remains unchanged.
+update query remains NOT_DEMONSTRATED. The updater does not replace a frozen
+EXE or AppImage in place: without a source checkout, both platforms bootstrap
+or update a managed source environment and its native launcher. That is shared
+behavior, not a Windows parity gap. `NATIVE_ACCEPTED=False` remains unchanged.
 
 To keep the content-addressed manifest stable across Windows and Linux clones,
 `README.md`, the installation and verification references, and

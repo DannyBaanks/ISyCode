@@ -1,22 +1,22 @@
 {
-  "recorded_at": "2026-10-16T04:58:58Z",
+  "recorded_at": "2026-10-16T05:01:29Z",
   "baseline_commit": "b80975517f8496b70b8f7c2d37f408cd839d6b27",
   "source_parent_commit": "572a6a04fc90afd225d1941d0175cd596d873c78",
   "environment": {
     "system": "Windows-11-10.0.26200-SP0",
     "python": "3.12.10"
   },
-  "scope": "PR #52 Windows distribution follow-up based on source parent 572a6a04fc90afd225d1941d0175cd596d873c78. Clean dependency install/uninstall from public PyPI, PowerShell checkout install/-Uninstall with venv retention, and PyInstaller one-file EXE copy/run/delete passed locally on Windows 11/Python 3.12.10. Matching clean install, source installer, and portable EXE lifecycle gates are in Windows package CI. Source docs/config are pinned to LF across OS clones and all manifest entries match staged Git blobs. Standalone EXE self-upgrade and live proxied updater query remain NOT_DEMONSTRATED. Five-user matrix waived; NATIVE_ACCEPTED=False and unrelated physical/security acceptance gates remain open.",
+  "scope": "PR #52 Windows distribution follow-up based on source parent 572a6a04fc90afd225d1941d0175cd596d873c78. Clean dependency install/uninstall from public PyPI, PowerShell checkout install/-Uninstall with venv retention, and PyInstaller one-file EXE copy/run/delete passed locally on Windows 11/Python 3.12.10. Matching clean install, source installer, and portable EXE lifecycle gates are in Windows package CI. Source docs/config are pinned to LF across OS clones and all manifest entries match Git blobs. Frozen EXE/AppImage artifacts use the shared managed-source updater path, not in-place self-upgrade; live proxied updater query remains NOT_DEMONSTRATED. Five-user matrix waived; NATIVE_ACCEPTED=False and unrelated physical/security acceptance gates remain open.",
   "files": {
     ".gitattributes": "d566456176c43a960423bfd354917a192da799bd077716ad4485c853d9851c31",
     ".github/workflows/ci.yml": "77b31759d397ef53cb425ff151db4e56234a27724010bcfdea78c23d6755103a",
     ".github/workflows/platform-parity.yml": "589f2d0f61f34bba90abae1d89e512a6a3426734a67ee8ab58723e445fbf4c65",
     "README.md": "6fdd4ce11b63f8d08d23efbf52485c64ca3250c1c2e165b509b72f017911437a",
     "docs/platform-parity/GUIA.md": "d3b8bc9f159d43f9d4e100d87ec49de162a862bc0e625cbc086aeffac7faeb9a",
-    "docs/platform-parity/INVENTORY.md": "7760efbcddf14868d9efb839a2d02f674e2b6e0d65049eaf6e099962cb78949b",
+    "docs/platform-parity/INVENTORY.md": "adac877d220f0bfdda7c969f103239a997b639cd891f967db5a9c6ee9475d62e",
     "docs/platform-parity/PLAN.md": "bb6a3222450f17b8979200898e0a42cb8f7fc8a82935a9e52280981528b32a1c",
     "docs/platform-parity/README.md": "20dc75ab73d00640de91522ef4c394b3cf18034f040a24807075432378ef2f22",
-    "docs/platform-parity/REPORT.md": "09c5da2179a855cc5204abc233a7ff9b774c5e19e5fd60f6ccf3ffd5913227c9",
+    "docs/platform-parity/REPORT.md": "ec373cf790195b3f5020bf188b4e9fc4385e5542b1da402d146a15819d24bcd8",
     "docs/platform-parity/WINDOWS-SANDBOX-DESIGN.md": "d981ed3de605755f582b59f613376ceca31a9defb78cb00412041f16718433e9",
     "docs/platform-parity/WINDOWS-SANDBOX-GUIA.md": "757c9be046ca19c9046d164a2edb25c47ace0bc4fe83359482dcbc730abb2fc4",
     "docs/platform-parity/WINDOWS-STORAGE-DESIGN.md": "a8e8b98b689dfd21d59eac2893c01b04733bc658696e2cec4d19f2e45c3bf662",
