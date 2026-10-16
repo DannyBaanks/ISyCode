@@ -1,21 +1,21 @@
 {
-  "recorded_at": "2026-10-15T21:31:37.403687-06:00",
+  "recorded_at": "2026-10-15T21:50:28.711176-06:00",
   "baseline_commit": "b80975517f8496b70b8f7c2d37f408cd839d6b27",
-  "source_parent_commit": "29288bcdb33b29f1ed817a605a60a0abe216b6e9",
+  "source_parent_commit": "a4b9d4f675cfe18ae6168f50ebcfea39cf23ba1e",
   "environment": {
     "system": "Windows-11-10.0.26200-SP0",
     "python": "3.12.10"
   },
-  "scope": "PR #52 scratch ACL correction after hosted Windows isolation failure. Protected scratch DACL is created on the first operation; local native sandbox selection passes 115 tests (13 skipped, 1 xfailed). New GitHub matrix pending. Five-user matrix waived; NATIVE_ACCEPTED=False and remaining NOT_DEMONSTRATED gates stay open.",
+  "scope": "PR #52 hosted Windows isolation correction: profile registry owner is checked against TokenUser or TokenOwner of the verified suspended child. Local native sandbox selection passes 115 tests (13 skipped, 1 xfailed); fresh GitHub matrix pending. Five-user matrix waived; NATIVE_ACCEPTED=False and remaining NOT_DEMONSTRATED gates stay open.",
   "files": {
     ".gitattributes": "5372c7ea6e697a9dd32091615b3ae215766314bca4de065b65e816661e2db764",
     ".github/workflows/platform-parity.yml": "589f2d0f61f34bba90abae1d89e512a6a3426734a67ee8ab58723e445fbf4c65",
     "README.md": "62295e92260cb5830037d7e592b2dd19f6075fe09600421acf631ffd1c4a476d",
     "docs/platform-parity/GUIA.md": "d3b8bc9f159d43f9d4e100d87ec49de162a862bc0e625cbc086aeffac7faeb9a",
-    "docs/platform-parity/INVENTORY.md": "1226ddc0cb1d1abbd392826ca72d25693def814b585b8f9a1d345d965219128c",
+    "docs/platform-parity/INVENTORY.md": "eec26bf41de90e23d7c466c92091852a4fead3e46b44c5f085774f18ad6148c3",
     "docs/platform-parity/PLAN.md": "bb6a3222450f17b8979200898e0a42cb8f7fc8a82935a9e52280981528b32a1c",
     "docs/platform-parity/README.md": "20dc75ab73d00640de91522ef4c394b3cf18034f040a24807075432378ef2f22",
-    "docs/platform-parity/REPORT.md": "4cfd539d4ae05c02ab609817916ae741653c3bf2e830845b75a8bec6b3c7c4dd",
+    "docs/platform-parity/REPORT.md": "3a26ffb51d6c21379be72f2e0b26d829f0803a578f26c645aa216ae065e54932",
     "docs/platform-parity/WINDOWS-SANDBOX-DESIGN.md": "d981ed3de605755f582b59f613376ceca31a9defb78cb00412041f16718433e9",
     "docs/platform-parity/WINDOWS-SANDBOX-GUIA.md": "af9843a108553016d0cf7beb081c2b4161fd37afa1338a506c8c08af8846bd87",
     "docs/platform-parity/WINDOWS-STORAGE-DESIGN.md": "a8e8b98b689dfd21d59eac2893c01b04733bc658696e2cec4d19f2e45c3bf662",
@@ -232,8 +232,11 @@
     "docs/platform-parity/evidence/windows-native-sandbox-pr52-r2-20261015.json": "14e6a87fec7a0ebabb3ff0db175510276f11efd7e93323742b62aed3065c70f7",
     "docs/platform-parity/evidence/windows-native-sandbox-pr52-r2-20261015.txt": "1033f6f52ddaf74d4ae5c94be7d04db5121652c18d400fbcabc7060a0625af00",
     "docs/platform-parity/evidence/windows-native-sandbox-pr52-r3-20261016.json": "64bcb8f927b3131e66b92a051d2ee15690bce9f83fb284597a31882749516672",
+    "docs/platform-parity/evidence/windows-native-sandbox-pr52-r3-20261016.txt.gz": "9700302bc32f101be8791e9f3a3b855a7ec12d5114498801b164d90b56469ff9",
     "docs/platform-parity/evidence/windows-native-sandbox-pr52-r4-20261016.json": "d2224664bf0603149ec3d3f7e6f766c2c8f4811dce47266d48026668b2473a66",
     "docs/platform-parity/evidence/windows-native-sandbox-pr52-r4-20261016.txt": "8ab488c65e2b341801c046ebbdf1dc569e715d326729dbe795f787b1d38108ca",
+    "docs/platform-parity/evidence/windows-native-sandbox-pr52-r5-20261016.json": "8c52ccb852bd02b3d5057ca17cfbd0b4df3c968776406ed8ca4ed300c21bdff2",
+    "docs/platform-parity/evidence/windows-native-sandbox-pr52-r5-20261016.txt": "c7d43b57c56ec0bcf4ee770a336405b54d084184776fd4c1e5bc1b1838c2598f",
     "docs/platform-parity/evidence/windows-onboarding-observation-green-20261014.txt": "cd9305d36b5e9fbe5aa4cb7377f59779115ad7966600c16de87ec07f2def505b",
     "docs/platform-parity/evidence/windows-onboarding-observation-green-r2-20261014.txt": "6570b536c1085ae2c1841999b1f31a8a635b412138d513febc21caab8205eadb",
     "docs/platform-parity/evidence/windows-onboarding-observation-red-20261014.txt": "95e310e179dda14eeb880ebbba4c6668bf427a74953427122241b33ad2cfbb57",
@@ -424,7 +427,7 @@
     "src/isycode/platform_windows_sandbox.py": "b7dbbbd2d47cae7fe05f531921f49efbfa0b09dacf1e6d7396e7921ad8b3bdfa",
     "src/isycode/platform_windows_sandbox_process.py": "4991aef693c7bb98bcf4c7c92fee0f1dbecacdcccfeeb5f4435c79566027a84f",
     "src/isycode/platform_windows_sandbox_recovery.py": "2748e2240e58aa6fd3740e564efc06aae0c1174b8e7e9e58c4e82e1841a19742",
-    "src/isycode/platform_windows_sandbox_registry.py": "7491faf6ec5d17969f562b4634846cbbaa16548d6f60a1507724e557f0f3654f",
+    "src/isycode/platform_windows_sandbox_registry.py": "64338b368f3cd0c71cc09f84b2e38d7345fd9eab8547b1b94c4d1c159531b33e",
     "src/isycode/platform_windows_sandbox_resources.py": "9cbf6fc64db142c584fa8c8d7747bc5d357855ac73996f5f8663170ea7d531ed",
     "src/isycode/platform_windows_sandbox_volume.py": "ab0dcbacd377432a1bd024246fdb11501b3f61da6ddd0bc9c8fa1413f7897cfa",
     "src/isycode/platform_windows_sandbox_volume_api.py": "119e7f1d204448bf426eb87d99f6e72da7034493dc8029441aab774da79bc319",
@@ -471,8 +474,7 @@
     "tests/test_windows_sandbox_volume_api.py": "d80b3460f58f837852e1983b3861bab5a6491464faf25c7678b61c316feb0fbe",
     "tests/test_windows_sandbox_volume_lifecycle.py": "77274a3fb99482ab6121bfe72b678f02242b98a58e2450aaf53563f50206ab9e",
     "tests/test_workspace_folders_tui.py": "43a04c90e132f46bcb45562d244ea9d05f8b43c1959a1f72c7f0f91802dda361",
-    "tests/test_workspace_sessions.py": "1f124bb6f4ec160189ddb44f66da0621049d456288ad58de3c6dc901ab67cb98",
-    "docs/platform-parity/evidence/windows-native-sandbox-pr52-r3-20261016.txt.gz": "9700302bc32f101be8791e9f3a3b855a7ec12d5114498801b164d90b56469ff9"
+    "tests/test_workspace_sessions.py": "1f124bb6f4ec160189ddb44f66da0621049d456288ad58de3c6dc901ab67cb98"
   },
   "compressed_raw_evidence": [
     {

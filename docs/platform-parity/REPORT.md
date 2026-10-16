@@ -771,3 +771,27 @@ and `evidence/windows-native-sandbox-pr52-r4-20261016.*`.
 The full GitHub suite on this newest correction is pending. The older run's
 failure does not test this commit. `NATIVE_ACCEPTED=False` and the remaining
 NOT_DEMONSTRATED acceptance gates remain unchanged.
+
+## Hosted profile-registry owner correction — 2026-10-16
+
+The hosted native-contract run `38846076594` on commit
+`eb34abfce47784f1cdb25ad90b7f739ad9cb3861` passed storage/Git/session contracts
+and pinned-resource checks, then failed the LPAC step (**29 failed, 86 passed,
+13 skipped, 1 expected failure**). The profile registry root's owner did not
+match `TokenUser` on the elevated hosted runner, so the guard refused to resume
+the child. That check was stricter than the file-storage path, which also
+recognizes the token's default owner.
+
+The registry guard now reads `TokenOwner` from the same suspended child token
+whose AppContainer SID and registry path it has already verified. It accepts
+only that token-bound default owner or the token user; any other owner still
+blocks launch. The code then installs the protected profile DACL, and the
+existing native controls verify LPAC cannot write the registry or its DACL.
+Seventeen focused local process/registry tests passed, followed by the complete
+local native sandbox selection: **115 passed, 13 skipped, 1 expected failure**
+in 460.21s. Evidence is in `windows-native-sandbox-pr52-r5-20261016.*`.
+
+A fresh hosted run is required to demonstrate this elevated-runner owner path.
+The Linux Textual 8 job in the same prior CI run also failed and is being
+inspected separately; neither result is represented as a passing latest run.
+`NATIVE_ACCEPTED=False` remains unchanged.

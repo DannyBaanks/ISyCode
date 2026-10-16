@@ -50,6 +50,12 @@ def restrict_profile_registry(process, profile_sid: bytes) -> None:
     try:
         user = security.GetTokenInformation(token, security.TokenUser)[0]
         user_sid = security.ConvertSidToStringSid(user)
+        # An elevated runner can create the per-user AppContainer hive with
+        # the process token's default owner (for example, its owner group).
+        # Accept only that token-bound identity or the token user; arbitrary
+        # owners still fail closed before the profile ACL is changed.
+        token_owner = security.GetTokenInformation(token, security.TokenOwner)
+        token_owner_sid = security.ConvertSidToStringSid(token_owner)
         # GetTokenInformation(TokenAppContainerSid) binds discovery to the
         # exact SID supplied at creation, not a caller-controlled registry path.
         get_info = c.WinDLL('advapi32', use_last_error=True).GetTokenInformation
@@ -105,8 +111,9 @@ def restrict_profile_registry(process, profile_sid: bytes) -> None:
     with winreg.OpenKey(winreg.HKEY_USERS, relative, 0, winreg.KEY_ALL_ACCESS) as root:
         owner = security.GetSecurityInfo(int(root), security.SE_REGISTRY_KEY,
                                         security.OWNER_SECURITY_INFORMATION).GetSecurityDescriptorOwner()
-        if security.ConvertSidToStringSid(owner) != user_sid:
-            raise OSError('profile registry is not owned by the sandbox user')
+        owner_sid = security.ConvertSidToStringSid(owner)
+        if owner_sid not in {user_sid, token_owner_sid}:
+            raise OSError('profile registry owner does not match the sandbox token')
         _protect_tree(root, descriptor)
 
 
