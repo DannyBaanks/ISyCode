@@ -27,6 +27,17 @@ async def _wait_for_copy_button(pilot, selector):
     raise AssertionError(f"{selector} never became visible in the copy menu")
 
 
+async def _wait_for_visible_widget(pilot, widget, description):
+    deadline = asyncio.get_running_loop().time() + 10.0
+    while True:
+        if widget.visible and widget.region.width and widget.region.height:
+            return
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise AssertionError(f"{description} never received visible layout")
+        await pilot.pause(min(0.05, remaining))
+
+
 @pytest.mark.parametrize("source,start,end,expected", [
     ("  uno  \ndos\ntres\n", (2, 0), (3, 1), "uno  \ndos"),
     ("uno\ndos\ntres\n", (0, 0), (0, 2), "uno\ndos\n"),
@@ -110,6 +121,7 @@ def test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection():
             title.focus()
             await pilot.press("space")
             body = box.query_one(SelectableText)
+            await _wait_for_visible_widget(pilot, body, "expanded selection body")
             await pilot.mouse_down(body, offset=(0, 0))
             await pilot.hover(body, offset=(2, 0))
             await pilot.mouse_up(body, offset=(2, 0))

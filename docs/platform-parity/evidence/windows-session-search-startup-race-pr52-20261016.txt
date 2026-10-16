@@ -55,6 +55,42 @@ async def main():
         monkeypatch.undo()
 asyncio.run(main())
 
+Additional Windows CI failures on the same head
+Workflow 38862639876 / Windows job
+https://github.com/DannyBaanks/ISyCode/actions/runs/38862639876/job/116848216370
+Failure: tests/test_tool_activity_groups.py::test_consecutive_same_tools_group_as_tree_with_distinct_operation_icons
+Result: 1 failed, 1838 passed, 339 skipped, 11 deselected, 1 xfailed in 1159.76s.
+Observed: expected three consecutive tool groups, got four. The TUI's
+workspace-startup worker can append startup notices between synthetic tool
+dispatches when the test begins before startup completes. The test now awaits
+the active workspace-startup worker before dispatching calls.
+
+Workflow 38862646360 / Windows job
+https://github.com/DannyBaanks/ISyCode/actions/runs/38862646360/job/116848236999
+Failure: tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection
+Result: 1 failed, 1838 passed, 339 skipped, 11 deselected, 1 xfailed in 1248.54s.
+Observed: expected the drag to select "one", but it selected "on". The test
+re-expanded an ExpandableBox and sent pointer events before the child had
+visible layout. It now waits, with a bounded timeout, for the body's visible
+region before dragging.
+
+Local reproduction after the tool-group fix
+Command: py - (PowerShell, repository root; inline Python below)
+Exit status: 0
+Output: DELAYED_WORKSPACE_STARTUP_GROUPING_TEST=PASS
+The existing grouping test ran with `_startup_workspace` delayed by two
+seconds. It waits for the worker before emitting the synthetic tool calls.
+
+Local verification after the drag-layout fix
+Command: py - (PowerShell, from the repository root)
+Script imported `test_design_interactions` and called
+`test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection`
+three times. Exit status: 0. Output:
+EXPANDED_BODY_SELECTION_REPEAT_1=PASS
+EXPANDED_BODY_SELECTION_REPEAT_2=PASS
+EXPANDED_BODY_SELECTION_REPEAT_3=PASS
+The full CLI suite for the current changes is pending.
+
 Current status
-The condition-based test fix has not yet been validated by a full CI rerun.
-Do not report CI green until the workflow for the fix completes successfully.
+The prior condition-based fixes have not yet been validated by a full CI rerun.
+Do not report CI green until the workflow for the fixes completes successfully.

@@ -942,8 +942,14 @@ CI result, not counted as passing parity evidence.
 The test now waits, with a bounded timeout, for `_sessions_enabled()` and
 then for `SessionSearchScreen` to become active. A local Windows reproduction
 delaying `_startup_workspace` by two seconds passed with this condition-based
-wait. The exact CI failure excerpt and local reproduction result are in
-`evidence/windows-session-search-startup-race-pr52-20261016.txt`. CI for the
-test fix is pending; no full-suite pass is claimed until that workflow
-completes. This is a test synchronization fix; it does not change application
-startup behavior.
+wait. The paired Windows jobs exposed two more timing assumptions: the tool
+activity grouping test dispatched calls before the `workspace-startup` worker
+had finished, and a drag-selection test interacted with an `ExpandableBox`
+before the re-expanded body had visible layout. The grouping test now waits
+for the active startup worker, and the selection test waits for the body's
+visible region before sending pointer events. A local Windows reproduction
+with a two-second startup delay passed; the drag-selection test passed three
+consecutive direct runs. The exact CI failure excerpts and local results are in
+`evidence/windows-session-search-startup-race-pr52-20261016.txt`. Another full
+CI rerun is pending; no full-suite pass is claimed until it completes. These
+are test synchronization fixes and do not change application behavior.

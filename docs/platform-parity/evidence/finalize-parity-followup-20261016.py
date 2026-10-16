@@ -28,6 +28,8 @@ paths.update({
     "src/isycode/updater.py",
     "tests/test_updater.py",
     "tests/test_session_search_screen.py",
+    "tests/test_tool_activity_groups.py",
+    "tests/test_design_interactions.py",
 })
 paths.discard("docs/platform-parity/hashes.json")
 missing = sorted(name for name in paths if not (root / name).is_file())
@@ -56,7 +58,11 @@ record.update({
         "The first full CI rerun exposed a session-search test race; the test "
         "now waits for its startup grants and screen transition, and a "
         "synthetic delayed-startup reproduction passes locally. CI rerun "
-        "after this test fix is pending. "
+        "then exposed two more timing assumptions in a tool-grouping test "
+        "and a drag-selection test; both now wait for their required startup "
+        "or visible-layout state and pass local delayed-startup checks plus "
+        "three consecutive drag-selection runs. "
+        "A full CI rerun after these fixes is pending. "
         "Five-user matrix waived; NATIVE_ACCEPTED=False and separate-user "
         "ACL, remaining IPC/device cases, runtime staging, power-loss, and "
         "interactive physical parity remain NOT_DEMONSTRATED."
