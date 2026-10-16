@@ -97,6 +97,10 @@ class GlobalRecurringDefaultScreen(ApprovalScreen):
         with Vertical(id="global-recurring-card", classes="isy-dialog"):
             yield Static(tr("Use recurring mode for new folders?"), id="global-recurring-title", classes="isy-dialog-title")
             with VerticalScroll(id="global-recurring-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="workspace setup preference", scope="future folders without a saved choice",
+                    duration="persistent user preference",
+                    not_granted="no file access, no permissions copied between workspaces")
                 yield Static(tr("When ISyCode first opens a folder without a saved choice, it will create an empty "
                     ".isyroot marker there. This remembers the workspace identity only; it does not "
                     "grant file access or copy permissions from another workspace. Broad folders such as "
@@ -104,7 +108,7 @@ class GlobalRecurringDefaultScreen(ApprovalScreen):
                     "first, so unrelated projects never share one workspace by accident."),
                     id="global-recurring-copy")
             with Horizontal(id="global-recurring-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="global-recurring-cancel")
+                yield Button(tr("Cancel · n"), id="global-recurring-cancel", classes="-refuse")
                 yield Button(tr("Use for new folders · y"), id="global-recurring-confirm", variant="primary")
             yield decision_hint()
 
@@ -254,6 +258,10 @@ class GrantWorkspaceReadScreen(ApprovalScreen):
             yield Static(tr("Turn off file reading?") if self.revoke
                          else tr("Allow ISyCode to read workspace files?"), id="workspace-read-title", classes="isy-dialog-title")
             with VerticalScroll(id="workspace-read-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="workspace file read", scope=str(self.root),
+                    duration="persistent grant (until revoked)",
+                    not_granted="no edits, no commands, no folders outside workspace")
                 yield Static(tr("Folder: {root}\n", root=self.root), markup=False)
                 copy = (tr("ISyCode will stop listing, reading, and searching files in this workspace. "
                            "Your files and conversations stay where they are.")
@@ -263,7 +271,7 @@ class GrantWorkspaceReadScreen(ApprovalScreen):
                            "folders outside this workspace. You will still be asked before sensitive actions."))
                 yield Static(copy, id="workspace-read-copy")
             with Horizontal(id="workspace-read-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="workspace-read-cancel")
+                yield Button(tr("Cancel · n"), id="workspace-read-cancel", classes="-refuse")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"),
                              id="workspace-read-grant", variant="error" if self.revoke else "primary")
             yield decision_hint()
@@ -304,9 +312,13 @@ class GrantProviderNetworkScreen(ApprovalScreen):
             yield Static(tr("Turn off this option?") if self.revoke else tr("Turn on this option?"),
                          id="provider-network-title", classes="isy-dialog-title")
             with VerticalScroll(id="provider-network-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="provider network access", scope=self.host,
+                    duration="persistent grant (until revoked)",
+                    not_granted="no tool execution, no file access, no secrets")
                 yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy", markup=False)
             with Horizontal(id="provider-network-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="provider-network-cancel")
+                yield Button(tr("Cancel · n"), id="provider-network-cancel", classes="-refuse")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="provider-network-confirm",
                              variant="error" if self.revoke else "primary")
             yield decision_hint()
@@ -342,10 +354,14 @@ class GrantMCPInvocationScreen(ApprovalScreen):
             yield Static(tr("Turn off Gateway tools?") if self.revoke else tr("Allow Gateway tools?"),
                          id="mcp-grant-title", classes="isy-dialog-title")
             with VerticalScroll(id="mcp-grant-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="Gateway MCP target", scope=self.host,
+                    duration="persistent grant (every call still approved)",
+                    not_granted="no automatic tool runs, no local filesystem access")
                 yield Static("Host: " + self.host, markup=False)
                 yield Static(copy, id="mcp-grant-copy")
             with Horizontal(id="mcp-grant-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="mcp-grant-cancel")
+                yield Button(tr("Cancel · n"), id="mcp-grant-cancel", classes="-refuse")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="mcp-grant-confirm",
                              variant="error" if self.revoke else "primary")
             yield decision_hint()
@@ -383,11 +399,15 @@ class GrantLSPProcessScreen(ApprovalScreen):
             yield Static(tr("Turn off local code help?") if self.revoke else tr("Allow local code help?"),
                          id="lsp-grant-title", classes="isy-dialog-title")
             with VerticalScroll(id="lsp-grant-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="local LSP process", scope=str(self.root),
+                    duration="persistent grant (until revoked)",
+                    not_granted="no internet, no general commands, no writes")
                 yield Static(tr("Folder: {root}\n", root=self.root), markup=False)
                 yield Static(self.sandbox_executable, markup=False)
                 yield Static(copy, id="lsp-grant-copy")
             with Horizontal(id="lsp-grant-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="lsp-grant-cancel")
+                yield Button(tr("Cancel · n"), id="lsp-grant-cancel", classes="-refuse")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="lsp-grant-confirm",
                              variant="error" if self.revoke else "primary")
             yield decision_hint()
@@ -417,13 +437,17 @@ class BrokerPreviewGrantScreen(ApprovalScreen):
         with Vertical(id="broker-grant-card", classes="isy-dialog"):
             yield Static(tr("Allow semantic broker preview?"), id="broker-grant-title", classes="isy-dialog-title")
             with VerticalScroll(id="broker-grant-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="broker preview", scope=str(self.root),
+                    duration="persistent grant (until revoked)",
+                    not_granted="no Docker, no containers, no workspace.files.read")
                 yield Static(
                     f"Workspace: {self.root}\n\nThis stores only the broker.preview grant for this .isyroot. "
                     "The selected project still needs its own workspace.files.read grant. "
                     "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
                     id="broker-grant-copy")
             with Horizontal(id="broker-grant-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="broker-grant-cancel")
+                yield Button(tr("Cancel · n"), id="broker-grant-cancel", classes="-refuse")
                 yield Button(tr("Grant preview · y"), id="broker-grant-confirm", variant="primary")
             yield decision_hint()
 

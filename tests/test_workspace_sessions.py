@@ -219,3 +219,47 @@ def test_existing_broad_marker_is_honoured_but_visibly_shared(fake_home: Path):
 
 def test_fallback_roots_never_warn(fake_home: Path):
     assert shared_root_warning(fake_home, "fallback", fake_home) is None
+
+
+def test_state_index_reproduces_historical_state_paths(tmp_path: Path, monkeypatch):
+    """F-10 golden: the single resolver must reproduce the paths stores write today.
+
+    Journal and sessions are compared against the real (still-unrefactored)
+    stores; trust uses the literal historical formula (raw path digest).
+    """
+    import hashlib
+
+    from isycode.action_audit import ActionAuditJournal
+    from isycode.state_index import get_state_index
+
+    state = tmp_path / "state"
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(state))
+    index = get_state_index()
+
+    workspaces = []
+    for name in ("alpha", "beta", "gamma"):
+        workspace = tmp_path / name
+        workspace.mkdir()
+        workspaces.append(workspace)
+
+    for workspace in workspaces:
+        resolved_digest = hashlib.sha256(
+            str(workspace.expanduser().resolve(strict=True)).encode("utf-8")).hexdigest()
+        raw_digest = hashlib.sha256(str(workspace).encode("utf-8")).hexdigest()[:32]
+
+        journal = ActionAuditJournal.for_read_only_inspection(workspace)
+        assert index.journal_path(workspace) == journal.path
+        assert journal.path == state / "action-audit" / f"actions-{resolved_digest[:32]}.jsonl"
+
+        assert index.trust_path(workspace) == (
+            state / "workspace-trust" / f"trust-{raw_digest}.json")
+
+        sessions = WorkspaceSetupStore().sessions_root(workspace)
+        assert index.sessions_path(workspace) == sessions
+        assert sessions == state / "isyrcodesessions" / resolved_digest[:24]
+
+    custom = tmp_path / "custom-journal"
+    assert index.journal_path(
+        workspaces[0], state_directory=custom) == (
+        ActionAuditJournal.for_read_only_inspection(
+            workspaces[0], state_directory=custom).path)

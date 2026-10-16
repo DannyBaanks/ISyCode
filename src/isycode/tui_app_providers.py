@@ -60,6 +60,12 @@ from isycode.tui_widgets import ExpandableBox, SidePanel
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
 from isycode.localization import configure_locale, next_locale, tr
 from isycode.user_defaults import UserDefaultsStore
+from isycode.chat_transport import provider_complete
+from isycode.contracts import CatalogSnapshot
+from isycode.gateway_client import GatewayClient
+from isycode.gateway_mcp import GatewayMCPUnavailable, discover_gateway_tools
+from isycode.streaming import StreamError
+from rich.text import Text
 
 
 class ProviderMixin:
@@ -342,19 +348,6 @@ class ProviderMixin:
                     translate=False))
         self._render_menu("named_credentials", "Settings · API keys", entries)
 
-    def _model_picker_result(self, entry: dict | None) -> None:
-        if entry is not None:
-            self._select_menu_entry(entry)
-        elif getattr(self, "_models_return_settings", False):
-            self._models_return_settings = False
-            self._models_scope = None
-            self._open_settings_menu()
-        elif getattr(self, "_models_scope", None):
-            # Esc from a provider's models walks back to the provider list; the
-            # active provider/model was never changed on the way here.
-            self._models_scope = None
-            self._open_provider_menu()
-
     def _open_scoped_models(self, name: str) -> None:
         """Step two of provider → model → reasoning. Nothing is applied yet."""
         self._models_scope = name
@@ -488,12 +481,6 @@ class ProviderMixin:
         self._account_model_status = rows[0]["label"] if not models_available else "Account catalog loaded · choose a concrete model"
         if self._menu_mode == "model_account" or (self._menu_mode == "branch" and self._menu_title == "Models"):
             self._render_menu("branch", "Models", self._branch_entries("models"))
-
-    def _role_button_label(self) -> str:
-        if not self._active_role:
-            return "Role"
-        name = self._active_role["name"]
-        return f"Role: {name[:12]}"
 
     def _model_button_label(self) -> str:
         try:
@@ -695,26 +682,6 @@ class ProviderMixin:
         self._append(f"  {label} API key removed." if outcome.decision == "ALLOW"
                      else f"  API key not removed · {outcome.reason[:180]}",
                      GREEN if outcome.decision == "ALLOW" else YELLOW)
-
-    @staticmethod
-    def _provider_failure(error: ProviderError, operation: str) -> str:
-        """Translate provider failures without rendering URLs or response bodies."""
-        from isycode.provider_errors import classify_provider_error
-        detail = classify_provider_error(error)
-        suffix = f" · HTTP {detail['http_status']}" if detail["http_status"] else ""
-        if detail["provider_code"]:
-            suffix += " · " + detail["provider_code"]
-        if detail["retry_after_s"] is not None:
-            suffix += f" · retry after {detail['retry_after_s']:g}s"
-        return f"{operation} failed · {detail['error_kind']}: {detail['provider_hint']}{suffix}."
-
-    @staticmethod
-    def _model_display_label(name: str, model: str) -> str:
-        from isycode.model_presentation import model_display_name
-        from isycode.reasoning_options import reasoning_label
-        preset = PRESETS.get(name, {})
-        effort = reasoning_label(name, model, preset.get("reasoning_effort"))
-        return f"{model_display_name(model)} / {effort.capitalize()} · {preset.get('label', name)}"
 
     async def _check_model(self) -> None:
         """Eager model check: is the configured provider ready?"""
@@ -1063,3 +1030,87 @@ class ProviderMixin:
             "Use ISyCode credential settings when an API key is supported.")
         self._close_menu()
         return
+
+    async def _check_gateway_async(self) -> None:
+        """Show reachability without implying that the remote root is mounted."""
+        try:
+            client = GatewayClient()
+            allowed, reason = self._authorize_remote_read("gateway.files.read", client.base_url + "/health")
+            if not allowed:
+                self.query_one("#gateway-status", Static).update(Text(
+                    "Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security.",
+                    style=YELLOW))
+                return
+            available = await asyncio.to_thread(client.is_available)
+            if available:
+                message = "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
+                if not client.api_key:
+                    message += " Set GATEWAY_API_KEY for scoped read access."
+                color = YELLOW
+            else:
+                message = "Unavailable. Local Files remains independent; no Gateway fallback is active."
+                color = YELLOW
+        except Exception as exc:  # noqa: BLE001 - a background probe must never kill the app
+            message = f"Gateway configuration error: {type(exc).__name__}"
+            color = RED
+        if self.is_mounted:
+            self.query_one("#gateway-status", Static).update(Text(message, style=color))
+
+    async def _check_gateway_mcp_async(self) -> None:
+        status = self.query_one("#gateway-mcp-status", Static)
+        status.update(Text("Checking Gateway MCP authorization…"))
+        try:
+            gateway_url = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787").rstrip("/")
+            allowed, reason = self._authorize_remote_read("mcp.discover", gateway_url + "/mcp")
+            if not allowed:
+                self._gateway_mcp_snapshot = CatalogSnapshot(True, [], "denied", reason)
+                message, color = "Not checked · grant Gateway MCP discovery in Settings · Authority & Security.", YELLOW
+                if self.is_mounted:
+                    status.update(Text(message, style=color))
+                return
+            status.update(Text("Loading · starting the native Gateway MCP tool catalog…"))
+            tools = await discover_gateway_tools()
+        except GatewayMCPUnavailable as exc:
+            snapshot = CatalogSnapshot(True, [], "unavailable", str(exc))
+            message, color = f"Unavailable · {exc}", YELLOW
+        except Exception as exc:
+            snapshot = CatalogSnapshot(True, [], "error", type(exc).__name__)
+            message, color = f"Failed · {type(exc).__name__}", RED
+        else:
+            snapshot = CatalogSnapshot(True, tools, "ready")
+            has_key = bool(os.environ.get("GATEWAY_API_KEY"))
+            if not has_key:
+                has_key = saved_secret_exists("isyco-gateway")
+            auth_state = "API key supplied" if has_key else "API key needed for calls"
+            message = (f"Ready · {len(tools)} tools · {auth_state} · manual calls require "
+                       "per-host grant + one-use approval")
+            color = GREEN if has_key else YELLOW
+        self._gateway_mcp_snapshot = snapshot
+        if self.is_mounted:
+            self.query_one("#gateway-mcp-status", Static).update(Text(message, style=color))
+
+    async def _check_provider_connection(self) -> None:
+        """Explicit minimal provider request; credentials alone never authorize it."""
+        try:
+            name = selected_provider_name()
+            provider = Provider(name=name, model=resolved_chat_model(name),
+                                api_key=load_provider_key(name) or None)
+            messages = [{"role": "user", "content": "Reply with OK only. Do not call any tools."}]
+            material = {"operation": "chat.completions", "messages": messages,
+                        "max_tokens": None, "tools": None,
+                        "token_limit_field": provider.token_limit_field,
+                        "reasoning_effort": provider.reasoning_effort,
+                        "temperature_supported": provider.temperature_supported}
+            async def send():
+                return await provider_complete(provider, messages, max_tokens=None, tools=None)
+            owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            response, outcome = await owner.execute(provider, material, send)
+            if outcome.decision == "ALLOW" and isinstance(response, dict) and response.get("text"):
+                self._append(f"  Provider response received · receipt {outcome.receipt.receipt_id} · "
+                             "this checks chat connectivity, not tool compatibility.", GREEN)
+            else:
+                self._append(f"  Provider not verified · {outcome.decision} · {outcome.reason[:160]}", YELLOW)
+        except (ProviderError, StreamError) as exc:
+            self._append(self._provider_failure(exc, "Connection check"), YELLOW)
+        except (OSError, ValueError) as exc:
+            self._append(f"  Connection check unavailable ({type(exc).__name__}).", YELLOW)

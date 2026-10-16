@@ -45,6 +45,7 @@ BG = BG2 = _PALETTE["surface"]
 ACCENT = ACCENT2 = CYAN = _PALETTE["focus"]
 TEXT, MUTED = _PALETTE["text"], _PALETTE["muted"]
 GREEN, YELLOW, RED = _PALETTE["success"], _PALETTE["warning"], _PALETTE["error"]
+SECURITY = _PALETTE["security"]
 
 
 # ── High-contrast overrides (optional accessibility mode) ─────────
@@ -136,7 +137,11 @@ def _semantic_box_title(title: str) -> Text:
         lowered = part.casefold()
         if lowered in {"completed", "exit 0", "allow"}:
             color = GREEN
-        elif any(word in lowered for word in ("denied", "failed", "error", "exit 1")):
+        elif "denied" in lowered:
+            # F-07: security-policy DENY is orange, distinct from operational
+            # errors (RED) so a user can tell a policy denial from a failure.
+            color = SECURITY
+        elif any(word in lowered for word in ("failed", "error", "exit 1")):
             color = RED
         elif any(word in lowered for word in ("running", "checking", "missing", "unavailable", "rejected", "cancelled")):
             color = YELLOW

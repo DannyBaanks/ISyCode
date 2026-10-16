@@ -353,6 +353,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._initial_view = initial_view
         self._initial_prompt = initial_prompt
         self._openisy_refresh_generation = 0
+        # F-01 readiness: set once _startup_workspace finishes (success or failure)
+        # so tests and callers never have to guess with blind pilot.pause() loops.
+        self._ready_event = asyncio.Event()
         self._history: list[dict] = []
         self._last_context_input_tokens = None
         self._tool_history: list[dict] = []
@@ -652,7 +655,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.set_interval(1.0, self._paint_work_status)
         add_decision_listener(self._on_journal_decision)
         self.set_interval(5.0, self._paint_sentinel)   # permissions changed in Settings
-        self.run_worker(self._load_sentinel_journal(), group="sentinel-journal")
+        self.run_worker(self._load_sentinel_journal(), group="sentinel-journal",
+                        exit_on_error=False)
         prompt = self.query_one("#prompt-input", PromptArea)
         self.query_one("#role-button", Button).label = self._role_button_label()
         self._refresh_model_button()
@@ -693,7 +697,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         # every start reads like an error. The reason stays available in Settings.
         if self._workspace_config_warning and "grant" not in self._workspace_config_warning:
             self._append_startup(f"  Workspace preferences · {self._workspace_config_warning[:200]}", YELLOW)
-        self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup")
+        self.run_worker(self._startup_workspace(), exclusive=True, group="workspace-startup",
+                        exit_on_error=False)
         # Mobile Host and Bridge have catalog actions but no product execution owners yet.
         # A saved preference is not an Authority grant, approval, or Sentinel decision.
         self._bridge_enabled = False
@@ -716,117 +721,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if self._mobile_host_owner is not None:
             await self._mobile_host_owner.shutdown()
 
-    async def _startup_workspace(self) -> None:
-        """Offer recurrence once, then choose persistent or temporary chat storage."""
-        try:
-            setup_store = WorkspaceSetupStore()
-            self._workspace_setup = setup_store
-            recurring = self._workspace_identity.workspace_root_source == "isyroot"
-            self._quick_start = False
-            if not recurring:
-                choice = setup_store.recurrent_choice(self._launch_dir)
-                if choice is None:
-                    try:
-                        defaults = UserDefaultsStore().load()
-                        preference = defaults.get("new_workspace", "ask")
-                        mode_preference = defaults.get("new_workspace_mode", "ask")
-                    except (OSError, ValueError, json.JSONDecodeError):
-                        preference = mode_preference = "ask"
-                    if preference == "ask" and mode_preference == "ask":
-                        try:
-                            provider_ready = Provider(
-                                name=selected_provider_name(),
-                                model=resolved_chat_model(selected_provider_name()),
-                                api_key=load_provider_key(selected_provider_name()) or None,
-                            ).configured()
-                        except (ConfigurationError, ProviderError):
-                            provider_ready = False
-                        start = await self._await_screen(
-                            QuickStartScreen(self._launch_dir, provider_ready=provider_ready))
-                        if start == "quick":
-                            choice = True
-                            self._quick_start = True
-                        else:
-                            choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
-                    else:
-                        choice = new_workspace_choice(self._launch_dir, None, preference)
-                        if choice is None:
-                            choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
-                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, choice)
-                elif choice:
-                    # Re-create a marker if the user removed it after opting in.
-                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, True)
-                recurring = choice
-                if recurring:
-                    self._workspace_identity = discover_workspace_identity(self._launch_dir)
-                    self._workspace_root = self._workspace_identity.workspace_root
-                    self._update_workspace_identity_ui()
-            warning = self._shared_root_warning()
-            if warning:
-                self._append_startup(f"  {warning}", YELLOW)
-            if self._initial_view == "files":
-                self.query_one("#workspace-tree", Tree).focus()
-            else:
-                self.query_one("#prompt-input", PromptArea).focus()
+    @property
+    def ready(self) -> bool:
+        """True once _startup_workspace has finished (successfully or not)."""
+        return self._ready_event.is_set()
 
-            # Transcripts are saved only through the chat_sessions owner, only for
-            # recurring workspaces, and only while the explicit session grants are
-            # on. A recurrence choice alone is identity, not permission to persist.
-            self._chat_sessions = None
-            self._active_chat_session_id = None
-            self._chat_session_owner = None
-            if recurring:
-                try:
-                    self._chat_session_owner = ChatSessionOwner(
-                        self._workspace_root, WorkspaceAuthority(self._workspace_root),
-                        setup_store.sessions_root(self._workspace_root))
-                except (WorkspaceAuthorityError, OSError, ValueError):
-                    self._chat_session_owner = None
-            try:
-                authority = WorkspaceAuthority(self._workspace_root)
-                if authority.mode() is None:
-                    if self._quick_start:
-                        chosen = "classic"
-                    else:
-                        try:
-                            preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
-                        except (OSError, ValueError, json.JSONDecodeError):
-                            preferred = "ask"
-                        if preferred in {"classic", "security"}:
-                            chosen = preferred
-                            self._append_startup(f"  New workspace · using your default {preferred.title()} mode "
-                                         "· change it in Settings → Authority.", MUTED)
-                        else:
-                            chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
-                    authority.set_mode(chosen)
-                await self._offer_quiet_trust(authority)
-                if self._quick_start:
-                    await self._enable_coding_toolkit(open_menu=False)
-                    self._append_startup("  Quick Start done · type below to chat. /help tour shows the lay of the land.", GREEN)
-                self.query_one(Banner).set_compact(True)
-            except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
-            self._update_workspace_identity_ui()
-            self._register_saved_key_reader()
-            await self._initialize_workspace()
-            self._refresh_lsp_status()
-            self.run_worker(self._refresh_openisy(), exclusive=False)
-            self.run_worker(self._check_gateway_async(), exclusive=False)
-            self.run_worker(self._check_model(), exclusive=False)
-            if not recurring:
-                self._append_startup("  Temporary workspace · this folder is the workspace; .isyroot is optional. "
-                                     "File access follows the selected mode and grants. Chat history is not saved.", MUTED)
-            if not self._sessions_enabled():
-                self._append_startup(
-                    "  This conversation stays in memory · turn on “Save conversations” in "
-                    "Settings → Authority (recurring workspaces only).", MUTED)
-        except Exception as exc:
-            # The screen that was current during an awaited load may already be gone.
-            # Reporting that must not raise, or Textual fails the worker.
-            try:
-                self._append_startup(f"  Workspace startup failed ({type(exc).__name__}).", RED)
-            except (NoMatches, NoScreen):
-                return
+    async def wait_for_ready(self, timeout: float = 10.0) -> None:
+        """Block until startup completes; TimeoutError means startup never finished."""
+        await asyncio.wait_for(self._ready_event.wait(), timeout)
+
 
     def _register_saved_key_reader(self) -> None:
         """Security mode: every saved-key read is its own owned, journaled decision."""
@@ -838,26 +741,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         set_saved_secret_reader(lambda service, consumer: owner.secret_for(service, consumer)[1])
 
-    def _shared_root_warning(self) -> str | None:
-        return shared_root_warning(self._workspace_root,
-                                   self._workspace_identity.workspace_root_source,
-                                   self._launch_dir)
 
-    def _root_source_label(self) -> str:
-        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "Fallback"
-        broad = " · Broad Shared Root" if self._shared_root_warning() else ""
-        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
-        return f"Root Source · {source}{broad} · {mode} Mode"
 
-    def _update_workspace_identity_ui(self) -> None:
-        if not self.is_mounted:
-            return
-        self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
-                          f"launch {self._launch_dir}")
-        self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
-        self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
-        self.query_one("#workspace-source-label", Static).update(self._root_source_label())
-        self.query_one(Banner).set_compact(True)
 
 
 
@@ -1054,13 +939,41 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "authorized": ("⚡ ", "[AUTH] ", "information", 3.0),
             "info": ("ℹ ", "[INFO] ", "information", 3.0),
             "warning": ("! ", "[WARN] ", "warning", 4.5),
-            "denied": ("× ", "[DENY] ", "error", 5.5),
+            # F-07: security-policy DENY gets its own severity so the toast is
+            # orange, distinct from operational errors (severity "error").
+            "denied": ("× ", "[DENY] ", "security-denied", 5.5),
             "error": ("× ", "[ERROR] ", "error", 5.5),
         }
         u_pfx, a_pfx, def_sev, def_timeout = semantics.get(kind, ("ℹ ", "[INFO] ", "information", 3.0))
         prefix = a_pfx if use_ascii else u_pfx
         calibrated_timeout = timeout if timeout is not None else def_timeout
         self.notify(f"{prefix}{message}", title=title, severity=def_sev, timeout=calibrated_timeout)
+
+    @staticmethod
+    def _provider_failure(error: ProviderError, operation: str) -> str:
+        """Translate provider failures without rendering URLs or response bodies."""
+        from isycode.provider_errors import classify_provider_error
+        detail = classify_provider_error(error)
+        suffix = f" · HTTP {detail['http_status']}" if detail["http_status"] else ""
+        if detail["provider_code"]:
+            suffix += " · " + detail["provider_code"]
+        if detail["retry_after_s"] is not None:
+            suffix += f" · retry after {detail['retry_after_s']:g}s"
+        return f"{operation} failed · {detail['error_kind']}: {detail['provider_hint']}{suffix}."
+
+    @staticmethod
+    def _model_display_label(name: str, model: str) -> str:
+        from isycode.model_presentation import model_display_name
+        from isycode.reasoning_options import reasoning_label
+        preset = PRESETS.get(name, {})
+        effort = reasoning_label(name, model, preset.get("reasoning_effort"))
+        return f"{model_display_name(model)} / {effort.capitalize()} · {preset.get('label', name)}"
+
+    def _role_button_label(self) -> str:
+        if not self._active_role:
+            return "Role"
+        name = self._active_role["name"]
+        return f"Role: {name[:12]}"
 
     def action_escape_to_chat(self) -> None:
         """Cancel active model output; otherwise back out and keep the draft."""
@@ -1133,52 +1046,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if event.text_area.id == "prompt-input":
             self._update_slash_suggestions(prompt=event.text_area)
 
-    def _update_slash_suggestions(self, *, force: bool = False, prompt: TextArea | None = None) -> None:
-        # The composer lives on the base screen; a modal (or shutdown) may be on top,
-        # where newer Textual's app-level query no longer finds it.
-        try:
-            prompt = prompt or self.query_one(PromptArea)
-            panel = prompt.screen.query_one('#slash-suggestions', OptionList)
-        except (NoMatches, NoScreen):
-            return
-        text = prompt.text
-        eligible = text.startswith('/') and not any(c.isspace() for c in text)
-        query = text[1:].casefold() if eligible else ''
-        self._slash_matches = [entry for entry in self._command_entries
-                               if entry['value'].casefold().startswith(query)] if eligible or force else []
-        panel.clear_options()
-        panel.add_options([Option(Text(entry['label'])) for entry in self._slash_matches])
-        panel.display = bool(self._slash_matches)
-        if self._slash_matches: panel.highlighted = 0
 
-    def _move_slash(self, direction: int) -> bool:
-        panel = self.query_one('#slash-suggestions', OptionList)
-        if not panel.display: return False
-        if direction > 0: panel.action_cursor_down()
-        else: panel.action_cursor_up()
-        return True
 
-    def _complete_slash(self, index: int | None = None, *, submit_exact: bool = False) -> bool:
-        panel = self.query_one('#slash-suggestions', OptionList)
-        if not panel.display or not self._slash_matches:
-            return False
-        prompt = self.query_one(PromptArea)
-        highlighted = 0 if panel.highlighted is None else panel.highlighted
-        # Enter on a command that is already fully typed runs it. A prefix,
-        # or a different highlighted row, only fills the name so arguments fit.
-        if submit_exact and index is None and 0 <= highlighted < len(self._slash_matches):
-            typed = prompt.text[1:] if prompt.text.startswith('/') else ''
-            if typed.casefold() == self._slash_matches[highlighted]['value'].casefold():
-                panel.display = False
-                return False
-        index = highlighted if index is None else index
-        if index < 0 or index >= len(self._slash_matches):
-            return False
-        name = self._slash_matches[index]['value']
-        prompt.load_text('/' + name + ' ')
-        panel.display = False
-        prompt.focus()
-        return True
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "action-search" and self._menu_mode:
@@ -1204,13 +1073,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "detail": tr(detail) if detail else detail, "enabled": enabled,
                 "display_value": tr("ON") if enabled else tr("OFF")}
 
-    def _open_palette(self) -> None:
-        entries = [self._entry(
-            tr("{name}  ·  {description}", name=tr(name), description=tr(description)),
-            "branch", name, translate=False)
-                   for name, description in SEMANTIC_BRANCHES]
-        self._menu_stack = []
-        self._render_menu("palette_root", "Navigate", entries)
 
     def _open_role_menu(self) -> None:
         entries = [
@@ -1417,103 +1279,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("workspace_config", "Settings · Workspace preferences", entries)
 
-    async def _change_workspace_preference(self, kind: str) -> None:
-        if kind == "workspace_pref_role":
-            key = "default_role"
-            value = {"kind": self._active_role["kind"], "name": self._active_role["name"]}
-        else:
-            key, value = "default_role", None
-        try:
-            owner = WorkspaceConfigOwner(self._workspace_root,
-                                         WorkspaceAuthority(self._workspace_root),
-                                         self._action_approvals)
-            preview = await asyncio.to_thread(owner.preview_update, {key: value})
-        except (OSError, ValueError) as exc:
-            self._append(f"  Workspace preference not prepared · {str(exc)[:180]}", YELLOW)
-            self._open_workspace_config_menu()
-            return
-        if not await self._await_screen(WriteApprovalScreen(preview)):
-            self._append(f"  Preference unchanged · {preview.path}", MUTED)
-            self._open_workspace_config_menu()
-            return
-        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
-        if outcome.decision == "ALLOW":
-            self._workspace_config_values = None
-            self._workspace_config_warning = ""
-            self._active_role = self._load_global_default_role()
-            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
-        else:
-            self._append(f"  Preference not saved · {outcome.reason[:160]}", YELLOW)
-        self._open_workspace_config_menu()
 
-    async def _open_workspace_migration_menu(self) -> None:
-        if self._workspace_identity.workspace_root_source != "isyroot":
-            self._render_menu("workspace_migration", "Workspace command migration", [
-                self._entry("Migration is available only in a workspace with its own .isyroot.", "info"),
-                self._entry(tr("Back to Settings"), "settings_back", ""),
-            ])
-            return
-        try:
-            owner = WorkspaceConfigOwner(self._workspace_root,
-                                         WorkspaceAuthority(self._workspace_root),
-                                         self._action_approvals)
-            names, issue = await asyncio.to_thread(owner.legacy_commands)
-        except (OSError, ValueError) as exc:
-            names, issue = [], str(exc)
-        entries = [self._entry(
-            tr("Migration unavailable · {error}", error=issue[:140]),
-            "info", translate=False)] if issue else []
-        entries.extend(self._entry(
-            tr("Copy /{name} into .isycode/commands/", name=name),
-            "workspace_config_migrate_item", name,
-            "The exact file is reviewed; the legacy original stays in place.",
-            translate=False)
-                       for name in names)
-        if not names and not issue:
-            entries.append(self._entry("No valid legacy workspace commands found.", "info"))
-        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
-        if self._menu_mode != "workspace_migration":
-            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
-        self._render_menu("workspace_migration", "Workspace command migration", entries)
 
-    async def _copy_workspace_command(self, name: str) -> None:
-        try:
-            owner = WorkspaceConfigOwner(self._workspace_root,
-                                         WorkspaceAuthority(self._workspace_root),
-                                         self._action_approvals)
-            preview = await asyncio.to_thread(owner.preview_migrate_legacy, name)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Command not copied · {str(exc)[:180]}", YELLOW)
-            await self._open_workspace_migration_menu()
-            return
-        if not await self._await_screen(WriteApprovalScreen(preview)):
-            self._append(f"  Command unchanged · /{name}", MUTED)
-            await self._open_workspace_migration_menu()
-            return
-        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
-        if outcome.decision == "ALLOW":
-            self._append(f"  Copied /{name} · legacy original kept · receipt "
-                         f"{outcome.receipt.receipt_id}", GREEN)
-        else:
-            self._append(f"  Command not copied · {outcome.reason[:160]}", YELLOW)
-        await self._open_workspace_migration_menu()
 
-    def _open_integrations_menu(self) -> None:
-        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
-        self._render_menu("integrations", "Settings · Integrations", [
-            self._entry("Tool servers · MCP & Gateway", "branch", "MCP"),
-            self._entry("Language servers · LSP", "branch", "LSP"),
-            self._entry("Mobile host status", "mobile_host_status", ""),
-            self._entry("Bridge coordination · blocked in Secure", "bridge_settings", ""),
-            self._entry("Private access · Tailscale", "private_access", ""),
-            self._entry("Refresh integration catalogs", "refresh", ""),
-            self._entry(tr("Back to Settings"), "settings_back", ""),
-        ])
 
-    def _folder_store(self) -> WorkspaceFolders:
-        return WorkspaceFolders(self._workspace_root)
 
     def _open_workspace_folders_menu(self) -> None:
         entries = []
@@ -1558,149 +1327,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._menu_stack = []
         self._render_menu('workspace_folders', 'Workspace folders · explicit access', entries)
 
-    async def _add_workspace_folder(self) -> None:
-        try:
-            selected_path = await SiblingFolderPickerOwner(self._workspace_root).choose()
-        except (FilePickerUnavailable, OSError, ValueError) as exc:
-            self._append(f"  Folder picker unavailable · {str(exc)[:160]}", YELLOW)
-            self._open_workspace_folders_menu()
-            return
-        if selected_path is None:
-            self._open_workspace_folders_menu()
-            return
-        selected = await self._await_screen(
-            AddWorkspaceFolderScreen(self._workspace_root, selected_path))
-        if selected is not None:
-            try:
-                self._folder_store().add(selected['alias'], selected['path'], editable=selected['editable'])
-                self._append(f"  Folder added · {selected['alias']} · {selected['path']}", GREEN)
-            except (OSError, ValueError, WorkspaceAuthorityError) as exc:
-                self._append(f"  Folder not added · {str(exc)[:180]}", YELLOW)
-        self._open_workspace_folders_menu()
 
-    async def _set_folder_auto_edit(self, alias: str, enabled: bool) -> bool:
-        try:
-            store = self._folder_store()
-            root = store.resolve(alias, write=enabled)
-            binding = store.binding(alias)
-            if enabled and not store.auto_edit_available(alias):
-                raise ValueError('Security requires review of each edit')
-            if enabled and not await self._await_screen(AutomaticEditsWarningScreen(root)):
-                return False
-            if store.resolve(alias, write=enabled) != root or store.binding(alias) != binding:
-                raise ValueError('Folder changed during confirmation')
-            store.set_auto_edit(alias, enabled)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Automatic edit setting unchanged · {str(exc)[:160]}", YELLOW)
-            return False
-        self._append(f"  Automatic file edits · {alias} · {'ON — dangerous' if enabled else 'OFF — each edit asks'}", YELLOW if enabled else GREEN)
-        return True
 
-    async def _browse_workspace_folder(self, alias: str) -> None:
-        try:
-            root = self._folder_store().resolve(alias)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Folder unavailable · {str(exc)[:160]}", YELLOW)
-            return
-        self._file_browser_alias = alias
-        self._search_mode = False
-        self._search_query = ''
-        self.query_one('#file-search', Input).value = ''
-        self._set_rail_view('files')
-        await self._load_directory(str(root))
 
-    def _additional_folder_access(self, *, write: bool = False) -> bool:
-        try:
-            store = self._folder_store()
-            for item in store.list():
-                if write and not item['editable']:
-                    continue
-                try:
-                    root = store.resolve(item['alias'], write=write)
-                except (OSError, ValueError):
-                    continue
-                enabled = self._workspace_write_tool_enabled(root) if write else self._workspace_chat_tools_enabled(root)
-                if enabled:
-                    return True
-        except (OSError, ValueError, WorkspaceAuthorityError):
-            pass
-        return False
 
-    def _open_user_defaults_menu(self) -> None:
-        try:
-            defaults = UserDefaultsStore().load()
-        except (OSError, ValueError, json.JSONDecodeError):
-            defaults = {"new_workspace": "ask", "default_role": None}
-        provider_name = selected_provider_name()
-        provider = PRESETS.get(provider_name, {})
-        from isycode.model_presentation import model_display_name
-        model_name = model_display_name(resolved_chat_model(provider_name))
-        entries = [
-            self._entry("These personal defaults follow you between workspaces.", "info"),
-            self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
-            self._entry(
-                tr("Default model · {provider} · {model}",
-                   provider=provider.get('label', provider_name), model=model_name),
-                "info", "", "Change it from Providers; model selection is already saved globally.",
-                translate=False),
-        ]
-        role = defaults.get("default_role")
-        entries.append(self._entry(
-            tr("Default role · {name}", name=role['name']) if role else tr("Default role · none"),
-            "info", "", "Role guidance is global preference only; it never grants permissions.",
-            translate=False))
-        if self._active_role:
-            entries.append(self._entry(
-                tr("Use current role ({name}) as my default", name=self._active_role['name']),
-                "user_default_role_save", "", translate=False))
-        if role:
-            entries.append(self._entry("Clear my default role", "user_default_role_clear", ""))
-        new_workspace = defaults.get("new_workspace", "ask")
-        choices = (
-            ("ask", "Ask me when I open a new folder"),
-            ("temporary", "Always use temporary mode for new folders"),
-            ("recurring", "Make new folders recurring by default"),
-        )
-        entries.extend(self._entry(
-            ("● " if new_workspace == value else "○ ") + tr(label),
-            "user_default_workspace", value,
-            ("A recurring workspace gets an empty .isyroot marker when first opened. "
-             "This identifies the workspace; it does not grant file access. Home, its parents, "
-             "temp and mount points still ask first.")
-            if value == "recurring" else "Applies only when this folder has no saved choice yet.",
-            translate=False)
-            for value, label in choices)
-        new_mode = defaults.get("new_workspace_mode", "ask")
-        mode_choices = (
-            ("ask", "Ask me which mode a new folder uses"),
-            ("classic", "Start new folders in Classic · Ready To Use"),
-            ("security", "Start new folders in Security · everything off until I allow it"),
-        )
-        entries.extend(self._entry(
-            ("● " if new_mode == value else "○ ") + tr(label), "user_default_mode", value,
-            "Applies only to folders opened for the first time; each workspace keeps its own "
-            "mode and you can switch it in Settings → Authority.",
-            translate=False)
-            for value, label in mode_choices)
-        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
-        if self._menu_mode != "user_defaults":
-            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
-        self._render_menu("user_defaults", "Settings · My defaults", entries)
 
-    def _context_window(self) -> tuple[int | None, str]:
-        """Window of the selected model: the account catalog first, then the
-        vendored models.dev snapshot (exact id match), else unknown."""
-        from isycode.model_card import catalog_entry
-        from isycode.providers import model_context_limit, resolved_chat_model, selected_provider_name
-        provider, model = selected_provider_name(), resolved_chat_model()
-        limit, source = model_context_limit(provider, model)
-        if limit:
-            return limit, source
-        entry = catalog_entry(provider, model)
-        context = entry.get("context") if entry else None
-        if type(context) is int and 0 < context <= 10**9:
-            return context, "snapshot"
-        return None, "unknown"
 
     def _request_is_quiet(self, request) -> bool:
         if request.parameters.get("rtk", {}).get("decision") == "ask":
@@ -1768,109 +1399,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._save_draft()
         return response
 
-    async def _set_global_mode_default(self, value: str) -> None:
-        if value == "classic" and not await self._await_screen(TailscaleConfirmScreen(
-                "Start new folders in Classic?",
-                "Every folder you open for the first time will read files, propose edits you approve, "
-                "chat with your provider and save conversations and keys without asking for each "
-                "permission. IsySentinel and the action journal still check and record everything. "
-                "Folders you already use keep their mode.", "Use Classic for new folders")):
-            self._open_user_defaults_menu()
-            return
-        try:
-            UserDefaultsStore().update(new_workspace_mode=value)
-            self._set_activity("Default mode saved for new workspaces", GREEN)
-        except (OSError, ValueError, json.JSONDecodeError):
-            self._set_activity("Could not save the default mode; existing settings remain", RED)
-        self._open_user_defaults_menu()
 
-    async def _set_global_workspace_default(self, value: str) -> None:
-        if value == "recurring":
-            accepted = await self._await_screen(GlobalRecurringDefaultScreen())
-            if not accepted:
-                self._open_user_defaults_menu()
-                return
-        try:
-            UserDefaultsStore().update(new_workspace=value)
-            self._set_activity("Default saved for new workspaces", GREEN)
-        except (OSError, ValueError, json.JSONDecodeError):
-            self._set_activity("Could not save your global default; existing settings remain", RED)
-        self._open_user_defaults_menu()
 
-    def _load_global_default_role(self) -> dict[str, str] | None:
-        try:
-            defaults = UserDefaultsStore().load()
-            defaults.update(self._workspace_preference_values())
-            role = defaults.get("default_role")
-        except (OSError, ValueError, json.JSONDecodeError):
-            return None
-        if not isinstance(role, dict):
-            return None
-        kind, name = role.get("kind"), role.get("name")
-        catalogs = {"agents": ISYCODE_AGENTS, "subagents": ISYCODE_SUBAGENTS,
-                    "motors": ISYCO_MOTORS}
-        selected = next((item for item in catalogs.get(kind, ())
-                         if item.get("name") == name), None)
-        if selected is None:
-            return None
-        return {"name": name, "kind": kind,
-                "description": str(selected.get("description", "")),
-                "engine": str(selected.get("engine", "ISyCode selected provider and model"))}
 
-    def _workspace_preference_values(self) -> dict[str, Any]:
-        if self._workspace_config_values is not None:
-            return self._workspace_config_values
-        self._workspace_config_values = {}
-        self._workspace_config_warning = ""
-        if self._workspace_identity.workspace_root_source != "isyroot":
-            return self._workspace_config_values
-        try:
-            owner = WorkspaceConfigOwner(self._workspace_root,
-                                         WorkspaceAuthority(self._workspace_root),
-                                         self._action_approvals)
-            parsed, issue = owner.read_config()
-            if parsed is not None and parsed.valid:
-                self._workspace_config_values = dict(parsed.values)
-                self._workspace_config_warning = "; ".join(parsed.warnings)
-            elif parsed is not None and parsed.error:
-                self._workspace_config_warning = f"ignored: {parsed.error}"
-            elif issue:
-                self._workspace_config_warning = f"unavailable: {issue}"
-        except (OSError, ValueError):
-            self._workspace_config_warning = "unavailable: settings could not be read safely"
-        return self._workspace_config_values
 
-    async def _initialize_workspace_config(self) -> None:
-        if self._workspace_identity.workspace_root_source != "isyroot":
-            self._append("  .isycode/ is available only in a workspace with its own .isyroot marker.",
-                         YELLOW)
-            return
-        try:
-            owner = WorkspaceConfigOwner(self._workspace_root,
-                                         WorkspaceAuthority(self._workspace_root),
-                                         self._action_approvals)
-            plan = await asyncio.to_thread(owner.prepare_initialization)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Workspace config unavailable · {str(exc)[:180]}", YELLOW)
-            return
-        if not plan.previews:
-            self._append(f"  {plan.message}", YELLOW if plan.message else MUTED)
-            return
-        if plan.message:
-            self._append(f"  {plan.message}", MUTED)
-        for preview in plan.previews:
-            if not await self._await_screen(WriteApprovalScreen(preview)):
-                self._append(f"  Initialization stopped · {preview.path} unchanged", MUTED)
-                return
-            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-            outcome = await asyncio.to_thread(owner.apply, preview, approval)
-            if outcome.decision != "ALLOW":
-                self._append(f"  Workspace setup {outcome.decision} · {outcome.reason[:180]}", YELLOW)
-                return
-            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
-        self._workspace_config_values = None
-        self._workspace_config_warning = ""
-        self._active_role = self._load_global_default_role()
 
 
 
@@ -1983,97 +1515,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#action-hint", Static).update(hint)
         self.query_one("#action-list", OptionList).focus()
 
-    def _render_options(self, query: str) -> None:
-        if self._menu_mode == "settings":
-            self.query_one("#action-title", Static).update(MenuHeading(
-                self._menu_title, tr("Search results") if query else tr(self._settings_category)))
-        if query and self._menu_mode == "providers":
-            filtered: list[dict[str, str]] = []
-            pending = None
-            used = False
-            for entry in self._menu_entries:
-                if entry.get("kind") == "section":
-                    pending = entry
-                    used = False
-                    continue
-                if (query in entry["label"].casefold()
-                        or query in entry.get("detail", "").casefold()):
-                    if pending is not None and not used:
-                        filtered.append(pending)
-                        used = True
-                    filtered.append(entry)
-            self._menu_filtered = filtered
-        else:
-            self._menu_filtered = [entry for entry in self._menu_entries
-                                   if query in entry["label"].casefold()
-                                   or query in entry.get("detail", "").casefold()
-                                   or query in str(entry.get("display_value", "")).casefold()
-                                   or query in str(entry.get("search_value", "")).casefold()]
-        if self._menu_mode == "settings" and not query:
-            self._menu_filtered = [entry for entry in self._menu_filtered
-                                   if entry.get("category_id", "Preferences") == self._settings_category]
-        options = self.query_one("#action-list", OptionList)
-        options.clear_options()
-        for entry in self._menu_filtered:
-            if entry.get("category") or "display_value" in entry and self._menu_mode != "providers":
-                label = SettingRow(entry["label"].split(" · ", 1)[0],
-                                   str(entry.get("display_value", "")), entry.get("detail", ""),
-                                   GREEN if entry.get("enabled") else MUTED if "enabled" in entry else TEXT)
-            elif "enabled" in entry:
-                label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
-            elif entry.get("kind") == "section":
-                label = Text(entry["label"], style=f"bold {TEXT}")
-            elif entry.get("kind") == "info":
-                label = Text(entry["label"], style=MUTED)
-            elif entry.get("kind") == "provider_unwired":
-                label = Text(entry["label"], style=MUTED)
-            elif str(entry.get("label", "")).startswith("✓"):
-                label = Text(entry["label"], style=TEXT)
-            else:
-                label = Text(entry["label"])
-            options.add_option(label)
-        highlight = 0 if self._menu_filtered else None
-        if self._menu_mode == "providers" and self._menu_filtered:
-            highlight = next((index for index, entry in enumerate(self._menu_filtered)
-                              if entry.get("kind") != "section"), 0)
-        options.highlighted = highlight
-        self._show_menu_detail(highlight or 0)
-        self._size_action_menu()
 
-    def _size_action_menu(self) -> None:
-        """Bound short menus by their contents; long lists scroll inside the frame."""
-        rows = max(4, len(getattr(self, "_menu_filtered", [])))
-        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority", "authority_settings") else 13
-        requested = rows + overhead
-        if self._menu_mode == "authority_settings" and self.size.height >= 36:
-            requested = max(34, requested)
-        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, requested))
 
-    def _show_menu_detail(self, index: int | None) -> None:
-        """Describe the highlighted entry so choices are clear before pressing Enter."""
-        entries = self._menu_filtered
-        if index is None or not 0 <= index < len(entries):
-            detail = ""
-        else:
-            entry = entries[index]
-            detail = entry.get("detail") or (
-                "Status only; this item does not run an action."
-                if entry.get("kind") == "info"
-                else "No extra summary is available. Press Enter or double-click to open."
-            )
-        try:
-            panel = self.screen_stack[0].query_one("#action-detail", Static)
-        except (NoMatches, NoScreen, IndexError):
-            # A queued highlight may arrive after the menu unmounts at shutdown.
-            return
-        panel.display = bool(detail)
-        if self._menu_mode == "settings" and index is not None and 0 <= index < len(entries):
-            detail = entries[index]["label"] + " · " + str(entries[index].get("display_value", "")) + "\n" + tr(str(detail))
-        elif index is not None and 0 <= index < len(entries) and "enabled" in entries[index]:
-            detail = entries[index]["label"] + " · " + str(entries[index]["display_value"]) + "\n" + tr(str(detail))
-        elif self._menu_mode == "providers" and index is not None and 0 <= index < len(entries):
-            detail = entries[index].get("display_name", entries[index]["label"]) + "\n\n" + tr(str(detail))
-        panel.update(Text(tr(str(detail))))
 
     def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         if event.option_list.id == "settings-categories" and self._menu_mode == "settings":
@@ -2337,9 +1780,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     # ── helpers ──────────────────────────────────────────────────
 
-    def _append_startup(self, text: str, color: str = TEXT) -> None:
-        """Keep startup notices beneath the welcome art without archiving it."""
-        self._append(text, color, startup=True)
 
     def _append(self, text: str, color: str = TEXT, *, startup: bool = False) -> None:
         """Append output, releasing the welcome pause only on the first message."""
@@ -2367,17 +1807,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         chat.mount(SelectableText(Text(text, style=color), selection_text=text))
         chat.follow_tail()
 
-    def _mount_user_turn(self, text: str, sent_at: str | None = None) -> None:
-        """Paint one user message as a rounded card and leave the idle board."""
-        self._active_lane().lines.append(("user", text, sent_at))
-        if not self._lane_on_screen():
-            return
-        self._dismiss_idle()
-        chat = self.query_one(ChatArea)
-        if clock_label(sent_at):
-            chat.mount(Static(Text(clock_label(sent_at), style=MUTED), classes="message-clock"))
-        chat.mount(SelectableText(Text(text, style=TEXT), selection_text=text, classes="user-turn"))
-        chat.follow_tail()
 
     def _idle_mounted(self) -> bool:
         try:
@@ -2432,276 +1861,23 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         rail_width = rail.region.width if rail.display else 0
         return max(24, self.size.width - rail_width - 8)
 
-    def _idle_status_rows(self) -> int:
-        """Model line, the blank under it, the status columns, and board padding."""
-        columns = [
-            self._idle_column("LSPs", self._idle_lsp_rows()),
-            self._idle_column("MCPs", self._idle_mcp_rows()),
-            self._idle_column("Skills", self._idle_skill_rows()),
-        ]
-        return 2 + max(len(column) for column in columns) + 1
 
-    def _landscape_row_budget(self) -> int:
-        """Panorama rows that still leave the model line and status columns visible."""
-        chat_h = self.query_one(ChatArea).content_size.height
-        if chat_h <= 0:
-            return 16
-        return max(1, min(MAX_SCENE_ROWS, chat_h - self._idle_status_rows()))
 
-    def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
-        """Cell-accurate landscape, model, and integration columns."""
-        width = measured_width or self._idle_content_width()
-        body = Text()
-        body.append(render_landscape(width, max_rows))
-        body.append("\n")
-        checking = not self._model_line
-        model = self._model_line or "Checking the configured model"
-        body.append("◇ ", style=MUTED if checking else ACCENT)
-        body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
-        columns = [
-            self._idle_column("LSPs", self._idle_lsp_rows()),
-            self._idle_column("MCPs", self._idle_mcp_rows()),
-            self._idle_column("Skills", self._idle_skill_rows()),
-        ]
-        gap = 2
-        budgets = [max(cell_len(line.plain) for line in column) for column in columns]
-        room = width - gap * (len(columns) - 1)
-        if sum(budgets) > room:
-            share = max(8, room // len(columns))
-            budgets = [min(budget, share) for budget in budgets]
-            columns = [[self._clip_idle_line(line, budget) for line in column]
-                       for column, budget in zip(columns, budgets)]
-        height = max(len(column) for column in columns)
-        for row in range(height):
-            for index, column in enumerate(columns):
-                line = column[row] if row < len(column) else Text("")
-                body.append(line)
-                pad = budgets[index] - cell_len(line.plain)
-                if index < len(columns) - 1:
-                    body.append(" " * (pad + gap))
-            if row < height - 1:
-                body.append("\n")
-        return body
 
-    @staticmethod
-    def _clip_idle_line(line: Text, width: int) -> Text:
-        if cell_len(line.plain) <= width:
-            return line
-        clipped = Text()
-        used = 0
-        for start, end, style in line._spans:
-            piece = line.plain[start:end]
-            room = width - used
-            if room <= 0:
-                break
-            if cell_len(piece) > room:
-                piece = _fit_cells(piece, room)
-            clipped.append(piece, style=style)
-            used += cell_len(piece)
-        return clipped
 
-    @staticmethod
-    def _idle_column(title: str, rows: list[tuple[str, str]]) -> list[Text]:
-        from isycode.tui_theme import ascii_only
-        lines = [Text(tr(title), style=f"bold {TEXT}")]
-        if not rows:
-            lines.append(Text(("- " if ascii_only() else "− ") + tr("None configured"), style=MUTED))
-            return lines
-        shown = rows[:14]
-        for color, name in shown:
-            line = Text()
-            glyph = ("[x]" if ascii_only() else "✓") if color == GREEN else (("[!]" if ascii_only() else "!") if color in {YELLOW, RED} else ("[]" if ascii_only() else "▣"))
-            line.append(glyph + " ", style=color)
-            line.append(name, style=TEXT)
-            lines.append(line)
-        extra = len(rows) - len(shown)
-        if extra:
-            lines.append(Text(f"+{extra} more", style=MUTED))
-        return lines
 
-    def _idle_lsp_rows(self) -> list[tuple[str, str]]:
-        rows = []
-        for server in self._lsp_inventory:
-            state = server.get("state")
-            ready = state == "sandbox_ready"
-            name = str(server.get("label") or server.get("id") or "language server")
-            if ready:
-                color = MUTED
-            elif state in {"installed_unavailable", "installed_unsupported"}:
-                color = RED
-            else:
-                color = YELLOW
-            rows.append((color, name))
-        return rows
 
-    def _idle_mcp_rows(self) -> list[tuple[str, str]]:
-        snapshot = self._mcp_snapshot
-        if snapshot.state != "ready":
-            return []
-        rows = []
-        for item in snapshot.items:
-            status = str(item.get("status", "")).lower()
-            healthy = status in {"connected", "ready", "running", "ok", "active"} and not item.get("has_error")
-            starting = "start" in status or status in {"checking", "loading"}
-            color = GREEN if healthy else YELLOW if starting or status else MUTED
-            rows.append((color, str(item.get("name") or "mcp")))
-        return rows
 
-    def _idle_skill_rows(self) -> list[tuple[str, str]]:
-        names: list[str] = []
-        try:
-            from isycode.skill_catalog import skills
-            names.extend(str(name) for name in skills())
-        except (OSError, ValueError):
-            names = []
-        if self._skill_snapshot.state == "ready":
-            for item in self._skill_snapshot.items:
-                name = str(item.get("name") or "")
-                if name and name not in names:
-                    names.append(name)
-        return [(MUTED, name) for name in names]
 
-    def action_find_console(self) -> None:
-        """Open console-wide search regardless of which main view has focus."""
-        if isinstance(self.screen, ConsoleSearchScreen):
-            self.screen.query_one("#console-search-input", Input).focus()
-            return
-        self.push_screen(ConsoleSearchScreen())
 
-    @staticmethod
-    def _render_searchable_text(widget: Static) -> str:
-        console = Console(width=max(24, widget.size.width), color_system=None)
-        with console.capture() as capture:
-            console.print(static_content(widget))
-        return capture.get()
 
-    def _search_console(self, query: str, screen: ConsoleSearchScreen) -> None:
-        for widget, _ in self._console_search_hits:
-            if widget.is_mounted:
-                widget.remove_class("console-search-match", "console-search-current")
-        self._console_search_hits = []
-        self._console_search_index = -1
-        if query.strip():
-            chat = self.query_one(ChatArea)
-            for card in chat.query(CommandOutputCard):
-                if query.strip().casefold() in card.output.casefold() and not card.expanded:
-                    card.action_toggle_output()
-            for widget in chat.query(Static):
-                if not widget.display:
-                    continue
-                text = self._render_searchable_text(widget)
-                self._console_search_hits.extend(
-                    (widget, match) for match in find_text_matches(text, query.strip()))
-        if self._console_search_hits:
-            self._console_search_index = 0
-            self._show_console_search_match()
-        screen.update_results(
-            self._console_search_index,
-            len(self._console_search_hits),
-            self._console_search_hits[self._console_search_index][1].snippet
-            if self._console_search_hits else "",
-        )
 
-    def _move_console_search(self, direction: int) -> None:
-        if not self._console_search_hits:
-            return
-        self._console_search_index = (
-            self._console_search_index + direction) % len(self._console_search_hits)
-        self._show_console_search_match()
-        if isinstance(self.screen, ConsoleSearchScreen):
-            self.screen.update_results(
-                self._console_search_index, len(self._console_search_hits),
-                self._console_search_hits[self._console_search_index][1].snippet)
 
-    def _show_console_search_match(self) -> None:
-        for widget, _ in self._console_search_hits:
-            if widget.is_mounted:
-                widget.remove_class("console-search-current")
-                widget.add_class("console-search-match")
-        if not self._console_search_hits:
-            return
-        widget, _ = self._console_search_hits[self._console_search_index]
-        if widget.is_mounted:
-            widget.add_class("console-search-current")
-            chat = self.query_one(ChatArea)
-            chat.pause_tail()
-            for parent in widget.ancestors:
-                if isinstance(parent, TextualCollapsible):
-                    parent.collapsed = False
-            chat.call_after_refresh(chat.scroll_to_widget, widget, top=True, animate=False)
 
-    def _clear_console_search(self) -> None:
-        for widget, _ in self._console_search_hits:
-            if widget.is_mounted:
-                widget.remove_class("console-search-match", "console-search-current")
-        self._console_search_hits = []
-        self._console_search_index = -1
-        if self.is_mounted:
-            self.query_one("#prompt-input", PromptArea).focus()
 
-    def _mount_thought(self, title: str = "thinking...") -> tuple[ThoughtBlock, ChatArea]:
-        chat = self.query_one(ChatArea)
-        block = ThoughtBlock(title=title)
-        chat.mount(block)
-        chat.follow_tail()
-        return block, chat
 
-    async def _check_gateway_async(self) -> None:
-        """Show reachability without implying that the remote root is mounted."""
-        try:
-            client = GatewayClient()
-            allowed, reason = self._authorize_remote_read("gateway.files.read", client.base_url + "/health")
-            if not allowed:
-                self.query_one("#gateway-status", Static).update(Text(
-                    "Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security.",
-                    style=YELLOW))
-                return
-            available = await asyncio.to_thread(client.is_available)
-            if available:
-                message = "Health reachable. Remote Files is disabled because the Gateway hides its root identity."
-                if not client.api_key:
-                    message += " Set GATEWAY_API_KEY for scoped read access."
-                color = YELLOW
-            else:
-                message = "Unavailable. Local Files remains independent; no Gateway fallback is active."
-                color = YELLOW
-        except (ValueError, OSError) as exc:
-            message = f"Gateway configuration error: {exc}"
-            color = RED
-        self.query_one("#gateway-status", Static).update(Text(message, style=color))
 
-    async def _check_gateway_mcp_async(self) -> None:
-        status = self.query_one("#gateway-mcp-status", Static)
-        status.update(Text("Checking Gateway MCP authorization…"))
-        try:
-            gateway_url = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787").rstrip("/")
-            allowed, reason = self._authorize_remote_read("mcp.discover", gateway_url + "/mcp")
-            if not allowed:
-                self._gateway_mcp_snapshot = CatalogSnapshot(True, [], "denied", reason)
-                message, color = "Not checked · grant Gateway MCP discovery in Settings · Authority & Security.", YELLOW
-                if self.is_mounted:
-                    status.update(Text(message, style=color))
-                return
-            status.update(Text("Loading · starting the native Gateway MCP tool catalog…"))
-            tools = await discover_gateway_tools()
-        except GatewayMCPUnavailable as exc:
-            snapshot = CatalogSnapshot(True, [], "unavailable", str(exc))
-            message, color = f"Unavailable · {exc}", YELLOW
-        except Exception as exc:
-            snapshot = CatalogSnapshot(True, [], "error", type(exc).__name__)
-            message, color = f"Failed · {type(exc).__name__}", RED
-        else:
-            snapshot = CatalogSnapshot(True, tools, "ready")
-            has_key = bool(os.environ.get("GATEWAY_API_KEY"))
-            if not has_key:
-                has_key = saved_secret_exists("isyco-gateway")
-            auth_state = "API key supplied" if has_key else "API key needed for calls"
-            message = (f"Ready · {len(tools)} tools · {auth_state} · manual calls require "
-                       "per-host grant + one-use approval")
-            color = GREEN if has_key else YELLOW
-        self._gateway_mcp_snapshot = snapshot
-        if self.is_mounted:
-            self.query_one("#gateway-mcp-status", Static).update(Text(message, style=color))
+
 
 
 
@@ -2732,28 +1908,503 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def on_prompt_area_submitted(self, message: PromptArea.Submitted) -> None:
         self._accept_prompt(message.prompt, message.value)
 
-    def _track_composer_draft(self, event: TextArea.Changed) -> None:
-        if event.text_area.id != "prompt-input":
-            return
-        self._draft_text = getattr(event.text_area, "pasted_text", None).expand(event.text_area.text) if hasattr(event.text_area, "pasted_text") else event.text_area.text
-        if self._draft_timer is not None:
-            self._draft_timer.stop()
-        self._draft_timer = self.set_timer(1.0, self._save_draft)
 
-    def _navigate_prompt_history(self, delta: int, current: str) -> str | None:
-        if not self._prompt_history or (self._prompt_history_idx == -1 and delta > 0):
+
+
+
+    def _start_operation(self, coroutine, label: str) -> None:
+        self._activity_label = label
+        self._activity_frame = 0
+        self._set_activity(label, CYAN)
+        timer = getattr(self, "_activity_timer", None)
+        if timer is not None:
+            timer.stop()
+        self._activity_timer = None if self._reduced_motion else self.set_interval(0.12, self._animate_activity)
+        task = self._pin_task(coroutine)
+        self._loop_task = task
+        self._animate_activity()
+        self._paint_idea_box()
+        task.add_done_callback(self._operation_finished)
+
+    def _play_notification_sound(self, kind: str) -> None:
+        from isycode.notification_sounds import PATTERNS
+        if not getattr(self, "_notification_sounds", True) or self.is_headless:
+            return
+        now = _time.monotonic()
+        if now - getattr(self, "_last_notification_sound", 0) < 0.9:
+            return
+        self._last_notification_sound = now
+        self.bell()
+        for delay in PATTERNS.get(kind, PATTERNS["info"])[1:]:
+            self.set_timer(delay, lambda: self.bell() if self._notification_sounds else None)
+
+    def notify(self, message, *, title=tr(""), severity="information", timeout=None,
+               markup=True):
+        self._play_notification_sound({"warning": "warning", "error": "error"}.get(severity, "info"))
+        return super().notify(message, title=title, severity=severity, timeout=timeout,
+                              markup=markup)
+
+    def _operation_finished(self, task: asyncio.Task) -> None:
+        lane = next((item for item in self._lanes.values() if item.loop_task is task), None)
+        if lane is None:
+            return
+        lane.loop_task = None
+        cancelled = task.cancelled()
+        failed = None if cancelled else task.exception()
+        foreground = lane.key == self._foreground_key
+        followed = False
+        if lane.queued_messages and not cancelled and failed is None and lane.retry_prompt is None:
+            if foreground:
+                self.call_after_refresh(self._send_next_queued_message)
+            else:
+                nxt = lane.queued_messages.pop(0)
+                self._start_background_turn(lane, nxt)
+                followed = True
+        if foreground:
+            self._play_notification_sound(
+                "warning" if cancelled else "error" if failed is not None else "done")
+            timer = getattr(self, "_activity_timer", None)
+            if timer is not None:
+                timer.stop()
+                self._activity_timer = None
+            if cancelled:
+                self._set_activity("Interrupted", YELLOW)
+            elif failed is not None:
+                self._set_activity(f"Failed · {type(failed).__name__}", RED)
+            elif self._last_plan is not None:
+                self._set_activity("Plan ready · review it in Overview", YELLOW)
+            else:
+                self._set_activity(tr("Chat ready"), MUTED)
+            self._paint_idea_box()
+            if self._idea_backlog:
+                self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")
+            return
+        if not followed:
+            if cancelled:
+                lane.activity_message = "Interrupted"
+                lane.activity_color = YELLOW
+            elif failed is not None:
+                lane.activity_message = f"Failed · {type(failed).__name__}"
+                lane.activity_color = RED
+            else:
+                lane.activity_message = "Chat ready"
+                lane.activity_color = MUTED
+        if not cancelled and not followed:
+            self.notify("A conversation failed" if failed is not None else "A conversation finished")
+        self.run_worker(self._refresh_work_list(), group="work-list")
+
+    async def _grit_peer_advisory(self, path: str) -> str | None:
+        """Advisory peer claims (grit) for one file; never gates the approval."""
+        try:
+            owner = GritPeersOwner(self._workspace_root,
+                                   WorkspaceAuthority(self._workspace_root),
+                                   self._action_approvals)
+            outcome = await owner.claims(path)
+        except (OSError, ValueError, RuntimeError):
             return None
-        if self._prompt_history_idx == -1:
-            self._prompt_history_draft = current
-            self._prompt_history_idx = len(self._prompt_history)
-        next_index = self._prompt_history_idx + delta
-        if next_index < 0:
+        if outcome.decision != "ALLOW":
             return None
-        if next_index >= len(self._prompt_history):
-            self._prompt_history_idx = -1
-            return self._prompt_history_draft
-        self._prompt_history_idx = next_index
-        return self._prompt_history[next_index]
+        try:
+            return json.loads(outcome.text).get("advisory")
+        except ValueError:
+            return None
+
+    async def _await_screen(self, screen: Any) -> Any:
+        """Show a modal screen and wait for its result from a worker or a plain task.
+
+        App.push_screen_wait only works inside a Textual worker; chat turns and
+        slash commands run as asyncio tasks, so wait on the dismiss callback.
+        Resolve after the next refresh because Screen.dismiss invokes its callback
+        before the previous screen has been restored.
+        """
+        if isinstance(screen, AgentQuestionScreen):
+            self._play_notification_sound("question")
+        elif isinstance(screen, ApprovalScreen):
+            self._play_notification_sound("approval")
+        future = asyncio.get_running_loop().create_future()
+
+        def finished(result) -> None:
+            def resolve_after_pop() -> None:
+                if not future.done():
+                    future.set_result(result)
+
+            self.call_after_refresh(resolve_after_pop)
+
+        await self.push_screen(screen, finished)
+        return await future
+
+    def _animate_activity(self) -> None:
+        if self._reduced_motion or self._loop_task is None or self._loop_task.done():
+            return
+        from isycode.cat_activity import walking_cat
+        self._activity_frame += 1
+        try:
+            status = self.query_one("#activity-status", Static)
+            status.update(walking_cat(status.content_size.width, self._activity_frame))
+        except (NoScreen, ScreenStackError):
+            pass
+
+
+    def _apply_high_contrast(self, enabled: bool) -> None:
+        from isycode.tui_theme import HIGH_CONTRAST_CSS
+        read_from = ("isycode", "high-contrast")
+        self.stylesheet.add_source(HIGH_CONTRAST_CSS if enabled else "",
+                                   read_from=read_from, is_default_css=False)
+        self.stylesheet.reparse()
+        self.stylesheet.update(self)
+
+    def _set_activity(self, message: str, color: str = MUTED) -> None:
+        lane = self._active_lane()
+        lane.activity_message = message
+        lane.activity_color = color
+        if not self._lane_on_screen():
+            return
+        self._activity_message = message
+        self._activity_color = color
+        if self.is_mounted:
+            try:
+                status = self.query_one("#activity-status", Static)
+                if self._loop_task is not None and not self._loop_task.done():
+                    return
+                from isycode.cat_activity import sleeping_cat
+                status.update(sleeping_cat(status.content_size.width, message, color))
+            except (NoScreen, ScreenStackError):
+                pass
+
+    def _blocked_notice(self, short: str, detail: str = "") -> None:
+        """A menu choice that did not run. The chat transcript stays untouched."""
+        self._set_activity(short, YELLOW)
+        if not detail:
+            return
+        try:
+            panel = self.screen_stack[0].query_one("#action-detail", Static)
+        except (NoMatches, NoScreen, IndexError):
+            return
+        panel.display = True
+        panel.update(Text(detail))
+
+
+
+    # ── chat (default path) ──────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def on_text_selected(self, event) -> None:
+        """Selection marks a range. Ctrl+C or an explicit menu choice copies it."""
+
+    def _folder_store(self) -> WorkspaceFolders:
+        return WorkspaceFolders(self._workspace_root)
+
+    async def _browse_workspace_folder(self, alias: str) -> None:
+        try:
+            root = self._folder_store().resolve(alias)
+        except (OSError, ValueError) as exc:
+            self._append(f"  Folder unavailable · {str(exc)[:160]}", YELLOW)
+            return
+        self._file_browser_alias = alias
+        self._search_mode = False
+        self._search_query = ''
+        self.query_one('#file-search', Input).value = ''
+        self._set_rail_view('files')
+        await self._load_directory(str(root))
+
+    def _additional_folder_access(self, *, write: bool = False) -> bool:
+        try:
+            store = self._folder_store()
+            for item in store.list():
+                if write and not item['editable']:
+                    continue
+                try:
+                    root = store.resolve(item['alias'], write=write)
+                except (OSError, ValueError):
+                    continue
+                enabled = self._workspace_write_tool_enabled(root) if write else self._workspace_chat_tools_enabled(root)
+                if enabled:
+                    return True
+        except (OSError, ValueError, WorkspaceAuthorityError):
+            pass
+        return False
+
+    async def _initialize_workspace_config(self) -> None:
+        if self._workspace_identity.workspace_root_source != "isyroot":
+            self._append("  .isycode/ is available only in a workspace with its own .isyroot marker.",
+                         YELLOW)
+            return
+        try:
+            owner = WorkspaceConfigOwner(self._workspace_root,
+                                         WorkspaceAuthority(self._workspace_root),
+                                         self._action_approvals)
+            plan = await asyncio.to_thread(owner.prepare_initialization)
+        except (OSError, ValueError) as exc:
+            self._append(f"  Workspace config unavailable · {str(exc)[:180]}", YELLOW)
+            return
+        if not plan.previews:
+            self._append(f"  {plan.message}", YELLOW if plan.message else MUTED)
+            return
+        if plan.message:
+            self._append(f"  {plan.message}", MUTED)
+        for preview in plan.previews:
+            if not await self._await_screen(WriteApprovalScreen(preview)):
+                self._append(f"  Initialization stopped · {preview.path} unchanged", MUTED)
+                return
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+            outcome = await asyncio.to_thread(owner.apply, preview, approval)
+            if outcome.decision != "ALLOW":
+                self._append(f"  Workspace setup {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                return
+            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+        self._workspace_config_values = None
+        self._workspace_config_warning = ""
+        self._active_role = self._load_global_default_role()
+
+    async def _set_global_mode_default(self, value: str) -> None:
+        if value == "classic" and not await self._await_screen(TailscaleConfirmScreen(
+                "Start new folders in Classic?",
+                "Every folder you open for the first time will read files, propose edits you approve, "
+                "chat with your provider and save conversations and keys without asking for each "
+                "permission. IsySentinel and the action journal still check and record everything. "
+                "Folders you already use keep their mode.", "Use Classic for new folders")):
+            self._open_user_defaults_menu()
+            return
+        try:
+            UserDefaultsStore().update(new_workspace_mode=value)
+            self._set_activity("Default mode saved for new workspaces", GREEN)
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save the default mode; existing settings remain", RED)
+        self._open_user_defaults_menu()
+
+    async def _set_global_workspace_default(self, value: str) -> None:
+        if value == "recurring":
+            accepted = await self._await_screen(GlobalRecurringDefaultScreen())
+            if not accepted:
+                self._open_user_defaults_menu()
+                return
+        try:
+            UserDefaultsStore().update(new_workspace=value)
+            self._set_activity("Default saved for new workspaces", GREEN)
+        except (OSError, ValueError, json.JSONDecodeError):
+            self._set_activity("Could not save your global default; existing settings remain", RED)
+        self._open_user_defaults_menu()
+
+    async def _startup_workspace(self) -> None:
+        """Offer recurrence once, then choose persistent or temporary chat storage."""
+        try:
+            setup_store = WorkspaceSetupStore()
+            self._workspace_setup = setup_store
+            recurring = self._workspace_identity.workspace_root_source == "isyroot"
+            self._quick_start = False
+            # Register the journalled key reader before any provider probe so the
+            # QuickStart readiness check can see vault-stored keys (F-11). It is
+            # registered again below, once the workspace root is final.
+            self._register_saved_key_reader()
+            if not recurring:
+                choice = setup_store.recurrent_choice(self._launch_dir)
+                if choice is None:
+                    try:
+                        defaults = UserDefaultsStore().load()
+                        preference = defaults.get("new_workspace", "ask")
+                        mode_preference = defaults.get("new_workspace_mode", "ask")
+                    except (OSError, ValueError, json.JSONDecodeError):
+                        preference = mode_preference = "ask"
+                    if preference == "ask" and mode_preference == "ask":
+                        try:
+                            provider_ready = Provider(
+                                name=selected_provider_name(),
+                                model=resolved_chat_model(selected_provider_name()),
+                                api_key=load_provider_key(selected_provider_name()) or None,
+                            ).configured()
+                        except (ConfigurationError, ProviderError):
+                            provider_ready = False
+                        start = await self._await_screen(
+                            QuickStartScreen(self._launch_dir, provider_ready=provider_ready))
+                        if start == "quick":
+                            choice = True
+                            self._quick_start = True
+                        else:
+                            choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
+                    else:
+                        choice = new_workspace_choice(self._launch_dir, None, preference)
+                        if choice is None:
+                            choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
+                    setup_store.choose_recurrent(self._launch_dir, choice)
+                elif choice:
+                    # Re-create a marker if the user removed it after opting in.
+                    setup_store.choose_recurrent(self._launch_dir, True)
+                recurring = choice
+                if recurring:
+                    self._workspace_identity = discover_workspace_identity(self._launch_dir)
+                    self._workspace_root = self._workspace_identity.workspace_root
+                    self._update_workspace_identity_ui()
+            warning = self._shared_root_warning()
+            if warning:
+                self._append_startup(f"  {warning}", YELLOW)
+            if self._initial_view == "files":
+                self.query_one("#workspace-tree", Tree).focus()
+            else:
+                self.query_one("#prompt-input", PromptArea).focus()
+
+            # Transcripts are saved only through the chat_sessions owner, only for
+            # recurring workspaces, and only while the explicit session grants are
+            # on. A recurrence choice alone is identity, not permission to persist.
+            self._chat_sessions = None
+            self._active_chat_session_id = None
+            self._chat_session_owner = None
+            if recurring:
+                try:
+                    self._chat_session_owner = ChatSessionOwner(
+                        self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                        setup_store.sessions_root(self._workspace_root))
+                except (WorkspaceAuthorityError, OSError, ValueError):
+                    self._chat_session_owner = None
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                if authority.mode() is None:
+                    if self._quick_start:
+                        chosen = "classic"
+                    else:
+                        try:
+                            preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
+                        except (OSError, ValueError, json.JSONDecodeError):
+                            preferred = "ask"
+                        if preferred in {"classic", "security"}:
+                            chosen = preferred
+                            self._append_startup(f"  New workspace · using your default {preferred.title()} mode "
+                                         "· change it in Settings → Authority.", MUTED)
+                        else:
+                            chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
+                    authority.set_mode(chosen)
+                await self._offer_quiet_trust(authority)
+                if self._quick_start:
+                    await self._enable_coding_toolkit(open_menu=False)
+                    self._append_startup("  Quick Start done · type below to chat. /help tour shows the lay of the land.", GREEN)
+                self.query_one(Banner).set_compact(True)
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
+            self._update_workspace_identity_ui()
+            self._register_saved_key_reader()
+            await self._initialize_workspace()
+            self._refresh_lsp_status()
+            self.run_worker(self._refresh_openisy(), exclusive=False, exit_on_error=False)
+            self.run_worker(self._check_gateway_async(), exclusive=False, exit_on_error=False)
+            self.run_worker(self._check_model(), exclusive=False, exit_on_error=False)
+            if not recurring:
+                self._append_startup("  Temporary workspace · this folder is the workspace; .isyroot is optional. "
+                                     "File access follows the selected mode and grants. Chat history is not saved.", MUTED)
+            if not self._sessions_enabled():
+                self._append_startup(
+                    "  This conversation stays in memory · turn on “Save conversations” in "
+                    "Settings → Authority (recurring workspaces only).", MUTED)
+        except Exception as exc:
+            # The screen that was current during an awaited load may already be gone.
+            # Reporting that must not raise, or Textual fails the worker.
+            try:
+                self._append_startup(f"  Workspace startup failed ({type(exc).__name__}).", RED)
+            except (NoMatches, NoScreen):
+                return
+        finally:
+            # F-01: release waiters even when startup failed partway through.
+            self._ready_event.set()
+
+    def _update_workspace_identity_ui(self) -> None:
+        if not self.is_mounted:
+            return
+        self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
+                          f"launch {self._launch_dir}")
+        self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
+        self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
+        self.query_one("#workspace-source-label", Static).update(self._root_source_label())
+        self.query_one(Banner).set_compact(True)
+
+    async def _load_project_context(self) -> bool:
+        """Explicitly read root AGENTS.md; the file never supplies grants or tools."""
+        return await self._load_context_file("AGENTS.md")
+
+    def copy_to_clipboard(self, text: str) -> None:
+        """Every copy Textual makes (selection, Ctrl+C, text fields) goes through the owner."""
+        self._copy_through_owner(text, "selection")
+
+    async def _request_clipboard_paste(self, prompt):
+        authority = WorkspaceAuthority(self._workspace_root)
+        grant = authority.effective_policy().get("grants", {}).get("clipboard.paste", {})
+        if not displayed_on("clipboard.paste", grant, CLIPBOARD_TARGET in grant.get("targets", ())):
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    "Allow pasting from the clipboard?", "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes.", "Allow paste")):
+                return
+            authority.set_grant("clipboard.paste", enabled=True, targets=[CLIPBOARD_TARGET])
+        owner = ClipboardOwner(self._workspace_root, authority)
+        outcome, mime, data = await asyncio.to_thread(owner.paste)
+        if outcome.decision != "ALLOW":
+            self.notify(outcome.reason, severity="warning")
+            return
+        try:
+            if mime.startswith("image/"):
+                prompt.insert(self._image_attachments.capture(mime, data))
+                self.notify("Image attached · Ctrl+P reviews attachments")
+            else:
+                from textual.events import Paste
+                await prompt._on_paste(Paste(data.decode("utf-8")))
+        except (ValueError, UnicodeError):
+            self.notify("Clipboard content could not be attached", severity="warning")
+        prompt.focus()
+
+    async def _request_clipboard_copy(self, text: str, source: str) -> None:
+        authority = WorkspaceAuthority(self._workspace_root)
+        grant = authority.effective_policy().get('grants', {}).get('clipboard.copy', {})
+        if not displayed_on('clipboard.copy', grant, CLIPBOARD_TARGET in grant.get('targets', ())):
+            if not await self._await_screen(TailscaleConfirmScreen(
+                    'Allow copying in this workspace?',
+                    'Copies text or paths you select to the OS clipboard. Other applications may read it. '
+                    'The model receives no clipboard tool; copied contents are not written to the journal.',
+                    'Allow copy')):
+                return
+            authority.set_grant('clipboard.copy', enabled=True, targets=[CLIPBOARD_TARGET])
+        self._copy_through_owner(text, source)
+
+    def _copy_through_owner(self, text: str, source: str) -> None:
+        try:
+            key_field = self.query_one("#provider-key-input", Input)
+        except Exception:  # noqa: BLE001 - the field only exists in the main screen
+            key_field = None
+        if key_field is not None and self.focused is key_field:
+            self.notify_semantic("API keys are never copied.", kind="warning")
+            return
+        try:
+            owner = ClipboardOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
+            outcome = owner.copy(text, source=source,
+                                 terminal_write=super().copy_to_clipboard)
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            self.notify_semantic("Copy failed · Workspace Authority is unavailable.", kind="denied")
+            return
+        if outcome.decision == "ALLOW":
+            where = ("terminal clipboard" if outcome.text == "terminal"
+                     else f"clipboard via {outcome.text}")
+            if outcome.text == 'terminal':
+                self.notify_semantic('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', kind="info", timeout=8)
+            else:
+                self.notify_semantic(f"Copied {len(text)} characters to the {where}.", kind="success", timeout=2.5)
+        elif "grant" in outcome.reason:
+            self.notify_semantic("Copying is off for this workspace · turn on “Copy selected text” in "
+                                 "Settings → Authority.", kind="denied", timeout=5)
+        else:
+            self.notify_semantic(f"Nothing copied · {outcome.reason[:120]}", kind="denied")
 
     def _save_draft(self) -> None:
         if not self._sessions_enabled() or (not self._active_chat_session_id and not self._draft_text
@@ -2864,365 +2515,88 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         else:
             self._start_operation(self._run_chat(text), "Chat · working")
 
-    def _start_operation(self, coroutine, label: str) -> None:
-        self._activity_label = label
-        self._activity_frame = 0
-        self._set_activity(label, CYAN)
-        timer = getattr(self, "_activity_timer", None)
-        if timer is not None:
-            timer.stop()
-        self._activity_timer = None if self._reduced_motion else self.set_interval(0.12, self._animate_activity)
-        task = self._pin_task(coroutine)
-        self._loop_task = task
-        self._animate_activity()
-        self._paint_idea_box()
-        task.add_done_callback(self._operation_finished)
+    def _append_startup(self, text: str, color: str = TEXT) -> None:
+        """Keep startup notices beneath the welcome art without archiving it."""
+        self._append(text, color, startup=True)
 
-    def _play_notification_sound(self, kind: str) -> None:
-        from isycode.notification_sounds import PATTERNS
-        if not getattr(self, "_notification_sounds", True) or self.is_headless:
-            return
-        now = _time.monotonic()
-        if now - getattr(self, "_last_notification_sound", 0) < 0.9:
-            return
-        self._last_notification_sound = now
-        self.bell()
-        for delay in PATTERNS.get(kind, PATTERNS["info"])[1:]:
-            self.set_timer(delay, lambda: self.bell() if self._notification_sounds else None)
-
-    def notify(self, message, *, title=tr(""), severity="information", timeout=None,
-               markup=True):
-        self._play_notification_sound({"warning": "warning", "error": "error"}.get(severity, "info"))
-        return super().notify(message, title=title, severity=severity, timeout=timeout,
-                              markup=markup)
-
-    def _operation_finished(self, task: asyncio.Task) -> None:
-        lane = next((item for item in self._lanes.values() if item.loop_task is task), None)
-        if lane is None:
-            return
-        lane.loop_task = None
-        cancelled = task.cancelled()
-        failed = None if cancelled else task.exception()
-        foreground = lane.key == self._foreground_key
-        followed = False
-        if lane.queued_messages and not cancelled and failed is None and lane.retry_prompt is None:
-            if foreground:
-                self.call_after_refresh(self._send_next_queued_message)
-            else:
-                nxt = lane.queued_messages.pop(0)
-                self._start_background_turn(lane, nxt)
-                followed = True
-        if foreground:
-            self._play_notification_sound(
-                "warning" if cancelled else "error" if failed is not None else "done")
-            timer = getattr(self, "_activity_timer", None)
-            if timer is not None:
-                timer.stop()
-                self._activity_timer = None
-            if cancelled:
-                self._set_activity("Interrupted", YELLOW)
-            elif failed is not None:
-                self._set_activity(f"Failed · {type(failed).__name__}", RED)
-            elif self._last_plan is not None:
-                self._set_activity("Plan ready · review it in Overview", YELLOW)
-            else:
-                self._set_activity(tr("Chat ready"), MUTED)
-            self._paint_idea_box()
-            if self._idea_backlog:
-                self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")
-            return
-        if not followed:
-            if cancelled:
-                lane.activity_message = "Interrupted"
-                lane.activity_color = YELLOW
-            elif failed is not None:
-                lane.activity_message = f"Failed · {type(failed).__name__}"
-                lane.activity_color = RED
-            else:
-                lane.activity_message = "Chat ready"
-                lane.activity_color = MUTED
-        if not cancelled and not followed:
-            self.notify("A conversation failed" if failed is not None else "A conversation finished")
-        self.run_worker(self._refresh_work_list(), group="work-list")
-
-    async def _grit_peer_advisory(self, path: str) -> str | None:
-        """Advisory peer claims (grit) for one file; never gates the approval."""
-        try:
-            owner = GritPeersOwner(self._workspace_root,
-                                   WorkspaceAuthority(self._workspace_root),
-                                   self._action_approvals)
-            outcome = await owner.claims(path)
-        except (OSError, ValueError, RuntimeError):
-            return None
-        if outcome.decision != "ALLOW":
-            return None
-        try:
-            return json.loads(outcome.text).get("advisory")
-        except ValueError:
-            return None
-
-    async def _await_screen(self, screen):
-        """Show a modal screen and wait for its result from a worker or a plain task.
-
-        App.push_screen_wait only works inside a Textual worker; chat turns and
-        slash commands run as asyncio tasks, so wait on the dismiss callback.
-        Resolve after the next refresh because Screen.dismiss invokes its callback
-        before the previous screen has been restored.
-        """
-        if isinstance(screen, AgentQuestionScreen):
-            self._play_notification_sound("question")
-        elif isinstance(screen, ApprovalScreen):
-            self._play_notification_sound("approval")
-        future = asyncio.get_running_loop().create_future()
-
-        def finished(result) -> None:
-            def resolve_after_pop() -> None:
-                if not future.done():
-                    future.set_result(result)
-
-            self.call_after_refresh(resolve_after_pop)
-
-        # Await both the modal and its descendants before the caller continues.
-        # Otherwise a fast second modal can receive input before its controls
-        # have mounted (the race is especially visible on Windows).
-        await self.push_screen(screen, finished)
-        return await future
-
-    def _animate_activity(self) -> None:
-        if self._reduced_motion or self._loop_task is None or self._loop_task.done():
-            return
-        from isycode.cat_activity import walking_cat
-        self._activity_frame += 1
-        try:
-            status = self.query_one("#activity-status", Static)
-            status.update(walking_cat(status.content_size.width, self._activity_frame))
-        except (NoScreen, ScreenStackError):
-            pass
-
-    def _refresh_activity(self) -> None:
-        if self._loop_task is not None and not self._loop_task.done():
-            self._animate_activity()
-        else:
-            self._set_activity(getattr(self, "_activity_message", "Chat ready"),
-                               getattr(self, "_activity_color", MUTED))
-
-    def _apply_high_contrast(self, enabled: bool) -> None:
-        from isycode.tui_theme import HIGH_CONTRAST_CSS
-        read_from = ("isycode", "high-contrast")
-        self.stylesheet.add_source(HIGH_CONTRAST_CSS if enabled else "",
-                                   read_from=read_from, is_default_css=False)
-        self.stylesheet.reparse()
-        self.stylesheet.update(self)
-
-    def _set_activity(self, message: str, color: str = MUTED) -> None:
-        lane = self._active_lane()
-        lane.activity_message = message
-        lane.activity_color = color
+    def _mount_user_turn(self, text: str, sent_at: str | None = None) -> None:
+        """Paint one user message as a rounded card and leave the idle board."""
+        self._active_lane().lines.append(("user", text, sent_at))
         if not self._lane_on_screen():
             return
-        self._activity_message = message
-        self._activity_color = color
-        if self.is_mounted:
-            try:
-                status = self.query_one("#activity-status", Static)
-                if self._loop_task is not None and not self._loop_task.done():
-                    return
-                from isycode.cat_activity import sleeping_cat
-                status.update(sleeping_cat(status.content_size.width, message, color))
-            except (NoScreen, ScreenStackError):
-                pass
+        self._dismiss_idle()
+        chat = self.query_one(ChatArea)
+        if clock_label(sent_at):
+            chat.mount(Static(Text(clock_label(sent_at), style=MUTED), classes="message-clock"))
+        chat.mount(SelectableText(Text(text, style=TEXT), selection_text=text, classes="user-turn"))
+        chat.follow_tail()
 
-    def _blocked_notice(self, short: str, detail: str = "") -> None:
-        """A menu choice that did not run. The chat transcript stays untouched."""
-        self._set_activity(short, YELLOW)
-        if not detail:
-            return
+    def _open_user_defaults_menu(self) -> None:
         try:
-            panel = self.screen_stack[0].query_one("#action-detail", Static)
-        except (NoMatches, NoScreen, IndexError):
-            return
-        panel.display = True
-        panel.update(Text(detail))
+            defaults = UserDefaultsStore().load()
+        except (OSError, ValueError, json.JSONDecodeError):
+            defaults = {"new_workspace": "ask", "default_role": None}
+        provider_name = selected_provider_name()
+        provider = PRESETS.get(provider_name, {})
+        from isycode.model_presentation import model_display_name
+        model_name = model_display_name(resolved_chat_model(provider_name))
+        entries = [
+            self._entry("These personal defaults follow you between workspaces.", "info"),
+            self._entry("Access stays separate for each workspace; these defaults never turn on permissions.", "info"),
+            self._entry(
+                tr("Default model · {provider} · {model}",
+                   provider=provider.get('label', provider_name), model=model_name),
+                "info", "", "Change it from Providers; model selection is already saved globally.",
+                translate=False),
+        ]
+        role = defaults.get("default_role")
+        entries.append(self._entry(
+            tr("Default role · {name}", name=role['name']) if role else tr("Default role · none"),
+            "info", "", "Role guidance is global preference only; it never grants permissions.",
+            translate=False))
+        if self._active_role:
+            entries.append(self._entry(
+                tr("Use current role ({name}) as my default", name=self._active_role['name']),
+                "user_default_role_save", "", translate=False))
+        if role:
+            entries.append(self._entry("Clear my default role", "user_default_role_clear", ""))
+        new_workspace = defaults.get("new_workspace", "ask")
+        choices = (
+            ("ask", "Ask me when I open a new folder"),
+            ("temporary", "Always use temporary mode for new folders"),
+            ("recurring", "Make new folders recurring by default"),
+        )
+        entries.extend(self._entry(
+            ("● " if new_workspace == value else "○ ") + tr(label),
+            "user_default_workspace", value,
+            ("A recurring workspace gets an empty .isyroot marker when first opened. "
+             "This identifies the workspace; it does not grant file access. Home, its parents, "
+             "temp and mount points still ask first.")
+            if value == "recurring" else "Applies only when this folder has no saved choice yet.",
+            translate=False)
+            for value, label in choices)
+        new_mode = defaults.get("new_workspace_mode", "ask")
+        mode_choices = (
+            ("ask", "Ask me which mode a new folder uses"),
+            ("classic", "Start new folders in Classic · Ready To Use"),
+            ("security", "Start new folders in Security · everything off until I allow it"),
+        )
+        entries.extend(self._entry(
+            ("● " if new_mode == value else "○ ") + tr(label), "user_default_mode", value,
+            "Applies only to folders opened for the first time; each workspace keeps its own "
+            "mode and you can switch it in Settings → Authority.",
+            translate=False)
+            for value, label in mode_choices)
+        entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
+        if self._menu_mode != "user_defaults":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("user_defaults", "Settings · My defaults", entries)
 
-    def _paint_bridge_presence(self) -> None:
-        rows = self._presence_rows
-        if rows is None:
-            return
-        try:
-            panel = self.query_one("#work-presence", Static)
-        except (NoMatches, NoScreen):
-            return
-        from isycode.bridge_presence import presence_line
-        width = panel.content_size.width or panel.size.width
-        panel.update(presence_line(rows, width))
-
-    async def _show_bridge_presence(self) -> None:
-        confirmed = await self._await_screen(BridgePresenceScreen())
-        panel = self.query_one("#work-presence", Static)
-        if not confirmed:
-            self._presence_rows = None
-            panel.update("Bridge presence off")
-            return
-        root = self._workspace_root
-        approvals = self._action_approvals
-        try:
-            base = WorkspaceAuthority(root)
-            request = BridgePresenceOwner(root, base, approvals).prepare()
-            owner = BridgePresenceOwner(
-                root, OneShotActionAuthority(base, request), approvals)
-            outcome, rows = await asyncio.to_thread(
-                owner.read, request, approvals.issue(request))
-        except (OSError, RuntimeError, ValueError):
-            self._presence_rows = None
-            panel.update("Presence unavailable")
-            return
-        if outcome.decision != "ALLOW":
-            self._presence_rows = None
-            panel.update("Presence unavailable")
-            return
-        self._presence_rows = rows
-        self._paint_bridge_presence()
-
-    # ── chat (default path) ──────────────────────────────────────
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def copy_to_clipboard(self, text: str) -> None:
-        """Every copy Textual makes (selection, Ctrl+C, text fields) goes through the owner."""
-        self._copy_through_owner(text, "selection")
-
-    def on_text_selected(self, event) -> None:
-        """Selection marks a range. Ctrl+C or an explicit menu choice copies it."""
-
-    async def _request_clipboard_paste(self, prompt):
-        authority = WorkspaceAuthority(self._workspace_root)
-        grant = authority.effective_policy().get("grants", {}).get("clipboard.paste", {})
-        if not displayed_on("clipboard.paste", grant, CLIPBOARD_TARGET in grant.get("targets", ())):
-            if not await self._await_screen(TailscaleConfirmScreen(
-                    "Allow pasting from the clipboard?", "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes.", "Allow paste")):
-                return
-            authority.set_grant("clipboard.paste", enabled=True, targets=[CLIPBOARD_TARGET])
-        owner = ClipboardOwner(self._workspace_root, authority)
-        outcome, mime, data = await asyncio.to_thread(owner.paste)
-        if outcome.decision != "ALLOW":
-            self.notify(outcome.reason, severity="warning")
-            return
-        try:
-            if mime.startswith("image/"):
-                prompt.insert(self._image_attachments.capture(mime, data))
-                self.notify("Image attached · Ctrl+P reviews attachments")
-            else:
-                from textual.events import Paste
-                await prompt._on_paste(Paste(data.decode("utf-8")))
-        except (ValueError, UnicodeError):
-            self.notify("Clipboard content could not be attached", severity="warning")
-        prompt.focus()
-
-    async def _request_clipboard_copy(self, text: str, source: str) -> None:
-        authority = WorkspaceAuthority(self._workspace_root)
-        grant = authority.effective_policy().get('grants', {}).get('clipboard.copy', {})
-        if not displayed_on('clipboard.copy', grant, CLIPBOARD_TARGET in grant.get('targets', ())):
-            if not await self._await_screen(TailscaleConfirmScreen(
-                    'Allow copying in this workspace?',
-                    'Copies text or paths you select to the OS clipboard. Other applications may read it. '
-                    'The model receives no clipboard tool; copied contents are not written to the journal.',
-                    'Allow copy')):
-                return
-            authority.set_grant('clipboard.copy', enabled=True, targets=[CLIPBOARD_TARGET])
-        self._copy_through_owner(text, source)
-
-    def _copy_through_owner(self, text: str, source: str) -> None:
-        try:
-            key_field = self.query_one("#provider-key-input", Input)
-        except Exception:  # noqa: BLE001 - the field only exists in the main screen
-            key_field = None
-        if key_field is not None and self.focused is key_field:
-            self.notify_semantic("API keys are never copied.", kind="warning")
-            return
-        try:
-            owner = ClipboardOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
-            outcome = owner.copy(text, source=source,
-                                 terminal_write=super().copy_to_clipboard)
-        except (WorkspaceAuthorityError, OSError, ValueError):
-            self.notify_semantic("Copy failed · Workspace Authority is unavailable.", kind="denied")
-            return
-        if outcome.decision == "ALLOW":
-            where = ("terminal clipboard" if outcome.text == "terminal"
-                     else f"clipboard via {outcome.text}")
-            if outcome.text == 'terminal':
-                self.notify_semantic('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', kind="info", timeout=8)
-            else:
-                self.notify_semantic(f"Copied {len(text)} characters to the {where}.", kind="success", timeout=2.5)
-        elif "grant" in outcome.reason:
-            self.notify_semantic("Copying is off for this workspace · turn on “Copy selected text” in "
-                                 "Settings → Authority.", kind="denied", timeout=5)
-        else:
-            self.notify_semantic(f"Nothing copied · {outcome.reason[:120]}", kind="denied")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    async def _check_provider_connection(self) -> None:
-        """Explicit minimal provider request; credentials alone never authorize it."""
-        try:
-            name = selected_provider_name()
-            provider = Provider(name=name, model=resolved_chat_model(name),
-                                api_key=load_provider_key(name) or None)
-            messages = [{"role": "user", "content": "Reply with OK only. Do not call any tools."}]
-            material = {"operation": "chat.completions", "messages": messages,
-                        "max_tokens": None, "tools": None,
-                        "token_limit_field": provider.token_limit_field,
-                        "reasoning_effort": provider.reasoning_effort,
-                        "temperature_supported": provider.temperature_supported}
-            async def send():
-                return await provider_complete(provider, messages, max_tokens=None, tools=None)
-            owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
-            response, outcome = await owner.execute(provider, material, send)
-            if outcome.decision == "ALLOW" and isinstance(response, dict) and response.get("text"):
-                self._append(f"  Provider response received · receipt {outcome.receipt.receipt_id} · "
-                             "this checks chat connectivity, not tool compatibility.", GREEN)
-            else:
-                self._append(f"  Provider not verified · {outcome.decision} · {outcome.reason[:160]}", YELLOW)
-        except (ProviderError, StreamError) as exc:
-            self._append(self._provider_failure(exc, "Connection check"), YELLOW)
-        except (OSError, ValueError) as exc:
-            self._append(f"  Connection check unavailable ({type(exc).__name__}).", YELLOW)
-
-    async def _load_project_context(self) -> bool:
-        """Explicitly read root AGENTS.md; the file never supplies grants or tools."""
-        return await self._load_context_file("AGENTS.md")
+    def _root_source_label(self) -> str:
+        source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "Fallback"
+        broad = " · Broad Shared Root" if self._shared_root_warning() else ""
+        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
+        return f"Root Source · {source}{broad} · {mode} Mode"
 
     async def _load_context_file(self, relative_path: str) -> bool:
         """Load one selected workspace document through the read owner and receipt."""
@@ -3240,296 +2614,39 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self.query_one("#context-button", Button).label = self._context_button_label()
         return self._agent_context is not None
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # ── /plan (IsyMotron plugin) ─────────────────────────────────
 
-    async def _run_plan(self, intent: str) -> None:
-        """Delegate planning to IsyMotron runtime and render its proposal."""
-        self._clear_pending_plan()
-        block = None
-        if self._lane_on_screen():
-            block, _chat = self._mount_thought()
-        reason_buf: list[str] = []
-        t0 = _time.monotonic()
-        try:
-            def on_chunk(kind: str, chunk: str) -> None:
-                if kind == "reasoning":
-                    reason_buf.append(chunk)
-                    if block is not None and block.is_mounted and self._lane_on_screen():
-                        self.call_from_thread(block.set_text, "".join(reason_buf))
-
-            runtime = self._runtime_factory(self._workspace_root)
-            outcome = await runtime.plan(intent, on_chunk=on_chunk)
-            plan = outcome.plan
-            from isycode.model_presentation import model_display_name
-            self._append(f"  Model: {model_display_name(outcome.model)} · {outcome.provider_label}", MUTED)
-            self._append(f"  Host: {outcome.host_name}", MUTED)
-
-            if plan.verdict() == "PLANNED":
-                self._append(f"\n  Understood: {plan.understood}", TEXT)
-                self._append(f"  Plan ({len(plan.steps)} steps):", YELLOW)
-                for i, step in enumerate(plan.steps, 1):
-                    params_str = ", ".join(f"{k}={v}" for k, v in step.params.items())
-                    self._append(f"    {i}. [{step.host}] {step.capability}({params_str})", TEXT)
-                    self._append(f"       ↳ {step.why}", MUTED)
-                self._append("\n  Proposal only · it carries no authority.", MUTED)
-                self._append(
-                    "  Execution is disabled in Secure until each step has an ISyCode owner, "
-                    "grant, Sentinel decision and required approval.", MUTED)
-                if plan.completion and plan.completion.prompt_tokens is not None and plan.completion.completion_tokens is not None:
-                    self._append(f"  Tokens: {plan.completion.prompt_tokens + plan.completion.completion_tokens}", MUTED)
-                self._clear_pending_plan()
-                if self._lane_on_screen():
-                    review = self.query_one("#review-plan", Button)
-                    review.disabled = True
-                    review.label = "Execution unavailable in Secure"
-                self._append(
-                    f"\n  {outcome.origin} proposal is ready for inspection; it cannot be run through IsyMotron.",
-                    YELLOW)
-            else:
-                self._append(f"\n  Refused: {plan.refused or 'no plan possible'}", RED)
-                self._append("  This is correct behavior, not a failure.", MUTED)
-
-        except PlanRejected as e:
-            reason = getattr(e, "reason", str(e))
-            self._append(f"\n  Plan rejected: {reason}. No executable plan was retained.", RED)
-        except ProviderError as e:
-            self._append(f"\n  {self._provider_failure(e, 'Planning')}", RED)
-        except Exception as e:
-            self._append(
-                f"\n  Planning failed ({type(e).__name__}). No executable plan was retained.", RED)
-        finally:
-            if block is not None and block.is_mounted and self._lane_on_screen():
-                block.collapse_to(_time.monotonic() - t0)
 
     # ── Contextual demo-plan approval ────────────────────────────
 
-    def action_run_plan(self) -> None:
-        """Review and confirm a demo plan through its contextual button."""
-        if self._last_plan is None or self._last_runtime is None:
-            self._append("  No plan to run. Use /plan <intent> first.", MUTED)
-            return
-        if self._loop_task and not self._loop_task.done():
-            self._append("  Wait for the current task to finish before running a plan.", YELLOW)
-            return
-        try:
-            current_context = self._last_runtime.approval_context()
-        except Exception as e:
-            self._clear_pending_plan()
-            self._set_activity("Plan cleared · authority could not be revalidated", RED)
-            self._append(
-                f"  Authority could not be revalidated ({type(e).__name__}); plan cleared.", RED)
-            return
-        if current_context != self._last_plan_context:
-            self._clear_pending_plan()
-            self._set_activity("Plan cleared · authority changed", RED)
-            self._append(
-                "  Host identity, grants, capabilities, or scopes changed after planning. "
-                "Create a new plan before execution.", RED)
-            return
-        now = _time.time()
-        plan_digest = self._plan_digest(self._last_plan)
-        if (now - self._armed_at > 10.0
-                or self._armed_plan_id != self._last_plan.plan_id
-                or self._armed_plan_digest != plan_digest
-                or self._armed_context != current_context):
-            try:
-                authority = self._last_runtime.approval_summary()
-            except Exception as e:
-                self._clear_pending_plan()
-                self._set_activity("Plan cleared · authority details unavailable", RED)
-                self._append(
-                    f"  Authority details could not be loaded ({type(e).__name__}); plan cleared.",
-                    RED)
-                return
-            self._armed_at = now
-            self._armed_plan_id = self._last_plan.plan_id
-            self._armed_plan_digest = plan_digest
-            self._armed_context = current_context
-            review = self.query_one("#review-plan", Button)
-            is_local_read = self._last_plan_origin == "local-read-only"
-            review.label = "Confirm local read-only plan" if is_local_read else "Confirm demo plan"
-            n = len(self._last_plan.steps)
-            effect = ("local filesystem.read only" if is_local_read
-                      else "simulated host; no real workspace effects")
-            self._append(
-                f"\n  Review {self._last_plan_origin} plan ({n} steps; {effect}):",
-                YELLOW)
-            self._append(f"  Host: {self._last_plan_host}", MUTED)
-            identity = authority.get("identity", {})
-            if isinstance(identity, dict):
-                self._append(
-                    f"  Host identity: {identity.get('host_id', 'unknown')} · "
-                    f"{identity.get('engine', 'unknown')} · {identity.get('os_family', 'unknown')}",
-                    MUTED)
-            capabilities = authority.get("granted", [])
-            if isinstance(capabilities, list):
-                self._append(
-                    "  Granted capabilities: " + (", ".join(map(str, capabilities)) or "none"),
-                    MUTED)
-            bounds = authority.get("bounds", {})
-            if isinstance(bounds, dict):
-                for capability, scope in sorted(bounds.items()):
-                    scope_text = json.dumps(scope, sort_keys=True, ensure_ascii=False, default=str)
-                    self._append(f"  Scope {capability}: {scope_text}", MUTED)
-            for i, s in enumerate(self._last_plan.steps, 1):
-                params = ", ".join(f"{key}={value}" for key, value in s.params.items())
-                self._append(f"    {i}. [{s.host}] {s.capability}({params})", TEXT)
-            self._append(
-                f"  Select {review.label} in Overview within 10s to execute it.", YELLOW)
-            self._set_activity("Awaiting confirmation · expires in 10s", YELLOW)
-            return
-        plan, runtime = self._last_plan, self._last_runtime
-        origin, host_name = self._last_plan_origin, self._last_plan_host
-        self._clear_pending_plan()
-        self._start_operation(
-            self._execute_stored_plan(
-                plan, runtime, origin, host_name, expected_context=current_context),
-            f"Executing · {host_name}")
 
-    def _clear_pending_plan(self) -> None:
-        """Forget an executable plan and any approval bound to it."""
-        self._last_plan = None
-        self._last_runtime = None
-        self._last_plan_origin = ""
-        self._last_plan_host = ""
-        self._last_plan_context = None
-        self._armed_at = 0.0
-        self._armed_plan_id = None
-        self._armed_plan_digest = None
-        self._armed_context = None
-        review = self.query_one("#review-plan", Button)
-        review.disabled = True
-        review.label = "No plan pending"
 
-    @staticmethod
-    def _plan_digest(plan) -> str:
-        payload = json.dumps(plan.to_dict(), sort_keys=True, separators=(",", ":"),
-                             ensure_ascii=False, default=str)
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-    @staticmethod
-    def _receipt_audit_lines(receipt, verification) -> list[str]:
-        """Render the receipt seal and every field from IsyMotron's verifier."""
-        def label(value) -> str:
-            if value is None:
-                return "none"
-            return str(getattr(value, "value", getattr(value, "name", value)))
 
-        if receipt is None:
-            lines = ["Receipt: unavailable"]
-        else:
-            decision = getattr(receipt, "decision", None)
-            policy_decision = getattr(decision, "decision", None)
-            policy_reason = getattr(decision, "reason", None)
-            lines = [
-                f"Receipt ID: {receipt.receipt_id}",
-                f"Seal: kind={getattr(receipt, 'seal_kind', 'unknown')} · "
-                f"status={getattr(verification, 'seal_status', 'NOT_REPORTED')} · "
-                f"value={getattr(receipt, 'seal', '') or 'missing'}",
-                f"Receipt decision: {label(policy_decision)} · reason={label(policy_reason)}",
-            ]
-
-        if verification is None:
-            lines.append("Verification: NOT_VERIFIABLE · verifier returned no result")
-            lines.extend(("Claim match: not checked", "Request match: not checked",
-                          "Decision match: not checked", "Re-derived decision: unavailable"))
-            return lines
-
-        status = label(getattr(verification, "status", "NOT_VERIFIABLE"))
-        lines.append(
-            f"Verification: {status} · {getattr(verification, 'reason', 'no verifier reason')}")
-        rederived = getattr(verification, "rederived", None)
-        was_rederived = rederived is not None
-        for title, field in (("Claim match", "claim_matched"),
-                             ("Request match", "request_matched"),
-                             ("Decision match", "decision_matched")):
-            value = getattr(verification, field, None)
-            rendered = ("not checked" if not was_rederived else
-                        "yes" if value is True else "no" if value is False else "unknown")
-            lines.append(f"{title}: {rendered}")
-        if rederived is None:
-            lines.append("Re-derived decision: unavailable")
-        else:
-            derived_decision = getattr(rederived, "decision", None)
-            lines.append(
-                f"Re-derived decision: {label(getattr(derived_decision, 'decision', None))} · "
-                f"reason={label(getattr(derived_decision, 'reason', None))}")
-        return lines
-
-    async def _execute_stored_plan(
-        self, plan, runtime: AgentRuntime, origin: str, host_name: str,
-        *, expected_context: str,
-    ) -> None:
-        """Execute only the plan explicitly reviewed against this host."""
-        self._append(f"\n  Executing on {host_name}...", CYAN)
-        try:
-            execution = await runtime.execute(plan, expected_context=expected_context)
-        except AuthorityContextChanged as e:
-            self._append(
-                f"  DENY before execution: {e} No step was submitted to the host; plan cleared.",
-                RED)
-            return
-        except Exception as e:
-            self._append(
-                f"  Execution returned no status ({type(e).__name__}); the host outcome is unknown. "
-                "Do not retry until host state or receipts are checked.", RED)
-            return
-        try:
-            verifications = await asyncio.to_thread(runtime.verify_execution, execution)
-        except Exception as e:
-            verifications = {}
-            self._append(
-                f"  Receipt verification unavailable ({type(e).__name__}); allowed steps remain untrusted.",
-                YELLOW)
-        ok_count = deny_count = unknown_count = 0
-        for step in execution.steps:
-            receipt = step.receipt
-            verification = verifications.get(step.index)
-            verify_status = verification.status if verification else "NOT_VERIFIABLE"
-            for line in self._receipt_audit_lines(receipt, verification):
-                self._append(f"    {step.index}. {line}", MUTED)
-            if step.allowed:
-                result = receipt.result or {}
-                evidence = getattr(receipt.evidence, "value", str(receipt.evidence))
-                if evidence != "DEMONSTRATED" or (isinstance(result, dict) and result.get("error")):
-                    unknown_count += 1
-                    detail = result.get("error", "engine outcome is not demonstrated") if isinstance(result, dict) else "engine outcome is unknown"
-                    self._append(
-                        f"    {step.index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
-                        YELLOW)
-                    continue
-                if verify_status != "PASS":
-                    unknown_count += 1
-                    self._append(
-                        f"    {step.index}. ALLOW decision · execution evidence not trusted · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
-                        RED if verify_status == "REJECT" else YELLOW)
-                    continue
-                ok_count += 1
-                self._append(
-                    f"    {step.index}. ALLOW — receipt {receipt.receipt_id[:12]} · verify PASS", GREEN)
-                result = receipt.result or {}
-                if origin == "local-read-only":
-                    if isinstance(result, dict) and isinstance(result.get("text"), str):
-                        preview = result["text"][:4000]
-                        if len(result["text"]) > 4000:
-                            preview += "\n… output truncated at 4,000 characters …"
-                        self._append(f"       Read result:\n{preview}", TEXT)
-                    elif isinstance(result, dict) and result.get("kind") == "directory":
-                        self._append(
-                            "       Directory listed. Use Files for the filtered browser view.", MUTED)
-            else:
-                deny_count += 1
-                self._append(
-                    f"    {step.index}. DENY — {receipt.decision.reason} · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
-                    YELLOW if verify_status == "PASS" else RED)
-        if execution.stopped_at is not None:
-            self._append(f"    Stopped at step {execution.stopped_at}: {execution.stop_reason}", YELLOW)
-        self._append(
-            f"\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown.", CYAN)
-        if origin == "local-read-only":
-            self._append("  Local read-only execution; write capabilities were removed from this runtime.", MUTED)
-        else:
-            self._append("  Demo execution only; real workspace writes are not enabled here.", MUTED)
 
 
 

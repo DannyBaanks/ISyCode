@@ -69,7 +69,7 @@ def run_app(scenario):
     async def main():
         app = TUIApp()
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             await scenario(app, pilot)
     asyncio.run(main())
 
@@ -183,14 +183,8 @@ def test_directory_reload_survives_a_screen_without_the_rail(chat, capsys):
             yield Static("cover")
 
     async def scenario(app, pilot):
-        for _ in range(200):
-            pending = [worker for worker in app.workers
-                       if worker.group == "workspace-startup" and not worker.is_finished]
-            if app._workspace is not None and not pending:
-                break
-            await pilot.pause(0.05)
-        else:
-            raise AssertionError("startup did not finish")
+        await asyncio.wait_for(app.wait_for_ready(), 10)
+        assert app._workspace is not None
         started = threading.Event()
         release = threading.Event()
         original_owner = app._workspace_read_owner

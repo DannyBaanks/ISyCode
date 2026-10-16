@@ -240,3 +240,29 @@ def test_gateway_workspace_id_honors_explicit_operator_override(tmp_path: Path, 
     monkeypatch.setenv("ISYCODE_GATEWAY_WORKSPACE_ID", "operator-workspace")
 
     assert config.gateway_workspace_id(tmp_path) == "operator-workspace"
+
+
+def test_state_index_honors_state_env_and_xdg_fallback(tmp_path: Path, monkeypatch):
+    """F-10: the single resolver keeps the historical env precedence."""
+    from isycode.state_index import StateIndex, get_state_index
+
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "explicit"))
+    assert StateIndex().state_root() == tmp_path / "explicit"
+    assert get_state_index().state_root() == tmp_path / "explicit"
+
+    monkeypatch.delenv("ISYCODE_STATE_HOME")
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+    assert get_state_index().state_root() == tmp_path / "xdg" / "isycode"
+
+    monkeypatch.delenv("XDG_STATE_HOME")
+    assert get_state_index().state_root() == get_state_index().default_root()
+
+
+def test_state_root_function_delegates_to_state_index(tmp_path: Path, monkeypatch):
+    """The legacy state_root() import keeps working through the resolver."""
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "s"))
+
+    from isycode.state_index import get_state_index
+    from isycode.workspace_setup import state_root
+
+    assert state_root() == get_state_index().state_root() == tmp_path / "s"

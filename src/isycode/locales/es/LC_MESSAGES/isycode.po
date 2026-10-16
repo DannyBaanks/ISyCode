@@ -1693,8 +1693,14 @@ msgstr "El catálogo de herramientas no se ha comprobado."
 msgid "Mobile Host"
 msgstr "Mobile Host"
 
-msgid "Starting local mobile host…"
-msgstr "Arrancando el host móvil local…"
+msgid "Not started"
+msgstr "No iniciado"
+
+msgid "Loading…"
+msgstr "Cargando…"
+
+msgid "Not checked"
+msgstr "Sin verificar"
 
 msgid "No mobile clients connected."
 msgstr "No hay clientes móviles conectados."

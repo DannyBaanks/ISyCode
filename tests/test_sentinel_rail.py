@@ -103,7 +103,7 @@ def test_the_rail_updates_live_and_reports_the_journal(tmp_path, monkeypatch, ca
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(140, 44)) as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             for _ in range(40):
                 await pilot.pause(0.05)
                 if app._sentinel_feed.journal:

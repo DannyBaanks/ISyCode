@@ -9,8 +9,9 @@ import asyncio
 import json
 import shlex
 import urllib.request
+from enum import Enum
 from typing import TYPE_CHECKING
-from textual.widgets import Button, Static
+from textual.widgets import Button, OptionList, Static
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, TEXT, YELLOW
 from isycode.tui_widgets import ChatArea, ExpandableBox, SelectableText
 from isycode.config import ConfigurationError
@@ -27,7 +28,15 @@ from rich.syntax import Syntax
 from rich.text import Text
 from isycode.user_defaults import UserDefaultsStore
 from isycode.prompt_expansion import WORKSPACE_COMMANDS_DIR, load_user_commands
-from isycode.workspace_authority import WorkspaceAuthority
+from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
+from textual.containers import Vertical
+from textual.css.query import NoMatches
+from textual.dom import NoScreen
+from textual.widgets import TextArea
+from textual.widgets.option_list import Option
+from isycode.catalog import SEMANTIC_BRANCHES
+from isycode.tui_presentation import MenuHeading, SettingRow
+from isycode.tui_theme import _authority_capability_label
 from isycode.localization import tr
 from urllib.parse import urlparse
 
@@ -383,125 +392,251 @@ async def _context_cmd(app: "TUIApp", arg: str) -> None:
     else:
         await app._load_project_context()
 
-MENU_DISPATCH: dict[str, str] = {
-    "folders_open": "_menu_folders_open",
-    "folder_add": "_menu_folder_add",
-    "folder_browse": "_menu_folder_browse",
-    "folder_remove": "_menu_folder_remove",
-    "folder_auto_on": "_menu_folder_auto_on",
-    "folder_auto_off": "_menu_folder_auto_on",
-    "integrations_open": "_menu_integrations_open",
-    "harness_open": "_menu_harness_open",
-    "user_defaults": "_menu_user_defaults",
-    "workspace_config_init": "_menu_workspace_config_init",
-    "workspace_config_preferences": "_menu_workspace_config_preferences",
-    "workspace_config_migrate": "_menu_workspace_config_migrate",
-    "workspace_config_migrate_item": "_menu_workspace_config_migrate_item",
-    "workspace_pref_role": "_menu_workspace_pref_role",
-    "workspace_pref_role_clear": "_menu_workspace_pref_role",
-    "user_default_mode": "_menu_user_default_mode",
-    "user_default_workspace": "_menu_user_default_workspace",
-    "user_default_role_save": "_menu_user_default_role_save",
-    "user_default_role_clear": "_menu_user_default_role_clear",
-    "workspace_mode": "_menu_workspace_mode",
-    "coding_toolkit": "_menu_coding_toolkit",
-    "authority_toggle": "_menu_authority_toggle",
-    "authority_saved_grant": "_menu_authority_saved_grant",
-    "bridge_settings": "_menu_bridge_settings",
-    "private_access": "_menu_private_access",
-    "tailscale_permissions": "_menu_tailscale_permissions",
-    "tailscale_grant": "_menu_tailscale_grant",
-    "tailscale_refresh": "_menu_tailscale_refresh",
-    "tailscale_install": "_menu_tailscale_install",
-    "tailscale_manual": "_menu_tailscale_manual",
-    "tailscale_login": "_menu_tailscale_login",
-    "tailscale_login_check": "_menu_tailscale_login_check",
-    "tailscale_login_cancel": "_menu_tailscale_login_cancel",
-    "tailscale_serve_enable": "_menu_tailscale_serve_enable",
-    "tailscale_serve_disable": "_menu_tailscale_serve_disable",
-    "private_access_back": "_menu_private_access_back",
-    "bridge_toggle": "_menu_bridge_toggle",
-    "bridge_refresh": "_menu_bridge_refresh",
-    "security_journal": "_menu_security_journal",
-    "context_inject": "_menu_context_inject",
-    "context_project": "_menu_context_project",
-    "context_clear": "_menu_context_clear",
-    "context_info": "_menu_context_info",
-    "branch": "_menu_branch",
-    "role_category": "_menu_role_category",
-    "command": "_menu_command",
-    "section": "_menu_section",
-    "provider_unwired": "_menu_provider_unwired",
-    "provider": "_menu_provider",
-    "xai_api_key": "_menu_xai_api_key",
-    "xai_session": "_menu_xai_session",
-    "xai_device": "_menu_xai_device",
-    "xai_browser": "_menu_xai_device",
-    "auth_api_key": "_menu_auth_api_key",
-    "auth_browser": "_menu_auth_browser",
-    "auth_device": "_menu_auth_browser",
-    "auth_logout": "_menu_auth_browser",
-    "auth_saved": "_menu_auth_saved",
-    "providers_open": "_menu_providers_open",
-    "models_open": "_menu_models_open",
-    "roles_open": "_menu_roles_open",
-    "rtk_settings": "_menu_rtk_settings",
-    "sounds_toggle": "_menu_sounds_toggle",
-    "contrast_toggle": "_menu_contrast_toggle",
-    "ascii_toggle": "_menu_ascii_toggle",
-    "locale_cycle": "_menu_locale_cycle",
-    "marquee_toggle": "_menu_marquee_toggle",
-    "motion_toggle": "_menu_motion_toggle",
-    "reasoning_open": "_menu_reasoning_open",
-    "reasoning_select": "_menu_reasoning_select",
-    "model": "_menu_model",
-    "model_list": "_menu_model_list",
-    "model_family": "_menu_model_family",
-    "provider_catalog_grant": "_menu_provider_catalog_grant",
-    "role_agent": "_menu_role_agent",
-    "role_motor": "_menu_role_motor",
-    "shortcuts": "_menu_shortcuts",
-    "mobile_host_status": "_menu_mobile_host_status",
-    "named_credentials": "_menu_named_credentials",
-    "skill_use": "_menu_skill_use",
-    "skill_clear": "_menu_skill_clear",
-    "mcp_preset": "_menu_mcp_preset",
-    "authority_open": "_menu_authority_open",
-    "authority_grant_read": "_menu_authority_grant_read",
-    "authority_revoke_read": "_menu_authority_revoke_read",
-    "authority_provider_grant": "_menu_authority_provider_grant",
-    "authority_provider_revoke": "_menu_authority_provider_revoke",
-    "network_action_grant": "_menu_network_action_grant",
-    "network_action_revoke": "_menu_network_action_revoke",
-    "mcp_invoke_grant": "_menu_mcp_invoke_grant",
-    "mcp_invoke_revoke": "_menu_mcp_invoke_revoke",
-    "gateway_mcp_tool": "_menu_gateway_mcp_tool",
-    "gateway_semantic_search": "_menu_gateway_semantic_search",
-    "broker_preview": "_menu_broker_preview",
-    "broker_provision": "_menu_broker_provision",
-    "broker_manage": "_menu_broker_manage",
-    "lsp_server": "_menu_lsp_server",
-    "lsp_start_grant": "_menu_lsp_start_grant",
-    "lsp_start_revoke": "_menu_lsp_start_revoke",
-    "context_menu": "_menu_context_menu",
-    "credential_add": "_menu_credential_add",
-    "credential_use_grant": "_menu_credential_use_grant",
-    "credential_revoke": "_menu_credential_revoke",
-    "credential_info": "_menu_credential_info",
-    "mobile_host_status_refresh": "_menu_mobile_host_status_refresh",
-    "mobile_host_start": "_menu_mobile_host_start",
-    "chat_session_new": "_menu_chat_session_new",
-    "chat_session_resume": "_menu_chat_session_resume",
-    "mobile_host_new_pin": "_menu_mobile_host_new_pin",
-    "settings_back": "_menu_settings_back",
-    "mobile_host_pairing": "_menu_mobile_host_pairing",
-    "files": "_menu_files",
-    "overview": "_menu_overview",
-    "refresh": "_menu_refresh",
-    "clear_role": "_menu_clear_role",
-    "oauth_info": "_menu_oauth_info",
-    "openisy_provider": "_menu_openisy_provider",
-    "info": "_menu_info",
+class MenuAction(str, Enum):
+    """Closed set of menu entry kinds (F-09).
+
+    An unknown kind is a programming error, not a user condition:
+    `_select_menu_entry` raises ValueError instead of a silent no-op.
+    """
+    FOLDERS_OPEN = "folders_open"
+    FOLDER_ADD = "folder_add"
+    FOLDER_BROWSE = "folder_browse"
+    FOLDER_REMOVE = "folder_remove"
+    FOLDER_AUTO_ON = "folder_auto_on"
+    FOLDER_AUTO_OFF = "folder_auto_off"
+    INTEGRATIONS_OPEN = "integrations_open"
+    HARNESS_OPEN = "harness_open"
+    USER_DEFAULTS = "user_defaults"
+    WORKSPACE_CONFIG_INIT = "workspace_config_init"
+    WORKSPACE_CONFIG_PREFERENCES = "workspace_config_preferences"
+    WORKSPACE_CONFIG_MIGRATE = "workspace_config_migrate"
+    WORKSPACE_CONFIG_MIGRATE_ITEM = "workspace_config_migrate_item"
+    WORKSPACE_PREF_ROLE = "workspace_pref_role"
+    WORKSPACE_PREF_ROLE_CLEAR = "workspace_pref_role_clear"
+    USER_DEFAULT_MODE = "user_default_mode"
+    USER_DEFAULT_WORKSPACE = "user_default_workspace"
+    USER_DEFAULT_ROLE_SAVE = "user_default_role_save"
+    USER_DEFAULT_ROLE_CLEAR = "user_default_role_clear"
+    WORKSPACE_MODE = "workspace_mode"
+    CODING_TOOLKIT = "coding_toolkit"
+    AUTHORITY_TOGGLE = "authority_toggle"
+    AUTHORITY_SAVED_GRANT = "authority_saved_grant"
+    BRIDGE_SETTINGS = "bridge_settings"
+    PRIVATE_ACCESS = "private_access"
+    TAILSCALE_PERMISSIONS = "tailscale_permissions"
+    TAILSCALE_GRANT = "tailscale_grant"
+    TAILSCALE_REFRESH = "tailscale_refresh"
+    TAILSCALE_INSTALL = "tailscale_install"
+    TAILSCALE_MANUAL = "tailscale_manual"
+    TAILSCALE_LOGIN = "tailscale_login"
+    TAILSCALE_LOGIN_CHECK = "tailscale_login_check"
+    TAILSCALE_LOGIN_CANCEL = "tailscale_login_cancel"
+    TAILSCALE_SERVE_ENABLE = "tailscale_serve_enable"
+    TAILSCALE_SERVE_DISABLE = "tailscale_serve_disable"
+    PRIVATE_ACCESS_BACK = "private_access_back"
+    BRIDGE_TOGGLE = "bridge_toggle"
+    BRIDGE_REFRESH = "bridge_refresh"
+    SECURITY_JOURNAL = "security_journal"
+    CONTEXT_INJECT = "context_inject"
+    CONTEXT_PROJECT = "context_project"
+    CONTEXT_CLEAR = "context_clear"
+    CONTEXT_INFO = "context_info"
+    BRANCH = "branch"
+    ROLE_CATEGORY = "role_category"
+    COMMAND = "command"
+    SECTION = "section"
+    PROVIDER_UNWIRED = "provider_unwired"
+    PROVIDER = "provider"
+    XAI_API_KEY = "xai_api_key"
+    XAI_SESSION = "xai_session"
+    XAI_DEVICE = "xai_device"
+    XAI_BROWSER = "xai_browser"
+    AUTH_API_KEY = "auth_api_key"
+    AUTH_BROWSER = "auth_browser"
+    AUTH_DEVICE = "auth_device"
+    AUTH_LOGOUT = "auth_logout"
+    AUTH_SAVED = "auth_saved"
+    PROVIDERS_OPEN = "providers_open"
+    MODELS_OPEN = "models_open"
+    ROLES_OPEN = "roles_open"
+    RTK_SETTINGS = "rtk_settings"
+    SOUNDS_TOGGLE = "sounds_toggle"
+    CONTRAST_TOGGLE = "contrast_toggle"
+    ASCII_TOGGLE = "ascii_toggle"
+    LOCALE_CYCLE = "locale_cycle"
+    MARQUEE_TOGGLE = "marquee_toggle"
+    MOTION_TOGGLE = "motion_toggle"
+    REASONING_OPEN = "reasoning_open"
+    REASONING_SELECT = "reasoning_select"
+    MODEL = "model"
+    MODEL_LIST = "model_list"
+    MODEL_FAMILY = "model_family"
+    PROVIDER_CATALOG_GRANT = "provider_catalog_grant"
+    ROLE_AGENT = "role_agent"
+    ROLE_MOTOR = "role_motor"
+    SHORTCUTS = "shortcuts"
+    MOBILE_HOST_STATUS = "mobile_host_status"
+    NAMED_CREDENTIALS = "named_credentials"
+    SKILL_USE = "skill_use"
+    SKILL_CLEAR = "skill_clear"
+    MCP_PRESET = "mcp_preset"
+    AUTHORITY_OPEN = "authority_open"
+    AUTHORITY_GRANT_READ = "authority_grant_read"
+    AUTHORITY_REVOKE_READ = "authority_revoke_read"
+    AUTHORITY_PROVIDER_GRANT = "authority_provider_grant"
+    AUTHORITY_PROVIDER_REVOKE = "authority_provider_revoke"
+    NETWORK_ACTION_GRANT = "network_action_grant"
+    NETWORK_ACTION_REVOKE = "network_action_revoke"
+    MCP_INVOKE_GRANT = "mcp_invoke_grant"
+    MCP_INVOKE_REVOKE = "mcp_invoke_revoke"
+    GATEWAY_MCP_TOOL = "gateway_mcp_tool"
+    GATEWAY_SEMANTIC_SEARCH = "gateway_semantic_search"
+    BROKER_PREVIEW = "broker_preview"
+    BROKER_PROVISION = "broker_provision"
+    BROKER_MANAGE = "broker_manage"
+    LSP_SERVER = "lsp_server"
+    LSP_START_GRANT = "lsp_start_grant"
+    LSP_START_REVOKE = "lsp_start_revoke"
+    CONTEXT_MENU = "context_menu"
+    CREDENTIAL_ADD = "credential_add"
+    CREDENTIAL_USE_GRANT = "credential_use_grant"
+    CREDENTIAL_REVOKE = "credential_revoke"
+    CREDENTIAL_INFO = "credential_info"
+    MOBILE_HOST_STATUS_REFRESH = "mobile_host_status_refresh"
+    MOBILE_HOST_START = "mobile_host_start"
+    CHAT_SESSION_NEW = "chat_session_new"
+    CHAT_SESSION_RESUME = "chat_session_resume"
+    MOBILE_HOST_NEW_PIN = "mobile_host_new_pin"
+    SETTINGS_BACK = "settings_back"
+    MOBILE_HOST_PAIRING = "mobile_host_pairing"
+    FILES = "files"
+    OVERVIEW = "overview"
+    REFRESH = "refresh"
+    CLEAR_ROLE = "clear_role"
+    OAUTH_INFO = "oauth_info"
+    OPENISY_PROVIDER = "openisy_provider"
+    INFO = "info"
+
+
+MENU_DISPATCH: dict[MenuAction, str] = {
+    MenuAction.FOLDERS_OPEN: "_menu_folders_open",
+    MenuAction.FOLDER_ADD: "_menu_folder_add",
+    MenuAction.FOLDER_BROWSE: "_menu_folder_browse",
+    MenuAction.FOLDER_REMOVE: "_menu_folder_remove",
+    MenuAction.FOLDER_AUTO_ON: "_menu_folder_auto_on",
+    MenuAction.FOLDER_AUTO_OFF: "_menu_folder_auto_on",
+    MenuAction.INTEGRATIONS_OPEN: "_menu_integrations_open",
+    MenuAction.HARNESS_OPEN: "_menu_harness_open",
+    MenuAction.USER_DEFAULTS: "_menu_user_defaults",
+    MenuAction.WORKSPACE_CONFIG_INIT: "_menu_workspace_config_init",
+    MenuAction.WORKSPACE_CONFIG_PREFERENCES: "_menu_workspace_config_preferences",
+    MenuAction.WORKSPACE_CONFIG_MIGRATE: "_menu_workspace_config_migrate",
+    MenuAction.WORKSPACE_CONFIG_MIGRATE_ITEM: "_menu_workspace_config_migrate_item",
+    MenuAction.WORKSPACE_PREF_ROLE: "_menu_workspace_pref_role",
+    MenuAction.WORKSPACE_PREF_ROLE_CLEAR: "_menu_workspace_pref_role",
+    MenuAction.USER_DEFAULT_MODE: "_menu_user_default_mode",
+    MenuAction.USER_DEFAULT_WORKSPACE: "_menu_user_default_workspace",
+    MenuAction.USER_DEFAULT_ROLE_SAVE: "_menu_user_default_role_save",
+    MenuAction.USER_DEFAULT_ROLE_CLEAR: "_menu_user_default_role_clear",
+    MenuAction.WORKSPACE_MODE: "_menu_workspace_mode",
+    MenuAction.CODING_TOOLKIT: "_menu_coding_toolkit",
+    MenuAction.AUTHORITY_TOGGLE: "_menu_authority_toggle",
+    MenuAction.AUTHORITY_SAVED_GRANT: "_menu_authority_saved_grant",
+    MenuAction.BRIDGE_SETTINGS: "_menu_bridge_settings",
+    MenuAction.PRIVATE_ACCESS: "_menu_private_access",
+    MenuAction.TAILSCALE_PERMISSIONS: "_menu_tailscale_permissions",
+    MenuAction.TAILSCALE_GRANT: "_menu_tailscale_grant",
+    MenuAction.TAILSCALE_REFRESH: "_menu_tailscale_refresh",
+    MenuAction.TAILSCALE_INSTALL: "_menu_tailscale_install",
+    MenuAction.TAILSCALE_MANUAL: "_menu_tailscale_manual",
+    MenuAction.TAILSCALE_LOGIN: "_menu_tailscale_login",
+    MenuAction.TAILSCALE_LOGIN_CHECK: "_menu_tailscale_login_check",
+    MenuAction.TAILSCALE_LOGIN_CANCEL: "_menu_tailscale_login_cancel",
+    MenuAction.TAILSCALE_SERVE_ENABLE: "_menu_tailscale_serve_enable",
+    MenuAction.TAILSCALE_SERVE_DISABLE: "_menu_tailscale_serve_disable",
+    MenuAction.PRIVATE_ACCESS_BACK: "_menu_private_access_back",
+    MenuAction.BRIDGE_TOGGLE: "_menu_bridge_toggle",
+    MenuAction.BRIDGE_REFRESH: "_menu_bridge_refresh",
+    MenuAction.SECURITY_JOURNAL: "_menu_security_journal",
+    MenuAction.CONTEXT_INJECT: "_menu_context_inject",
+    MenuAction.CONTEXT_PROJECT: "_menu_context_project",
+    MenuAction.CONTEXT_CLEAR: "_menu_context_clear",
+    MenuAction.CONTEXT_INFO: "_menu_context_info",
+    MenuAction.BRANCH: "_menu_branch",
+    MenuAction.ROLE_CATEGORY: "_menu_role_category",
+    MenuAction.COMMAND: "_menu_command",
+    MenuAction.SECTION: "_menu_section",
+    MenuAction.PROVIDER_UNWIRED: "_menu_provider_unwired",
+    MenuAction.PROVIDER: "_menu_provider",
+    MenuAction.XAI_API_KEY: "_menu_xai_api_key",
+    MenuAction.XAI_SESSION: "_menu_xai_session",
+    MenuAction.XAI_DEVICE: "_menu_xai_device",
+    MenuAction.XAI_BROWSER: "_menu_xai_device",
+    MenuAction.AUTH_API_KEY: "_menu_auth_api_key",
+    MenuAction.AUTH_BROWSER: "_menu_auth_browser",
+    MenuAction.AUTH_DEVICE: "_menu_auth_browser",
+    MenuAction.AUTH_LOGOUT: "_menu_auth_browser",
+    MenuAction.AUTH_SAVED: "_menu_auth_saved",
+    MenuAction.PROVIDERS_OPEN: "_menu_providers_open",
+    MenuAction.MODELS_OPEN: "_menu_models_open",
+    MenuAction.ROLES_OPEN: "_menu_roles_open",
+    MenuAction.RTK_SETTINGS: "_menu_rtk_settings",
+    MenuAction.SOUNDS_TOGGLE: "_menu_sounds_toggle",
+    MenuAction.CONTRAST_TOGGLE: "_menu_contrast_toggle",
+    MenuAction.ASCII_TOGGLE: "_menu_ascii_toggle",
+    MenuAction.LOCALE_CYCLE: "_menu_locale_cycle",
+    MenuAction.MARQUEE_TOGGLE: "_menu_marquee_toggle",
+    MenuAction.MOTION_TOGGLE: "_menu_motion_toggle",
+    MenuAction.REASONING_OPEN: "_menu_reasoning_open",
+    MenuAction.REASONING_SELECT: "_menu_reasoning_select",
+    MenuAction.MODEL: "_menu_model",
+    MenuAction.MODEL_LIST: "_menu_model_list",
+    MenuAction.MODEL_FAMILY: "_menu_model_family",
+    MenuAction.PROVIDER_CATALOG_GRANT: "_menu_provider_catalog_grant",
+    MenuAction.ROLE_AGENT: "_menu_role_agent",
+    MenuAction.ROLE_MOTOR: "_menu_role_motor",
+    MenuAction.SHORTCUTS: "_menu_shortcuts",
+    MenuAction.MOBILE_HOST_STATUS: "_menu_mobile_host_status",
+    MenuAction.NAMED_CREDENTIALS: "_menu_named_credentials",
+    MenuAction.SKILL_USE: "_menu_skill_use",
+    MenuAction.SKILL_CLEAR: "_menu_skill_clear",
+    MenuAction.MCP_PRESET: "_menu_mcp_preset",
+    MenuAction.AUTHORITY_OPEN: "_menu_authority_open",
+    MenuAction.AUTHORITY_GRANT_READ: "_menu_authority_grant_read",
+    MenuAction.AUTHORITY_REVOKE_READ: "_menu_authority_revoke_read",
+    MenuAction.AUTHORITY_PROVIDER_GRANT: "_menu_authority_provider_grant",
+    MenuAction.AUTHORITY_PROVIDER_REVOKE: "_menu_authority_provider_revoke",
+    MenuAction.NETWORK_ACTION_GRANT: "_menu_network_action_grant",
+    MenuAction.NETWORK_ACTION_REVOKE: "_menu_network_action_revoke",
+    MenuAction.MCP_INVOKE_GRANT: "_menu_mcp_invoke_grant",
+    MenuAction.MCP_INVOKE_REVOKE: "_menu_mcp_invoke_revoke",
+    MenuAction.GATEWAY_MCP_TOOL: "_menu_gateway_mcp_tool",
+    MenuAction.GATEWAY_SEMANTIC_SEARCH: "_menu_gateway_semantic_search",
+    MenuAction.BROKER_PREVIEW: "_menu_broker_preview",
+    MenuAction.BROKER_PROVISION: "_menu_broker_provision",
+    MenuAction.BROKER_MANAGE: "_menu_broker_manage",
+    MenuAction.LSP_SERVER: "_menu_lsp_server",
+    MenuAction.LSP_START_GRANT: "_menu_lsp_start_grant",
+    MenuAction.LSP_START_REVOKE: "_menu_lsp_start_revoke",
+    MenuAction.CONTEXT_MENU: "_menu_context_menu",
+    MenuAction.CREDENTIAL_ADD: "_menu_credential_add",
+    MenuAction.CREDENTIAL_USE_GRANT: "_menu_credential_use_grant",
+    MenuAction.CREDENTIAL_REVOKE: "_menu_credential_revoke",
+    MenuAction.CREDENTIAL_INFO: "_menu_credential_info",
+    MenuAction.MOBILE_HOST_STATUS_REFRESH: "_menu_mobile_host_status_refresh",
+    MenuAction.MOBILE_HOST_START: "_menu_mobile_host_start",
+    MenuAction.CHAT_SESSION_NEW: "_menu_chat_session_new",
+    MenuAction.CHAT_SESSION_RESUME: "_menu_chat_session_resume",
+    MenuAction.MOBILE_HOST_NEW_PIN: "_menu_mobile_host_new_pin",
+    MenuAction.SETTINGS_BACK: "_menu_settings_back",
+    MenuAction.MOBILE_HOST_PAIRING: "_menu_mobile_host_pairing",
+    MenuAction.FILES: "_menu_files",
+    MenuAction.OVERVIEW: "_menu_overview",
+    MenuAction.REFRESH: "_menu_refresh",
+    MenuAction.CLEAR_ROLE: "_menu_clear_role",
+    MenuAction.OAUTH_INFO: "_menu_oauth_info",
+    MenuAction.OPENISY_PROVIDER: "_menu_openisy_provider",
+    MenuAction.INFO: "_menu_info",
 }
 
 class MenuMixin:
@@ -529,12 +664,42 @@ class MenuMixin:
     def _select_menu_entry(self, entry: dict[str, str | bool]) -> None:
         kind = entry["kind"]
         entry["value"]  # the old chain unpacked value before any branch could run
-        handler_name = MENU_DISPATCH.get(kind)
-        if handler_name is None:
-            self._blocked_notice("Nothing ran", str(entry.get("label") or ""))
-            self._close_menu()
-            return
-        getattr(self, handler_name)(entry)
+        # F-09/H5: an unknown kind is a programming error, not a user condition.
+        # It used to degrade into a silent _blocked_notice; now it raises.
+        match kind:
+            case str() as raw:
+                action = MenuAction(raw)
+            case _:
+                raise ValueError(f"menu kind must be a str, got {kind!r}")
+        getattr(self, MENU_DISPATCH[action])(entry)
+
+    def _menu_folder_remove(self, entry: dict[str, str | bool]) -> None:
+        kind, value = entry["kind"], entry["value"]
+        try:
+            revoked = self._folder_store().remove(value)
+            self._append(f"  Folder removed · {value} · "
+                         + (f"revoked {len(revoked)} permission(s) ISyCode had given it"
+                            if revoked else "its own permissions were left as they were"), GREEN)
+            if self._file_browser_alias == value:
+                self._file_browser_alias = 'main'
+                self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
+        except (OSError, ValueError, WorkspaceAuthorityError) as exc:
+            self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
+        self._open_workspace_folders_menu()
+        return
+
+    def _model_picker_result(self, entry: dict | None) -> None:
+        if entry is not None:
+            self._select_menu_entry(entry)
+        elif getattr(self, "_models_return_settings", False):
+            self._models_return_settings = False
+            self._models_scope = None
+            self._open_settings_menu()
+        elif getattr(self, "_models_scope", None):
+            # Esc from a provider's models walks back to the provider list; the
+            # active provider/model was never changed on the way here.
+            self._models_scope = None
+            self._open_provider_menu()
 
     def _register_builtin_plugins(self) -> None:
         """Register ISyCode commands and the optional planning runtime."""
@@ -947,3 +1112,160 @@ class MenuMixin:
         if entry.get("value"):
             self._close_menu()
         return
+
+    def _open_palette(self) -> None:
+        entries = [self._entry(
+            tr("{name}  ·  {description}", name=tr(name), description=tr(description)),
+            "branch", name, translate=False)
+                   for name, description in SEMANTIC_BRANCHES]
+        self._menu_stack = []
+        self._render_menu("palette_root", "Navigate", entries)
+
+    def _open_integrations_menu(self) -> None:
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("integrations", "Settings · Integrations", [
+            self._entry("Tool servers · MCP & Gateway", "branch", "MCP"),
+            self._entry("Language servers · LSP", "branch", "LSP"),
+            self._entry("Mobile host status", "mobile_host_status", ""),
+            self._entry("Bridge coordination · blocked in Secure", "bridge_settings", ""),
+            self._entry("Private access · Tailscale", "private_access", ""),
+            self._entry("Refresh integration catalogs", "refresh", ""),
+            self._entry(tr("Back to Settings"), "settings_back", ""),
+        ])
+
+
+    def _render_options(self, query: str) -> None:
+        if self._menu_mode == "settings":
+            self.query_one("#action-title", Static).update(MenuHeading(
+                self._menu_title, tr("Search results") if query else tr(self._settings_category)))
+        if query and self._menu_mode == "providers":
+            filtered: list[dict[str, str]] = []
+            pending = None
+            used = False
+            for entry in self._menu_entries:
+                if entry.get("kind") == "section":
+                    pending = entry
+                    used = False
+                    continue
+                if (query in entry["label"].casefold()
+                        or query in entry.get("detail", "").casefold()):
+                    if pending is not None and not used:
+                        filtered.append(pending)
+                        used = True
+                    filtered.append(entry)
+            self._menu_filtered = filtered
+        else:
+            self._menu_filtered = [entry for entry in self._menu_entries
+                                   if query in entry["label"].casefold()
+                                   or query in entry.get("detail", "").casefold()
+                                   or query in str(entry.get("display_value", "")).casefold()
+                                   or query in str(entry.get("search_value", "")).casefold()]
+        if self._menu_mode == "settings" and not query:
+            self._menu_filtered = [entry for entry in self._menu_filtered
+                                   if entry.get("category_id", "Preferences") == self._settings_category]
+        options = self.query_one("#action-list", OptionList)
+        options.clear_options()
+        for entry in self._menu_filtered:
+            if entry.get("category") or "display_value" in entry and self._menu_mode != "providers":
+                label = SettingRow(entry["label"].split(" · ", 1)[0],
+                                   str(entry.get("display_value", "")), entry.get("detail", ""),
+                                   GREEN if entry.get("enabled") else MUTED if "enabled" in entry else TEXT)
+            elif "enabled" in entry:
+                label = _authority_capability_label(entry["label"], bool(entry["enabled"]))
+            elif entry.get("kind") == "section":
+                label = Text(entry["label"], style=f"bold {TEXT}")
+            elif entry.get("kind") == "info":
+                label = Text(entry["label"], style=MUTED)
+            elif entry.get("kind") == "provider_unwired":
+                label = Text(entry["label"], style=MUTED)
+            elif str(entry.get("label", "")).startswith("✓"):
+                label = Text(entry["label"], style=TEXT)
+            else:
+                label = Text(entry["label"])
+            options.add_option(label)
+        highlight = 0 if self._menu_filtered else None
+        if self._menu_mode == "providers" and self._menu_filtered:
+            highlight = next((index for index, entry in enumerate(self._menu_filtered)
+                              if entry.get("kind") != "section"), 0)
+        options.highlighted = highlight
+        self._show_menu_detail(highlight or 0)
+        self._size_action_menu()
+
+    def _size_action_menu(self) -> None:
+        """Bound short menus by their contents; long lists scroll inside the frame."""
+        rows = max(4, len(getattr(self, "_menu_filtered", [])))
+        overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode in ("settings", "authority") else 13
+        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
+
+    def _show_menu_detail(self, index: int | None) -> None:
+        """Describe the highlighted entry so choices are clear before pressing Enter."""
+        entries = self._menu_filtered
+        if index is None or not 0 <= index < len(entries):
+            detail = ""
+        else:
+            entry = entries[index]
+            detail = entry.get("detail") or (
+                "Status only; this item does not run an action."
+                if entry.get("kind") == "info"
+                else "No extra summary is available. Press Enter or double-click to open."
+            )
+        try:
+            panel = self.screen_stack[0].query_one("#action-detail", Static)
+        except (NoMatches, NoScreen, IndexError):
+            # A queued highlight may arrive after the menu unmounts at shutdown.
+            return
+        panel.display = bool(detail)
+        if self._menu_mode == "settings" and index is not None and 0 <= index < len(entries):
+            detail = entries[index]["label"] + " · " + str(entries[index].get("display_value", "")) + "\n" + tr(str(detail))
+        elif index is not None and 0 <= index < len(entries) and "enabled" in entries[index]:
+            detail = entries[index]["label"] + " · " + str(entries[index]["display_value"]) + "\n" + tr(str(detail))
+        elif self._menu_mode == "providers" and index is not None and 0 <= index < len(entries):
+            detail = entries[index].get("display_name", entries[index]["label"]) + "\n\n" + tr(str(detail))
+        panel.update(Text(tr(str(detail))))
+
+    def _update_slash_suggestions(self, *, force: bool = False, prompt: TextArea | None = None) -> None:
+        # The composer lives on the base screen; a modal (or shutdown) may be on top,
+        # where newer Textual's app-level query no longer finds it.
+        try:
+            prompt = prompt or self.query_one(PromptArea)
+            panel = prompt.screen.query_one('#slash-suggestions', OptionList)
+        except (NoMatches, NoScreen):
+            return
+        text = prompt.text
+        eligible = text.startswith('/') and not any(c.isspace() for c in text)
+        query = text[1:].casefold() if eligible else ''
+        self._slash_matches = [entry for entry in self._command_entries
+                               if entry['value'].casefold().startswith(query)] if eligible or force else []
+        panel.clear_options()
+        panel.add_options([Option(Text(entry['label'])) for entry in self._slash_matches])
+        panel.display = bool(self._slash_matches)
+        if self._slash_matches: panel.highlighted = 0
+
+    def _move_slash(self, direction: int) -> bool:
+        panel = self.query_one('#slash-suggestions', OptionList)
+        if not panel.display: return False
+        if direction > 0: panel.action_cursor_down()
+        else: panel.action_cursor_up()
+        return True
+
+    def _complete_slash(self, index: int | None = None, *, submit_exact: bool = False) -> bool:
+        panel = self.query_one('#slash-suggestions', OptionList)
+        if not panel.display or not self._slash_matches:
+            return False
+        prompt = self.query_one(PromptArea)
+        highlighted = 0 if panel.highlighted is None else panel.highlighted
+        # Enter on a command that is already fully typed runs it. A prefix,
+        # or a different highlighted row, only fills the name so arguments fit.
+        if submit_exact and index is None and 0 <= highlighted < len(self._slash_matches):
+            typed = prompt.text[1:] if prompt.text.startswith('/') else ''
+            if typed.casefold() == self._slash_matches[highlighted]['value'].casefold():
+                panel.display = False
+                return False
+        index = highlighted if index is None else index
+        if index < 0 or index >= len(self._slash_matches):
+            return False
+        name = self._slash_matches[index]['value']
+        prompt.load_text('/' + name + ' ')
+        panel.display = False
+        prompt.focus()
+        return True

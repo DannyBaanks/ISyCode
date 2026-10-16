@@ -323,3 +323,38 @@ def test_a_legacy_decision_without_effect_identity_still_verifies(tmp_path):
     report = journal.verify()
     assert report.status == "PASS" and report.records == 1
     assert report.recent[0]["effect"] is None
+
+
+def test_journal_verify_survives_concurrent_appends(tmp_path):
+    """F-03: verify() must not report JOURNAL_INVALID while a writer appends.
+
+    Verification and append share a native sidecar lock across platforms;
+    POSIX also holds LOCK_SH/LOCK_EX on the journal while reading or appending.
+    """
+    import threading
+
+    journal, request = _journal(tmp_path)
+    authority = AuthorityDecision(True, "grant:workspace.files.read", "matched", request.digest)
+    decision = SentinelDecision("workspace.files.read", request.digest,
+                                (DecisionCheck("Authority", True, "matched"),))
+    for _ in range(20):
+        journal.record_decision(request, authority, decision)
+
+    stop = threading.Event()
+
+    def _writer():
+        while not stop.is_set():
+            try:
+                journal.record_decision(request, authority, decision)
+            except Exception:
+                pass
+
+    thread = threading.Thread(target=_writer)
+    thread.start()
+    try:
+        for _ in range(200):
+            report = journal.verify()
+            assert report.status == "PASS", f"expected PASS, got {report.status}: {report.reason}"
+    finally:
+        stop.set()
+        thread.join(timeout=10)

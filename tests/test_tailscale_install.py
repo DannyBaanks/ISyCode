@@ -132,6 +132,7 @@ def setup(tmp_path, monkeypatch):
     if os.name == "nt":
         pytest.skip("NOT_DEMONSTRATED: this owner targets Ubuntu/Debian apt and Linux root staging")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state" / "isycode"))
     root = tmp_path / "workspace"
     root.mkdir()
     apt = tmp_path / "apt-get"

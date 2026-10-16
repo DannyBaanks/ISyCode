@@ -82,10 +82,15 @@ from isycode.providers import (
     selected_provider_name,
 )
 from isycode.streaming import StreamError, detect_unexecuted_tool_request
+from isycode.reasoning_options import steering_support
 import time as _time
 from isycode.tui_theme import MUTED, YELLOW, RED, CYAN, GREEN
 from isycode.tui_widgets import ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
+from isycode.tui_screens_sessions import IdeaBacklogScreen, QueuedMessagesScreen
+from isycode.tui_theme import TEXT, _fit_cells
+from isycode.tui_widgets import ThoughtBlock
+from textual.widgets import TextArea
 
 
 class ChatMixin:
@@ -1091,3 +1096,34 @@ class ChatMixin:
             prompt.load_text(self._retry_prompt)
             prompt.focus()
             self._append("  Retry draft ready · review previous effects, then press Enter to send.", MUTED)
+
+    def _track_composer_draft(self, event: TextArea.Changed) -> None:
+        if event.text_area.id != "prompt-input":
+            return
+        self._draft_text = getattr(event.text_area, "pasted_text", None).expand(event.text_area.text) if hasattr(event.text_area, "pasted_text") else event.text_area.text
+        if self._draft_timer is not None:
+            self._draft_timer.stop()
+        self._draft_timer = self.set_timer(1.0, self._save_draft)
+
+    def _navigate_prompt_history(self, delta: int, current: str) -> str | None:
+        if not self._prompt_history or (self._prompt_history_idx == -1 and delta > 0):
+            return None
+        if self._prompt_history_idx == -1:
+            self._prompt_history_draft = current
+            self._prompt_history_idx = len(self._prompt_history)
+        next_index = self._prompt_history_idx + delta
+        if next_index < 0:
+            return None
+        if next_index >= len(self._prompt_history):
+            self._prompt_history_idx = -1
+            return self._prompt_history_draft
+        self._prompt_history_idx = next_index
+        return self._prompt_history[next_index]
+
+
+    def _mount_thought(self, title: str = "thinking...") -> tuple[ThoughtBlock, ChatArea]:
+        chat = self.query_one(ChatArea)
+        block = ThoughtBlock(title=title)
+        chat.mount(block)
+        chat.follow_tail()
+        return block, chat

@@ -43,7 +43,7 @@ from rich.markdown import Markdown as RichMarkdown
 from isycode.providers import PRESETS, Provider, ProviderError, load_provider_key, selected_provider_name
 from isycode.streaming import StreamError
 import time as _time
-from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, _elapsed_label
+from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, SECURITY, _elapsed_label
 from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import (
@@ -55,6 +55,16 @@ from isycode.tui_screens_sessions import AgentQuestionScreen
 
 
 from isycode.providers import provider_supports_tools
+from isycode.contracts import AgentRuntime
+from isycode.runtime import AuthorityContextChanged
+from textual.widgets import Button
+import hashlib
+
+try:
+    from agents.planner import PlanRejected  # type: ignore[reportMissingImports]
+except ModuleNotFoundError:
+    class PlanRejected(RuntimeError):
+        """A planner rejection raised only when an optional runtime is present."""
 
 
 class ToolMixin:
@@ -184,11 +194,11 @@ class ToolMixin:
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
                                  ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
             outcome = {"error": "tool is not registered by ISyCode"}
-            self._append("  Tool denied · unregistered tool name", YELLOW)
+            self._append("  Tool denied · unregistered tool name", SECURITY)
             return tool_call_id, json.dumps(outcome)
         if not isinstance(raw_arguments, str) or len(raw_arguments) > 64 * 1024:
             outcome = {"error": "tool arguments are malformed or too large"}
-            self._append(f"  Tool denied · {name} · invalid arguments", YELLOW)
+            self._append(f"  Tool denied · {name} · invalid arguments", SECURITY)
             return tool_call_id, json.dumps(outcome)
         try:
             arguments = json.loads(raw_arguments)
@@ -196,7 +206,7 @@ class ToolMixin:
             arguments = None
         if not isinstance(arguments, dict):
             outcome = {"error": "tool arguments must be a JSON object"}
-            self._append(f"  Tool denied · {name} · invalid arguments", YELLOW)
+            self._append(f"  Tool denied · {name} · invalid arguments", SECURITY)
             return tool_call_id, json.dumps(outcome)
         if name == CONTEXT_ACCESS_TOOL_NAME:
             if (set(arguments) != {"path"} or not isinstance(arguments.get("path"), str)
@@ -292,11 +302,11 @@ class ToolMixin:
                 root, WorkspaceAuthority(root))
             result = await asyncio.to_thread(owner.execute, action_id, arguments)
         except Exception:
-            self._append(f"  Tool denied · {action_id} · authority/owner unavailable", YELLOW)
+            self._append(f"  Tool denied · {action_id} · authority/owner unavailable", SECURITY)
             return tool_call_id, json.dumps({"error": "ISyCode authorization or read owner unavailable"})
         if result.decision != "ALLOW" or result.receipt is None:
             reason = result.reason or result.decision
-            self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", YELLOW)
+            self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", SECURITY)
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
         # The outcome and its receipt live inside the tool's own card; no
         # separate box per call.
@@ -636,7 +646,7 @@ class ToolMixin:
             self._append(f"  MCP {name} started · {len(tools)} tools · receipt "
                          f"{outcome.receipt.receipt_id}", GREEN)
         else:
-            self._append(f"  MCP {name} {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            self._append(f"  MCP {name} {outcome.decision} · {outcome.reason[:180]}", SECURITY)
 
     async def _call_local_mcp(self, function: str, arguments) -> str:
         mcp_owner = self._local_mcp_owner()
@@ -657,7 +667,7 @@ class ToolMixin:
             return json.dumps({"status": "rejected_by_user"})
         outcome = await mcp_owner.call(preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  MCP {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            self._append(f"  MCP {outcome.decision} · {outcome.reason[:180]}", SECURITY)
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
         try:
             payload = json.loads(outcome.text)
@@ -742,7 +752,7 @@ class ToolMixin:
         except (OSError, RuntimeError, ValueError):
             return json.dumps({"error": "workspace memory authority is unavailable"})
         if configured.get("enabled") is False:
-            self._append("  Memory action denied · explicitly revoked in workspace authority", YELLOW)
+            self._append("  Memory action denied · explicitly revoked in workspace authority", SECURITY)
             return json.dumps({"error": "workspace memory action was explicitly revoked",
                                "decision": "DENY"})
         sends_to_model = operation in {
@@ -779,3 +789,290 @@ class ToolMixin:
         self._add_mcp_preset(value)
         self._render_menu("branch", "MCP", self._branch_entries("mcp"))
         return
+
+    async def _run_plan(self, intent: str) -> None:
+        """Delegate planning to IsyMotron runtime and render its proposal."""
+        self._clear_pending_plan()
+        block = None
+        if self._lane_on_screen():
+            block, _chat = self._mount_thought()
+        reason_buf: list[str] = []
+        t0 = _time.monotonic()
+        try:
+            def on_chunk(kind: str, chunk: str) -> None:
+                if kind == "reasoning":
+                    reason_buf.append(chunk)
+                    if block is not None and block.is_mounted and self._lane_on_screen():
+                        self.call_from_thread(block.set_text, "".join(reason_buf))
+
+            runtime = self._runtime_factory(self._workspace_root)
+            outcome = await runtime.plan(intent, on_chunk=on_chunk)
+            plan = outcome.plan
+            from isycode.model_presentation import model_display_name
+            self._append(f"  Model: {model_display_name(outcome.model)} · {outcome.provider_label}", MUTED)
+            self._append(f"  Host: {outcome.host_name}", MUTED)
+
+            if plan.verdict() == "PLANNED":
+                self._append(f"\n  Understood: {plan.understood}", TEXT)
+                self._append(f"  Plan ({len(plan.steps)} steps):", YELLOW)
+                for i, step in enumerate(plan.steps, 1):
+                    params_str = ", ".join(f"{k}={v}" for k, v in step.params.items())
+                    self._append(f"    {i}. [{step.host}] {step.capability}({params_str})", TEXT)
+                    self._append(f"       ↳ {step.why}", MUTED)
+                self._append("\n  Proposal only · it carries no authority.", MUTED)
+                self._append(
+                    "  Execution is disabled in Secure until each step has an ISyCode owner, "
+                    "grant, Sentinel decision and required approval.", MUTED)
+                if plan.completion and plan.completion.prompt_tokens is not None and plan.completion.completion_tokens is not None:
+                    self._append(f"  Tokens: {plan.completion.prompt_tokens + plan.completion.completion_tokens}", MUTED)
+                self._clear_pending_plan()
+                if self._lane_on_screen():
+                    review = self.query_one("#review-plan", Button)
+                    review.disabled = True
+                    review.label = "Execution unavailable in Secure"
+                self._append(
+                    f"\n  {outcome.origin} proposal is ready for inspection; it cannot be run through IsyMotron.",
+                    YELLOW)
+            else:
+                self._append(f"\n  Refused: {plan.refused or 'no plan possible'}", RED)
+                self._append("  This is correct behavior, not a failure.", MUTED)
+
+        except PlanRejected as e:
+            reason = getattr(e, "reason", str(e))
+            self._append(f"\n  Plan rejected: {reason}. No executable plan was retained.", RED)
+        except ProviderError as e:
+            self._append(f"\n  {self._provider_failure(e, 'Planning')}", RED)
+        except Exception as e:
+            self._append(
+                f"\n  Planning failed ({type(e).__name__}). No executable plan was retained.", RED)
+        finally:
+            if block is not None and block.is_mounted and self._lane_on_screen():
+                block.collapse_to(_time.monotonic() - t0)
+
+    def action_run_plan(self) -> None:
+        """Review and confirm a demo plan through its contextual button."""
+        if self._last_plan is None or self._last_runtime is None:
+            self._append("  No plan to run. Use /plan <intent> first.", MUTED)
+            return
+        if self._loop_task and not self._loop_task.done():
+            self._append("  Wait for the current task to finish before running a plan.", YELLOW)
+            return
+        try:
+            current_context = self._last_runtime.approval_context()
+        except Exception as e:
+            self._clear_pending_plan()
+            self._set_activity("Plan cleared · authority could not be revalidated", RED)
+            self._append(
+                f"  Authority could not be revalidated ({type(e).__name__}); plan cleared.", RED)
+            return
+        if current_context != self._last_plan_context:
+            self._clear_pending_plan()
+            self._set_activity("Plan cleared · authority changed", RED)
+            self._append(
+                "  Host identity, grants, capabilities, or scopes changed after planning. "
+                "Create a new plan before execution.", RED)
+            return
+        now = _time.time()
+        plan_digest = self._plan_digest(self._last_plan)
+        if (now - self._armed_at > 10.0
+                or self._armed_plan_id != self._last_plan.plan_id
+                or self._armed_plan_digest != plan_digest
+                or self._armed_context != current_context):
+            try:
+                authority = self._last_runtime.approval_summary()
+            except Exception as e:
+                self._clear_pending_plan()
+                self._set_activity("Plan cleared · authority details unavailable", RED)
+                self._append(
+                    f"  Authority details could not be loaded ({type(e).__name__}); plan cleared.",
+                    RED)
+                return
+            self._armed_at = now
+            self._armed_plan_id = self._last_plan.plan_id
+            self._armed_plan_digest = plan_digest
+            self._armed_context = current_context
+            review = self.query_one("#review-plan", Button)
+            is_local_read = self._last_plan_origin == "local-read-only"
+            review.label = "Confirm local read-only plan" if is_local_read else "Confirm demo plan"
+            n = len(self._last_plan.steps)
+            effect = ("local filesystem.read only" if is_local_read
+                      else "simulated host; no real workspace effects")
+            self._append(
+                f"\n  Review {self._last_plan_origin} plan ({n} steps; {effect}):",
+                YELLOW)
+            self._append(f"  Host: {self._last_plan_host}", MUTED)
+            identity = authority.get("identity", {})
+            if isinstance(identity, dict):
+                self._append(
+                    f"  Host identity: {identity.get('host_id', 'unknown')} · "
+                    f"{identity.get('engine', 'unknown')} · {identity.get('os_family', 'unknown')}",
+                    MUTED)
+            capabilities = authority.get("granted", [])
+            if isinstance(capabilities, list):
+                self._append(
+                    "  Granted capabilities: " + (", ".join(map(str, capabilities)) or "none"),
+                    MUTED)
+            bounds = authority.get("bounds", {})
+            if isinstance(bounds, dict):
+                for capability, scope in sorted(bounds.items()):
+                    scope_text = json.dumps(scope, sort_keys=True, ensure_ascii=False, default=str)
+                    self._append(f"  Scope {capability}: {scope_text}", MUTED)
+            for i, s in enumerate(self._last_plan.steps, 1):
+                params = ", ".join(f"{key}={value}" for key, value in s.params.items())
+                self._append(f"    {i}. [{s.host}] {s.capability}({params})", TEXT)
+            self._append(
+                f"  Select {review.label} in Overview within 10s to execute it.", YELLOW)
+            self._set_activity("Awaiting confirmation · expires in 10s", YELLOW)
+            return
+        plan, runtime = self._last_plan, self._last_runtime
+        origin, host_name = self._last_plan_origin, self._last_plan_host
+        self._clear_pending_plan()
+        self._start_operation(
+            self._execute_stored_plan(
+                plan, runtime, origin, host_name, expected_context=current_context),
+            f"Executing · {host_name}")
+
+    def _clear_pending_plan(self) -> None:
+        """Forget an executable plan and any approval bound to it."""
+        self._last_plan = None
+        self._last_runtime = None
+        self._last_plan_origin = ""
+        self._last_plan_host = ""
+        self._last_plan_context = None
+        self._armed_at = 0.0
+        self._armed_plan_id = None
+        self._armed_plan_digest = None
+        self._armed_context = None
+        review = self.query_one("#review-plan", Button)
+        review.disabled = True
+        review.label = "No plan pending"
+
+    @staticmethod
+    def _plan_digest(plan) -> str:
+        payload = json.dumps(plan.to_dict(), sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=False, default=str)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _receipt_audit_lines(receipt, verification) -> list[str]:
+        """Render the receipt seal and every field from IsyMotron's verifier."""
+        def label(value) -> str:
+            if value is None:
+                return "none"
+            return str(getattr(value, "value", getattr(value, "name", value)))
+
+        if receipt is None:
+            lines = ["Receipt: unavailable"]
+        else:
+            decision = getattr(receipt, "decision", None)
+            policy_decision = getattr(decision, "decision", None)
+            policy_reason = getattr(decision, "reason", None)
+            lines = [
+                f"Receipt ID: {receipt.receipt_id}",
+                f"Seal: kind={getattr(receipt, 'seal_kind', 'unknown')} · "
+                f"status={getattr(verification, 'seal_status', 'NOT_REPORTED')} · "
+                f"value={getattr(receipt, 'seal', '') or 'missing'}",
+                f"Receipt decision: {label(policy_decision)} · reason={label(policy_reason)}",
+            ]
+
+        if verification is None:
+            lines.append("Verification: NOT_VERIFIABLE · verifier returned no result")
+            lines.extend(("Claim match: not checked", "Request match: not checked",
+                          "Decision match: not checked", "Re-derived decision: unavailable"))
+            return lines
+
+        status = label(getattr(verification, "status", "NOT_VERIFIABLE"))
+        lines.append(
+            f"Verification: {status} · {getattr(verification, 'reason', 'no verifier reason')}")
+        rederived = getattr(verification, "rederived", None)
+        was_rederived = rederived is not None
+        for title, field in (("Claim match", "claim_matched"),
+                             ("Request match", "request_matched"),
+                             ("Decision match", "decision_matched")):
+            value = getattr(verification, field, None)
+            rendered = ("not checked" if not was_rederived else
+                        "yes" if value is True else "no" if value is False else "unknown")
+            lines.append(f"{title}: {rendered}")
+        if rederived is None:
+            lines.append("Re-derived decision: unavailable")
+        else:
+            derived_decision = getattr(rederived, "decision", None)
+            lines.append(
+                f"Re-derived decision: {label(getattr(derived_decision, 'decision', None))} · "
+                f"reason={label(getattr(derived_decision, 'reason', None))}")
+        return lines
+
+    async def _execute_stored_plan(
+        self, plan, runtime: AgentRuntime, origin: str, host_name: str,
+        *, expected_context: str,
+    ) -> None:
+        """Execute only the plan explicitly reviewed against this host."""
+        self._append(f"\n  Executing on {host_name}...", CYAN)
+        try:
+            execution = await runtime.execute(plan, expected_context=expected_context)
+        except AuthorityContextChanged as e:
+            self._append(
+                f"  DENY before execution: {e} No step was submitted to the host; plan cleared.",
+                RED)
+            return
+        except Exception as e:
+            self._append(
+                f"  Execution returned no status ({type(e).__name__}); the host outcome is unknown. "
+                "Do not retry until host state or receipts are checked.", RED)
+            return
+        try:
+            verifications = await asyncio.to_thread(runtime.verify_execution, execution)
+        except Exception as e:
+            verifications = {}
+            self._append(
+                f"  Receipt verification unavailable ({type(e).__name__}); allowed steps remain untrusted.",
+                YELLOW)
+        ok_count = deny_count = unknown_count = 0
+        for step in execution.steps:
+            receipt = step.receipt
+            verification = verifications.get(step.index)
+            verify_status = verification.status if verification else "NOT_VERIFIABLE"
+            for line in self._receipt_audit_lines(receipt, verification):
+                self._append(f"    {step.index}. {line}", MUTED)
+            if step.allowed:
+                result = receipt.result or {}
+                evidence = getattr(receipt.evidence, "value", str(receipt.evidence))
+                if evidence != "DEMONSTRATED" or (isinstance(result, dict) and result.get("error")):
+                    unknown_count += 1
+                    detail = result.get("error", "engine outcome is not demonstrated") if isinstance(result, dict) else "engine outcome is unknown"
+                    self._append(
+                        f"    {step.index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
+                        YELLOW)
+                    continue
+                if verify_status != "PASS":
+                    unknown_count += 1
+                    self._append(
+                        f"    {step.index}. ALLOW decision · execution evidence not trusted · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
+                        RED if verify_status == "REJECT" else YELLOW)
+                    continue
+                ok_count += 1
+                self._append(
+                    f"    {step.index}. ALLOW — receipt {receipt.receipt_id[:12]} · verify PASS", GREEN)
+                result = receipt.result or {}
+                if origin == "local-read-only":
+                    if isinstance(result, dict) and isinstance(result.get("text"), str):
+                        preview = result["text"][:4000]
+                        if len(result["text"]) > 4000:
+                            preview += "\n… output truncated at 4,000 characters …"
+                        self._append(f"       Read result:\n{preview}", TEXT)
+                    elif isinstance(result, dict) and result.get("kind") == "directory":
+                        self._append(
+                            "       Directory listed. Use Files for the filtered browser view.", MUTED)
+            else:
+                deny_count += 1
+                self._append(
+                    f"    {step.index}. DENY — {receipt.decision.reason} · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
+                    YELLOW if verify_status == "PASS" else RED)
+        if execution.stopped_at is not None:
+            self._append(f"    Stopped at step {execution.stopped_at}: {execution.stop_reason}", YELLOW)
+        self._append(
+            f"\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown.", CYAN)
+        if origin == "local-read-only":
+            self._append("  Local read-only execution; write capabilities were removed from this runtime.", MUTED)
+        else:
+            self._append("  Demo execution only; real workspace writes are not enabled here.", MUTED)

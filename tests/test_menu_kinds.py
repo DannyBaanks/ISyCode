@@ -1,8 +1,9 @@
 """The menu kind table keeps every branch that used to return."""
 import ast
+import random
 from pathlib import Path
 
-from isycode.tui_app_menu import MENU_DISPATCH
+from isycode.tui_app_menu import MENU_DISPATCH, MenuAction, MenuMixin
 
 EXPECTED = {
     "folders_open",
@@ -148,3 +149,59 @@ def test_menu_handlers_exist_once_on_the_app():
     assert missing == []
     for name in set(MENU_DISPATCH.values()):
         assert callable(getattr(TUIApp, name))
+
+
+def test_every_menu_action_member_has_a_handler():
+    # H5: the enum and the dispatch table cannot drift apart; a new member
+    # without a handler entry fails here instead of at menu click time.
+    assert set(MenuAction) == set(MENU_DISPATCH)
+    from isycode.tui import TUIApp
+    for action in MenuAction:
+        assert callable(getattr(TUIApp, MENU_DISPATCH[action])), action
+
+
+class _DispatchRecorder:
+    """Stands in for the TUI app: records handler names, never raises."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def __getattr__(self, name: str):
+        def _record(entry):
+            self.calls.append(name)
+        return _record
+
+
+def test_random_menu_entries_never_fail_silently():
+    # H5 property test: 100 seeded entries. Valid kinds must dispatch to
+    # their registered handler; unknown or non-str kinds must raise
+    # ValueError. A silent return (no dispatch, no exception) is the F-09 bug.
+    rng = random.Random(0xF09)
+    valid_pool = [member.value for member in MenuAction]
+    valid_set = set(valid_pool)
+    probes: list[object] = [rng.choice(valid_pool) for _ in range(50)]
+    probes += [f"unknown_{index}" for index in range(38)]
+    for _ in range(10):
+        kind = rng.choice(valid_pool)
+        probes.append(kind[:-1])
+    probes += [True, None]
+    assert len(probes) == 100
+    rng.shuffle(probes)
+
+    dispatched = raised = 0
+    for kind in probes:
+        probe = _DispatchRecorder()
+        entry = {"kind": kind, "value": "", "label": "h5-probe"}
+        is_valid = isinstance(kind, str) and kind in valid_set
+        try:
+            MenuMixin._select_menu_entry(probe, entry)
+        except ValueError:
+            raised += 1
+            assert not is_valid, f"valid kind {kind!r} raised"
+            assert probe.calls == [], f"invalid kind {kind!r} dispatched"
+        else:
+            dispatched += 1
+            assert is_valid, f"unknown kind {kind!r} passed silently"
+            assert probe.calls == [MENU_DISPATCH[MenuAction(kind)]]
+    assert dispatched >= 50 and raised >= 40
+    assert dispatched + raised == 100

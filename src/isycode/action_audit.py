@@ -15,7 +15,7 @@ from typing import Any
 from isycode.actions import ACTION_BY_ID
 from isycode.effect_policy import EFFECTS, POLICY_VERSION, effect_class
 from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
-from isycode.workspace_setup import state_root
+from isycode.state_index import get_state_index
 from isycode.platform_storage import storage, held
 
 
@@ -89,8 +89,8 @@ class ActionAuditJournal:
 
     def __init__(self, workspace_root: Path, *, state_directory: Path | None = None):
         root = Path(workspace_root).expanduser().resolve(strict=True)
-        root_id = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
-        directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
+        root_id = get_state_index().workspace_digest(root, length=32)
+        directory = get_state_index().journal_directory(state_directory=state_directory)
         try:
             storage.ensure_directory(directory)
         except ValueError as exc:
@@ -108,8 +108,8 @@ class ActionAuditJournal:
                                  *, state_directory: Path | None = None) -> "ActionAuditJournal":
         """Build a verifier handle without creating or changing state files."""
         root = Path(workspace_root).expanduser().resolve(strict=True)
-        root_id = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
-        directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
+        root_id = get_state_index().workspace_digest(root, length=32)
+        directory = get_state_index().journal_directory(state_directory=state_directory)
         instance = cls.__new__(cls)
         instance.path = directory / f"actions-{root_id}.jsonl"
         instance.root_id = root_id
@@ -141,8 +141,22 @@ class ActionAuditJournal:
                 or (os.name == "posix" and
                     (info.st_uid != os.getuid() or info.st_mode & 0o077))):
             raise ValueError("journal file is unsafe or exceeds its size limit")
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0))
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_BINARY", 0))
         try:
+            try:
+                import fcntl
+            except ImportError:          # non-POSIX: stability check alone
+                fcntl = None
+            if fcntl is not None:
+                # F-03: hold a shared lock for the whole read so a cooperating
+                # writer (LOCK_EX in the append path) cannot append mid-verify
+                # and trip the stability check below. The lock is taken BEFORE
+                # the reference fstat so a writer cannot slip a whole append
+                # between the reference snapshot and the lock acquisition.
+                # Non-cooperating writers are still caught by the
+                # size/mtime/ctime comparison.
+                fcntl.flock(fd, fcntl.LOCK_SH)
             opened = os.fstat(fd)
             if not storage.private(path, fd=fd):
                 raise ValueError('journal file is not private')
@@ -160,6 +174,11 @@ class ActionAuditJournal:
                     or after.st_ctime_ns != opened.st_ctime_ns):
                 raise ValueError("journal changed during verification")
         finally:
+            if fcntl is not None:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                except OSError:
+                    pass
             os.close(fd)
         raw = b"".join(chunks)
         if len(raw) > self.MAX_BYTES or (raw and not raw.endswith(b"\n")):
@@ -251,6 +270,39 @@ class ActionAuditJournal:
         })
 
     def verify(self, *, recent_limit: int = 80) -> ActionAuditReport:
+        """Verify under the stable native sidecar lock so rotation cannot race reads."""
+        if not isinstance(recent_limit, int) or not 0 <= recent_limit <= 500:
+            raise ValueError("recent_limit must be between 0 and 500")
+        try:
+            parent_info = self.path.parent.lstat()
+        except FileNotFoundError:
+            return ActionAuditReport("NOT_VERIFIABLE", 0, 0, 0, 0, (),
+                                     "no durable journal exists for this workspace")
+        except OSError:
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal directory metadata is unavailable")
+        if (not stat.S_ISDIR(parent_info.st_mode) or self.path.parent.is_symlink()
+                or (os.name == "posix" and
+                    (parent_info.st_uid != os.getuid() or parent_info.st_mode & 0o077))):
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal directory is unsafe")
+        try:
+            has_journal = (self.path.exists() or self.path.is_symlink()
+                           or bool(self._sealed_segments()))
+        except (OSError, ValueError):
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     "journal segments are missing or out of order")
+        if not has_journal:
+            return ActionAuditReport("NOT_VERIFIABLE", 0, 0, 0, 0, (),
+                                     "no durable journal exists for this workspace")
+        try:
+            with held(self.path.with_suffix('.lock')):
+                return self._verify_locked(recent_limit=recent_limit)
+        except (OSError, ValueError) as exc:
+            return ActionAuditReport("JOURNAL_INVALID", 0, 0, 0, 0, (),
+                                     f"journal lock is unsafe or unavailable ({type(exc).__name__})")
+
+    def _verify_locked(self, *, recent_limit: int = 80) -> ActionAuditReport:
         """Verify the journal without repairing, rewriting, or following links."""
         if not isinstance(recent_limit, int) or not 0 <= recent_limit <= 500:
             raise ValueError("recent_limit must be between 0 and 500")
@@ -415,8 +467,8 @@ class ActionAuditJournal:
                                      f"journal verification failed ({type(exc).__name__})")
 
     def _append(self, body: dict[str, Any]) -> None:
-        # A concurrent writer may seal the active file between our open and our
-        # lock; _append_once then reports "rotated" and we reopen the new file.
+        # The sidecar lock remains stable while the journal file rotates. POSIX
+        # readers also lock the journal itself to keep verification snapshots stable.
         try:
             with held(self.path.with_suffix('.lock')):
                 for _ in range(4):
@@ -427,7 +479,12 @@ class ActionAuditJournal:
         raise ActionAuditError("private action journal kept rotating; action denied")
 
     def _append_once(self, body: dict[str, Any]) -> bool:
-        flags = os.O_RDWR | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+        try:
+            import fcntl
+        except ImportError:  # pragma: no cover - non-POSIX fallback uses exclusive file access
+            fcntl = None
+        flags = (os.O_RDWR | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_BINARY", 0))
         try:
             fd = os.open(self.path, flags, 0o600)
         except OSError as exc:
@@ -438,7 +495,11 @@ class ActionAuditJournal:
                     or info.st_size > self.MAX_BYTES
                     or (os.name == "posix" and info.st_uid != os.getuid())):
                 raise ActionAuditError("private action journal is unsafe or full")
+            if fcntl is not None:
+                fcntl.flock(fd, fcntl.LOCK_EX)
             if os.name == "posix":
+                # F-03: fchmod inside LOCK_EX so it cannot sneak a ctime update
+                # between a concurrent reader's two fstat calls (LOCK_SH).
                 os.fchmod(fd, 0o600)
             if not storage.private(self.path, fd=fd):
                 raise ActionAuditError('private action journal ACL or ownership is unsafe')
@@ -546,6 +607,11 @@ class ActionAuditJournal:
             raise ActionAuditError("private action journal could not be committed") from exc
         finally:
             if fd is not None:
+                if fcntl is not None:
+                    try:
+                        fcntl.flock(fd, fcntl.LOCK_UN)
+                    except OSError:
+                        pass
                 os.close(fd)
 
 

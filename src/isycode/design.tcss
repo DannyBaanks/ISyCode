@@ -8,6 +8,7 @@ $isy-border: #718291;
 $isy-separator: #3f4d59;
 $isy-success: #7fe39d;
 $isy-warning: #f2c068;
+$isy-security: #f2955e;
 $isy-error: #f7888e;
 
 /* Shared ISyCode surfaces. Screen-specific layout and action semantics stay local. */
@@ -44,6 +45,11 @@ ModalScreen Button.-primary { color: $isy-focus !important; }
 ModalScreen Button.-warning { color: $isy-warning !important; }
 ModalScreen Button.-error { color: $isy-error !important; }
 ModalScreen Button:disabled { color: $isy-muted !important; text-style: dim; }
+
+/* F-07: security-policy DENY toast — orange, distinct from error red. */
+Toast.-security-denied { border-left: outer $isy-security; }
+Toast.-security-denied .toast--title { color: $isy-security; }
+
 OptionList > .option-list--option-highlighted { background: $isy-selected-surface !important; color: $isy-focus !important; text-style: none; }
 OptionList > .option-list--option { background: $isy-surface; color: $isy-text; text-style: none; }
 OptionList > .option-list--option-disabled { color: $isy-muted; }

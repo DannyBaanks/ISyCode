@@ -37,13 +37,7 @@ def test_xai_signin_confirms_then_runs_only_through_the_owner(
     async def run():
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as p:
-            await p.pause()
-            startup_workers = tuple(
-                worker for worker in app.workers
-                if worker.group == "workspace-startup"
-            )
-            if startup_workers:
-                await app.workers.wait_for_complete(startup_workers)
+            await app.wait_for_ready()
             from isycode.action_audit import ActionAuditJournal
             task = asyncio.create_task(app._connect_xai_login("device"))
             for _ in range(100):
@@ -51,8 +45,10 @@ def test_xai_signin_confirms_then_runs_only_through_the_owner(
                 if isinstance(app.screen, TailscaleConfirmScreen):
                     break
             assert isinstance(app.screen, TailscaleConfirmScreen)
-            # Startup is complete before the login flow begins, so its receipts
-            # cannot arrive after the audit baseline and pollute the cancel path.
+            # Capture the baseline only after the confirm modal is up. On slow
+            # CI runners a single pause() does not drain startup work; a late
+            # background receipt would otherwise appear after a baseline taken
+            # too early and pollute the cancel-path equality check.
             baseline = ActionAuditJournal(project).verify()
             if cancel:
                 await p.press("escape")
@@ -102,7 +98,7 @@ def test_xai_signin_without_the_grok_cli_reports_and_never_opens_the_modal(
     async def run():
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as p:
-            await p.pause()
+            await app.wait_for_ready()
             original = app._append
             app._append = lambda value, *args, **kwargs: lines.append(str(value))
             await app._connect_xai_login("browser")

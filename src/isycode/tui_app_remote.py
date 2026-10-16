@@ -842,25 +842,28 @@ class RemoteMixin:
             GREEN)
         self._set_activity("LSP request completed · sandbox closed", GREEN)
 
-    def _authorize_remote_read(self, action_id: str, url: str) -> tuple[bool, str]:
-        parsed = urlparse(url)
-        host = (parsed.hostname or "").casefold().rstrip(".")
+    async def _change_mobile_host_grant(self, enabled: bool) -> None:
         try:
-            if parsed.port:
-                host += f":{parsed.port}"
-        except ValueError:
-            return False, "invalid endpoint port"
-        if not host:
-            return False, "endpoint host is missing"
-        try:
-            request = ActionRequest(action_id, self._workspace_root, host, {"url": url},
-                                    execution_owner="remote_catalog")
-            authority, decision = ProductActionGate(
-                self._workspace_root, WorkspaceAuthority(self._workspace_root),
-                owner_id="remote_catalog").authorize(request)
-        except Exception:
-            return False, "authorization is unavailable"
-        if not decision.allowed:
-            failed = "; ".join(check.reason for check in decision.checks if not check.passed)
-            return False, failed or authority.reason
-        return True, "authorized"
+            authority = WorkspaceAuthority(self._workspace_root)
+            if enabled:
+                if await self._grant_mobile_host(authority):
+                    self._append("  Mobile Host granted for this workspace. Starting it still asks first.", GREEN)
+                else:
+                    self._append("  Mobile Host grant cancelled; nothing changed.", MUTED)
+            elif await self._await_screen(TailscaleConfirmScreen(
+                    "Revoke Mobile Host for this workspace",
+                    "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` "
+                    "grants. New starts, new PINs and new pairing are denied. A host already "
+                    "running keeps serving devices paired earlier until ISyCode exits; their "
+                    "tokens still expire within an hour.",
+                    "Revoke Mobile Host grants")):
+                authority.set_grant("mobile.host.start", enabled=False, network_hosts=[])
+                for action in MOBILE_PAIR_ACTIONS:
+                    authority.set_grant(action, enabled=False, targets=[])
+                self._append("  Mobile Host grants revoked for this workspace.", GREEN)
+            else:
+                self._append("  Mobile Host grants unchanged.", MUTED)
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            self._append("  Mobile Host grants could not be changed; starts and pairing stay denied "
+                         "unless a valid saved grant remains.", RED)
+        self._open_authority_menu()

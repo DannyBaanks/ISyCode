@@ -347,7 +347,7 @@ class SidePanel(Vertical):
                     with Collapsible(title=tr("Gateway MCP"), id="rail-gateway-mcp"):
                         yield Static(tr("Tool catalog has not been checked."), id="gateway-mcp-status", classes="rail-copy")
                     with Collapsible(title=tr("Mobile Host"), id="rail-mobile"):
-                        yield Static(tr("Starting local mobile host…"), id="mobile-host-status", classes="rail-copy")
+                        yield Static(tr("Not started"), id="mobile-host-status", classes="rail-copy")
                         yield Static(tr("No mobile clients connected."), id="mobile-client-status", classes="rail-copy")
                     with Collapsible(title=tr("Bridge Coordination"), id="rail-bridge"):
                         yield Static(tr("Disabled · No Bridge Handshake"), id="bridge-status", classes="rail-copy")
