@@ -52,11 +52,33 @@ class WindowsStorage:
         return None
 
     def _user(self):
+        return self._identities()[0]
+
+    def _identities(self):
         token = security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
         try:
-            return security.GetTokenInformation(token, security.TokenUser)[0]
+            user = security.GetTokenInformation(token, security.TokenUser)[0]
+            default_owner = security.GetTokenInformation(token, security.TokenOwner)
+            return user, default_owner
         finally:
             token.Close()
+
+    @staticmethod
+    def _private_dacl(acl, user: str) -> bool:
+        if acl is None:
+            return False
+        user_access = 0
+        for index in range(acl.GetAceCount()):
+            (kind, flags), mask, sid = acl.GetAce(index)
+            # Reject unfamiliar/object ACEs and permissions for other principals.
+            if kind != security.ACCESS_ALLOWED_ACE_TYPE:
+                return False
+            principal = security.ConvertSidToStringSid(sid)
+            if principal not in {user, 'S-1-5-18'}:
+                return False
+            if principal == user and not flags & security.INHERIT_ONLY_ACE:
+                user_access |= mask
+        return user_access & 0x1F01FF == 0x1F01FF
 
     def _descriptor(self, directory: bool):
         user = security.ConvertSidToStringSid(self._user())
@@ -95,9 +117,21 @@ class WindowsStorage:
         if not self._real_chain(path):
             raise ValueError('private state cannot be a reparse point')
         current = security.GetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT,
-            security.OWNER_SECURITY_INFORMATION)
-        if current.GetSecurityDescriptorOwner() != self._user():
-            raise ValueError('private state is not owned by the current user')
+            security.OWNER_SECURITY_INFORMATION | security.DACL_SECURITY_INFORMATION)
+        user, default_owner = self._identities()
+        owner = current.GetSecurityDescriptorOwner()
+        owner_sid = security.ConvertSidToStringSid(owner)
+        user_sid = security.ConvertSidToStringSid(user)
+        default_owner_sid = security.ConvertSidToStringSid(default_owner)
+        if owner_sid != user_sid:
+            if (owner_sid != default_owner_sid
+                    or not self._private_dacl(current.GetSecurityDescriptorDacl(), user_sid)):
+                raise ValueError('private state is not owned by the current user')
+            try:
+                security.SetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT,
+                    security.OWNER_SECURITY_INFORMATION, user, None, None, None)
+            except pywintypes.error as exc:
+                raise ValueError('private state owner could not be normalized') from exc
         descriptor = self._descriptor(path.is_dir())
         security.SetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT,
             security.DACL_SECURITY_INFORMATION | security.PROTECTED_DACL_SECURITY_INFORMATION,
@@ -112,24 +146,12 @@ class WindowsStorage:
             flags = security.OWNER_SECURITY_INFORMATION | security.DACL_SECURITY_INFORMATION
             descriptor = (security.GetSecurityInfo(msvcrt.get_osfhandle(fd), security.SE_FILE_OBJECT, flags)
                 if fd is not None else security.GetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT, flags))
-            user = security.ConvertSidToStringSid(self._user())
-            if security.ConvertSidToStringSid(descriptor.GetSecurityDescriptorOwner()) != user:
+            user_sid, default_owner_sid = self._identities()
+            user = security.ConvertSidToStringSid(user_sid)
+            owner = security.ConvertSidToStringSid(descriptor.GetSecurityDescriptorOwner())
+            if owner not in {user, security.ConvertSidToStringSid(default_owner_sid)}:
                 return False
-            acl = descriptor.GetSecurityDescriptorDacl()
-            if acl is None:
-                return False
-            user_access = 0
-            for index in range(acl.GetAceCount()):
-                (kind, flags), mask, sid = acl.GetAce(index)
-                # Reject unfamiliar/object ACEs and permissions for other principals.
-                if kind != security.ACCESS_ALLOWED_ACE_TYPE:
-                    return False
-                principal = security.ConvertSidToStringSid(sid)
-                if principal not in {user, 'S-1-5-18'}:
-                    return False
-                if principal == user and not flags & security.INHERIT_ONLY_ACE:
-                    user_access |= mask
-            return user_access & 0x1F01FF == 0x1F01FF
+            return self._private_dacl(descriptor.GetSecurityDescriptorDacl(), user)
         except (OSError, pywintypes.error, ValueError, TypeError):
             return False
 

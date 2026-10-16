@@ -216,3 +216,41 @@ def test_legacy_private_child_remains_readable_without_changing_bytes(tmp_path):
         assert path.read_bytes() == content
     finally:
         os.close(fd)
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows token owner semantics')
+def test_private_file_created_with_default_token_owner_is_protected_for_user(tmp_path):
+    import win32api
+    import win32con
+    import win32security as security
+
+    store = backend()
+    root = tmp_path / 'private'
+    store.ensure_directory(root)
+    path = root / 'default-owner.txt'
+    path.write_bytes(b'private')
+
+    token = security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+    try:
+        user = security.GetTokenInformation(token, security.TokenUser)[0]
+        default_owner = security.GetTokenInformation(token, security.TokenOwner)
+    finally:
+        token.Close()
+    if security.ConvertSidToStringSid(default_owner) == security.ConvertSidToStringSid(user):
+        pytest.skip('this process token already defaults ownership to its user')
+
+    descriptor = security.GetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT,
+        security.OWNER_SECURITY_INFORMATION)
+    owner = descriptor.GetSecurityDescriptorOwner()
+    if security.ConvertSidToStringSid(owner) != security.ConvertSidToStringSid(default_owner):
+        pytest.skip('this filesystem assigns newly created files to the user')
+
+    # Elevated Windows tokens can create files owned by their default owner
+    # group. A private inherited DACL still protects the file from other users.
+    assert store.private(path)
+    store.protect(path)
+    descriptor = security.GetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT,
+        security.OWNER_SECURITY_INFORMATION)
+    assert security.ConvertSidToStringSid(descriptor.GetSecurityDescriptorOwner()) == \
+        security.ConvertSidToStringSid(user)
+    assert store.private(path)
