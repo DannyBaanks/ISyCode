@@ -89,6 +89,16 @@ def test_git_environment_keeps_only_standard_proxy_and_tls_overrides(monkeypatch
     assert env["GIT_CONFIG_GLOBAL"] == os.devnull
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows Git needs the native system root.")
+def test_git_environment_preserves_windows_system_root():
+    system_root = os.environ.get("SystemRoot")
+    assert system_root, "Windows must define SystemRoot for native Git subprocesses"
+
+    env = SelfUpdater(discover_source_checkout=False)._env()
+
+    assert env.get("SYSTEMROOT") == system_root
+
+
 def test_clean_checkout_advances_only_by_fast_forward(tmp_path):
     _, repo, peer = repositories(tmp_path)
     push_peer_commit(peer, "publish update")

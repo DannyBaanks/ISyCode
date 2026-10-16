@@ -91,6 +91,12 @@ class SelfUpdater:
             "GIT_PAGER": "cat",
             "GIT_ATTR_NOSYSTEM": "1",
         }
+        if os.name == "nt":
+            # Native Windows programs such as Git need SystemRoot even when
+            # their environment is otherwise deliberately kept minimal.
+            system_root = os.environ.get("SystemRoot") or os.environ.get("WINDIR")
+            if system_root:
+                env["SYSTEMROOT"] = system_root
         # Keep Git isolated from arbitrary user environment while allowing the
         # standard proxy and trusted-CA settings needed on managed networks.
         # Deliberately exclude variables that disable TLS verification.

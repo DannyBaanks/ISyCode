@@ -1,0 +1,60 @@
+ISyCode PR #52 Windows updater proxy verification
+Date: 2026-10-16 (America/Mexico_City)
+Host: Windows 11, build 26200; Python 3.12.10; PyInstaller 6.22.3
+Source checkout: fe88ac0e7eb3774dfcbc74b09e969f6de8878add
+Proxy: temporary Ubuntu Tinyproxy reached over Tailscale; private addresses
+  intentionally omitted from this repository evidence.
+
+Finding and repair:
+  SelfUpdater._env() deliberately gives Git a small environment and forwards
+  standard proxy/TLS variables. On Windows it had omitted SYSTEMROOT. Git
+  for Windows could not complete a proxied GitHub connection with the reduced
+  environment. An A/B check showed that adding only SYSTEMROOT made the same
+  git ls-remote request succeed; forwarding the full PATH was unnecessary.
+  _env() now forwards SYSTEMROOT (or WINDIR as fallback) only on Windows.
+  A Windows-only regression test asserts the value is present.
+
+Local regression command:
+  py -m pytest -q tests/test_updater.py
+Result:
+  37 passed, 1 skipped in 197.73s
+The focused SystemRoot test also passed (1 passed). The full raw module log is
+stored in windows-updater-tests-pr52-20261016.log.
+
+Live source probe (process-scoped HTTP_PROXY/HTTPS_PROXY pointed at the
+temporary Tailscale proxy; NO_PROXY empty; no proxy credentials used):
+  SelfUpdater(source_root=Path.cwd())._git(
+      "ls-remote", OFFICIAL_REPOSITORY, "refs/heads/main")
+Output:
+  EXIT_CODE=0
+  b76377d12fdc33bd2fbfc70f880bc950846c07fc    refs/heads/main
+  SYSTEMROOT_PROPAGATED=True
+
+Isolated executable check:
+  A clean venv built a one-file executable with PyInstaller 6.22.3. The EXE
+  was copied to a disposable Temp path containing spaces and an accented
+  character, then run with process-scoped proxy variables and isolated
+  ISYCODE_STATE_HOME:
+    isycode.exe update --check
+  Output:
+    Repositorio oficial disponible (main).
+    La comprobación no clonó ni instaló archivos.
+    EXIT_CODE=0
+  EXE SHA-256:
+    324cc4431b3bf5a23798c9f8d460c9a1e1b1132b237a03a19430c819b136ec
+  The check-only path did not clone, install, or advance a checkout.
+
+Temporary proxy configuration on Ubuntu was restricted to the Tailscale
+interface/client and CONNECT port 443. Active temporary config SHA-256:
+5e9d6e8c5de6ed6361e16292cbe237e4c0a1247657859fc674ab083819623c2e.
+The pre-test configuration backup SHA-256 was
+ec2768782e6f64456c2f1c5958f5e7ff3dcef9534c3ae5d382efb9d1f680cd18.
+The post-cleanup check confirmed the restored config hash equals the original
+backup hash, dpkg status is rc (removed; configuration files retained), the
+service is inactive, and port 8888 has no listener. Both duplicate entries
+for the temporary SSH key were removed; the other authorized-key lines were
+preserved.
+
+Scope: this demonstrates a real Windows Git-over-proxy query through the
+source updater and a bundled EXE check-only path. It does not test applying
+an update to the EXE itself, proxy authentication, or other proxy types.

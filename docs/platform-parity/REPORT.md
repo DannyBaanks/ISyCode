@@ -880,8 +880,9 @@ demonstrates portable copy/delete installation, not an autonomous EXE updater.
 
 The Windows package job runs the clean dependency install, both installation
 and uninstall paths, and the portable EXE copy/delete checks on each PR. The
-workflow YAML and PowerShell step bodies parse locally. The live proxied Git
-update query remains NOT_DEMONSTRATED. The updater does not replace a frozen
+workflow YAML and PowerShell step bodies parse locally. At the time of that
+run, the live proxied Git update query remained NOT_DEMONSTRATED; the
+2026-10-16 follow-up below closes the check-only proxy query. The updater does not replace a frozen
 EXE or AppImage in place: without a source checkout, both platforms bootstrap
 or update a managed source environment and its native launcher. That is shared
 behavior, not a Windows parity gap. `NATIVE_ACCEPTED=False` remains unchanged.
@@ -890,3 +891,38 @@ To keep the content-addressed manifest stable across Windows and Linux clones,
 `README.md`, the installation and verification references, and
 `pyproject.toml` are pinned to LF. The 479 manifest entries match their staged
 Git blobs after that normalization; raw platform evidence remains byte-pinned.
+
+## Windows updater proxy and physical Linux suite — 2026-10-16
+
+The live proxied updater check exposed a Windows-only environment gap:
+Git for Windows could not connect through the configured proxy when
+`SelfUpdater` supplied its intentionally minimal subprocess environment.
+Forwarding only `SYSTEMROOT` (with `WINDIR` as fallback) fixed the request; the
+updater still excludes unrelated user variables and does not need the full
+Windows `PATH`. A Windows regression test covers that contract. The full updater
+module passes 37 tests, 1 skip. A real `git ls-remote` through the temporary
+Ubuntu/Tailscale proxy returned the official `main` ref. A fresh PyInstaller
+6.22.3 one-file build also passed `isycode.exe update --check` from a temporary
+path with spaces and an accented character; it reported the official
+repository available and confirmed the check did not clone or install files.
+This closes the live proxy-query gap for the check-only path; it does not
+demonstrate replacing a frozen executable in place.
+
+The Ubuntu physical machine ran the full non-integration suite from the PR
+head with complete Git history: 2,025 passed, 153 skipped, 11 deselected. An
+earlier depth-1 clone run had one failure because a historical evaluated
+commit was not present; that raw run is preserved, and the full-history rerun
+passed. Evidence and raw logs are in
+`evidence/windows-updater-proxy-live-pr52-20261016.txt`,
+`evidence/windows-updater-tests-pr52-20261016.log`,
+`evidence/linux-physical-suite-full-20261015.log`, and the adjacent Linux
+metadata file.
+
+The temporary Tinyproxy configuration has been restored byte-for-byte to its
+recorded original SHA-256. The package is removed, its service is inactive,
+and port 8888 has no listener. Both duplicate entries for the temporary SSH
+key were removed while preserving the other authorized-key lines. The
+five-user matrix is waived per user request. `NATIVE_ACCEPTED=False` remains
+unchanged; separate user ACL acceptance, remaining IPC/device cases,
+runtime/dependency staging, power-loss recovery, and physical interactive
+parity remain NOT_DEMONSTRATED.
