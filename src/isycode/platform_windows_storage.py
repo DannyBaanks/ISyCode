@@ -20,7 +20,9 @@ class WindowsStorage:
         return not any(is_link(part) for part in (path, *path.parents))
 
     def delete_private(self, path: Path) -> None:
-        if not self.private(path.parent) or is_link(path):
+        if is_link(path):
+            raise OSError('private artifact cannot be a reparse point')
+        if not self.private(path.parent):
             raise ValueError('unsafe private artifact')
         # No sharing allows deletion only when no peer holds the artifact.
         try:
@@ -170,7 +172,12 @@ class WindowsStorage:
         if not self._real_chain(path):
             raise ValueError('private state cannot traverse a reparse point')
         if not path.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
+            # Never use mkdir(parents=True) here: it creates missing ancestors
+            # with inherited, potentially shared ACLs. Build each component
+            # with the same user/SYSTEM descriptor, starting at the nearest
+            # existing parent.
+            if not path.parent.exists():
+                self.ensure_directory(path.parent)
             attributes = pywintypes.SECURITY_ATTRIBUTES()
             attributes.SECURITY_DESCRIPTOR = self._descriptor(True)
             try:

@@ -32,6 +32,16 @@ def test_private_directory_and_file_roundtrip(tmp_path):
         os.close(fd)
 
 
+@pytest.mark.skipif(os.name != 'nt', reason='Windows inherited-ACL regression')
+def test_missing_state_ancestors_are_created_with_private_acls(tmp_path):
+    from isycode.platform_windows_storage import WindowsStorage
+    store = WindowsStorage()
+    root = tmp_path / 'private-parent' / 'nested' / 'state'
+    store.ensure_directory(root)
+    for directory in (root, root.parent, root.parent.parent):
+        assert store.private(directory)
+
+
 def test_cross_process_lock_refuses_contender_and_recovers_after_death(tmp_path):
     store = backend()
     root = tmp_path / 'state'

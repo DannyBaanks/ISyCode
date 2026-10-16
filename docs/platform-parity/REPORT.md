@@ -54,7 +54,7 @@ An independent read-only reviewer examined the storage/Git changes and correctio
 
 The M15 coverage snapshot changed only generated source-line associations (14 old/new line references). The previous bytes are retained in evidence. Updating that live snapshot is not release acceptance.
 
-The native-contract CI workflow was added but has not been run on GitHub in this task. No product push, release or deployment is part of this local implementation.
+At the time of this section the native-contract CI workflow had not yet run on GitHub; the later PR run and its follow-up are recorded below. No product release or deployment is part of this implementation.
 
 ## Exact reproduction
 
@@ -645,10 +645,55 @@ separately logged-on second-user witness remains NOT_DEMONSTRATED.
 The PR adds a Windows 3.12 job that runs the same full non-integration pytest
 selection as Linux and gates package builds on it. Local Windows had already
 passed the full suite (1,827 passed, 323 skipped, 11 integration tests
-deselected, 1 expected failure). The new GitHub-hosted Windows run is pending
-until the PR workflow executes; it is not represented as a completed result.
+deselected, 1 expected failure). The first GitHub-hosted PR run executed and
+failed; the correction pass and pending follow-up are recorded below.
 The 7,309,128-byte Linux collection log is retained locally in raw form and committed here as a lossless gzip stream at `evidence/linux-collection.log.gz`. Decompression was verified byte-for-byte; the original SHA-256 is `15e8cf3d313466921af807f358bf1769222c2db2136a4ef4264b715931976440` and the compressed SHA-256 is `39eb2f59dfafb367410e7f77a8885c9926f16f165df7fdff867363ea6f53536e` (also recorded in `hashes.json`).
 
 The 4,200,909-byte raw log `windows-clipboard-regressions-20261014.txt` remains local and is committed losslessly as `windows-clipboard-regressions-20261014.txt.gz`. Decompression matches the original byte-for-byte (original SHA-256 `1281df6bf6cfc783f79ab305f91512e3529a6f9c0590a52fc11f4081570f30fd`, gzip SHA-256 `440432b9fb6d26b8fab0c989816f0d71124edbb6b9d79638f46795020efcbb25`).
 
 The 1,018,307-byte raw log `windows-full-suite-final-closure-20261015.txt` remains local and is committed losslessly as `windows-full-suite-final-closure-20261015.txt.gz`. Decompression matches the original byte-for-byte (original SHA-256 `1e7adba1d61420c80d6a5dd22296c1d48d02936cb9a6213ba7c215fdd7cd20ea`, gzip SHA-256 `f562cba7719b5380033a9c131421750b56dfe1ff3e63f93d3ef954d2c37d7408`).
+
+## PR #52 full-matrix correction pass — 2026-10-15
+
+The first hosted PR run (`38836535715`, native contracts `38836535727`) was
+red. Linux reported three existing UI/test-isolation failures. Windows reported
+62 failures and 41 setup errors, chiefly because private-state parents inherited
+shared ACLs and the hosted Python runtime contained an input rejected by the
+strict reparse/regular-file check. The Windows job also exposed a test that
+waited only one second for a cold ACL-backed preview, a platform-specific
+symlink error string assertion, and content-addressed gate files checked out
+with altered line endings.
+
+The follow-up creates each missing private-state ancestor with the protected
+user/SYSTEM DACL, detects actual token elevation before inspecting an operator
+VHD, includes the rejected runtime-relative path in diagnostics without
+weakening reparse checks, makes the affected UI tests isolate startup workers
+and wait on their expected condition, and disables Git newline conversion for
+`docs/evidence/**` and `docs/decisions/**`. The 163 local CRLF-only worktree
+conversions in those directories were restored byte-for-byte from their Git
+blobs; the gate validator then passed.
+
+Current local Windows verification after those fixes:
+
+- Touched regression selection: **100 passed, 2 skipped, 1 integration
+  deselected**.
+- Native LPAC resource controls and the Windows updater launcher regression:
+  **17 passed**.
+- Native storage/Git/audit/session selection: **129 passed, 2 skipped, 1
+  integration deselected**; raw output is
+  `evidence/windows-native-contracts-pr52-r3-20261015.txt` (SHA-256
+  `B358D5D3170ED958D1F05669BEF346938C235A01AC4620C452073E775F1C78B8`).
+- The first local native-contract run had **1 failing test out of 128 passes**:
+  its foreign-owner fixture replaced `_user`, while `protect()` now consults
+  `_identities()`. The fixture was corrected; the exact failed log is preserved
+  losslessly as `evidence/windows-native-contracts-pr52-20261015.txt.gz`
+  (compressed SHA-256 `97c8c2f6f9d45e9fe5902197a4e2e22ae833b57955f75c708497139a2191b60d`,
+  original SHA-256 `47b4bf3c7211a0ff565eb5b90c87b2d865b6d03ab7b412b6b73a7aefeb1c46f6`).
+  The corrected r2 selection passed **128 tests**; r3 above includes the new
+  recursive-ACL regression. Command and environment metadata for r3 are in its
+  adjacent `.json` record.
+- Gate validator: **14 passed, 2 skipped**.
+
+The follow-up GitHub full-matrix run is still pending. These targeted results do
+not replace that run or close the separately listed NOT_DEMONSTRATED items. The
+five-user matrix remains waived; `NATIVE_ACCEPTED=False` remains unchanged.

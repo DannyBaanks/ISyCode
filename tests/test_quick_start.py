@@ -4,22 +4,12 @@ Quick Start chains the EXISTING first-run pieces (recurring + Classic +
 the explicit coding-tools confirmation); it grants nothing beyond what
 the user could already click through, and never touches the Security path.
 """
-import json
-
 import pytest
 
 from isycode.tui import QuickStartScreen, TUIApp, WorkspaceModeScreen, WorkspaceSetupScreen
 from isycode.tui_screens_approval import TailscaleConfirmScreen
 from isycode.workspace_authority import WorkspaceAuthority
 from test_daily_tui import configure
-
-
-def _clear_saved_recurrence(app):
-    """Simulate a true first run: drop the boot-time saved recurrence choice."""
-    store = app._workspace_setup
-    data = store._load()
-    data.pop(store._key(app._launch_dir), None)
-    store.preferences_path.write_text(json.dumps({"choices": data}), encoding="utf-8")
 
 
 @pytest.mark.asyncio
@@ -53,11 +43,19 @@ async def test_quick_start_chains_recurring_classic_and_toolkit_offer(tmp_path, 
             return True
         return True
 
+    startup = app._startup_workspace
+
+    async def no_startup():
+        return None
+
+    # on_mount starts onboarding automatically. Suppress that worker so this
+    # test can install its screen stub before driving the startup flow once.
+    app._startup_workspace = no_startup
     async with app.run_test(size=(120, 40)) as pilot:
         app._await_screen = fake_screen
         await pilot.pause()
-        _clear_saved_recurrence(app)
-        await app._startup_workspace()
+        app._startup_workspace = startup
+        await startup()
         await pilot.pause()
         root = app._workspace_root
         assert app._quick_start is True
@@ -88,11 +86,17 @@ async def test_custom_setup_keeps_the_step_by_step_chain(tmp_path, monkeypatch):
             return "security"
         return True
 
+    startup = app._startup_workspace
+
+    async def no_startup():
+        return None
+
+    app._startup_workspace = no_startup
     async with app.run_test(size=(120, 40)) as pilot:
         app._await_screen = fake_screen
         await pilot.pause()
-        _clear_saved_recurrence(app)
-        await app._startup_workspace()
+        app._startup_workspace = startup
+        await startup()
         await pilot.pause()
         assert app._quick_start is False
         names = seen

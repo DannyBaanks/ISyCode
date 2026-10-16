@@ -307,12 +307,22 @@ def test_security_requires_review_despite_saved_automatic_edits(tmp_path, monkey
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            # On Windows a cold ACL check + file preview can take longer than
+            # one second. Wait on the screen/task condition, with the same
+            # bounded window used by the sibling-attachment review below.
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen) or task.done():
                     break
             assert (sibling / 'file.py').read_text() == 'value = 1\n'

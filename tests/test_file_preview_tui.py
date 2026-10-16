@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from isycode.tui import TUIApp
 from test_daily_tui import configure
 
@@ -22,7 +23,15 @@ def test_file_leaf_enables_preview_modal_and_copy_path(tmp_path,monkeypatch,caps
                     await p.pause(0.05)
                 assert copied and copied[-1] == expected
             await p.pause();app._set_rail_view('files');await app._load_directory(str(root))
-            tree=app.query_one('#workspace-tree',Tree);leaf=next(n for n in tree.root.children if n.data['path']==str(file))
+            tree=app.query_one('#workspace-tree',Tree)
+            leaf=None
+            for _ in range(40):
+                leaf=next((node for node in tree.root.children
+                           if Path(node.data['path']).resolve()==file.resolve()),None)
+                if leaf is not None:
+                    break
+                await p.pause(0.05)
+            assert leaf is not None
             assert not leaf.allow_expand
             tree.select_node(leaf);await p.pause()
             assert not app.query_one('#file-copy-path').disabled

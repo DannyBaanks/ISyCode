@@ -134,7 +134,10 @@ def test_usage_status_shows_estimated_context_and_unknown_cost(tmp_path, monkeyp
 
 
 def test_budget_defaults_are_validated_and_legacy_settings_load(tmp_path):
-    store = UserDefaultsStore(tmp_path)
+    # Pytest's temporary root may be created by an elevated Windows token and
+    # is therefore not a private application state directory. Let the store
+    # create and secure its own child directory, as production does.
+    store = UserDefaultsStore(tmp_path / 'state')
     assert store.load()['chat_token_budget'] == 0
     store.update(chat_token_budget=10000)
     store.update(answer_tokens=4096)

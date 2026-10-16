@@ -188,8 +188,18 @@ def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, ca
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        # This contract exercises chat tool ownership only. Do not let the
+        # unrelated on-mount onboarding worker contend for the same private
+        # action journal while the fake provider is stepping through calls.
+        app._startup_workspace = no_startup
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             if real_command:
                 from isycode.workspace_authority import WorkspaceAuthority
                 WorkspaceAuthority(root).set_grant('workspace.command.run', enabled=True,
@@ -210,7 +220,10 @@ def test_full_chat_read_edit_and_diff_uses_real_owners(tmp_path, monkeypatch, ca
                     task.cancel()
                     await asyncio.gather(task, return_exceptions=True)
             assert (root / 'app.py').read_text() == 'value = 2\n'
-            assert len(seen) == len(actions) + 1
+            assert len(seen) == len(actions) + 1, (
+                f"provider calls stopped early; startup notes={app._active_lane().lines[-8:]}; "
+                f"audit={ActionAuditJournal(root).verify().recent[-8:]}"
+            )
             tool_results = [json.loads(m['content']) for m in seen[-1] if m['role'] == 'tool']
             assert tool_results[1]['status'] == 'written'
             assert '+value = 2' in json.dumps(tool_results[-1])

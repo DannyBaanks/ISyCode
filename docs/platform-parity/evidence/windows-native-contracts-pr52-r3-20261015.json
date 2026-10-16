@@ -1,0 +1,14 @@
+{
+  "schema": "isycode.parity-test-result/1",
+  "recorded_at": "2026-10-15T20:27:59.238395-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10"
+  },
+  "command": ".venv\\Scripts\\python.exe -m pytest -q -m \"not integration\" tests/test_platform_storage.py tests/test_platform_windows_git.py tests/test_iteration.py tests/test_workspace_modes.py tests/test_action_audit.py tests/test_action_audit_segments.py tests/test_git_owner.py tests/test_session_continuity_tui.py tests/test_daily_tui.py tests/test_tui_startup.py",
+  "exit_code": 0,
+  "result": "129 passed, 2 skipped, 1 deselected in 192.94 seconds",
+  "log_path": "docs/platform-parity/evidence/windows-native-contracts-pr52-r3-20261015.txt",
+  "log_sha256": "b358d5d3170ed958d1f05669bef346938c235a01ac4620c452073e775f1c78b8",
+  "scope": "Native storage, Git, audit and session contracts. The one deselected test is integration-marked; this run does not execute the five-user acceptance matrix or enable the Windows command sandbox."
+}

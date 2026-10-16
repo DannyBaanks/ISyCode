@@ -27,7 +27,12 @@ def main():
     parser.add_argument('--expected-image-id',required=True)
     parser.add_argument('--new-attachment',action='store_true')
     args=parser.parse_args()
-    if not c.windll.shell32.IsUserAnAdmin():
+    token=security.OpenProcessToken(win32api.GetCurrentProcess(),win32con.TOKEN_QUERY)
+    try:
+        elevated=bool(security.GetTokenInformation(token,security.TokenElevation))
+    finally:
+        token.Close()
+    if not elevated:
         raise OSError('Administrative operator required')
     observed=api.inspect_image(args.image)
     if (not observed.fixed or observed.device_id!=2 or observed.virtual_bytes!=512*1024**2

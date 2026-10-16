@@ -16,8 +16,15 @@ def test_narrow_sidebar_files_tab_is_visible_and_clickable(tmp_path, monkeypatch
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             assert not app.query_one(SidePanel).display
             app.action_toggle_sidebar()
             await pilot.pause()
@@ -44,8 +51,15 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
 
     async def scenario():
         app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
+            app._startup_workspace = startup
             if isinstance(app.screen, TailscaleConfirmScreen):
                 await pilot.press("escape")
                 await pilot.pause()

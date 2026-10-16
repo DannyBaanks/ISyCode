@@ -18,7 +18,7 @@ Baseline source: `b80975517f8496b70b8f7c2d37f408cd839d6b27`, native Windows audi
 | Credentials/provider settings/observations | Existing keyring/metadata behavior retained | Remaining chmod/optional-lock stores need native privacy inventory |
 | Distribution | Source PowerShell installer; wheel install/uninstall verified in a fresh private venv; one-file EXE smoke verified (`--version`, `--help`, `doctor`, `dirs`, `models`); updater Git environment has a Windows proxy/TLS allowlist | Clean dependency download; source installer uninstall; standalone EXE install/uninstall and supported upgrade; live proxied Git update query |
 | Integrity-pinned bundled resources | Exact Git bytes restored; checkout conversion disabled | Continued clone/wheel catalog validation on both OS jobs |
-| Hermetic regression suite | Linux full suite runs in CI; Windows full suite passes locally and now runs as a required Windows CI job | GitHub Actions result for this PR is pending; the five-user acceptance matrix is waived for this request |
+| Hermetic regression suite | Linux full suite runs in CI; an earlier Windows full suite passed locally; the required Windows CI job is now installed | First hosted PR run failed; the follow-up includes ACL, runtime-diagnostic, UI-wait and content-byte fixes and is pending; the five-user acceptance matrix is waived for this request |
 
 No milestone or release gate is advanced by this inventory. A missing capability stays unavailable. Full parity requires functional, security and operational acceptance for every required workflow, not merely matching method names.
 
@@ -61,5 +61,7 @@ control against the private metadata DACLs: `test_windows_private_identity.py`
 passed without modifying the seeded files. The five-user acceptance matrix was
 not run, as requested. That control is not equivalent to a separately logged-in
 Windows account; the latter remains NOT_DEMONSTRATED. A full Windows 3.12
-non-integration test job now gates package builds; its GitHub Actions result is
-pending the PR run.
+non-integration test job now gates package builds. Its first hosted run failed;
+local correction selections now pass, and the follow-up hosted result remains
+pending. See the final correction pass in `REPORT.md`; the five-user matrix
+remains waived.

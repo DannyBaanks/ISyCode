@@ -116,7 +116,9 @@ def runtime_files(runtime: Path):
     result = []
     for path in sorted(selected):
         if is_link(path) or not path.is_file():
-            raise ValueError('runtime input is not a regular file')
+            raise ValueError(
+                'runtime input is not a regular file: '
+                + path.relative_to(runtime).as_posix())
         total += path.stat().st_size
         if total > 512 * 1024 ** 2:
             raise ValueError('runtime exceeds the copying budget')

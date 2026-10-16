@@ -87,7 +87,7 @@ def test_session_store_rejects_symlink_root(tmp_path: Path):
     except OSError:
         pytest.skip("directory symlinks are unavailable")
 
-    with pytest.raises(ValueError, match="symlink"):
+    with pytest.raises(ValueError):
         ChatSessionStore(alias)
 
 

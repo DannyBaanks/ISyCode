@@ -63,7 +63,9 @@ def test_privacy_refuses_foreign_owner_before_changing_acl(tmp_path, monkeypatch
         value = security.GetNamedSecurityInfo(str(path), security.SE_FILE_OBJECT, flags)
         return security.ConvertSecurityDescriptorToStringSecurityDescriptor(value, security.SDDL_REVISION_1, flags)
     before = descriptor()
-    monkeypatch.setattr(provider, '_user', lambda: security.CreateWellKnownSid(security.WinWorldSid, None))
+    _, default_owner = provider._identities()
+    monkeypatch.setattr(provider, '_identities', lambda: (
+        security.CreateWellKnownSid(security.WinWorldSid, None), default_owner))
     with pytest.raises(ValueError):
         provider.protect(path)
     assert descriptor() == before
