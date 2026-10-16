@@ -2009,7 +2009,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except ValueError:
             return None
 
-    async def _await_screen(self, screen):
+    async def _await_screen(self, screen: Any) -> Any:
         """Show a modal screen and wait for its result from a worker or a plain task.
 
         App.push_screen_wait only works inside a Textual worker; chat turns and
