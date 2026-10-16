@@ -91,6 +91,33 @@ EXPANDED_BODY_SELECTION_REPEAT_2=PASS
 EXPANDED_BODY_SELECTION_REPEAT_3=PASS
 The full CLI suite for the current changes is pending.
 
+Further Windows CI failures on commit 85ac469392bb92c29ca0dc3c1c2516c87b9912a2
+Workflow 38865339700
+https://github.com/DannyBaanks/ISyCode/actions/runs/38865339700
+Failure: tests/test_quiet_classic_diff.py::test_quiet_classic_edit_and_delete_show_their_diff_in_the_chat
+Result: 1 failed, 1838 passed, 339 skipped, 11 deselected, 1 xfailed in 1242.28s.
+Observed: after eight fixed pilot pauses, the test assumed TailscaleConfirmScreen
+had appeared and that accepting it had already persisted workspace trust.
+Under a slow startup both assumptions could be false. The test now waits for
+the trust prompt or an already-persisted decision, accepts when prompted, and
+waits for the persisted trust state.
+
+Workflow 38865346509
+https://github.com/DannyBaanks/ISyCode/actions/runs/38865346509
+Failure: tests/test_visual_tui.py::test_long_workspace_header_keeps_status_and_path_end
+Result: 1 failed, 1838 passed, 339 skipped, 11 deselected, 1 xfailed in 1132.28s.
+Observed: after toggling the sidebar, the test measured a 78-cell banner while
+only 51 cells were available. The sidebar action schedules a compact-banner
+layout update; the assertion ran before the callback. The test now waits for
+the displayed banner geometry to fit the panel width.
+
+Local verification of latest fixes
+The visual TUI test passed directly on Windows:
+SIDEBAR_BANNER_LAYOUT_TEST=PASS
+The quiet Classic trust/diff test passed on Windows with
+`_startup_workspace` artificially delayed by two seconds:
+DELAYED_QUIET_CLASSIC_TRUST_AND_DIFF_TEST=PASS
+
 Current status
-The prior condition-based fixes have not yet been validated by a full CI rerun.
+The two latest fixes are committed locally and awaiting a fresh full CI run.
 Do not report CI green until the workflow for the fixes completes successfully.

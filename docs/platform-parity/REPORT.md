@@ -927,7 +927,7 @@ unchanged; separate user ACL acceptance, remaining IPC/device cases,
 runtime/dependency staging, power-loss recovery, and physical interactive
 parity remain NOT_DEMONSTRATED.
 
-## Windows session-search startup race — 2026-10-16
+## Windows TUI timing races — 2026-10-16
 
 The first full CI run after the updater change (run
 `38859799571`, head `3f7d7c45f0110a503e32513927b17c9f4512d7f6`) passed Linux
@@ -951,5 +951,15 @@ visible region before sending pointer events. A local Windows reproduction
 with a two-second startup delay passed; the drag-selection test passed three
 consecutive direct runs. The exact CI failure excerpts and local results are in
 `evidence/windows-session-search-startup-race-pr52-20261016.txt`. Another full
-CI rerun is pending; no full-suite pass is claimed until it completes. These
-are test synchronization fixes and do not change application behavior.
+CI run on commit `85ac469` exposed two further readiness assumptions. The
+sidebar test checked the banner before the scheduled compact-layout callback
+had updated its geometry; it now waits for the displayed banner to fit the
+available width. The quiet Classic trust test used eight fixed pauses and
+could check trust before the prompt or persisted decision was ready; it now
+waits for either state and then for trust persistence. Both fixes pass locally,
+including the trust test with `_startup_workspace` delayed by two seconds.
+Exact CI excerpts and local results are in
+`evidence/windows-session-search-startup-race-pr52-20261016.txt`. A full CI
+rerun containing these newest fixes is pending; no full-suite pass is claimed
+until it completes. These are test synchronization fixes and do not change
+application behavior.

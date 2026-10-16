@@ -30,6 +30,8 @@ paths.update({
     "tests/test_session_search_screen.py",
     "tests/test_tool_activity_groups.py",
     "tests/test_design_interactions.py",
+    "tests/test_visual_tui.py",
+    "tests/test_quiet_classic_diff.py",
 })
 paths.discard("docs/platform-parity/hashes.json")
 missing = sorted(name for name in paths if not (root / name).is_file())
@@ -61,8 +63,12 @@ record.update({
         "then exposed two more timing assumptions in a tool-grouping test "
         "and a drag-selection test; both now wait for their required startup "
         "or visible-layout state and pass local delayed-startup checks plus "
-        "three consecutive drag-selection runs. "
-        "A full CI rerun after these fixes is pending. "
+        "three consecutive drag-selection runs. The next Windows CI pair "
+        "exposed banner reflow and quiet Classic trust-prompt timing; those "
+        "tests now wait for final banner geometry or the trust prompt and "
+        "persisted decision, and both pass locally including a two-second "
+        "delayed-startup trust reproduction. A full CI rerun after these "
+        "latest fixes is pending. "
         "Five-user matrix waived; NATIVE_ACCEPTED=False and separate-user "
         "ACL, remaining IPC/device cases, runtime staging, power-loss, and "
         "interactive physical parity remain NOT_DEMONSTRATED."

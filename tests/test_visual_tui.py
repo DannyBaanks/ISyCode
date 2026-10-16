@@ -11,6 +11,18 @@ from isycode.tui import Banner, ChatArea, SidePanel, TUIApp, TailscaleConfirmScr
 from test_daily_tui import configure
 
 
+async def _wait_for_banner_to_fit(pilot, banner, panel):
+    deadline = asyncio.get_running_loop().time() + 10.0
+    while True:
+        if (panel.display and panel.region.width
+                and cell_len(plain_text(banner)) <= panel.region.x - 1):
+            return
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise AssertionError("workspace banner did not fit after sidebar layout")
+        await pilot.pause(min(0.05, remaining))
+
+
 def test_narrow_sidebar_files_tab_is_visible_and_clickable(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
 
@@ -68,8 +80,8 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
             assert cell_len(header) <= banner.content_size.width
             assert ('Classic' in header or 'Security' in header) and '日本語-project' in header
             app.action_toggle_sidebar()
-            await pilot.pause()
-            assert cell_len(plain_text(banner)) <= app.query_one(SidePanel).region.x - 1
+            panel = app.query_one(SidePanel)
+            await _wait_for_banner_to_fit(pilot, banner, panel)
             assert 'Classic' in plain_text(banner) or 'Security' in plain_text(banner)
 
     with capsys.disabled():
