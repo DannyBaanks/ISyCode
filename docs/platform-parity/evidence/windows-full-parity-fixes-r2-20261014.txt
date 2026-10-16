@@ -1,0 +1,70 @@
+.........................sss.............s...FF.F.F....                  [100%]
+================================== FAILURES ===================================
+_____________________ test_broad_directories_are_detected _____________________
+
+fake_home = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_broad_directories_are_det0/home')
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_broad_directories_are_det0')
+
+    def test_broad_directories_are_detected(fake_home: Path, tmp_path: Path):
+>       assert broad_workspace_reason(fake_home) is not None
+E       AssertionError: assert None is not None
+E        +  where None = broad_workspace_reason(WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_broad_directories_are_det0/home'))
+
+tests\test_workspace_sessions.py:141: AssertionError
+_________ test_global_recurring_default_never_marks_a_broad_directory _________
+
+fake_home = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_global_recurring_default_0/home')
+
+    def test_global_recurring_default_never_marks_a_broad_directory(fake_home: Path):
+>       assert new_workspace_choice(fake_home, None, "recurring") is None
+E       AssertionError: assert True is None
+E        +  where True = new_workspace_choice(WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_global_recurring_default_0/home'), None, 'recurring')
+
+tests\test_workspace_sessions.py:149: AssertionError
+_______ test_recurring_default_keeps_projects_out_of_a_shared_home_root _______
+
+fake_home = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_recurring_default_keeps_p0/home')
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_recurring_default_keeps_p0')
+
+    def test_recurring_default_keeps_projects_out_of_a_shared_home_root(fake_home: Path, tmp_path: Path):
+        """Regression: launching from $HOME once must not make $HOME every project's root."""
+        store = WorkspaceSetupStore(tmp_path / "state")
+        app = fake_home / "projects" / "app"
+    
+        def startup(launch: Path):
+            identity = discover_workspace_identity(launch)
+            if identity.workspace_root_source != "isyroot":
+                choice = new_workspace_choice(launch, store.recurrent_choice(launch), "recurring")
+                if choice is not None:
+                    store.choose_recurrent(launch, choice)
+                identity = discover_workspace_identity(launch)
+            return identity
+    
+        home_identity = startup(fake_home)
+>       assert not (fake_home / ".isyroot").exists()
+E       AssertionError: assert not True
+E        +  where True = exists()
+E        +    where exists = (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_recurring_default_keeps_p0/home') / '.isyroot').exists
+
+tests\test_workspace_sessions.py:178: AssertionError
+__________ test_existing_broad_marker_is_honoured_but_visibly_shared __________
+
+fake_home = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-813/test_existing_broad_marker_is_0/home')
+
+    def test_existing_broad_marker_is_honoured_but_visibly_shared(fake_home: Path):
+        """A pre-existing ~/.isyroot (older default or by hand) must not share silently."""
+        (fake_home / ".isyroot").write_bytes(b"")
+        app = fake_home / "projects" / "app"
+        identity = discover_workspace_identity(app)
+        assert identity.workspace_root == fake_home.resolve()
+        warning = shared_root_warning(identity.workspace_root, identity.workspace_root_source, app)
+>       assert warning is not None and str(app) in warning and ".isyroot" in warning
+E       assert (None is not None)
+
+tests\test_workspace_sessions.py:207: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_workspace_sessions.py::test_broad_directories_are_detected
+FAILED tests/test_workspace_sessions.py::test_global_recurring_default_never_marks_a_broad_directory
+FAILED tests/test_workspace_sessions.py::test_recurring_default_keeps_projects_out_of_a_shared_home_root
+FAILED tests/test_workspace_sessions.py::test_existing_broad_marker_is_honoured_but_visibly_shared
+4 failed, 47 passed, 4 skipped in 29.17s

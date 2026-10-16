@@ -1,21 +1,25 @@
 """Local fake app-server tests. No installed Codex or credential store is used."""
 import asyncio
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import time
 
 import pytest
 
 from isycode.codex_connector import CodexConnector, CodexConnectorError
+from isycode.platform_storage import storage
 
 
 FAKE = r'''
 import json, os, pathlib, signal, sys, time
 SCENARIO = __SCENARIO__
 home = pathlib.Path(os.environ["CODEX_HOME"])
+argv = ["app-server", *sys.argv[1:]] if os.name == "nt" else sys.argv[1:]
 (home / "child.json").write_text(json.dumps({
-    "argv": sys.argv[1:], "cwd": os.getcwd(), "keys": sorted(os.environ),
+    "argv": argv, "cwd": os.getcwd(), "keys": sorted(os.environ),
     "home": os.environ.get("HOME"), "proxy": os.environ.get("HTTPS_PROXY"),
     "ca": os.environ.get("SSL_CERT_FILE"), "path": os.environ.get("PATH")}))
 if SCENARIO == "ignore_terminate":
@@ -125,12 +129,32 @@ MESSAGES = [{"role": "system", "content": "system-imported"},
 
 
 def connector(tmp_path, scenario="normal", *, timeout_s=2):
-    executable = tmp_path / "fake-codex"
-    # The project's interpreter path contains spaces, which POSIX shebangs
-    # cannot represent. The fake peer uses stdlib only and the sanitized PATH.
-    executable.write_text("#!/usr/bin/env python3\n" + FAKE.replace("__SCENARIO__", repr(scenario)))
-    executable.chmod(0o700)
-    return CodexConnector(str(executable), tmp_path / "managed", timeout_s=timeout_s)
+    home = tmp_path / "managed"
+    if os.name == "nt":
+        # Windows cannot execute a POSIX shebang. Use Python as the exact
+        # executable and place the peer script in its isolated cwd only when
+        # the connector is about to launch; construction itself stays pure.
+        class WindowsFakeConnector(CodexConnector):
+            def _prepare_home(self):
+                super()._prepare_home()
+                peer = self.home / "app-server"
+                peer.write_text(FAKE.replace("__SCENARIO__", repr(scenario)), encoding="utf-8")
+                storage.protect(peer)
+
+            async def close(self):
+                try:
+                    await super().close()
+                finally:
+                    (self.home / "app-server").unlink(missing_ok=True)
+
+        return WindowsFakeConnector(sys.executable, home, timeout_s=timeout_s)
+    else:
+        executable = tmp_path / "fake-codex"
+        # The project's interpreter path contains spaces, which POSIX shebangs
+        # cannot represent. The fake peer uses stdlib only and the sanitized PATH.
+        executable.write_text("#!/usr/bin/env python3\n" + FAKE.replace("__SCENARIO__", repr(scenario)))
+        executable.chmod(0o700)
+        return CodexConnector(str(executable), home, timeout_s=timeout_s)
 
 
 def requests(connection):
@@ -165,14 +189,14 @@ def test_hardened_environment_exact_argv_and_private_config(tmp_path, monkeypatc
     assert child["ca"] == "/tmp/fake-ca.pem"
     assert not set(child["keys"]) & {"OPENAI_API_KEY", "CHATGPT_TOKEN", "CODEX_AUTH", "PYTHONPATH", "LD_PRELOAD"}
     assert child["path"] != str(tmp_path)
-    assert connection.home.stat().st_mode & 0o777 == 0o700
+    assert storage.private(connection.home)
     config = (connection.home / "config.toml").read_text()
     assert 'cli_auth_credentials_store = "keyring"' in config
     assert 'forced_login_method = "chatgpt"' in config
     assert 'approval_policy = "untrusted"' not in config
     for flag in ("shell_tool", "multi_agent", "skill_mcp_dependency_install", "enable_mcp_apps", "plugins"):
         assert flag + " = false" in config
-    assert (connection.home / "config.toml").stat().st_mode & 0o777 == 0o600
+    assert storage.private(connection.home / "config.toml")
     assert requests(connection)[0]["params"]["capabilities"] == {"experimentalApi": True}
     assert not (connection.home / "auth.json").exists()
     assert connection._process.returncode is not None
@@ -382,23 +406,45 @@ def test_stderr_is_drained_without_rendering(tmp_path, capsys):
     assert "SECRET" not in captured.out + captured.err
 
 
-def test_symlink_home_and_config_are_rejected(tmp_path):
+def test_linked_home_is_rejected(tmp_path):
     connection = connector(tmp_path)
     actual = tmp_path / "actual"
     actual.mkdir()
-    connection.home.symlink_to(actual, target_is_directory=True)
+
+    if os.name == "nt":
+        result = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(connection.home), str(actual)],
+            capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            pytest.skip("NOT_DEMONSTRATED: Windows directory junction creation failed")
+    else:
+        connection.home.symlink_to(actual, target_is_directory=True)
+
     async def reject():
         with pytest.raises(CodexConnectorError):
             async with connection:
                 pass
         assert connection._process is None
     asyncio.run(reject())
-    connection.home.unlink()
+
+
+def test_linked_config_is_rejected_without_touching_target(tmp_path):
+    connection = connector(tmp_path)
     connection.home.mkdir()
     target = tmp_path / "untouched"
     target.write_text("unchanged")
-    (connection.home / "config.toml").symlink_to(target)
-    connection = connector(tmp_path)
+    try:
+        (connection.home / "config.toml").symlink_to(target)
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            pytest.skip("NOT_DEMONSTRATED: Windows file symlink privilege is unavailable")
+        raise
+
+    async def reject():
+        with pytest.raises(CodexConnectorError):
+            async with connection:
+                pass
+        assert connection._process is None
     asyncio.run(reject())
     assert target.read_text() == "unchanged"
 

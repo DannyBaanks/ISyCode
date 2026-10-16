@@ -1,0 +1,31 @@
+Windows focused regression repetitions — 2026-10-15
+=== repetition 1/10 ===
+.                                                                        [100%]
+1 passed in 4.16s
+=== repetition 2/10 ===
+.                                                                        [100%]
+1 passed in 3.97s
+=== repetition 3/10 ===
+.                                                                        [100%]
+1 passed in 4.75s
+=== repetition 4/10 ===
+.                                                                        [100%]
+1 passed in 4.56s
+=== repetition 5/10 ===
+.                                                                        [100%]
+1 passed in 4.06s
+=== repetition 6/10 ===
+.                                                                        [100%]
+1 passed in 4.00s
+=== repetition 7/10 ===
+.                                                                        [100%]
+1 passed in 4.26s
+=== repetition 8/10 ===
+.                                                                        [100%]
+1 passed in 4.51s
+=== repetition 9/10 ===
+.                                                                        [100%]
+1 passed in 4.73s
+=== repetition 10/10 ===
+.                                                                        [100%]
+1 passed in 4.34s

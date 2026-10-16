@@ -1,0 +1,41 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 30 items
+
+tests/test_windows_sandbox_acceptance.py::test_owner_death_kills_job_without_cooperative_shutdown PASSED [  3%]
+tests/test_windows_sandbox_acceptance.py::test_junction_source_is_rejected_before_copy PASSED [  6%]
+tests/test_windows_sandbox_acceptance.py::test_runtime_digest_mismatch_refuses_execution PASSED [ 10%]
+tests/test_windows_sandbox_acceptance.py::test_invalid_mask_cannot_escape_scratch[../escape] PASSED [ 13%]
+tests/test_windows_sandbox_acceptance.py::test_invalid_mask_cannot_escape_scratch[C:/outside] PASSED [ 16%]
+tests/test_windows_sandbox_acceptance.py::test_invalid_mask_cannot_escape_scratch[file:stream] PASSED [ 20%]
+tests/test_windows_sandbox_acceptance.py::test_invalid_mask_cannot_escape_scratch[folder\\escape] PASSED [ 23%]
+tests/test_windows_sandbox_acceptance.py::test_execution_file_budget_blocks_513_mib SKIPPED [ 26%]
+tests/test_windows_sandbox_acceptance.py::test_missing_budget_keeps_product_native_backend_unavailable PASSED [ 30%]
+tests/test_windows_sandbox_operator.py::test_attach_parameters_match_sdk_union_alignment PASSED [ 33%]
+tests/test_windows_sandbox_operator.py::test_operator_attach_refuses_unelevated_before_image_access PASSED [ 36%]
+tests/test_windows_sandbox_operator.py::test_powershell_operator_scripts_parse_without_execution PASSED [ 40%]
+tests/test_windows_sandbox_paths.py::test_guid_launch_uses_measured_alias_and_pins_image PASSED [ 43%]
+tests/test_windows_sandbox_paths.py::test_unmatched_or_missing_alias_fails_closed[changed0] PASSED [ 46%]
+tests/test_windows_sandbox_paths.py::test_unmatched_or_missing_alias_fails_closed[changed1] PASSED [ 50%]
+tests/test_windows_sandbox_paths.py::test_unmatched_or_missing_alias_fails_closed[changed2] PASSED [ 53%]
+tests/test_windows_sandbox_paths.py::test_native_mapping_is_checked_again_before_resume PASSED [ 56%]
+tests/test_windows_sandbox_paths.py::test_verified_fs_keeps_lexical_root_when_windows_has_a_volume_alias PASSED [ 60%]
+tests/test_windows_sandbox_paths.py::test_verified_fs_rejects_root_alias_retarget PASSED [ 63%]
+tests/test_windows_sandbox_paths.py::test_verified_fs_extended_dos_alias_has_same_containment_key PASSED [ 66%]
+tests/test_windows_sandbox_process.py::test_native_lpac_runs_private_runtime PASSED [ 70%]
+tests/test_windows_sandbox_process.py::test_native_lpac_preserves_argv PASSED [ 73%]
+tests/test_windows_sandbox_process.py::test_native_lpac_loads_standard_native_extensions PASSED [ 76%]
+tests/test_windows_sandbox_process.py::test_native_lpac_blocks_original_file PASSED [ 80%]
+tests/test_windows_sandbox_process.py::test_job_terminates_tree PASSED   [ 83%]
+tests/test_windows_sandbox_process.py::test_job_assignment_failure_never_resumes PASSED [ 86%]
+tests/test_windows_sandbox_process.py::test_breakaway_refused PASSED     [ 90%]
+tests/test_windows_sandbox_process.py::test_process_is_in_job_at_creation_before_resume PASSED [ 93%]
+tests/test_windows_sandbox_process.py::test_registry_protection_failure_never_resumes PASSED [ 96%]
+tests/test_windows_sandbox_process.py::test_protected_profile_can_be_reused_without_leaking_thread_identity PASSED [100%]
+
+================== 29 passed, 1 skipped in 187.36s (0:03:07) ==================

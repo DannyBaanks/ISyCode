@@ -191,7 +191,6 @@ class ModelsScreen(ModalScreen):
                 Binding("down", "focus_next", "Next", show=False),
                 Binding("up", "focus_previous", "Previous", show=False)]
     NARROW_WIDTH = 100
-
     def __init__(self, entries: list[dict], provider_scope: str | None = None) -> None:
         super().__init__()
         self.provider_scope = provider_scope
@@ -202,6 +201,9 @@ class ModelsScreen(ModalScreen):
         # Widget IDs change when a live catalog is recomposed. Retain the
         # provider/model payload, never a positional row ID, as the preview.
         self.selected_model_value: str | None = None
+        # Textual chooses initial focus before refresh callbacks run. The
+        # current row assigns its concrete selector while compose builds it.
+        self.AUTO_FOCUS = "#models-search"
 
     def compose(self) -> ComposeResult:
         self.choices = {}
@@ -269,6 +271,10 @@ class ModelsScreen(ModalScreen):
         provider, model = entry["value"].split("|", 1)
         key = f"model-choice-{len(self.choices)}"
         self.choices[key] = entry
+        wanted = self.selected_model_value or (
+            f"{selected_provider_name()}|{resolved_chat_model()}")
+        if entry.get("value") == wanted:
+            self.AUTO_FOCUS = f"#{key}"
         label = Text(model_display_name(model), style=TEXT)
         if provider == selected_provider_name() and model == resolved_chat_model(provider):
             label.append("  · " + tr("current"), style=GREEN)
@@ -304,6 +310,8 @@ class ModelsScreen(ModalScreen):
         for key, entry in list(self.choices.items()):
             if entry.get("kind") != "model" or entry.get("value") != wanted:
                 continue
+            provider, model = wanted.split("|", 1)
+            self.show_details(provider, model)
             try:
                 button = self.query_one(f"#{key}", ModelChoice)
             except NoMatches:
@@ -312,8 +320,7 @@ class ModelsScreen(ModalScreen):
                 return
             if button.display:
                 button.scroll_visible()
-                button.focus()
-                self.show_details(*wanted.split("|", 1))
+                self.set_focus(button)
             return
         if attempt < 3 and not self.choices:
             self.call_after_refresh(self._reveal_current, attempt + 1)

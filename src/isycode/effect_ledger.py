@@ -10,10 +10,12 @@ import hashlib
 import json
 import os
 import stat
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
 from isycode.workspace_setup import state_root
+from isycode.platform_storage import storage
 
 LEDGER_VERSION = 1
 LIMITS_VERSION = 1
@@ -67,6 +69,7 @@ class EffectLedger:
         self.lock_path = base / f"{self.identity}.lock"
         self.backup_root = base / "preimages" / self.identity
         self._depth = 0
+        self._thread_lock = threading.RLock()
         self._descriptor: int | None = None
 
     def exclusive(self):
@@ -184,7 +187,7 @@ class EffectLedger:
         target = folder / relative
         _mkdir_real(target.parent)
         temporary = target.with_name(target.name + ".tmp")
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
         try:
             descriptor = os.open(temporary, flags, 0o600)
             try:
@@ -201,14 +204,10 @@ class EffectLedger:
                 pass
             raise LedgerDenied(f"pre-change backup could not be saved ({exc.strerror or type(exc).__name__}); "
                                "nothing was changed") from exc
-        os.replace(temporary, target)
+        storage.replace(temporary, target)
         if os.name == "posix":
             os.chmod(target, 0o600)
-        directory = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        storage.sync_directory(target.parent)
 
     def read_backup(self, reservation_id: str, relative: str) -> bytes:
         path = self.backup_root / reservation_id / relative
@@ -326,22 +325,26 @@ class EffectLedger:
         }
 
     def _acquire(self) -> None:
+        self._thread_lock.acquire()
+        try:
+            self._acquire_file()
+        except BaseException:
+            self._thread_lock.release()
+            raise
+
+    def _acquire_file(self) -> None:
         if self._depth:
             self._depth += 1
             return
-        try:
-            import fcntl
-        except ImportError as exc:  # pragma: no cover - POSIX only
-            raise LedgerDenied("effect ledger lock is unavailable") from exc
-        self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        storage.ensure_directory(self.directory, repair=True)
         if self.directory.is_symlink():
             raise LedgerDenied("effect ledger directory is a symlink")
-        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
         descriptor = os.open(self.lock_path, flags, 0o600)
         try:
             if os.name == "posix":
                 os.fchmod(descriptor, 0o600)
-            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            storage.lock(descriptor)
         except Exception:
             os.close(descriptor)
             raise
@@ -351,6 +354,12 @@ class EffectLedger:
     def _release(self) -> None:
         if self._depth == 0:
             return
+        try:
+            self._release_file()
+        finally:
+            self._thread_lock.release()
+
+    def _release_file(self) -> None:
         self._depth -= 1
         if self._depth:
             return
@@ -359,8 +368,7 @@ class EffectLedger:
         if descriptor is None:
             return
         try:
-            import fcntl
-            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            storage.unlock(descriptor)
         finally:
             os.close(descriptor)
 
@@ -389,7 +397,7 @@ class EffectLedger:
     def _read(self) -> dict:
         if not self.path.exists():
             return self._fresh()
-        if self.path.is_symlink() or not self.path.is_file():
+        if self.path.is_symlink() or not self.path.is_file() or not storage.private(self.path):
             raise LedgerDenied("effect ledger is not a regular file; mutations are stopped")
         try:
             loaded = json.loads(self.path.read_text(encoding="utf-8"))
@@ -416,7 +424,7 @@ class EffectLedger:
         temporary = self.path.with_name(self.path.name + ".tmp")
         try:
             descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-                                 | getattr(os, "O_NOFOLLOW", 0), 0o600)
+                                 | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o600)
             try:
                 view = memoryview(payload)
                 while view:                    # a short write must not truncate the ledger
@@ -424,14 +432,10 @@ class EffectLedger:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
-            os.replace(temporary, self.path)
+            storage.replace(temporary, self.path)
             if os.name == "posix":
                 os.chmod(self.path, 0o600)
-            directory = os.open(self.directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-            try:
-                os.fsync(directory)
-            finally:
-                os.close(directory)
+            storage.sync_directory(self.directory)
         except OSError as exc:
             try:
                 os.unlink(temporary)

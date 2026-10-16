@@ -166,7 +166,10 @@ async def test_models_screen_renders_family_variants(tmp_path, monkeypatch):
         key = next(key for key, entry in screen.choices.items()
                    if entry.get("value") == "openai|glm-5.3-flash")
         screen.query_one("#" + key).focus()
-        await pilot.pause()
+        for _ in range(100):
+            await pilot.pause(0.05)
+            if "glm-5.3-flash" in str(screen.query_one("#model-detail").render()):
+                break
         assert "glm-5.3-flash" in str(screen.query_one("#model-detail").render())
 
 

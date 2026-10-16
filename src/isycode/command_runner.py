@@ -13,44 +13,39 @@ exact sandbox executable plus a fresh approval bound to the reviewed request.
 from __future__ import annotations
 
 import asyncio
-import ctypes.util
 import hashlib
 import json
 import os
 import secrets
-import shutil
-import signal
-import stat
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
-try:
-    import resource
-except ModuleNotFoundError:  # pragma: no cover - no resource limits outside POSIX
-    resource = None
-
 from isycode.action_runtime import (
-    COMMAND_MAX_OUTPUT_BYTES, COMMAND_MAX_TIMEOUT_S, COMMAND_SYSTEM_BIN_DIRS, ActionOutcome,
+    COMMAND_MAX_OUTPUT_BYTES, COMMAND_MAX_TIMEOUT_S, ActionOutcome,
     ActionReceipt, ProductActionGate, WorkspaceReadSystembility, command_argv_valid,
-    command_relative_path_valid, sandbox_program_valid,
+    command_relative_path_valid,
 )
 from isycode.approvals import ActionApproval, ActionApprovalStore
-from isycode.lsp import network_deny_bootstrap
 from isycode.security import ActionRequest
 from isycode.staging import (
     StagingError, cleanup_staging, measure_changes, prepare_staging, promote_accounted,
 )
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.platform_sandbox import sandbox_backend
+from isycode.winfs import is_link
 
 OWNER_ID = "workspace_command"
 COMMAND_TOOL_NAME = "workspace_run"
 DEFAULT_TIMEOUT_S = 120
-MAX_PROCESSES = 256
+# Compatibility exports for callers of the original Linux sandbox helpers.
 PYTHON = "/usr/bin/python3"
-# Only the files dynamic linking and user lookups need; no hosts, resolv or keys.
-ETC_FILES = ("ld.so.cache", "ld.so.conf", "ld.so.conf.d", "alternatives", "passwd", "group",
-             "nsswitch.conf", "localtime")
+
+
+def command_bootstrap(timeout_s: int) -> str:
+    from isycode.platform_posix_sandbox import command_bootstrap as bootstrap
+    return bootstrap(timeout_s)
+
 
 COMMAND_TOOL = {"type": "function", "function": {
     "name": COMMAND_TOOL_NAME,
@@ -72,55 +67,24 @@ COMMAND_TOOL = {"type": "function", "function": {
 }}
 
 
-def sandbox_executable() -> str | None:
-    """The resolved bubblewrap path when every sandbox ingredient is present."""
-    if os.name != "posix" or resource is None or not hasattr(resource, "setrlimit"):
-        return None
-    found = shutil.which("bwrap")
-    if not found or not ctypes.util.find_library("seccomp") or not os.access(PYTHON, os.X_OK):
-        return None
-    try:
-        return str(Path(found).resolve(strict=True))
-    except (OSError, RuntimeError):
-        return None
-
-
-def _is_executable_file(path: Path) -> bool:
-    try:
-        mode = path.stat().st_mode
-    except OSError:
-        return False
-    return stat.S_ISREG(mode) and os.access(path, os.X_OK)
-
-
 def _no_symlinks(root: Path, relative: str) -> bool:
     current = root
     for part in relative.split("/"):
         current = current / part
         try:
-            if stat.S_ISLNK(current.lstat().st_mode):
+            if is_link(current):
                 return False
         except OSError:
             return False
     return True
 
 
+def sandbox_executable() -> str | None:
+    return sandbox_backend.executable()
+
+
 def resolve_program(root: Path, name: str) -> str:
-    """Map argv[0] to the path it has inside the sandbox; nothing is searched in the workspace."""
-    if "/" not in name:
-        for folder in COMMAND_SYSTEM_BIN_DIRS:
-            if _is_executable_file(Path(folder) / name):
-                return f"{folder}/{name}"
-        raise ValueError(f"program {name!r} is not installed in {', '.join(COMMAND_SYSTEM_BIN_DIRS)}")
-    if name.startswith("/"):
-        if sandbox_program_valid(name, name) and _is_executable_file(Path(name)):
-            return name
-        raise ValueError("absolute programs must come from a system bin folder")
-    relative = name.removeprefix("./")
-    if (not command_relative_path_valid(relative) or not _no_symlinks(root, relative)
-            or not _is_executable_file(root / relative)):
-        raise ValueError("workspace program must be an executable, non-sensitive file without symlinks")
-    return "/workspace/" + relative
+    return sandbox_backend.resolve_program(root, name)
 
 
 def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
@@ -149,7 +113,7 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
     def collect_secret_files(folder: str) -> None:
         with os.scandir(folder) as entries:
             for entry in entries:
-                if entry.is_symlink():
+                if is_link(Path(entry.path)):
                     continue
                 if entry.is_dir(follow_symlinks=False):
                     collect_secret_files(entry.path)
@@ -161,7 +125,7 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
         folder = stack.pop()
         with os.scandir(folder) as entries:
             for entry in entries:
-                if entry.is_symlink():
+                if is_link(Path(entry.path)):
                     continue
                 is_folder = entry.is_dir(follow_symlinks=False)
                 if WorkspaceReadSystembility.is_sensitive_name(entry.name):
@@ -183,54 +147,10 @@ def masked_digest(masks: tuple[tuple[str, bool], ...]) -> str:
 
 
 def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...], cwd: str,
-                    masks: tuple[tuple[str, bool], ...], *,
-                    timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
-    """Bubblewrap argv: system files read-only, only the workspace writable, sensitive paths masked."""
-    args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all",
-            "--clearenv", "--ro-bind", "/usr", "/usr"]
-    for source, destination, alias in (("/bin", "/bin", "/usr/bin"), ("/sbin", "/sbin", "/usr/sbin"),
-                                       ("/lib", "/lib", "/usr/lib"),
-                                       ("/lib64", "/lib64", "/usr/lib64")):
-        if Path(source).is_symlink():
-            args.extend(["--symlink", alias, destination])
-        elif Path(source).exists():
-            args.extend(["--ro-bind", source, destination])
-    for name in ETC_FILES:
-        if Path("/etc", name).exists():
-            args.extend(["--ro-bind", f"/etc/{name}", f"/etc/{name}"])
-    args.extend(["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
-                 "--dir", "/workspace", "--bind", str(root), "/workspace"])
-    # The workspace identity marker stays exactly as it is.
-    if (root / ".isyroot").is_file() and not (root / ".isyroot").is_symlink():
-        args.extend(["--ro-bind", str(root / ".isyroot"), "/workspace/.isyroot"])
-    for relative, is_folder in masks:
-        if is_folder:
-            args.extend(["--tmpfs", f"/workspace/{relative}"])
-        else:
-            args.extend(["--ro-bind", "/dev/null", f"/workspace/{relative}"])
-    args.extend(["--chdir", "/workspace" if cwd == "." else f"/workspace/{cwd}",
-                 "--setenv", "HOME", "/tmp", "--setenv", "TMPDIR", "/tmp",
-                 "--setenv", "PATH", ":".join(COMMAND_SYSTEM_BIN_DIRS),
-                 "--setenv", "LANG", "C.UTF-8", "--setenv", "TERM", "dumb",
-                 "--setenv", "NO_COLOR", "1",
-                 "--", PYTHON, "-I", "-c", command_bootstrap(timeout_s), program, *argv[1:]])
-    return args
-
-
-def command_bootstrap(timeout_s: int) -> str:
-    """Install hard resource limits in the child before any user program runs.
-
-    Setting limits from the parent races both program execution and reaping:
-    a fast command can exit while the busy UI is waiting to resume.
-    """
-    if type(timeout_s) is not int or not 1 <= timeout_s <= COMMAND_MAX_TIMEOUT_S:
-        raise ValueError("command timeout is invalid")
-    cpu = timeout_s + 10
-    limits = ("import resource\n"
-              f"resource.setrlimit(resource.RLIMIT_CPU, ({cpu}, {cpu}))\n"
-              "resource.setrlimit(resource.RLIMIT_NOFILE, (1024, 1024))\n"
-              f"resource.setrlimit(resource.RLIMIT_FSIZE, ({512 * 1024**2}, {512 * 1024**2}))\n")
-    return limits + network_deny_bootstrap(MAX_PROCESSES)
+                    masks: tuple[tuple[str, bool], ...], *, timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
+    """Compatibility entry point for the Linux argv builder."""
+    from isycode.platform_posix_sandbox import sandbox_command as build
+    return build(sandbox, root, program, argv, cwd, masks, timeout_s=timeout_s)
 
 
 @dataclass(frozen=True)
@@ -272,7 +192,7 @@ class CommandRunOwner:
             raise ValueError(f"timeout must be 1–{COMMAND_MAX_TIMEOUT_S} seconds")
         sandbox = sandbox_executable()
         if sandbox is None:
-            raise ValueError("the command sandbox needs bubblewrap, libseccomp and python3 on Linux; commands stay disabled and there is no unsandboxed fallback")
+            raise ValueError(sandbox_backend.unavailable_reason())
         program = resolve_program(self.root, argv[0])
         if not isinstance(scope, str) or not command_relative_path_valid(scope, allow_root=True):
             raise ValueError("scope must be a non-sensitive workspace-relative folder")
@@ -283,12 +203,14 @@ class CommandRunOwner:
         masks = self._scope_masks(scope)
         from isycode.rtk_integration import plan as rtk_plan
         rtk = rtk_plan(argv, program)
+        identity = sandbox_backend.identity()
         request = ActionRequest(
             "workspace.command.run", self.root, program,
             {"argv": argv, "program": program, "cwd": cwd, "timeout_s": timeout_s,
              "network": "denied", "executable": sandbox, "workspace_root": str(self.root),
              "masked_sha256": masked_digest(masks), "masked_count": len(masks),
              "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES,
+             **({"sandbox_identity": identity} if identity is not None else {}),
              **({"scope": scope} if scope != "." else {}),
              **({"rtk": rtk} if rtk else {})},
             execution_owner="workspace_command")
@@ -342,6 +264,10 @@ class CommandRunOwner:
             detail = str(exc).strip() or type(exc).__name__
             return ActionOutcome("Command could not start.", "ERROR", None,
                                  f"sandboxed command failed to start ({detail[:200]})")
+        if result.get('sandbox_cleanup', {}).get('state') == 'uncertain':
+            return ActionOutcome(json.dumps(result, ensure_ascii=False, sort_keys=True),
+                'NOT_VERIFIABLE', None,
+                'command finished; file effects are recorded in the ledger, but sandbox cleanup is uncertain')
         if "rtk" in result:
             from isycode.rtk_integration import archive_result, record_stats
             try:
@@ -387,14 +313,15 @@ class CommandRunOwner:
                 raise
         except StagingError as exc:
             raise OSError(str(exc)) from exc
+        original_staging = staging
+        proc = None
+        result = None
         try:
-            command = sandbox_command(params["executable"], staging.root, preview.program,
-                                      preview.argv, preview.cwd, preview.masks,
-                                      timeout_s=preview.timeout_s)
-            proc = await asyncio.create_subprocess_exec(
-                *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-                start_new_session=True)
+            proc = await sandbox_backend.start(staging.root, preview.program, preview.argv,
+                preview.cwd, preview.masks, preview.timeout_s, executable=params['executable'],
+                identity=params.get('sandbox_identity'))
+            if hasattr(proc, 'staged_root'):
+                staging = replace(staging, root=proc.staged_root)
             output = bytearray()
             total = 0
             timed_out = False
@@ -426,6 +353,7 @@ class CommandRunOwner:
                       "exit_code": proc.returncode, "timed_out": timed_out,
                       "output": output.decode("utf-8", errors="replace"),
                       "output_truncated": total > len(output), "output_bytes": total}
+            await sandbox_backend.finish(proc)
             if "rtk" in params:
                 from isycode.rtk_integration import finish
                 result["command_success"] = proc.returncode == 0 and not timed_out
@@ -465,7 +393,17 @@ class CommandRunOwner:
                     }
             return result
         finally:
-            cleanup_staging(staging)
+            try:
+                if proc is not None:
+                    await sandbox_backend.close(proc)
+            except (OSError, RuntimeError) as exc:
+                if result is None or 'staging' not in result:
+                    raise
+                result['sandbox_cleanup'] = {'state': 'uncertain', 'reason': str(exc)[:300]}
+            finally:
+                cleanup_staging(staging)
+                if staging.root != original_staging.root:
+                    cleanup_staging(original_staging)
 
     def _revoked_effect(self, changes: list[dict]) -> str | None:
         """Why the measured diff may not reach the user tree, or None.
@@ -491,15 +429,7 @@ class CommandRunOwner:
 
     @staticmethod
     def _kill(proc: asyncio.subprocess.Process) -> None:
-        if proc.returncode is not None:
-            return
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            try:
-                proc.kill()
-            except ProcessLookupError:
-                pass
+        sandbox_backend.terminate(proc)
 
 
 __all__ = [

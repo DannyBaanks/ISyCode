@@ -13,6 +13,7 @@ dependencies = [
   "textual==8.2.8",
   "aiohttp>=3.9,<4",
   "keyring>=25.7,<26",
+  "pywin32>=306; sys_platform == 'win32'",
   "tomli>=2; python_version < '3.11'",
 ]
 

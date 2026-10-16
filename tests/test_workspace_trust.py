@@ -33,7 +33,7 @@ FAKE_BWRAP = _COMMAND_MODULE.FAKE_BWRAP
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    monkeypatch.delenv("ISYCODE_STATE_HOME", raising=False)
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "isycode-state"))
     root = tmp_path / "project"
     root.mkdir()
     (root / ".isyroot").write_text("", encoding="utf-8")
@@ -68,12 +68,12 @@ def test_wrong_phrase_broad_root_and_inside_state_do_not_trust(project, monkeypa
     with pytest.raises(ValueError):
         trust.accept(authority, "trust everything")
     assert not trust.trusted(authority)
-    monkeypatch.setenv("XDG_STATE_HOME", str(root / "state"))
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(root / "state"))
     inside = WorkspaceTrust()
     with pytest.raises(ValueError):
         inside.accept(authority, ACCEPT_PHRASE)
     assert not inside.trusted(authority)
-    monkeypatch.setenv("XDG_STATE_HOME", str(root.parent / "state"))
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(root.parent / "state"))
     monkeypatch.setattr("isycode.workspace_trust.broad_workspace_reason",
                         lambda _path: "it is a mount point")
     with pytest.raises(ValueError):
@@ -148,20 +148,24 @@ def test_ordinary_flow_has_zero_per_action_approvals(project, tmp_path, monkeypa
         assert writer.apply(preview, None).decision == "ALLOW"
     assert (root / "app.py").read_text(encoding="utf-8") == "x = 4\n"
 
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake = bin_dir / "bwrap"
-    fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
-    fake.chmod(0o755)
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
-    monkeypatch.setenv("FAKE_BWRAP_LOG", str(tmp_path / "bwrap.json"))
     runner = CommandRunOwner(root, authority, approvals)
-    for index in range(3):
-        preview = runner.prepare(["echo", f"test-{index}"])
-        requests.append(preview.request)
-        result = asyncio.run(runner.run(preview, None))
-        assert result.decision == "ALLOW"
-        assert f"test-{index}" in json.loads(result.text)["output"]
+    if os.name == "nt":
+        with pytest.raises(ValueError, match="pending native acceptance"):
+            runner.prepare(["echo", "Windows commands stay gated until native acceptance"])
+    else:
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "bwrap"
+        fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
+        fake.chmod(0o755)
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+        monkeypatch.setenv("FAKE_BWRAP_LOG", str(tmp_path / "bwrap.json"))
+        for index in range(3):
+            preview = runner.prepare(["echo", f"test-{index}"])
+            requests.append(preview.request)
+            result = asyncio.run(runner.run(preview, None))
+            assert result.decision == "ALLOW"
+            assert f"test-{index}" in json.loads(result.text)["output"]
     assert issued == []
     assert not any(modal_required(authority, request) for request in requests)
 
@@ -316,7 +320,12 @@ def test_a_linked_trust_file_is_not_rewritten_into_trust(project, tmp_path):
     outside = tmp_path / "outside-record"
     outside.write_text("keep\n", encoding="utf-8")
     path.unlink()
-    path.symlink_to(outside)
+    try:
+        path.symlink_to(outside)
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            pytest.skip("NOT_DEMONSTRATED: Windows file symlink privilege is unavailable")
+        raise
     assert not trust.trusted(authority)
     assert outside.read_text(encoding="utf-8") == "keep\n"
     _trust(authority)

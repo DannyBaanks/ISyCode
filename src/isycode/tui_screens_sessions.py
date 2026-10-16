@@ -239,6 +239,8 @@ class IdeaBacklogScreen(QueuedMessagesScreen):
 class AgentQuestionScreen(ModalScreen[dict]):
     """One selector or text answer. Escape cancels and grants nothing."""
 
+    AUTO_FOCUS = "#ask-choice-0, #ask-text"
+
     CSS = """
     AgentQuestionScreen { align: center middle; background: #000000 68%; }
     #agent-question-card { width: 84; max-width: 94%; height: 94%; padding: 0 1; border: solid #718291; background: #000000; }
@@ -267,18 +269,12 @@ class AgentQuestionScreen(ModalScreen[dict]):
                     with Vertical(id="ask-choices"):
                         for index, choice in enumerate(self.choices):
                             yield Button(choice, id=f"ask-choice-{index}")
-                else:
-                    yield Input(placeholder=tr("Your answer"), id="ask-text", max_length=500)
+            if not self.choices:
+                yield Input(placeholder=tr("Your answer"), id="ask-text", max_length=500)
             with Horizontal(id="ask-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="ask-cancel")
                 if not self.choices:
                     yield Button(tr("Send"), id="ask-submit", variant="primary")
-
-    def on_mount(self) -> None:
-        if self.choices:
-            self.query_one("#ask-choice-0", Button).focus()
-        else:
-            self.query_one("#ask-text", Input).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()

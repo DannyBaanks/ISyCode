@@ -66,6 +66,7 @@ def test_advisory_text_names_holder_and_stays_advisory():
     assert grit.advisory_text([]) is None
 
 
+@pytest.mark.skipif(os.name != "posix", reason="grit availability requires the POSIX bwrap sandbox")
 def test_discover_grit_pins_path_and_sha256(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -87,6 +88,7 @@ def test_discover_grit_without_binary_returns_none(tmp_path, monkeypatch):
     assert grit.discover_grit() is None
 
 
+@pytest.mark.skipif(os.name != "posix", reason="grit bubblewrap command is POSIX-specific")
 def test_sandbox_command_mounts_workspace_ro_and_only_grit_rw(tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

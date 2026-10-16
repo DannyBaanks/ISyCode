@@ -1767,77 +1767,77 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2122,
+      "line": 2134,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2248,
+      "line": 2260,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "workspace.files.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1903,
+      "line": 1915,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 1975,
+      "line": 1987,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2045,
+      "line": 2057,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2131,
+      "line": 2143,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2182,
+      "line": 2194,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2190,
+      "line": 2202,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2256,
+      "line": 2268,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "grit.claims.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2318,
+      "line": 2330,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2399,
+      "line": 2411,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -1893,21 +1893,21 @@
     },
     {
       "file": "isycode/clipboard_owner.py",
-      "line": 101,
+      "line": 48,
       "callable": "isycode.clipboard_owner.ClipboardOwner.paste",
       "action": "clipboard.paste",
       "owner": "clipboard"
     },
     {
       "file": "isycode/clipboard_owner.py",
-      "line": 123,
+      "line": 70,
       "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
       "action": "clipboard.copy",
       "owner": "clipboard"
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 286,
+      "line": 207,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
@@ -1935,7 +1935,7 @@
     },
     {
       "file": "isycode/git_owner.py",
-      "line": 305,
+      "line": 302,
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
@@ -1970,14 +1970,14 @@
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 237,
+      "line": 241,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "action": "mcp.local.start",
       "owner": "mcp_local"
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 339,
+      "line": 343,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
       "action": "mcp.local.invoke",
       "owner": "mcp_local"
@@ -2082,14 +2082,14 @@
     },
     {
       "file": "isycode/tailscale_login.py",
-      "line": 128,
+      "line": 130,
       "callable": "isycode.tailscale_login.TailscaleLoginOwner.login_request",
       "action": "tailscale.login",
       "owner": "tailscale_login"
     },
     {
       "file": "isycode/tailscale_login.py",
-      "line": 165,
+      "line": 167,
       "callable": "isycode.tailscale_login.TailscaleLoginOwner.begin_login",
       "action": "tailscale.login",
       "owner": "tailscale_login"
@@ -2103,7 +2103,7 @@
     },
     {
       "file": "isycode/tailscale_serve.py",
-      "line": 184,
+      "line": 189,
       "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "action": null,
       "owner": "tailscale_serve"
@@ -2224,7 +2224,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2399,
+      "line": 2411,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2238,14 +2238,14 @@
     },
     {
       "file": "isycode/git_owner.py",
-      "line": 305,
+      "line": 302,
       "callable": "isycode.git_owner.GitOwner._request",
       "action": null,
       "owner": "workspace_git"
     },
     {
       "file": "isycode/tailscale_serve.py",
-      "line": 184,
+      "line": 189,
       "callable": "isycode.tailscale_serve.TailscaleServeOwner._prepare",
       "action": null,
       "owner": "tailscale_serve"

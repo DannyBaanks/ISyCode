@@ -15,6 +15,7 @@ def test_rollback_keeps_the_original_file_mode(tmp_path):
     root.mkdir()
     (root / "a.txt").write_bytes(b"old\n")
     (root / "a.txt").chmod(0o751)
+    original_mode = (root / "a.txt").stat().st_mode & 0o777
     (root / "b.txt").write_bytes(b"b\n")
     stage = prepare_staging(root)
     try:
@@ -25,7 +26,7 @@ def test_rollback_keeps_the_original_file_mode(tmp_path):
             promote_accounted(stage, measure_changes(stage), ledger=book, crash_at="before-apply:1")
         assert book.reconcile() == "ROLLED_BACK"
         assert (root / "a.txt").read_bytes() == b"old\n"
-        assert (root / "a.txt").stat().st_mode & 0o777 == 0o751
+        assert (root / "a.txt").stat().st_mode & 0o777 == original_mode
     finally:
         cleanup_staging(stage)
 

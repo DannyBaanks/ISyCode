@@ -18,11 +18,14 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
             await pilot.pause()
             screen = app.screen
             assert isinstance(screen, ModelsScreen)
-            for _ in range(200):  # composed (and not mid-rebuild) before it is used
-                if app.screen.query('#models-search'):
+            for _ in range(200):  # wait until the screen and both controls are composed
+                if (app.screen.query('#models-search')
+                        and app.screen.query('#model-provider-openai')):
                     break
                 await pilot.pause(0.05)
             screen = app.screen
+            assert screen.query('#models-search')
+            assert screen.query('#model-provider-openai')
             assert not screen.query_one('#model-provider-openai', Collapsible).collapsed
             screen.query_one('#models-search').value = 'nemotron-3-ultra'
             # Searching expands the NVIDIA group, which loads the account catalog in a

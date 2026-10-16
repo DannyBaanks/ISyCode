@@ -1,0 +1,31 @@
+Windows copy selection regression repetitions — 2026-10-15
+=== repetition 1/10 ===
+.                                                                        [100%]
+1 passed in 4.72s
+=== repetition 2/10 ===
+.                                                                        [100%]
+1 passed in 4.28s
+=== repetition 3/10 ===
+.                                                                        [100%]
+1 passed in 4.97s
+=== repetition 4/10 ===
+.                                                                        [100%]
+1 passed in 4.43s
+=== repetition 5/10 ===
+.                                                                        [100%]
+1 passed in 4.46s
+=== repetition 6/10 ===
+.                                                                        [100%]
+1 passed in 4.47s
+=== repetition 7/10 ===
+.                                                                        [100%]
+1 passed in 4.31s
+=== repetition 8/10 ===
+.                                                                        [100%]
+1 passed in 4.70s
+=== repetition 9/10 ===
+.                                                                        [100%]
+1 passed in 4.47s
+=== repetition 10/10 ===
+.                                                                        [100%]
+1 passed in 4.62s

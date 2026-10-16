@@ -1,0 +1,27 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 16 items
+
+tests/test_design_interactions.py::test_exact_logical_ranges[  uno  \ndos\ntres\n-start0-end0-uno  \ndos] PASSED [  6%]
+tests/test_design_interactions.py::test_exact_logical_ranges[uno\ndos\ntres\n-start1-end1-uno\ndos\n] PASSED [ 12%]
+tests/test_design_interactions.py::test_exact_logical_ranges[\t\u03b1\u754c = 2  \n-start2-end2-\u03b1\u754c = 2  ] PASSED [ 18%]
+tests/test_design_interactions.py::test_exact_logical_ranges[abc\ndef-start3-end3-] PASSED [ 25%]
+tests/test_design_interactions.py::test_drag_two_lines_and_reverse_drag_copy_only_marked_text PASSED [ 31%]
+tests/test_design_interactions.py::test_markdown_selection_tracks_soft_wrap_and_preserves_code_whitespace PASSED [ 37%]
+tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection PASSED [ 43%]
+tests/test_design_interactions.py::test_space_in_editable_field_does_not_expand_parent PASSED [ 50%]
+tests/test_design_interactions.py::test_readonly_double_click_preserves_marked_range_until_copy_or_cancel PASSED [ 56%]
+tests/test_design_interactions.py::test_real_thinking_motion_and_timers_stop_on_completion_and_unmount[False] PASSED [ 62%]
+tests/test_design_interactions.py::test_real_thinking_motion_and_timers_stop_on_completion_and_unmount[True] PASSED [ 68%]
+tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[QuickStartScreen] PASSED [ 75%]
+tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen] PASSED [ 81%]
+tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceSetupScreen] PASSED [ 87%]
+tests/test_design_interactions.py::test_settings_reachable_categories_search_motion_and_new_chat_focus PASSED [ 93%]
+tests/test_design_interactions.py::test_mode_banner_updates_without_resize PASSED [100%]
+
+============================= 16 passed in 21.55s =============================

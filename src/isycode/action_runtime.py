@@ -573,6 +573,9 @@ def command_relative_path_valid(value: object, *, allow_root: bool = False) -> T
         return allow_root
     if value.startswith("/") or "\\" in value:
         return False
+    from isycode.platform_sandbox import sandbox_backend
+    if not sandbox_backend.relative_path_valid(value):
+        return False
     parts = value.split("/")
     return all(part not in {"", ".", ".."}
                and not WorkspaceReadSystembility.is_sensitive_name(part) for part in parts)
@@ -598,8 +601,9 @@ class CommandProcessSystembility:
         if request.action_id != "workspace.command.run":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        if set(params) not in tuple(COMMAND_PARAMETER_KEYS | extra for extra in
-                                   (set(), {"scope"}, {"rtk"}, {"scope", "rtk"})):
+        allowed_extras = (set(), {'scope'}, {'rtk'}, {'scope', 'rtk'})
+        if set(params) not in tuple(COMMAND_PARAMETER_KEYS | extra | identity for extra in
+                                   allowed_extras for identity in (set(), {'sandbox_identity'})):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
         if "rtk" in params:
             from isycode.rtk_integration import valid_plan
@@ -608,7 +612,8 @@ class CommandProcessSystembility:
         argv = params.get("argv")
         if not command_argv_valid(argv):
             return SystembilityResult(self.name, False, "command arguments are invalid")
-        if not sandbox_program_valid(params.get("program"), argv[0]) or request.target != params["program"]:
+        from isycode.platform_sandbox import sandbox_backend
+        if not sandbox_backend.program_valid(params.get("program"), argv[0]) or request.target != params["program"]:
             return SystembilityResult(self.name, False, "program must be a system or workspace executable")
         timeout = params.get("timeout_s")
         count = params.get("masked_count")
@@ -624,11 +629,14 @@ class CommandProcessSystembility:
                 or params.get("workspace_root") != str(request.workspace_root)):
             return SystembilityResult(self.name, False, "command limits or sandbox facts are invalid")
         try:
-            sandbox = str(Path(shutil.which("bwrap") or "").resolve(strict=True))
-        except (OSError, RuntimeError):
+            sandbox = sandbox_backend.executable()
+            identity = sandbox_backend.identity()
+        except (OSError, RuntimeError, ValueError):
             return SystembilityResult(self.name, False, "the command sandbox is unavailable")
-        if params.get("executable") != sandbox:
-            return SystembilityResult(self.name, False, "command must run through the bubblewrap sandbox")
+        if not sandbox or params.get("executable") != sandbox:
+            return SystembilityResult(self.name, False, "command must run through the exact native sandbox")
+        if params.get('sandbox_identity') != identity:
+            return SystembilityResult(self.name, False, 'sandbox runtime or capability identity changed')
         return SystembilityResult(
             self.name, True,
             "one reviewed argv in a sandbox: only the workspace is writable, sensitive paths are "
@@ -660,7 +668,9 @@ class GitSystembility:
         if (not repo_valid or request.target != str(request.workspace_root)
                 or params.get("workspace_root") != str(request.workspace_root)):
             return SystembilityResult(self.name, False, "git request must target one direct workspace repository")
-        if not sandbox_program_valid(params.get("git"), "git"):
+        from isycode.platform_git import git_platform
+        executable = git_platform.discover(COMMAND_SYSTEM_BIN_DIRS)
+        if not executable or params.get('git') != executable:
             return SystembilityResult(self.name, False, "git must be the system git executable")
         if request.action_id == "git.diff":
             if (type(params.get("staged")) is not bool
@@ -1401,7 +1411,7 @@ def _canonical_executable_identity(value: object, expected_name: str) -> bool:
     if not isinstance(value, str) or not value or len(value) > 4096:
         return False
     return (os.path.isabs(value) and os.path.normpath(value) == value
-            and Path(value).name == expected_name)
+            and os.path.normcase(Path(value).name) == os.path.normcase(expected_name))
 
 
 class TailscaleExecutableSystembility:
@@ -1419,7 +1429,8 @@ class TailscaleExecutableSystembility:
         executable = request.parameters.get("executable")
         valid = (request.target == "tailscale" and isinstance(self.facts, TailscaleAuthorityFacts)
                  and executable == self.facts.cli_executable
-                 and _canonical_executable_identity(executable, "tailscale"))
+                 and _canonical_executable_identity(
+                     executable, "tailscale.exe" if os.name == "nt" else "tailscale"))
         if request.action_id == "tailscale.login":
             valid = (valid and set(request.parameters) == {"executable", "operation"}
                      and request.parameters.get("operation") == "login")
@@ -1730,9 +1741,10 @@ class BridgePresenceSystembility:
             and set(params) == {"executable", "handshake", "sha256", "operation"}
             and params.get("operation") == "agents"
             and isinstance(params.get("executable"), str)
-            and params["executable"].startswith("/")
+            and Path(params["executable"]).is_absolute()
             and isinstance(handshake, str)
-            and handshake.endswith("/handshake.py")
+            and Path(handshake).is_absolute()
+            and Path(handshake).name == 'handshake.py'
             and ".." not in Path(handshake).parts
             and isinstance(params.get("sha256"), str)
             and re.fullmatch(r"[0-9a-f]{64}", params["sha256"]) is not None
@@ -2498,7 +2510,7 @@ class LocalWorkspaceReadOwner:
             text = data.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ValueError("binary or non-UTF-8 files are not returned to chat") from exc
-        return json.dumps({"path": str(path.relative_to(self.root)), "text": text},
+        return json.dumps({"path": path.relative_to(self.root).as_posix(), "text": text},
                           ensure_ascii=False)
 
     def _search(self, query: str, start: Path) -> str:

@@ -32,6 +32,7 @@ from isycode.action_runtime import (
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.platform_storage import storage
 
 OWNER_ID = "mcp_local"
 MAX_CONFIG_BYTES = 64 * 1024
@@ -82,10 +83,13 @@ def load_config(path: Path | None = None) -> dict[str, ServerConfig]:
         info = path.lstat()
     except FileNotFoundError:
         return {}
-    if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_CONFIG_BYTES:
+    if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+            or info.st_size > MAX_CONFIG_BYTES):
         raise ValueError(f"{path} must be a regular file under 64 KiB")
     if os.name == "posix" and info.st_mode & 0o022:
         raise ValueError(f"{path} must not be writable by other users")
+    if os.name == "nt" and not storage.private(path):
+        raise ValueError(f"{path} must have a private Windows owner and DACL")
     data = json.loads(path.read_text(encoding="utf-8"))
     servers = data.get("servers") if isinstance(data, dict) else None
     if not isinstance(servers, dict) or len(servers) > MAX_SERVERS:

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -92,6 +93,11 @@ def test_transcript_reader_refuses_oversize_or_symlink_file(tmp_path):
     path.unlink()
     target = tmp_path / "outside.jsonl"
     target.write_text('{"role":"user","content":"outside"}\n', encoding="utf-8")
-    path.symlink_to(target)
+    try:
+        path.symlink_to(target)
+    except OSError:
+        if os.name == "nt":
+            pytest.skip("NOT_DEMONSTRATED: Windows file symlink privilege unavailable")
+        raise
     with pytest.raises(ValueError, match="unavailable"):
         read_transcript(root, relative)

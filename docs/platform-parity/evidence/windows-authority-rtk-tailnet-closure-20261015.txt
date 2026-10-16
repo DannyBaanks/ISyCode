@@ -1,0 +1,2038 @@
+COMMAND: .\.venv\Scripts\python.exe -m pytest -vv tests/test_tailscale_authority.py tests/test_tailscale_login.py tests/test_tailscale_read.py tests/test_tailscale_serve.py tests/test_tailscale_serve_hostport.py tests/test_tailscale_install.py tests/test_private_tailnet_witness.py tests/test_rtk_integration.py tests/test_rtk_authority.py tests/test_workspace_authority.py tests/test_workspace_folders.py
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 156 items
+
+tests/test_tailscale_authority.py::test_tailscale_catalog_effects_and_approval_contract PASSED [  0%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.inspect] PASSED [  1%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.prepare] FAILED [  1%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] FAILED [  2%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install] FAILED [  3%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.login] PASSED [  3%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.serve.enable] PASSED [  4%]
+tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.serve.disable] PASSED [  5%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.inspect] PASSED [  5%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.install.prepare] PASSED [  6%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.install.stage] PASSED [  7%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.install] PASSED [  7%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.login] PASSED [  8%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.serve.enable] PASSED [  8%]
+tests/test_tailscale_authority.py::test_tailscale_request_parameters_fail_closed[tailscale.serve.disable] PASSED [  9%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_matching_owned_live_route PASSED [ 10%]
+tests/test_tailscale_authority.py::test_tailscale_empty_serve_configuration_can_enable PASSED [ 10%]
+tests/test_tailscale_authority.py::test_tailscale_matching_but_unowned_existing_route_cannot_enable PASSED [ 11%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes0-False-True-ALLOW] PASSED [ 12%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes1-False-True-ALLOW] PASSED [ 12%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes2-False-True-DENY] PASSED [ 13%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes3-False-True-DENY] PASSED [ 14%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes4-True-True-DENY] PASSED [ 14%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[None-False-False-DENY] PASSED [ 15%]
+tests/test_tailscale_authority.py::test_tailscale_enable_requires_verified_free_or_owned_target[live_routes6-False-False-DENY] PASSED [ 16%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[live_routes0-True] PASSED [ 16%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[live_routes1-True] PASSED [ 17%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[live_routes2-True] PASSED [ 17%]
+tests/test_tailscale_authority.py::test_tailscale_disable_requires_fresh_matching_live_route[None-False] PASSED [ 18%]
+tests/test_tailscale_authority.py::test_tailscale_missing_adapter_facts_deny_even_with_grant_and_approval PASSED [ 19%]
+tests/test_tailscale_authority.py::test_tailscale_approval_for_different_valid_route_digest_denies PASSED [ 19%]
+tests/test_tailscale_authority.py::test_serve_authority_binds_fixed_private_delta[serve_argv-value0] PASSED [ 20%]
+tests/test_tailscale_authority.py::test_serve_authority_binds_fixed_private_delta[serve_delta_digest-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb] PASSED [ 21%]
+tests/test_tailscale_authority.py::test_serve_authority_binds_fixed_private_delta[funnel-True] PASSED [ 21%]
+tests/test_tailscale_authority.py::test_tailscale_expired_approval_denies PASSED [ 22%]
+tests/test_tailscale_authority.py::test_tailscale_systembilities_use_supplied_facts_without_filesystem_probes PASSED [ 23%]
+tests/test_tailscale_login.py::test_login_preview_is_fixed_and_approval_precedes_launch FAILED [ 23%]
+tests/test_tailscale_login.py::test_login_url_and_cli_output_are_redacted_from_state_and_receipts FAILED [ 24%]
+tests/test_tailscale_login.py::test_login_completes_only_after_signed_in_inventory FAILED [ 25%]
+tests/test_tailscale_login.py::test_cli_failure_is_generic_and_does_not_expose_stderr FAILED [ 25%]
+tests/test_tailscale_login.py::test_login_timeout_kills_only_its_child FAILED [ 26%]
+tests/test_tailscale_login.py::test_cancel_discards_attempt_without_tailnet_logout FAILED [ 26%]
+tests/test_tailscale_login.py::test_new_owner_cannot_resume_in_memory_login_or_reuse_auth_material FAILED [ 27%]
+tests/test_tailscale_login.py::test_malformed_or_untrusted_login_url_is_not_exposed FAILED [ 28%]
+tests/test_tailscale_login.py::test_official_login_url_can_be_recognized_across_pipe_reads FAILED [ 28%]
+tests/test_tailscale_login.py::test_login_preview_reads_no_inventory_without_the_read_only_grant PASSED [ 29%]
+tests/test_tailscale_read.py::test_tailscale_read_owner_inspects_and_journals_without_mutation PASSED [ 30%]
+tests/test_tailscale_read.py::test_tailscale_read_owner_returns_missing_inventory_state PASSED [ 30%]
+tests/test_tailscale_serve.py::test_enable_preview_shows_exact_private_route_and_operation PASSED [ 31%]
+tests/test_tailscale_serve.py::test_mobile_route_preview_targets_only_the_mobile_host PASSED [ 32%]
+tests/test_tailscale_serve.py::test_enable_requires_fresh_approval_then_verifies_and_records_route PASSED [ 32%]
+tests/test_tailscale_serve.py::test_opening_preview_and_cancelling_has_no_mutation PASSED [ 33%]
+tests/test_tailscale_serve.py::test_enable_denies_missing_grant_or_approval_without_command PASSED [ 33%]
+tests/test_tailscale_serve.py::test_enable_fails_closed_when_host_path_is_already_owned_by_other_target PASSED [ 34%]
+tests/test_tailscale_serve.py::test_enable_allows_other_live_routes_and_preserves_them PASSED [ 35%]
+tests/test_tailscale_serve.py::test_enable_preserves_tcp_listeners_and_service_config PASSED [ 35%]
+tests/test_tailscale_serve.py::test_enable_reports_not_verifiable_if_unrelated_tcp_config_changes PASSED [ 36%]
+tests/test_tailscale_serve.py::test_route_drift_after_preview_requires_new_approval_and_runs_no_command PASSED [ 37%]
+tests/test_tailscale_serve.py::test_enable_rejects_non_loopback_gateway_and_unverified_health PASSED [ 37%]
+tests/test_tailscale_serve.py::test_mobile_host_health_failure_explains_how_to_recover PASSED [ 38%]
+tests/test_tailscale_serve.py::test_enable_requires_complete_live_inventory PASSED [ 39%]
+tests/test_tailscale_serve.py::test_enable_idempotent_only_for_matching_owned_live_route PASSED [ 39%]
+tests/test_tailscale_serve.py::test_disable_requires_owned_mapping_and_exact_off_command PASSED [ 40%]
+tests/test_tailscale_serve.py::test_disable_cannot_touch_matching_but_unowned_route PASSED [ 41%]
+tests/test_tailscale_serve.py::test_disable_clears_stale_ownership_when_live_route_is_already_absent PASSED [ 41%]
+tests/test_tailscale_serve.py::test_disable_preserves_unrelated_routes PASSED [ 42%]
+tests/test_tailscale_serve.py::test_disable_remains_available_when_gateway_health_is_down PASSED [ 42%]
+tests/test_tailscale_serve.py::test_disable_uses_saved_loopback_target_after_gateway_port_changes PASSED [ 43%]
+tests/test_tailscale_serve.py::test_cli_failure_does_not_claim_unverified_route_and_receipt_is_redacted PASSED [ 44%]
+tests/test_tailscale_serve.py::test_only_fixed_private_commands_are_issued PASSED [ 44%]
+tests/test_tailscale_serve.py::test_preview_reads_no_inventory_without_the_read_only_grant PASSED [ 45%]
+tests/test_tailscale_serve_hostport.py::test_serve_host_port_matches_tailscale_web_keys PASSED [ 46%]
+tests/test_tailscale_serve_hostport.py::test_enable_then_disable_round_trips_with_real_hostport_inventory PASSED [ 46%]
+tests/test_tailscale_serve_hostport.py::test_unowned_isycode_route_at_hostport_is_never_overwritten PASSED [ 47%]
+tests/test_tailscale_serve_hostport.py::test_funnel_on_the_same_hostport_still_blocks_changes PASSED [ 48%]
+tests/test_tailscale_serve_hostport.py::test_existing_route_on_same_hostport_is_preserved_through_enable_and_disable PASSED [ 48%]
+tests/test_tailscale_serve_hostport.py::test_unrelated_listener_change_during_enable_is_not_verifiable PASSED [ 49%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[fedora-noble] PASSED [ 50%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[ubuntu-oracular] PASSED [ 50%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[debian-buster] PASSED [ 51%]
+tests/test_tailscale_install.py::test_install_plan_rejects_unsupported_release[ubuntu;id-noble] PASSED [ 51%]
+tests/test_tailscale_install.py::test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt ERROR [ 52%]
+tests/test_tailscale_install.py::test_simulation_binds_single_package_version_hash_actions_and_service_effect ERROR [ 53%]
+tests/test_tailscale_install.py::test_stage_request_and_preview_bind_every_privileged_operation ERROR [ 53%]
+tests/test_tailscale_install.py::test_total_deadline_exhausts_across_multiple_privilege_prompts[stage] ERROR [ 54%]
+tests/test_tailscale_install.py::test_total_deadline_exhausts_across_multiple_privilege_prompts[install] ERROR [ 55%]
+tests/test_tailscale_install.py::test_install_requires_separate_verified_root_stage ERROR [ 55%]
+tests/test_tailscale_install.py::test_stage_substituted_source_is_bounded_quarantined_and_never_installed ERROR [ 56%]
+tests/test_tailscale_install.py::test_stage_rejects_existing_or_symlink_path_before_copy[directory] ERROR [ 57%]
+tests/test_tailscale_install.py::test_stage_rejects_existing_or_symlink_path_before_copy[symbolic link] ERROR [ 57%]
+tests/test_tailscale_install.py::test_stage_rejects_symlinked_root_prefix_before_copy ERROR [ 58%]
+tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[owner] ERROR [ 58%]
+tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[mode] ERROR [ 59%]
+tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[hash] ERROR [ 60%]
+tests/test_tailscale_install.py::test_exact_approved_install_uses_fixed_privilege_argv_and_receipt ERROR [ 60%]
+tests/test_tailscale_install.py::test_dependency_transaction_routes_to_manual_without_privilege ERROR [ 61%]
+tests/test_tailscale_install.py::test_drift_after_final_approval_records_failure_without_privilege ERROR [ 62%]
+tests/test_tailscale_install.py::test_root_stage_drift_after_final_approval_stops_before_apt ERROR [ 62%]
+tests/test_tailscale_install.py::test_prepare_rejects_host_apt_hook_before_update_and_records_failure ERROR [ 63%]
+tests/test_tailscale_install.py::test_mutated_private_source_cannot_change_root_stage_install ERROR [ 64%]
+tests/test_tailscale_install.py::test_mutated_private_archive_cannot_change_root_stage_install ERROR [ 64%]
+tests/test_tailscale_install.py::test_wrong_key_records_redacted_prepare_failure ERROR [ 65%]
+tests/test_tailscale_install.py::test_signing_key_inspection_rejects_second_primary_key PASSED [ 66%]
+tests/test_tailscale_install.py::test_simulation_rejects_summary_embedded_in_other_text PASSED [ 66%]
+tests/test_tailscale_install.py::test_atomic_publication_rejects_symlinked_parent SKIPPED [ 67%]
+tests/test_private_tailnet_witness.py::test_private_access_preflight_enable_verify_disable_keeps_other_route PASSED [ 67%]
+tests/test_private_tailnet_witness.py::test_cancelled_private_route_preview_has_no_command_or_saved_state PASSED [ 68%]
+tests/test_rtk_integration.py::test_native_adapter_exists PASSED         [ 69%]
+tests/test_rtk_integration.py::test_off_does_not_detect_or_execute_rtk PASSED [ 69%]
+tests/test_rtk_integration.py::test_opt_in_binds_path_hash_version_and_advisory SKIPPEDbox; Windows keeps the original command output) [ 70%]
+tests/test_rtk_integration.py::test_swapped_binary_does_not_inherit_opt_in SKIPPEDbox; Windows keeps the original command output) [ 71%]
+tests/test_rtk_integration.py::test_workspace_program_cannot_become_rtk_authorized PASSED [ 71%]
+tests/test_rtk_integration.py::test_unsupported_command_keeps_native_execution SKIPPEDbox; Windows keeps the original command output) [ 72%]
+tests/test_rtk_integration.py::test_rewrite_is_data_never_shell_code SKIPPEDbox; Windows keeps the original command output) [ 73%]
+tests/test_rtk_integration.py::test_compression_fallback_keeps_original_output_and_exit SKIPPEDbox; Windows keeps the original command output) [ 73%]
+tests/test_rtk_integration.py::test_raw_output_and_result_have_verifiable_private_artifacts SKIPPEDbox; Windows keeps the original command
+output)                                                                  [ 74%]
+tests/test_rtk_integration.py::test_filter_cannot_expand_output SKIPPEDbox; Windows keeps the original command output) [ 75%]
+tests/test_rtk_integration.py::test_settings_symlink_is_rejected SKIPPED [ 75%]
+tests/test_rtk_integration.py::test_real_owner_filters_once_keeps_exit_and_journal SKIPPEDbox; Windows keeps the original command output) [ 76%]
+tests/test_rtk_integration.py::test_raw_artifact_failure_prevents_promotion SKIPPEDbox; Windows keeps the original command output) [ 76%]
+tests/test_rtk_integration.py::test_enable_rejects_identity_changed_after_display SKIPPEDbox; Windows keeps the original command output) [ 77%]
+tests/test_rtk_integration.py::test_private_artifacts_reject_hardlinks PASSED [ 78%]
+tests/test_rtk_integration.py::test_evidence_links_receipt_hash_to_original_bytes SKIPPEDbox; Windows keeps the original command output) [ 78%]
+tests/test_rtk_integration.py::test_settings_fifo_is_rejected_without_opening_a_blocking_reader SKIPPED [ 79%]
+tests/test_rtk_authority.py::test_rtk_allow_cannot_replace_workspace_grant SKIPPEDbox; Windows keeps native output) [ 80%]
+tests/test_rtk_authority.py::test_rtk_ask_requires_explicit_approval_in_classic SKIPPEDbox; Windows keeps native output) [ 80%]
+tests/test_rtk_authority.py::test_rtk_replacement_after_approval_denies_before_execution SKIPPEDbox; Windows keeps native output) [ 81%]
+tests/test_workspace_authority.py::test_workspace_root_does_not_grant_filesystem_read_by_itself PASSED [ 82%]
+tests/test_workspace_authority.py::test_explicit_path_grant_allows_only_covered_workspace_paths PASSED [ 82%]
+tests/test_workspace_authority.py::test_path_grant_cannot_escape_isyroot_or_follow_symlink SKIPPED [ 83%]
+tests/test_workspace_authority.py::test_authority_rejects_a_request_for_another_workspace PASSED [ 83%]
+tests/test_workspace_authority.py::test_corrupt_or_unknown_grants_fail_closed PASSED [ 84%]
+tests/test_workspace_authority.py::test_workspace_policy_rejects_group_or_world_readable_file PASSED [ 85%]
+tests/test_workspace_authority.py::test_workspace_policy_refuses_symbolic_link_replacement SKIPPED [ 85%]
+tests/test_workspace_authority.py::test_workspace_policy_refuses_symlink_swap_between_stat_and_open PASSED [ 86%]
+tests/test_workspace_folders.py::test_attached_folder_persists_with_exact_file_grants PASSED [ 87%]
+tests/test_workspace_folders.py::test_read_only_attachment_caps_a_classic_workspace PASSED [ 87%]
+tests/test_workspace_folders.py::test_only_real_sibling_directories_can_be_attached[parent] SKIPPED [ 88%]
+tests/test_workspace_folders.py::test_only_real_sibling_directories_can_be_attached[child] SKIPPED [ 89%]
+tests/test_workspace_folders.py::test_only_real_sibling_directories_can_be_attached[missing] SKIPPED [ 89%]
+tests/test_workspace_folders.py::test_only_real_sibling_directories_can_be_attached[symlink] SKIPPED [ 90%]
+tests/test_workspace_folders.py::test_replaced_root_and_removed_alias_do_not_route PASSED [ 91%]
+tests/test_workspace_folders.py::test_auto_edit_preference_is_disabled_by_default_and_root_scoped PASSED [ 91%]
+tests/test_workspace_folders.py::test_corrupt_or_unsafe_config_fails_closed PASSED [ 92%]
+tests/test_workspace_folders.py::test_aliases_duplicates_and_limits_are_validated PASSED [ 92%]
+tests/test_workspace_folders.py::test_sensitive_roots_and_internal_state_cannot_be_attached[.ssh] PASSED [ 93%]
+tests/test_workspace_folders.py::test_sensitive_roots_and_internal_state_cannot_be_attached[.git] PASSED [ 94%]
+tests/test_workspace_folders.py::test_sensitive_roots_and_internal_state_cannot_be_attached[state] PASSED [ 94%]
+tests/test_workspace_folders.py::test_private_state_inside_primary_cannot_enable_delegation PASSED [ 95%]
+tests/test_workspace_folders.py::test_removing_a_folder_revokes_only_what_attaching_it_granted PASSED [ 96%]
+tests/test_workspace_folders.py::test_removing_a_legacy_registration_revokes_the_grants_it_always_set PASSED [ 96%]
+tests/test_workspace_folders.py::test_recorded_grants_cannot_claim_write_on_a_read_only_folder PASSED [ 97%]
+tests/test_workspace_folders.py::test_security_mode_suspends_saved_automatic_edits[main] PASSED [ 98%]
+tests/test_workspace_folders.py::test_security_mode_suspends_saved_automatic_edits[other] PASSED [ 98%]
+tests/test_workspace_folders.py::test_unconfigured_or_unreadable_attachment_cannot_delegate[unconfigured] PASSED [ 99%]
+tests/test_workspace_folders.py::test_unconfigured_or_unreadable_attachment_cannot_delegate[corrupt] PASSED [100%]
+
+=================================== ERRORS ====================================
+_ ERROR at setup of test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_preparation_requires_dist0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CC04650>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_preparation_requires_dist0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_preparation_requires_dist0/native-state/tailscale-apt/26bb27d8764626be-0237f9de6a928188ae5bae21d717ece7')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_simulation_binds_single_package_version_hash_actions_and_service_effect _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_simulation_binds_single_p0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA85580>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_simulation_binds_single_p0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_simulation_binds_single_p0/native-state/tailscale-apt/d0a3b108c155cb1a-09b46a96719db19c07c0b42edd4f7377')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_stage_request_and_preview_bind_every_privileged_operation _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_request_and_preview0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA2A510>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_request_and_preview0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_request_and_preview0/native-state/tailscale-apt/f1c9f570f58761f3-b40a0fbb45165311f78b21290b65f605')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_total_deadline_exhausts_across_multiple_privilege_prompts[stage] _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_total_deadline_exhausts_a0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA2A8D0>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_total_deadline_exhausts_a0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_total_deadline_exhausts_a0/native-state/tailscale-apt/9e836419f196b382-3aae196dd9914c6e0dc17f2b218b8ed5')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_total_deadline_exhausts_across_multiple_privilege_prompts[install] _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_total_deadline_exhausts_a1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA85D60>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_total_deadline_exhausts_a1\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_total_deadline_exhausts_a1/native-state/tailscale-apt/9e50ac8944a5c733-b533c0f560fcd7d57abe48b3e148559f')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+____ ERROR at setup of test_install_requires_separate_verified_root_stage _____
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_install_requires_separate0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA65550>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_install_requires_separate0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_install_requires_separate0/native-state/tailscale-apt/bccffadf151508ae-eef3815e8f1669331a7d03b22a264534')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_stage_substituted_source_is_bounded_quarantined_and_never_installed _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_substituted_source_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB6D6D0>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_substituted_source_0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_substituted_source_0/native-state/tailscale-apt/5ffa1bb499ec1dcb-9736e831bf7d7a974836b8bd147303fa')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_stage_rejects_existing_or_symlink_path_before_copy[directory] _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_existing_or0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477BFCAF60>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_rejects_existing_or0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_existing_or0/native-state/tailscale-apt/a702731661538681-5cde707831a30ceecd27e7d5e3be67c5')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_stage_rejects_existing_or_symlink_path_before_copy[symbolic link] _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_existing_or1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB56060>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_rejects_existing_or1\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_existing_or1/native-state/tailscale-apt/0978164f0b488a79-db03317c5c2e5b257eb670e5784352ca')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+___ ERROR at setup of test_stage_rejects_symlinked_root_prefix_before_copy ____
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_symlinked_r0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB6CEC0>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_rejects_symlinked_r0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_symlinked_r0/native-state/tailscale-apt/3c97a0c6edfd81db-2729e3d78f18d4a15f769ff93eddc81f')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+___ ERROR at setup of test_stage_rejects_wrong_root_metadata_or_hash[owner] ___
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_wrong_root_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA66C60>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_rejects_wrong_root_0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_wrong_root_0/native-state/tailscale-apt/eb40e5c6053e9c50-876a5ce634275db790b4edaf5ed48273')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+___ ERROR at setup of test_stage_rejects_wrong_root_metadata_or_hash[mode] ____
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_wrong_root_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CC07EF0>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_rejects_wrong_root_1\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_wrong_root_1/native-state/tailscale-apt/e7432a4532070cd3-60f7a9aea7cc4fcb6b1b4411dab71981')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+___ ERROR at setup of test_stage_rejects_wrong_root_metadata_or_hash[hash] ____
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_wrong_root_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA29E20>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_stage_rejects_wrong_root_2\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_stage_rejects_wrong_root_2/native-state/tailscale-apt/6e4c8f8dd4e259a4-d5cd00ed12f6f58da25d21db3c05f118')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_exact_approved_install_uses_fixed_privilege_argv_and_receipt _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_exact_approved_install_us0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB55250>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_exact_approved_install_us0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_exact_approved_install_us0/native-state/tailscale-apt/f8b7a1af84c80f1c-e3ee8dd6b2991a10054c417c25af62e6')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_dependency_transaction_routes_to_manual_without_privilege _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_dependency_transaction_ro0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB57110>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_dependency_transaction_ro0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_dependency_transaction_ro0/native-state/tailscale-apt/708876d9c1300c1f-3cfd087137446cab32cc4340b8a9fc35')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_drift_after_final_approval_records_failure_without_privilege _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_drift_after_final_approva0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB55B20>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_drift_after_final_approva0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_drift_after_final_approva0/native-state/tailscale-apt/0cfd75da9a055f6e-c641e0a378f86811a2f61b2609bf2b6b')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_root_stage_drift_after_final_approval_stops_before_apt _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_root_stage_drift_after_fi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA2BE60>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_root_stage_drift_after_fi0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_root_stage_drift_after_fi0/native-state/tailscale-apt/5a99ce540aebc245-9a4021b64433d4ae3669b4a5fed57d9e')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_prepare_rejects_host_apt_hook_before_update_and_records_failure _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_prepare_rejects_host_apt_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CA67860>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_prepare_rejects_host_apt_0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_prepare_rejects_host_apt_0/native-state/tailscale-apt/5b3bf0a4612aff4f-67e2ca278c792cee9ad3bc4889acf2bb')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_mutated_private_source_cannot_change_root_stage_install _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_mutated_private_source_ca0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477BFCA7E0>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_mutated_private_source_ca0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_mutated_private_source_ca0/native-state/tailscale-apt/8f215301756809e0-ea6bd3ea27855486e1132a1f8bd82b96')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+_ ERROR at setup of test_mutated_private_archive_cannot_change_root_stage_install _
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_mutated_private_archive_c0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB802C0>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_mutated_private_archive_c0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_mutated_private_archive_c0/native-state/tailscale-apt/13a09e2e8140eb96-360568cfed085172c182df54e8e37c7a')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+______ ERROR at setup of test_wrong_key_records_redacted_prepare_failure ______
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_wrong_key_records_redacte0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CB80D70>
+
+    @pytest.fixture
+    def setup(tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        root = tmp_path / "workspace"
+        root.mkdir()
+        apt = tmp_path / "apt-get"
+        apt.write_text("fake executable", encoding="utf-8")
+        apt.chmod(0o700)
+        authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
+        approvals = ActionApprovalStore()
+        fake = FakeApt()
+        fake.stage["/var"] = ("directory", 0o755, b"")
+        fake.stage["/var/lib"] = ("directory", 0o755, b"")
+        fetched = []
+    
+        def fetch(url, *, timeout, max_bytes):
+            fetched.append(url)
+            if url.endswith(".gpg"):
+                return b"one pinned signing key"
+            if url.endswith(".list"):
+                return SOURCE.encode()
+            if url.endswith(".deb"):
+                return ARCHIVE
+            pytest.fail(f"unapproved network URL: {url}")
+    
+        owner = TailscalePackageInstallOwner(
+            root, authority, approvals, platform="linux",
+            os_release=lambda: {"ID": "ubuntu", "VERSION_CODENAME": "noble"},
+            apt_executable=str(apt), fetch=fetch,
+            key_fingerprint=lambda _: KEY,
+            run=fake.run, privileged_run=fake.privileged_run,
+        )
+>       fake.plan = owner.plan()
+                    ^^^^^^^^^^^^
+
+tests\test_tailscale_install.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_install.py:549: in plan
+    return UbuntuDebianInstallPlan.for_release(os_id, codename, str(executable), directory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'isycode.tailscale_install.UbuntuDebianInstallPlan'>
+os_id = 'ubuntu', codename = 'noble'
+apt_executable = 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-898\\test_wrong_key_records_redacte0\\apt-get'
+private_directory = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_wrong_key_records_redacte0/native-state/tailscale-apt/8b30d04e663858dd-ac052a3b422ae18ad94caea2966678a7')
+
+    @classmethod
+    def for_release(cls, os_id: str, codename: str, apt_executable: str,
+                    private_directory: Path | None = None):
+        if (os_id not in SUPPORTED or codename not in SUPPORTED[os_id]
+                or not isinstance(apt_executable, str)
+                or Path(apt_executable).name != "apt-get"
+                or not Path(apt_executable).is_absolute()):
+            raise ValueError("unsupported Tailscale apt release or executable")
+        base = f"https://pkgs.tailscale.com/stable/{os_id}"
+        key_url = f"{base}/{codename}.noarmor.gpg"
+        list_url = f"{base}/{codename}.tailscale-keyring.list"
+        directory = Path(private_directory or (state_root() / "tailscale-apt" / "preview"))
+        if (not directory.is_absolute() or any(c.isspace() or c in {'"', "'", "\\"}
+                                                for c in str(directory))):
+>           raise ValueError("private package path cannot be represented safely")
+E           ValueError: private package path cannot be represented safely
+
+src\isycode\tailscale_install.py:85: ValueError
+================================== FAILURES ===================================
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.prepare] _
+
+setup = (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_tailscale_actions_require1/workspace')...aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), <isycode.workspace_authority.WorkspaceAuthority object at 0x000002477BFC89E0>, ...)
+action_id = 'tailscale.install.prepare'
+
+    @pytest.mark.parametrize("action_id", ACTION_OWNER)
+    def test_tailscale_actions_require_exact_grant_owner_and_fresh_approval(setup, action_id):
+        root, cli, apt, wrong, facts, authority, approvals = setup
+        request = request_for(setup, action_id)
+        assert authorize(setup, request).status == "DENY"  # No grant.
+        if action_id == "tailscale.inspect":
+            authority.set_grant(action_id, enabled=True)
+        else:
+            authority.set_grant(action_id, enabled=True, executables=[cli, apt, wrong])
+        assert authorize(setup, request).status == (
+            "ALLOW" if action_id == "tailscale.inspect" else "DENY")
+    
+        other_owner = "tailscale_login" if request.execution_owner != "tailscale_login" else "tailscale_read"
+        crossed = replace(request, execution_owner=other_owner)
+        gate = ProductActionGate(root, authority, owner_id=other_owner, tailscale_facts=facts)
+        crossed_approval = approvals.issue(crossed) if action_id != "tailscale.inspect" else None
+        assert gate.authorize(crossed, approvals=approvals, approval=crossed_approval)[1].status == "DENY"
+    
+        if action_id == "tailscale.inspect":
+            assert authorize(setup, request).status == "ALLOW"
+        else:
+            approval = approvals.issue(request)
+>           assert authorize(setup, request, approval=approval).status == "ALLOW"
+E           AssertionError: assert 'DENY' == 'ALLOW'
+E             
+E             - ALLOW
+E             + DENY
+
+tests\test_tailscale_authority.py:197: AssertionError
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] _
+
+setup = (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_tailscale_actions_require2/workspace')...aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), <isycode.workspace_authority.WorkspaceAuthority object at 0x000002477CB6CE90>, ...)
+action_id = 'tailscale.install.stage'
+
+    @pytest.mark.parametrize("action_id", ACTION_OWNER)
+    def test_tailscale_actions_require_exact_grant_owner_and_fresh_approval(setup, action_id):
+        root, cli, apt, wrong, facts, authority, approvals = setup
+        request = request_for(setup, action_id)
+        assert authorize(setup, request).status == "DENY"  # No grant.
+        if action_id == "tailscale.inspect":
+            authority.set_grant(action_id, enabled=True)
+        else:
+            authority.set_grant(action_id, enabled=True, executables=[cli, apt, wrong])
+        assert authorize(setup, request).status == (
+            "ALLOW" if action_id == "tailscale.inspect" else "DENY")
+    
+        other_owner = "tailscale_login" if request.execution_owner != "tailscale_login" else "tailscale_read"
+        crossed = replace(request, execution_owner=other_owner)
+        gate = ProductActionGate(root, authority, owner_id=other_owner, tailscale_facts=facts)
+        crossed_approval = approvals.issue(crossed) if action_id != "tailscale.inspect" else None
+        assert gate.authorize(crossed, approvals=approvals, approval=crossed_approval)[1].status == "DENY"
+    
+        if action_id == "tailscale.inspect":
+            assert authorize(setup, request).status == "ALLOW"
+        else:
+            approval = approvals.issue(request)
+>           assert authorize(setup, request, approval=approval).status == "ALLOW"
+E           AssertionError: assert 'DENY' == 'ALLOW'
+E             
+E             - ALLOW
+E             + DENY
+
+tests\test_tailscale_authority.py:197: AssertionError
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install] _
+
+setup = (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_tailscale_actions_require3/workspace')...aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), <isycode.workspace_authority.WorkspaceAuthority object at 0x000002477CB6ED80>, ...)
+action_id = 'tailscale.install'
+
+    @pytest.mark.parametrize("action_id", ACTION_OWNER)
+    def test_tailscale_actions_require_exact_grant_owner_and_fresh_approval(setup, action_id):
+        root, cli, apt, wrong, facts, authority, approvals = setup
+        request = request_for(setup, action_id)
+        assert authorize(setup, request).status == "DENY"  # No grant.
+        if action_id == "tailscale.inspect":
+            authority.set_grant(action_id, enabled=True)
+        else:
+            authority.set_grant(action_id, enabled=True, executables=[cli, apt, wrong])
+        assert authorize(setup, request).status == (
+            "ALLOW" if action_id == "tailscale.inspect" else "DENY")
+    
+        other_owner = "tailscale_login" if request.execution_owner != "tailscale_login" else "tailscale_read"
+        crossed = replace(request, execution_owner=other_owner)
+        gate = ProductActionGate(root, authority, owner_id=other_owner, tailscale_facts=facts)
+        crossed_approval = approvals.issue(crossed) if action_id != "tailscale.inspect" else None
+        assert gate.authorize(crossed, approvals=approvals, approval=crossed_approval)[1].status == "DENY"
+    
+        if action_id == "tailscale.inspect":
+            assert authorize(setup, request).status == "ALLOW"
+        else:
+            approval = approvals.issue(request)
+>           assert authorize(setup, request, approval=approval).status == "ALLOW"
+E           AssertionError: assert 'DENY' == 'ALLOW'
+E             
+E             - ALLOW
+E             + DENY
+
+tests\test_tailscale_authority.py:197: AssertionError
+__________ test_login_preview_is_fixed_and_approval_precedes_launch ___________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_login_preview_is_fixe...er object at 0x000002477CB6D580>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CACEF60>)
+
+    def test_login_preview_is_fixed_and_approval_precedes_launch(login_fixture):
+        fixture = login_fixture
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+_____ test_login_url_and_cli_output_are_redacted_from_state_and_receipts ______
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_login_url_and_cli_out...er object at 0x000002477CB6FBC0>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CC07140>)
+
+    def test_login_url_and_cli_output_are_redacted_from_state_and_receipts(login_fixture):
+        fixture = login_fixture
+        secret = "super-secret-auth-material"
+        fixture.process.stdout.data.extend(
+            f"visit https://login.tailscale.com/a/AbCdEf0123456789\n{secret}".encode())
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+_____________ test_login_completes_only_after_signed_in_inventory _____________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_login_completes_only_...er object at 0x000002477CB6F6E0>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CB6F800>)
+
+    def test_login_completes_only_after_signed_in_inventory(login_fixture):
+        fixture = login_fixture
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+___________ test_cli_failure_is_generic_and_does_not_expose_stderr ____________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_cli_failure_is_generi...er object at 0x000002477CB6E3F0>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CC072C0>)
+
+    def test_cli_failure_is_generic_and_does_not_expose_stderr(login_fixture):
+        fixture = login_fixture
+        fixture.process.stderr.data.extend(b"credential=do-not-leak")
+        fixture.process.returncode = 7
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+___________________ test_login_timeout_kills_only_its_child ___________________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_login_timeout_kills_o...er object at 0x000002477CB6E6F0>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CB6DAF0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002477CC06AE0>
+
+    def test_login_timeout_kills_only_its_child(login_fixture, monkeypatch):
+        fixture = login_fixture
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:171: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+_____________ test_cancel_discards_attempt_without_tailnet_logout _____________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_cancel_discards_attem...er object at 0x000002477CB6C830>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CB6F470>)
+
+    def test_cancel_discards_attempt_without_tailnet_logout(login_fixture):
+        fixture = login_fixture
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+_____ test_new_owner_cannot_resume_in_memory_login_or_reuse_auth_material _____
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_new_owner_cannot_resu...er object at 0x000002477CB6FB90>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CB6F7D0>)
+
+    def test_new_owner_cannot_resume_in_memory_login_or_reuse_auth_material(login_fixture):
+        fixture = login_fixture
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+____________ test_malformed_or_untrusted_login_url_is_not_exposed _____________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_malformed_or_untruste...er object at 0x000002477CC0EF90>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CC0D040>)
+
+    def test_malformed_or_untrusted_login_url_is_not_exposed(login_fixture):
+        fixture = login_fixture
+        fixture.process.stdout.data.extend(
+            b"https://evil.example/a/12345678 https://login.tailscale.com.evil/a/12345678")
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:206: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+_________ test_official_login_url_can_be_recognized_across_pipe_reads _________
+
+login_fixture = LoginFixture(root=WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-898/test_official_login_url_ca...er object at 0x000002477CC0CAA0>, launched=[], process=<test_tailscale_login.FakeProcess object at 0x000002477CC0D8E0>)
+
+    def test_official_login_url_can_be_recognized_across_pipe_reads(login_fixture):
+        fixture = login_fixture
+>       request = fixture.owner.login_request()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_tailscale_login.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\tailscale_login.py:127: in login_request
+    executable = self._executable(snapshot)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+snapshot = TailscaleSnapshot(state='signed_out', serve_state='unavailable', executable='C:\\Users\\progr\\AppData\\Local\\Temp\\p...tes=(), serve_digest=None, gateway_url=None, gateway_healthy=False, serve_node_config=None, serve_services_config=None)
+
+    @staticmethod
+    def _executable(snapshot: TailscaleSnapshot) -> str:
+        executable = snapshot.executable
+        if (not isinstance(executable, str) or not Path(executable).is_absolute()
+                or Path(executable).name != "tailscale"):
+>           raise ValueError("canonical Tailscale executable is unavailable")
+E           ValueError: canonical Tailscale executable is unavailable
+
+src\isycode\tailscale_login.py:116: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.prepare] - AssertionError: assert 'DENY' == 'ALLOW'
+  
+  - ALLOW
+  + DENY
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] - AssertionError: assert 'DENY' == 'ALLOW'
+  
+  - ALLOW
+  + DENY
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install] - AssertionError: assert 'DENY' == 'ALLOW'
+  
+  - ALLOW
+  + DENY
+FAILED tests/test_tailscale_login.py::test_login_preview_is_fixed_and_approval_precedes_launch - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_login_url_and_cli_output_are_redacted_from_state_and_receipts - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_login_completes_only_after_signed_in_inventory - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_cli_failure_is_generic_and_does_not_expose_stderr - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_login_timeout_kills_only_its_child - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_cancel_discards_attempt_without_tailnet_logout - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_new_owner_cannot_resume_in_memory_login_or_reuse_auth_material - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_malformed_or_untrusted_login_url_is_not_exposed - ValueError: canonical Tailscale executable is unavailable
+FAILED tests/test_tailscale_login.py::test_official_login_url_can_be_recognized_across_pipe_reads - ValueError: canonical Tailscale executable is unavailable
+ERROR tests/test_tailscale_install.py::test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_simulation_binds_single_package_version_hash_actions_and_service_effect - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_request_and_preview_bind_every_privileged_operation - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_total_deadline_exhausts_across_multiple_privilege_prompts[stage] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_total_deadline_exhausts_across_multiple_privilege_prompts[install] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_install_requires_separate_verified_root_stage - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_substituted_source_is_bounded_quarantined_and_never_installed - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_rejects_existing_or_symlink_path_before_copy[directory] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_rejects_existing_or_symlink_path_before_copy[symbolic link] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_rejects_symlinked_root_prefix_before_copy - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[owner] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[mode] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_stage_rejects_wrong_root_metadata_or_hash[hash] - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_exact_approved_install_uses_fixed_privilege_argv_and_receipt - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_dependency_transaction_routes_to_manual_without_privilege - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_drift_after_final_approval_records_failure_without_privilege - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_root_stage_drift_after_final_approval_stops_before_apt - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_prepare_rejects_host_apt_hook_before_update_and_records_failure - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_mutated_private_source_cannot_change_root_stage_install - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_mutated_private_archive_cannot_change_root_stage_install - ValueError: private package path cannot be represented safely
+ERROR tests/test_tailscale_install.py::test_wrong_key_records_redacted_prepare_failure - ValueError: private package path cannot be represented safely
+=========== 12 failed, 100 passed, 23 skipped, 21 errors in 21.57s ============
+EXIT: 1

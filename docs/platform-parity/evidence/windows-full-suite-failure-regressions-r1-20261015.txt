@@ -1,0 +1,63 @@
+.............F....F....F..F.........F.ss                                 [100%]
+================================== FAILURES ===================================
+_________ test_wrong_phrase_broad_root_and_inside_state_do_not_trust __________
+tests\test_workspace_trust.py:73: in test_wrong_phrase_broad_root_and_inside_state_do_not_trust
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______________ test_ordinary_flow_has_zero_per_action_approvals _______________
+tests\test_workspace_trust.py:160: in test_ordinary_flow_has_zero_per_action_approvals
+    preview = runner.prepare(["echo", f"test-{index}"])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\command_runner.py:195: in prepare
+    raise ValueError(sandbox_backend.unavailable_reason())
+E   ValueError: the Windows LPAC command sandbox is pending native acceptance; commands stay disabled and there is no unsandboxed fallback
+____________ test_a_linked_trust_file_is_not_rewritten_into_trust _____________
+tests\test_workspace_trust.py:319: in test_a_linked_trust_file_is_not_rewritten_into_trust
+    path.symlink_to(outside)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-906\\test_a_linked_trust_file_is_no0\\outside-record' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-906\\test_a_linked_trust_file_is_no0\\isycode-state\\workspace-trust\\trust-6cf7af5bb3f8822f52aeda63c9375a24.json'
+_ test_workspace_pack_reviews_exact_files_and_returns_untrusted_bounded_content _
+tests\test_workspace_pack.py:40: in test_workspace_pack_reviews_exact_files_and_returns_untrusted_bounded_content
+    result = owner.execute(preview)
+             ^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\workspace_pack.py:220: in execute
+    raise WorkspaceUnavailable("workspace read result did not match the reviewed file")
+E   isycode.workspace.WorkspaceUnavailable: workspace read result did not match the reviewed file
+______________ test_real_cycle_verifies_effects_and_restores_cwd ______________
+tests\test_soak_g9_validation.py:42: in test_real_cycle_verifies_effects_and_restores_cwd
+    result = asyncio.run(mod.one_cycle(0))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+scripts\soak_g9.py:75: in one_cycle
+    return await _cycle(index, monkey)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\soak_g9.py:134: in _cycle
+    return {"cycle": index, "rss_mib": round(rss_mib(), 1), "orphans": len(orphans()), "write_verified": True, "undo_verified": True, "journal_verified": True}
+                                             ^^^^^^^^^
+scripts\soak_g9.py:39: in rss_mib
+    return int(Path("/proc/self/statm").read_text().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1024**2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1027: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1013: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '\\proc\\self\\statm'
+=========================== short test summary info ===========================
+FAILED tests/test_workspace_trust.py::test_wrong_phrase_broad_root_and_inside_state_do_not_trust
+FAILED tests/test_workspace_trust.py::test_ordinary_flow_has_zero_per_action_approvals
+FAILED tests/test_workspace_trust.py::test_a_linked_trust_file_is_not_rewritten_into_trust
+FAILED tests/test_workspace_pack.py::test_workspace_pack_reviews_exact_files_and_returns_untrusted_bounded_content
+FAILED tests/test_soak_g9_validation.py::test_real_cycle_verifies_effects_and_restores_cwd
+5 failed, 33 passed, 2 skipped in 34.24s

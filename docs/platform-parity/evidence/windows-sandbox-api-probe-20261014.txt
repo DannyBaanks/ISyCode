@@ -1,0 +1,8 @@
+Date: 2026-10-14
+Scope: DLL symbol inspection only; no profiles/processes/ACL changes
+Command (PowerShell): .venv/Scripts/python.exe -c 'import ctypes,platform,sys; print("platform:",platform.platform()); print("python:",sys.version); k=ctypes.WinDLL("kernel32"); u=ctypes.WinDLL("userenv"); print("kernel32:",{n:hasattr(k,n) for n in ["CreateJobObjectW","AssignProcessToJobObject","TerminateJobObject","InitializeProcThreadAttributeList"]}); print("userenv:",{n:hasattr(u,n) for n in ["CreateAppContainerProfile","DeleteAppContainerProfile","DeriveAppContainerSidFromAppContainerName"]})'
+platform: Windows-11-10.0.26200-SP0
+python: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+kernel32: {'CreateJobObjectW': True, 'AssignProcessToJobObject': True, 'TerminateJobObject': True, 'InitializeProcThreadAttributeList': True}
+userenv: {'CreateAppContainerProfile': True, 'DeleteAppContainerProfile': True, 'DeriveAppContainerSidFromAppContainerName': True}
+Exit: 0

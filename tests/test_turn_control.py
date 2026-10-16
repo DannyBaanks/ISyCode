@@ -115,6 +115,10 @@ def test_g6_01_cancel_during_stream_closes_the_socket():
     assert len(returned) == 1 and isinstance(returned[0], asyncio.CancelledError)
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="NOT_DEMONSTRATED: this witness uses os.fork and /proc; Windows Job Object tree tests cover native termination",
+)
 def test_g6_01_cancel_during_staging_kills_child_and_grandchild(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
     sandbox = sandbox_executable()

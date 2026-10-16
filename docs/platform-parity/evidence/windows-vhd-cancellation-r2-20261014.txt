@@ -1,0 +1,4 @@
+real cancellation: preparation clean, original preserved
+.real cancellation: executing Job stopped, no promotion, scratch clean
+.
+2 passed, 9 deselected in 30.49s

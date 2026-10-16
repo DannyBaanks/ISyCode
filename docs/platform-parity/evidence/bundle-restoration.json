@@ -1,0 +1,102 @@
+{
+  "src/isycode/bundled_skills/LICENSE": {
+    "before_sha256": "0da33ed814ee87e72db078f489c4447af72f13d9f25d9e17476f32efd77705fc",
+    "canonical_sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/brainstorming/SKILL.md": {
+    "before_sha256": "8b883cc136d60e304dbc2cc3c2e024f5416bb9d805b4ea3c1aec5b5012da3442",
+    "canonical_sha256": "a32d2255354775aa124855aa7100cf276bea096fff4ebb3a0edf57be216e6c72",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/brainstorming/spec-document-reviewer-prompt.md": {
+    "before_sha256": "793f2546815a28f2712f0dcb926ab96dc4a60145fbea6f9a08d88287ec8e15bc",
+    "canonical_sha256": "95a0a195de9d984be2fffa95bab16fc8c563bc296a9cfc5e9c29cb3ece0d7457",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/brainstorming/visual-companion.md": {
+    "before_sha256": "95a58903eeac8e247f75335d46d5cbbe29e041e1731a15ff89aec82e96a7c989",
+    "canonical_sha256": "6ffcb038b53254bd31debaa15e12dcd4ff24bd63d690e0b644ac6396701cf2e2",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/manifest.json": {
+    "before_sha256": "611bb8c6df0c4d34f6997d477eee9b8e1e8ca4a9049e76a44e37af43251a5fa2",
+    "canonical_sha256": "0935dcf1852dcce58fac5cb13dde57850ef7197a8e83b3602925b8c6bc7fbe68",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/requesting-code-review/SKILL.md": {
+    "before_sha256": "c12edf804d7b064661de587920b92768ad650fc5b61917c795436637b7f00740",
+    "canonical_sha256": "cfcee1b06774e7c0517f1e09be1a11f2d5680257072723e709ddbcf7e08b795a",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/requesting-code-review/code-reviewer.md": {
+    "before_sha256": "5e618b2a89ab9616112791b5245957948a1a26079ca6c30339f42fb378411e32",
+    "canonical_sha256": "82e370be6b3447523816286195571e4216ba56ba1ad6ad0e87862294c4c78dcb",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/CREATION-LOG.md": {
+    "before_sha256": "397f122f115f994372a1805e30071fc0ad86c0dc1e427fbf5b5f1b14143399f5",
+    "canonical_sha256": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/SKILL.md": {
+    "before_sha256": "23f249e47a3a4b06c3a5030e37aaf3ced12a54f406782766b384ed127d21eca4",
+    "canonical_sha256": "808fc5717aa88ad65efff312b11c186294d3e6ee301afb584e2f86599b137787",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/condition-based-waiting.md": {
+    "before_sha256": "02aa854bd9e761f275e1450d7136ba60f1a4d103fe94b552fdce822dd3c99506",
+    "canonical_sha256": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/defense-in-depth.md": {
+    "before_sha256": "9407efcbd028a5ec45edfdf6692b988716c0a7b34d1fb5e05d60146171d8041e",
+    "canonical_sha256": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/root-cause-tracing.md": {
+    "before_sha256": "f6359a35f1c695f789fac7b08d46ae0bb74f9a24123f9add96a7de053019b9bb",
+    "canonical_sha256": "75b933b6a8c40bdb2031b10f21654395b56ec6ab6bc7b018c18d3fe57aeb7fb8",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/test-academic.md": {
+    "before_sha256": "51e07c1c56052a6c46cde8e7d42d6612598ea076f128086fd85911f4d2d3e8dd",
+    "canonical_sha256": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/test-pressure-1.md": {
+    "before_sha256": "fbf04219c44460e76d96642d7dc16960a2390936e0a6937d0b133e013fa55afb",
+    "canonical_sha256": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/test-pressure-2.md": {
+    "before_sha256": "fc6b2594bed3f2a15ece75d0a211b55cb9a4668d85b9873f2bab5ee54ed31cbf",
+    "canonical_sha256": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/systematic-debugging/test-pressure-3.md": {
+    "before_sha256": "69ed6a5a59dac92d58d284519991a46b90978bc40a229776dac0ffa3a6123bfe",
+    "canonical_sha256": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/test-driven-development/SKILL.md": {
+    "before_sha256": "90fa0021a53360948fd1eb67799821d549ebef036ffad0ad5ceb7d8585abf159",
+    "canonical_sha256": "64b03fce4aee5a97a93160cea8111f3ba13a17b7c001db4bd5836d67fd10705d",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/test-driven-development/writing-good-tests.md": {
+    "before_sha256": "87f56d0a4236f804165149ec038787d20062afc9b37aa240a167c394b39d2065",
+    "canonical_sha256": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/verification-before-completion/SKILL.md": {
+    "before_sha256": "8f15b9f67e566f286d531b7da77052f4009b5065fd8edfcb659c9f837eebb4a4",
+    "canonical_sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+    "restored": true
+  },
+  "src/isycode/bundled_skills/writing-plans/SKILL.md": {
+    "before_sha256": "0fdb0f2af96e7d8e879bbffc65413983915411c63daf85e0757034e38630445d",
+    "canonical_sha256": "a6c67c1900064347c2a329990dd3c555657c51c3ec53b259a08aa01a2c26139a",
+    "restored": true
+  }
+}

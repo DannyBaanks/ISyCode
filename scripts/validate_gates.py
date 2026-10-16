@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import re
 import subprocess
+import stat
 import sys
 from pathlib import Path
 
@@ -167,7 +169,9 @@ def _artifact_errors(root: Path, folder: Path, case: dict, *, strict: bool,
             walked = root
             for part in path.relative_to(root).parts:
                 walked /= part
-                if walked.is_symlink():
+                info = os.lstat(walked)
+                if (stat.S_ISLNK(info.st_mode)
+                        or bool(getattr(info, "st_file_attributes", 0) & 0x400)):
                     raise ValueError("symlink artifact")
             if not path.is_file():
                 raise ValueError("missing artifact")

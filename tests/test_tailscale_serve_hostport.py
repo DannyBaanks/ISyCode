@@ -6,6 +6,7 @@ offline CLI emulator, so the owner cannot drift from the parser's route shape.
 """
 import copy
 import json
+import os
 
 import pytest
 
@@ -60,7 +61,7 @@ class TailscaleCLIEmulator:
 @pytest.fixture
 def real_adapter(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
-    cli = tmp_path / "bin" / "tailscale"
+    cli = tmp_path / "bin" / ("tailscale.exe" if os.name == "nt" else "tailscale")
     cli.parent.mkdir()
     cli.write_text("offline CLI stand-in", encoding="utf-8")
     cli.chmod(0o700)

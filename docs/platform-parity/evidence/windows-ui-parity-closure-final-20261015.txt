@@ -1,0 +1,50 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 39 items
+
+tests/test_session_messages.py::test_message_reaches_another_conversation_as_the_user PASSED [  2%]
+tests/test_session_messages.py::test_message_waits_when_the_other_conversation_is_working PASSED [  5%]
+tests/test_session_messages.py::test_same_title_does_not_guess_and_the_open_chat_is_refused PASSED [  7%]
+tests/test_model_reasoning_ui.py::test_model_accordions_filter_and_open_provider_reasoning PASSED [ 10%]
+tests/test_model_reasoning_ui.py::test_catalog_levels_are_model_specific_and_unknown_models_have_no_invented_levels PASSED [ 12%]
+tests/test_model_reasoning_ui.py::test_nvidia_thinking_uses_chat_template_and_does_not_send_generic_effort PASSED [ 15%]
+tests/test_workspace_folders_tui.py::test_sibling_read_and_native_approved_edit_use_its_own_root PASSED [ 17%]
+tests/test_workspace_folders_tui.py::test_unknown_alias_traversal_and_unsupported_effects_are_denied[workspace_read-args0] PASSED [ 20%]
+tests/test_workspace_folders_tui.py::test_unknown_alias_traversal_and_unsupported_effects_are_denied[workspace_read-args1] PASSED [ 23%]
+tests/test_workspace_folders_tui.py::test_unknown_alias_traversal_and_unsupported_effects_are_denied[workspace_run-args2] PASSED [ 25%]
+tests/test_workspace_folders_tui.py::test_unknown_alias_traversal_and_unsupported_effects_are_denied[workspace_delete-args3] PASSED [ 28%]
+tests/test_workspace_folders_tui.py::test_folder_removed_while_diff_is_open_cannot_be_written PASSED [ 30%]
+tests/test_workspace_folders_tui.py::test_auto_edit_warning_cancel_enable_disable_and_authority_remain PASSED [ 33%]
+tests/test_workspace_folders_tui.py::test_file_browser_selection_keeps_primary_identity PASSED [ 35%]
+tests/test_workspace_folders_tui.py::test_readded_alias_invalidates_pending_diff_and_warning PASSED [ 38%]
+tests/test_workspace_folders_tui.py::test_native_add_and_always_button_at_80_columns PASSED [ 41%]
+tests/test_workspace_folders_tui.py::test_read_only_attachment_does_not_inherit_classic_write_access PASSED [ 43%]
+tests/test_workspace_folders_tui.py::test_warning_controls_remain_visible_and_cancel_by_default[size0] PASSED [ 46%]
+tests/test_workspace_folders_tui.py::test_warning_controls_remain_visible_and_cancel_by_default[size1] PASSED [ 48%]
+tests/test_workspace_folders_tui.py::test_security_requires_review_despite_saved_automatic_edits[main] PASSED [ 51%]
+tests/test_workspace_folders_tui.py::test_security_requires_review_despite_saved_automatic_edits[sibling] PASSED [ 53%]
+tests/test_workspace_folders_tui.py::test_security_parent_requires_review_for_trusted_classic_attachment PASSED [ 56%]
+tests/test_design_interactions.py::test_exact_logical_ranges[  uno  \ndos\ntres\n-start0-end0-uno  \ndos] PASSED [ 58%]
+tests/test_design_interactions.py::test_exact_logical_ranges[uno\ndos\ntres\n-start1-end1-uno\ndos\n] PASSED [ 61%]
+tests/test_design_interactions.py::test_exact_logical_ranges[\t\u03b1\u754c = 2  \n-start2-end2-\u03b1\u754c = 2  ] PASSED [ 64%]
+tests/test_design_interactions.py::test_exact_logical_ranges[abc\ndef-start3-end3-] PASSED [ 66%]
+tests/test_design_interactions.py::test_drag_two_lines_and_reverse_drag_copy_only_marked_text PASSED [ 69%]
+tests/test_design_interactions.py::test_markdown_selection_tracks_soft_wrap_and_preserves_code_whitespace PASSED [ 71%]
+tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection PASSED [ 74%]
+tests/test_design_interactions.py::test_space_in_editable_field_does_not_expand_parent PASSED [ 76%]
+tests/test_design_interactions.py::test_readonly_double_click_preserves_marked_range_until_copy_or_cancel PASSED [ 79%]
+tests/test_design_interactions.py::test_real_thinking_motion_and_timers_stop_on_completion_and_unmount[False] PASSED [ 82%]
+tests/test_design_interactions.py::test_real_thinking_motion_and_timers_stop_on_completion_and_unmount[True] PASSED [ 84%]
+tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[QuickStartScreen] PASSED [ 87%]
+tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen] PASSED [ 89%]
+tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceSetupScreen] PASSED [ 92%]
+tests/test_design_interactions.py::test_settings_reachable_categories_search_motion_and_new_chat_focus PASSED [ 94%]
+tests/test_design_interactions.py::test_mode_banner_updates_without_resize PASSED [ 97%]
+tests/test_tui_startup.py::test_tui_starts_in_a_temporary_security_workspace PASSED [100%]
+
+======================== 39 passed in 89.18s (0:01:29) ========================

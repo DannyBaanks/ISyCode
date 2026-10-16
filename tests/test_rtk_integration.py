@@ -11,6 +11,12 @@ from pathlib import Path
 import pytest
 
 
+_RTK_POSIX_REASON = (
+    'NOT_DEMONSTRATED: RTK command rewriting uses the POSIX Bubblewrap sandbox; '
+    'Windows keeps the original command output'
+)
+
+
 def test_native_adapter_exists():
     assert importlib.util.find_spec('isycode.rtk_integration'), 'native RTK adapter is missing'
 
@@ -42,6 +48,7 @@ def test_off_does_not_detect_or_execute_rtk(adapter, monkeypatch):
     assert rtk.plan(('grep', '-n', 'needle', 'notes.txt'), '/usr/bin/grep') is None
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_opt_in_binds_path_hash_version_and_advisory(adapter):
     rtk, binary = adapter
     identity = rtk.Settings().enable()
@@ -54,6 +61,7 @@ def test_opt_in_binds_path_hash_version_and_advisory(adapter):
     assert plan['rewrite_argv'] == ('rtk', 'grep', '-n', 'needle', 'notes.txt')
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_swapped_binary_does_not_inherit_opt_in(adapter):
     rtk, binary = adapter
     rtk.Settings().enable()
@@ -68,6 +76,7 @@ def test_workspace_program_cannot_become_rtk_authorized(adapter):
     assert rtk.plan(('./grep', 'x', 'file'), '/workspace/grep') is None
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_unsupported_command_keeps_native_execution(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -75,6 +84,7 @@ def test_unsupported_command_keeps_native_execution(adapter, monkeypatch):
     assert rtk.plan(('echo', 'hello'), '/usr/bin/echo') is None
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_rewrite_is_data_never_shell_code(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -83,6 +93,7 @@ def test_rewrite_is_data_never_shell_code(adapter, monkeypatch):
         rtk.plan(('grep', 'x', 'file'), '/usr/bin/grep')
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_compression_fallback_keeps_original_output_and_exit(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -96,6 +107,7 @@ def test_compression_fallback_keeps_original_output_and_exit(adapter, monkeypatc
     assert result['rtk']['applied'] is False
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_raw_output_and_result_have_verifiable_private_artifacts(adapter):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -111,9 +123,14 @@ def test_raw_output_and_result_have_verifiable_private_artifacts(adapter):
     assert evidence.read_bytes() == json.dumps(result, ensure_ascii=False, sort_keys=True).encode()
     raw_path = evidence.parent / (result['rtk']['raw_sha256'] + '.bin')
     assert raw_path.read_bytes() == raw
-    assert raw_path.stat().st_mode & 0o077 == 0
+    if os.name == 'posix':
+        assert raw_path.stat().st_mode & 0o077 == 0
+    else:
+        from isycode.platform_storage import storage
+        assert storage.private(raw_path)
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_filter_cannot_expand_output(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -131,13 +148,18 @@ def test_settings_symlink_is_rejected(adapter, tmp_path):
     settings = rtk.Settings()
     target = tmp_path / 'untrusted.json'
     target.write_text('{"enabled": true}')
-    settings.path.symlink_to(target)
+    try:
+        settings.path.symlink_to(target)
+    except OSError as exc:
+        if os.name == 'nt' and getattr(exc, 'winerror', None) == 1314:
+            pytest.skip('NOT_DEMONSTRATED: this Windows identity cannot create file symlinks')
+        raise
     with pytest.raises((ValueError, OSError)):
         settings.load()
 
 
 @pytest.mark.skipif(shutil.which('bwrap') is None or not Path('/usr/local/bin/rtk').is_file(),
-                    reason='real native RTK and bubblewrap are required')
+                    reason=_RTK_POSIX_REASON)
 def test_real_owner_filters_once_keeps_exit_and_journal(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     from isycode.approvals import ActionApprovalStore
@@ -172,6 +194,7 @@ def test_real_owner_filters_once_keeps_exit_and_journal(tmp_path, monkeypatch):
     assert json.loads(result.text)['exit_code'] == 2
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_raw_artifact_failure_prevents_promotion(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     from isycode.approvals import ActionApprovalStore
@@ -198,6 +221,7 @@ def test_raw_artifact_failure_prevents_promotion(tmp_path, monkeypatch):
     assert (root / 'input.txt').read_text() == 'original'
 
 
+@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
 def test_enable_rejects_identity_changed_after_display(adapter):
     rtk, binary = adapter
     shown = rtk.Settings().inspect()
@@ -210,13 +234,16 @@ def test_private_artifacts_reject_hardlinks(adapter, tmp_path):
     rtk, _ = adapter
     raw = b'private output'
     artifact = rtk._artifact(raw, '.bin')
+    if os.name == 'nt':
+        from isycode.platform_storage import storage
+        assert storage.private(artifact)
     os.link(artifact, tmp_path / 'alias')
     with pytest.raises(ValueError):
         rtk._artifact(raw, '.bin')
 
 
 @pytest.mark.skipif(shutil.which('bwrap') is None or not Path('/usr/local/bin/rtk').is_file(),
-                    reason='real native RTK and bubblewrap are required')
+                    reason=_RTK_POSIX_REASON)
 def test_evidence_links_receipt_hash_to_original_bytes(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     from isycode.approvals import ActionApprovalStore
@@ -240,6 +267,7 @@ def test_evidence_links_receipt_hash_to_original_bytes(tmp_path, monkeypatch):
     assert len(raw.read_bytes()) == result['rtk']['captured_bytes']
 
 
+@pytest.mark.skipif(not hasattr(os, 'mkfifo'), reason='NOT_DEMONSTRATED: named pipes cannot model POSIX FIFOs on Windows')
 def test_settings_fifo_is_rejected_without_opening_a_blocking_reader(adapter, monkeypatch):
     rtk, _ = adapter
     settings = rtk.Settings()

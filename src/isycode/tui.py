@@ -755,10 +755,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         choice = new_workspace_choice(self._launch_dir, None, preference)
                         if choice is None:
                             choice = await self._await_screen(WorkspaceSetupScreen(self._launch_dir))
-                    setup_store.choose_recurrent(self._launch_dir, choice)
+                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, choice)
                 elif choice:
                     # Re-create a marker if the user removed it after opting in.
-                    setup_store.choose_recurrent(self._launch_dir, True)
+                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, True)
                 recurring = choice
                 if recurring:
                     self._workspace_identity = discover_workspace_identity(self._launch_dir)
@@ -2012,7 +2012,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         """Bound short menus by their contents; long lists scroll inside the frame."""
         rows = max(4, len(getattr(self, "_menu_filtered", [])))
         overhead = (18 if self.size.width >= 100 else 14) if self._menu_mode == "settings" else 13
-        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, rows + overhead))
+        requested = rows + overhead
+        if self._menu_mode == 'authority_settings' and self.size.height >= 36:
+            requested = max(34, requested)
+        self.query_one("#action-card", Vertical).styles.height = max(8, min(self.size.height - 2, requested))
 
     def _show_menu_detail(self, index: int | None) -> None:
         """Describe the highlighted entry so choices are clear before pressing Enter."""
@@ -2947,7 +2950,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
             self.call_after_refresh(resolve_after_pop)
 
-        self.push_screen(screen, finished)
+        # Await both the modal and its descendants before the caller continues.
+        # Otherwise a fast second modal can receive input before its controls
+        # have mounted (the race is especially visible on Windows).
+        await self.push_screen(screen, finished)
         return await future
 
     def _animate_activity(self) -> None:

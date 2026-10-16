@@ -4,6 +4,13 @@ from isycode.diagnostics import collect_diagnostics
 from isycode.launcher import main
 
 
+def test_doctor_uses_selected_backend_unavailability_reason(tmp_path):
+    from isycode.platform_sandbox import sandbox_backend
+    from isycode.command_runner import sandbox_executable
+    if sandbox_executable() is None:
+        assert collect_diagnostics(tmp_path)['command_sandbox'] == sandbox_backend.unavailable_reason()
+
+
 def test_doctor_is_local_and_does_not_expose_secrets(tmp_path, monkeypatch):
     monkeypatch.setenv('ISYCODE_STATE_HOME', str(tmp_path / 'state'))
     monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path / 'xdg'))

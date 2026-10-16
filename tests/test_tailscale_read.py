@@ -1,4 +1,6 @@
 """Read owner witnesses for local Tailscale status."""
+import os
+
 from isycode.approvals import ActionApprovalStore
 from isycode.tailscale import TailscaleSnapshot
 from isycode.tailscale_read import TailscaleReadOwner
@@ -19,7 +21,7 @@ class Adapter:
 
 
 def test_tailscale_read_owner_inspects_and_journals_without_mutation(tmp_path):
-    cli = tmp_path / "tailscale"
+    cli = tmp_path / ("tailscale.exe" if os.name == "nt" else "tailscale")
     cli.write_text("fake")
     cli.chmod(0o700)
     adapter = Adapter(TailscaleSnapshot(

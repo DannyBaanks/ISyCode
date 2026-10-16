@@ -218,14 +218,13 @@ class WorkspaceTrust:
         return stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode)
 
     def _ensure_dir(self) -> None:
-        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if self.root.is_symlink() or not self.root.is_dir():
-            raise ValueError("trust state root must be a real directory")
-        self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if self.directory.is_symlink() or not self.directory.is_dir():
-            raise ValueError("trust directory must be a real directory")
-        if os.name == "posix":
-            self.directory.chmod(0o700)
+        from isycode.platform_storage import storage
+        storage.ensure_directory(self.root, repair=True)
+        storage.ensure_directory(self.directory, repair=True)
+        if (self.root.is_symlink() or not self.root.is_dir()
+                or self.directory.is_symlink() or not self.directory.is_dir()
+                or not storage.private(self.root) or not storage.private(self.directory)):
+            raise ValueError("trust state directory is unsafe")
 
     def _read(self, workspace: Path) -> dict[str, Any] | None:
         """Return a record, or None. Never rewrite a bad file into trust."""

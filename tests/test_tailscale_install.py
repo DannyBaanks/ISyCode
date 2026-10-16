@@ -1,6 +1,7 @@
 """Offline Tailscale apt preparation and exact package transaction witnesses."""
 from dataclasses import replace
 import hashlib
+import os
 from pathlib import Path
 
 import pytest
@@ -128,6 +129,8 @@ class FakeApt:
 
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
+    if os.name == "nt":
+        pytest.skip("NOT_DEMONSTRATED: this owner targets Ubuntu/Debian apt and Linux root staging")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     root = tmp_path / "workspace"
     root.mkdir()
@@ -511,12 +514,13 @@ def test_simulation_rejects_summary_embedded_in_other_text():
         _simulation("10 upgraded, 1 newly installed, 0 to remove\n" + SIMULATION.split("\n", 2)[-1])
 
 
-def test_atomic_publication_rejects_symlinked_parent(tmp_path):
+@pytest.mark.skipif(os.name == "nt", reason="NOT_DEMONSTRATED: Linux apt publication uses POSIX dir_fd operations")
+def test_atomic_publication_rejects_symlinked_parent(tmp_path, make_directory_link):
     private = tmp_path / "private"
     private.mkdir(mode=0o700)
     target = tmp_path / "outside"
     target.mkdir(mode=0o700)
-    (private / "redirect").symlink_to(target, target_is_directory=True)
+    make_directory_link(private / "redirect", target)
     with pytest.raises((OSError, ValueError)):
         _atomic_private_file(private / "redirect" / "keyring.gpg", b"secret")
     assert not (target / "keyring.gpg").exists()

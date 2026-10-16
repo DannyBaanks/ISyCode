@@ -286,7 +286,7 @@ def test_sentinel_rejects_forged_command_requests(sandbox, change):
 
 def test_without_bubblewrap_nothing_can_be_prepared(sandbox, monkeypatch):
     owner = sandbox[0]
-    monkeypatch.setattr("isycode.command_runner.shutil.which", lambda name: None)
+    monkeypatch.setattr("isycode.platform_posix_sandbox.shutil.which", lambda name: None)
     with pytest.raises(ValueError, match="bubblewrap"):
         owner.prepare(["echo", "hi"])
 

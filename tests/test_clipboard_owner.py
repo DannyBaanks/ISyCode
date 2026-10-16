@@ -1,5 +1,6 @@
 """Explicit copying: owned, granted, journaled without the text, never from the model."""
 import ast
+import sys
 from pathlib import Path
 
 import pytest
@@ -18,10 +19,11 @@ def owner(tmp_path, monkeypatch):
     root.mkdir()
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "state" / "authority")
     written = []
-    tool = tmp_path / "fake-copy"
-    tool.write_text(f"#!/bin/sh\ncat > {tmp_path / 'clip.txt'}\n")
-    tool.chmod(0o755)
-    return (ClipboardOwner(root, authority, command_finder=lambda: [str(tool)]), authority,
+    tool = tmp_path / "fake-copy.py"
+    tool.write_text("import os,sys; from pathlib import Path; "
+                    f"Path({str(tmp_path / 'clip.txt')!r}).write_text("
+                    "sys.stdin.buffer.read().decode('utf-16-le' if os.name=='nt' else 'utf-8'),encoding='utf-8')",encoding='utf-8')
+    return (ClipboardOwner(root, authority, command_finder=lambda: [sys.executable, str(tool)]), authority,
             written, tmp_path / "clip.txt", root.resolve())
 
 
@@ -39,15 +41,15 @@ def test_copy_uses_the_system_tool_and_never_journals_the_text(owner, source):
     authority.set_grant("clipboard.copy", enabled=True, targets=[CLIPBOARD_TARGET])
     secret_looking = "my selected text 12345"
     outcome = clipboard.copy(secret_looking, source=source, terminal_write=written.append)
-    assert outcome.decision == "ALLOW" and outcome.text == "fake-copy"
-    assert clip.read_text() == secret_looking and written == [secret_looking]
+    assert outcome.decision == "ALLOW" and outcome.text == Path(sys.executable).name
+    assert clip.read_text(encoding="utf-8") == secret_looking and written == [secret_looking]
     assert ActionAuditJournal(root).verify().receipts == 1
     journal = "".join(path.read_text(errors="ignore")
                       for path in Path(ActionAuditJournal(root).path).parent.rglob("*") if path.is_file())
     assert secret_looking not in journal
 
 
-@pytest.mark.parametrize("text, source", [("", "selection"), ("x", "model"), ("x" * (1024 * 1024 + 1), "selection")])
+@pytest.mark.parametrize("text, source", [("", "selection"), ("x", "model"), ("x" * (1024 * 1024 + 1), "selection")], ids=['empty', 'model-source', 'oversize'])
 def test_invalid_copies_are_refused(owner, text, source):
     clipboard, authority, written, _, _ = owner
     authority.set_grant("clipboard.copy", enabled=True, targets=[CLIPBOARD_TARGET])

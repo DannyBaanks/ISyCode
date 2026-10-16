@@ -1,0 +1,553 @@
+FFFFFFFFFFFFF
+================================== FAILURES ===================================
+______________________ test_fixed_volume_blocks_513_mib _______________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16B7A390>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16FEF5F0>)
+
+    def test_fixed_volume_blocks_513_mib(bounded_resources):
+        resource, lease = bounded_resources
+>       status, output = execute(resource,
+            'block=b"x"*1048576\nwith open("budget.bin","wb",buffering=0) as f:\n'
+            ' for _ in range(513): f.write(block)\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16F0CC50>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+______________ test_alternate_writes_remain_bounded[many-files] _______________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16EE5160>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16EE5AC0>)
+mode = 'many-files'
+
+    @pytest.mark.parametrize('mode', ['many-files', 'temp', 'truncate'])
+    def test_alternate_writes_remain_bounded(bounded_resources, mode):
+        resource, lease = bounded_resources
+        code = {
+            'many-files': 'from pathlib import Path\nfor i in range(131073):\n'
+                          ' Path(str(i)).write_bytes(b"x"*4096)\n',
+            'temp': 'import os\nwith open(os.path.join(os.environ["TEMP"],"budget.bin"),"wb",buffering=0) as f:\n'
+                    ' for _ in range(513): f.write(b"x"*1048576)\n',
+            'truncate': 'with open("budget.bin","wb") as f: f.truncate(537919488)\n',
+        }[mode]
+>       status, output = execute(resource, code)
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16B8A5D0>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_________________ test_alternate_writes_remain_bounded[temp] __________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16F41490>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16FEF620>)
+mode = 'temp'
+
+    @pytest.mark.parametrize('mode', ['many-files', 'temp', 'truncate'])
+    def test_alternate_writes_remain_bounded(bounded_resources, mode):
+        resource, lease = bounded_resources
+        code = {
+            'many-files': 'from pathlib import Path\nfor i in range(131073):\n'
+                          ' Path(str(i)).write_bytes(b"x"*4096)\n',
+            'temp': 'import os\nwith open(os.path.join(os.environ["TEMP"],"budget.bin"),"wb",buffering=0) as f:\n'
+                    ' for _ in range(513): f.write(b"x"*1048576)\n',
+            'truncate': 'with open("budget.bin","wb") as f: f.truncate(537919488)\n',
+        }[mode]
+>       status, output = execute(resource, code)
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D17107200>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_______________ test_alternate_writes_remain_bounded[truncate] ________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D17104E00>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D17104BF0>)
+mode = 'truncate'
+
+    @pytest.mark.parametrize('mode', ['many-files', 'temp', 'truncate'])
+    def test_alternate_writes_remain_bounded(bounded_resources, mode):
+        resource, lease = bounded_resources
+        code = {
+            'many-files': 'from pathlib import Path\nfor i in range(131073):\n'
+                          ' Path(str(i)).write_bytes(b"x"*4096)\n',
+            'temp': 'import os\nwith open(os.path.join(os.environ["TEMP"],"budget.bin"),"wb",buffering=0) as f:\n'
+                    ' for _ in range(513): f.write(b"x"*1048576)\n',
+            'truncate': 'with open("budget.bin","wb") as f: f.truncate(537919488)\n',
+        }[mode]
+>       status, output = execute(resource, code)
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16ECE5A0>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_____ test_ntfs_sparse_and_compression_cannot_bypass_file_ceiling[sparse] _____
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16ECEC90>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16ECEFF0>)
+mode = 'sparse'
+
+    @pytest.mark.parametrize('mode', ['sparse', 'compressed'])
+    def test_ntfs_sparse_and_compression_cannot_bypass_file_ceiling(bounded_resources, mode):
+        resource, lease = bounded_resources
+        control = 0x900c4 if mode == 'sparse' else 0x9c040
+        operation = ('f.truncate(537919488)' if mode == 'sparse' else
+                     'for _ in range(513): f.write(b"x"*1048576)')
+        code = ('import ctypes as c,msvcrt\n'
+                'io=c.WinDLL("kernel32",use_last_error=True).DeviceIoControl\n'
+                'io.argtypes=[c.c_void_p,c.c_ulong,c.c_void_p,c.c_ulong,c.c_void_p,c.c_ulong,c.c_void_p,c.c_void_p]\n'
+                'io.restype=c.c_int\n'
+                'with open("budget.bin","wb",buffering=0) as f:\n'
+                ' returned=c.c_ulong(); compression=c.c_ushort(1)\n'
+                f' ok=io(msvcrt.get_osfhandle(f.fileno()),{control},'
+                + ('None,0,' if mode == 'sparse' else 'c.byref(compression),2,')
+                + 'None,0,c.byref(returned),None)\n'
+                ' if not ok:\n'
+                '  assert c.get_last_error()==5, c.get_last_error()\n'
+                '  print("control-denied")\n'
+                ' else:\n  ' + operation + '\n')
+>       status, output = execute(resource, code)
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D170F0410>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+___ test_ntfs_sparse_and_compression_cannot_bypass_file_ceiling[compressed] ___
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D170F05F0>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D170F3FB0>)
+mode = 'compressed'
+
+    @pytest.mark.parametrize('mode', ['sparse', 'compressed'])
+    def test_ntfs_sparse_and_compression_cannot_bypass_file_ceiling(bounded_resources, mode):
+        resource, lease = bounded_resources
+        control = 0x900c4 if mode == 'sparse' else 0x9c040
+        operation = ('f.truncate(537919488)' if mode == 'sparse' else
+                     'for _ in range(513): f.write(b"x"*1048576)')
+        code = ('import ctypes as c,msvcrt\n'
+                'io=c.WinDLL("kernel32",use_last_error=True).DeviceIoControl\n'
+                'io.argtypes=[c.c_void_p,c.c_ulong,c.c_void_p,c.c_ulong,c.c_void_p,c.c_ulong,c.c_void_p,c.c_void_p]\n'
+                'io.restype=c.c_int\n'
+                'with open("budget.bin","wb",buffering=0) as f:\n'
+                ' returned=c.c_ulong(); compression=c.c_ushort(1)\n'
+                f' ok=io(msvcrt.get_osfhandle(f.fileno()),{control},'
+                + ('None,0,' if mode == 'sparse' else 'c.byref(compression),2,')
+                + 'None,0,c.byref(returned),None)\n'
+                ' if not ok:\n'
+                '  assert c.get_last_error()==5, c.get_last_error()\n'
+                '  print("control-denied")\n'
+                ' else:\n  ' + operation + '\n')
+>       status, output = execute(resource, code)
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16B89D00>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_______________ test_other_storage_write_paths_denied[backing] ________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16FEFCE0>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16FEF8C0>)
+target = 'backing'
+
+    @pytest.mark.parametrize('target', ['backing', 'root', 'metadata', 'profile'])
+    def test_other_storage_write_paths_denied(bounded_resources, target):
+        resource, lease = bounded_resources
+        paths = {'backing': lease.config.backing_file, 'root': lease.root,
+                 'metadata': resource.scratch_root / 'ownership.json',
+                 'profile': resource.profile_root}
+        path = paths[target]
+        def fingerprint():
+            if target == 'backing':
+                # Mounted NTFS metadata changes its contents. Identity is checked
+                # by the lease; the fixed image length is the stable witness here.
+                return path.stat().st_size
+            if not path.is_file():
+                return None
+            with path.open('rb') as stream:
+                return hashlib.file_digest(stream, 'sha256').hexdigest()
+        before = fingerprint()
+>       status, output = execute(resource,
+            'import ctypes as c\nk=c.WinDLL("kernel32",use_last_error=True)\n'
+            'k.CreateFileW.argtypes=[c.c_wchar_p,c.c_ulong,c.c_ulong,c.c_void_p,c.c_ulong,c.c_ulong,c.c_void_p]\n'
+            'k.CreateFileW.restype=c.c_void_p\nk.CloseHandle.argtypes=[c.c_void_p]\n'
+            f'h=k.CreateFileW({str(path)!r},0x40000000,3,None,3,0x02000000,None)\n'
+            'if h==c.c_void_p(-1).value:\n assert c.get_last_error()==5,c.get_last_error()\n print("denied")\n'
+            'else:\n k.CloseHandle(h)\n raise RuntimeError("write handle escaped scratch")\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D170F2C00>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_________________ test_other_storage_write_paths_denied[root] _________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D170F29F0>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D170F13A0>)
+target = 'root'
+
+    @pytest.mark.parametrize('target', ['backing', 'root', 'metadata', 'profile'])
+    def test_other_storage_write_paths_denied(bounded_resources, target):
+        resource, lease = bounded_resources
+        paths = {'backing': lease.config.backing_file, 'root': lease.root,
+                 'metadata': resource.scratch_root / 'ownership.json',
+                 'profile': resource.profile_root}
+        path = paths[target]
+        def fingerprint():
+            if target == 'backing':
+                # Mounted NTFS metadata changes its contents. Identity is checked
+                # by the lease; the fixed image length is the stable witness here.
+                return path.stat().st_size
+            if not path.is_file():
+                return None
+            with path.open('rb') as stream:
+                return hashlib.file_digest(stream, 'sha256').hexdigest()
+        before = fingerprint()
+>       status, output = execute(resource,
+            'import ctypes as c\nk=c.WinDLL("kernel32",use_last_error=True)\n'
+            'k.CreateFileW.argtypes=[c.c_wchar_p,c.c_ulong,c.c_ulong,c.c_void_p,c.c_ulong,c.c_ulong,c.c_void_p]\n'
+            'k.CreateFileW.restype=c.c_void_p\nk.CloseHandle.argtypes=[c.c_void_p]\n'
+            f'h=k.CreateFileW({str(path)!r},0x40000000,3,None,3,0x02000000,None)\n'
+            'if h==c.c_void_p(-1).value:\n assert c.get_last_error()==5,c.get_last_error()\n print("denied")\n'
+            'else:\n k.CloseHandle(h)\n raise RuntimeError("write handle escaped scratch")\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D17104E00>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_______________ test_other_storage_write_paths_denied[metadata] _______________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D17104C50>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D17107EC0>)
+target = 'metadata'
+
+    @pytest.mark.parametrize('target', ['backing', 'root', 'metadata', 'profile'])
+    def test_other_storage_write_paths_denied(bounded_resources, target):
+        resource, lease = bounded_resources
+        paths = {'backing': lease.config.backing_file, 'root': lease.root,
+                 'metadata': resource.scratch_root / 'ownership.json',
+                 'profile': resource.profile_root}
+        path = paths[target]
+        def fingerprint():
+            if target == 'backing':
+                # Mounted NTFS metadata changes its contents. Identity is checked
+                # by the lease; the fixed image length is the stable witness here.
+                return path.stat().st_size
+            if not path.is_file():
+                return None
+            with path.open('rb') as stream:
+                return hashlib.file_digest(stream, 'sha256').hexdigest()
+        before = fingerprint()
+>       status, output = execute(resource,
+            'import ctypes as c\nk=c.WinDLL("kernel32",use_last_error=True)\n'
+            'k.CreateFileW.argtypes=[c.c_wchar_p,c.c_ulong,c.c_ulong,c.c_void_p,c.c_ulong,c.c_ulong,c.c_void_p]\n'
+            'k.CreateFileW.restype=c.c_void_p\nk.CloseHandle.argtypes=[c.c_void_p]\n'
+            f'h=k.CreateFileW({str(path)!r},0x40000000,3,None,3,0x02000000,None)\n'
+            'if h==c.c_void_p(-1).value:\n assert c.get_last_error()==5,c.get_last_error()\n print("denied")\n'
+            'else:\n k.CloseHandle(h)\n raise RuntimeError("write handle escaped scratch")\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16B7BB60>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_______________ test_other_storage_write_paths_denied[profile] ________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16B8B2C0>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16B8B980>)
+target = 'profile'
+
+    @pytest.mark.parametrize('target', ['backing', 'root', 'metadata', 'profile'])
+    def test_other_storage_write_paths_denied(bounded_resources, target):
+        resource, lease = bounded_resources
+        paths = {'backing': lease.config.backing_file, 'root': lease.root,
+                 'metadata': resource.scratch_root / 'ownership.json',
+                 'profile': resource.profile_root}
+        path = paths[target]
+        def fingerprint():
+            if target == 'backing':
+                # Mounted NTFS metadata changes its contents. Identity is checked
+                # by the lease; the fixed image length is the stable witness here.
+                return path.stat().st_size
+            if not path.is_file():
+                return None
+            with path.open('rb') as stream:
+                return hashlib.file_digest(stream, 'sha256').hexdigest()
+        before = fingerprint()
+>       status, output = execute(resource,
+            'import ctypes as c\nk=c.WinDLL("kernel32",use_last_error=True)\n'
+            'k.CreateFileW.argtypes=[c.c_wchar_p,c.c_ulong,c.c_ulong,c.c_void_p,c.c_ulong,c.c_ulong,c.c_void_p]\n'
+            'k.CreateFileW.restype=c.c_void_p\nk.CloseHandle.argtypes=[c.c_void_p]\n'
+            f'h=k.CreateFileW({str(path)!r},0x40000000,3,None,3,0x02000000,None)\n'
+            'if h==c.c_void_p(-1).value:\n assert c.get_last_error()==5,c.get_last_error()\n print("denied")\n'
+            'else:\n k.CloseHandle(h)\n raise RuntimeError("write handle escaped scratch")\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16ECCBF0>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+______ test_concurrent_allocations_have_distinct_sids_and_no_cross_read _______
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D16FEFCE0>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D16FEFC20>)
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-760/test_concurrent_allocations_ha0')
+
+    def test_concurrent_allocations_have_distinct_sids_and_no_cross_read(bounded_resources, tmp_path):
+        resource, lease = bounded_resources
+        from isycode.platform_windows_sandbox_resources import WindowsSandboxResources
+        with WindowsSandboxResources.prepare(tmp_path, Path(sys.base_prefix), (), storage_lease=lease) as other:
+            assert resource.scratch_root != other.scratch_root
+            assert resource.profile_sid != other.profile_sid
+            foreign = other.stage_root / 'foreign.txt'
+            foreign.write_text('host-positive-read-witness')
+>           status, output = execute(resource,
+                f'from pathlib import Path\ntry: Path({str(foreign)!r}).read_bytes()\n'
+                'except PermissionError: print("cross-read-denied")\nelse: raise RuntimeError("cross-read allowed")\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D170321E0>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+_________ test_real_volume_owner_promotes_unicode_with_exact_approval _________
+
+real_storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-760/test_real_volume_owner_promote0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000023D17030BF0>
+
+    def test_real_volume_owner_promotes_unicode_with_exact_approval(real_storage, tmp_path, monkeypatch):
+        import asyncio
+        import isycode.platform_windows_sandbox as native
+        from isycode.command_runner import CommandRunOwner
+        from isycode.workspace_authority import WorkspaceAuthority
+        from isycode.approvals import ActionApprovalStore
+        monkeypatch.setattr(native, 'NATIVE_ACCEPTED', True)  # acceptance harness only
+        (tmp_path / '.isyroot').write_text('')
+        authority = WorkspaceAuthority(tmp_path)
+        authority.set_mode('classic')
+        owner = CommandRunOwner(tmp_path, authority, ActionApprovalStore())
+        preview = owner.prepare(['python', '-c',
+            'from pathlib import Path; Path("resultado � con espacios.txt").write_text("verificado",encoding="utf-8")'])
+        assert asyncio.run(owner.run(preview, None)).decision == 'DENY'
+>       outcome = asyncio.run(owner.run(preview, owner.approvals.issue(preview.request)))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_acceptance.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+src\isycode\command_runner.py:228: in run
+    return await self._run(preview, approval, promote=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\command_runner.py:262: in _run
+    result = await self._execute(preview, promote=promote)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\command_runner.py:320: in _execute
+    proc = await sandbox_backend.start(staging.root, preview.program, preview.argv,
+src\isycode\platform_windows_sandbox.py:152: in start
+    raw = WindowsSandboxProcess.launch(exe, (str(exe), *argv[1:]), target,
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D16FEFA10>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+___________________ test_volume_device_write_handles_denied ___________________
+
+bounded_resources = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x0000023D17095280>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x0000023D17095DC0>)
+
+    def test_volume_device_write_handles_denied(bounded_resources):
+        resource, lease = bounded_resources
+        from isycode.platform_windows_sandbox_volume_api import inspect_image
+        physical = inspect_image(lease.config.backing_file).physical_device
+        assert physical is not None
+        paths = [lease.config.volume_guid.rstrip('\\'), physical]
+>       status, output = execute(resource,
+            'import ctypes as c\nk=c.WinDLL("kernel32",use_last_error=True)\n'
+            'k.CreateFileW.argtypes=[c.c_wchar_p,c.c_ulong,c.c_ulong,c.c_void_p,c.c_ulong,c.c_ulong,c.c_void_p]\n'
+            'k.CreateFileW.restype=c.c_void_p\nk.CloseHandle.argtypes=[c.c_void_p]\n'
+            f'for path in {paths!r}:\n'
+            ' h=k.CreateFileW(path,0x40000000,3,None,3,0,None)\n'
+            ' if h==c.c_void_p(-1).value: assert c.get_last_error()==5,c.get_last_error()\n'
+            ' else: k.CloseHandle(h); raise RuntimeError("device writable")\n'
+            'print("device-denied")\n')
+
+tests\test_windows_sandbox_volume_acceptance.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_windows_sandbox_volume_acceptance.py:40: in execute
+    with WindowsSandboxProcess.launch(executable, (str(executable), '-I', '-c', code),
+src\isycode\platform_windows_sandbox_process.py:176: in launch
+    image.verify(process)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.platform_windows_sandbox_process.LaunchImage object at 0x0000023D1741BAA0>
+process = <PyHANDLE:0>
+
+    def verify(self, process):
+        if self.native_path is not None:
+>           actual = win32process.GetProcessImageFileName(process)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'win32process' has no attribute 'GetProcessImageFileName'
+
+src\isycode\platform_windows_sandbox_process.py:103: AttributeError
+13 failed in 181.24s (0:03:01)
+exit=1

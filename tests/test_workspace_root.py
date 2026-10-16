@@ -68,10 +68,11 @@ def test_missing_marker_falls_back_to_canonical_launch_directory(tmp_path: Path)
 
 
 def test_discovery_terminates_at_filesystem_root():
-    identity = _discover(Path("/"))
+    filesystem_root = Path(Path.cwd().anchor)
+    identity = _discover(filesystem_root)
 
-    assert identity.launch_dir == Path("/")
-    assert identity.workspace_root == Path("/")
+    assert identity.launch_dir == filesystem_root
+    assert identity.workspace_root == filesystem_root
     assert identity.workspace_root_source in {"isyroot", "fallback"}
 
 

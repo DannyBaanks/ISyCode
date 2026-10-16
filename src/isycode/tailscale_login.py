@@ -111,11 +111,13 @@ class TailscaleLoginOwner:
     @staticmethod
     def _executable(snapshot: TailscaleSnapshot) -> str:
         executable = snapshot.executable
+        expected_name = "tailscale.exe" if os.name == "nt" else "tailscale"
         if (not isinstance(executable, str) or not Path(executable).is_absolute()
-                or Path(executable).name != "tailscale"):
+                or os.path.normcase(Path(executable).name) != os.path.normcase(expected_name)):
             raise ValueError("canonical Tailscale executable is unavailable")
         resolved = Path(executable).resolve(strict=True)
-        if str(resolved) != executable or not resolved.is_file() or not os.access(resolved, os.X_OK):
+        if (os.path.normcase(str(resolved)) != os.path.normcase(executable)
+                or not resolved.is_file() or not os.access(resolved, os.X_OK)):
             raise ValueError("canonical Tailscale executable is unavailable")
         return executable
 

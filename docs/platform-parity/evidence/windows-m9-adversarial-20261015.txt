@@ -1,0 +1,35 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 10 items
+
+tests/test_m9_adversarial.py::test_control_characters_are_removed_and_styles_kept PASSED [ 10%]
+tests/test_m9_adversarial.py::test_a_hostile_model_reply_cannot_drive_the_terminal PASSED [ 20%]
+tests/test_m9_adversarial.py::test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal FAILED [ 30%]
+tests/test_m9_adversarial.py::test_a_full_disk_never_changes_the_file_and_never_leaks_a_raw_error[workspace-ERROR] SKIPPED [ 40%]
+tests/test_m9_adversarial.py::test_a_full_disk_never_changes_the_file_and_never_leaks_a_raw_error[action-audit-DENY] SKIPPED [ 50%]
+tests/test_m9_adversarial.py::test_a_full_disk_never_changes_the_file_and_never_leaks_a_raw_error[effect-ledger-DENY] SKIPPED [ 60%]
+tests/test_m9_adversarial.py::test_a_short_write_never_truncates_the_effect_ledger PASSED [ 70%]
+tests/test_m9_adversarial.py::test_with_the_state_disk_full_the_chat_denies_explains_and_keeps_the_prompt SKIPPED [ 80%]
+tests/test_m9_adversarial.py::test_network_down_is_retried_briefly_then_stops_without_changing_authority PASSED [ 90%]
+tests/test_m9_adversarial.py::test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed PASSED [100%]
+
+================================== FAILURES ===================================
+_____ test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal ______
+C:\Development\ISyCo Git\ISyCode\tests\test_m9_adversarial.py:87: in test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal
+    (root / "evil.txt").write_text("SEEN " + HOSTILE + "\n")   # the preview pane is narrow
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1048: in write_text
+    return f.write(data)
+           ^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py:19: in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   UnicodeEncodeError: 'charmap' codec can't encode character '\x9b' in position 44: character maps to <undefined>
+=========================== short test summary info ===========================
+FAILED tests/test_m9_adversarial.py::test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal - UnicodeEncodeError: 'charmap' codec can't encode character '\x9b' in position 44: character maps to <undefined>
+=================== 1 failed, 5 passed, 4 skipped in 37.90s ===================

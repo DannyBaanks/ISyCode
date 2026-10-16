@@ -22,8 +22,8 @@ def test_workspace_pack_reviews_exact_files_and_returns_untrusted_bounded_conten
     root = tmp_path / "project"
     source = root / "src"
     source.mkdir(parents=True)
-    (source / "main.py").write_text("print('hello')\n", encoding="utf-8")
-    (source / "readme.md").write_text("# Project\n", encoding="utf-8")
+    (source / "main.py").write_bytes(b"print('hello')\n")
+    (source / "readme.md").write_bytes(b"# Project\n")
     (root / ".env").write_text("API_KEY=never-read\n", encoding="utf-8")
     (root / ".hidden-note").write_text("hidden by broad directory selection\n",
                                        encoding="utf-8")
@@ -34,7 +34,7 @@ def test_workspace_pack_reviews_exact_files_and_returns_untrusted_bounded_conten
     owner = WorkspacePackOwner(root, _authority(root, tmp_path / "authority"))
     preview = owner.prepare({"paths": ["src"], "token_budget": 1000})
     assert [item.path for item in preview.files] == ["src/main.py", "src/readme.md"]
-    assert preview.total_bytes == len("print('hello')\n# Project\n")
+    assert preview.total_bytes == len(b"print('hello')\n# Project\n")
     assert preview.estimated_tokens <= 1000
 
     result = owner.execute(preview)
@@ -54,7 +54,7 @@ def test_workspace_pack_can_read_a_file_larger_than_normal_tool_result_limit(tmp
     root = tmp_path / "project"
     root.mkdir()
     content = "def example():\n    return '" + ("x" * 35_000) + "'\n"
-    (root / "large.py").write_text(content, encoding="utf-8")
+    (root / "large.py").write_bytes(content.encode("utf-8"))
     owner = WorkspacePackOwner(root, _authority(root, tmp_path / "authority"))
 
     result = owner.execute(owner.prepare({

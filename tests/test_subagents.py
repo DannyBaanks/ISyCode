@@ -89,9 +89,12 @@ def test_native_cross_provider_child_edits_with_existing_diff_approval(tmp_path,
             await pilot.pause(.1)
             await pilot.click('#child-launch')
             if not deny_network:
-                for _ in range(100):
-                    await pilot.pause(.01)
-                    if isinstance(app.screen,WriteApprovalScreen):break
+                for _ in range(200):
+                    await pilot.pause(.05)
+                    if (isinstance(app.screen, WriteApprovalScreen)
+                            and app.screen.query('#write-approval-apply')
+                            and app.screen.query_one('#write-approval-apply').region.height):
+                        break
                 assert isinstance(app.screen,WriteApprovalScreen)
                 assert (root/'app.py').read_text()=='value = 1\n'
                 await pilot.press('tab','enter')

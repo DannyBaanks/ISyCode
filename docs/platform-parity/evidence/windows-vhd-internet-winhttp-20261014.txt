@@ -1,0 +1,87 @@
+F
+================================== FAILURES ===================================
+_________ test_real_volume_winhttp_internet_denied_with_host_control __________
+
+prepared = (<isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x000001E8F00EF800>, <isycode.platform_windows_sandbox_volume.StorageLease object at 0x000001E8F010A600>)
+
+    def test_real_volume_winhttp_internet_denied_with_host_control(prepared):
+        resource,lease=prepared
+        code=r'''
+    import ctypes as c,sys
+    from ctypes import wintypes as w
+    v=c.WinDLL('winhttp',use_last_error=True)
+    def bind(name,args,result):
+     f=getattr(v,name);f.argtypes=args;f.restype=result;return f
+    open_=bind('WinHttpOpen',[w.LPCWSTR,w.DWORD,w.LPCWSTR,w.LPCWSTR,w.DWORD],w.HANDLE)
+    connect=bind('WinHttpConnect',[w.HANDLE,w.LPCWSTR,w.WORD,w.DWORD],w.HANDLE)
+    request=bind('WinHttpOpenRequest',[w.HANDLE,w.LPCWSTR,w.LPCWSTR,w.LPCWSTR,w.LPCWSTR,c.c_void_p,w.DWORD],w.HANDLE)
+    timeouts=bind('WinHttpSetTimeouts',[w.HANDLE,c.c_int,c.c_int,c.c_int,c.c_int],w.BOOL)
+    send=bind('WinHttpSendRequest',[w.HANDLE,w.LPCWSTR,w.DWORD,c.c_void_p,w.DWORD,w.DWORD,c.c_size_t],w.BOOL)
+    receive=bind('WinHttpReceiveResponse',[w.HANDLE,c.c_void_p],w.BOOL)
+    close=bind('WinHttpCloseHandle',[w.HANDLE],w.BOOL)
+    handles=[]
+    try:
+     session=open_('ISyCode-Parity-Control',1,None,None,0)
+     if not session:raise c.WinError(c.get_last_error())
+     handles.append(session);timeouts(session,2500,2500,2500,2500)
+     connection=connect(session,'www.microsoft.com',443,0)
+     if not connection:raise c.WinError(c.get_last_error())
+     handles.append(connection)
+     req=request(connection,'HEAD','/',None,None,None,0x800000)
+     if not req:raise c.WinError(c.get_last_error())
+     handles.append(req)
+     if not send(req,None,0,None,0,0,0):raise c.WinError(c.get_last_error())
+     if not receive(req,None):raise c.WinError(c.get_last_error())
+     print('HTTP_OK')
+    except OSError as exc:
+     print('HTTP_DENIED',exc.winerror)
+     if len(sys.argv)>1 and sys.argv[1]=='host':raise
+     assert exc.winerror in (5,12029),exc
+    finally:
+     for handle in reversed(handles):close(handle)
+    '''
+        control=subprocess.run([sys.executable,'-c',code,'host'],capture_output=True,text=True,timeout=20)
+        if control.returncode!=0:
+            pytest.skip('NOT_DEMONSTRATED: host WinHTTP Internet positive control unavailable')
+>       output=run(resource,code)
+               ^^^^^^^^^^^^^^^^^^
+
+tests\test_windows_sandbox_volume_lifecycle.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+resource = <isycode.platform_windows_sandbox_resources.WindowsSandboxResources object at 0x000001E8F00EF800>
+code = "\nimport ctypes as c,sys\nfrom ctypes import wintypes as w\nv=c.WinDLL('winhttp',use_last_error=True)\ndef bind(name,...gv[1]=='host':raise\n assert exc.winerror in (5,12029),exc\nfinally:\n for handle in reversed(handles):close(handle)\n"
+
+    def run(resource,code):
+        from isycode.platform_windows_sandbox_process import WindowsSandboxProcess
+        exe=resource.runtime_root/'python.exe'
+        with WindowsSandboxProcess.launch(exe,(str(exe),'-I','-c',code),resource.stage_root,
+                resource.environment,resource.profile_sid,256,resource.capability_sids) as p:
+            status=p.wait(25)
+            output=p.read(16384)
+>       assert status==0,output.decode(errors='replace')
+E       AssertionError: Traceback (most recent call last):
+
+E           File "<string>", line 25, in <module>
+
+E         PermissionError: [WinError 10013] Intento de acceso a un socket no permitido por sus permisos de acceso.
+
+E         
+
+E         During handling of the above exception, another exception occurred:
+
+E         
+
+E         Traceback (most recent call last):
+
+E           File "<string>", line 31, in <module>
+
+E         AssertionError: [WinError 10013] Intento de acceso a un socket no permitido por sus permisos de acceso.
+
+E         HTTP_DENIED 10013
+
+E         
+E       assert 1 == 0
+
+tests\test_windows_sandbox_volume_lifecycle.py:40: AssertionError
+1 failed, 8 deselected in 15.08s

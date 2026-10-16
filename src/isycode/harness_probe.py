@@ -12,6 +12,7 @@ from pathlib import Path
 
 from isycode.harness_graph import CATALOG_IDS
 from isycode.workspace_setup import broad_workspace_reason
+from isycode.winfs import is_link
 
 
 @dataclass(frozen=True)
@@ -170,7 +171,7 @@ def unlock_dotfolder(result: ProbeResult, *, home: Path | None = None) -> Path |
     candidate = base / CATALOG[result.harness_id].dotfolder
     try:
         info = candidate.lstat()
-        if not stat.S_ISDIR(info.st_mode) or candidate.is_symlink():
+        if not stat.S_ISDIR(info.st_mode) or is_link(candidate):
             return None
         resolved = candidate.resolve(strict=True)
         if resolved != candidate.absolute():
@@ -185,7 +186,7 @@ def _has_symlink_component(path: Path) -> bool:
     for part in path.parts[1:]:
         current = current / part
         try:
-            if current.is_symlink():
+            if is_link(current):
                 return True
         except OSError:
             return True

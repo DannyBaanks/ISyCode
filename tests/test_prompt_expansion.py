@@ -42,16 +42,29 @@ def test_commands_render_arguments():
     assert parse_command("empty", "   ", "user") is None
 
 
-def test_user_commands_skip_symlinks_large_files_and_bad_names(tmp_path):
+def test_user_commands_skip_large_files_and_bad_names(tmp_path):
     folder = tmp_path / "commands"
     folder.mkdir()
     (folder / "review.md").write_text("Review $ARGUMENTS")
     (folder / "big.md").write_text("x" * 40_000)
     (folder / "Bad Name.md").write_text("x")
     (folder / "notes.txt").write_text("x")
-    (folder / "link.md").symlink_to(folder / "review.md")
     assert sorted(load_user_commands(folder)) == ["review"]
     assert load_user_commands(tmp_path / "missing") == {}
+
+
+def test_user_commands_skip_symlink_files(tmp_path):
+    import os
+    folder = tmp_path / "commands"
+    folder.mkdir()
+    (folder / "review.md").write_text("Review $ARGUMENTS")
+    try:
+        (folder / "link.md").symlink_to(folder / "review.md")
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            pytest.skip("NOT_DEMONSTRATED: this Windows identity cannot create file symlinks")
+        raise
+    assert sorted(load_user_commands(folder)) == ["review"]
 
 
 def test_workspace_command_files_need_the_read_grant(tmp_path, monkeypatch):

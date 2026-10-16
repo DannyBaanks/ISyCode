@@ -192,13 +192,13 @@ def featured_models(catalog: list[str]) -> list[tuple[str, str | None]]:
 
 
 def _preferences_path():
-    from isycode.workspace_setup import state_root
-    directory = state_root() / "preferences"
-    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if directory.is_symlink() or not directory.is_dir():
-        raise OSError("ISyCode preferences directory is unsafe")
-    if os.name == "posix":
-        directory.chmod(0o700)
+    from isycode.workspace_setup import ensure_state_root
+    from isycode.platform_storage import storage
+    directory = ensure_state_root() / "preferences"
+    try:
+        storage.ensure_directory(directory, repair=True)
+    except ValueError as exc:
+        raise OSError('ISyCode preferences directory is unsafe') from exc
     return directory / "provider.json"
 
 
@@ -208,7 +208,8 @@ def _load_preferences() -> dict[str, Any]:
         info = path.lstat()
     except FileNotFoundError:
         return {"version": 1, "provider": "", "models": {}, "slots": {}, "model_metadata": {}}
-    if not stat.S_ISREG(info.st_mode) or info.st_size > 64 * 1024:
+    from isycode.platform_storage import storage
+    if not stat.S_ISREG(info.st_mode) or info.st_size > 64 * 1024 or not storage.private(path):
         return {"version": 1, "provider": "", "models": {}, "slots": {}, "model_metadata": {}}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -259,18 +260,21 @@ def record_model_metadata(provider: str, model: str, entry: dict[str, Any]) -> N
 
 
 def _write_preferences(data: dict[str, Any]) -> None:
+    from isycode.platform_storage import storage
     path = _preferences_path()
+    if path.exists() and not storage.private(path):
+        raise OSError('Existing provider preferences are unsafe')
     temporary = path.with_name(".provider-" + secrets.token_hex(8) + ".tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, 'O_BINARY', 0)
     fd = os.open(temporary, flags, 0o600)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            storage.protect(temporary)
             json.dump(data, stream, ensure_ascii=False, sort_keys=True)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
-        if os.name == "posix":
-            path.chmod(0o600)
+        storage.replace(temporary, path)
+        storage.sync_directory(path.parent)
     finally:
         if temporary.exists():
             temporary.unlink()

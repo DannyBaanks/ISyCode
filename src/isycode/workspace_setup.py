@@ -7,6 +7,7 @@ import os
 import stat
 import tempfile
 from pathlib import Path
+from isycode.platform_storage import storage
 
 
 def state_root() -> Path:
@@ -16,6 +17,15 @@ def state_root() -> Path:
     if os.name == "nt":
         return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "ISyCode"
     return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "isycode"
+
+
+def ensure_state_root() -> Path:
+    """Create or repair the private app-state boundary before child stores."""
+    root = state_root().expanduser()
+    storage.ensure_directory(root, repair=True)
+    if not root.is_dir() or not storage.private(root):
+        raise ValueError("ISyCode private state root is unsafe")
+    return root
 
 
 def broad_workspace_reason(directory: Path) -> str | None:
@@ -89,12 +99,11 @@ class WorkspaceSetupStore:
 
     def __init__(self, root: Path | None = None) -> None:
         self.root = Path(root or state_root()).expanduser()
-        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if self.root.is_symlink() or not self.root.is_dir():
-            raise ValueError("ISyCode state root must be a real directory, not a symlink")
+        preferences = self.root / 'workspace-setup.json'
+        if preferences.exists() and not storage.private(preferences):
+            raise ValueError('Existing workspace setup preferences are unsafe')
+        storage.ensure_directory(self.root, repair=True)
         self.root = self.root.resolve(strict=True)
-        if os.name == "posix":
-            self.root.chmod(0o700)
         self.preferences_path = self.root / "workspace-setup.json"
 
     @staticmethod
@@ -108,6 +117,8 @@ class WorkspaceSetupStore:
             return {}
         if not stat.S_ISREG(info.st_mode):
             raise ValueError("workspace setup preferences are not a regular file")
+        if not storage.private(self.preferences_path) or info.st_nlink != 1:
+            raise ValueError('workspace setup preferences are unsafe')
         if info.st_size > 256_000:
             raise ValueError("workspace setup preferences exceed the size limit")
         data = json.loads(self.preferences_path.read_text(encoding="utf-8"))
@@ -142,15 +153,13 @@ class WorkspaceSetupStore:
         payload = json.dumps({"version": 1, "choices": choices}, indent=2)
         fd, temporary = tempfile.mkstemp(prefix=".workspace-setup-", dir=self.root)
         try:
-            if os.name == "posix":
-                os.fchmod(fd, 0o600)
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                storage.protect(Path(temporary))
                 stream.write(payload)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(temporary, self.preferences_path)
-            if os.name == "posix":
-                self.preferences_path.chmod(0o600)
+            storage.replace(Path(temporary), self.preferences_path)
+            storage.sync_directory(self.root)
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)

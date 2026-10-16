@@ -15,6 +15,7 @@ Run: python3 scripts/soak_g9.py /tmp/NEW-UNIQUE-soak.json
 from __future__ import annotations
 
 import asyncio
+from contextlib import ExitStack
 import json
 import os
 import hashlib
@@ -35,6 +36,35 @@ STATE_PATH = Path(os.environ.get("G9_SOAK_STATE", str(OUT_PATH.with_suffix(".sta
 
 
 def rss_mib() -> float:
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        class MemoryCounters(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                        ("PeakWorkingSetSize", ctypes.c_size_t),
+                        ("WorkingSetSize", ctypes.c_size_t),
+                        ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                        ("PagefileUsage", ctypes.c_size_t),
+                        ("PeakPagefileUsage", ctypes.c_size_t),
+                        ("PrivateUsage", ctypes.c_size_t)]
+
+        counters = MemoryCounters()
+        counters.cb = ctypes.sizeof(counters)
+        api = ctypes.WinDLL("psapi", use_last_error=True)
+        api.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE,
+                                             ctypes.POINTER(MemoryCounters),
+                                             wintypes.DWORD]
+        api.GetProcessMemoryInfo.restype = wintypes.BOOL
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        if not api.GetProcessMemoryInfo(kernel32.GetCurrentProcess(),
+                                        ctypes.byref(counters), counters.cb):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return counters.WorkingSetSize / 1024**2
     return int(Path("/proc/self/statm").read_text().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1024**2
 
 
@@ -55,6 +85,49 @@ def save_state(state: dict) -> None:
 def orphans() -> list[str]:
     # These are actual surviving descendants of this worker, not matches of a
     # never-used command-line marker. Read after the TUI cycle has unmounted.
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        class ProcessEntry(ctypes.Structure):
+            _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                        ("th32ProcessID", wintypes.DWORD),
+                        ("th32DefaultHeapID", ctypes.c_size_t),
+                        ("th32ModuleID", wintypes.DWORD),
+                        ("cntThreads", wintypes.DWORD),
+                        ("th32ParentProcessID", wintypes.DWORD),
+                        ("pcPriClassBase", wintypes.LONG), ("dwFlags", wintypes.DWORD),
+                        ("szExeFile", wintypes.WCHAR * 260)]
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+        kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        kernel32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)]
+        kernel32.Process32FirstW.restype = wintypes.BOOL
+        kernel32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)]
+        kernel32.Process32NextW.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+        if snapshot == wintypes.HANDLE(-1).value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        children: dict[int, list[int]] = {}
+        try:
+            entry = ProcessEntry()
+            entry.dwSize = ctypes.sizeof(entry)
+            if kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+                while True:
+                    children.setdefault(entry.th32ParentProcessID, []).append(entry.th32ProcessID)
+                    if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                        break
+        finally:
+            kernel32.CloseHandle(snapshot)
+        pending, found = [os.getpid()], []
+        while pending:
+            parent = pending.pop()
+            descendants = children.get(parent, [])
+            found.extend(str(pid) for pid in descendants)
+            pending.extend(descendants)
+        return found
     found, pending = [], [os.getpid()]
     while pending:
         pid = pending.pop()
@@ -78,7 +151,12 @@ async def one_cycle(index: int) -> dict:
 
 async def _cycle(index, monkey):
     from test_daily_tui import configure
-    with tempfile.TemporaryDirectory() as raw:
+    original_cwd = Path.cwd()
+    with ExitStack() as cleanup:
+        raw = cleanup.enter_context(tempfile.TemporaryDirectory())
+        # Restore cwd before TemporaryDirectory removes the workspace; Windows
+        # refuses to delete the process's current directory.
+        cleanup.callback(os.chdir, original_cwd)
         tmp = Path(raw)
         root = configure(tmp, monkey)
         (root / "note.txt").write_text("original fixture\n")

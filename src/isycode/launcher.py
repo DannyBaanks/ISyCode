@@ -39,6 +39,14 @@ def _ask(question: str, details: tuple[str, ...]) -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # CLI text and JSON have the same UTF-8 wire format on every platform.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        configure = getattr(stream, 'reconfigure', None)
+        if configure is not None:
+            try:
+                configure(encoding='utf-8')
+            except (OSError, ValueError):
+                pass  # Embedded/test streams may already have consumed input.
     arguments = list(sys.argv[1:] if argv is None else argv)
     if arguments and arguments[0] in {"update", "actualizar"}:
         from isycode.updater import SelfUpdater

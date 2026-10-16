@@ -9,6 +9,7 @@ hooks. G7-05 missing tools/LSP/MCP/provider support is diagnosed
 honestly, never a false "ready".
 """
 import json
+import os
 import subprocess
 
 import pytest
@@ -27,8 +28,10 @@ from test_workspace_trust import FAKE_BWRAP
 
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    monkeypatch.delenv("ISYCODE_STATE_HOME", raising=False)
+    # Windows state_root intentionally prefers its native override. Keep both
+    # roots inside this fixture so the flow never consults the user's profile.
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
     root = tmp_path / "project"
     root.mkdir()
     (root / ".isyroot").write_text("", encoding="utf-8")
@@ -59,7 +62,7 @@ def test_g7_01_dirty_repo_diagnose_edit_test_diff_undo(repo, monkeypatch):
     approvals.issue = spy
     reader = LocalWorkspaceReadOwner(root, authority)
     outcome = reader.execute("workspace.files.read", {"path": "app.py"})
-    assert outcome.decision == "ALLOW" and "human work in progress" in outcome.text
+    assert outcome.decision == "ALLOW" and "human work in progress" in outcome.text, outcome
     writer = WorkspaceWriteOwner(root, authority, approvals)
     for name, content in (("util.py", "def helper():\n    return 2\n"),
                           ("new_module.py", "VALUE = 2\n"),
@@ -74,9 +77,15 @@ def test_g7_01_dirty_repo_diagnose_edit_test_diff_undo(repo, monkeypatch):
     monkeypatch.setenv("PATH", f"{bin_dir}{__import__('os').pathsep}{__import__('os').environ.get('PATH', '')}")
     monkeypatch.setenv("FAKE_BWRAP_LOG", str(root / "bwrap.json"))
     runner = CommandRunOwner(root, authority, approvals)
-    preview = runner.prepare(["echo", "tests-pass"])
     import asyncio
-    assert asyncio.run(runner.run(preview, None)).decision == "ALLOW"
+    if os.name == "nt":
+        # Physical Windows commands stay denied until the native acceptance
+        # record is approved; the rest of the workspace flow remains testable.
+        with pytest.raises(ValueError, match="pending native acceptance"):
+            runner.prepare(["echo", "tests-pass"])
+    else:
+        preview = runner.prepare(["echo", "tests-pass"])
+        assert asyncio.run(runner.run(preview, None)).decision == "ALLOW"
     diff = GitOwner(root, authority, approvals).diff()
     assert diff.decision == "ALLOW"
     assert "helper():\n-    return 1\n+    return 2" in diff.text.replace("\\n", "\n") or "return 2" in diff.text

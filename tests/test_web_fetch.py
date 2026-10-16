@@ -153,13 +153,20 @@ def test_interactive_web_read_requires_actual_host_confirmation(tmp_path,monkeyp
         async with app.run_test(size=(120,40)) as pilot:
             await pilot.pause()
             job=asyncio.create_task(app._dispatch_chat_tool_impl({'id':'web','function':{'name':'webfetch','arguments':json.dumps({'url':'https://example.com'})}}))
-            await pilot.pause()
+            selector = '#provider-network-confirm' if approved else '#provider-network-cancel'
+            for _ in range(200):
+                if isinstance(app.screen, GrantProviderNetworkScreen):
+                    button = app.screen.query_one(selector)
+                    if button.region.width and button.region.height:
+                        break
+                await pilot.pause(0.05)
             assert isinstance(app.screen,GrantProviderNetworkScreen)
             assert app.screen.host=='example.com'
             assert 'example.com' in str(app.screen.query_one('#provider-network-copy').render())
             assert calls==[]
-            await pilot.click('#provider-network-confirm' if approved else '#provider-network-cancel')
-            _,output=await job
+            assert button.region.width and button.region.height
+            assert await pilot.click(selector)
+            _,output=await asyncio.wait_for(job,timeout=10)
             result=json.loads(output)
             assert calls==(['https://example.com/'] if approved else [])
             assert (result.get('content')=='fixture')==approved

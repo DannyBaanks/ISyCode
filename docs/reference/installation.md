@@ -32,6 +32,21 @@ when launching from another project. The repository also supplies
 
 ## First workspace
 
+### Windows source installation
+
+From the checkout in PowerShell, run `& .\scripts\install-windows.ps1`.
+Use `-TestDependencies` to install the native contract test runner as well.
+The installer creates `.venv` using `py`, installs the same Python package,
+including the Windows-only pywin32 dependency, and verifies `--version`.
+Launch `.venv\Scripts\isycode.exe` from your chosen project.
+
+Native storage, session and Git workflows have selected Windows evidence in
+[the platform parity report](../platform-parity/REPORT.md). Native command
+isolation is still unavailable; this is not full Windows parity or an EXE release.
+Existing unsafe state is refused; the guide describes isolated state for verification.
+
+## Workspace setup
+
 Choose a recurring or temporary workspace and Classic or Security. A recurring
 workspace can create `.isyroot` and save conversations; a temporary workspace
 is intended for a single session. The marker identifies the logical boundary,

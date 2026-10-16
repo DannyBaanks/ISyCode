@@ -12,6 +12,7 @@ from isycode.agent_loop import (
     AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, DEFAULT_AGENT_STEPS, DEFAULT_ANSWER_TOKENS,
 )
 from isycode.workspace_setup import state_root
+from isycode.platform_storage import storage
 
 CHAT_TOKEN_BUDGET_CHOICES = (0, 10_000, 50_000, 100_000, 500_000)
 
@@ -36,12 +37,10 @@ class UserDefaultsStore:
 
     def __init__(self, directory: Path | None = None) -> None:
         self.directory = Path(directory or state_root()).expanduser()
-        self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if self.directory.is_symlink() or not self.directory.is_dir():
+        storage.ensure_directory(self.directory, repair=True)
+        if not self.directory.is_dir() or not storage.private(self.directory):
             raise ValueError("ISyCode user settings directory is unsafe")
         self.directory = self.directory.resolve(strict=True)
-        if os.name == "posix":
-            self.directory.chmod(0o700)
         self.path = self.directory / "user-defaults.json"
 
     def load(self) -> dict[str, Any]:
@@ -54,16 +53,18 @@ class UserDefaultsStore:
                     "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
                     "high_contrast": False, "ascii_only": False, "reduced_motion": False,
                     "locale": self.DEFAULT_LOCALE}
-        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > self.MAX_BYTES:
+        if (not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1
+                or metadata.st_size > self.MAX_BYTES or not storage.private(self.path)):
             raise ValueError("ISyCode user settings file is unsafe")
-        if os.name == "posix" and metadata.st_mode & 0o077:
-            raise ValueError("ISyCode user settings file permissions are too open")
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_BINARY", 0))
         descriptor = os.open(self.path, flags)
         try:
             opened = os.fstat(descriptor)
             if (not stat.S_ISREG(opened.st_mode) or opened.st_dev != metadata.st_dev
-                    or opened.st_ino != metadata.st_ino or opened.st_size > self.MAX_BYTES):
+                    or opened.st_ino != metadata.st_ino or opened.st_nlink != 1
+                    or opened.st_size > self.MAX_BYTES
+                    or not storage.private(self.path, fd=descriptor)):
                 raise ValueError("ISyCode user settings changed during inspection")
             content = os.read(descriptor, self.MAX_BYTES + 1)
         finally:
@@ -184,15 +185,15 @@ class UserDefaultsStore:
         payload = json.dumps(current, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
         temporary = self.directory / f".user-defaults-{secrets.token_hex(8)}.tmp"
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(temporary, flags, 0o600)
+        descriptor = os.open(temporary, flags | getattr(os, "O_BINARY", 0), 0o600)
         try:
+            storage.protect(temporary)
             with os.fdopen(descriptor, "wb") as stream:
                 stream.write(payload)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(temporary, self.path)
-            if os.name == "posix":
-                self.path.chmod(0o600)
+            storage.replace(temporary, self.path)
+            storage.sync_directory(self.directory)
         finally:
             if temporary.exists():
                 temporary.unlink()

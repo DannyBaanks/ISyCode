@@ -16,6 +16,7 @@ from isycode.actions import ACTION_BY_ID
 from isycode.effect_policy import EFFECTS, POLICY_VERSION, effect_class
 from isycode.security import ActionRequest, AuthorityDecision, DecisionCheck, SentinelDecision
 from isycode.workspace_setup import state_root
+from isycode.platform_storage import storage, held
 
 
 # In-process observers of journaled decisions (the IsySentinel rail). They get
@@ -90,7 +91,10 @@ class ActionAuditJournal:
         root = Path(workspace_root).expanduser().resolve(strict=True)
         root_id = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:32]
         directory = Path(state_directory or (state_root() / "action-audit")).expanduser()
-        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            storage.ensure_directory(directory)
+        except ValueError as exc:
+            raise ActionAuditError('private action journal directory is unsafe') from exc
         if directory.is_symlink() or not directory.is_dir():
             raise ActionAuditError("private action journal directory is unsafe")
         directory = directory.resolve(strict=True)
@@ -137,9 +141,11 @@ class ActionAuditJournal:
                 or (os.name == "posix" and
                     (info.st_uid != os.getuid() or info.st_mode & 0o077))):
             raise ValueError("journal file is unsafe or exceeds its size limit")
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0))
         try:
             opened = os.fstat(fd)
+            if not storage.private(path, fd=fd):
+                raise ValueError('journal file is not private')
             if (not stat.S_ISREG(opened.st_mode) or opened.st_ino != info.st_ino
                     or opened.st_dev != info.st_dev or opened.st_size > self.MAX_BYTES):
                 raise ValueError("journal changed during verification")
@@ -411,17 +417,17 @@ class ActionAuditJournal:
     def _append(self, body: dict[str, Any]) -> None:
         # A concurrent writer may seal the active file between our open and our
         # lock; _append_once then reports "rotated" and we reopen the new file.
-        for _ in range(4):
-            if self._append_once(dict(body)):
-                return
+        try:
+            with held(self.path.with_suffix('.lock')):
+                for _ in range(4):
+                    if self._append_once(dict(body)):
+                        return
+        except (OSError, ValueError) as exc:
+            raise ActionAuditError('private action journal lock is unavailable or unsafe') from exc
         raise ActionAuditError("private action journal kept rotating; action denied")
 
     def _append_once(self, body: dict[str, Any]) -> bool:
-        try:
-            import fcntl
-        except ImportError:  # pragma: no cover - non-POSIX fallback uses exclusive file access
-            fcntl = None
-        flags = os.O_RDWR | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
+        flags = os.O_RDWR | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
         try:
             fd = os.open(self.path, flags, 0o600)
         except OSError as exc:
@@ -434,8 +440,8 @@ class ActionAuditJournal:
                 raise ActionAuditError("private action journal is unsafe or full")
             if os.name == "posix":
                 os.fchmod(fd, 0o600)
-            if fcntl is not None:
-                fcntl.flock(fd, fcntl.LOCK_EX)
+            if not storage.private(self.path, fd=fd):
+                raise ActionAuditError('private action journal ACL or ownership is unsafe')
             try:
                 current = self.path.lstat()
             except FileNotFoundError:
@@ -519,6 +525,8 @@ class ActionAuditJournal:
                 if target.exists() or target.is_symlink():
                     raise ActionAuditError("private action journal segment already exists")
                 os.fsync(fd)
+                os.close(fd)
+                fd = None
                 os.rename(self.path, target)
                 return False
             if info.st_size + len(encoded) > self.MAX_BYTES:
@@ -537,12 +545,8 @@ class ActionAuditJournal:
         except (OSError, ValueError) as exc:
             raise ActionAuditError("private action journal could not be committed") from exc
         finally:
-            if fcntl is not None:
-                try:
-                    fcntl.flock(fd, fcntl.LOCK_UN)
-                except OSError:
-                    pass
-            os.close(fd)
+            if fd is not None:
+                os.close(fd)
 
 
 __all__ = ["ActionAuditError", "ActionAuditJournal", "ActionAuditReport"]

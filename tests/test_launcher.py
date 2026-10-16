@@ -5,10 +5,17 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
+posix_installer = pytest.mark.skipif(
+    os.name != "posix",
+    reason="these installer tests exercise the POSIX shell launcher; Windows uses install-windows.ps1",
+)
 
 
+@posix_installer
 def test_installer_links_launcher_and_preserves_invocation_directory(tmp_path: Path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -37,6 +44,7 @@ def test_installer_links_launcher_and_preserves_invocation_directory(tmp_path: P
     assert str(ROOT / "src") in pythonpath.split(os.pathsep)
 
 
+@posix_installer
 def test_installer_refuses_to_replace_an_existing_command(tmp_path: Path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -52,6 +60,7 @@ def test_installer_refuses_to_replace_an_existing_command(tmp_path: Path):
     assert command.read_text(encoding="utf-8") == "user-owned"
 
 
+@posix_installer
 def test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup(tmp_path: Path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -70,6 +79,7 @@ def test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup(
     assert again.returncode == 0 and list(bin_dir.glob("isycode.backup.*")) == backups
 
 
+@posix_installer
 def test_installer_migration_keeps_unknown_symlinks_and_regular_files(tmp_path: Path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -83,6 +93,7 @@ def test_installer_migration_keeps_unknown_symlinks_and_regular_files(tmp_path: 
     assert not list(bin_dir.glob("isycode.backup.*"))
 
 
+@posix_installer
 def test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv(tmp_path: Path):
     task_home = tmp_path / "home"
     legacy_dir = task_home / ".local/share/isycode-mainline"
@@ -101,6 +112,7 @@ def test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv(t
     assert len(backups) == 1 and os.readlink(backups[0]) == str(legacy_dir / ".venv/bin/isycode")
 
 
+@posix_installer
 def test_launcher_prefers_repository_virtualenv(tmp_path: Path):
     repository = tmp_path / "repo"
     launcher = repository / "scripts" / "isycode"

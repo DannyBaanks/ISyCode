@@ -15,6 +15,18 @@ from isycode.tui_widgets import ExpandableBox, BoxTitle, SelectableText, Thought
 from test_daily_tui import configure
 
 
+async def _wait_for_copy_button(pilot, selector):
+    for _ in range(200):
+        if isinstance(pilot.app.screen, CopyMenuScreen):
+            buttons = pilot.app.screen.query(selector)
+            if buttons:
+                button = buttons.first()
+                if button.region.width and button.region.height:
+                    return button
+        await pilot.pause(0.05)
+    raise AssertionError(f"{selector} never became visible in the copy menu")
+
+
 @pytest.mark.parametrize("source,start,end,expected", [
     ("  uno  \ndos\ntres\n", (2, 0), (3, 1), "uno  \ndos"),
     ("uno\ndos\ntres\n", (0, 0), (0, 2), "uno\ndos\n"),
@@ -101,6 +113,16 @@ def test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection():
             await pilot.mouse_down(body, offset=(0, 0))
             await pilot.hover(body, offset=(2, 0))
             await pilot.mouse_up(body, offset=(2, 0))
+            selected = ""
+            for _ in range(100):
+                if body.screen.selections:
+                    selection = body.screen.selections.get(body)
+                    if selection is not None:
+                        selected = body.get_selection(selection)[0]
+                        if selected == "one":
+                            break
+                await pilot.pause(0.01)
+            assert selected == "one"
             saved = dict(body.screen.selections)
             await pilot.click(title, times=2)
             await pilot.pause()
@@ -108,13 +130,25 @@ def test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection():
             await pilot.press("escape")
             assert body.screen.selections == saved
             await pilot.click(title, times=2)
-            await pilot.click("#copy-selection")
-            await pilot.pause()
+            await _wait_for_copy_button(pilot, "#copy-selection")
+            assert await pilot.click("#copy-selection")
+            for _ in range(200):
+                if copied:
+                    break
+                await pilot.pause(0.05)
             assert copied == [("one", "selection")]
             body.screen.selections = {}
+            # The copy menu keeps a just-finished drag for 600 ms so a
+            # double-click cannot lose its marked range. Let that explicit
+            # grace period expire before asserting a zero-selection choice.
+            await pilot.pause(0.65)
             await pilot.click(title, times=2)
-            await pilot.click("#copy-whole")
-            await pilot.pause()
+            await _wait_for_copy_button(pilot, "#copy-whole")
+            assert await pilot.click("#copy-whole")
+            for _ in range(200):
+                if len(copied) == 2:
+                    break
+                await pilot.pause(0.05)
             assert copied[-1] == ("one\ntwo\n", "content_box")
     asyncio.run(scenario())
 
@@ -153,8 +187,12 @@ def test_readonly_double_click_preserves_marked_range_until_copy_or_cancel():
             await pilot.press("escape")
             assert field.selection == selected
             await pilot.click(field, offset=(2, 1), times=2)
-            await pilot.click("#copy-selection", offset=(2, 1))
-            await pilot.pause()
+            await _wait_for_copy_button(pilot, "#copy-selection")
+            assert pilot.app.screen.selected == "one\ntwo\n"
+            assert await pilot.click("#copy-selection", offset=(2, 1))
+            deadline = asyncio.get_running_loop().time() + 10
+            while not copied and asyncio.get_running_loop().time() < deadline:
+                await pilot.pause(0.05)
             assert copied == [("one\ntwo\n", "selection")]
     asyncio.run(scenario())
 
@@ -185,7 +223,7 @@ def test_real_thinking_motion_and_timers_stop_on_completion_and_unmount(reduced)
 def test_long_onboarding_keeps_choices_visible_at_80x24(tmp_path, monkeypatch, screen_name):
     configure(tmp_path, monkeypatch)
     from isycode import tui
-    root = tmp_path / ("project-" + "x" * 220)
+    root = tmp_path.joinpath(*["segment-" + "x" * 35 for _ in range(8)])
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as pilot:
@@ -197,9 +235,22 @@ def test_long_onboarding_keeps_choices_visible_at_80x24(tmp_path, monkeypatch, s
             assert screen.region.contains_region(options.region)
             assert options.content_region.height >= 2
             copy = screen.query_one("OnboardingCopy")
+            for _ in range(200):
+                await pilot.pause(0.05)
+                if copy.max_scroll_y > 0:
+                    break
+            assert copy.max_scroll_y > 0
             copy.focus()
+            for _ in range(100):
+                if app.screen.focused is copy:
+                    break
+                await pilot.pause(0.05)
+            assert app.screen.focused is copy
             await pilot.press("end")
-            await pilot.pause()
+            for _ in range(100):
+                if copy.scroll_y > 0:
+                    break
+                await pilot.pause(0.05)
             assert copy.scroll_y > 0
             for button in screen.query(Button):
                 assert screen.region.contains_region(button.region)

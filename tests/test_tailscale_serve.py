@@ -2,6 +2,7 @@
 from dataclasses import replace
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -82,7 +83,7 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     root = tmp_path / "workspace"
     root.mkdir()
-    cli = tmp_path / "tailscale"
+    cli = tmp_path / ("tailscale.exe" if os.name == "nt" else "tailscale")
     cli.write_text("fake CLI", encoding="utf-8")
     cli.chmod(0o700)
     snapshot = TailscaleSnapshot(

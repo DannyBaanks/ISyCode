@@ -38,12 +38,12 @@ def test_explicit_path_grant_allows_only_covered_workspace_paths(tmp_path):
     assert not denied.allowed
 
 
-def test_path_grant_cannot_escape_isyroot_or_follow_symlink(tmp_path):
+def test_path_grant_cannot_escape_isyroot_or_follow_symlink(tmp_path, make_directory_link):
     root = tmp_path / "project"
     root.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
-    (root / "link").symlink_to(outside, target_is_directory=True)
+    make_directory_link(root / "link", outside)
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "state")
     authority.set_grant("workspace.files.read", enabled=True,
                         path_prefixes=[root])
@@ -84,11 +84,21 @@ def test_corrupt_or_unknown_grants_fail_closed(tmp_path):
 
 
 def test_workspace_policy_rejects_group_or_world_readable_file(tmp_path):
+    import os
     root = tmp_path / "project"
     root.mkdir()
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "state")
     authority.set_grant("role.select", enabled=True)
-    authority.policy_path.chmod(0o644)
+    if os.name == "posix":
+        authority.policy_path.chmod(0o644)
+    else:
+        import win32security as security
+        everyone = security.CreateWellKnownSid(security.WinWorldSid, None)
+        acl = security.ACL()
+        acl.AddAccessAllowedAce(security.ACL_REVISION, 0x1F01FF, everyone)
+        security.SetNamedSecurityInfo(str(authority.policy_path), security.SE_FILE_OBJECT,
+            security.DACL_SECURITY_INFORMATION | security.PROTECTED_DACL_SECURITY_INFORMATION,
+            None, None, acl, None)
 
     decision = authority.evaluate(ActionRequest("role.select", root))
 
@@ -97,6 +107,8 @@ def test_workspace_policy_rejects_group_or_world_readable_file(tmp_path):
 
 
 def test_workspace_policy_refuses_symbolic_link_replacement(tmp_path):
+    import os
+    import pytest
     root = tmp_path / "project"
     root.mkdir()
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "state")
@@ -104,7 +116,12 @@ def test_workspace_policy_refuses_symbolic_link_replacement(tmp_path):
     outside = tmp_path / "outside.json"
     outside.write_text('{"version": 1, "workspace_root": "x", "grants": {}}', encoding="utf-8")
     authority.policy_path.unlink()
-    authority.policy_path.symlink_to(outside)
+    try:
+        authority.policy_path.symlink_to(outside)
+    except OSError as exc:
+        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+            pytest.skip("NOT_DEMONSTRATED: this Windows identity cannot create file symlinks")
+        raise
 
     decision = authority.evaluate(ActionRequest("role.select", root))
 

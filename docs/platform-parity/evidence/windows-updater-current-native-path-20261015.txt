@@ -1,0 +1,19 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/test_updater.py::test_clean_checkout_advances_only_by_fast_forward PASSED [ 14%]
+tests/test_updater.py::test_dirty_checkout_is_preserved_and_never_fast_forwarded[tracked] PASSED [ 28%]
+tests/test_updater.py::test_dirty_checkout_is_preserved_and_never_fast_forwarded[untracked] PASSED [ 42%]
+tests/test_updater.py::test_divergence_check_only_previews_merge_without_changing_checkout PASSED [ 57%]
+tests/test_updater.py::test_check_only_marks_canonical_coverage_conflict_regenerable_without_mutation PASSED [ 71%]
+tests/test_updater.py::test_failed_coverage_regeneration_aborts_the_merge_and_preserves_checkout PASSED [ 85%]
+tests/test_updater.py::test_bootstrap_installs_source_without_replacing_foreign_launcher PASSED [100%]
+
+============================= 7 passed in 51.28s ==============================
+EXIT: 0

@@ -2,6 +2,8 @@
 from dataclasses import replace
 import hashlib
 import json
+import os
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +15,7 @@ from isycode.private_access import OwnedServeRoute
 from isycode.security import ActionRequest, AuthorityDecision
 from isycode.tailscale import ServeRoute
 from isycode.workspace_authority import WorkspaceAuthority
+from isycode.workspace_setup import state_root
 
 
 ACTION_OWNER = {
@@ -34,7 +37,7 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     root = tmp_path / "workspace"
     root.mkdir()
-    cli = tmp_path / "tailscale"
+    cli = tmp_path / ("tailscale.exe" if os.name == "nt" else "tailscale")
     apt = tmp_path / "apt-get"
     wrong = tmp_path / "other"
     for path in (cli, apt, wrong):
@@ -57,7 +60,7 @@ def setup(tmp_path, monkeypatch):
 
 def request_for(setup, action_id, **changes):
     root, cli, apt, _, _, _, _ = setup
-    private_directory = str(root.parent / "state" / "isycode" / "tailscale-apt" /
+    private_directory = str(state_root().expanduser().absolute() / "tailscale-apt" /
                             ("a" * 16 + "-" + "b" * 32))
     all_parameters = {
         "tailscale.inspect": {"executable": str(cli), "gateway_url": GATEWAY,
@@ -126,13 +129,13 @@ def request_for(setup, action_id, **changes):
     archive_name = staged["archive_name"]
     prefix = "pkgs.tailscale.com_stable_ubuntu_dists_noble_"
     artifacts = (
-        ("keyring.gpg", f"{private_directory}/keyring.gpg", 10, DIGEST),
-        ("source.list", f"{private_directory}/stage-source.list", 10, DIGEST),
-        ("apt.conf", f"{private_directory}/stage-apt.conf", 10, DIGEST),
-        (f"lists/{prefix}InRelease", f"{private_directory}/lists/{prefix}InRelease", 10, DIGEST),
+        ("keyring.gpg", str(Path(private_directory) / "keyring.gpg"), 10, DIGEST),
+        ("source.list", str(Path(private_directory) / "stage-source.list"), 10, DIGEST),
+        ("apt.conf", str(Path(private_directory) / "stage-apt.conf"), 10, DIGEST),
+        (f"lists/{prefix}InRelease", str(Path(private_directory) / "lists" / f"{prefix}InRelease"), 10, DIGEST),
         (f"lists/{prefix}main_binary-amd64_Packages.lz4",
-         f"{private_directory}/lists/{prefix}main_binary-amd64_Packages.lz4", 10, DIGEST),
-        (f"cache/{archive_name}", f"{private_directory}/cache/{archive_name}", 10, DIGEST),
+         str(Path(private_directory) / "lists" / f"{prefix}main_binary-amd64_Packages.lz4"), 10, DIGEST),
+        (f"cache/{archive_name}", str(Path(private_directory) / "cache" / archive_name), 10, DIGEST),
     )
     manifest = [(relative, size, digest) for relative, _, size, digest in artifacts]
     operations = action_runtime.tailscale_stage_operations(stage_dir, artifacts)

@@ -5,6 +5,7 @@ import os
 import tempfile
 from pathlib import Path
 from isycode.mcp_local import config_path, load_config, MAX_CONFIG_BYTES, MAX_SERVERS
+from isycode.platform_storage import storage
 
 PRESETS = {
     'playwright': {'command': ['npx', '-y', '@playwright/mcp@0.0.83'],
@@ -31,12 +32,18 @@ def add_preset(name: str, path: Path | None = None) -> None:
         raise ValueError('MCP configuration exceeds its limit')
     if path.parent.is_symlink():
         raise ValueError('MCP configuration directory must not be a symlink')
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if os.name == 'nt':
+        storage.ensure_directory(path.parent, repair=True)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temporary = tempfile.mkstemp(prefix='.mcp-', dir=path.parent)
     try:
         with os.fdopen(fd, 'wb') as output:
+            storage.protect(Path(temporary))
             output.write(payload); output.flush(); os.fsync(output.fileno())
         os.replace(temporary, path)
+        if not storage.private(path):
+            raise ValueError('MCP configuration did not retain private file protection')
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)

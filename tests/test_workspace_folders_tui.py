@@ -37,8 +37,8 @@ def test_sibling_read_and_native_approved_edit_use_its_own_root(tmp_path, monkey
             assert 'value = 1' in text and 'value = 10' not in text
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen):
                     break
             assert isinstance(app.screen, WriteApprovalScreen)
@@ -163,8 +163,8 @@ def test_readded_alias_invalidates_pending_diff_and_warning(tmp_path, monkeypatc
             await pilot.pause()
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen):
                     break
             assert isinstance(app.screen, WriteApprovalScreen)
@@ -175,7 +175,10 @@ def test_readded_alias_invalidates_pending_diff_and_warning(tmp_path, monkeypatc
             assert 'error' in json.loads(result)
             assert (sibling / 'file.py').read_text() == 'value = 1\n'
             task = asyncio.create_task(app._set_folder_auto_edit('sibling', True))
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if isinstance(app.screen, AutomaticEditsWarningScreen):
+                    break
             assert isinstance(app.screen, AutomaticEditsWarningScreen)
             store.remove('sibling')
             sibling.rename(sibling.with_name('old-sibling'))
@@ -208,27 +211,38 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             task = asyncio.create_task(app._add_workspace_folder())
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if isinstance(app.screen, AddWorkspaceFolderScreen):
+                    button = app.screen.query_one('#folder-add')
+                    if button.region.width and button.region.height and not button.disabled:
+                        break
             assert isinstance(app.screen, AddWorkspaceFolderScreen)
             app.screen.query_one('#folder-alias', Input).value = 'sibling'
             button = app.screen.query_one('#folder-add')
             assert button.region.bottom <= 24
-            await pilot.click('#folder-add')
+            await pilot.pause(.1)
+            assert await pilot.click('#folder-add')
             await asyncio.wait_for(task, 10)
             assert store.resolve('sibling') == sibling
             app._close_menu()
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen):
                     break
             await pilot.pause()
             assert app.screen.query_one('#write-approval-always').region.bottom <= 24
             await pilot.click('#write-approval-always')
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if (isinstance(app.screen, AutomaticEditsWarningScreen)
+                        and app.screen.query('#auto-edit-enable')):
+                    break
             assert isinstance(app.screen, AutomaticEditsWarningScreen)
-            assert app.screen.query_one('#auto-edit-enable').region.bottom <= 24
+            enable = app.screen.query_one('#auto-edit-enable')
+            assert enable.region.bottom <= 24
             await pilot.click('#auto-edit-enable')
             _, result = await asyncio.wait_for(task, 10)
             assert json.loads(result)['approval_mode'] == 'delegated'
@@ -327,8 +341,8 @@ def test_security_parent_requires_review_for_trusted_classic_attachment(tmp_path
             await pilot.pause()
             task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
-            for _ in range(100):
-                await pilot.pause(.01)
+            for _ in range(200):
+                await pilot.pause(.05)
                 if isinstance(app.screen, WriteApprovalScreen) or task.done():
                     break
             assert (sibling / 'file.py').read_text() == 'value = 1\n'

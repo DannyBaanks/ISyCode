@@ -1,4 +1,5 @@
 import asyncio
+from textual.widgets import Static
 from isycode.tui import TUIApp, SidePanel, plain_text
 from isycode import reasoning_options as reasoning
 from isycode.providers import Provider
@@ -49,7 +50,12 @@ def test_scroll_indicator_uses_same_stroke_in_both_directions(tmp_path, monkeypa
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            bar = app.query_one("#chat").vertical_scrollbar
+            chat = app.query_one("#chat")
+            await chat.mount(Static("\n".join(f"message {index}" for index in range(80))))
+            await pilot.pause()
+            bar = chat.vertical_scrollbar
+            assert bar.display
+            assert bar.size.height >= 3
             patterns = []
             for direction in (-1, 1):
                 bar._direction = direction

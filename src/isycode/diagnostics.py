@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from isycode.command_runner import sandbox_executable
+from isycode.platform_sandbox import sandbox_backend
 from isycode.providers import PRESETS, selected_model_name, selected_provider_name
 from isycode.user_defaults import UserDefaultsStore
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
@@ -56,7 +57,7 @@ def collect_diagnostics(root: Path) -> dict:
                          'connection': 'not-tested; use /check for an explicit owned request'},
             'defaults': defaults, 'workspace_mode': mode, 'enabled_actions': grants,
             'command_sandbox': 'ingredients-installed; execution not-probed' if sandbox_executable()
-                               else 'unavailable; needs Linux bubblewrap, libseccomp and /usr/bin/python3',
+                               else sandbox_backend.unavailable_reason(),
             'next_steps': ['Use Settings → Authority to inspect scoped permissions.',
                            'Use /context to read AGENTS.md with a workspace read grant.',
                            'Use /check only when a provider and its network permission are configured.']}

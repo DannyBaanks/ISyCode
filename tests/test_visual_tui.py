@@ -114,6 +114,17 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             widget = app.query_one("#idle-board")
+
+            def board_fits():
+                board_text = plain_text(widget)
+                return (widget._painted_width == widget.content_size.width
+                        and all(cell_len(line) <= widget.content_size.width
+                                for line in board_text.splitlines()))
+
+            for _ in range(100):
+                if board_fits():
+                    break
+                await pilot.pause(0.05)
             board = plain_text(widget)
             assert "LSPs" in board and "MCPs" in board and "Skills" in board
             assert "▀" in board
@@ -121,12 +132,16 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
             assert "|##|" not in board
             assert not list(app.query("#open-idle-art"))
             assert all(cell_len(line) <= widget.content_size.width for line in board.splitlines()), (
+                widget._painted_width,
                 widget.content_size.width,
                 [(cell_len(line), line[:70]) for line in board.splitlines()
                  if cell_len(line) > widget.content_size.width],
             )
             await pilot.resize_terminal(80, 24)
-            await pilot.pause()
+            for _ in range(100):
+                if board_fits():
+                    break
+                await pilot.pause(0.05)
             narrow = plain_text(widget)
             assert "▀" in narrow or "ISYCODE" in narrow
             assert "LSPs" in narrow
@@ -313,7 +328,9 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
                 assert board.region.y + len(board_lines) - 1 < composer.region.y
                 lsp = next(index for index, line in enumerate(board_lines) if 'LSPs' in line)
                 assert chat.region.y <= board.region.y + lsp < chat.region.bottom
-            app.save_screenshot('/tmp/isycode-header-tui.svg')
+            screenshot = tmp_path / 'isycode-header-tui.svg'
+            app.save_screenshot(str(screenshot))
+            assert screenshot.is_file()
 
     with capsys.disabled():
         asyncio.run(scenario())

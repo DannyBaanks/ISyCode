@@ -1,0 +1,16 @@
+Processing c:\development\isyco git\isycode
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: isycode
+  Building wheel for isycode (pyproject.toml): started
+  Building wheel for isycode (pyproject.toml): finished with status 'done'
+  Created wheel for isycode: filename=isycode-1.0.0rc1-py3-none-any.whl size=9079878 sha256=3334bf5699cd9a2996ff92c288f54d3c2f0d7874a440b31d08e8a84cf22134dd
+  Stored in directory: C:\Users\progr\AppData\Local\Temp\pip-ephem-wheel-cache-kura7vjs\wheels\fe\b1\4f\8890f87bee11713e473456550a1bd6fd54b73e49a6aca627bf
+Successfully built isycode
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe -m pip install --upgrade pip

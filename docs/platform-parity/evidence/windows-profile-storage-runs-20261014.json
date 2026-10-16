@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-14",
+  "source_parent_commit": "673be80",
+  "environment": "Windows 11 10.0.26200, Xeon E5-2678 v3, CPython 3.12.10, pywin32 312",
+  "scope": "Approved native sandbox acceptance continuation; only owned ephemeral profiles and copied runtimes/stages. No volume, quota, driver, administrator service, Linux product-code change or product activation.",
+  "red_controls": [
+    {"command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_resources.py::test_profile_storage_is_not_an_extra_writable_root", "output": "windows-profile-storage-red-20261014.txt", "exit": 1, "observed": "LPAC wrote seeded data in its AppContainer profile outside scratch"},
+    {"command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_resources.py::test_profile_registry_write_is_denied", "output": "windows-profile-registry-control-20261014.txt", "exit": 1, "observed": "LPAC wrote a seeded registry value into its own profile storage"},
+    {"command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_registry.py::test_non_owned_profile_name_is_refused_before_mutation_or_resume", "output": "windows-profile-namespace-red-20261014.txt", "exit": 1, "observed": "A seeded non-owned namespace reached registry discovery; fault witness blocked mutation and resume"}
+  ],
+  "final_runs": [
+    {"command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_process.py tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_recovery.py tests/test_windows_sandbox_acceptance.py tests/test_command_runner_windows.py tests/test_platform_sandbox.py tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners -k 'not execution_file_budget_blocks_513_mib'", "output": "windows-profile-hardening-final-20261014.txt", "exit": 0, "result": "54 passed, 1 deselected in 557.79s", "phase": "Before final namespace predicate; quota control unchanged and explicitly excluded"},
+    {"command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_registry.py tests/test_windows_sandbox_recovery.py tests/test_command_runner_windows.py::test_native_owner_keeps_approval_and_promotes_accounted_diff tests/test_windows_sandbox_resources.py::test_profile_storage_is_not_an_extra_writable_root tests/test_windows_sandbox_process.py::test_native_lpac_loads_standard_native_extensions", "output": "windows-profile-scope-final-20261014.txt", "exit": 0, "result": "15 passed in 174.36s", "phase": "Current namespace predicate, corrected sibling-preparation witness and all registry controls"},
+    {"command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners", "output": "windows-profile-authority-snapshot-final-20261014.txt", "exit": 0, "result": "1 passed in 5.93s"}
+  ],
+  "counts": "Selections overlap and are not summed as unique cases",
+  "storage_design": "WINDOWS-STORAGE-DESIGN.md is proposed, not implemented. The current token lacks SeManageVolumePrivilege; read-only host observations recorded in windows-bounded-storage-host-20261014.txt.",
+  "not_demonstrated": ["enforced execution storage ceiling", "VHD provider/provisioning/identity/exhaustion acceptance", "native product activation", "Internet and wider IPC/device acceptance", "new GitHub CI execution", "full product parity"],
+  "native_accepted": false
+}

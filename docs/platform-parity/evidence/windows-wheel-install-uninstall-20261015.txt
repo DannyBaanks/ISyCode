@@ -1,0 +1,9 @@
+Windows wheel install/uninstall acceptance
+recorded_at_utc=2026-10-16T00:26:28.868157+00:00
+environment=Windows 11 x64; CPython 3.12.10; fresh venv with system dependencies visible
+commands=build wheel --no-deps; install wheel --no-deps --ignore-installed; isycode.exe --version; isycode.exe --help; pip uninstall -y isycode; pip show verifies absence
+source=working-tree pyproject.toml and src/ copied into a private D: staging path with Unicode and spaces
+result=PASS; install created Scripts/isycode.exe; version/help exited 0; uninstall removed launcher and distribution
+wheel_sha256=a6e97cb4d76b74a933625e1e51fb5879fcdace4b334966f37d87ac4415c2a3c6
+private_raw_log_sha256=ea98c12c075be5b8694ca7a581f65a0d4706fbb920dc8aa89a96867b563f0f1d
+private_raw_log_path_disclosed=NO

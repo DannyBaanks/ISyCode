@@ -87,6 +87,11 @@ def test_scroll_thumb_tracks_position_and_remains_after_settle(tmp_path, monkeyp
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
             bar = app.query_one('#chat').vertical_scrollbar
+            for _ in range(100):
+                await pilot.pause(.05)
+                if bar.size.height >= 3:
+                    break
+            assert bar.size.height >= 3
             bar.window_virtual_size = 1000
             bar.window_size = 20
             bar.position = 0

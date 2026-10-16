@@ -1,0 +1,26 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/test_m15_closure.py::test_sessions_screen_forks_through_the_owner_and_the_journal FAILED [100%]
+
+================================== FAILURES ===================================
+________ test_sessions_screen_forks_through_the_owner_and_the_journal _________
+tests\test_m15_closure.py:150: in test_sessions_screen_forks_through_the_owner_and_the_journal
+    source = Path(action_coverage.__file__).with_name("tui_screens_sessions.py").read_text()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1028: in read_text
+    return f.read()
+           ^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py:23: in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 35742: character maps to <undefined>
+=========================== short test summary info ===========================
+FAILED tests/test_m15_closure.py::test_sessions_screen_forks_through_the_owner_and_the_journal - UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 35742: character maps to <undefined>
+============================== 1 failed in 3.14s ==============================

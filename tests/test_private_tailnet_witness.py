@@ -1,5 +1,6 @@
 """Offline end-to-end private tailnet lifecycle using fake command owners."""
 from pathlib import Path
+import os
 
 from isycode.approvals import ActionApprovalStore
 from isycode.private_access import PrivateAccessStateStore
@@ -14,7 +15,7 @@ def test_private_access_preflight_enable_verify_disable_keeps_other_route(tmp_pa
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     root = tmp_path / "workspace"
     root.mkdir()
-    cli = tmp_path / "tailscale"
+    cli = tmp_path / ("tailscale.exe" if os.name == "nt" else "tailscale")
     cli.write_text("fake CLI", encoding="utf-8")
     cli.chmod(0o700)
     other = ServeRoute("docs.tail123.ts.net:443", "/docs", "http://127.0.0.1:9000", True)
@@ -62,7 +63,7 @@ def test_cancelled_private_route_preview_has_no_command_or_saved_state(tmp_path,
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
     root = tmp_path / "workspace"
     root.mkdir()
-    cli = tmp_path / "tailscale"
+    cli = tmp_path / ("tailscale.exe" if os.name == "nt" else "tailscale")
     cli.write_text("fake CLI", encoding="utf-8")
     cli.chmod(0o700)
     adapter = FakeAdapter(TailscaleSnapshot(

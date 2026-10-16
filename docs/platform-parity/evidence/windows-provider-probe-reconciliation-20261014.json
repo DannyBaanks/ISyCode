@@ -1,0 +1,10 @@
+{
+  "cause": "Red metadata controls exposed old code ignoring ISYCODE_STATE_HOME, cp1252 encoding and 5 lost concurrent writes. Exact synthetic rows were removed; tests also override XDG_STATE_HOME now.",
+  "removed_exact_synthetic_rows": 32,
+  "attempted_synthetic_rows": 37,
+  "original_sha256": "8efb6cbbb3b3e0b1f515ed7e37b85d1a7736cafd0f245dfb9a9ea07a05beba57",
+  "remaining_bytes": 0,
+  "remaining_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "unmatched_bytes_preserved": true,
+  "private_backup_outside_git": "D:\\ISyCode-Sandbox-5ae383aa26a8490ea9910d768b51f4a0\\provider-probe-before-clean.bin"
+}

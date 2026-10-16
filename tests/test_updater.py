@@ -19,6 +19,15 @@ def git(*args: str, cwd: Path) -> str:
     return result.stdout.strip()
 
 
+@pytest.fixture(autouse=True)
+def isolate_git_user_configuration(monkeypatch, tmp_path):
+    # These local repositories must not inherit machine-wide line-ending rules,
+    # credentials, or filters from the developer's Git configuration.
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("GIT_ATTR_NOSYSTEM", "1")
+
+
 def repositories(tmp_path: Path) -> tuple[Path, Path, Path]:
     remote = tmp_path / "origin.git"
     repo = tmp_path / "source"
@@ -51,6 +60,33 @@ def updater(repo: Path, *, confirm=lambda question, details: True):
     """An updater whose user answers «s» to stash/merge unless a test says otherwise."""
     assert SelfUpdater is not None, "SelfUpdater must exist before updater behavior can be tested"
     return SelfUpdater(source_root=repo, allow_local_remotes=True, confirm=confirm)
+
+
+def test_git_environment_keeps_only_standard_proxy_and_tls_overrides(monkeypatch, tmp_path):
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.example.invalid:8080")
+    monkeypatch.setenv("all_proxy", "socks5://proxy.example.invalid:1080")
+    monkeypatch.setenv("no_proxy", ".example.invalid,localhost")
+    monkeypatch.setenv("SSL_CERT_FILE", str(tmp_path / "ca-bundle.pem"))
+    monkeypatch.setenv("CURL_CA_BUNDLE", str(tmp_path / "curl-ca.pem"))
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "must-not-pass")
+    monkeypatch.setenv("PYTHONPATH", "must-not-pass")
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_SSL_NO_VERIFY", "1")
+
+    env = SelfUpdater(discover_source_checkout=False)._env()
+    normalized_env = {key.casefold(): value for key, value in env.items()}
+
+    assert normalized_env["https_proxy"] == "http://proxy.example.invalid:8080"
+    assert normalized_env["all_proxy"] == "socks5://proxy.example.invalid:1080"
+    assert normalized_env["no_proxy"] == ".example.invalid,localhost"
+    assert normalized_env["ssl_cert_file"] == str(tmp_path / "ca-bundle.pem")
+    assert normalized_env["curl_ca_bundle"] == str(tmp_path / "curl-ca.pem")
+    assert "AWS_ACCESS_KEY_ID" not in env
+    assert "PYTHONPATH" not in env
+    assert "GIT_CONFIG_COUNT" not in env
+    assert "GIT_SSL_NO_VERIFY" not in env
+    assert env["GIT_CONFIG_NOSYSTEM"] == "1"
+    assert env["GIT_CONFIG_GLOBAL"] == os.devnull
 
 
 def test_clean_checkout_advances_only_by_fast_forward(tmp_path):
@@ -479,6 +515,7 @@ def test_local_url_rewrite_is_blocked_before_fetch(tmp_path):
     assert any("configuración local" in line.casefold() for line in report.lines)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX pip console-script format")
 def test_pip_launcher_recognition_requires_exact_entry_point(tmp_path):
     assert SelfUpdater is not None
     candidate = tmp_path / "isycode"
@@ -609,12 +646,15 @@ def test_bootstrap_installs_source_without_replacing_foreign_launcher(tmp_path, 
 
     def runner(args, **kwargs):
         if args[1:3] == ["-m", "venv"]:
-            python = Path(args[-1]) / "bin" / "python"
+            python = Path(args[-1]) / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             python.parent.mkdir(parents=True, exist_ok=True)
             python.write_text("#!/bin/sh\n", encoding="utf-8")
             python.chmod(0o755)
             return subprocess.CompletedProcess(args, 0, "", "")
         if "-m" in args and "pip" in args:
+            if os.name == "nt":
+                launcher = data_home / "isycode" / "source" / ".venv" / "Scripts" / "isycode.exe"
+                launcher.write_bytes(b"test launcher")
             return subprocess.CompletedProcess(args, 0, "", "")
         return subprocess.run(args, **kwargs)
 
@@ -623,9 +663,12 @@ def test_bootstrap_installs_source_without_replacing_foreign_launcher(tmp_path, 
 
     assert report.status == "updated"
     assert (destination / "scripts" / "isycode").is_file()
-    assert (destination / ".venv" / "bin" / "python").is_file()
+    python_path = destination / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    assert python_path.is_file()
     assert foreign.read_text(encoding="utf-8") == "another application\n"
-    assert any(str(destination / "scripts" / "isycode") in line for line in report.lines)
+    command = (destination / ".venv" / "Scripts" / "isycode.exe" if os.name == "nt"
+               else destination / "scripts" / "isycode")
+    assert any(str(command) in line for line in report.lines)
 
 
 def test_official_repository_is_accepted_case_insensitively():

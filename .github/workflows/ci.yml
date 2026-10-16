@@ -104,6 +104,35 @@ jobs:
       - name: Run test suite
         run: python -m pytest -q -m "not integration"
 
+  test-windows:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Give git a commit identity
+        shell: pwsh
+        run: |
+          git config --global user.name "ISyCode CI"
+          git config --global user.email "ci@isycode.invalid"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install ISyCode and test runner
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[test]'
+
+      - name: Run the full Windows test suite
+        run: python -m pytest -q -m "not integration"
+
   gate-evidence:
     name: Gate evidence
     runs-on: ubuntu-latest
@@ -125,7 +154,7 @@ jobs:
 
   package:
     name: Package (${{ matrix.target }})
-    needs: [test, test-textual-current, gate-evidence]
+    needs: [test, test-textual-current, test-windows, gate-evidence]
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
