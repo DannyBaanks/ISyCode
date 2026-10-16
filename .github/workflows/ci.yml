@@ -180,6 +180,35 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e . pyinstaller==6.22.3
 
+      - name: Verify clean Windows dependency install and uninstall
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'isycode-clean-install'
+          $venv = Join-Path $root 'venv'
+          New-Item -ItemType Directory -Path $root | Out-Null
+          python -m venv $venv
+          if ($LASTEXITCODE -ne 0) { throw 'Creating the clean install environment failed.' }
+
+          $python = Join-Path $venv 'Scripts\python.exe'
+          & $python -m pip --isolated --disable-pip-version-check --no-cache-dir install --index-url https://pypi.org/simple $PWD.Path
+          if ($LASTEXITCODE -ne 0) { throw 'Installing ISyCode with clean dependencies failed.' }
+
+          $env:ISYCODE_STATE_HOME = Join-Path $root 'isolated-state'
+          $isycode = Join-Path $venv 'Scripts\isycode.exe'
+          foreach ($argument in @('--version', '--help', 'doctor', 'dirs', 'models')) {
+            & $isycode $argument
+            if ($LASTEXITCODE -ne 0) { throw "Clean installation smoke failed: $argument" }
+          }
+
+          & $python -m pip --isolated uninstall -y isycode
+          if ($LASTEXITCODE -ne 0) { throw 'Uninstalling ISyCode failed.' }
+          if (Test-Path -LiteralPath $isycode) { throw 'Uninstall left the isycode launcher behind.' }
+          $packages = & $python -m pip --isolated list --format=freeze
+          if ($LASTEXITCODE -ne 0) { throw 'Checking the clean environment after uninstall failed.' }
+          if ($packages -match '(?im)^isycode==') { throw 'Uninstall left ISyCode distribution metadata behind.' }
+
       - name: Verify tag matches package version
         id: metadata
         shell: bash
@@ -222,8 +251,26 @@ jobs:
 
       - name: Smoke-check Windows executable
         if: runner.os == 'Windows'
-        shell: bash
-        run: dist/isycode.exe --version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'ISyCode portátil package smoke'
+          $temp = Join-Path $root 'temp'
+          New-Item -ItemType Directory -Path $temp -Force | Out-Null
+          $source = Join-Path $PWD.Path 'dist/isycode.exe'
+          $installed = Join-Path $root 'isycode.exe'
+          Copy-Item -LiteralPath $source -Destination $installed
+
+          $env:ISYCODE_STATE_HOME = Join-Path $root 'state'
+          $env:TEMP = $temp
+          $env:TMP = $temp
+          foreach ($argument in @('--version', '--help', 'doctor', 'dirs', 'models')) {
+            & $installed $argument
+            if ($LASTEXITCODE -ne 0) { throw "Portable executable smoke failed: $argument" }
+          }
+
+          Remove-Item -LiteralPath $installed -Force
+          if (Test-Path -LiteralPath $installed) { throw 'Portable uninstall left the executable behind.' }
 
       - name: Smoke-check Linux executable
         if: runner.os == 'Linux'

@@ -843,3 +843,36 @@ named pipe under the tested policy. Other IPC/device surfaces, separate-user
 ACL evidence, runtime/dependency staging, packaged updater acceptance,
 power-loss recovery and physical interactive parity remain open;
 `NATIVE_ACCEPTED=False` remains unchanged.
+
+## Windows dependency install and portable EXE lifecycle — 2026-10-16
+
+A new Windows 11 / Python 3.12.10 virtual environment installed the current
+source distribution from public PyPI with no cache and no user pip configuration.
+The install fetched its runtime dependencies, passed `--version`, `--help`,
+`doctor`, `dirs` and `models`, then `pip uninstall` removed both the launcher
+and distribution metadata. The isolated state directory was outside the source
+tree. Raw output and command metadata are in
+`evidence/windows-clean-source-install-pr52-20261016.txt` and its adjacent
+`.json` record (output SHA-256
+`4b21df99bd0fb9008bdced373f8a68dfd8df060185f08b42b806b508a88939e4`). This
+closes the earlier clean-dependency-download gap. It does not add an uninstall
+switch to the checkout PowerShell installer.
+
+PyInstaller 6.22.3 then built the current Windows one-file executable from that
+clean environment. The executable (SHA-256
+`dc7f095afda2775673d53eead2c5dcfdad2578026e6227f6e9da679d15dc04e6`) was
+copied to a disposable D: path containing spaces and an accented character; all
+five CLI smokes passed, and deleting the copy left no executable behind. Raw
+output and metadata are in
+`evidence/windows-portable-exe-copy-delete-pr52-20261016.txt` and its adjacent
+`.json` record (output SHA-256
+`d6c2b734a3350574f959fabf0a45e57aa687a12c57370e1cbc709deea96a9437`). This
+demonstrates portable copy/delete installation, not an autonomous EXE updater.
+
+The Windows package job now repeats the clean dependency install, five CLI
+smokes and uninstall, and copies the built executable into a Unicode/space
+path for the same smoke and delete checks. The workflow YAML and PowerShell
+step bodies parse locally. The currently running full suite predates these
+workflow additions; the updated PR head must pass its new hosted run. The live
+proxied Git update query and supported standalone self-upgrade remain
+NOT_DEMONSTRATED. `NATIVE_ACCEPTED=False` remains unchanged.
