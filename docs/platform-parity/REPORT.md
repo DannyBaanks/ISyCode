@@ -960,6 +960,10 @@ waits for either state and then for trust persistence. Both fixes pass locally,
 including the trust test with `_startup_workspace` delayed by two seconds.
 Exact CI excerpts and local results are in
 `evidence/windows-session-search-startup-race-pr52-20261016.txt`. A full CI
-rerun containing these newest fixes is pending; no full-suite pass is claimed
-until it completes. These are test synchronization fixes and do not change
-application behavior.
+run of the same head also exposed a session-continuity test that called
+`/compact` before asynchronous startup had installed the session owner and
+grants. It now waits for `_sessions_enabled()` before measuring failed-request
+usage persistence. The test passes locally both normally and with startup
+delayed by two seconds. Its CI excerpt and reproduction are recorded in the
+same evidence file. These are test synchronization fixes and do not change
+application behavior; a full CI rerun containing all six fixes is pending.

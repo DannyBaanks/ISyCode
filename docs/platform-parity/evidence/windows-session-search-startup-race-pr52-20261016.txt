@@ -118,6 +118,26 @@ The quiet Classic trust/diff test passed on Windows with
 `_startup_workspace` artificially delayed by two seconds:
 DELAYED_QUIET_CLASSIC_TRUST_AND_DIFF_TEST=PASS
 
+Native contract workflow failure on commit d1d5a490f0d65b71215526cfd4a1cb590d6213b6
+Workflow 38870993432 / Windows job
+https://github.com/DannyBaanks/ISyCode/actions/runs/38870993432/job/116874773081
+Failure: tests/test_session_continuity_tui.py::test_failed_explicit_compaction_saves_unknown_consumption
+Result: 1 failed, 100 passed, 30 skipped, 1 deselected in 64.61s.
+Observed: after one fixed pilot pause the test called /compact before the
+asynchronous workspace startup had installed its recurring ChatSessionOwner
+and grants. A provider failure therefore reached draft persistence before
+sessions were enabled, leaving no saved session id to inspect. The test now
+waits for app._sessions_enabled() before starting the operation. This preserves
+the test's purpose—checking that a failed compaction records unknown usage—
+while establishing the product precondition of an initialized saved workspace.
+
+Local verification after this fix
+The focused test passed directly on Windows:
+1 passed in 4.02s
+The same test passed with _startup_workspace artificially delayed by two
+seconds:
+DELAYED_COMPACTION_STARTUP_REPRO=PASS
+
 Current status
-The two latest fixes are committed locally and awaiting a fresh full CI run.
+The latest fixes are committed locally and awaiting a fresh full CI run.
 Do not report CI green until the workflow for the fixes completes successfully.

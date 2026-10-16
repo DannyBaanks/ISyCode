@@ -10,6 +10,17 @@ from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
 
 
+async def _wait_for_condition(pilot, predicate, description, timeout=10.0):
+    deadline = asyncio.get_running_loop().time() + timeout
+    while True:
+        if predicate():
+            return
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise AssertionError(f"Timed out waiting for {description}")
+        await pilot.pause(min(0.05, remaining))
+
+
 def test_tool_context_survives_next_turn_and_restart_without_replay(tmp_path, monkeypatch, capsys):
     root = configure(tmp_path, monkeypatch)
     UserDefaultsStore().update(new_workspace='recurring')
@@ -215,7 +226,8 @@ def test_failed_explicit_compaction_saves_unknown_consumption(tmp_path, monkeypa
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await _wait_for_condition(
+                pilot, app._sessions_enabled, "recurring workspace session grants")
             app._history = [{'role': 'user', 'content': 'Old conversation.'},
                             {'role': 'assistant', 'content': 'Old answer.'}] * 4
             await app._compact_conversation()
