@@ -972,5 +972,8 @@ workspace-startup worker finished, and the question selector test asserted
 visibility after a fixed 350 ms pause. The login test now awaits startup; the
 selector test waits until the focused option is inside its card. Both pass
 locally, including the login test with startup delayed by two seconds and three
-consecutive selector runs. The evidence file records the failures and local
-results. A full CI rerun with all eight synchronization fixes is pending.
+consecutive selector runs. Textual 8 Linux then found a folder-browser test
+that navigated before `_workspace` was initialized; it now awaits the startup
+worker before browsing and passes locally with a two-second startup delay. The
+evidence file records the failures and local results. A full CI rerun with all
+nine synchronization fixes is pending.

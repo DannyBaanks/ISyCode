@@ -1,12 +1,12 @@
 {
-  "recorded_at": "2026-10-16T08:34:07.291353+00:00",
+  "recorded_at": "2026-10-16T08:57:18.996392+00:00",
   "baseline_commit": "b80975517f8496b70b8f7c2d37f408cd839d6b27",
-  "source_parent_commit": "f5cb709ebf92e33b47a36a11961d17e0e248320a",
+  "source_parent_commit": "28e42eb87db5b5e72776a9bc77641ddf532badba",
   "environment": {
     "system": "Windows-11-10.0.26200-SP0",
     "python": "3.12.10"
   },
-  "scope": "PR #52 parity follow-up. Windows updater preserves SYSTEMROOT for native Git and passes a live proxied ls-remote plus isolated bundled EXE update --check. Physical Ubuntu full-history non-integration suite: 2025 passed, 153 skipped, 11 deselected. Temporary proxy configuration restored to its original SHA-256; package removed, service stopped, port closed, and temporary SSH key removed. The first full CI rerun exposed a session-search test race; the test now waits for its startup grants and screen transition, and a synthetic delayed-startup reproduction passes locally. CI rerun then exposed two more timing assumptions in a tool-grouping test and a drag-selection test; both now wait for their required startup or visible-layout state and pass local delayed-startup checks plus three consecutive drag-selection runs. The next Windows CI pair exposed banner reflow and quiet Classic trust-prompt timing; those tests now wait for final banner geometry or the trust prompt and persisted decision, and both pass locally including a two-second delayed-startup trust reproduction. A full CI rerun after these latest fixes then exposed session-continuity compaction before workspace startup had enabled saved sessions; the test now waits for the session grants and passes locally with startup delayed by two seconds. The next Windows CI pair exposed a Grok audit baseline taken before the startup worker completed and a question-selector visibility assertion after a fixed pause; the test now awaits worker completion or actual in-card geometry. Both pass locally, including a two-second delayed-startup reproduction and three selector runs. A full CI rerun after all latest fixes is pending. Five-user matrix waived; NATIVE_ACCEPTED=False and separate-user ACL, remaining IPC/device cases, runtime staging, power-loss, and interactive physical parity remain NOT_DEMONSTRATED.",
+  "scope": "PR #52 parity follow-up. Windows updater preserves SYSTEMROOT for native Git and passes a live proxied ls-remote plus isolated bundled EXE update --check. Physical Ubuntu full-history non-integration suite: 2025 passed, 153 skipped, 11 deselected. Temporary proxy configuration restored to its original SHA-256; package removed, service stopped, port closed, and temporary SSH key removed. The first full CI rerun exposed a session-search test race; the test now waits for its startup grants and screen transition, and a synthetic delayed-startup reproduction passes locally. CI rerun then exposed two more timing assumptions in a tool-grouping test and a drag-selection test; both now wait for their required startup or visible-layout state and pass local delayed-startup checks plus three consecutive drag-selection runs. The next Windows CI pair exposed banner reflow and quiet Classic trust-prompt timing; those tests now wait for final banner geometry or the trust prompt and persisted decision, and both pass locally including a two-second delayed-startup trust reproduction. A full CI rerun after these latest fixes then exposed session-continuity compaction before workspace startup had enabled saved sessions; the test now waits for the session grants and passes locally with startup delayed by two seconds. The next Windows CI pair exposed a Grok audit baseline taken before the startup worker completed and a question-selector visibility assertion after a fixed pause; the test now awaits worker completion or actual in-card geometry. Both pass locally, including a two-second delayed-startup reproduction and three selector runs. Textual 8 Linux then found the workspace-folder browser test navigating before the workspace-startup worker initialized app._workspace; it now awaits that worker and passes locally with startup delayed by two seconds. A full CI rerun after all latest fixes is pending. Five-user matrix waived; NATIVE_ACCEPTED=False and separate-user ACL, remaining IPC/device cases, runtime staging, power-loss, and interactive physical parity remain NOT_DEMONSTRATED.",
   "files": {
     ".gitattributes": "d566456176c43a960423bfd354917a192da799bd077716ad4485c853d9851c31",
     ".github/workflows/ci.yml": "77b31759d397ef53cb425ff151db4e56234a27724010bcfdea78c23d6755103a",
@@ -16,14 +16,14 @@
     "docs/platform-parity/INVENTORY.md": "adac877d220f0bfdda7c969f103239a997b639cd891f967db5a9c6ee9475d62e",
     "docs/platform-parity/PLAN.md": "bb6a3222450f17b8979200898e0a42cb8f7fc8a82935a9e52280981528b32a1c",
     "docs/platform-parity/README.md": "20dc75ab73d00640de91522ef4c394b3cf18034f040a24807075432378ef2f22",
-    "docs/platform-parity/REPORT.md": "b465df18feebe6e575b32e1b10b9cc4237c7a28e0a55edddf35a45b69f2df2d0",
+    "docs/platform-parity/REPORT.md": "3709a7987fc8bcb763219b07bd3293525ed6de796f524c5780f3ba593e9a05cb",
     "docs/platform-parity/WINDOWS-SANDBOX-DESIGN.md": "d981ed3de605755f582b59f613376ceca31a9defb78cb00412041f16718433e9",
     "docs/platform-parity/WINDOWS-SANDBOX-GUIA.md": "757c9be046ca19c9046d164a2edb25c47ace0bc4fe83359482dcbc730abb2fc4",
     "docs/platform-parity/WINDOWS-STORAGE-DESIGN.md": "a8e8b98b689dfd21d59eac2893c01b04733bc658696e2cec4d19f2e45c3bf662",
     "docs/platform-parity/WINDOWS-STORAGE-GUIA.md": "0a249c51154e4922ff9bf575e31c68cf2eebfdfe3decb34dbe7bd8af70c7ca4e",
     "docs/platform-parity/evidence/bundle-restoration.json": "94c30cef2f5bd1e1fdfba0f2d34527e12dac9dec5bd0ad42de0b2a2810ccbbb4",
     "docs/platform-parity/evidence/create-private-clipboard-station-20261014.py": "cc38adf3d977acdf7619390eab75a3b0f28067783f55558a8b0ccec34e9c5e23",
-    "docs/platform-parity/evidence/finalize-parity-followup-20261016.py": "bf96dd47c01073d2ff71d243351f41af5a5150652d4c6e905864ea3c436d035d",
+    "docs/platform-parity/evidence/finalize-parity-followup-20261016.py": "276aa1ec9f6eafa957fe66bdddf34f261b0a9758d578d2bf5e61b2fee3f7a923",
     "docs/platform-parity/evidence/finalize-sandbox-evidence-20261014.py": "14045311c1713900d170f9e128e9b1dceff72bafec7654c449738b364bd69186",
     "docs/platform-parity/evidence/hangtrace/sitecustomize.py": "4f6bc48e91b213d6f9230d0127661940c82d97a04b31bbb2b7c08c243fe7dedf",
     "docs/platform-parity/evidence/hashes-before-bounded-provider-20261014.json": "244d9eb01e7d967206883ea494920ee11153d546ad7aca2e3c41a166924e1ac5",
@@ -304,7 +304,7 @@
     "docs/platform-parity/evidence/windows-session-message-session-id-stabilized-20261015.txt": "f8137993a5049767bada770b87029210075f7e681604a70097441bd7f95d0bed",
     "docs/platform-parity/evidence/windows-session-processes-exit.txt": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
     "docs/platform-parity/evidence/windows-session-processes.log": "ac5585165fbbed2af43635c52a3aa6e3440d6908b01956d2aa52ddf71cd98a49",
-    "docs/platform-parity/evidence/windows-session-search-startup-race-pr52-20261016.txt": "fa75c802ca42a25588fba8346957693d8e084492ef9e66cfa860d3564a0c7d6b",
+    "docs/platform-parity/evidence/windows-session-search-startup-race-pr52-20261016.txt": "43a0d82a5c09ed2e29ff48a73eeefd6f945e3fd826af0afa1433bbe7f8efc35a",
     "docs/platform-parity/evidence/windows-suite.log": "1943048f1d72c97cc6fe756b7e29eab70807aa466c9ee0bcd83316b87061a487",
     "docs/platform-parity/evidence/windows-tailnet-rtk-followup-20261015.txt": "340ab6a2bf0abd7b65148185ceb2749018e5db6211589cdb4f0a330ef7198bc2",
     "docs/platform-parity/evidence/windows-targeted-closure-d-r1-20261015.txt": "ed873ec59c54e7af930f8e690104bfab71f7063c2d6ca07f094f7781d7ed0778",
@@ -497,7 +497,7 @@
     "tests/test_windows_sandbox_volume_acceptance.py": "53c91e3fb77e01e6195b17252eb7cf8c733fc679f6eddbe77272ea18eb84665d",
     "tests/test_windows_sandbox_volume_api.py": "d80b3460f58f837852e1983b3861bab5a6491464faf25c7678b61c316feb0fbe",
     "tests/test_windows_sandbox_volume_lifecycle.py": "7636ab165b9ba8cb18332491006e1db6ef5e1ce0a6d5d1f5b8a748452fad87ab",
-    "tests/test_workspace_folders_tui.py": "c15750503c11ecf96dfe2990ea1aed334179b5f051da3f98114267dec15efd2d",
+    "tests/test_workspace_folders_tui.py": "15e00443bc7a909750f58bbc880edea04a96739fc30b19c7b20872407f7311e9",
     "tests/test_workspace_sessions.py": "deea1be226d6ea3f57e855e38900f3eebc3a1606914d45e540ce6886a73e0173"
   },
   "compressed_raw_evidence": [

@@ -165,6 +165,24 @@ QUESTION_SCROLL_WAIT_RUN_1=PASS
 QUESTION_SCROLL_WAIT_RUN_2=PASS
 QUESTION_SCROLL_WAIT_RUN_3=PASS
 
+Additional Textual 8 Linux CI failure on commit 28e42eb87db5b5e72776a9bc77641ddf532badba
+Workflow 38874584394
+https://github.com/DannyBaanks/ISyCode/actions/runs/38874584394/job/116886445243
+Failure: tests/test_workspace_folders_tui.py::test_file_browser_selection_keeps_primary_identity
+Result: 1 failed, 2022 passed, 156 skipped, 11 deselected in 714.81s.
+Observed: the test navigated to a sibling after one fixed pilot pause. Its
+workspace-startup worker had not yet set app._workspace; _browse_workspace_folder
+therefore returned before loading the directory and left _file_path empty. The
+test now waits for the workspace-startup worker and asserts workspace
+initialization before browsing.
+
+Local verification after this fix
+The focused test passed directly on Windows:
+1 passed in 5.58s
+The same test passed with _startup_workspace artificially delayed by two
+seconds:
+DELAYED_BROWSER_STARTUP_REPRO=PASS
+
 Current status
 The latest fixes are committed locally and awaiting a fresh full CI run.
 Do not report CI green until the workflow for the fixes completes successfully.

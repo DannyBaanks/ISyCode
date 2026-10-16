@@ -143,6 +143,13 @@ def test_file_browser_selection_keeps_primary_identity(tmp_path, monkeypatch, ca
         app = TUIApp()
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
+            startup_workers = tuple(
+                worker for worker in app.workers
+                if worker.group == 'workspace-startup'
+            )
+            if startup_workers:
+                await app.workers.wait_for_complete(startup_workers)
+            assert app._workspace is not None
             await app._browse_workspace_folder('sibling')
             assert app._workspace_root == root and app._file_path == str(sibling)
             await app._preview_file(str(sibling / 'file.py'))
