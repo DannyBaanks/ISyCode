@@ -22,3 +22,9 @@
 
 - For changes advancing Classic autonomy, Security policy, or the associated UX, follow [the executable roadmap](docs/roadmap-classic-security-ux.md). Its target does not describe current behavior: the per-action approval rule above remains the baseline until the applicable gates authorize a tested transition.
 - Do not advance dependent milestones or release affected capabilities with failed, missing, or reopened prerequisites. Preserve evidence and user work; document publication is not gate completion. These are procedural requirements today; automated CI enforcement is a pending roadmap deliverable.
+
+## Cross-repo agent briefing registry
+
+- Before a large refactor, audit, or when planning work that touches the TUI architecture, read the private registry [DannyBaanks/vicios-tecnicos](https://github.com/DannyBaanks/vicios-tecnicos) (clone it with `gh repo clone DannyBaanks/vicios-tecnicos` if not present locally). It holds dated, evidence-backed briefings per repo — for ISyCode start with `briefings/isicode/2026-10-16-post-remediacion-v0.md`.
+- The registry maps where code lives after the V0 remediation (M0–M10, commits `f73ead1`..`86aee1d`), which patterns are known debt, and which decisions are pending. A briefing describes a moment in time: verify against the working tree before citing it, and update the registry when your session materially changes the picture.
+- Additions to the registry are commits like any other repo: honest, dated, with evidence.
