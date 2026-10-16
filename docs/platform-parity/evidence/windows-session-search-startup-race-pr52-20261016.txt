@@ -1,0 +1,60 @@
+Windows session-search startup race — PR #52
+Date: 2026-10-16
+
+Prior CI evidence
+Workflow: https://github.com/DannyBaanks/ISyCode/actions/runs/38859799571
+Windows job: https://github.com/DannyBaanks/ISyCode/actions/runs/38859799571/job/116839260587
+Head: 3f7d7c45f0110a503e32513927b17c9f4512d7f6
+Result: 1 failed, 1838 passed, 339 skipped, 11 deselected, 1 xfailed in 975.45s
+Failure: tests/test_session_search_screen.py::test_action_opens_screen_in_classic_recurring
+Observed: after one pilot.pause(), action_open_session_search() did not push
+SessionSearchScreen; app.screen remained Screen(id='_default').
+
+Root cause
+TUIApp starts workspace initialization asynchronously. The test's single
+pilot.pause() did not guarantee that the recurring workspace's session owner
+and grants were ready. The action correctly returned while those prerequisites
+were absent. Other jobs in that workflow passed: Linux Textual 8, Linux Python
+3.10, and Gate evidence.
+
+Regression change
+The test waits up to ten seconds for app._sessions_enabled(), invokes the
+action, then waits up to ten seconds for SessionSearchScreen to become active.
+The helper polls the actual conditions with pilot.pause() bounded to 50 ms.
+Application behavior is unchanged.
+
+Local delayed-startup reproduction after the change
+Command: py - (PowerShell, from the repository root; inline Python below)
+Exit status: 0
+Output: DELAYED_STARTUP_TEST=PASS
+Environment: Windows 11 host, Python 3.12, Textual 8.2.8, pytest 9.1.1.
+The test invoked the existing async regression test directly, patched
+TUIApp._startup_workspace to await asyncio.sleep(2) before original startup,
+and used pytest's MonkeyPatch helper. This local reproduction is not a
+substitute for the pending Windows CI rerun.
+
+Inline reproduction:
+import asyncio, sys, tempfile
+from pathlib import Path
+sys.path[:0] = ["tests", "src"]
+from _pytest.monkeypatch import MonkeyPatch
+from isycode.tui import TUIApp
+import test_session_search_screen as test
+original = TUIApp._startup_workspace
+async def delayed_startup(self):
+    await asyncio.sleep(2)
+    return await original(self)
+async def main():
+    monkeypatch = MonkeyPatch()
+    monkeypatch.setattr(TUIApp, "_startup_workspace", delayed_startup)
+    try:
+        directory = Path(tempfile.mkdtemp(prefix="isycode-session-search-test-"))
+        await test.test_action_opens_screen_in_classic_recurring(directory, monkeypatch)
+        print("DELAYED_STARTUP_TEST=PASS")
+    finally:
+        monkeypatch.undo()
+asyncio.run(main())
+
+Current status
+The condition-based test fix has not yet been validated by a full CI rerun.
+Do not report CI green until the workflow for the fix completes successfully.

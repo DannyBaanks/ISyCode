@@ -926,3 +926,24 @@ five-user matrix is waived per user request. `NATIVE_ACCEPTED=False` remains
 unchanged; separate user ACL acceptance, remaining IPC/device cases,
 runtime/dependency staging, power-loss recovery, and physical interactive
 parity remain NOT_DEMONSTRATED.
+
+## Windows session-search startup race — 2026-10-16
+
+The first full CI run after the updater change (run
+`38859799571`, head `3f7d7c45f0110a503e32513927b17c9f4512d7f6`) passed Linux
+Python 3.10, Linux Textual 8, and the evidence gate. The Windows suite had one
+failure in `test_action_opens_screen_in_classic_recurring`: the test invoked
+the search action after one `pilot.pause()`, before asynchronous workspace
+startup had created the session owner and grants. The action therefore left
+the default screen in place. The Windows result was 1 failed, 1,838 passed,
+339 skipped, 11 deselected, and 1 xfailed. This failure is preserved as a real
+CI result, not counted as passing parity evidence.
+
+The test now waits, with a bounded timeout, for `_sessions_enabled()` and
+then for `SessionSearchScreen` to become active. A local Windows reproduction
+delaying `_startup_workspace` by two seconds passed with this condition-based
+wait. The exact CI failure excerpt and local reproduction result are in
+`evidence/windows-session-search-startup-race-pr52-20261016.txt`. CI for the
+test fix is pending; no full-suite pass is claimed until that workflow
+completes. This is a test synchronization fix; it does not change application
+startup behavior.

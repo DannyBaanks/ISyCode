@@ -3,6 +3,8 @@
 The screen only filters authority-provided sessions and reports a choice;
 resuming goes through the existing session owner path.
 """
+import asyncio
+
 import pytest
 
 from isycode.chat_sessions import ChatSession
@@ -20,6 +22,18 @@ SESSIONS = [
     _session("b" * 32, "Deploy notes", ["remember the parser migration"]),
     _session("c" * 32, "Shopping list", ["coffee and tea"]),
 ]
+
+
+async def _wait_for_condition(pilot, predicate, description, timeout=10.0):
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while True:
+        if predicate():
+            return
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            raise AssertionError(f"Timed out waiting for {description}")
+        await pilot.pause(min(0.05, remaining))
 
 
 @pytest.mark.asyncio
@@ -96,10 +110,12 @@ async def test_action_opens_screen_in_classic_recurring(tmp_path, monkeypatch):
     UserDefaultsStore().update(new_workspace='recurring')
     app = TUIApp()
     async with app.run_test(size=(100, 30)) as pilot:
-        await pilot.pause()
+        await _wait_for_condition(
+            pilot, app._sessions_enabled, "recurring workspace session grants")
         app.action_open_session_search()
-        await pilot.pause()
-        assert isinstance(app.screen, SessionSearchScreen)
+        await _wait_for_condition(
+            pilot, lambda: isinstance(app.screen, SessionSearchScreen),
+            "session search screen")
         await pilot.press("escape")
 
 

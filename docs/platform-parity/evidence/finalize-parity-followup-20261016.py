@@ -24,7 +24,11 @@ paths.add(shallow_archive)
 for item in (root / "docs/platform-parity").rglob("*"):
     if item.is_file() and "__pycache__" not in item.parts:
         paths.add(item.relative_to(root).as_posix())
-paths.update({"src/isycode/updater.py", "tests/test_updater.py"})
+paths.update({
+    "src/isycode/updater.py",
+    "tests/test_updater.py",
+    "tests/test_session_search_screen.py",
+})
 paths.discard("docs/platform-parity/hashes.json")
 missing = sorted(name for name in paths if not (root / name).is_file())
 if missing:
@@ -49,6 +53,10 @@ record.update({
         "suite: 2025 passed, 153 skipped, 11 deselected. Temporary proxy "
         "configuration restored to its original SHA-256; package removed, "
         "service stopped, port closed, and temporary SSH key removed. "
+        "The first full CI rerun exposed a session-search test race; the test "
+        "now waits for its startup grants and screen transition, and a "
+        "synthetic delayed-startup reproduction passes locally. CI rerun "
+        "after this test fix is pending. "
         "Five-user matrix waived; NATIVE_ACCEPTED=False and separate-user "
         "ACL, remaining IPC/device cases, runtime staging, power-loss, and "
         "interactive physical parity remain NOT_DEMONSTRATED."
