@@ -75,6 +75,17 @@ def test_root_acl_unchanged_after_allocation(tmp_path, synthetic_windows_storage
         before = snapshot(lease.root)
         with WindowsSandboxResources.prepare(tmp_path, Path(sys.base_prefix), (), storage_lease=lease) as resource:
             assert resource.scratch_root.parent == lease.root
+            descriptor = security.GetNamedSecurityInfo(str(resource.scratch_root),
+                security.SE_FILE_OBJECT,
+                security.OWNER_SECURITY_INFORMATION | security.DACL_SECURITY_INFORMATION)
+            from isycode.platform_windows_storage import WindowsStorage
+            user_sid = security.ConvertSidToStringSid(WindowsStorage()._user())
+            dacl = descriptor.GetSecurityDescriptorDacl()
+            principals = {security.ConvertSidToStringSid(dacl.GetAce(index)[2])
+                          for index in range(dacl.GetAceCount())}
+            assert security.ConvertSidToStringSid(descriptor.GetSecurityDescriptorOwner()) == user_sid
+            assert principals == {user_sid, 'S-1-5-18',
+                security.ConvertSidToStringSid(security.SID(resource.profile_sid))}
             assert json.loads((resource.scratch_root / 'ownership.json').read_text())['schema'] == 'isycode-native-scratch/2'
             assert snapshot(lease.root) == before
         assert snapshot(lease.root) == before

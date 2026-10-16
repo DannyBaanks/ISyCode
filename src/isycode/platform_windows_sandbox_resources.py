@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 import secrets
 import shutil
-import tempfile
 import stat
 import hashlib
 
@@ -154,7 +153,10 @@ class WindowsSandboxResources:
         self.storage_lease = storage_lease
         # LPAC cannot traverse the user's private Temp ancestors. Allocate a
         # private directory on the same volume, without changing parent ACLs.
-        self.scratch_root = Path(tempfile.mkdtemp(prefix='isycode-lpac-', dir=allocation_root))
+        # Create it with the protected owner/SYSTEM DACL from the first
+        # filesystem operation: mkdtemp inherits the volume-root ACL on some
+        # hosted Windows runners, which may be shared with other principals.
+        self.scratch_root = Path(allocation_root) / ('isycode-lpac-' + secrets.token_hex(16))
         self.runtime_root = self.scratch_root / 'runtime'
         self.stage_root = self.scratch_root / 'workspace'
         self.profile_created = False
@@ -162,7 +164,7 @@ class WindowsSandboxResources:
             storage = WindowsStorage()
             if storage_lease is not None:
                 storage_lease.assert_directory(self.scratch_root)
-            storage.ensure_directory(self.scratch_root, repair=True)
+            storage.ensure_directory(self.scratch_root)
             self.profile_sid = _profile_sid(self.profile_name)
             record_options = {} if storage_lease is None else {'storage_identity': storage_lease.identity}
             write_ownership(self.scratch_root, self.profile_name, self.profile_sid,

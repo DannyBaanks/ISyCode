@@ -742,3 +742,32 @@ The new full GitHub run is triggered by the correction commit and must pass
 before the Windows CI gate can be called green. These local selections do not
 replace it. The five-user matrix remains waived; `NATIVE_ACCEPTED=False` remains
 unchanged, and the other NOT_DEMONSTRATED gates in INVENTORY.md are still open.
+
+## Scratch ACL correction on volume roots — 2026-10-16
+
+The hosted native-contract run `38844517651` on commit
+`ddbbd03e2c7df50d3dc89a123d8a1139ad96f1bf` failed in the experimental Windows
+isolation step (**19 failed, 68 passed, 13 skipped, 1 expected failure, 28
+errors**). The root cause was `tempfile.mkdtemp()` inheriting the ACL of the
+allocation volume root. GitHub's `C:\` root is shared, so the product correctly
+refused the resulting scratch tree before launching the isolated process.
+Most reported failures were cascading setup errors from that refusal.
+
+Scratch allocation now uses `WindowsStorage.ensure_directory()` with the
+protected user/SYSTEM descriptor on the first creation. It does not repair the
+volume root or inherit its ACL. Recovery accepts both the historical eight-
+character scratch names and the new 32-hex-character names. The root-ACL
+regression checks that the volume root stays byte-for-byte unchanged and the
+scratch DACL contains only the current user, SYSTEM and the owned LPAC profile.
+
+The first local rerun caught a `Path.anchor` string/path mismatch; that was
+fixed before acceptance. Three focused Windows controls then passed, including
+root ACL preservation, recovery after creator death and isolated backend
+execution. The complete local native sandbox selection passed **115 tests, 13
+skipped, 1 expected failure** in 461.42s. Raw attempts and adjacent command/hash
+metadata are preserved in `evidence/windows-native-sandbox-pr52-r3-20261016.*`
+and `evidence/windows-native-sandbox-pr52-r4-20261016.*`.
+
+The full GitHub suite on this newest correction is pending. The older run's
+failure does not test this commit. `NATIVE_ACCEPTED=False` and the remaining
+NOT_DEMONSTRATED acceptance gates remain unchanged.

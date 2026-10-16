@@ -84,7 +84,8 @@ def recover_owned_scratch(root: Path, *, storage_config=None) -> str:
 def _recover_with_storage(root, storage_config):
     # Inspect only a private record at the exact historical boundary. Bind the
     # provider before the existing recovery path can delete any profile/data.
-    if root.parent != Path(root.anchor) or not re.fullmatch(r'isycode-lpac-[a-z0-9_]{8}', root.name):
+    scratch_name = r'isycode-lpac-(?:[a-z0-9_]{8}|[a-f0-9]{32})'
+    if root.parent != Path(root.anchor) or not re.fullmatch(scratch_name, root.name):
         raise ValueError('scratch ownership boundary is invalid')
     if not root.exists():
         return 'ABSENT'
@@ -115,7 +116,8 @@ def _recover_owned_scratch(root: Path, payload) -> str:
     from ctypes import wintypes as w
     storage = WindowsStorage()
     # Exact directory requested; no sweeping deletion of prefix matches.
-    if root.parent != Path(root.anchor) or not re.fullmatch(r'isycode-lpac-[a-z0-9_]{8}', root.name):
+    scratch_name = r'isycode-lpac-(?:[a-z0-9_]{8}|[a-f0-9]{32})'
+    if root.parent != Path(root.anchor) or not re.fullmatch(scratch_name, root.name):
         raise ValueError('scratch ownership boundary is invalid')
     if not root.exists():
         return 'ABSENT'
