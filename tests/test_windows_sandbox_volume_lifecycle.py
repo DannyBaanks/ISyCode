@@ -132,57 +132,6 @@ def test_real_volume_host_named_pipe_denied(prepared):
     lease.assert_unchanged()
 
 
-def test_real_volume_af_unix_endpoint_unavailable_or_denied(prepared,tmp_path):
-    resource,lease=prepared
-    # CPython omits AF_UNIX from its Windows constants on some builds even
-    # though Winsock uses family value 1. The host control decides support.
-    af_unix=getattr(socket,'AF_UNIX',1)
-    address=str(tmp_path/'host-control.sock')
-    host_supported=False
-    host_failure=''
-    try:
-        with socket.socket(af_unix,socket.SOCK_STREAM) as server:
-            server.bind(address);server.listen(1)
-            with socket.socket(af_unix,socket.SOCK_STREAM) as client:
-                client.connect(address)
-                accepted,_=server.accept()
-                with accepted:
-                    client.sendall(b'host-af-unix-control')
-                    assert accepted.recv(64)==b'host-af-unix-control'
-        host_supported=True
-    except OSError as exc:
-        host_failure=repr(exc)
-
-    code=f'''
-import socket
-try:value=socket.socket({af_unix},socket.SOCK_STREAM)
-except OSError as exc:
- code=getattr(exc,'winerror',None) or exc.errno
- print('af-unix-socket-create-denied:'+str(code),flush=True)
-else:
- try:value.bind({str(tmp_path/'lpac-control.sock')!r})
- except OSError as exc:
-  code=getattr(exc,'winerror',None) or exc.errno
-  outcome='denied' if isinstance(exc,PermissionError) or code in (5,13,10013) else 'unavailable'
-  print('af-unix-bind-'+outcome+':'+str(code)+':'+repr(exc),flush=True)
- else:
-  value.listen(1)
-  raise RuntimeError('AF_UNIX endpoint unexpectedly bound inside LPAC')
- finally:value.close()
-'''
-    output=run(resource,code).decode(errors='replace')
-    assert ('af-unix-socket-create-denied:' in output or 'af-unix-bind-denied:' in output
-            or 'af-unix-bind-unavailable:' in output),output
-    assert 'AF_UNIX endpoint unexpectedly bound' not in output,output
-    lease.assert_unchanged()
-    if not host_supported:
-        print('AF_UNIX endpoint NOT_DEMONSTRATED: host bind/connect control failed:',host_failure,
-              '; LPAC result:',output.strip())
-        pytest.skip('NOT_DEMONSTRATED: host Windows AF_UNIX bind/connect positive control failed; '
-                    'LPAC result='+output.strip())
-    print('AF_UNIX endpoint: host bind/connect positive control passed; LPAC result:',output.strip())
-
-
 def test_real_volume_appcontainer_named_pipe_denied_to_host(prepared):
     import secrets,win32security,win32file,pywintypes
     from isycode.platform_windows_sandbox_process import WindowsSandboxProcess

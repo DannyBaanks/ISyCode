@@ -11,7 +11,7 @@ Baseline source: `b80975517f8496b70b8f7c2d37f408cd839d6b27`, native Windows audi
 | Workspace file recovery | Native preimages, stale-check and readback implemented | Same-user directory replacement risk remains documented |
 | Git status/diff/approved commits | Native trusted installation discovery implemented | Wider Git installation layouts are not supported automatically |
 | Native terminal startup | Windows startup tested in the earlier baseline audit; current headless flows tested | Physical mouse, fonts, clipboard and long interactive session |
-| Command sandbox | Shared owner with POSIX adapter and native LPAC/Job prototype; private fixed-VHD provider and schema2 recovery; real VHD acceptance 13/13 PASS; lifecycle controls include TCP/UDP IPv4/IPv6, WinHTTP, host-to-LPAC named-pipe denial, abrupt-owner recovery, and a full lifecycle rerun (12 passed, 3 skipped); LPAC named-pipe creation was denied with ERROR_ACCESS_DENIED; exact-image remount and inspection passed after a real Windows reboot; Windows product activation remains disabled | Other IPC/device surfaces; AF_UNIX endpoint (host bind/connect unavailable, so NOT_DEMONSTRATED); reverse host access to a pipe created by LPAC (creation was denied); additional runtimes/project dependencies; separately logged-on identity ACL witness; standalone EXE install/update and power-loss recovery |
+| Command sandbox | Shared owner with POSIX adapter and native LPAC/Job prototype; private fixed-VHD provider and schema2 recovery; real VHD acceptance 13/13 PASS; prior VHD lifecycle run (12 passed, 3 skipped; its AF_UNIX skip is superseded by the raw-Winsock control); controls include TCP/UDP IPv4/IPv6, WinHTTP, host-to-LPAC named-pipe denial, abrupt-owner recovery; LPAC named-pipe creation was denied with ERROR_ACCESS_DENIED; raw Winsock AF_UNIX host endpoint control passed and LPAC connection was denied with WSAEACCES (10013); exact-image remount and inspection passed after a real Windows reboot; Windows product activation remains disabled | Other IPC/device surfaces; reverse host access to a pipe created by LPAC (creation was denied); additional runtimes/project dependencies; separately logged-on identity ACL witness; standalone EXE install/update and power-loss recovery |
 | Process cancellation outside these owners | Existing integrations have their own mechanisms | Native Windows child-tree termination and per-owner tests |
 | Clipboard, LSP, MCP, RTK | Existing mechanisms, not globally certified by this migration | Individual native diagnostics, permissions and end-to-end evidence |
 | Tailscale/mobile/private-access state | Additional POSIX-dependent code remains | Adapter inventory, privacy, process and live-service controls |
@@ -49,12 +49,18 @@ accepted sandbox runtime; Node and Bun are present on this host but their names
 and absolute executable paths are rejected. A pure wheel was built from a
 private copy of the current source, installed into a fresh Unicode/spaces venv,
 smoked with `--version` and `--help`, and uninstalled; the check used
-`--no-deps` with system dependencies visible. The real-VHD lifecycle module
-passes 12 with three explicit skips: two operator-controlled disappearance
-controls were demonstrated separately, while the AF_UNIX host positive control
-is unavailable. LPAC's named-pipe server creation is denied; host access to an
-LPAC-created pipe is therefore untested. Details and hashes are in the latest
-IPC/runtime section of `REPORT.md` and `evidence/`.
+`--no-deps` with system dependencies visible. The historical real-VHD lifecycle
+run passed 12 with three skips; two operator-controlled disappearance controls
+were demonstrated separately, and its AF_UNIX skip is superseded by the raw
+Winsock/LPAC host-endpoint test below. LPAC's named-pipe server creation is
+denied; host access to an LPAC-created pipe is therefore untested. Details and
+hashes are in the latest IPC/runtime section of `REPORT.md` and `evidence/`.
+
+Correction (2026-10-16): the old lifecycle AF_UNIX skip only reflected this
+CPython build omitting `socket.AF_UNIX`; it did not show a Windows OS limitation.
+The replacement raw-Winsock host-to-LPAC control passes in
+`test_windows_sandbox_resources.py` and returns WSAEACCES (10013). The old
+volume-lifecycle check was removed; its preserved 12/3 run remains historical.
 
 An anonymous Windows token was also used as a distinct-principal negative
 control against the private metadata DACLs: `test_windows_private_identity.py`

@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-15T22:14:35.359-06:00",
+  "source_parent_commit": "a0ba7095b89ea5a8e32ef4d62b2868ea7fc3e06b",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "Python 3.12.10"
+  },
+  "command": ".venv/Scripts/python.exe -m pytest -s -q tests/test_windows_sandbox_resources.py::test_af_unix_host_endpoint_is_not_reachable_from_lpac",
+  "exit_code": 0,
+  "result": "1 passed in 10.31s",
+  "claim": "raw Winsock host bind/listen/connect/send/receive positive control passed; LPAC connection to the live host AF_UNIX endpoint was denied with WSAEACCES (10013)",
+  "uses_operator_vhd": false,
+  "source_working_tree_sha256": {
+    "tests/test_windows_sandbox_resources.py": "1bd197562db71a508702b7fbec1f7c4c21514ae448c3afbc87e37e577c74eb0d",
+    "tests/test_windows_sandbox_volume_lifecycle.py": "ec201be64e01b58d38b2d6122a9b50d4971ad4ac4cc7c8c314a2ff59ee5b8d49"
+  },
+  "output": {
+    "path": "docs/platform-parity/evidence/windows-af-unix-lpac-control-pr52-20261016.txt",
+    "sha256": "6e53ba1fc77ded75f0865a131b7a4f950179ec9d9eac3c265246736a7407cf21",
+    "bytes": 91
+  }
+}

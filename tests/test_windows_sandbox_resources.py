@@ -91,6 +91,109 @@ def test_network_denied_with_host_witness(prepared, kind, family):
             witness.accept() if kind == 'tcp' else witness.recvfrom(1024)
 
 
+def test_af_unix_host_endpoint_is_not_reachable_from_lpac(prepared):
+    import ctypes as c
+    import tempfile
+    import uuid
+
+    class WSAData(c.Structure):
+        _fields_ = [('version', c.c_ushort), ('high_version', c.c_ushort),
+                    ('description', c.c_char * 257), ('system_status', c.c_char * 129),
+                    ('max_sockets', c.c_ushort), ('max_udp', c.c_ushort),
+                    ('vendor_info', c.c_void_p)]
+
+    class SockAddrUnix(c.Structure):
+        _fields_ = [('family', c.c_ushort), ('path', c.c_char * 108)]
+
+    winsock = c.WinDLL('Ws2_32', use_last_error=True)
+    winsock.WSAStartup.argtypes = [c.c_ushort, c.POINTER(WSAData)]
+    winsock.WSAStartup.restype = c.c_int
+    winsock.WSASocketW.argtypes = [c.c_int, c.c_int, c.c_int, c.c_void_p,
+                                    c.c_uint, c.c_uint]
+    winsock.WSASocketW.restype = c.c_size_t
+    for name, args, result in (
+        ('bind', [c.c_size_t, c.c_void_p, c.c_int], c.c_int),
+        ('listen', [c.c_size_t, c.c_int], c.c_int),
+        ('connect', [c.c_size_t, c.c_void_p, c.c_int], c.c_int),
+        ('accept', [c.c_size_t, c.c_void_p, c.c_void_p], c.c_size_t),
+        ('send', [c.c_size_t, c.c_void_p, c.c_int, c.c_int], c.c_int),
+        ('recv', [c.c_size_t, c.c_void_p, c.c_int, c.c_int], c.c_int),
+        ('closesocket', [c.c_size_t], c.c_int),
+    ):
+        function = getattr(winsock, name)
+        function.argtypes = args
+        function.restype = result
+    winsock.WSAGetLastError.restype = c.c_int
+
+    startup = WSAData()
+    assert winsock.WSAStartup(0x202, c.byref(startup)) == 0
+    address_file = Path(tempfile.gettempdir()) / f'afunix-{uuid.uuid4().hex}.sock'
+    address_path = str(address_file).encode('ascii')
+    assert len(address_path) < 108, 'AF_UNIX control path exceeds Winsock limit'
+    address = SockAddrUnix()
+    address.family = 1  # Winsock supports AF_UNIX; this CPython build omits the constant.
+    address.path = address_path
+    invalid_socket = c.c_size_t(-1).value
+    server = winsock.WSASocketW(1, 1, 0, None, 0, 0)
+    assert server != invalid_socket, f'host AF_UNIX socket unavailable: {winsock.WSAGetLastError()}'
+    client = accepted = invalid_socket
+    try:
+        assert winsock.bind(server, c.byref(address), c.sizeof(address)) == 0, \
+            f'host AF_UNIX bind failed: {winsock.WSAGetLastError()}'
+        assert winsock.listen(server, 1) == 0, \
+            f'host AF_UNIX listen failed: {winsock.WSAGetLastError()}'
+        client = winsock.WSASocketW(1, 1, 0, None, 0, 0)
+        assert client != invalid_socket
+        assert winsock.connect(client, c.byref(address), c.sizeof(address)) == 0, \
+            f'host AF_UNIX connect failed: {winsock.WSAGetLastError()}'
+        peer_address = SockAddrUnix()
+        peer_size = c.c_int(c.sizeof(peer_address))
+        accepted = winsock.accept(server, c.byref(peer_address), c.byref(peer_size))
+        assert accepted != invalid_socket, f'host AF_UNIX accept failed: {winsock.WSAGetLastError()}'
+        payload = b'host-af-unix-control'
+        send_buffer = c.create_string_buffer(payload)
+        assert winsock.send(client, send_buffer, len(payload), 0) == len(payload)
+        receive_buffer = c.create_string_buffer(64)
+        received = winsock.recv(accepted, receive_buffer, 64, 0)
+        assert receive_buffer.raw[:received] == payload
+
+        code = f'''
+import ctypes as c
+w=c.WinDLL('Ws2_32',use_last_error=True)
+class Data(c.Structure):
+ _fields_=[('version',c.c_ushort),('high',c.c_ushort),('description',c.c_char*257),('status',c.c_char*129),('sockets',c.c_ushort),('udp',c.c_ushort),('vendor',c.c_void_p)]
+class Addr(c.Structure): _fields_=[('family',c.c_ushort),('path',c.c_char*108)]
+w.WSAStartup.argtypes=[c.c_ushort,c.POINTER(Data)];w.WSAStartup.restype=c.c_int
+w.WSASocketW.argtypes=[c.c_int,c.c_int,c.c_int,c.c_void_p,c.c_uint,c.c_uint];w.WSASocketW.restype=c.c_size_t
+w.connect.argtypes=[c.c_size_t,c.c_void_p,c.c_int];w.connect.restype=c.c_int
+w.closesocket.argtypes=[c.c_size_t];w.closesocket.restype=c.c_int
+w.WSAGetLastError.restype=c.c_int
+d=Data();assert w.WSAStartup(0x202,c.byref(d))==0
+a=Addr();a.family=1;a.path={address_path!r}
+s=w.WSASocketW(1,1,0,None,0,0)
+if s==c.c_size_t(-1).value:
+ print('af-unix-socket-denied:'+str(w.WSAGetLastError()),flush=True)
+else:
+ try:
+  if w.connect(s,c.byref(a),c.sizeof(a))==0:
+   print('af-unix-host-connect-allowed',flush=True)
+  else:
+   print('af-unix-connect-denied:'+str(w.WSAGetLastError()),flush=True)
+ finally:w.closesocket(s)
+'''
+        output = run(prepared, code).decode(errors='replace')
+        assert 'af-unix-host-connect-allowed' not in output, output
+        assert ('af-unix-socket-denied:10013' in output
+                or 'af-unix-connect-denied:10013' in output), output
+        print('AF_UNIX host endpoint denied to LPAC:', output.strip())
+    finally:
+        for handle in (accepted, client, server):
+            if handle != invalid_socket:
+                winsock.closesocket(handle)
+        winsock.WSACleanup()
+        address_file.unlink(missing_ok=True)
+
+
 def test_registry_read_does_not_open_private_key(prepared):
     import secrets
     import winreg

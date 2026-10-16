@@ -204,3 +204,29 @@ delimitados como arriba. Los hashes y resultados exactos están en
 `NATIVE_ACCEPTED=False` permanece. Siguen pendientes otros IPC/dispositivos,
 un testigo ACL de otra identidad, staging de dependencias, recuperación ante
 pérdida de energía y aceptación de runtimes adicionales.
+
+### Control AF_UNIX con Winsock — 2026-10-16
+
+La prueba anterior omitía AF_UNIX porque este CPython no publica
+`socket.AF_UNIX`. Eso no significa que Windows no lo admita: Winsock sí expone
+la familia 1. La prueba de reemplazo abre un servidor AF_UNIX en el host con
+Winsock, completa bind/listen/connect/send/receive y luego intenta conectar al
+mismo endpoint desde LPAC. El host completa el intercambio y LPAC recibe
+`WSAEACCES` (10013).
+
+Comando desde la raíz del repo:
+
+```powershell
+.venv\Scripts\python.exe -m pytest -s -q tests/test_windows_sandbox_resources.py::test_af_unix_host_endpoint_is_not_reachable_from_lpac
+```
+
+Salida aceptada:
+
+```text
+AF_UNIX host endpoint denied to LPAC: af-unix-connect-denied:10013
+1 passed
+```
+
+Raw log y metadatos: `evidence/windows-af-unix-lpac-control-pr52-20261016.*`.
+Este control prueba que LPAC no alcanza un endpoint del host; no prueba todos
+los IPC/dispositivos ni habilita el sandbox para acciones de producto.

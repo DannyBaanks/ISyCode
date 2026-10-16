@@ -817,3 +817,29 @@ is still running, and predates these UI-test synchronization changes. The PR
 needs a fresh full run at its updated head; no full-suite pass is claimed here.
 The five-user matrix remains waived and `NATIVE_ACCEPTED=False` remains in
 force.
+
+## Raw Winsock AF_UNIX host boundary — 2026-10-16
+
+The earlier AF_UNIX skip was a Python-wrapper limitation, not a Windows OS
+limitation: this CPython build does not publish `socket.AF_UNIX`, but Winsock
+family 1 is available. A host positive control now uses raw Winsock to bind and
+listen, connect from a second host socket, and exchange bytes. It passed. The
+private LPAC CPython process then attempted to connect to that live host
+endpoint through raw Winsock and received `WSAEACCES` (10013). This directly
+demonstrates that the isolated process cannot reach a host AF_UNIX endpoint.
+
+The control is in
+`tests/test_windows_sandbox_resources.py::test_af_unix_host_endpoint_is_not_reachable_from_lpac` and passed locally
+(**1 passed in 10.31s**). Exact output is
+`evidence/windows-af-unix-lpac-control-pr52-20261016.txt`; adjacent metadata
+records the command, environment and hashes. The older VHD-lifecycle check that
+used CPython's missing constant was removed; its prior 12-pass/3-skip log stays
+preserved as historical evidence. The new control uses the same LPAC process
+launcher and does not require the VHD because it tests the host IPC boundary.
+
+This closes the AF_UNIX host-endpoint reachability item only. Reverse access to
+a pipe created by LPAC remains NOT_DEMONSTRATED because LPAC cannot create that
+named pipe under the tested policy. Other IPC/device surfaces, separate-user
+ACL evidence, runtime/dependency staging, packaged updater acceptance,
+power-loss recovery and physical interactive parity remain open;
+`NATIVE_ACCEPTED=False` remains unchanged.
