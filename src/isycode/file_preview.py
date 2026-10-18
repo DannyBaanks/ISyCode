@@ -19,8 +19,6 @@ def guess_syntax_language(path: str | Path | None, code: str | None = None) -> s
         name_mapping = {
             "dockerfile": "bash",
             "containerfile": "bash",
-            "makefile": "bash",
-            "gnumakefile": "bash",
             "procfile": "bash",
             ".gitattributes": "bash",
             ".gitignore": "bash",
@@ -36,8 +34,7 @@ def guess_syntax_language(path: str | Path | None, code: str | None = None) -> s
             return name_mapping[name]
         if (name.startswith(".env") or name.startswith("dockerfile")
                 or name.endswith(".dockerfile") or name.startswith("containerfile")
-                or name.endswith(".containerfile") or name.startswith("makefile")
-                or name.endswith(".mk")):
+                or name.endswith(".containerfile")):
             return "bash"
 
         ext_mapping = {

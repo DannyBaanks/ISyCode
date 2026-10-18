@@ -8,7 +8,8 @@ def test_guess_syntax_language_basenames():
     assert guess_syntax_language(Path(".gitignore")) == "bash"
     assert guess_syntax_language(Path("Dockerfile")) == "bash"
     assert guess_syntax_language(Path("Dockerfile.dev")) == "bash"
-    assert guess_syntax_language(Path("Makefile")) == "bash"
+    assert guess_syntax_language(Path("Makefile")) is None
+    assert guess_syntax_language(Path("rules.mk")) is None
     assert guess_syntax_language(Path("compose.yaml")) == "yaml"
 
 def test_guess_syntax_language_extensions():
@@ -27,7 +28,8 @@ def test_guess_syntax_language_shebang():
     assert guess_syntax_language(Path("unknown_file"), code="plain text without shebang") is None
 
 def test_user_defaults_sidebar_file_preview(tmp_path):
-    store = UserDefaultsStore(directory=tmp_path)
+    # Let WindowsStorage create a private child with its own restrictive ACL.
+    store = UserDefaultsStore(directory=tmp_path / "private-defaults")
     defaults = store.load()
     assert defaults.get("sidebar_file_preview") is False
 
