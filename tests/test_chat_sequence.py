@@ -6,6 +6,7 @@ from textual.widgets import Static
 
 from isycode.tui import ChatArea, TUIApp, ThoughtBlock
 from isycode.conversation_lane import ConversationLane
+from isycode.tui_widgets import SelectableText
 from test_daily_tui import configure
 
 
@@ -240,6 +241,53 @@ def test_fast_consecutive_reasoning_chunks_share_one_visible_block(tmp_path, mon
             assert len(blocks) == 1
             assert plain_text(blocks[0]._body) == 'First thought. Second thought.'
             assert blocks[0].collapsed
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_completed_answers_remain_separate_after_later_user_turns(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    answers = ["Answer alpha.", "Answer beta.", "Answer gamma."]
+    requests = []
+
+    async def complete(provider, messages, **kwargs):
+        prompt = messages[-1]["content"]
+        requests.append(prompt)
+        answer = answers[len(requests) - 1]
+        kwargs["on_chunk"]("content", answer)
+        return {"text": answer, "tool_calls": []}
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 35)) as pilot:
+            await pilot.pause()
+            prompt = app.query_one("#prompt-input")
+            questions = ["Question alpha?", "Question beta?", "Question gamma?"]
+            for question in questions:
+                prompt.load_text(question)
+                app._accept_prompt(prompt, prompt.text)
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app._foreground_lane().loop_task is None:
+                        break
+                assert app._foreground_lane().loop_task is None
+
+            visible = [widget for widget in app.query_one(ChatArea).query(SelectableText)]
+            user_text = [widget.selection_text for widget in visible if widget.has_class("user-turn")]
+            assistant_text = [widget.selection_text for widget in visible
+                              if not widget.has_class("user-turn")
+                              and widget.selection_text in answers]
+            assert user_text == questions
+            assert assistant_text == answers
+            assert requests == user_text
+            assert [(item["role"], item["content"]) for item in app._history] == [
+                ("user", "Question alpha?"), ("assistant", answers[0]),
+                ("user", "Question beta?"), ("assistant", answers[1]),
+                ("user", "Question gamma?"), ("assistant", answers[2]),
+            ]
 
     with capsys.disabled():
         asyncio.run(scenario())

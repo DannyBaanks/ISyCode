@@ -1003,6 +1003,7 @@ class ChatMixin:
                 done_lane.partial = ""
                 done_lane.partial_reason = ""
                 done_lane.partial_reason_chunks = []
+                done_lane.stream_widget = None
                 if step_reason:
                     done_lane.lines.append(("reasoning", "".join(step_reason),
                                             _time.monotonic() - thought_started))
