@@ -515,6 +515,69 @@ class ModelsScreen(ModalScreen):
         self.dismiss(None)
 
 
+class HarnessRepairConfirmScreen(ModalScreen[bool]):
+    """One Accept/Cancel window that lists every cli:file the repair will touch.
+
+    The body scrolls so the user can review the full blast radius before a
+    new conversation lane starts executing the compose in Classic mode.
+    """
+
+    CSS = """
+    HarnessRepairConfirmScreen { align: center middle; background: #000000 58%; }
+    #repair-confirm-card { width: 94; max-width: 96%; height: 96%; padding: 0 1;
+                          border: solid #718291; background: #000000; }
+    #repair-confirm-title { height: 1; color: #edf1f5; text-style: bold; }
+    #repair-confirm-scroll { height: 1fr; }
+    #repair-confirm-body { height: auto; }
+    #repair-confirm-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #repair-confirm-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel", show=False),
+                Binding("n", "cancel", "Cancel", show=False)]
+
+    def __init__(self, targets: list[dict[str, Any]], brief: str) -> None:
+        super().__init__()
+        self.targets = targets
+        self.brief = brief
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="repair-confirm-card", classes="isy-dialog"):
+            yield Static(tr("Repair plan · review before launching"), id="repair-confirm-title",
+                        classes="isy-dialog-title")
+            with VerticalScroll(id="repair-confirm-scroll", classes="isy-dialog-body"):
+                yield Static(self._render_body(), id="repair-confirm-body")
+            with Horizontal(id="repair-confirm-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Cancel · Esc"), id="repair-cancel")
+                yield Button(tr("Launch repair conversation"), id="repair-accept", variant="primary")
+
+    def _render_body(self) -> Text:
+        body = Text()
+        if not self.targets:
+            body.append("No actionable gaps · nothing to repair.\n", style="#9295a2")
+            return body
+        body.append(f"{len(self.targets)} setting(s) will be reviewed:\n\n", style="#edf1f5")
+        for index, target in enumerate(self.targets, 1):
+            harnesses = ", ".join(target["harnesses"]) or "none"
+            body.append(f"{index}. {target['title']}", style="#77d8b0")
+            body.append(f"\n   cli: {harnesses}", style="#aeb6c5")
+            files = target["files"]
+            if not files:
+                body.append("\n   files: none yet (new in ISyCode)", style="#f6c77b")
+            else:
+                for path in files:
+                    body.append(f"\n   files: {path}", style="#aeb6c5")
+            body.append("\n")
+        body.append("A new conversation lane will run this compose in Classic mode.\n",
+                    style="#f6c77b")
+        return body
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "repair-accept")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class HarnessComposeScreen(ModalScreen[bool]):
     CSS = """
     HarnessComposeScreen { align: center middle; background: #000000 58%; }
