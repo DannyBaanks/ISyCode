@@ -193,3 +193,44 @@ def repair_compose(semantic_id: str, harnesses: Iterable[str]) -> str:
             "human controls and limitations. Keep unrelated files intact. If the runtime "
             "cannot validate the required capability, stop before that effect and present "
             "the concrete change for review. Do not claim a gap fixed until verified.\n")
+
+
+def repair_compose_all(rows: Iterable[dict[str, Any]]) -> str:
+    """Build one unified review brief covering every actionable gap in the map."""
+    actionable = [row for row in rows if row["status"] in {"ADD", "WATCH"}]
+    if not actionable:
+        return "No gaps to repair · the harness map is aligned."
+    parts = [f"ISyCode harness repair proposal: all gaps\n"
+             f"Meaning: unified brief for every actionable gap in the Multi Harness map\n"
+             f"Gaps covered: {len(actionable)}\n"]
+    for row in actionable:
+        parts.append("\n---\n")
+        parts.append(repair_compose(row["semantic_id"], row["harnesses"]))
+    return "".join(parts)
+
+
+def repair_targets(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """List every cli/file touched by an actionable gap, for the confirm screen.
+
+    Each entry is ``{"semantic_id": str, "title": str, "harnesses": tuple[str, ...],
+    "status": str, "files": [str, ...]}``. Files come from the seed option's
+    ``isycode_target``; ``"absent"`` means there is no native file yet.
+    """
+    targets: list[dict[str, Any]] = []
+    for row in rows:
+        if row["status"] not in {"ADD", "WATCH"}:
+            continue
+        option = SEED_OPTIONS.get(row["semantic_id"])
+        raw_target = option.isycode_target if option is not None else row.get("target_label", "")
+        if not raw_target or raw_target == "absent":
+            files: list[str] = []
+        else:
+            files = [item.strip() for item in raw_target.split("|") if item.strip()]
+        targets.append({
+            "semantic_id": row["semantic_id"],
+            "title": row["title"],
+            "harnesses": tuple(row["harnesses"]),
+            "status": row["status"],
+            "files": files,
+        })
+    return targets

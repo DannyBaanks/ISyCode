@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import Any
 from rich.cells import cell_len
@@ -25,6 +26,8 @@ from isycode.harness_graph import (
     copyable_default_model,
     present_by_semantic,
 )
+from isycode.hive import HiveManager, HiveConfig, AgentMeta
+from isycode.hive.hook_server import HookServer
 from isycode.harness_probe import (
     probe_catalog,
     unlock_dotfolder,
@@ -660,12 +663,21 @@ class SessionMixin:
             if selected is None:
                 return
             if selected.startswith("compose:"):
-                from isycode.harness_graph import repair_compose
+                from isycode.harness_graph import repair_compose, repair_compose_all, repair_targets
                 semantic_id = selected.removeprefix("compose:")
-                row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
-                brief = repair_compose(semantic_id, row["harnesses"])
-                if await self._await_screen(HarnessComposeScreen(brief)):
-                    await self._request_clipboard_copy(brief, "selection")
+                if semantic_id == "all":
+                    rows = screen._gap_rows()
+                    brief = repair_compose_all(rows)
+                    targets = repair_targets(rows)
+                else:
+                    row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
+                    brief = repair_compose(semantic_id, row["harnesses"])
+                    targets = repair_targets([row])
+                action = await self._await_screen(HarnessRepairConfirmScreen(targets, brief))
+                if action == "lane":
+                    await self._launch_repair_conversation(brief)
+                elif action == "hive":
+                    await self._launch_hive_agent(brief)
                 continue
             if selected.startswith("copy:"):
                 harness_id = selected.removeprefix("copy:")
@@ -681,6 +693,86 @@ class SessionMixin:
                     await self._import_harness_transcript(harness_id, Path(root), relative_path)
                 continue
             await self._choose_harness_root(selected)
+
+    async def _launch_repair_conversation(self, brief: str) -> None:
+        """Open a fresh conversation lane and post the repair compose to it.
+
+        The new lane runs in the current workspace's mode (Classic by default
+        for new folders), so the model that answers is bound by the same
+        Sentinel / Authority gates as any other turn. The compose is a review
+        proposal, not execution authority: the model still needs per-action
+        approval.
+        """
+        if not brief.strip():
+            self._append("  Repair compose is empty.", YELLOW)
+            return
+        self._capture_running_session()
+        lane = open_lane(self, None)
+        self._show_lane(lane)
+        self._append("  Repair conversation opened · running the compose in the background.", CYAN)
+        status = self._post_user_text(lane, brief)
+        if status == "full":
+            self._append("  Repair lane is busy; the compose is queued.", YELLOW)
+        elif status == "queued":
+            self._append("  Repair compose queued behind the current turn.", YELLOW)
+        self.run_worker(self._refresh_work_list(), group="work-list")
+
+    async def _launch_hive_agent(self, brief: str) -> None:
+        """Spawn a hive agent to execute the repair compose.
+
+        The agent runs as a separate CLI process (Claude Code, Codex, etc.)
+        with hive coordination (inbox/outbox, git-backed). The user chooses
+        the provider. The agent receives the compose as its initial prompt.
+        """
+        if not brief.strip():
+            self._append("  Repair compose is empty.", YELLOW)
+            return
+
+        # Provider selection for the hive agent
+        from isycode.tui_screens_harness import ModelsScreen
+        model_screen = ModelsScreen(provider_scope=None)
+        selected = await self._await_screen(model_screen)
+        if not selected:
+            return
+        if isinstance(selected, dict):
+            value = selected.get("value", "")
+            if "|" in value:
+                provider, model = value.split("|", 1)
+            else:
+                provider = value
+                model = ""
+        else:
+            self._append("  Invalid model selection.", YELLOW)
+            return
+
+        # Create hive manager
+        from isycode.platform_storage import storage
+        from isycode.workspace_setup import state_root
+        from isycode.hive import spawn_hive_agent, HiveManager, HiveConfig
+        from isycode.hive.hook_server import HookServer
+
+        hive_root = state_root() / "hive"
+        manager = HiveManager(HiveConfig(harness_home=hive_root))
+        manager.ensure_hive()
+
+        hook_server = HookServer(manager)
+
+        workspace_root = str(self._workspace_root) if hasattr(self, "_workspace_root") and self._workspace_root else None
+
+        self._append(f"  Spawning hive agent with {provider}...", CYAN)
+        result = await spawn_hive_agent(
+            manager=manager,
+            hook_server=hook_server,
+            provider=provider,
+            compose=brief,
+            workspace_root=workspace_root,
+        )
+
+        if result.error:
+            self._append(f"  Failed to spawn hive agent: {result.error}", YELLOW)
+        else:
+            self._append(f"  Hive agent {result.agent_id} spawned (PID {result.pid}) with {provider}.", GREEN)
+            self._append(f"  Compose injected as initial prompt. Check hive at {result.hive_root}.", CYAN)
 
     def _conversation_status(self) -> str:
         if isinstance(self.screen, (ApprovalScreen, ContextAccessScreen, AgentQuestionScreen)):
