@@ -97,7 +97,9 @@ class ProviderMixin:
                 current = key == active or (key == "openai" and active == "chatgpt")
                 mark = "*" if current else " "
                 note = tr("  ·  Current") if current else ""
-                default_model = (provider_default_model("chatgpt") or PRESETS["chatgpt"].get("default_model") or DEFAULT_MODEL) if (key == "openai" and active == "chatgpt") else (provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL)
+                display_provider = "chatgpt" if key == "openai" and active == "chatgpt" else key
+                display_preset = PRESETS.get(display_provider, preset)
+                default_model = provider_default_model(display_provider) or display_preset.get("default_model") or DEFAULT_MODEL
                 entries.append(self._entry(
                     tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
