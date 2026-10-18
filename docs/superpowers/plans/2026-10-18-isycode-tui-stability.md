@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Status:** Approved for direct execution by the user on 2026-10-18, including the three reported chat/OAuth fixes below. Gmail Hive remains deferred.
+**Status:** Approved for direct execution by the user on 2026-10-18, including the three reported chat/OAuth fixes below and the sibling-folder alias fix added after a new reproduction. Gmail Hive remains deferred.
 
-**Goal:** Resolve demonstrated TUI reliability risks, preserve completed chat turns across later responses, make the signed-in ChatGPT model selector usable, and make the official OAuth link actionable, while preserving security gates and truthful evidence.
+**Goal:** Resolve demonstrated TUI reliability risks, preserve completed chat turns across later responses, make the signed-in ChatGPT model selector usable, make the official OAuth link actionable, and let users register sibling folders with natural capitalization, while preserving security gates and truthful evidence.
 
 **Architecture:** Establish a clean baseline first. Diagnose the Sentinel journal startup worker and prior test flake without assuming a product defect. Reproduce the reported multi-turn overwrite and OAuth UX issues with offline TUI tests, fix only their owning flows, then profile synthetic content and reasoning streams without a live provider and optimize only if measurement shows material UI cost.
 
@@ -33,6 +33,7 @@
 6. **Native-login cancellation:** the private challenge code may not enter chat history or persisted state.
 7. **Fragmented or partial streams:** coalescing rendering must not lose, duplicate, or expose failed-step output, and steering must preserve its existing semantics.
 8. **Large reasoning and content streams:** the UI must remain responsive, preserve the complete selectable result, and keep updates working when the active lane is off screen.
+9. **Sibling-folder registration:** a user-entered alias such as `Github` should be accepted and stored canonically as `github`; case-only duplicates remain rejected and folder grants stay scoped to that exact selected path.
 
 ---
 
@@ -141,7 +142,24 @@
 - [ ] **Step 4: Run login/cancel and link tests.** Run `python -m pytest -q tests/test_chatgpt_auth_tui.py tests/test_provider_auth_methods.py`.
 - [ ] **Step 5: Confirm the one-use code and challenge URL remain absent from `_history` and persisted state; commit only exact source/test paths.**
 
-### Task 6: Measure content and thinking render cost offline
+### Task 6: Accept natural casing for sibling-folder aliases
+
+**Files:**
+- Test: `tests/test_workspace_folders.py`
+- Test: `tests/test_workspace_folders_tui.py`
+- Modify: `src/isycode/workspace_folders.py`
+
+**Interfaces:**
+- Consumes: the native sibling picker result and `WorkspaceFolders.add()` validation.
+- Produces: a canonical lowercase alias for mixed-case user input, with duplicate detection against the canonical form and no change to path or grant boundaries.
+
+- [ ] **Step 1: Add failing unit and TUI regressions.** Enter `Github` for an actual sibling folder; assert it registers as `github`, resolves under that alias, and a later `GITHUB` registration cannot create a case-only duplicate.
+- [ ] **Step 2: Run the regressions before the fix.** Expected: the current lowercase-only validator rejects `Github`; preserve the exact failure.
+- [ ] **Step 3: Canonicalize aliases at the store boundary.** Lowercase string aliases before the existing strict syntax, reserved-name, path, identity, capacity, and duplicate checks. Preserve fail-closed path and Authority behavior.
+- [ ] **Step 4: Run folder tests.** Run `python -m pytest -q tests/test_workspace_folders.py tests/test_workspace_folders_tui.py`; then inspect that the test uses the normal add-folder screen and exact selected path.
+- [ ] **Step 5: Commit only the exact folder source/test paths.**
+
+### Task 7: Measure content and thinking render cost offline
 
 **Files:**
 - Create: `scripts/profile_tui_streaming.py`
@@ -164,7 +182,7 @@
 - [ ] **Step 5: Implement only the measured bottleneck.** If content Markdown formatting dominates, coalesce UI paints while retaining the full source text and flush at turn boundaries. If reasoning preview dominates, change `ThoughtBlock` only with the same boundary guarantees. Do not change stream transport, provider chunking, or Idea Box timing as a rendering workaround.
 - [ ] **Step 6: Re-profile with identical samples.** Expected: the targeted render cost drops at least 20% against the same-host baseline; all full-content and boundary tests pass. If the target is missed, revert the optimization and retain the profile result only.
 
-### Task 7: Verify and close the stability delivery
+### Task 8: Verify and close the stability delivery
 
 **Files:**
 - Update: `docs/superpowers/results/2026-10-18-isycode-stability-baseline.md`
@@ -172,7 +190,7 @@
 - Verify: `.github/workflows/ci.yml` jobs `test`, `test-textual-current`, and `test-windows`
 
 **Interfaces:**
-- Consumes: completed diagnostics and any narrow regression/profile changes from Tasks 1–6.
+- Consumes: completed diagnostics and any narrow regression/profile changes from Tasks 1–7.
 - Produces: a reviewable evidence record and an explicit release/hold recommendation for Stability A.
 
 - [ ] **Step 1: Run the full local non-integration suite.**
@@ -189,8 +207,8 @@
 
 ## Self-review
 
-- Spec coverage: Task 1 covers baseline and historical flake; Task 2 covers the Windows journal race; Tasks 3–5 cover the reported multi-turn overwrite, OAuth model-selector, and wrapped-link issues; Task 6 profiles content and reasoning and permits only measured optimization; Task 7 covers full-suite/platform validation and evidence. Gmail remains deferred.
-- Review Focus coverage: consecutive-turn widgets are checked in Task 3; model catalog ownership and explicit selection are checked in Task 4; OAuth host validation and cancellation-secret absence are checked in Task 5; worker overlap is in Task 2; fragmented/failed/cancelled stream boundaries are tested in Task 6; large output and active-lane behavior are profiled without a timing assertion in CI.
+- Spec coverage: Task 1 covers baseline and historical flake; Task 2 covers the Windows journal race; Tasks 3–6 cover the reported chat/OAuth and sibling-folder issues; Task 7 profiles content and reasoning and permits only measured optimization; Task 8 covers full-suite/platform validation and evidence. Gmail remains deferred.
+- Review Focus coverage: consecutive-turn widgets are checked in Task 3; model catalog ownership and explicit selection are checked in Task 4; OAuth host validation and cancellation-secret absence are checked in Task 5; canonical alias handling and path-scoped grants are checked in Task 6; worker overlap is in Task 2; fragmented/failed/cancelled stream boundaries are tested in Task 7; large output and active-lane behavior are profiled without a timing assertion in CI.
 - No task presumes the root cause. A missing reproduction yields a documented non-fix, not a speculative source edit.
 - The 20% profile threshold is a proposed operational definition of “material” for review; it is not a product performance claim.
 

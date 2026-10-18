@@ -29,6 +29,7 @@ The following are observations from repository/CI inspection. Historical measure
 - **[USER-REPORTED, code-path cause identified; regression test pending]** After a completed assistant response, `lane.stream_widget` can still reference that response. A later `_content_line()` may reuse that mounted widget and replace the prior answer. The fix must preserve prior turn widgets while allowing only the active turn's stream widget to update.
 - **[USER-REPORTED, implementation gap under investigation]** After ChatGPT subscription OAuth, the model selector should let the user choose a model actually available to the signed-in Codex account. Do not guess models or switch away from `auto` unless the user chooses.
 - **[USER-REPORTED, code gap identified]** The subscription-login screen displays the raw long OAuth URL as plain static text, so the terminal does not expose an actionable link. Make the official URL clearly clickable while preserving host validation, cancellation, and secret-handling behavior.
+- **[USER-REPORTED, reproduced from screenshot and code]** The native sibling-folder dialog accepts a display alias such as `Github`, but the store accepts only lowercase aliases and rejects the registration. Canonicalize casing at the store boundary, keep case-insensitive duplicates from registering twice, and preserve the exact sibling path and existing per-folder grants.
 - `docs/ROADMAP.md` still identifies its static audit as 2026-10-09 / commit `49cb0a1`; its status text should not be treated as a fresh audit of the 2026-10-18 baseline.
 - The prior workflow-gate validation reported historical evidence/approval mismatches. This work must not rewrite evidence, manufacture approvals, or mark gates complete without fresh proof.
 
@@ -45,6 +46,7 @@ Turn the observed reliability risks into reproducible findings, fix only verifie
 - Reproduce the reported multi-turn chat behavior with consecutive user/assistant turns, including a tool round if needed. Preserve prior user and assistant messages in the visible transcript and conversation history; distinguish actual replacement from normal scroll-offscreen behavior.
 - Make the ChatGPT subscription model selector usable after OAuth. It must source choices from the authenticated provider/account model catalog (or explicitly report that the account did not provide one), retain `auto` as the default, and never select a model silently.
 - Make the official ChatGPT sign-in URL actionable in the OAuth modal, including at 80×24 and when displayed across wrapped terminal rows. Keep URL validation restricted to the official auth hosts and do not append the challenge URL or one-use code to chat history or persisted state.
+- Make native sibling-folder registration accept natural mixed-case aliases by canonicalizing them to lowercase, reject case-only duplicates, and retain the current direct-sibling path checks and exact folder-scoped Authority grants.
 - Rerun the focused test and relevant TUI/auth tests on Windows CI, then the required local suite. Record exact commands, commit, results, and any platform gaps.
 - Profile streaming response rendering with a representative long response. Optimize only if measurements show a material bottleneck; preserve streaming order, visible thinking behavior, and message history.
 - Refresh roadmap audit metadata only after the relevant state has actually been re-audited. Do not change milestone acceptance status as a side effect.
@@ -56,10 +58,11 @@ Turn the observed reliability risks into reproducible findings, fix only verifie
 2. A completed assistant response remains unchanged after later user turns and assistant/tool output; the regression test covers the observed consecutive-turn sequence. If only scroll position explains the screenshot, record that separately instead of claiming content loss.
 3. After ChatGPT OAuth, the model control opens a selector that reflects the signed-in account's available model catalog; `auto` remains selected until the user chooses a concrete model.
 4. The sign-in URL can be activated from the OAuth screen at supported terminal sizes, opens only an approved official auth URL, and the private one-use code/URL stays out of chat history and persistent state.
-5. Relevant tests pass on the supported CI platform(s); no assertion is weakened to hide the failure.
-6. Any rendering optimization has before/after profiling evidence and does not regress stream correctness or TUI behavior. If no material bottleneck is measured, no optimization is made.
-7. No historical evidence, approvals, or gate records are rewritten to create a pass.
-8. The stability change is reviewable independently from Gmail Hive.
+5. A mixed-case sibling alias such as `Github` registers canonically as `github`; case-only duplicates are rejected and permissions remain scoped to the selected folder.
+6. Relevant tests pass on the supported CI platform(s); no assertion is weakened to hide the failure.
+7. Any rendering optimization has before/after profiling evidence and does not regress stream correctness or TUI behavior. If no material bottleneck is measured, no optimization is made.
+8. No historical evidence, approvals, or gate records are rewritten to create a pass.
+9. The stability change is reviewable independently from Gmail Hive.
 
 ## 4. Delivery B — Gmail Hive, after stability
 
