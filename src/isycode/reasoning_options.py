@@ -45,7 +45,16 @@ def reasoning_levels(provider: str, model: str) -> tuple[str, ...]:
     # support only none (Responses API exposes the other effort levels).
     if provider == "openai" and model == "gpt-6-luna":
         return ("none",)
+    # gpt-oss documents reasoning effort low/medium/high (OpenAI model card);
+    # OpenAI-compatible hosts receive it as reasoning_effort. Not verified per host.
+    if provider != "anthropic" and "gpt-oss" in model.casefold():
+        return ("low", "medium", "high")
     return ()
+
+
+def selected_reasoning(provider: str, model: str) -> str | None:
+    """The level chosen this session for exactly this model, if any."""
+    return _SELECTIONS.get((provider, model))
 
 
 def select_reasoning(provider: str, model: str, level: str) -> None:

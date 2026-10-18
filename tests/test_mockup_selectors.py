@@ -186,7 +186,8 @@ async def test_catalog_refresh_keeps_model_identity_or_disables_removed_preview(
             assert "claude-opus-4-6" in str(screen.query_one("#model-detail").render())
             await pilot.click("#models-use")
         await pilot.pause()
-    assert chosen == ([None] if remove_preview else [entries[1]])
+    # Models with published levels also carry the effort slider's draft level.
+    assert chosen == ([None] if remove_preview else [{**entries[1], "reasoning": "default"}])
 
 
 @pytest.mark.asyncio

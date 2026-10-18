@@ -159,6 +159,7 @@ def test_escape_walks_back_and_keeps_the_previous_model(tui, capsys):
 
 def test_model_with_levels_is_applied_only_with_its_reasoning(tui, monkeypatch, capsys):
     import isycode.reasoning_options as reasoning
+    from isycode.tui_effort_slider import EffortSlider
     monkeypatch.setattr(reasoning, "_SELECTIONS", {})
     monkeypatch.setattr(reasoning, "reasoning_levels",
                         lambda provider, model: ("low", "high") if model == "z-ai/glm-5.3" else ())
@@ -166,25 +167,79 @@ def test_model_with_levels_is_applied_only_with_its_reasoning(tui, monkeypatch, 
     async def scenario(app, pilot):
         before = selected_provider_name()
         screen = await open_nvidia(app, pilot)
-        target = f"#{choice(screen, 'z-ai/glm-5.3').id}"
-        await pilot.click(target)
-        assert isinstance(app.screen, ModelsScreen)
-        await pilot.click(target)
-        assert await until(pilot, lambda: app._menu_mode == "reasoning")
+        choice(screen, "z-ai/glm-5.3").focus()
+        await pilot.pause()
+        slider = screen.query_one("#models-effort", EffortSlider)
+        assert slider.display and slider.stops == ("default", "low", "high")
+        await pilot.press("right", "right")                   # auto → low → high (draft)
+        assert slider.level == "high"
+        assert "◉" in str(slider.render())
         assert selected_provider_name() == before            # still a draft
-        assert [e["value"].rsplit("|", 1)[1] for e in app._menu_entries] == ["default", "low", "high"]
-        await pilot.press("escape")                           # back to the models, not applied
-        assert await until(pilot, lambda: isinstance(app.screen, ModelsScreen))
+        await pilot.press("escape")                           # back, nothing applied
+        assert await until(pilot, lambda: app._menu_mode == "providers")
         assert selected_provider_name() == before
-        screen = app.screen
-        target = f"#{choice(screen, 'z-ai/glm-5.3').id}"
-        await pilot.click(target)
-        await pilot.click(target)
-        assert await until(pilot, lambda: app._menu_mode == "reasoning")
-        app._select_menu_entry(app._menu_entries[-1])
+        app._select_menu_entry(provider_entry(app, "nvidia"))
+        assert await until(pilot, lambda: isinstance(app.screen, ModelsScreen))
+        screen = await open_nvidia_screen(app, pilot)
+        choice(screen, "z-ai/glm-5.3").focus()
+        await pilot.pause()
+        await pilot.press("right", "right")
+        await pilot.press("enter")
         assert await until(pilot, lambda: selected_provider_name() == "nvidia")
         assert resolved_chat_model("nvidia") == "z-ai/glm-5.3"
         assert reasoning.effective_reasoning("nvidia", "z-ai/glm-5.3", None) == "high"
+        assert app._menu_mode != "reasoning"                  # no second, list-style step
+
+    with capsys.disabled():
+        run(scenario)
+
+
+async def open_nvidia_screen(app, pilot):
+    last, stable = None, 0
+    for _ in range(300):
+        await pilot.pause(0.05)
+        screen = app.screen
+        models = (tuple(sorted(e["value"] for e in screen.choices.values() if e["kind"] == "model"))
+                  if isinstance(screen, ModelsScreen) and not getattr(app, "_account_models_loading", False)
+                  else ())
+        stable = stable + 1 if models and models == last else 0
+        last = models
+        if stable >= 6:
+            return screen
+    raise AssertionError("the nvidia model picker never settled")
+
+
+def test_custom_model_id_is_added_to_the_provider_and_persisted(tui, capsys):
+    from isycode.providers import custom_models
+
+    async def scenario(app, pilot):
+        before = (selected_provider_name(), resolved_chat_model(selected_provider_name()))
+        screen = await open_nvidia(app, pilot)
+        field = screen.query_one("#models-add-input")
+        field.value = "acme/my-private-model"
+        field.focus()
+        await pilot.press("enter")
+        assert await until(pilot, lambda: any(
+            e.get("value") == "nvidia|acme/my-private-model" for e in app.screen.choices.values()))
+        assert custom_models("nvidia") == ["acme/my-private-model"]
+        screen = app.screen
+        assert await until(pilot, lambda: screen.selected_model_value == "nvidia|acme/my-private-model")
+        assert (selected_provider_name(), resolved_chat_model(selected_provider_name())) == before
+        # It survives a fresh branch build (catalog refresh) for this provider.
+        rows = app._branch_entries("models")
+        assert any(r.get("value") == "nvidia|acme/my-private-model" and r.get("custom") for r in rows)
+
+    with capsys.disabled():
+        run(scenario)
+
+
+def test_detail_card_has_no_sources_block(tui, capsys):
+    async def scenario(app, pilot):
+        screen = await open_nvidia(app, pilot)
+        choice(screen, "z-ai/glm-5.3").focus()
+        await pilot.pause()
+        detail = str(screen.query_one("#model-detail").render())
+        assert "Sources" not in detail and "Fuentes" not in detail
 
     with capsys.disabled():
         run(scenario)

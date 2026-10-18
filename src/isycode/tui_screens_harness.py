@@ -23,6 +23,7 @@ from isycode.tui_theme import (
     TEXT,
 )
 from isycode.tui_widgets import Collapsible, activate_on_second_click
+from isycode.tui_effort_slider import EffortSlider
 from isycode.localization import tr
 
 
@@ -183,13 +184,18 @@ class ModelsScreen(ModalScreen):
     .model-choice:focus, .model-choice.-selected { background: #03252d; }
     .model-choice:hover { background: #03252d; }
     #models-status { height: auto; max-height: 2; color: #a9b5c2; }
+    #models-add { height: 3; }
+    #models-add-input { width: 1fr; }
+    #models-add-button { height: 3; width: auto; margin-left: 1; }
     #models-actions { height: 3; align-horizontal: right; }
     #models-actions Button { height: 3; width: auto; margin-left: 1; }
     #models-hint { height: 1; color: #a9b5c2; }
     """
     BINDINGS = [Binding("escape", "close", "Close"),
                 Binding("down", "focus_next", "Next", show=False),
-                Binding("up", "focus_previous", "Previous", show=False)]
+                Binding("up", "focus_previous", "Previous", show=False),
+                Binding("left", "effort(-1)", "Less effort", show=False),
+                Binding("right", "effort(1)", "More effort", show=False)]
     NARROW_WIDTH = 100
     def __init__(self, entries: list[dict], provider_scope: str | None = None) -> None:
         super().__init__()
@@ -204,6 +210,8 @@ class ModelsScreen(ModalScreen):
         # Textual chooses initial focus before refresh callbacks run. The
         # current row assigns its concrete selector while compose builds it.
         self.AUTO_FOCUS = "#models-search"
+        # Draft reasoning level per provider|model; applied only with Choose.
+        self.effort_drafts: dict[str, str] = {}
 
     def compose(self) -> ComposeResult:
         self.choices = {}
@@ -259,12 +267,21 @@ class ModelsScreen(ModalScreen):
                 with VerticalScroll(id="model-detail-scroll"):
                     yield Static(Text("Click a model. Context, reasoning and tools show here.", style=MUTED),
                                  id="model-detail")
+            slider = EffortSlider(id="models-effort")
+            slider.display = False
+            yield slider
             notes = [entry["label"] for entry in self.entries if entry["kind"] == "info"]
             yield Static("\n".join(notes), id="models-status", classes="isy-dialog-hint")
+            if scope:
+                with Horizontal(id="models-add"):
+                    yield Input(placeholder=tr("Add a model ID to {provider}…",
+                                               provider=PRESETS.get(scope, {}).get("label", scope)),
+                                id="models-add-input")
+                    yield Button(tr("+ Add"), id="models-add-button")
             with Horizontal(id="models-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Back") if scope else tr("Close"), id="models-close")
                 yield Button(tr("Choose model"), id="models-use", variant="primary", disabled=True)
-            yield Static(tr("↑↓ move · Enter choose · Esc back · Tab search"), id="models-hint", classes="isy-dialog-hint")
+            yield Static(tr("↑↓ move · ←→ effort · Enter choose · Esc back · Tab search"), id="models-hint", classes="isy-dialog-hint")
 
     def _choice_button(self, entry: dict) -> ModelChoice:
         from isycode.model_presentation import model_display_name
@@ -276,6 +293,8 @@ class ModelsScreen(ModalScreen):
         if entry.get("value") == wanted:
             self.AUTO_FOCUS = f"#{key}"
         label = Text(model_display_name(model), style=TEXT)
+        if entry.get("custom"):
+            label.append("  · " + tr("added"), style=MUTED)
         if provider == selected_provider_name() and model == resolved_chat_model(provider):
             label.append("  · " + tr("current"), style=GREEN)
         return ModelChoice(label, id=key, classes="model-choice")
@@ -341,6 +360,39 @@ class ModelsScreen(ModalScreen):
                 row.set_class(row is widget, "-selected")
             self.query_one("#models-use", Button).disabled = False
             self.show_details(*entry["value"].split("|", 1))
+            self._show_effort(entry["value"])
+
+    def _show_effort(self, value: str) -> None:
+        from isycode.reasoning_options import (effective_reasoning, reasoning_levels,
+                                               selected_reasoning)
+        provider, model = value.split("|", 1)
+        slider = self.query_one("#models-effort", EffortSlider)
+        levels = reasoning_levels(provider, model)
+        if value not in self.effort_drafts:
+            self.effort_drafts[value] = selected_reasoning(provider, model) or "default"
+        hint = effective_reasoning(provider, model, PRESETS.get(provider, {}).get("reasoning_effort"))
+        slider.show(levels, self.effort_drafts[value], hint)
+
+    def action_effort(self, direction: int) -> None:
+        if self.selected_model_value is None:
+            return
+        level = self.query_one("#models-effort", EffortSlider).step(direction)
+        if level is not None:
+            self.effort_drafts[self.selected_model_value] = level
+
+    def on_effort_slider_changed(self, event: EffortSlider.Changed) -> None:
+        if self.selected_model_value is not None:
+            self.effort_drafts[self.selected_model_value] = event.level
+
+    def _with_effort(self, entry: dict) -> dict:
+        """The chosen entry plus its draft level, when the model has levels."""
+        from isycode.reasoning_options import reasoning_levels
+        if entry.get("kind") != "model":
+            return entry
+        provider, model = entry["value"].split("|", 1)
+        if not reasoning_levels(provider, model):
+            return entry
+        return {**entry, "reasoning": self.effort_drafts.get(entry["value"], "default")}
 
     def show_details(self, provider: str, model: str) -> None:
         from isycode.model_card import model_facts
@@ -349,9 +401,6 @@ class ModelsScreen(ModalScreen):
         for fact in facts:
             card.append(tr(fact.label) + ": ", style=MUTED)
             card.append(fact.value + "\n", style=TEXT)
-        card.append("\n" + tr("Sources") + "\n", style=MUTED)
-        for fact in facts:
-            card.append(f"{tr(fact.label)}: {tr(fact.source)}\n", style=MUTED)
         self.query_one("#model-detail", Static).update(card)
 
     def _haystack(self, provider: str, model: str) -> str:
@@ -405,11 +454,44 @@ class ModelsScreen(ModalScreen):
         self.query_one("#models-status", Static).update(status)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "models-add-input":
+            event.stop()
+            self._add_custom_model()
+            return
         if event.input.id == "models-search":
             event.stop()
             first = next((row for row in self.query(ModelChoice) if row.display), None)
             if first is not None:
                 first.focus()
+
+    def _add_custom_model(self) -> None:
+        """Remember a typed ID for this provider and preview it. Activates nothing."""
+        from isycode.providers import add_custom_model
+        scope = self.provider_scope
+        field = self.query_one("#models-add-input", Input)
+        model = field.value.strip()
+        status = self.query_one("#models-status", Static)
+        if not scope or not model:
+            status.update(tr("Type a model ID first."))
+            return
+        try:
+            add_custom_model(scope, model)
+        except (ValueError, OSError) as error:
+            status.update(tr("Model ID not added · {reason}", reason=str(error)[:120]))
+            return
+        value = f"{scope}|{model}"
+        if not any(entry.get("kind") == "model" and entry.get("value") == value
+                   for entry in self.entries):
+            label = PRESETS.get(scope, {}).get("label", scope)
+            self.entries = [*self.entries, {
+                "label": tr("{label}  ·  {model}  · added by you", label=label, model=model),
+                "kind": "model", "value": value, "custom": True,
+                "detail": tr("Model ID you added; not verified against this account.")}]
+        self.selected_model_value = value
+        self.search_query = ""
+        self.choices = {}
+        self.refresh(recompose=True)
+        self.call_after_refresh(self._reveal_current)
 
     def _selected_row(self) -> ModelChoice | None:
         return next((row for row in self.query(ModelChoice)
@@ -418,14 +500,16 @@ class ModelsScreen(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
-        if event.button.id == "models-close":
+        if event.button.id == "models-add-button":
+            self._add_custom_model()
+        elif event.button.id == "models-close":
             self.dismiss(None)
         elif event.button.id == "models-use":
             selected = self._selected_row()
             if selected is not None:
-                self.dismiss(self.choices[selected.id])
+                self.dismiss(self._with_effort(self.choices[selected.id]))
         elif event.button.id in self.choices:
-            self.dismiss(self.choices[event.button.id])
+            self.dismiss(self._with_effort(self.choices[event.button.id]))
 
     def action_close(self) -> None:
         self.dismiss(None)

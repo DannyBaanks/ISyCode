@@ -2267,3 +2267,90 @@ msgstr "模型 · {provider}"
 
 msgid "↑↓ move · Enter open · Esc back · Shift+Tab search"
 msgstr "↑↓ 移动 · Enter 打开 · Esc 返回 · Shift+Tab 搜索"
+
+msgid "Add a model ID to {provider}…"
+msgstr "向 {provider} 添加模型 ID…"
+
+msgid "+ Add"
+msgstr "+ 添加"
+
+msgid "added"
+msgstr "已添加"
+
+msgid "Type a model ID first."
+msgstr "请先输入模型 ID。"
+
+msgid "Model ID not added · {reason}"
+msgstr "未添加模型 ID · {reason}"
+
+msgid "{label}  ·  {model}  · added by you"
+msgstr "{label}  ·  {model}  · 由你添加"
+
+msgid "Model ID you added; not verified against this account."
+msgstr "你添加的模型 ID；未针对此账户验证。"
+
+msgid "↑↓ move · ←→ effort · Enter choose · Esc back · Tab search"
+msgstr "↑↓ 移动 · ←→ 推理强度 · Enter 选择 · Esc 返回 · Tab 搜索"
+
+msgid "Effort"
+msgstr "推理强度"
+
+msgid "auto"
+msgstr "自动"
+
+msgid "none"
+msgstr "无"
+
+msgid "minimal"
+msgstr "极少"
+
+msgid "low"
+msgstr "低"
+
+msgid "medium"
+msgstr "中"
+
+msgid "high"
+msgstr "高"
+
+msgid "xhigh"
+msgstr "很高"
+
+msgid "max"
+msgstr "最高"
+
+msgid "this model publishes no adjustable levels · provider default"
+msgstr "此模型未公布可调级别 · 使用提供商默认值"
+
+msgid "Provider decides · currently {level}"
+msgstr "由提供商决定 · 当前 {level}"
+
+msgid "Provider decides the reasoning effort"
+msgstr "由提供商决定推理强度"
+
+msgid "No reasoning — fastest replies"
+msgstr "不推理 — 回复最快"
+
+msgid "Thinking disabled — fastest replies"
+msgstr "关闭思考 — 回复最快"
+
+msgid "Thinking enabled for this model"
+msgstr "为此模型开启思考"
+
+msgid "Barely any reasoning — very fast"
+msgstr "极少推理 — 非常快"
+
+msgid "Faster responses, lighter reasoning — good for simpler tasks"
+msgstr "更快回复、较轻推理 — 适合简单任务"
+
+msgid "Balanced speed and reasoning quality for most tasks"
+msgstr "速度与推理质量平衡，适合大多数任务"
+
+msgid "Deeper reasoning for complex problems — slower"
+msgstr "更深入推理，适合复杂问题 — 较慢"
+
+msgid "Extra-deep reasoning — slower and costlier"
+msgstr "超深推理 — 更慢且更贵"
+
+msgid "Maximum reasoning budget — slowest but strongest"
+msgstr "最大推理预算 — 最慢但最强"
