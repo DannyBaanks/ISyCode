@@ -2354,3 +2354,15 @@ msgstr "Extra-deep reasoning — slower and costlier"
 
 msgid "Maximum reasoning budget — slowest but strongest"
 msgstr "Maximum reasoning budget — slowest but strongest"
+
+msgid "Copy whole file"
+msgstr "Copy whole file"
+
+msgid "Sidebar file preview · {state}"
+msgstr "Sidebar file preview · {state}"
+
+msgid "Sidebar file preview"
+msgstr "Sidebar file preview"
+
+msgid "Show a preview box below the file tree in the sidebar."
+msgstr "Show a preview box below the file tree in the sidebar."

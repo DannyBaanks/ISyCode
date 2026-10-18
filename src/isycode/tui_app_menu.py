@@ -463,6 +463,7 @@ class MenuAction(str, Enum):
     SOUNDS_TOGGLE = "sounds_toggle"
     CONTRAST_TOGGLE = "contrast_toggle"
     ASCII_TOGGLE = "ascii_toggle"
+    SIDEBAR_PREVIEW_TOGGLE = "sidebar_preview_toggle"
     LOCALE_CYCLE = "locale_cycle"
     MARQUEE_TOGGLE = "marquee_toggle"
     MOTION_TOGGLE = "motion_toggle"
@@ -584,6 +585,7 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.SOUNDS_TOGGLE: "_menu_sounds_toggle",
     MenuAction.CONTRAST_TOGGLE: "_menu_contrast_toggle",
     MenuAction.ASCII_TOGGLE: "_menu_ascii_toggle",
+    MenuAction.SIDEBAR_PREVIEW_TOGGLE: "_menu_sidebar_preview_toggle",
     MenuAction.LOCALE_CYCLE: "_menu_locale_cycle",
     MenuAction.MARQUEE_TOGGLE: "_menu_marquee_toggle",
     MenuAction.MOTION_TOGGLE: "_menu_motion_toggle",

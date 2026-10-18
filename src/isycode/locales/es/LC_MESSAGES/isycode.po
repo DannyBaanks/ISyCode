@@ -1883,7 +1883,7 @@ msgid "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for ter
 msgstr "Sustituye ✓/✗/●/○ y el arte del banner por marcas ASCII en terminales sin Unicode."
 
 msgid "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it."
-msgstr "Desplaza el texto terminado en cabeceras plegadas. Clic en el texto de cabecera alterna una caja; la flecha la abre."
+msgstr "Desplaza el texto terminado en cabeceras plegadas. Clic en el texto de cabecera alterna un bloque; la flecha lo abre."
 
 msgid "Inspect or change workspace permissions and approval settings."
 msgstr "Inspecciona o cambia permisos del espacio y ajustes de aprobación."
@@ -2018,10 +2018,10 @@ msgid "Copy selection"
 msgstr "Copiar selección"
 
 msgid "Copy whole box"
-msgstr "Copiar caja completa"
+msgstr "Copiar bloque completo"
 
 msgid "Only the selected characters are copied. Whole-box copy is a separate choice."
-msgstr "Solo se copian los caracteres marcados. Copiar la caja completa es una opción aparte."
+msgstr "Solo se copian los caracteres marcados. Copiar el bloque completo es una opción aparte."
 
 msgid "No text selected."
 msgstr "No hay texto seleccionado."
@@ -2045,7 +2045,7 @@ msgid "{label} · {count} characters"
 msgstr "{label} · {count} caracteres"
 
 msgid "Ctrl+C or Copy selection copies only the marked text. Copy whole box and Copy path are separate explicit choices. The assistant cannot copy. The journal records the size, never the text. API keys are never copied."
-msgstr "Ctrl+C o Copiar selección copia solo el texto marcado. Copiar caja completa y Copiar ruta son opciones explícitas aparte. El asistente no puede copiar. El registro guarda el tamaño, nunca el texto. Las claves API nunca se copian."
+msgstr "Ctrl+C o Copiar selección copia solo el texto marcado. Copiar bloque completo y Copiar ruta son opciones explícitas aparte. El asistente no puede copiar. El registro guarda el tamaño, nunca el texto. Las claves API nunca se copian."
 
 msgid "Switch this workspace to Classic?"
 msgstr "¿Cambiar este espacio de trabajo a Classic?"
@@ -2093,7 +2093,7 @@ msgid "Brighten text and focused frames while keeping the shared black surfaces.
 msgstr "Aumentar el contraste del texto y los bordes enfocados conservando las superficies negras comunes."
 
 msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
-msgstr "Desplazar texto terminado en títulos contraídos. Usa Space para expandir una caja. Movimiento reducido desactiva este desplazamiento."
+msgstr "Desplazar texto terminado en títulos contraídos. Usa Space para expandir un bloque. Movimiento reducido desactiva este desplazamiento."
 
 # Accepted menu layout and exact decision chrome.
 
@@ -2354,3 +2354,15 @@ msgstr "Razonamiento extra profundo — más lento y caro"
 
 msgid "Maximum reasoning budget — slowest but strongest"
 msgstr "Presupuesto máximo de razonamiento — el más lento pero el más fuerte"
+
+msgid "Copy whole file"
+msgstr "Copiar archivo completo"
+
+msgid "Sidebar file preview · {state}"
+msgstr "Vista previa en barra lateral · {state}"
+
+msgid "Sidebar file preview"
+msgstr "Vista previa en barra lateral"
+
+msgid "Show a preview box below the file tree in the sidebar."
+msgstr "Mostrar un cuadro de vista previa debajo del árbol de archivos en la barra lateral."

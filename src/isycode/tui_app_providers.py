@@ -834,6 +834,18 @@ class ProviderMixin:
         self._open_settings_menu()
         return
 
+    def _menu_sidebar_preview_toggle(self, entry: dict[str, str | bool]) -> None:
+        enabled = not self._sidebar_file_preview
+        try:
+            UserDefaultsStore().update(sidebar_file_preview=enabled)
+        except (OSError, ValueError):
+            self.notify("Sidebar file preview preference could not be saved", severity="warning")
+            return
+        self._sidebar_file_preview = enabled
+        self._apply_sidebar_file_preview(enabled)
+        self._open_settings_menu()
+        return
+
     def _menu_reasoning_open(self, entry: dict[str, str | bool]) -> None:
         self._open_reasoning_menu()
         return

@@ -306,7 +306,7 @@ Collapsible = ExpandableBox
 
 
 class ActivateTree(Tree):
-    """One click highlights a node. The next click on that node opens it."""
+    """One click selects a node. A second click on that node (double-click) or Enter opens it."""
 
     async def _on_click(self, event: Click) -> None:
         async with self.lock:
@@ -323,8 +323,27 @@ class ActivateTree(Tree):
                 return
             self.focus()
             self.cursor_line = line
-            if activate_on_second_click(self, event, line):
-                await self.run_action("select_cursor")
+            node = self.get_node_at_line(line)
+            if node is not None:
+                if activate_on_second_click(self, event, line):
+                    await self._activate_node(node)
+                else:
+                    self.select_node(node)
+
+    async def action_select_cursor(self) -> None:
+        if self.cursor_node is not None:
+            await self._activate_node(self.cursor_node)
+
+    async def _activate_node(self, node: TreeNode) -> None:
+        data = node.data
+        if isinstance(data, dict) and data.get("kind") != "directory":
+            uri = data.get("path")
+            if isinstance(uri, str):
+                preview_fn = getattr(self.app, "_preview_file", None)
+                if callable(preview_fn):
+                    self.app.run_worker(preview_fn(uri, modal=True), group="file-preview")
+                    return
+        self.select_node(node)
 
 
 class SidePanel(Vertical):
@@ -377,9 +396,10 @@ class SidePanel(Vertical):
             with Horizontal(id="file-actions"):
                 yield Button(tr("Copy path"), id="file-copy-path", disabled=True)
                 yield Button(tr("Open preview"), id="file-open-preview", disabled=True)
-            yield Static("", id="file-preview-meta", markup=False)
-            with VerticalScroll(id="file-preview-scroll"):
-                yield SelectableText(tr("Select a file to preview it."), id="file-preview", classes="rail-copy", markup=False)
+            with Vertical(id="file-preview-box"):
+                yield Static("", id="file-preview-meta", markup=False)
+                with VerticalScroll(id="file-preview-scroll"):
+                    yield SelectableText(tr("Select a file to preview it."), id="file-preview", classes="rail-copy", markup=False)
 
     def on_mount(self) -> None:
         for button in self.query(Button):

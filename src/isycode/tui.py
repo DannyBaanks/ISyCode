@@ -455,6 +455,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._high_contrast = defaults.get("high_contrast", False)
             self._reduced_motion = defaults.get("reduced_motion", False)
             self._ascii_only = defaults.get("ascii_only", False)
+            self._sidebar_file_preview = defaults.get("sidebar_file_preview", False)
             self._locale = defaults.get("locale", "es")
         except (OSError, ValueError):
             self._compact_marquee_default = False
@@ -462,6 +463,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._high_contrast = False
             self._reduced_motion = False
             self._ascii_only = False
+            self._sidebar_file_preview = False
             self._locale = "es"
         configure_locale(self._locale)
         from isycode.tui_theme import set_ascii_only
@@ -649,6 +651,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def on_mount(self) -> None:
         if self._high_contrast:
             self._apply_high_contrast(True)
+        self._apply_sidebar_file_preview(self._sidebar_file_preview)
         self._refresh_usage()
         self._apply_locale_chrome()
         self._set_activity(tr("Chat ready"), MUTED)
@@ -1123,6 +1126,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry(tr("Compact text scroll · {state}",
                            state=on if self._compact_marquee_default else off),
                         "marquee_toggle", ""),
+            self._entry(tr("Sidebar file preview · {state}",
+                           state=on if self._sidebar_file_preview else off),
+                        "sidebar_preview_toggle", "",
+                        tr("Show a preview box below the file tree in the sidebar.")),
         ]
         if self._workspace_identity.workspace_root_source == "isyroot":
             entries.extend([
@@ -1167,6 +1174,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "contrast_toggle": "Brighten text and focused frames while keeping the shared black surfaces.",
                 "ascii_toggle": "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode.",
                 "marquee_toggle": "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling.",
+                "sidebar_preview_toggle": "Show a preview box below the file tree in the sidebar.",
                 "locale_cycle": tr("Interface language for ISyCode. This does not change permissions or workspace files."),
             }),
             tr("Permissions"): (YELLOW, {
@@ -1217,6 +1225,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "ascii_toggle": ("ASCII-only display", on if self._ascii_only else off),
             "locale_cycle": ("Language", tr(language_msgid(self._locale))),
             "marquee_toggle": ("Compact text scroll", off if self._reduced_motion else on if self._compact_marquee_default else off),
+            "sidebar_preview_toggle": ("Sidebar file preview", on if self._sidebar_file_preview else off),
             "user_defaults": ("My defaults", tr("All workspaces")),
             "workspace_config_preferences": ("Workspace preferences", tr("This workspace")),
             "authority_open": ("Authority & Security", self._workspace_mode().title()),
