@@ -124,7 +124,7 @@ async def test_model_preview_keeps_list_and_explicit_choice_reachable(size):
         assert "current" not in str(target.label)
         await pilot.click("#models-use")
         await pilot.pause()
-    assert chosen == [MODELS[-1]]
+    assert chosen == [{**MODELS[-1], "reasoning": "default"}]
 
 
 @pytest.mark.asyncio

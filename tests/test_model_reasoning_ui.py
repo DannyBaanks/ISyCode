@@ -83,7 +83,8 @@ def test_catalog_levels_are_model_specific_and_unknown_models_have_no_invented_l
     reasoning.record_catalog('chatgpt', 'fixture', {'supportedReasoningEfforts': [
         {'reasoningEffort': 'low'}, {'reasoningEffort': 'xhigh'}, {'reasoningEffort': 'bogus'}]})
     assert reasoning.reasoning_levels('chatgpt', 'fixture') == ('low', 'xhigh')
-    assert reasoning.reasoning_levels('nvidia', 'z-ai/glm-5.3') == ()
+    assert reasoning.reasoning_levels('nvidia', 'unknown/non-reasoning-model') == ()
+    assert reasoning.reasoning_levels('nvidia', 'z-ai/glm-5.3') == ('low', 'medium', 'high', 'max')
     assert reasoning.reasoning_levels('anthropic', 'claude-opus-4-6') == ('low', 'medium', 'high', 'max')
 
 
