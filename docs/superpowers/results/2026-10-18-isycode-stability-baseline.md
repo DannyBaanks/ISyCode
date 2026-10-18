@@ -40,3 +40,20 @@ Run [38974723145](https://github.com/DannyBaanks/ISyCode/actions/runs/3897472314
 - Interrupted-turn resume: passes locally and in 20/20 repetitions.
 - Journal worker race as a cause of the Windows failure: **NOT_DEMONSTRATED**. No lifecycle fix is justified by this baseline alone.
 - Later multi-turn rendering regression: tracked and tested separately in the approved plan; it is not inferred from the historical Windows job.
+
+## Post-fix verification (2026-10-18, follow-up session)
+
+Follow-up verification on the same host and branch (`codex/gmail-hive`), after the Task 3–7 fixes were applied:
+
+- Focused chat/streaming: `python3 -m pytest -q tests/test_chat_sequence.py tests/test_ux_polish_and_resume.py::test_area_f_interrupted_turn_capture_and_resume` → **15 passed in 16.72 s**.
+- Focused auth/model/folders: `python3 -m pytest -q tests/test_model_button.py tests/test_model_decision_surface.py tests/test_chatgpt_auth_tui.py tests/test_provider_auth_methods.py tests/test_workspace_folders.py tests/test_workspace_folders_tui.py` → **66 passed in 50.57 s**.
+- Task 7 profile: targeted Markdown render CPU reduced by at least 97% against the pre-change baseline (see `2026-10-18-isycode-stream-profile.md`).
+- Full local suite `python3 -m pytest -q -m "not integration"`:
+  - Plain run: 2044 passed, 151 skipped, 11 deselected; 2 failures in subprocess-import tests (`test_native_cli_stdio`, `test_provider_metadata_native`) caused by running without an editable install — both pass immediately with `PYTHONPATH=src`, which matches CI's `pip install -e '.[test]'`.
+  - Re-run with `PYTHONPATH=src`: **2045 passed**, 151 skipped, 11 deselected, 1 failure: `tests/test_file_preview_tui.py::test_copy_path_for_selected_directory`. That test passes standalone (2.00 s) and as a whole file (2 passed, 3.66 s); it failed only under a loaded full-suite run and is recorded as a timing flake, not a regression of this change (cause `NOT_DEMONSTRATED`).
+  - Log: `.superpowers/sdd/2026-10-18-isycode-tui-stability/task-8-full-suite-pythonpath.log`, sha256 `e1781961e1c46036e8f6ddff02ed9b1a73ee45edf77b709604bd383ea05666fb`.
+- Platform CI (Linux 3.10, Linux/Textual 8, Windows) has not run for this branch: it is not pushed to `origin`. CI evidence stays **NOT_DEMONSTRATED** here.
+
+## Release recommendation
+
+Local evidence supports shipping the stability fixes (chat retention, ChatGPT model picker, actionable OAuth link, sibling-folder alias, streaming repaint coalescing). Merging should wait for the platform CI jobs to run on a pushed branch; that evidence is pending and must not be inferred. Gmail Hive remains deferred and is not part of this delivery.
