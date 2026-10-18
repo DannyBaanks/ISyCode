@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Reproduce and resolve only demonstrated TUI stability or streaming-render bottlenecks, while preserving chat output, security gates, and truthful evidence.
+**Status:** Approved for direct execution by the user on 2026-10-18, including the three reported chat/OAuth fixes below. Gmail Hive remains deferred.
 
-**Architecture:** Establish a clean baseline first. Diagnose the Sentinel journal startup worker and prior test flake without assuming a product defect; make the smallest regression-backed fix only if a cause is reproduced. Profile synthetic content and reasoning streams without a live provider, then optimize only if measurement shows material UI cost.
+**Goal:** Resolve demonstrated TUI reliability risks, preserve completed chat turns across later responses, make the signed-in ChatGPT model selector usable, and make the official OAuth link actionable, while preserving security gates and truthful evidence.
+
+**Architecture:** Establish a clean baseline first. Diagnose the Sentinel journal startup worker and prior test flake without assuming a product defect. Reproduce the reported multi-turn overwrite and OAuth UX issues with offline TUI tests, fix only their owning flows, then profile synthetic content and reasoning streams without a live provider and optimize only if measurement shows material UI cost.
 
 **Tech Stack:** Python 3.10/3.12, pytest, Textual 8.2.8, GitHub Actions Linux and Windows jobs; no new runtime dependencies.
 
@@ -12,20 +14,25 @@
 
 ## Global Constraints
 
-- Stability ships before Gmail Hive; this plan does not implement Gmail, OAuth, or remote polling.
+- Stability ships before Gmail Hive; this plan does not implement Gmail OAuth or remote polling.
+- ChatGPT subscription changes are limited to the existing provider's post-login model selection and login-link presentation. Do not use the user's live account in automated tests, add credential storage, broaden OAuth scopes, or send a real sign-in request.
 - Change production code only when a reproducible failure or profile supports the change.
-- Preserve full user-visible stream text, reasoning text, selectable content, cancellation behavior, and Authority/ISySentinel/one-use approval checks.
+- Preserve all prior user and assistant messages, full streamed/reasoning text, selectable content, cancellation behavior, and Authority/ISySentinel/one-use approval checks.
+- Never select a ChatGPT model silently; keep `auto` until the user explicitly chooses an available model.
 - Do not weaken assertions, rewrite historical evidence, manufacture gate approvals, or mark a gate complete without fresh proof.
 - Refresh roadmap audit metadata only after a real re-audit; this work does not complete the roadmap audit.
 - Record exact command, environment, result, and changed artifact hash in the result report.
 
 ## Review Focus
 
-1. **Journal startup overlap on Windows:** do not read the journal or its lock file while the `sentinel-journal` worker is still verifying it.
-2. **TUI teardown with a pending worker:** app shutdown must leave no active worker or unsafe journal access.
-3. **Native-login cancellation:** the private challenge code may not enter chat history or persisted state.
-4. **Fragmented or partial streams:** coalescing rendering must not lose, duplicate, or expose failed-step output, and steering must preserve its existing semantics.
-5. **Large reasoning and content streams:** the UI must remain responsive, preserve the complete selectable result, and keep updates working when the active lane is off screen.
+1. **Consecutive chat turns:** a completed assistant widget must never be reused as the next turn's streaming widget; prior user/assistant/tool output remains intact. Separate actual replacement from expected scroll-offscreen behavior.
+2. **OAuth model selection:** ChatGPT subscription choices come from the authenticated account catalog or a clearly labeled supported catalog; `auto` is never silently replaced.
+3. **OAuth link activation:** the long URL remains actionable when wrapped; only HTTPS URLs on approved ChatGPT auth hosts may open.
+4. **Journal startup overlap on Windows:** do not read the journal or its lock file while the `sentinel-journal` worker is still verifying it.
+5. **TUI teardown with a pending worker:** app shutdown must leave no active worker or unsafe journal access.
+6. **Native-login cancellation:** the private challenge code may not enter chat history or persisted state.
+7. **Fragmented or partial streams:** coalescing rendering must not lose, duplicate, or expose failed-step output, and steering must preserve its existing semantics.
+8. **Large reasoning and content streams:** the UI must remain responsive, preserve the complete selectable result, and keep updates working when the active lane is off screen.
 
 ---
 
@@ -83,7 +90,58 @@
 
 - [ ] **Step 5: Run the Windows focused check.** Use CI's `test-windows` runner after the regression change. Expected: both parametrized cancellation states pass; a Linux pass is not a substitute.
 
-### Task 3: Measure content and thinking render cost offline
+### Task 3: Preserve completed assistant messages across turns
+
+**Files:**
+- Test: `tests/test_chat_sequence.py`
+- Possible, only if the regression reproduces: `src/isycode/tui_app_chat.py` or the owning session method
+
+**Interfaces:**
+- Consumes: the existing `TUIApp._run_chat()` streaming path and active `ConversationLane`.
+- Produces: a regression proving two completed assistant answers remain separately visible and unchanged after a later turn; a minimal fix if the lane reuses a completed stream widget.
+
+- [ ] **Step 1: Write a two-turn regression first.** Use an offline fake provider returning distinct answers for sequential user turns, mount both prompts through the normal submission path, then assert both prompts and both answers remain in the mounted chat and in `_history`.
+- [ ] **Step 2: Run the regression before changing production code.** Expected: if the issue reproduces, the first answer's widget is updated to the second answer or the prior turn is otherwise missing. Record the failure. If the test passes, inspect scroll position and record content loss as `NOT_REPRODUCED`; do not alter normal tail-follow behavior just to keep all history within a 24-row viewport.
+- [ ] **Step 3: If reproduced, make the smallest lifecycle fix.** Ensure only an unfinished response owns `lane.stream_widget`; release that reference once the no-tool final response is committed, while preserving tool-followup, interruption, retry, and steering paths.
+- [ ] **Step 4: Verify adjacent behavior.** Run `python -m pytest -q tests/test_chat_sequence.py tests/test_ux_polish_and_resume.py::test_area_f_interrupted_turn_capture_and_resume`.
+- [ ] **Step 5: Inspect the diff and commit only exact chat source/test paths.** If no source change is justified, retain a test only if it covers a distinct contract not already protected; otherwise record the investigation in the baseline report.
+
+### Task 4: Make ChatGPT subscription model selection explicit
+
+**Files:**
+- Test: `tests/test_chatgpt_auth_tui.py`
+- Test: `tests/test_model_button.py`
+- Possible: `src/isycode/tui_app_providers.py`, `src/isycode/tui.py`, or the owning model-selection module
+
+**Interfaces:**
+- Consumes: the existing ChatGPT OAuth completion path, active model control, and provider/account catalog returned through the existing authority owner.
+- Produces: a visible, tested route from a signed-in ChatGPT subscription to an explicit model choice without changing the default automatically.
+
+- [ ] **Step 1: Inspect the existing post-OAuth provider-selection and model-catalog path.** Confirm whether the active model button exposes model choices for `chatgpt`, and whether `Provider.models()` is backed by the authenticated Codex endpoint. Do not make a live request.
+- [ ] **Step 2: Write a failing offline TUI test.** Simulate OAuth success with a fake connector, open the visible model control, and assert the user can reach a catalog-backed ChatGPT model choice while `auto` stays active until Enter selects one.
+- [ ] **Step 3: Run the test before implementation.** Expected: the current route either offers only provider choices or cannot present/select ChatGPT account models. Preserve the failure output.
+- [ ] **Step 4: Implement the smallest route/catalog fix.** Keep provider switching separate from model selection; send model-list requests only through existing `ProviderNetworkOwner` and Authority grants. If the authenticated endpoint supplies no catalog, show that state clearly and use only an explicitly labeled supported catalog; never invent IDs or claim account availability.
+- [ ] **Step 5: Run focused auth/model tests.** Run `python -m pytest -q tests/test_chatgpt_auth_tui.py tests/test_model_button.py tests/test_resolved_chat_model.py tests/test_model_availability.py`.
+- [ ] **Step 6: Verify opening, choosing, cancellation, focus return, and default `auto`; commit only exact source/test paths.**
+
+### Task 5: Make the ChatGPT OAuth URL actionable when wrapped
+
+**Files:**
+- Test: `tests/test_chatgpt_auth_tui.py`
+- Modify, only as needed: `src/isycode/provider_auth_screens.py`
+- Possible: the narrow link-opening owner used by the current Textual UI
+
+**Interfaces:**
+- Consumes: the challenge URL returned by the existing approved ChatGPT connector.
+- Produces: a readable, mouse/keyboard actionable official sign-in link that remains usable at 80×24, without exposing it to conversation or persistent state.
+
+- [ ] **Step 1: Add a failing screen test** with a long HTTPS URL on `auth.openai.com`; assert the rendered control targets the exact URL and remains activatable after wrapping at 80×24.
+- [ ] **Step 2: Run the test and confirm it fails** because the current screen exposes only plain static URL text.
+- [ ] **Step 3: Implement a native actionable link or explicit Open button** using Textual's supported link/browser-opening path. Validate scheme and hostname against existing `AUTH_HOSTS`; reject unrelated hosts and keep cancellation reachable.
+- [ ] **Step 4: Run login/cancel and link tests.** Run `python -m pytest -q tests/test_chatgpt_auth_tui.py tests/test_provider_auth_methods.py`.
+- [ ] **Step 5: Confirm the one-use code and challenge URL remain absent from `_history` and persisted state; commit only exact source/test paths.**
+
+### Task 6: Measure content and thinking render cost offline
 
 **Files:**
 - Create: `scripts/profile_tui_streaming.py`
@@ -106,7 +164,7 @@
 - [ ] **Step 5: Implement only the measured bottleneck.** If content Markdown formatting dominates, coalesce UI paints while retaining the full source text and flush at turn boundaries. If reasoning preview dominates, change `ThoughtBlock` only with the same boundary guarantees. Do not change stream transport, provider chunking, or Idea Box timing as a rendering workaround.
 - [ ] **Step 6: Re-profile with identical samples.** Expected: the targeted render cost drops at least 20% against the same-host baseline; all full-content and boundary tests pass. If the target is missed, revert the optimization and retain the profile result only.
 
-### Task 4: Verify and close the stability delivery
+### Task 7: Verify and close the stability delivery
 
 **Files:**
 - Update: `docs/superpowers/results/2026-10-18-isycode-stability-baseline.md`
@@ -114,7 +172,7 @@
 - Verify: `.github/workflows/ci.yml` jobs `test`, `test-textual-current`, and `test-windows`
 
 **Interfaces:**
-- Consumes: completed diagnostics and any narrow regression/profile changes from Tasks 1–3.
+- Consumes: completed diagnostics and any narrow regression/profile changes from Tasks 1–6.
 - Produces: a reviewable evidence record and an explicit release/hold recommendation for Stability A.
 
 - [ ] **Step 1: Run the full local non-integration suite.**
@@ -131,11 +189,11 @@
 
 ## Self-review
 
-- Spec coverage: Task 1 covers baseline and historical flake; Task 2 covers the Windows journal race; Task 3 profiles both content and reasoning and permits only measured optimization; Task 4 covers full-suite/platform validation and evidence. Gmail remains deferred.
-- Review Focus coverage: worker overlap is in Task 2; teardown and journal locks are checked there and in startup tests if implicated; cancellation secret assertions stay unchanged; fragmented/failed/cancelled stream boundaries are tested in Task 3; large output and active-lane behavior are profiled without a timing assertion in CI.
+- Spec coverage: Task 1 covers baseline and historical flake; Task 2 covers the Windows journal race; Tasks 3–5 cover the reported multi-turn overwrite, OAuth model-selector, and wrapped-link issues; Task 6 profiles content and reasoning and permits only measured optimization; Task 7 covers full-suite/platform validation and evidence. Gmail remains deferred.
+- Review Focus coverage: consecutive-turn widgets are checked in Task 3; model catalog ownership and explicit selection are checked in Task 4; OAuth host validation and cancellation-secret absence are checked in Task 5; worker overlap is in Task 2; fragmented/failed/cancelled stream boundaries are tested in Task 6; large output and active-lane behavior are profiled without a timing assertion in CI.
 - No task presumes the root cause. A missing reproduction yields a documented non-fix, not a speculative source edit.
 - The 20% profile threshold is a proposed operational definition of “material” for review; it is not a product performance claim.
 
 ## Execution handoff
 
-No implementation has started. After human review, execute directly in this session and require a final independent review of the branch. If the plan is approved, use `superpowers:executing-plans` task by task.
+The plan and additions above are approved. Execute directly in this isolated branch, task by task, and require a final review before recommending a merge. Gmail Hive is still a separate later delivery.
