@@ -55,15 +55,19 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
             assert button is not None, 'filtered model button never appeared'
 
             assert 'Nemotron 3 Ultra' in str(button.label)
+            button.focus()
+            await pilot.pause()
+            from isycode.tui_effort_slider import EffortSlider
+            slider = current.query_one('#models-effort', EffortSlider)
+            assert slider.stops == ('default', 'off', 'on')
+            await pilot.press('right', 'right')
+            assert slider.level == 'on'
             button.press()
             for _ in range(100):
                 await pilot.pause(0.05)
-                if app._menu_mode == 'reasoning':
+                if not isinstance(app.screen, ModelsScreen):
                     break
-            assert app._menu_mode == 'reasoning'
-            assert [entry['value'].rsplit('|', 1)[1] for entry in app._menu_entries] == ['default', 'off', 'on']
-            app._select_menu_entry(app._menu_entries[-1])
-            await pilot.pause()
+            assert app._menu_mode != 'reasoning'
             assert Provider(name='nvidia', api_key='test-not-real').reasoning_effort == 'on'
             assert '/ On · NVIDIA NIM' in plain_text(app.query_one('#idea-box'))
             assert 'nvidia/nemotron' not in plain_text(app.query_one('#idea-box'))
@@ -79,7 +83,8 @@ def test_catalog_levels_are_model_specific_and_unknown_models_have_no_invented_l
     reasoning.record_catalog('chatgpt', 'fixture', {'supportedReasoningEfforts': [
         {'reasoningEffort': 'low'}, {'reasoningEffort': 'xhigh'}, {'reasoningEffort': 'bogus'}]})
     assert reasoning.reasoning_levels('chatgpt', 'fixture') == ('low', 'xhigh')
-    assert reasoning.reasoning_levels('nvidia', 'z-ai/glm-5.3') == ()
+    assert reasoning.reasoning_levels('nvidia', 'unknown/non-reasoning-model') == ()
+    assert reasoning.reasoning_levels('nvidia', 'z-ai/glm-5.3') == ('low', 'medium', 'high', 'max')
     assert reasoning.reasoning_levels('anthropic', 'claude-opus-4-6') == ('low', 'medium', 'high', 'max')
 
 

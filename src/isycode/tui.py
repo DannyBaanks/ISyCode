@@ -1629,6 +1629,20 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         f"reasoning={'yes' if entry['reasoning'] else 'no'} · "
                         f"context={entry['context'] or '?'} · tool_call={'yes' if entry['tool_call'] else 'NO — chat needs tools'}",
                         translate=False))
+            from isycode.providers import custom_models
+            listed_values = {row["value"] for row in models if row["kind"] == "model"}
+            for name in PRESETS:
+                for model_id in custom_models(name):
+                    if f"{name}|{model_id}" in listed_values:
+                        continue
+                    row = self._entry(
+                        tr("{label}  ·  {model}  · added by you",
+                           label=PRESETS[name]['label'], model=model_id),
+                        "model", f"{name}|{model_id}",
+                        "Model ID you added; not verified against this account.",
+                        translate=False)
+                    row["custom"] = True
+                    models.append(row)
             if getattr(self, "_account_models_loading", False):
                 models.append(self._entry("Loading account catalog…", "info"))
             elif getattr(self, "_account_model_status", ""):

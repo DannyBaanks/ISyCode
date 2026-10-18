@@ -331,8 +331,46 @@ def save_provider_selection(name: str, model: str) -> None:
     recent = [identity] + [item for item in recent_models() if item != identity]
     data = {"version": 1, "provider": provider, "models": models,
             "recent_models": recent[:12], "slots": data.get("slots", {}),
-            "model_metadata": data.get("model_metadata", {})}
+            "model_metadata": data.get("model_metadata", {}),
+            "custom_models": data.get("custom_models", {})}
     _write_preferences(data)
+
+
+CUSTOM_MODELS_PER_PROVIDER = 64
+CUSTOM_MODELS_TOTAL = 128  # keeps provider.json far below its 64 KiB load limit
+
+
+def _valid_model_id(model: Any) -> bool:
+    return (isinstance(model, str) and bool(model.strip()) and len(model) <= 256
+            and model == model.strip() and not any(ord(char) < 32 for char in model))
+
+
+def custom_models(provider: str) -> list[str]:
+    """Model IDs the user typed for this provider; metadata only, never verified."""
+    rows = _load_preferences().get("custom_models", {})
+    items = rows.get(provider, []) if isinstance(rows, dict) else []
+    if not isinstance(items, list):
+        return []
+    return list(dict.fromkeys(item for item in items if _valid_model_id(item)))[:CUSTOM_MODELS_PER_PROVIDER]
+
+
+def add_custom_model(provider: str, model: str) -> str:
+    """Remember a typed model ID for one provider. No network call, no key load."""
+    provider, model = provider.casefold(), model.strip()
+    if provider not in PRESETS or not _valid_model_id(model):
+        raise ValueError("model id is invalid")
+    data = _load_preferences()
+    rows = data.get("custom_models", {})
+    rows = {key: value for key, value in rows.items()
+            if key in PRESETS and isinstance(value, list)} if isinstance(rows, dict) else {}
+    existing = [item for item in custom_models(provider) if item != model]
+    total = sum(len(value) for key, value in rows.items() if key != provider) + len(existing)
+    if len(existing) >= CUSTOM_MODELS_PER_PROVIDER or total >= CUSTOM_MODELS_TOTAL:
+        raise ValueError("too many custom model ids")
+    rows[provider] = existing + [model]
+    data["custom_models"] = rows
+    _write_preferences(data)
+    return model
 
 
 def model_slot(slot: str) -> dict[str, str] | None:

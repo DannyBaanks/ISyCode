@@ -76,6 +76,8 @@ async def test_variant_selection_reaches_select_provider_with_intact_id(tmp_path
         app._menu_model_family({"kind": "model_family", "value": "openai|GLM"})
         row = next(row for row in app._menu_entries if row["kind"] == "model")
         app._menu_model(row)
+        if app._menu_mode == "reasoning":
+            app._select_menu_entry(app._menu_entries[0])
         assert chosen == [("openai", "glm-5.3-flash")]
 
 

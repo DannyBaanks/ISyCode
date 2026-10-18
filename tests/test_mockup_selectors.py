@@ -124,7 +124,7 @@ async def test_model_preview_keeps_list_and_explicit_choice_reachable(size):
         assert "current" not in str(target.label)
         await pilot.click("#models-use")
         await pilot.pause()
-    assert chosen == [MODELS[-1]]
+    assert chosen == [{**MODELS[-1], "reasoning": "default"}]
 
 
 @pytest.mark.asyncio
@@ -186,7 +186,8 @@ async def test_catalog_refresh_keeps_model_identity_or_disables_removed_preview(
             assert "claude-opus-4-6" in str(screen.query_one("#model-detail").render())
             await pilot.click("#models-use")
         await pilot.pause()
-    assert chosen == ([None] if remove_preview else [entries[1]])
+    # Models with published levels also carry the effort slider's draft level.
+    assert chosen == ([None] if remove_preview else [{**entries[1], "reasoning": "default"}])
 
 
 @pytest.mark.asyncio

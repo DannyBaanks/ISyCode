@@ -858,6 +858,13 @@ class ProviderMixin:
         kind, value = entry["kind"], entry["value"]
         provider_name, model_name = value.split("|", 1)
         from isycode.reasoning_options import reasoning_levels
+        level = entry.get("reasoning")
+        if isinstance(level, str) and (level == "default"
+                                       or level in reasoning_levels(provider_name, model_name)):
+            # The picker's effort slider already chose the level: apply both at once.
+            self._menu_reasoning_select({"kind": "reasoning_select",
+                                         "value": f"{provider_name}|{model_name}|{level}"})
+            return
         if not reasoning_levels(provider_name, model_name):
             # No selectable levels: apply directly instead of inventing a selector.
             self._models_scope = None
