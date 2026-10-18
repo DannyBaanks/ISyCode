@@ -515,6 +515,69 @@ class ModelsScreen(ModalScreen):
         self.dismiss(None)
 
 
+class HarnessRepairConfirmScreen(ModalScreen[bool]):
+    """One Accept/Cancel window that lists every cli:file the repair will touch.
+
+    The body scrolls so the user can review the full blast radius before a
+    new conversation lane starts executing the compose in Classic mode.
+    """
+
+    CSS = """
+    HarnessRepairConfirmScreen { align: center middle; background: #000000 58%; }
+    #repair-confirm-card { width: 94; max-width: 96%; height: 96%; padding: 0 1;
+                          border: solid #718291; background: #000000; }
+    #repair-confirm-title { height: 1; color: #edf1f5; text-style: bold; }
+    #repair-confirm-scroll { height: 1fr; }
+    #repair-confirm-body { height: auto; }
+    #repair-confirm-actions { height: 3; align-horizontal: right; margin-top: 1; }
+    #repair-confirm-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "cancel", "Cancel", show=False),
+                Binding("n", "cancel", "Cancel", show=False)]
+
+    def __init__(self, targets: list[dict[str, Any]], brief: str) -> None:
+        super().__init__()
+        self.targets = targets
+        self.brief = brief
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="repair-confirm-card", classes="isy-dialog"):
+            yield Static(tr("Repair plan · review before launching"), id="repair-confirm-title",
+                        classes="isy-dialog-title")
+            with VerticalScroll(id="repair-confirm-scroll", classes="isy-dialog-body"):
+                yield Static(self._render_body(), id="repair-confirm-body")
+            with Horizontal(id="repair-confirm-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Cancel · Esc"), id="repair-cancel")
+                yield Button(tr("Launch repair conversation"), id="repair-accept", variant="primary")
+
+    def _render_body(self) -> Text:
+        body = Text()
+        if not self.targets:
+            body.append("No actionable gaps · nothing to repair.\n", style="#9295a2")
+            return body
+        body.append(f"{len(self.targets)} setting(s) will be reviewed:\n\n", style="#edf1f5")
+        for index, target in enumerate(self.targets, 1):
+            harnesses = ", ".join(target["harnesses"]) or "none"
+            body.append(f"{index}. {target['title']}", style="#77d8b0")
+            body.append(f"\n   cli: {harnesses}", style="#aeb6c5")
+            files = target["files"]
+            if not files:
+                body.append("\n   files: none yet (new in ISyCode)", style="#f6c77b")
+            else:
+                for path in files:
+                    body.append(f"\n   files: {path}", style="#aeb6c5")
+            body.append("\n")
+        body.append("A new conversation lane will run this compose in Classic mode.\n",
+                    style="#f6c77b")
+        return body
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "repair-accept")
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class HarnessComposeScreen(ModalScreen[bool]):
     CSS = """
     HarnessComposeScreen { align: center middle; background: #000000 58%; }
@@ -564,6 +627,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     .harness-actions Button { width: 1fr; min-width: 0; height: 3; margin-right: 1; text-wrap: nowrap; text-overflow: ellipsis; }
     #harness-gap-panel { width: 100%; margin-top: 1; }
     #harness-gap-content { height: auto; }
+    #harness-gap-actions { width: 100%; height: 3; margin-bottom: 1; }
+    #harness-gap-actions Button { width: 1fr; min-width: 0; height: 3; }
     #harness-footer { height: 3; align-horizontal: right; }
     #harness-close { width: auto; height: 3; }
     #harness-hint { height: 1; color: #a9b5c2; }
@@ -603,6 +668,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                             transcript_button.display = False
                             yield transcript_button
                 with Collapsible(title=self._gap_title(), collapsed=True, id="harness-gap-panel"):
+                    with Horizontal(id="harness-gap-actions"):
+                        yield Button(tr("Repair all gaps"), id="harness-compose-all", variant="primary")
                     yield Static(self._render_gaps(), id="harness-gap-content")
                     for row in self._gap_rows():
                         with Collapsible(title=row["title"], collapsed=True):
@@ -792,6 +859,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "harness-close":
             self.dismiss(None)
+        elif event.button.id == "harness-compose-all":
+            self.dismiss("compose:all")
         elif event.button.id and event.button.id.startswith("harness-compose-"):
             semantic_id = event.button.id.removeprefix("harness-compose-")
             if semantic_id in SEED_OPTIONS:

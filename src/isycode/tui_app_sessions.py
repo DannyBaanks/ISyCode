@@ -660,12 +660,18 @@ class SessionMixin:
             if selected is None:
                 return
             if selected.startswith("compose:"):
-                from isycode.harness_graph import repair_compose
+                from isycode.harness_graph import repair_compose, repair_compose_all, repair_targets
                 semantic_id = selected.removeprefix("compose:")
-                row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
-                brief = repair_compose(semantic_id, row["harnesses"])
-                if await self._await_screen(HarnessComposeScreen(brief)):
-                    await self._request_clipboard_copy(brief, "selection")
+                if semantic_id == "all":
+                    rows = screen._gap_rows()
+                    brief = repair_compose_all(rows)
+                    targets = repair_targets(rows)
+                else:
+                    row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
+                    brief = repair_compose(semantic_id, row["harnesses"])
+                    targets = repair_targets([row])
+                if await self._await_screen(HarnessRepairConfirmScreen(targets, brief)):
+                    await self._launch_repair_conversation(brief)
                 continue
             if selected.startswith("copy:"):
                 harness_id = selected.removeprefix("copy:")
@@ -681,6 +687,29 @@ class SessionMixin:
                     await self._import_harness_transcript(harness_id, Path(root), relative_path)
                 continue
             await self._choose_harness_root(selected)
+
+    async def _launch_repair_conversation(self, brief: str) -> None:
+        """Open a fresh conversation lane and post the repair compose to it.
+
+        The new lane runs in the current workspace's mode (Classic by default
+        for new folders), so the model that answers is bound by the same
+        Sentinel / Authority gates as any other turn. The compose is a review
+        proposal, not execution authority: the model still needs per-action
+        approval.
+        """
+        if not brief.strip():
+            self._append("  Repair compose is empty.", YELLOW)
+            return
+        self._capture_running_session()
+        lane = open_lane(self, None)
+        self._show_lane(lane)
+        self._append("  Repair conversation opened · running the compose in the background.", CYAN)
+        status = self._post_user_text(lane, brief)
+        if status == "full":
+            self._append("  Repair lane is busy; the compose is queued.", YELLOW)
+        elif status == "queued":
+            self._append("  Repair compose queued behind the current turn.", YELLOW)
+        self.run_worker(self._refresh_work_list(), group="work-list")
 
     def _conversation_status(self) -> str:
         if isinstance(self.screen, (ApprovalScreen, ContextAccessScreen, AgentQuestionScreen)):

@@ -6,6 +6,8 @@ from isycode.harness_graph import (
     copyable_default_model,
     gap_status,
     present_by_semantic,
+    repair_compose_all,
+    repair_targets,
 )
 
 
@@ -62,3 +64,51 @@ def test_reviewed_seed_has_separate_web_nodes_and_expected_targets():
     assert SEED_OPTIONS["default_model"].isycode_target == "src/isycode/providers.py:save_provider_selection"
     assert SEED_OPTIONS["reasoning_effort"].isycode_target == "src/isycode/providers.py:Provider.reasoning_effort"
     assert SEED_OPTIONS["folder_trust"].transfer == "non_transferable"
+
+
+def test_repair_compose_all_bundles_actionable_rows():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+        {"semantic_id": "user_skills", "harnesses": ("codex", "claude", "hermes", "grok"), "status": "ADD", "target_label": "Missing in ISyCode", "title": "User skills"},
+        {"semantic_id": "ui_theme", "harnesses": ("codex", "claude"), "status": "WATCH", "target_label": "Not an ISyCode setting", "title": "UI theme"},
+        {"semantic_id": "approval_bypass", "harnesses": ("codex", "claude"), "status": "DO_NOT_MERGE", "target_label": "Not an ISyCode setting", "title": "Approval bypass"},
+    ]
+    brief = repair_compose_all(rows)
+    assert "Gaps covered: 2" in brief
+    assert "User skills" in brief
+    assert "UI theme" in brief
+    assert "Approval bypass" not in brief
+    assert "Default model" not in brief
+
+
+def test_repair_compose_all_returns_aligned_message_when_no_actionable_gaps():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+    ]
+    assert repair_compose_all(rows) == "No gaps to repair · the harness map is aligned."
+
+
+def test_repair_targets_lists_cli_and_files_for_actionable_rows_only():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+        {"semantic_id": "user_skills", "harnesses": ("codex", "claude", "hermes", "grok"), "status": "ADD", "target_label": "Missing in ISyCode", "title": "User skills"},
+        {"semantic_id": "web_fetch", "harnesses": ("codex", "claude"), "status": "WATCH",
+         "target_label": "src/isycode/web_fetch.py:WebFetchOwner.execute", "title": "Web fetch"},
+        {"semantic_id": "approval_bypass", "harnesses": ("codex", "claude"), "status": "DO_NOT_MERGE", "target_label": "absent", "title": "Approval bypass"},
+    ]
+    targets = repair_targets(rows)
+    assert [t["semantic_id"] for t in targets] == ["user_skills", "web_fetch"]
+    skills = targets[0]
+    assert skills["harnesses"] == ("codex", "claude", "hermes", "grok")
+    assert skills["files"] == []
+    web = targets[1]
+    assert web["files"] == ["src/isycode/web_fetch.py:WebFetchOwner.execute"]
+
+
+def test_repair_targets_uses_seed_option_target_over_row_label():
+    rows = [
+        {"semantic_id": "web_fetch", "harnesses": ("codex", "claude"), "status": "WATCH",
+         "target_label": "row-label-ignored", "title": "Web fetch"},
+    ]
+    targets = repair_targets(rows)
+    assert targets[0]["files"] == ["src/isycode/web_fetch.py:WebFetchOwner.execute"]
