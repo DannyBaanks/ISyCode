@@ -1,11 +1,13 @@
 from isycode.tui import plain_text
 import asyncio
 import json
+import pytest
 
 from textual.widgets import Static
 
 from isycode.tui import ChatArea, TUIApp, ThoughtBlock
 from isycode.conversation_lane import ConversationLane
+from isycode.tui_widgets import SelectableText
 from test_daily_tui import configure
 
 
@@ -245,6 +247,53 @@ def test_fast_consecutive_reasoning_chunks_share_one_visible_block(tmp_path, mon
         asyncio.run(scenario())
 
 
+def test_completed_answers_remain_separate_after_later_user_turns(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    answers = ["Answer alpha.", "Answer beta.", "Answer gamma."]
+    requests = []
+
+    async def complete(provider, messages, **kwargs):
+        prompt = messages[-1]["content"]
+        requests.append(prompt)
+        answer = answers[len(requests) - 1]
+        kwargs["on_chunk"]("content", answer)
+        return {"text": answer, "tool_calls": []}
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 35)) as pilot:
+            await pilot.pause()
+            prompt = app.query_one("#prompt-input")
+            questions = ["Question alpha?", "Question beta?", "Question gamma?"]
+            for question in questions:
+                prompt.load_text(question)
+                app._accept_prompt(prompt, prompt.text)
+                for _ in range(100):
+                    await pilot.pause(0.02)
+                    if app._foreground_lane().loop_task is None:
+                        break
+                assert app._foreground_lane().loop_task is None
+
+            visible = [widget for widget in app.query_one(ChatArea).query(SelectableText)]
+            user_text = [widget.selection_text for widget in visible if widget.has_class("user-turn")]
+            assistant_text = [widget.selection_text for widget in visible
+                              if not widget.has_class("user-turn")
+                              and widget.selection_text in answers]
+            assert user_text == questions
+            assert assistant_text == answers
+            assert requests == user_text
+            assert [(item["role"], item["content"]) for item in app._history] == [
+                ("user", "Question alpha?"), ("assistant", answers[0]),
+                ("user", "Question beta?"), ("assistant", answers[1]),
+                ("user", "Question gamma?"), ("assistant", answers[2]),
+            ]
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
 def test_reasoning_stream_batches_expensive_thought_paints(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     chunks = [f"reasoning-{index:03d} " + ("detail " * 40) for index in range(80)]
@@ -288,11 +337,12 @@ def test_reasoning_stream_reuses_block_after_switching_lanes(tmp_path, monkeypat
 
     async def complete(provider, messages, **kwargs):
         kwargs["on_chunk"]("reasoning", "First thought. ")
+        kwargs["on_chunk"]("content", "First content. ")
         first_chunk.set()
         await continue_stream.wait()
         kwargs["on_chunk"]("reasoning", "Second thought.")
-        kwargs["on_chunk"]("content", "Answer.")
-        return {"text": "Answer.", "tool_calls": []}
+        kwargs["on_chunk"]("content", "Second content.")
+        return {"text": "First content. Second content.", "tool_calls": []}
 
     monkeypatch.setattr("isycode.tui.provider_complete", complete)
 
@@ -318,6 +368,96 @@ def test_reasoning_stream_reuses_block_after_switching_lanes(tmp_path, monkeypat
             assert len(blocks) == 1
             assert blocks[0]._full_text == "First thought. Second thought."
             assert blocks[0].collapsed
+            content = [widget.selection_text for widget in app.query_one(ChatArea).query(SelectableText)]
+            assert "First content. Second content." in content
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_content_burst_coalesces_markdown_paints_and_flushes_exact_answer(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    chunks = [f"chunk-{index:03d} " + ("sample text " * 8) for index in range(96)]
+    answer = "".join(chunks)
+
+    async def complete(provider, messages, **kwargs):
+        for chunk in chunks:
+            kwargs["on_chunk"]("content", chunk)
+        return {"text": answer, "tool_calls": []}
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+    from isycode.tui_app_chat import RichMarkdown as OriginalMarkdown
+    markdown_calls = 0
+
+    def count_markdown(*args, **kwargs):
+        nonlocal markdown_calls
+        markdown_calls += 1
+        return OriginalMarkdown(*args, **kwargs)
+
+    monkeypatch.setattr("isycode.tui_app_chat.RichMarkdown", count_markdown)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            await app._run_chat("Render this burst.")
+            await pilot.pause()
+            rendered = [widget.selection_text for widget in app.query_one(ChatArea).query(SelectableText)]
+            assert answer in rendered
+            assert app._history[-1]["content"] == answer.strip()
+            assert markdown_calls < len(chunks) // 2
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("ending", ["failure", "cancel"])
+def test_content_flushes_latest_partial_on_failure_and_cancel(tmp_path, monkeypatch, capsys, ending):
+    configure(tmp_path, monkeypatch)
+    started = asyncio.Event()
+    partial = "Latest partial text, fully selectable."
+    attempts = 0
+
+    async def complete(provider, messages, **kwargs):
+        if ending == "cancel":
+            kwargs["on_chunk"]("content", partial[:12])
+            kwargs["on_chunk"]("content", partial[12:])
+            started.set()
+            await asyncio.Event().wait()
+        nonlocal attempts
+        attempts += 1
+        latest = partial if attempts == 4 else f"Discarded retry {attempts}."
+        kwargs["on_chunk"]("content", latest[:12])
+        kwargs["on_chunk"]("content", latest[12:])
+        from isycode.streaming import StreamError
+        raise StreamError("synthetic stream failure")
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+
+    async def no_retry_delay(_delay):
+        return None
+
+    monkeypatch.setattr("isycode.continuity_recovery.wait_fixed", no_retry_delay)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            task = asyncio.create_task(app._run_chat("Keep the partial text."))
+            if ending == "cancel":
+                await asyncio.wait_for(started.wait(), 5)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+            else:
+                await task
+            await pilot.pause()
+            if ending == "failure":
+                assert attempts == 4
+                assert app._interrupted_turn.partial_text == partial
+            rendered = [widget.selection_text for widget in app.query_one(ChatArea).query(SelectableText)]
+            assert partial in rendered
+            assert app._history == []
 
     with capsys.disabled():
         asyncio.run(scenario())

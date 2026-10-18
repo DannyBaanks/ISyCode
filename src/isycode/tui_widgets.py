@@ -47,12 +47,11 @@ SPINNER_FRAMES_ASCII = ("|", "/", "-", "\\")
 def activate_on_second_click(host, event, key) -> bool:
     """Return whether this click should open a row that is already selected.
 
-    The first click only arms that row. Textual reports a double-click only
-    when the second press lands on the exact same cell, so a one-cell jitter
-    stays at chain 1 and used to do nothing. A later click on the same row
-    opens it anyway.
+    The first click only arms that row. Textual click chains can also span
+    different widgets, so event.chain alone must never activate a newly
+    selected row. A later click on that same row opens it.
     """
-    if getattr(event, "chain", 0) >= 2 or getattr(host, "_activate_key", None) == key:
+    if getattr(host, "_activate_key", None) == key:
         host._activate_key = None
         return True
     host._activate_key = key
@@ -327,8 +326,6 @@ class ActivateTree(Tree):
             if node is not None:
                 if activate_on_second_click(self, event, line):
                     await self._activate_node(node)
-                else:
-                    self.select_node(node)
 
     async def action_select_cursor(self) -> None:
         if self.cursor_node is not None:

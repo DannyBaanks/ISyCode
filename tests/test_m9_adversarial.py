@@ -88,6 +88,8 @@ def test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal(tmp_path,
 
     async def scenario(app, pilot):
         app._set_rail_view("files")
+        # Inline preview is an opt-in preference; display it to test sanitization.
+        app._apply_sidebar_file_preview(True)
         await app._preview_file(str(app._workspace_root / "evil.txt"))
         await pilot.pause()
         out = terminal_bytes(app)

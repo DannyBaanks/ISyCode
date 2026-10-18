@@ -93,6 +93,8 @@ from isycode.tui_theme import TEXT, _fit_cells
 from isycode.tui_widgets import ThoughtBlock
 from textual.widgets import TextArea
 
+CONTENT_PAINT_INTERVAL_S = 1 / 30
+
 
 class ChatMixin:
     async def _summarize_older(self, provider, owner, older: list[dict],
@@ -544,6 +546,8 @@ class ChatMixin:
             holder: dict = {"widget": None}
             assistant_sent_at: str | None = None
             prompt_persisted = False
+            last_content_paint_at = 0.0
+            last_painted_content: str | None = None
             thought_started = _time.monotonic()
 
             provider_name = selected_provider_name()
@@ -567,8 +571,8 @@ class ChatMixin:
             else:
                 messages = self._image_attachments.prepare(messages, provider.name, provider.model)
 
-            def _content_line() -> None:
-                nonlocal assistant_sent_at
+            def _content_line(*, force: bool = False) -> None:
+                nonlocal assistant_sent_at, last_content_paint_at, last_painted_content
                 if not step_content:
                     return
                 lane = self._active_lane()
@@ -578,11 +582,24 @@ class ChatMixin:
                     lane.stream_widget = None
                     holder["widget"] = None
                     return
+                now = _time.monotonic()
+                if not force and now - last_content_paint_at < CONTENT_PAINT_INTERVAL_S:
+                    return
+                if content == last_painted_content:
+                    return
+                last_content_paint_at = now
+                last_painted_content = content
                 chat_now = self.query_one(ChatArea)
                 w = holder["widget"]
+                if w is not None and w.parent is not chat_now:
+                    # Repainting a lane replaces its widgets while the stream task
+                    # continues in the background. Do not keep writing into the
+                    # detached widget captured before the lane switch.
+                    w = None
+                    holder["widget"] = None
                 if w is None:
                     live = lane.stream_widget
-                    if live is not None:
+                    if live is not None and live.parent is chat_now:
                         w = live
                         holder["widget"] = w
                 if w is None:
@@ -712,6 +729,8 @@ class ChatMixin:
                     holder["widget"] = None
                     step_content.clear()
                     step_reason.clear()
+                    last_content_paint_at = 0.0
+                    last_painted_content = None
                     content_mark, reason_mark = len(content_buf), len(reason_buf)
                     if self._pending_steering:
                         steer_trial = {"messages": list(messages), "history": list(self._history), "instructions": list(self._pending_steering)}
@@ -797,7 +816,10 @@ class ChatMixin:
                             await wait_fixed(decision.delay_s)
                             continue
                         if recovery_failures:
-                            discard_failed_step(content_mark, reason_mark)
+                            # Keep the final attempt's partial output available to the
+                            # interrupted-turn handler below. It stays uncommitted and
+                            # is surfaced as partial text for /resume; earlier retry
+                            # attempts were already removed before their replacement.
                             self._append(
                                 f"  ⚠ Recovery stopped after {recovery_failures} automatic "
                                 f"attempt{'s' if recovery_failures != 1 else ''} · "
@@ -853,6 +875,7 @@ class ChatMixin:
                         self._append("Steering accepted · continuing the turn.", CYAN)
                     if not step_content and isinstance(response.get("text"), str):
                         on_chunk("content", response["text"])
+                    _content_line(force=True)
                     finish_step()
                     calls = response.get("tool_calls", [])
                     if not calls:
@@ -928,7 +951,7 @@ class ChatMixin:
                         })
             except asyncio.CancelledError:
                 if content_buf:
-                    _content_line()
+                    _content_line(force=True)
                     self._append(
                         "  Response stopped. This partial answer was not added to chat history.",
                         YELLOW)
@@ -958,7 +981,7 @@ class ChatMixin:
                 self._retry_prompt = text
                 if content_buf or reason_buf:
                     if content_buf:
-                        _content_line()
+                        _content_line(force=True)
                     self._append(
                         f"  Stream interrupted ({_transport_reason(exc)}). Use /resume to continue without repeating completed tools.",
                         YELLOW)
@@ -982,7 +1005,7 @@ class ChatMixin:
                     "nothing was executed.")
                 content_buf[:] = [full]
                 step_content[:] = [full]
-                _content_line()
+                _content_line(force=True)
             elif attempted_tool:
                 full = (
                     f"ISyCode did not run this `{attempted_tool}` request: chat has no "
@@ -992,7 +1015,7 @@ class ChatMixin:
                 )
                 content_buf[:] = [full]
                 step_content[:] = [full]
-                _content_line()
+                _content_line(force=True)
             if full:
                 if not prompt_persisted:
                     self._persist_chat_message("user", text, sent_at=self._pending_user_sent_at)
@@ -1003,6 +1026,7 @@ class ChatMixin:
                 done_lane.partial = ""
                 done_lane.partial_reason = ""
                 done_lane.partial_reason_chunks = []
+                done_lane.stream_widget = None
                 if step_reason:
                     done_lane.lines.append(("reasoning", "".join(step_reason),
                                             _time.monotonic() - thought_started))

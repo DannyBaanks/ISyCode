@@ -844,7 +844,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         elif button_id == "providers-button":
             self._open_provider_menu()
         elif button_id == "model-button":
-            self._open_provider_menu()
+            self._open_scoped_models(selected_provider_name())
         elif button_id == "role-button":
             self._open_role_menu()
         elif button_id == "settings-button":
