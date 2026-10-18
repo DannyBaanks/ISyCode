@@ -4,6 +4,12 @@ msgstr ""
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Temporary input-copy budget: {mib} MiB for this command."
+msgstr "Presupuesto de copia temporal: {mib} MiB para este comando."
+
+msgid "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
+msgstr "Supera los 512 MiB predeterminados: necesita más disco temporal y tiempo de copia. No concede permisos adicionales; el sandbox y los límites de cambios de archivos se mantienen. Si falta espacio, el comando no se ejecuta."
+
 msgid "ISyCode  ·  COMMAND BROWSER"
 msgstr "ISyCode  ·  EXPLORADOR DE COMANDOS"
 

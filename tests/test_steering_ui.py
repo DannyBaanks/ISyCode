@@ -1,7 +1,46 @@
 import asyncio
 import pytest
 from isycode.tui import TUIApp
+from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
+
+
+def test_steering_keeps_the_prompt_before_the_steering_message_in_the_saved_session(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    UserDefaultsStore().update(new_workspace='recurring')
+    monkeypatch.setattr("isycode.reasoning_options.steering_support", lambda provider, model: True)
+    async def scenario():
+        ready = asyncio.Event()
+        snapshots = []
+        async def complete(provider, messages, **kwargs):
+            import copy
+            snapshots.append(copy.deepcopy(messages))
+            if len(snapshots) == 1:
+                kwargs["on_chunk"]("content", "Partial reply")
+                ready.set()
+                await asyncio.Event().wait()
+            kwargs["on_chunk"]("content", "Updated reply")
+            return {"text": "Updated reply", "tool_calls": []}
+        monkeypatch.setattr("isycode.tui.provider_complete", complete)
+        app = TUIApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            prompt = app.query_one("#prompt-input")
+            app._accept_prompt(prompt, "First instruction")
+            await asyncio.wait_for(ready.wait(), 5)
+            task = app._loop_task
+            app._accept_prompt(prompt, "/steer New steering instruction")
+            await asyncio.wait_for(task, 5)
+            await pilot.pause()
+            session = app._chat_session_owner.resume(app._active_chat_session_id)[1]
+            pairs = [(m["role"], m["content"]) for m in session.messages]
+            assert pairs == [("user", "First instruction"),
+                             ("user", "New steering instruction"),
+                             ("assistant", "Partial reply\n\nUpdated reply")]
+            stamps = [m["sent_at"] for m in session.messages]
+            assert stamps[0] <= stamps[1]
+            assert session.title == "First instruction"
+    asyncio.run(scenario())
 
 
 def test_steer_cancels_only_provider_request_and_sends_updated_messages(tmp_path, monkeypatch):

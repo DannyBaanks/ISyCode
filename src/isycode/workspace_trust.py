@@ -85,6 +85,10 @@ def quiet_classic(authority, request) -> bool:
             return False
         if action_id == "workspace.command.run":
             from isycode.command_runner import sandbox_executable
+            from isycode.action_runtime import COMMAND_DEFAULT_STAGE_BYTES
+            stage_bytes = request.parameters.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES)
+            if type(stage_bytes) is not int or not 1 <= stage_bytes <= COMMAND_DEFAULT_STAGE_BYTES:
+                return False
             if not sandbox_executable():
                 return False
         return WorkspaceTrust().trusted(authority)

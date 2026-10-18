@@ -62,6 +62,31 @@ Si el modelo todavía está respondiendo, **Enter** en un mensaje normal lo deja
 
 **Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
 
+**Comandos en un workspace grande**
+
+Si aparece `workspace exceeds staging budget`, el comando no llegó a ejecutarse:
+el límite predeterminado para copiar el árbol de entrada al sandbox es de
+512 MiB. Es una limitación de recursos, no una denegación de permisos.
+
+Puedes pedir en el chat: «Propón este mismo comando con un presupuesto de copia
+de 1 GiB y pídeme aprobación». La propuesta de `workspace_run` usa
+`max_stage_bytes: 1073741824`; la pantalla de revisión muestra el comando,
+su alcance y el presupuesto en MiB. **Ejecutar comando** aprueba solo esa
+ejecución; **Rechazar**, Enter sobre la opción inicial o Esc no ejecutan nada.
+La ampliación siempre pregunta, también en Classic de confianza. No se guarda
+como autorización permanente y cambiar el presupuesto requiere otra aprobación.
+
+El máximo de entrada es 8 GiB. Se necesita espacio temporal libre de al menos
+dos veces el tamaño medido más 64 MiB; la copia se detiene si el árbol crece
+por encima del límite aprobado. No se amplían los límites de cambios de archivos,
+el acceso a red ni los permisos: el comando sigue aislado. Windows conserva
+el máximo de 512 MiB; allí la ampliación se rechaza explícitamente.
+
+Otra opción es proponer un `scope` menor. Cambiar solo `cwd` no reduce la copia:
+con `scope` no se montan las carpetas hermanas, por lo que debes incluir las
+dependencias que necesiten los tests. No se omiten silenciosamente archivos
+ignorados, dependencias ni resultados de build.
+
 Marca texto con el ratón y pulsa **Ctrl+C**, o usa **Copiar selección** en el menú de doble clic. Sólo se copia el rango marcado; sin selección no se sustituye por toda la caja. **Copiar caja completa** y **Copy path** son acciones aparte y requieren el permiso *Copy selected text to the clipboard*. El modelo no tiene esa herramienta. **Space** expande las cajas; el doble clic abre el menú de copia. [Menús integrados, capturas y gestos](design/2026-10-12-mockup-e2e/GUIA.md).
 
 Configuración muestra **Conversación**, **Preferencias**, **Permisos** y **Conexiones**. Cada fila separa la opción, su valor actual y la ayuda. En terminales estrechas, la ayuda completa aparece debajo de la lista. Buscar encuentra opciones de todas las categorías. **Proveedor** y **Modelo** tienen entradas propias; un clic en un modelo previsualiza sus detalles y **Usar modelo** confirma. Refrescar el catálogo conserva la identidad del modelo previsualizado; si desaparece o queda oculto por el filtro, el botón se desactiva.

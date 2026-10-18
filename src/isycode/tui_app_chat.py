@@ -543,6 +543,7 @@ class ChatMixin:
             step_content: list[str] = []
             holder: dict = {"widget": None}
             assistant_sent_at: str | None = None
+            prompt_persisted = False
             thought_started = _time.monotonic()
 
             provider_name = selected_provider_name()
@@ -839,6 +840,9 @@ class ChatMixin:
                     if steer_trial is not None:
                         from isycode.reasoning_options import record_steering_result
                         record_steering_result(provider.name, provider.model, True)
+                        if not prompt_persisted:
+                            prompt_persisted = True
+                            self._persist_chat_message("user", text, sent_at=self._pending_user_sent_at)
                         for instruction in steer_trial["instructions"]:
                             self._persist_chat_message("user", instruction)
                             positions = self._steering_restore_positions.get(instruction, [])
@@ -990,9 +994,9 @@ class ChatMixin:
                 step_content[:] = [full]
                 _content_line()
             if full:
-                user_sent = self._pending_user_sent_at
+                if not prompt_persisted:
+                    self._persist_chat_message("user", text, sent_at=self._pending_user_sent_at)
                 self._pending_user_sent_at = None
-                self._persist_chat_message("user", text, sent_at=user_sent)
                 self._history.append({"role": "assistant", "content": full})
                 self._persist_chat_message("assistant", full, sent_at=assistant_sent_at)
                 done_lane = self._active_lane()
