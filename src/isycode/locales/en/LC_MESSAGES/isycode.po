@@ -4,6 +4,12 @@ msgstr ""
 "Language: en\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Temporary input-copy budget: {mib} MiB for this command."
+msgstr "Temporary input-copy budget: {mib} MiB for this command."
+
+msgid "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
+msgstr "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
+
 msgid "ISyCode  ·  COMMAND BROWSER"
 msgstr "ISyCode  ·  COMMAND BROWSER"
 

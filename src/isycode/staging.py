@@ -15,10 +15,12 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from isycode.action_runtime import WorkspaceReadSystembility
+from isycode.action_runtime import (
+    COMMAND_DEFAULT_STAGE_BYTES, COMMAND_MAX_STAGE_BYTES, WorkspaceReadSystembility,
+)
 from isycode.winfs import is_link
 
-MAX_STAGE_BYTES = 512 * 1024 * 1024
+MAX_STAGE_BYTES = COMMAND_DEFAULT_STAGE_BYTES
 FREE_MARGIN_BYTES = 64 * 1024 * 1024
 
 
@@ -54,8 +56,11 @@ def remove_spill(path: Path) -> None:
         shutil.rmtree(folder, ignore_errors=True)
 
 
-def prepare_staging(original: Path, *, scope: str = ".") -> Staging:
+def prepare_staging(original: Path, *, scope: str = ".", max_stage_bytes: int | None = None) -> Staging:
     """Copy ``original`` to a new directory outside it. The original is not mounted writable."""
+    budget = MAX_STAGE_BYTES if max_stage_bytes is None else max_stage_bytes
+    if type(budget) is not int or not 1 <= budget <= COMMAND_MAX_STAGE_BYTES:
+        raise StagingError("staging budget must be a positive integer of at most 8 GiB")
     source = original.resolve(strict=True)
     if (Path(scope).is_absolute() or ".." in Path(scope).parts
             or not _parents_are_real(source, source / scope)):
@@ -63,9 +68,10 @@ def prepare_staging(original: Path, *, scope: str = ".") -> Staging:
     selected = source / scope
     if not selected.is_dir() or is_link(selected):
         raise StagingError("staging scope is not an existing folder")
-    size = _tree_bytes(selected)
-    if size > MAX_STAGE_BYTES:
-        raise StagingError("workspace is larger than the staging budget; command was not run")
+    size = _tree_bytes(selected, budget)
+    if size > budget:
+        raise StagingError(f"workspace exceeds staging budget ({budget / (1024 * 1024):g} MiB); command was not run. "
+                           "Use a smaller scope or propose max_stage_bytes for user review (up to 8 GiB)")
     usage = shutil.disk_usage(tempfile.gettempdir())
     if usage.free < size * 2 + FREE_MARGIN_BYTES:
         raise StagingError("not enough free space to stage the workspace; command was not run")
@@ -80,7 +86,10 @@ def prepare_staging(original: Path, *, scope: str = ".") -> Staging:
     try:
         target = destination / scope
         target.mkdir(parents=True, exist_ok=True)
-        _copy_tree(selected, target)
+        _copy_tree(selected, target, [budget])
+    except StagingError:
+        shutil.rmtree(destination, ignore_errors=True)
+        raise
     except OSError as exc:
         shutil.rmtree(destination, ignore_errors=True)
         raise StagingError("workspace could not be copied into staging; command was not run") from exc
@@ -450,19 +459,19 @@ def _lexical(root: Path, relative: str) -> Path | None:
     return root / relative
 
 
-def _tree_bytes(root: Path) -> int:
+def _tree_bytes(root: Path, budget: int) -> int:
     total = 0
     for path in _walk_files(root):
         try:
             total += path.stat(follow_symlinks=False).st_size
         except OSError:
             continue
-        if total > MAX_STAGE_BYTES:
+        if total > budget:
             return total
     return total
 
 
-def _copy_tree(source: Path, destination: Path) -> None:
+def _copy_tree(source: Path, destination: Path, remaining: list[int]) -> None:
     for entry in os.scandir(source):
         target = destination / entry.name
         if is_link(Path(entry.path)):
@@ -470,10 +479,16 @@ def _copy_tree(source: Path, destination: Path) -> None:
             continue
         if entry.is_dir(follow_symlinks=False):
             target.mkdir()
-            _copy_tree(Path(entry.path), target)
+            _copy_tree(Path(entry.path), target, remaining)
             continue
         if entry.is_file(follow_symlinks=False):
-            shutil.copy2(entry.path, target, follow_symlinks=False)
+            with open(entry.path, "rb") as incoming, target.open("wb") as outgoing:
+                while chunk := incoming.read(min(1024 * 1024, remaining[0] + 1)):
+                    if len(chunk) > remaining[0]:
+                        raise StagingError("workspace grew beyond the staging budget; command was not run")
+                    outgoing.write(chunk)
+                    remaining[0] -= len(chunk)
+            shutil.copystat(entry.path, target, follow_symlinks=False)
 
 
 def _walk_files(root: Path):

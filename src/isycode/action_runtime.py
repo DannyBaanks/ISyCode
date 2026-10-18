@@ -175,6 +175,8 @@ COMMAND_MAX_ARG_CHARS = 4096
 COMMAND_MAX_ARGV_CHARS = 16_384
 COMMAND_MAX_TIMEOUT_S = 600
 COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
+COMMAND_DEFAULT_STAGE_BYTES = 512 * 1024 * 1024
+COMMAND_MAX_STAGE_BYTES = 8 * 1024 * 1024 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
 GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
 PUBLISH_PARAMETER_KEYS = frozenset({"remote", "ref", "content_sha256"})
@@ -603,9 +605,8 @@ class CommandProcessSystembility:
         if request.action_id != "workspace.command.run":
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
-        allowed_extras = (set(), {'scope'}, {'rtk'}, {'scope', 'rtk'})
-        if set(params) not in tuple(COMMAND_PARAMETER_KEYS | extra | identity for extra in
-                                   allowed_extras for identity in (set(), {'sandbox_identity'})):
+        if not (COMMAND_PARAMETER_KEYS <= set(params) <= COMMAND_PARAMETER_KEYS | {
+                'scope', 'rtk', 'sandbox_identity', 'max_stage_bytes'}):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
         if "rtk" in params:
             from isycode.rtk_integration import valid_plan
@@ -619,10 +620,13 @@ class CommandProcessSystembility:
             return SystembilityResult(self.name, False, "program must be a system or workspace executable")
         timeout = params.get("timeout_s")
         count = params.get("masked_count")
+        stage_bytes = params.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES)
         if "scope" in params and not command_relative_path_valid(params["scope"], allow_root=True):
             return SystembilityResult(self.name, False, "command staging scope is invalid")
         if (not command_relative_path_valid(params.get("cwd"), allow_root=True)
                 or type(timeout) is not int or not 1 <= timeout <= COMMAND_MAX_TIMEOUT_S
+                or type(stage_bytes) is not int or not 1 <= stage_bytes <= COMMAND_MAX_STAGE_BYTES
+                or (os.name == "nt" and stage_bytes > COMMAND_DEFAULT_STAGE_BYTES)
                 or params.get("network") != "denied"
                 or params.get("max_output_bytes") != COMMAND_MAX_OUTPUT_BYTES
                 or type(count) is not int or count < 0

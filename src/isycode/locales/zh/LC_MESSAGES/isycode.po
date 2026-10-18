@@ -4,6 +4,12 @@ msgstr ""
 "Language: zh\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Temporary input-copy budget: {mib} MiB for this command."
+msgstr "本次命令的临时输入复制预算：{mib} MiB。"
+
+msgid "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
+msgstr "超过默认的 512 MiB：需要更多临时磁盘空间和复制时间。这不会授予额外权限；沙箱和文件更改限制保持不变。磁盘空间不足时仍不会执行命令。"
+
 msgid "ISyCode  ·  COMMAND BROWSER"
 msgstr "ISyCode  ·  命令浏览器"
 

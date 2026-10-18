@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Callable
 
 from isycode.action_runtime import (
+    COMMAND_DEFAULT_STAGE_BYTES, COMMAND_MAX_STAGE_BYTES,
     COMMAND_MAX_OUTPUT_BYTES, COMMAND_MAX_TIMEOUT_S, ActionOutcome,
     ActionReceipt, ProductActionGate, WorkspaceReadSystembility, command_argv_valid,
     command_relative_path_valid,
@@ -61,6 +62,8 @@ COMMAND_TOOL = {"type": "function", "function": {
         "background": {"type": "boolean", "description": "TUI only: return a process ID immediately after review; inspect or stop it in Ctrl+S ShellBox. Existing timeout and sandbox still apply."},
         "cwd": {"type": "string", "description": "Workspace-relative folder; defaults to the root."},
         "scope": {"type": "string", "description": "Optional workspace-relative folder to stage in isolation for a small project inside a large workspace. Paths remain workspace-relative; siblings are not mounted."},
+        "max_stage_bytes": {"type": "integer", "minimum": 1, "maximum": COMMAND_MAX_STAGE_BYTES,
+                            "description": "Proposed temporary input-copy budget in bytes; default 536870912 (512 MiB). Above-default proposals always require the user's exact-command approval, even in trusted Classic. Not extra permissions; sandbox and effect limits remain unchanged. Expansion is not supported on Windows. Prefer a smaller scope when possible."},
         "timeout_s": {"type": "integer", "minimum": 1, "maximum": COMMAND_MAX_TIMEOUT_S,
                       "description": f"Seconds before the command is stopped; default {DEFAULT_TIMEOUT_S}."},
     }, "required": ["argv"], "additionalProperties": False},
@@ -162,6 +165,7 @@ class CommandPreview:
     timeout_s: int
     masks: tuple[tuple[str, bool], ...]
     scope: str = "."
+    max_stage_bytes: int = COMMAND_DEFAULT_STAGE_BYTES
 
 
 class CommandRunOwner:
@@ -175,7 +179,8 @@ class CommandRunOwner:
         self.gate = ProductActionGate(self.root, authority, owner_id=OWNER_ID)
 
     def prepare(self, argv: object, cwd: object = ".",
-                timeout_s: object = DEFAULT_TIMEOUT_S, *, scope: object = ".") -> CommandPreview:
+                timeout_s: object = DEFAULT_TIMEOUT_S, *, scope: object = ".",
+                max_stage_bytes: object = COMMAND_DEFAULT_STAGE_BYTES) -> CommandPreview:
         """Build the exact request the user reviews. Raises ValueError when it cannot run."""
         if isinstance(argv, list):
             argv = tuple(argv)
@@ -190,6 +195,10 @@ class CommandRunOwner:
             raise ValueError("cwd must be an existing folder without symlinks")
         if type(timeout_s) is not int or not 1 <= timeout_s <= COMMAND_MAX_TIMEOUT_S:
             raise ValueError(f"timeout must be 1–{COMMAND_MAX_TIMEOUT_S} seconds")
+        if type(max_stage_bytes) is not int or not 1 <= max_stage_bytes <= COMMAND_MAX_STAGE_BYTES:
+            raise ValueError(f"staging budget must be 1-{COMMAND_MAX_STAGE_BYTES} bytes (at most 8 GiB)")
+        if os.name == "nt" and max_stage_bytes > COMMAND_DEFAULT_STAGE_BYTES:
+            raise ValueError("Windows staging expansion is not supported; use a smaller scope")
         sandbox = sandbox_executable()
         if sandbox is None:
             raise ValueError(sandbox_backend.unavailable_reason())
@@ -211,10 +220,12 @@ class CommandRunOwner:
              "masked_sha256": masked_digest(masks), "masked_count": len(masks),
              "max_output_bytes": COMMAND_MAX_OUTPUT_BYTES,
              **({"sandbox_identity": identity} if identity is not None else {}),
-             **({"scope": scope} if scope != "." else {}),
+              **({"scope": scope} if scope != "." else {}),
+              **({"max_stage_bytes": max_stage_bytes}
+                 if max_stage_bytes != COMMAND_DEFAULT_STAGE_BYTES else {}),
              **({"rtk": rtk} if rtk else {})},
             execution_owner="workspace_command")
-        return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope)
+        return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope, max_stage_bytes)
 
     def _scope_masks(self, scope: str) -> tuple[tuple[str, bool], ...]:
         entries = sensitive_entries(self.root / scope)
@@ -241,7 +252,8 @@ class CommandRunOwner:
         # review denies instead of running with a stale mask set.
         try:
             fresh = await asyncio.to_thread(self.prepare, list(preview.argv), preview.cwd,
-                                            preview.timeout_s, scope=preview.scope)
+                                            preview.timeout_s, scope=preview.scope,
+                                            max_stage_bytes=preview.max_stage_bytes)
             if fresh != preview:
                 raise ValueError("sensitive files, command scope or the program changed after review")
             masks = await asyncio.to_thread(self._scope_masks, preview.scope)
@@ -254,6 +266,10 @@ class CommandRunOwner:
                                  "sensitive files or the program changed after review")
         if request.parameters.get("rtk", {}).get("decision") == "ask" and approval is None:
             return ActionOutcome("Command denied.", "DENY", None, "RTK requested explicit review")
+        if preview.max_stage_bytes > COMMAND_DEFAULT_STAGE_BYTES and (
+                not isinstance(approval, ActionApproval) or approval.mode != "user"):
+            return ActionOutcome("Command denied.", "DENY", None,
+                                 "a larger staging budget requires explicit user approval for this command")
         _, decision = self.gate.authorize(request, approvals=self.approvals, approval=approval)
         if not decision.allowed:
             reason = "; ".join(check.reason for check in decision.checks if not check.passed)
@@ -298,7 +314,9 @@ class CommandRunOwner:
     async def _execute(self, preview: CommandPreview, *, promote: bool) -> dict:
         params = preview.request.parameters
         try:
-            stage_task = asyncio.create_task(asyncio.to_thread(prepare_staging, self.root, scope=preview.scope))
+            stage_task = asyncio.create_task(asyncio.to_thread(
+                prepare_staging, self.root, scope=preview.scope,
+                max_stage_bytes=params.get("max_stage_bytes")))
             try:
                 staging = await asyncio.shield(stage_task)
             except asyncio.CancelledError:
