@@ -110,6 +110,11 @@ def test_clean_checkout_advances_only_by_fast_forward(tmp_path):
     assert git("rev-parse", "HEAD", cwd=repo) != before
     assert (repo / "README.md").read_text(encoding="utf-8") == "Incoming version\n"
     assert "actualizado" in " ".join(report.lines).casefold()
+    assert any("Commits integrados:" in line for line in report.lines)
+    assert any("publish update" in line for line in report.lines)
+    assert any("Archivos modificados:" in line for line in report.lines)
+    assert any("git log -p -n 1" in line for line in report.lines)
+    assert any("git diff HEAD~1..HEAD" in line for line in report.lines)
 
 
 def test_check_only_reports_incoming_changes_without_changing_checkout(tmp_path):
@@ -126,7 +131,10 @@ def test_check_only_reports_incoming_changes_without_changing_checkout(tmp_path)
     assert git("write-tree", cwd=repo) == before_tree
     assert (repo / "README.md").read_bytes() == before_content
     assert any("incoming feature" in line for line in report.lines)
+    assert any("Commits entrantes:" in line for line in report.lines)
     assert any("git diff" in line for line in report.lines)
+    assert any("git log -p HEAD..FETCH_HEAD" in line for line in report.lines)
+    assert any("isycode actualizar" in line for line in report.lines)
 
 
 def test_current_checkout_retries_environment_sync(monkeypatch, tmp_path):

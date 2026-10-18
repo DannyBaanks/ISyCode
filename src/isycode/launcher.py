@@ -1,6 +1,8 @@
 """Command dispatcher for the ISyCode TUI and semantic CLI browser."""
 from __future__ import annotations
 
+import os
+import re
 import sys
 
 
@@ -38,6 +40,54 @@ def _ask(question: str, details: tuple[str, ...]) -> bool:
     return input(f"{question} [s/N] ").strip().casefold() in {"s", "si", "sí", "y", "yes"}
 
 
+def _print_update_report(report) -> None:
+    is_tty = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+    last_was_blank = True
+    for i, line in enumerate(report.lines):
+        is_header = line.endswith(":") and not line.startswith(" ")
+        is_tip = line.startswith("Para ver ") or line.startswith("Revisa el cambio") or line.startswith("Para aplicar")
+        if (is_header or is_tip) and i > 0 and not last_was_blank:
+            print()
+            last_was_blank = True
+
+        if not is_tty or not line:
+            print(line)
+            last_was_blank = not bool(line.strip())
+            continue
+
+        styled = line
+        if line.startswith("✨") or line.startswith("✓"):
+            styled = f"\033[1;32m{line}\033[0m"
+        elif line.startswith("⚠️"):
+            styled = f"\033[1;33m{line}\033[0m"
+        elif line.startswith("Conflicto:") or "falló" in line.casefold() or "error" in line.casefold():
+            styled = f"\033[1;31m{line}\033[0m"
+        elif is_header:
+            styled = f"\033[1;36m{line}\033[0m"
+        elif is_tip:
+            if ":" in line:
+                label, cmd = line.split(":", 1)
+                prefix_icon = "🚀" if "aplicar" in label.casefold() else "💡"
+                color = "\033[1;35m" if "aplicar" in label.casefold() else "\033[1;34m"
+                styled = f"{color}{prefix_icon} {label.strip()}:\033[0m\n   \033[1;37m{cmd.strip()}\033[0m"
+        elif line.strip().startswith("• "):
+            parts = line.split("• ", 1)
+            tokens = parts[1].split(" ", 1)
+            if len(tokens) == 2 and re.match(r"^[0-9a-f]{7,12}$", tokens[0]):
+                styled = f"{parts[0]}\033[36m•\033[0m \033[1;33m{tokens[0]}\033[0m {tokens[1]}"
+            else:
+                styled = f"{parts[0]}\033[36m•\033[0m {parts[1]}"
+        elif "|" in line and ("+" in line or "-" in line):
+            parts = line.split("|", 1)
+            file_part = parts[0]
+            stat_part = parts[1]
+            stat_colored = stat_part.replace("+", "\033[32m+\033[0m").replace("-", "\033[31m-\033[0m")
+            styled = f"\033[2m{file_part}|\033[0m{stat_colored}"
+
+        print(styled)
+        last_was_blank = not bool(line.strip())
+
+
 def main(argv: list[str] | None = None) -> int:
     # CLI text and JSON have the same UTF-8 wire format on every platform.
     for stream in (sys.stdin, sys.stdout, sys.stderr):
@@ -61,8 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             confirm = None  # no one to ask: never stash or merge on their behalf
         report = SelfUpdater(confirm=confirm).run(check_only=arguments[1:] == ["--check"])
-        for line in report.lines:
-            print(line)
+        _print_update_report(report)
         return 1 if report.status in {"blocked", "dirty", "error", "updated-conflicts"} else 0
     if not arguments or arguments == ["tui"]:
         from isycode.tui import TUIApp

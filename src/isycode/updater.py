@@ -302,10 +302,10 @@ class SelfUpdater:
                     sync = self._sync_environment(root)
                     if sync is not None:
                         return sync
-                lines = ["ISyCode ya está actualizado; no hay commits remotos nuevos."]
+                lines = ["✓ ISyCode ya está actualizado; no hay commits remotos nuevos."]
                 if dirty_paths:
                     lines.append(
-                        f"Se conservaron {len(dirty_paths)} cambio(s) local(es) sin modificar."
+                        f"  (Se conservaron {len(dirty_paths)} cambio(s) local(es) sin modificar.)"
                     )
                 return UpdateReport("current", tuple(lines))
             if dirty_paths or collisions:
@@ -338,10 +338,16 @@ class SelfUpdater:
             details = [f"Actualizaciones disponibles: {behind} commit(s)."]
             if detached_note:
                 details.insert(0, detached_note)
-            details.extend(self._clean_line(line) for line in commits[:12])
-            details.extend(self._clean_line(line) for line in summary[:12])
+            if commits:
+                details.append("Commits entrantes:")
+                details.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
+            if summary:
+                details.append("Resumen de cambios:")
+                details.extend(f"  {self._clean_line(line)}" for line in summary[:12])
             review = "git diff --stat HEAD FETCH_HEAD"
             details.append(f"Revisa el cambio con: {review}")
+            details.append("Para ver los diffs completos: git log -p HEAD..FETCH_HEAD")
+            details.append("Para aplicar la actualización: isycode actualizar")
             diverged = ahead > 0 and behind > 0
             if diverged:
                 local_commits = self._git("log", "--format=%h %s", "FETCH_HEAD..HEAD").stdout.splitlines()
@@ -376,9 +382,14 @@ class SelfUpdater:
                         sync = self._sync_environment(root)
                         if sync is not None:
                             return sync
+                        log_cmd = f"git log -p -n {behind + 1}"
                         return UpdateReport(
                             "updated",
-                            ("ISyCode actualizado; se conservaron ambas historias y se regeneró el snapshot.", *lines),
+                            (
+                                "✨ ISyCode actualizado; se conservaron ambas historias y se regeneró el snapshot.",
+                                *lines,
+                                f"Para ver el historial completo con diffs: {log_cmd}",
+                            ),
                         )
                     lines.append("Git detectó conflictos; no se integró nada y se conservaron la rama y los archivos.")
                     lines.extend(f"Conflicto: {path}" for path in conflicts)
@@ -402,7 +413,15 @@ class SelfUpdater:
                 sync = self._sync_environment(root)
                 if sync is not None:
                     return sync
-                return UpdateReport("updated", ("ISyCode actualizado; se conservaron ambas historias.", *lines))
+                log_cmd = f"git log -p -n {behind + 1}"
+                return UpdateReport(
+                    "updated",
+                    (
+                        "✨ ISyCode actualizado; se conservaron ambas historias.",
+                        *lines,
+                        f"Para ver el historial completo con diffs: {log_cmd}",
+                    )
+                )
             if check_only:
                 return UpdateReport("available", tuple(details))
             merge = self._git("merge", "--ff-only", "--no-edit", "FETCH_HEAD", check=False)
@@ -411,7 +430,23 @@ class SelfUpdater:
             sync = self._sync_environment(root)
             if sync is not None:
                 return sync
-            return UpdateReport("updated", ("ISyCode actualizado correctamente.", *details))
+            applied_lines = [
+                "✨ ISyCode actualizado correctamente.",
+                f"Se integraron {behind} commit(s) nuevos desde {remote_name}/{remote_branch}.",
+            ]
+            if detached_note:
+                applied_lines.append(detached_note)
+            if commits:
+                applied_lines.append("Commits integrados:")
+                applied_lines.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
+            if summary:
+                applied_lines.append("Archivos modificados:")
+                applied_lines.extend(f"  {self._clean_line(line)}" for line in summary[:12])
+            log_cmd = f"git log -p -n {behind}" if behind > 0 else "git show HEAD"
+            diff_cmd = f"git diff HEAD~{behind}..HEAD" if behind > 0 else "git show"
+            applied_lines.append(f"Para ver el historial completo con diffs: {log_cmd}")
+            applied_lines.append(f"Para ver diff directo entre versiones: {diff_cmd}")
+            return UpdateReport("updated", tuple(applied_lines))
         except RuntimeError as exc:
             return UpdateReport("error", (str(exc),))
 
