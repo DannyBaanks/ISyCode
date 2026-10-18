@@ -319,7 +319,7 @@ def test_cancelled_compaction_persists_unknown_usage(tmp_path, monkeypatch, caps
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             app._persist_chat_message('user', 'Old conversation.')
             app._history = [{'role': 'user', 'content': 'Old conversation.'},
                             {'role': 'assistant', 'content': 'Old answer.'}] * 4

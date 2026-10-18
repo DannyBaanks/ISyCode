@@ -11,9 +11,10 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from .types import HiveMessage, MessageAct, Registry
+from .types import HiveMessage, MessageAct, Registry, validate_identifier
+from .safe_io import checked_path, read_message, create_message
 
 
 class Router:
@@ -22,12 +23,17 @@ class Router:
     HOP_CAP = 12
     SCAN_INTERVAL = 1.0  # seconds
 
-    def __init__(self, hive_root: Path, registry: Registry) -> None:
+    def __init__(self, hive_root: Path, registry: Registry | Callable[[], Registry]) -> None:
         self.hive_root = hive_root
-        self.registry = registry
+        self._registry_source = registry
         self._task: asyncio.Task | None = None
         self._running = False
         self._last_route_at = 0.0
+
+    @property
+    def registry(self) -> Registry:
+        source = self._registry_source
+        return source() if callable(source) else source
 
     async def start(self) -> None:
         if self._running:
@@ -59,39 +65,45 @@ class Router:
     async def _route_once(self) -> None:
         """Scan all agents' outbox/ and deliver messages."""
         agents_dir = self.hive_root / "agents"
+        checked_path(self.hive_root, agents_dir)
         if not agents_dir.exists():
             return
 
         for agent_dir in agents_dir.iterdir():
-            if not agent_dir.is_dir():
+            if agent_dir.is_symlink() or not agent_dir.is_dir():
                 continue
             agent_id = agent_dir.name
+            if agent_id not in self.registry.agents or self.registry.agents[agent_id].archived:
+                continue
             outbox = agent_dir / "outbox"
+            if outbox.is_symlink():
+                continue
             if not outbox.exists():
                 continue
 
             for msg_file in sorted(outbox.glob("*.json")):
                 if msg_file.name.startswith("."):
                     continue
-                await self._deliver_message(agent_id, msg_file)
-
-            # Also check .sent for any strays
-            sent = outbox / ".sent"
-            if sent.exists():
-                for msg_file in sorted(sent.glob("*.json")):
+                try:
                     await self._deliver_message(agent_id, msg_file)
+                except (ValueError, OSError):
+                    # Unsafe recipient paths stay pending, without touching the target.
+                    continue
 
         self._last_route_at = time.time()
 
     async def _deliver_message(self, from_agent_id: str, msg_file: Path) -> None:
         try:
-            text = msg_file.read_text(encoding="utf-8")
+            validate_identifier(from_agent_id)
+            text = read_message(self.hive_root, msg_file)
             msg = HiveMessage.from_jsonl(text)
-        except Exception:
-            # Malformed → quarantine
-            quarantine = self.hive_root / "quarantine"
-            quarantine.mkdir(exist_ok=True)
-            shutil.move(str(msg_file), str(quarantine / msg_file.name))
+            if msg.from_agent != from_agent_id or from_agent_id not in self.registry.agents:
+                raise ValueError("Hive sender does not match outbox owner")
+            if msg_file.name != f"{msg.id}.json":
+                raise ValueError("Hive envelope ID does not match filename")
+        except (ValueError, TypeError, KeyError, OSError):
+            # Keep the source intact for diagnosis; never follow an untrusted path
+            # while trying to quarantine it. It cannot be delivered.
             return
 
         # Check hop limit
@@ -110,8 +122,13 @@ class Router:
             if to_agent_id not in self.registry.agents:
                 continue
             to_agent = self.registry.agents[to_agent_id]
+            if to_agent.archived:
+                continue
+            validate_identifier(to_agent_id)
             inbox = self.hive_root / "agents" / to_agent_id / "inbox"
+            checked_path(self.hive_root, inbox)
             inbox.mkdir(parents=True, exist_ok=True)
+            checked_path(self.hive_root, inbox / ".done")
             (inbox / ".done").mkdir(exist_ok=True)
 
             # Increment hops and write
@@ -130,7 +147,8 @@ class Router:
                 created_at=msg.created_at,
             )
             dest = inbox / f"{msg.id}.json"
-            dest.write_text(delivered.to_jsonl() + "\n", encoding="utf-8")
+            if not (inbox / ".done" / dest.name).exists():
+                create_message(self.hive_root, dest, delivered.to_jsonl() + "\n")
 
         # Archive from sender's outbox
         self._archive_sent(from_agent_id, msg_file, "delivered")
@@ -157,6 +175,9 @@ class Router:
         """Move message from outbox/ to outbox/.sent/."""
         agent_dir = self.hive_root / "agents" / agent_id
         sent_dir = agent_dir / "outbox" / ".sent"
+        checked_path(self.hive_root, sent_dir)
+        checked_path(self.hive_root, msg_file)
+        checked_path(self.hive_root, sent_dir / msg_file.name)
         sent_dir.mkdir(parents=True, exist_ok=True)
         try:
             shutil.move(str(msg_file), str(sent_dir / msg_file.name))

@@ -2,67 +2,64 @@
 from rich.text import Text
 
 
-# Each terminal cell holds two by four dots; spaces preserve the silhouette.
-# Loading-bar walk of U+130E0. The Noto glyph was mirrored to face right, its
-# own leg strokes were swung, and each pose was downsampled with ascii-art
-# (width 16, legacy box filter). One dot is dropped wherever a cell would be
-# U+28FF, which DejaVu draws as .notdef. The resting sprites stay as they were.
+# Original hand-drawn kitten: round head, two ears, short back, four paws
+# and an upright curled tail. Sparse outlines keep the 2×4 subcell dots clear.
 _WALK_FRAMES = (
     (
-        "................",
-        "................",
-        "...........###..",
-        "..........#####.",
-        "..........######",
-        "........###.####",
-        "....######..##..",
-        "######.....##...",
-        "..######....##..",
-        ".##.##########..",
-        ".##.#####..####.",
-        ".####.#.##..#.##",
+        "........#..#....",
+        "........####....",
+        ".......#....#...",
+        "..##...#.#..##..",
+        ".#..#..#....#...",
+        ".#..#...####....",
+        "..#..####..#....",
+        "..#.#......#....",
+        "...##......#....",
+        "....#.#..#.#....",
+        "....#.#..#.#....",
+        "....##...##.....",
     ),
     (
-        "................",
-        "................",
-        "...........###..",
-        "..........#####.",
-        "..........######",
-        "........###.####",
-        "....######..##..",
-        "######.....##...",
-        "..######....##..",
-        ".##.##########..",
-        ".##.#####..###..",
-        ".####.#.#####.##",
+        "........#..#....",
+        "........####....",
+        ".......#....#...",
+        "..##...#.#..##..",
+        ".#..#..#....#...",
+        ".#..#...####....",
+        "..#..####..#....",
+        "..#.#......#....",
+        "...##......#....",
+        "....#.#..#.#....",
+        "...#..#..#..#...",
+        "...#..#...#.#...",
     ),
     (
-        "................",
-        "................",
-        "...........###..",
-        "..........#####.",
-        "..........######",
-        "........###.####",
-        "....######..##..",
-        "######.....##...",
-        "..######....##..",
-        ".##.##########..",
-        ".##..####.###...",
-        ".######.#######.",
+        "........#..#....",
+        "........####....",
+        ".......#....#...",
+        "..##...#.#..##..",
+        ".#..#..#....#...",
+        ".#..#...####....",
+        "..#..####..#....",
+        "..#.#......#....",
+        "...##......#....",
+        "....#.#..#.#....",
+        "....#..##..#....",
+        "....##....##....",
     ),
     (
-        "................",
-        "................",
-        "...........###..",
-        "..........#####.",
-        "..........######",
-        "........###.####",
-        "....######..##..",
-        "######.....##...",
-        "..######..####..",
-        ".##.##########..",
-        ".##.#####..#####",
-        ".####.#.#####.##",
+        "........#..#....",
+        "........####....",
+        ".......#....#...",
+        "..##...#.#..##..",
+        ".#..#..#....#...",
+        ".#..#...####....",
+        "..#..####..#....",
+        "..#.#......#....",
+        "...##......#....",
+        "....#.#..#.#....",
+        ".....#.#..#.#...",
+        ".....#.#..#.#...",
     ),
 )
 # Whole cat curled up on all three rows: ears, closed eyes, back, belly and a
@@ -76,7 +73,7 @@ _REST_LOAF = (
     "#.....##....#...",
     ".#####......#...",
     ".#...........#..",
-    ".#...........#..",
+    ".#...........#.#",
     "..#.........#..#",
     "...#########...#",
     "...........####.",
@@ -132,7 +129,7 @@ def _dots(bitmap: tuple[str, ...]) -> list[str]:
 def walking_cat(width: int, tick: int) -> Text:
     width = max(1, width)
     if width < 10:
-        return Text(("[:3]" if tick % 2 else "[3:]").ljust(width)[:width], style="#77d8b0")
+        return Text(("[:3]" if tick % 2 else "[3:]").ljust(width)[:width], style="#f6a34a")
     travel = width - 10
     phase = tick % (2 * travel) if travel else 0
     right = phase <= travel
@@ -144,7 +141,7 @@ def walking_cat(width: int, tick: int) -> Text:
     for row, pixels in enumerate(_dots(bitmap)):
         result.append("[" if row == 1 else " ", style="#9aa3ad")
         result.append(" " * position)
-        result.append(pixels, style="#77d8b0")
+        result.append(pixels, style="#f6a34a")
         result.append(" " * (travel - position))
         result.append("]" if row == 1 else " ", style="#9aa3ad")
         if row != 2:
@@ -222,7 +219,7 @@ def _wrapped_status(label: str, width: int, style: str) -> Text:
 
 
 def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad") -> Text:
-    """Cat resting on the caption line, z on its face and a tail behind it.
+    """Curled kitten with a visible tail and stepped sleep marks when space permits.
 
     The walking pose still fills the activity box and bounces when a turn starts.
     A caption that does not fit beside the cat wraps inside the column.
@@ -238,14 +235,16 @@ def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "
 
     loaf = _dots(_REST_LOAF)
     start = cell_len(label) + 1
-    if start + 1 + cell_len(loaf[0]) <= width:
+    sleep_width = 3 if start + 3 + cell_len(loaf[0]) <= width else 1
+    if start + sleep_width + cell_len(loaf[0]) <= width:
         result = Text()
         for row, pixels in enumerate(loaf):
             line = Text(label, style=caption_style) if row == 2 else Text(" " * cell_len(label))
             line.append(" ")
-            line.append("z" if row == 1 else " ", style="#77d8b0")
-            line.append(pixels, style="#77d8b0")
-            line.append(" " * (width - start - 1 - cell_len(pixels)))
+            sleep = ("  z", " z ", "z  ")[row] if sleep_width == 3 else ("z" if row == 1 else " ")
+            line.append(sleep, style="#f6a34a")
+            line.append(pixels, style="#f6a34a")
+            line.append(" " * (width - start - sleep_width - cell_len(pixels)))
             result.append(line)
             if row < 2:
                 result.append("\n")
@@ -271,11 +270,11 @@ def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "
     top, body, gap = chosen
     start = cell_len(label) + gap
     face = Text(" " * start)
-    face.append("z" + top, style="#77d8b0")
+    face.append("z" + top, style="#f6a34a")
     face.append(" " * (width - start - cell_len("z" + top)))
     feet = Text(label, style=caption_style)
     feet.append(" " * gap)
-    feet.append(" " + body, style="#77d8b0")  # the space sits under the z
+    feet.append(" " + body, style="#f6a34a")  # the space sits under the z
     feet.append(" " * (width - cell_len(label) - gap - cell_len(" " + body)))
     result = Text()
     result.append(blank)

@@ -80,16 +80,24 @@ def handle_pre_tool_use(data: dict[str, Any], hive_root: Path, agent_id: str) ->
     tool_input = data.get("tool_input", {})
     cwd = data.get("cwd", os.getcwd())
 
-    # Check write guard for file tools
-    if tool_name in {"Write", "Edit", "MultiEdit", "NotebookEdit"}:
-        manager = HiveManager(HiveConfig(harness_home=hive_root.parent))
-        manager.ensure_hive()
-        decision = manager.check_write(tool_name, tool_input, cwd, agent_id)
-        if decision["deny"]:
-            return {
-                "decision": "deny",
-                "reason": decision["reason"],
-            }
+    # Read existing coordination state only. A hook cannot bootstrap or grant it.
+    try:
+        from isycode.hive.types import Registry, validate_identifier
+        validate_identifier(agent_id)
+        registry = Registry.from_dict(json.loads((hive_root / "registry.json").read_text(encoding="utf-8")))
+        agent = registry.agents[agent_id]
+        if agent.archived:
+            raise ValueError("Archived Hive agent")
+        decision = hive_write_decision({
+            "tool": tool_name, "toolInput": tool_input, "cwd": cwd,
+            "agentId": agent_id, "isGod": agent.is_god,
+            "hiveRoot": str(hive_root), "caseInsensitive": os.name == "nt",
+        })
+    except (OSError, ValueError, TypeError, KeyError):
+        decision = {"deny": True, "reason": "Hive identity or registry is unavailable."}
+    if decision["deny"]:
+        return {"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                "permissionDecision": "deny", "permissionDecisionReason": decision["reason"]}}
     # Forward to hive for live status
     sock_path = os.environ.get("HIVE_SOCK")
     if sock_path:
@@ -101,7 +109,7 @@ def handle_pre_tool_use(data: dict[str, Any], hive_root: Path, agent_id: str) ->
             "cwd": cwd,
             "ts": time.time(),
         })
-    return {"decision": "allow"}
+    return {}
 
 
 def handle_post_tool_use(data: dict[str, Any], agent_id: str) -> dict[str, Any]:

@@ -551,7 +551,7 @@ class HarnessRepairConfirmScreen(ModalScreen[str | None]):
             with Horizontal(id="repair-confirm-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · Esc"), id="repair-cancel")
                 yield Button(tr("Launch repair conversation"), id="repair-lane", variant="primary")
-                yield Button(tr("Launch in Hive"), id="repair-hive", variant="success")
+                yield Button(tr("External Hive · unavailable"), id="repair-hive", disabled=True)
 
     def _render_body(self) -> Text:
         body = Text()
@@ -572,7 +572,7 @@ class HarnessRepairConfirmScreen(ModalScreen[str | None]):
             body.append("\n")
         body.append("\nChoose execution mode:\n", style="#f6c77b")
         body.append("  • Lane: new ISyCode conversation in this window\n", style="#aeb6c5")
-        body.append("  • Hive: spawn a hive agent (multi-agent, git-backed coordination)\n", style="#aeb6c5")
+        body.append("  • External Hive: unavailable until execution-owner enforcement is implemented\n", style="#aeb6c5")
         return body
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

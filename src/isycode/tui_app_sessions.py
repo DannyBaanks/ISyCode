@@ -718,61 +718,12 @@ class SessionMixin:
         self.run_worker(self._refresh_work_list(), group="work-list")
 
     async def _launch_hive_agent(self, brief: str) -> None:
-        """Spawn a hive agent to execute the repair compose.
-
-        The agent runs as a separate CLI process (Claude Code, Codex, etc.)
-        with hive coordination (inbox/outbox, git-backed). The user chooses
-        the provider. The agent receives the compose as its initial prompt.
-        """
+        """Compatibility route: repairs run through the existing authorized lane."""
         if not brief.strip():
             self._append("  Repair compose is empty.", YELLOW)
             return
-
-        # Provider selection for the hive agent
-        from isycode.tui_screens_harness import ModelsScreen
-        model_screen = ModelsScreen(provider_scope=None)
-        selected = await self._await_screen(model_screen)
-        if not selected:
-            return
-        if isinstance(selected, dict):
-            value = selected.get("value", "")
-            if "|" in value:
-                provider, model = value.split("|", 1)
-            else:
-                provider = value
-                model = ""
-        else:
-            self._append("  Invalid model selection.", YELLOW)
-            return
-
-        # Create hive manager
-        from isycode.platform_storage import storage
-        from isycode.workspace_setup import state_root
-        from isycode.hive import spawn_hive_agent, HiveManager, HiveConfig
-        from isycode.hive.hook_server import HookServer
-
-        hive_root = state_root() / "hive"
-        manager = HiveManager(HiveConfig(harness_home=hive_root))
-        manager.ensure_hive()
-
-        hook_server = HookServer(manager)
-
-        workspace_root = str(self._workspace_root) if hasattr(self, "_workspace_root") and self._workspace_root else None
-
-        self._append(f"  Spawning hive agent with {provider}...", CYAN)
-        result = await spawn_hive_agent(
-            manager=manager,
-            hook_server=hook_server,
-            provider=provider,
-            compose=brief,
-            workspace_root=workspace_root,
-        )
-
-        if result.error:
-            self._append(f"  Failed to spawn hive agent: {result.error}", YELLOW)
-        else:
-            self._append(f"  Hive agent {result.agent_id} spawned (PID {result.pid}) with {provider}.", GREEN)
-            self._append(f"  Compose injected as initial prompt. Check hive at {result.hive_root}.", CYAN)
+        self._append("  External Hive launch is unavailable; opening an ISyCode repair conversation with the current model.", YELLOW)
+        await self._launch_repair_conversation(brief)
 
     def _conversation_status(self) -> str:
         if isinstance(self.screen, (ApprovalScreen, ContextAccessScreen, AgentQuestionScreen)):

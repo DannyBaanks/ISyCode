@@ -1,9 +1,8 @@
 """Hive write guard — refuses file writes outside the agent's own hive workspace.
 
-Ported from isyco-worlds/src/main/hiveGuard.ts. Only guards Claude's file tools
-(Write, Edit, MultiEdit, NotebookEdit). Shell commands that write files are not
-judged from their text. The PreToolUse hook fails OPEN when the shim can't
-reach the app's socket, so this is a strong guard, not an airtight one.
+Only guards the named Claude file tools. This lexical/physical path check
+is an additional coordination constraint, not Workspace Authority, Sentinel
+or protection against a hostile process racing filesystem changes.
 """
 from __future__ import annotations
 
@@ -69,8 +68,14 @@ def hive_write_decision(i: HiveWriteInput) -> HiveWriteDecision:
     hive_root_n = os.path.normpath(norm(i["hiveRoot"]))
     target_n = os.path.normpath(norm(target))
 
-    if not is_inside(hive_root_n, target_n, i["caseInsensitive"]):
+    lexical_inside = is_inside(hive_root_n, target_n, i["caseInsensitive"])
+    physical_root = os.path.realpath(i["hiveRoot"])
+    physical_target = os.path.realpath(target)
+    physical_inside = is_inside(physical_root, physical_target, i["caseInsensitive"])
+    if not lexical_inside and not physical_inside:
         return {"deny": False, "reason": None}
+    if not lexical_inside or not physical_inside or os.path.normcase(os.path.abspath(target)) != os.path.normcase(physical_target):
+        return {"deny": True, "reason": "Hive coordination writes cannot traverse symbolic links."}
 
     try:
         rel = os.path.relpath(target_n, hive_root_n).replace(os.sep, "/")
