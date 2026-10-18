@@ -660,10 +660,13 @@ class SessionMixin:
             if selected is None:
                 return
             if selected.startswith("compose:"):
-                from isycode.harness_graph import repair_compose
+                from isycode.harness_graph import repair_compose, repair_compose_all
                 semantic_id = selected.removeprefix("compose:")
-                row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
-                brief = repair_compose(semantic_id, row["harnesses"])
+                if semantic_id == "all":
+                    brief = repair_compose_all(screen._gap_rows())
+                else:
+                    row = next(item for item in screen._gap_rows() if item["semantic_id"] == semantic_id)
+                    brief = repair_compose(semantic_id, row["harnesses"])
                 if await self._await_screen(HarnessComposeScreen(brief)):
                     await self._request_clipboard_copy(brief, "selection")
                 continue

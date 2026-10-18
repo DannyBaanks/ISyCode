@@ -6,6 +6,7 @@ from isycode.harness_graph import (
     copyable_default_model,
     gap_status,
     present_by_semantic,
+    repair_compose_all,
 )
 
 
@@ -62,3 +63,25 @@ def test_reviewed_seed_has_separate_web_nodes_and_expected_targets():
     assert SEED_OPTIONS["default_model"].isycode_target == "src/isycode/providers.py:save_provider_selection"
     assert SEED_OPTIONS["reasoning_effort"].isycode_target == "src/isycode/providers.py:Provider.reasoning_effort"
     assert SEED_OPTIONS["folder_trust"].transfer == "non_transferable"
+
+
+def test_repair_compose_all_bundles_actionable_rows():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+        {"semantic_id": "user_skills", "harnesses": ("codex", "claude", "hermes", "grok"), "status": "ADD", "target_label": "Missing in ISyCode", "title": "User skills"},
+        {"semantic_id": "ui_theme", "harnesses": ("codex", "claude"), "status": "WATCH", "target_label": "Not an ISyCode setting", "title": "UI theme"},
+        {"semantic_id": "approval_bypass", "harnesses": ("codex", "claude"), "status": "DO_NOT_MERGE", "target_label": "Not an ISyCode setting", "title": "Approval bypass"},
+    ]
+    brief = repair_compose_all(rows)
+    assert "Gaps covered: 2" in brief
+    assert "User skills" in brief
+    assert "UI theme" in brief
+    assert "Approval bypass" not in brief
+    assert "Default model" not in brief
+
+
+def test_repair_compose_all_returns_aligned_message_when_no_actionable_gaps():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+    ]
+    assert repair_compose_all(rows) == "No gaps to repair · the harness map is aligned."

@@ -564,6 +564,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     .harness-actions Button { width: 1fr; min-width: 0; height: 3; margin-right: 1; text-wrap: nowrap; text-overflow: ellipsis; }
     #harness-gap-panel { width: 100%; margin-top: 1; }
     #harness-gap-content { height: auto; }
+    #harness-gap-actions { width: 100%; height: 3; margin-bottom: 1; }
+    #harness-gap-actions Button { width: 1fr; min-width: 0; height: 3; }
     #harness-footer { height: 3; align-horizontal: right; }
     #harness-close { width: auto; height: 3; }
     #harness-hint { height: 1; color: #a9b5c2; }
@@ -603,6 +605,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                             transcript_button.display = False
                             yield transcript_button
                 with Collapsible(title=self._gap_title(), collapsed=True, id="harness-gap-panel"):
+                    with Horizontal(id="harness-gap-actions"):
+                        yield Button(tr("Repair all gaps"), id="harness-compose-all", variant="primary")
                     yield Static(self._render_gaps(), id="harness-gap-content")
                     for row in self._gap_rows():
                         with Collapsible(title=row["title"], collapsed=True):
@@ -792,6 +796,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "harness-close":
             self.dismiss(None)
+        elif event.button.id == "harness-compose-all":
+            self.dismiss("compose:all")
         elif event.button.id and event.button.id.startswith("harness-compose-"):
             semantic_id = event.button.id.removeprefix("harness-compose-")
             if semantic_id in SEED_OPTIONS:

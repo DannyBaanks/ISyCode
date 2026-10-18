@@ -193,3 +193,17 @@ def repair_compose(semantic_id: str, harnesses: Iterable[str]) -> str:
             "human controls and limitations. Keep unrelated files intact. If the runtime "
             "cannot validate the required capability, stop before that effect and present "
             "the concrete change for review. Do not claim a gap fixed until verified.\n")
+
+
+def repair_compose_all(rows: Iterable[dict[str, Any]]) -> str:
+    """Build one unified review brief covering every actionable gap in the map."""
+    actionable = [row for row in rows if row["status"] in {"ADD", "WATCH"}]
+    if not actionable:
+        return "No gaps to repair · the harness map is aligned."
+    parts = [f"ISyCode harness repair proposal: all gaps\n"
+             f"Meaning: unified brief for every actionable gap in the Multi Harness map\n"
+             f"Gaps covered: {len(actionable)}\n"]
+    for row in actionable:
+        parts.append("\n---\n")
+        parts.append(repair_compose(row["semantic_id"], row["harnesses"]))
+    return "".join(parts)
