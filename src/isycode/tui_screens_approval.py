@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from textual.binding import Binding
 from textual.widgets import Button, Checkbox, Static
-from isycode.command_runner import CommandPreview
+from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, CommandPreview
 from isycode.git_owner import CommitPreview
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -437,6 +437,14 @@ class CommandApprovalScreen(ApprovalScreen):
                                           + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
                 yield Static(tr("Scope: {scope}", scope=preview.scope),
                              id="command-approval-scope", markup=False)
+                budget = tr("Temporary input-copy budget: {mib} MiB for this command.",
+                            mib=f"{preview.max_stage_bytes / (1024 * 1024):g}")
+                if preview.max_stage_bytes > COMMAND_DEFAULT_STAGE_BYTES:
+                    budget += "\n" + tr(
+                        "Larger than the default 512 MiB: needs more temporary disk space and copy time. "
+                        "This does not grant extra permissions; sandbox and file-change limits are unchanged. "
+                        "Insufficient disk space still stops the run.")
+                yield Static(budget, id="command-approval-budget", markup=False)
                 yield Static(
                     tr("Program: {program}\nStops after {timeout} s · network blocked · "
                        "{hidden} sensitive paths hidden\nIt may change files in this workspace; those changes "

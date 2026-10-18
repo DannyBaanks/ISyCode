@@ -13,7 +13,7 @@ from isycode.file_picker import ContextFilePickerOwner, FilePickerUnavailable
 from isycode.action_runtime import LocalWorkspaceReadOwner, LPSSymbolOwner
 from isycode.prompt_expansion import read_result_text
 from isycode.git_owner import GitOwner, git_executable
-from isycode.command_runner import CommandRunOwner, sandbox_executable
+from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, CommandRunOwner, sandbox_executable
 from isycode.workspace_write import DELETE_TOOL_NAME, MOVE_TOOL_NAME, WorkspaceWriteOwner
 from isycode.authority_view import displayed_on
 from isycode.localization import tr
@@ -325,7 +325,8 @@ class WorkspaceMixin:
         try:
             preview = await asyncio.to_thread(
                 owner.prepare, arguments.get("argv"), arguments.get("cwd", "."),
-                arguments.get("timeout_s", 120), scope=arguments.get("scope", "."))
+                arguments.get("timeout_s", 120), scope=arguments.get("scope", "."),
+                max_stage_bytes=arguments.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES))
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
             self._append(f"  Command denied · {reason}", SECURITY)
@@ -395,7 +396,8 @@ class WorkspaceMixin:
             raise
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             card.finish(outcome.decision, output=outcome.reason[:300])
-            self.notify_semantic(f"Sentinel decision · {outcome.decision}", kind="denied")
+            self.notify_semantic(f"Command outcome · {outcome.decision}",
+                                 kind="denied" if outcome.decision == "DENY" else "error")
             return json.dumps({"error": "command did not run", "decision": outcome.decision,
                                "reason": outcome.reason[:300]})
         result = json.loads(outcome.text)
