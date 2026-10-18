@@ -88,7 +88,10 @@ def provider_entry(app, name):
 
 
 async def open_nvidia(app, pilot):
-    await pilot.click("#model-button")
+    await pilot.click("#settings-button")
+    assert await until(pilot, lambda: app._menu_mode == "settings")
+    app._select_menu_entry(next(entry for entry in app._menu_entries
+                                if entry["kind"] == "providers_open"))
     assert await until(pilot, lambda: app._menu_mode == "providers")
     app._select_menu_entry(provider_entry(app, "nvidia"))
     # The picker is rebuilt when the account catalog arrives; wait until the same

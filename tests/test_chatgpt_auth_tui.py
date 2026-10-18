@@ -131,3 +131,53 @@ def test_providers_opens_the_selector_and_keys_reports_grouped_credentials(tmp_p
 
     with capsys.disabled():
         asyncio.run(run())
+
+
+def test_subscription_login_opens_valid_wrapped_url_without_closing_screen(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    url = 'https://auth.openai.com/oauth/authorize?' + 'scope=' + ('long-value-' * 24)
+    opened = []
+    monkeypatch.setattr(TUIApp, 'open_url', lambda self, value, **kwargs: opened.append((value, kwargs)))
+
+    async def run():
+        from isycode.provider_auth_screens import SubscriptionLoginScreen
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            screen = SubscriptionLoginScreen({'url': url, 'user_code': 'PRIVATE-CODE'})
+            await app.push_screen(screen)
+            await pilot.pause()
+            button = screen.query_one('#subscription-open-link')
+            assert button.region.bottom <= 24
+            assert not button.disabled
+            assert url in str(screen.query_one('#subscription-url').render())
+            await pilot.click('#subscription-open-link')
+            assert opened == [(url, {'new_tab': True})]
+            assert app.screen is screen  # opening the browser does not cancel polling
+            await pilot.click('#subscription-cancel')
+            assert app.screen is not screen
+            assert all('PRIVATE-CODE' not in item['content'] for item in app._history)
+
+    with capsys.disabled():
+        asyncio.run(run())
+
+
+def test_subscription_login_disables_unapproved_browser_destinations(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    opened = []
+    monkeypatch.setattr(TUIApp, 'open_url', lambda self, value, **kwargs: opened.append(value))
+
+    async def run():
+        from isycode.provider_auth_screens import SubscriptionLoginScreen
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            screen = SubscriptionLoginScreen({'url': 'https://evil.example/login'})
+            await app.push_screen(screen)
+            await pilot.pause()
+            button = screen.query_one('#subscription-open-link')
+            assert button.disabled
+            assert 'failed safety validation' in str(screen.query_one('#subscription-url').render()).lower()
+            await pilot.click('#subscription-open-link')
+            assert opened == []
+
+    with capsys.disabled():
+        asyncio.run(run())
