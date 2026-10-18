@@ -35,18 +35,46 @@ el contexto enviado se procesa en ese servicio.
 
 ## Empieza en tu proyecto
 
-Necesitas **Python 3.10 o posterior** y Git. Instala ISyCode desde el código:
+Necesitas **Python 3.10 o posterior** y Git. Instala ISyCode con un solo comando:
+
+### Linux / macOS
+```bash
+curl -fsSL https://raw.githubusercontent.com/DannyBaanks/ISyCode/main/install.sh | bash
+```
+
+### Windows (PowerShell)
+```powershell
+irm https://raw.githubusercontent.com/DannyBaanks/ISyCode/main/install.ps1 | iex
+```
+
+Una vez instalado, abre cualquier terminal y ejecuta:
+```bash
+isycode
+```
+
+Para mantenerlo siempre al día con los últimos cambios y mejoras:
+```bash
+isycode actualizar
+```
+
+<details>
+<summary><b>Instalación manual desde el código (desarrolladores)</b></summary>
 
 ```bash
 git clone https://github.com/DannyBaanks/ISyCode.git
 cd ISyCode
+./install.sh
+```
+
+O con venv manual:
+```bash
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
 isycode
 ```
+</details>
 
-Con el entorno activado, entra en la carpeta de tu proyecto y ejecuta `isycode`.
 En Windows, desde el checkout puedes usar `& .\scripts\install-windows.ps1`
 y arrancar `.venv\Scripts\isycode.exe`. La primera etapa de paridad incluye
 almacenamiento nativo y Git; el sandbox de comandos Windows sigue pendiente.
