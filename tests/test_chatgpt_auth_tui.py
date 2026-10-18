@@ -14,6 +14,31 @@ def test_openai_menu_has_separate_subscription_methods(tmp_path, monkeypatch, ca
             assert {'auth_api_key','auth_browser','auth_device'}.issubset({e['kind'] for e in app._menu_entries})
     with capsys.disabled(): asyncio.run(run())
 
+def test_chatgpt_active_provider_opens_scoped_models(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setenv('ISYCODE_PROVIDER', 'chatgpt')
+    async def run():
+        app = TUIApp()
+        async with app.run_test() as p:
+            await p.pause()
+            # 1. When chatgpt is active, selecting 'openai' (which represents the active connection) opens chatgpt models
+            app._select_menu_entry(app._entry('OpenAI', 'provider', 'openai'))
+            assert app._menu_mode == 'branch'
+            assert app._models_scope == 'chatgpt'
+
+            # 2. Connection methods entry is available and opens provider_auth_methods
+            app._open_provider_menu()
+            assert any(e['kind'] == 'provider_auth_methods' for e in app._menu_entries)
+            app._select_menu_entry(app._entry('OpenAI & ChatGPT · choose connection method…', 'provider_auth_methods', 'openai'))
+            assert app._menu_mode == 'provider_auth_methods'
+
+            # 3. Using saved auth also scopes models to chatgpt
+            app._select_menu_entry(app._entry('Use saved ChatGPT sign-in', 'auth_saved'))
+            assert app._models_scope == 'chatgpt'
+            from isycode.providers import selected_provider_name
+            assert selected_provider_name() == 'chatgpt'
+    with capsys.disabled(): asyncio.run(run())
+
 @pytest.mark.parametrize('cancel',[False,True])
 def test_native_subscription_login_and_cancel_never_save_challenge(tmp_path,monkeypatch,capsys,cancel):
     configure(tmp_path,monkeypatch)

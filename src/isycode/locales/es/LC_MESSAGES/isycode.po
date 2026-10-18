@@ -2366,3 +2366,6 @@ msgstr "Vista previa en barra lateral"
 
 msgid "Show a preview box below the file tree in the sidebar."
 msgstr "Mostrar un cuadro de vista previa debajo del árbol de archivos en la barra lateral."
+
+msgid "OpenAI & ChatGPT · choose connection method…"
+msgstr "OpenAI y ChatGPT · elegir método de conexión…"

@@ -456,6 +456,7 @@ class MenuAction(str, Enum):
     AUTH_DEVICE = "auth_device"
     AUTH_LOGOUT = "auth_logout"
     AUTH_SAVED = "auth_saved"
+    PROVIDER_AUTH_METHODS = "provider_auth_methods"
     PROVIDERS_OPEN = "providers_open"
     MODELS_OPEN = "models_open"
     ROLES_OPEN = "roles_open"
@@ -578,6 +579,7 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.AUTH_DEVICE: "_menu_auth_browser",
     MenuAction.AUTH_LOGOUT: "_menu_auth_browser",
     MenuAction.AUTH_SAVED: "_menu_auth_saved",
+    MenuAction.PROVIDER_AUTH_METHODS: "_menu_provider_auth_methods",
     MenuAction.PROVIDERS_OPEN: "_menu_providers_open",
     MenuAction.MODELS_OPEN: "_menu_models_open",
     MenuAction.ROLES_OPEN: "_menu_roles_open",
