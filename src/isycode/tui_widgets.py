@@ -326,8 +326,6 @@ class ActivateTree(Tree):
             if node is not None:
                 if activate_on_second_click(self, event, line):
                     await self._activate_node(node)
-                else:
-                    self.select_node(node)
 
     async def action_select_cursor(self) -> None:
         if self.cursor_node is not None:

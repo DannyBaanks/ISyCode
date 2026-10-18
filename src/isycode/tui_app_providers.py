@@ -99,13 +99,13 @@ class ProviderMixin:
                 note = tr("  ·  Current") if current else ""
                 display_provider = "chatgpt" if key == "openai" and active == "chatgpt" else key
                 display_preset = PRESETS.get(display_provider, preset)
-                default_model = provider_default_model(display_provider) or display_preset.get("default_model") or DEFAULT_MODEL
+                catalog_default = provider_default_model(display_provider) or display_preset.get("default_model") or DEFAULT_MODEL
                 entries.append(self._entry(
                     tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
                     tr("{blurb}. {status}. Default model: {default}",
                        blurb=tr(blurb), status=status,
-                       default=default_model),
+                       default=catalog_default),
                     translate=False))
                 entries[-1]["display_name"] = label
             else:

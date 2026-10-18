@@ -515,11 +515,13 @@ class ModelsScreen(ModalScreen):
         self.dismiss(None)
 
 
-class HarnessRepairConfirmScreen(ModalScreen[bool]):
-    """One Accept/Cancel window that lists every cli:file the repair will touch.
+class HarnessRepairConfirmScreen(ModalScreen[str | None]):
+    """One window that lists every cli:file the repair will touch.
 
-    The body scrolls so the user can review the full blast radius before a
-    new conversation lane starts executing the compose in Classic mode.
+    Actions:
+    - Cancel: dismiss with None
+    - Launch repair conversation: dismiss with "lane" (new ISyCode lane)
+    - Launch in Hive: dismiss with "hive" (spawn hive agent)
     """
 
     CSS = """
@@ -542,13 +544,14 @@ class HarnessRepairConfirmScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="repair-confirm-card", classes="isy-dialog"):
-            yield Static(tr("Repair plan · review before launching"), id="repair-confirm-title",
+            yield Static(tr("Repair plan · choose how to execute"), id="repair-confirm-title",
                         classes="isy-dialog-title")
             with VerticalScroll(id="repair-confirm-scroll", classes="isy-dialog-body"):
                 yield Static(self._render_body(), id="repair-confirm-body")
             with Horizontal(id="repair-confirm-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · Esc"), id="repair-cancel")
-                yield Button(tr("Launch repair conversation"), id="repair-accept", variant="primary")
+                yield Button(tr("Launch repair conversation"), id="repair-lane", variant="primary")
+                yield Button(tr("Launch in Hive"), id="repair-hive", variant="success")
 
     def _render_body(self) -> Text:
         body = Text()
@@ -567,15 +570,21 @@ class HarnessRepairConfirmScreen(ModalScreen[bool]):
                 for path in files:
                     body.append(f"\n   files: {path}", style="#aeb6c5")
             body.append("\n")
-        body.append("A new conversation lane will run this compose in Classic mode.\n",
-                    style="#f6c77b")
+        body.append("\nChoose execution mode:\n", style="#f6c77b")
+        body.append("  • Lane: new ISyCode conversation in this window\n", style="#aeb6c5")
+        body.append("  • Hive: spawn a hive agent (multi-agent, git-backed coordination)\n", style="#aeb6c5")
         return body
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "repair-accept")
+        if event.button.id == "repair-cancel":
+            self.dismiss(None)
+        elif event.button.id == "repair-lane":
+            self.dismiss("lane")
+        elif event.button.id == "repair-hive":
+            self.dismiss("hive")
 
     def action_cancel(self) -> None:
-        self.dismiss(False)
+        self.dismiss(None)
 
 
 class HarnessComposeScreen(ModalScreen[bool]):
