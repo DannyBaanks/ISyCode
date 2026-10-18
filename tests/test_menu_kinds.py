@@ -124,6 +124,8 @@ EXPECTED = {
     "info",
     "locale_cycle",
     "models_open",
+    "sidebar_preview_toggle",
+    "provider_auth_methods",
 }
 
 def test_menu_dispatch_keeps_every_extracted_kind():

@@ -82,6 +82,8 @@ class ProviderMixin:
             if key and key in PRESETS:
                 preset = PRESETS[key]
                 state = provider_credential_state(key)
+                if key == "openai" and active == "chatgpt":
+                    state = "subscription"
                 if state == "missing":
                     status = tr("needs {env}", env=preset["key_env"])
                 else:
@@ -95,18 +97,25 @@ class ProviderMixin:
                 current = key == active or (key == "openai" and active == "chatgpt")
                 mark = "*" if current else " "
                 note = tr("  ·  Current") if current else ""
+                default_model = (provider_default_model("chatgpt") or PRESETS["chatgpt"].get("default_model") or DEFAULT_MODEL) if (key == "openai" and active == "chatgpt") else (provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL)
                 entries.append(self._entry(
                     tr("{mark}  {label}{note}", mark=mark, label=label, note=note),
                     "provider", key,
                     tr("{blurb}. {status}. Default model: {default}",
                        blurb=tr(blurb), status=status,
-                       default=provider_default_model(key) or preset.get("default_model") or DEFAULT_MODEL),
+                       default=default_model),
                     translate=False))
                 entries[-1]["display_name"] = label
             else:
                 entries.append(self._entry(
                     tr("·  {label}  ·  {blurb}", label=label, blurb=tr(blurb)),
                     "provider_unwired", label, blurb, translate=False))
+        if active in {"chatgpt", "openai"}:
+            entries.append(self._entry(
+                tr("OpenAI & ChatGPT · choose connection method…"),
+                "provider_auth_methods", "openai",
+                "Switch between API key and ChatGPT subscription, or disconnect.",
+                translate=False))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
                         for item in snapshot.items} if snapshot.state == "ready" else {}
@@ -187,6 +196,7 @@ class ProviderMixin:
             return
         set_xai_auth_mode("session")
         self._select_provider("xai", SESSION_MODEL)
+        self._open_scoped_models("xai")
 
     async def _connect_xai_login(self, method: str) -> None:
         from isycode.grok_auth import GrokAuthOwner
@@ -230,6 +240,7 @@ class ProviderMixin:
             return
         set_xai_auth_mode("session")
         self._select_provider("xai", SESSION_MODEL)
+        self._open_scoped_models("xai")
 
     def _open_auth_methods(self) -> None:
         self._render_menu('provider_auth_methods', 'OpenAI · choose connection method', [
@@ -288,6 +299,7 @@ class ProviderMixin:
             if outcome.decision == 'ALLOW' and account:
                 self._append(f"  ChatGPT sign-in verified · plan {account['plan']} · subscription limits apply", GREEN)
                 self._select_provider('chatgpt', 'auto')
+                self._open_scoped_models('chatgpt')
             else:
                 self._append(f"  ChatGPT sign-in not completed · {outcome.reason[:160]}", YELLOW)
         except (OSError, ValueError, ProviderError, WorkspaceAuthorityError) as exc:
@@ -716,19 +728,33 @@ class ProviderMixin:
 
     def _menu_provider(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
+        active = selected_provider_name()
+        if value == "chatgpt" or (value == "openai" and active == "chatgpt"):
+            self._select_provider("chatgpt")
+            self._open_scoped_models("chatgpt")
+            return
         if value in {"openai", "chatgpt"}:
             self._open_auth_methods()
             return
         if value == "xai":
+            if active == "xai":
+                self._open_scoped_models("xai")
+                return
             self._open_xai_auth_methods()
             return
         self._open_scoped_models(value)
+        return
+
+    def _menu_provider_auth_methods(self, entry: dict[str, str | bool]) -> None:
+        self._open_auth_methods()
         return
 
     def _menu_xai_api_key(self, entry: dict[str, str | bool]) -> None:
         from isycode.grok_session import set_xai_auth_mode
         set_xai_auth_mode("api_key")
         self._select_provider("xai")
+        if provider_credential_state("xai") != "missing":
+            self._open_scoped_models("xai")
         return
 
     def _menu_xai_session(self, entry: dict[str, str | bool]) -> None:
@@ -745,6 +771,8 @@ class ProviderMixin:
 
     def _menu_auth_api_key(self, entry: dict[str, str | bool]) -> None:
         self._select_provider("openai")
+        if provider_credential_state("openai") != "missing":
+            self._open_scoped_models("openai")
         return
 
     def _menu_auth_browser(self, entry: dict[str, str | bool]) -> None:
@@ -755,6 +783,7 @@ class ProviderMixin:
 
     def _menu_auth_saved(self, entry: dict[str, str | bool]) -> None:
         self._select_provider("chatgpt")
+        self._open_scoped_models("chatgpt")
         return
 
     def _menu_providers_open(self, entry: dict[str, str | bool]) -> None:
