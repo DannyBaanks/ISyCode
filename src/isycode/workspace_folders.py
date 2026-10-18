@@ -161,6 +161,10 @@ class WorkspaceFolders:
 
     def add(self, alias: str, path: str, *, editable: bool) -> None:
         data = self._load()
+        # Folder aliases are identifiers passed through model tools. Canonicalize
+        # human-entered casing so labels like "Github" remain valid identifiers.
+        if isinstance(alias, str):
+            alias = alias.lower()
         if (not isinstance(alias, str) or not ALIAS.fullmatch(alias) or alias == 'main'
                 or type(editable) is not bool or not isinstance(path, str) or len(path) > 4096):
             raise ValueError('Use an alias like other-project and an absolute sibling folder path')

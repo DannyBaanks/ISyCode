@@ -104,6 +104,18 @@ def test_aliases_duplicates_and_limits_are_validated(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         store.add('extra', str(extra), editable=True)
 
+
+def test_alias_casing_is_normalized_and_case_insensitive_for_duplicates(tmp_path, monkeypatch):
+    store, _, other = make_store(tmp_path, monkeypatch)
+    store.add('Github', str(other), editable=False)
+    assert store.list()[0]['alias'] == 'github'
+    assert store.resolve('github') == other
+
+    second = other.parent / 'Another Project'
+    second.mkdir()
+    with pytest.raises(ValueError, match='already registered'):
+        store.add('GITHUB', str(second), editable=False)
+
 @pytest.mark.parametrize('name', ['.ssh', '.git', 'state'])
 def test_sensitive_roots_and_internal_state_cannot_be_attached(tmp_path, monkeypatch, name):
     store, _, _ = make_store(tmp_path, monkeypatch)

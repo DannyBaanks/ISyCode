@@ -225,15 +225,17 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
                     if button.region.width and button.region.height and not button.disabled:
                         break
             assert isinstance(app.screen, AddWorkspaceFolderScreen)
-            app.screen.query_one('#folder-alias', Input).value = 'sibling'
+            # A human-readable provider name should be canonicalized to the
+            # lowercase alias format instead of silently failing to attach.
+            app.screen.query_one('#folder-alias', Input).value = 'Github'
             button = app.screen.query_one('#folder-add')
             assert button.region.bottom <= 24
             await pilot.pause(.1)
             assert await pilot.click('#folder-add')
             await asyncio.wait_for(task, 10)
-            assert store.resolve('sibling') == sibling
+            assert store.resolve('github') == sibling
             app._close_menu()
-            task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
+            task = asyncio.create_task(app._dispatch_chat_tool(call('workspace_edit', folder='github',
                 path='file.py', old_text='value = 1', new_text='value = 2')))
             for _ in range(200):
                 await pilot.pause(.05)
@@ -253,13 +255,13 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
             await pilot.click('#auto-edit-enable')
             _, result = await asyncio.wait_for(task, 10)
             assert json.loads(result)['approval_mode'] == 'delegated'
-            assert store.auto_edit_allowed('sibling')
+            assert store.auto_edit_allowed('github')
             assert not store.auto_edit_allowed('main')
-            _, result = await app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
+            _, result = await app._dispatch_chat_tool(call('workspace_edit', folder='github',
                 path='file.py', old_text='value = 2', new_text='value = 3'))
             assert json.loads(result)['status'] == 'written'
             assert (sibling / 'file.py').read_text() == 'value = 3\n'
-            await app._set_folder_auto_edit('sibling', False)
+            await app._set_folder_auto_edit('github', False)
 
     with capsys.disabled():
         asyncio.run(scenario())
