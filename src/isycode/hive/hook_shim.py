@@ -13,16 +13,31 @@ Also implements the write guard check for PreToolUse.
 """
 from __future__ import annotations
 
-import json
 import os
-import socket
 import sys
+
+# When executed directly (`python hook_shim.py`), Python puts the script's directory
+# (`.../src/isycode/hive`) as sys.path[0]. Because `hive/types.py` exists, standard
+# library modules (such as json, re, enum, pathlib) attempting `from types import ...`
+# would erroneously load `hive/types.py` instead of the stdlib `types`, causing
+# an ImportError.
+# We must prune the script directory from sys.path and add `src/` before importing anything else.
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+while sys.path and (
+    os.path.abspath(sys.path[0]) == _script_dir
+    or sys.path[0].replace("\\", "/").rstrip("/").endswith("/isycode/hive")
+):
+    sys.path.pop(0)
+
+_src_dir = os.path.abspath(os.path.join(_script_dir, "..", ".."))
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
+import json
+import socket
 import time
 from pathlib import Path
 from typing import Any
-
-# Add src to path for imports when run as script
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from isycode.hive.manager import HiveManager, HiveConfig
 from isycode.hive.guard import hive_write_decision, HiveWriteInput
