@@ -86,6 +86,7 @@
     #filter-controls Button { width: 1fr; }
     #file-search { height: 3; }
     #workspace-tree { height: 1fr; min-height: 6; background: #11151b; border: round #414650; }
+    #file-preview-box { height: auto; max-height: 50%; }
     #file-actions { height: 1; }
     #file-actions Button { width: 1fr; }
     #file-preview-scroll { height: 7; min-height: 4; border: round #414650; background: #11151b; }

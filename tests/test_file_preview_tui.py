@@ -54,12 +54,38 @@ def test_file_leaf_enables_preview_modal_and_copy_path(tmp_path,monkeypatch,caps
             assert isinstance(app.screen, FilePreviewScreen)
             editor=app.screen.query_one(TextArea);assert editor.read_only and editor.text==file.read_bytes().decode('utf-8')
             assert app.screen.query_one('#preview-copy').disabled
-            await p.click('#preview-copy');await wait_for_copy(str(file))
+            copied.clear()
+            await p.click('#preview-copy-path')
+            await wait_for_copy(str(file))
             from textual.document._document import Selection
             editor.selection=Selection((0,3),(0,7));await p.pause()
             await p.click('#preview-copy');await wait_for_copy('main')
             await p.click('#preview-copy-whole');await wait_for_copy(file.read_bytes().decode('utf-8'))
             await p.press('escape')
+            for _ in range(40):
+                if not isinstance(app.screen, FilePreviewScreen):
+                    break
+                await p.pause(0.05)
+            assert not isinstance(app.screen, FilePreviewScreen)
+            # Direct activation (Enter / double-click action) opens modal preview
+            tree.cursor_line = leaf.line
+            await tree.action_select_cursor()
+            for _ in range(40):
+                if isinstance(app.screen, FilePreviewScreen) and app.screen.is_mounted:
+                    break
+                await p.pause(0.05)
+            assert isinstance(app.screen, FilePreviewScreen)
+            await p.press('escape')
+            for _ in range(40):
+                if not isinstance(app.screen, FilePreviewScreen):
+                    break
+                await p.pause(0.05)
+            # Sidebar file preview box visibility toggle
+            box = app.query_one('#file-preview-box')
+            app._apply_sidebar_file_preview(False)
+            assert box.display is False
+            app._apply_sidebar_file_preview(True)
+            assert box.display is True
     with capsys.disabled():asyncio.run(run())
 
 def test_copy_path_for_selected_directory(tmp_path,monkeypatch,capsys):

@@ -14,6 +14,7 @@ from isycode.decision_view import verified_receipt_line
 from isycode.contracts import CatalogSnapshot
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
+from textual.containers import Vertical
 from textual.widgets import (
     Static,
     Input,
@@ -548,9 +549,39 @@ class RailMixin:
             return
         self._selected_file_path = uri
         # Copying goes through ClipboardOwner (clipboard.copy grant + IsySentinel).
-        self.query_one("#file-copy-path", Button).disabled = False
-        self.query_one("#file-open-preview", Button).disabled = False
-        await self._preview_file(uri)
+        try:
+            self.query_one("#file-copy-path", Button).disabled = False
+            self.query_one("#file-open-preview", Button).disabled = False
+        except Exception:
+            pass
+        if getattr(self, "_sidebar_file_preview", False):
+            await self._preview_file(uri, modal=False)
+
+    async def on_tree_node_highlighted(self, event: Tree.NodeHighlighted) -> None:
+        if event.control.id != "workspace-tree":
+            return
+        data = event.node.data
+        if not isinstance(data, dict) or self._workspace is None:
+            return
+        uri = data.get("path")
+        if not isinstance(uri, str):
+            return
+        if data.get("kind") != "directory":
+            self._selected_file_path = uri
+            try:
+                self.query_one("#file-copy-path", Button).disabled = False
+                self.query_one("#file-open-preview", Button).disabled = False
+            except Exception:
+                pass
+            if getattr(self, "_sidebar_file_preview", False):
+                self.run_worker(self._preview_file(uri, modal=False), group="file-preview")
+
+    def _apply_sidebar_file_preview(self, enabled: bool) -> None:
+        try:
+            box = self.query_one("#file-preview-box", Vertical)
+            box.display = enabled
+        except Exception:
+            pass
 
     async def _preview_file(self, uri: str, *, modal: bool = False) -> None:
         if self._workspace is None:

@@ -2354,3 +2354,15 @@ msgstr "超深推理 — 更慢且更贵"
 
 msgid "Maximum reasoning budget — slowest but strongest"
 msgstr "最大推理预算 — 最慢但最强"
+
+msgid "Copy whole file"
+msgstr "复制整个文件"
+
+msgid "Sidebar file preview · {state}"
+msgstr "侧边栏文件预览 · {state}"
+
+msgid "Sidebar file preview"
+msgstr "侧边栏文件预览"
+
+msgid "Show a preview box below the file tree in the sidebar."
+msgstr "在侧边栏文件树下方显示预览框。"

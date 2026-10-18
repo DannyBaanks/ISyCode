@@ -52,6 +52,7 @@ class UserDefaultsStore:
                     "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
                     "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
                     "high_contrast": False, "ascii_only": False, "reduced_motion": False,
+                    "sidebar_file_preview": False,
                     "locale": self.DEFAULT_LOCALE}
         if (not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1
                 or metadata.st_size > self.MAX_BYTES or not storage.private(self.path)):
@@ -103,6 +104,9 @@ class UserDefaultsStore:
         reduced_motion = data.get("reduced_motion", False)
         if type(reduced_motion) is not bool:
             raise ValueError("ISyCode reduced motion preference is invalid")
+        sidebar_preview = data.get("sidebar_file_preview", False)
+        if type(sidebar_preview) is not bool:
+            raise ValueError("ISyCode sidebar file preview preference is invalid")
         steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
         tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
         budget = data.get("chat_token_budget", 0)
@@ -118,7 +122,8 @@ class UserDefaultsStore:
         return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
                 "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
                 "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds,
-                "high_contrast": contrast, "ascii_only": ascii_only, "reduced_motion": reduced_motion, "locale": locale}
+                "high_contrast": contrast, "ascii_only": ascii_only, "reduced_motion": reduced_motion,
+                "sidebar_file_preview": sidebar_preview, "locale": locale}
 
     def update(self, *, new_workspace: str | None = None,
                new_workspace_mode: str | None = None,
@@ -127,8 +132,13 @@ class UserDefaultsStore:
                chat_token_budget: int | None = None, compact_marquee: bool | None = None,
                notification_sounds: bool | None = None, high_contrast: bool | None = None,
                ascii_only: bool | None = None, locale: str | None = None,
-               reduced_motion: bool | None = None) -> None:
+               reduced_motion: bool | None = None,
+               sidebar_file_preview: bool | None = None) -> None:
         current = self.load()
+        if sidebar_file_preview is not None:
+            if type(sidebar_file_preview) is not bool:
+                raise ValueError("ISyCode sidebar file preview preference is invalid")
+            current["sidebar_file_preview"] = sidebar_file_preview
         if reduced_motion is not None:
             if type(reduced_motion) is not bool:
                 raise ValueError("ISyCode reduced motion preference is invalid")

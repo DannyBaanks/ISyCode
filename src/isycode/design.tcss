@@ -71,6 +71,7 @@ Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-sur
 #side-panel Button:focus, #side-panel Button:hover, #side-panel Button.rail-lit { background: $isy-selected-surface; color: $isy-focus; }
 #rail-tabs { border: none !important; border-bottom: solid $isy-separator !important; height: 2; }
 #workspace-tree { border: none !important; background: $isy-surface !important; min-height: 2; height: 1fr; }
+#file-preview-box { height: 1fr; min-height: 5; }
 #file-preview-scroll { border: none !important; border-top: solid $isy-separator !important; background: $isy-surface !important; height: 1fr; min-height: 5; }
 #file-preview { height: auto; }
 #file-preview-meta { height: auto; max-height: 2; color: $isy-muted; }
