@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from isycode.asyncio_compat import cancel_requested
+from isycode.hive_bridge import emit as hive_emit
 import json
 import uuid
 from isycode.work_list import clock_label
@@ -902,7 +903,15 @@ class ChatMixin:
                                 tool_result = json.dumps({"error": "workspace chat tools are not enabled"})
                                 self._append("  Tool denied · no explicit workspace read grant", YELLOW)
                             else:
+                                _tool_name = (call_function.get("name", "tool")
+                                              if isinstance(call_function, dict) else "tool")
+                                # Fire-and-forget hive lifecycle ping. Must never
+                                # raise: a missing/unreachable hive socket is the
+                                # common case (stock ISyCo), so _dispatch stays
+                                # the only thing that can surface a tool failure.
+                                hive_emit("PreToolUse", self, tool_name=_tool_name, tool_input=call_function)
                                 call_id, tool_result = await self._dispatch_chat_tool(call)
+                                hive_emit("PostToolUse", self, tool_name=_tool_name)
                             if not is_idea_box:
                                 try:
                                     previous = self._tool_history[:-1] if noted else self._tool_history
@@ -1045,6 +1054,12 @@ class ChatMixin:
             if block is not None and getattr(block, "is_mounted", False) and on_screen:
                 block.collapse_to(_time.monotonic() - thought_started)
                 self.query_one(ChatArea).follow_tail()
+            # A cleanly-completed turn that returns the loop to waiting-for-user
+            # IS the idle moment the hive drains inbox mail on (Stop → drain).
+            # Guarded by `completed`: cancellations/exceptions leave the turn
+            # interrupted and must NOT claim the agent went idle. Fire-and-forget.
+            if completed:
+                hive_emit("Stop", self)
 
         try:
             await _prepare_chat_tools()
