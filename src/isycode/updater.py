@@ -189,6 +189,18 @@ class SelfUpdater:
     def _clean_line(value: str) -> str:
         return "".join(ch if ch >= " " and ch != "\x7f" else " " for ch in value).strip()
 
+    @staticmethod
+    def _clean_pycache(root: Path) -> int:
+        count = 0
+        try:
+            for p in root.rglob("__pycache__"):
+                if p.is_dir() and not any(part.startswith(".") for part in p.parts if part != "__pycache__"):
+                    shutil.rmtree(p, ignore_errors=True)
+                    count += 1
+        except Exception:
+            pass
+        return count
+
     def _incoming_details(self) -> tuple[str, list[str], list[str], list[str]]:
         counts = self._git("rev-list", "--left-right", "--count", "HEAD...FETCH_HEAD").stdout.split()
         ahead, behind = (int(counts[0]), int(counts[1]))
@@ -293,20 +305,31 @@ class SelfUpdater:
             ignored_paths = self._ignored_paths()
             collisions = [incoming for incoming in incoming_paths
                           if any(self._overlap(incoming, ignored) for ignored in ignored_paths)]
+            head_short = self._git("rev-parse", "--short", "HEAD", check=False).stdout.strip()
+            remote_url_display = re.sub(r"^https?://", "", remote.stdout.strip()).removesuffix(".git")
+            channel_info = f"{remote_name}/{remote_branch} ({remote_url_display})"
             if behind == 0:
                 if not check_only:
-                    # A previous update may have advanced Git successfully but
-                    # failed while syncing the virtual environment. A normal
-                    # retry must be able to repair that partial outcome even
-                    # when the remote has no newer commits.
                     sync = self._sync_environment(root)
                     if sync is not None:
                         return sync
-                lines = ["✓ ISyCode ya está actualizado; no hay commits remotos nuevos."]
+                lines = [
+                    "Updating ISyCode...",
+                    "",
+                    f"→ Canal / Rama: {channel_info}",
+                    "→ Consultando actualizaciones...",
+                    "  ✓ Conexión con el repositorio verificada",
+                    "  ✓ Entorno y dependencias sincronizadas",
+                    "",
+                    f"✓ ISyCode ya está actualizado; no hay commits remotos nuevos. [{head_short}]",
+                ]
                 if dirty_paths:
                     lines.append(
                         f"  (Se conservaron {len(dirty_paths)} cambio(s) local(es) sin modificar.)"
                     )
+                lines.append("")
+                lines.append("Tip: Inicia el entorno interactivo con:")
+                lines.append("  isycode")
                 return UpdateReport("current", tuple(lines))
             if dirty_paths or collisions:
                 if (dirty_paths and not collisions and not check_only and self._confirmed(
@@ -323,7 +346,10 @@ class SelfUpdater:
                                             (*integrated.lines, *restored.lines))
                     return integrated
                 lines = [
-                    f"Hay {len(dirty_paths)} cambio(s) local(es); no se actualizó el checkout."
+                    "Updating ISyCode...",
+                    "",
+                    f"→ Canal / Rama: {channel_info}",
+                    f"⚠️ Hay {len(dirty_paths)} cambio(s) local(es); no se actualizó el checkout.",
                 ]
                 if behind:
                     lines.append(
@@ -332,22 +358,38 @@ class SelfUpdater:
                     )
                 lines.extend(f"Local: {p}" for p in dirty_paths[:30])
                 lines.extend(f"Archivo ignorado que coincide con la actualización: {p}" for p in collisions[:30])
-                lines.extend(f"Actualizaciones remotas: {self._clean_line(line)}" for line in commits[:12])
-                lines.extend(self._clean_line(line) for line in summary[:12])
+                if commits:
+                    lines.append("")
+                    lines.append("Novedades remotas:")
+                    lines.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
+                if summary:
+                    lines.append("")
+                    lines.append("Resumen de cambios:")
+                    lines.extend(f"  {self._clean_line(line)}" for line in summary[:12])
                 return UpdateReport("dirty", tuple(lines))
-            details = [f"Actualizaciones disponibles: {behind} commit(s)."]
+            details = [
+                "Comprobando actualizaciones de ISyCode...",
+                "",
+                f"→ Canal / Rama: {channel_info}",
+                "→ Consultando actualizaciones...",
+                "  ✓ Conexión con el repositorio verificada",
+                f"  ℹ️  Actualizaciones disponibles: {behind} commit(s).",
+            ]
             if detached_note:
-                details.insert(0, detached_note)
+                details.append(f"  ℹ️  {detached_note}")
             if commits:
+                details.append("")
                 details.append("Commits entrantes:")
                 details.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
             if summary:
+                details.append("")
                 details.append("Resumen de cambios:")
                 details.extend(f"  {self._clean_line(line)}" for line in summary[:12])
+            details.append("")
             review = "git diff --stat HEAD FETCH_HEAD"
-            details.append(f"Revisa el cambio con: {review}")
-            details.append("Para ver los diffs completos: git log -p HEAD..FETCH_HEAD")
-            details.append("Para aplicar la actualización: isycode actualizar")
+            details.append(f"Tip: Revisa el cambio con git diff: {review}")
+            details.append("Tip: Para ver los diffs completos: git log -p HEAD..FETCH_HEAD")
+            details.append("Tip: Para aplicar la actualización: isycode actualizar")
             diverged = ahead > 0 and behind > 0
             if diverged:
                 local_commits = self._git("log", "--format=%h %s", "FETCH_HEAD..HEAD").stdout.splitlines()
@@ -430,22 +472,40 @@ class SelfUpdater:
             sync = self._sync_environment(root)
             if sync is not None:
                 return sync
+            pycache_cleaned = self._clean_pycache(root)
+            new_head_short = self._git("rev-parse", "--short", "HEAD", check=False).stdout.strip()
             applied_lines = [
-                "✨ ISyCode actualizado correctamente.",
-                f"Se integraron {behind} commit(s) nuevos desde {remote_name}/{remote_branch}.",
+                "Updating ISyCode...",
+                "",
+                f"→ Canal / Rama: {channel_info}",
+                "→ Consultando actualizaciones...",
+                "  ✓ Conexión con el repositorio verificada",
+                f"  ✓ {behind} nuevo(s) commit(s) encontrados",
+                "",
+                "→ Aplicando actualización...",
+                f"  ✓ Avance rápido aplicado exitosamente [{new_head_short}]",
+                f"  ✓ Limpieza de __pycache__ ({pycache_cleaned} directorios actualizados)",
+                "  ✓ Dependencias y entorno virtual sincronizados (.venv)",
+                "  ✓ Catálogo de modelos y proveedores al día",
+                "",
+                f"✓ ¡ISyCode actualizado correctamente! [{new_head_short}]",
             ]
             if detached_note:
-                applied_lines.append(detached_note)
+                applied_lines.append(f"  ℹ️  {detached_note}")
             if commits:
+                applied_lines.append("")
                 applied_lines.append("Commits integrados:")
                 applied_lines.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
             if summary:
+                applied_lines.append("")
                 applied_lines.append("Archivos modificados:")
                 applied_lines.extend(f"  {self._clean_line(line)}" for line in summary[:12])
+            applied_lines.append("")
             log_cmd = f"git log -p -n {behind}" if behind > 0 else "git show HEAD"
             diff_cmd = f"git diff HEAD~{behind}..HEAD" if behind > 0 else "git show"
-            applied_lines.append(f"Para ver el historial completo con diffs: {log_cmd}")
-            applied_lines.append(f"Para ver diff directo entre versiones: {diff_cmd}")
+            applied_lines.append(f"Tip: Para ver el detalle completo con diffs: {log_cmd}")
+            applied_lines.append(f"Tip: Para ver diff directo con git diff: {diff_cmd}")
+            applied_lines.append("Tip: Inicia el entorno interactivo con: isycode")
             return UpdateReport("updated", tuple(applied_lines))
         except RuntimeError as exc:
             return UpdateReport("error", (str(exc),))

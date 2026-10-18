@@ -42,34 +42,33 @@ def _ask(question: str, details: tuple[str, ...]) -> bool:
 
 def _print_update_report(report) -> None:
     is_tty = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
-    last_was_blank = True
-    for i, line in enumerate(report.lines):
-        is_header = line.endswith(":") and not line.startswith(" ")
-        is_tip = line.startswith("Para ver ") or line.startswith("Revisa el cambio") or line.startswith("Para aplicar")
-        if (is_header or is_tip) and i > 0 and not last_was_blank:
-            print()
-            last_was_blank = True
-
+    for line in report.lines:
         if not is_tty or not line:
             print(line)
-            last_was_blank = not bool(line.strip())
             continue
 
         styled = line
-        if line.startswith("✨") or line.startswith("✓"):
+        if line.startswith("Updating ISyCode") or line.startswith("Comprobando actualizaciones"):
+            styled = f"\033[1;36m{line}\033[0m"
+        elif line.startswith("→ "):
+            styled = f"\033[1;36m→\033[0m \033[1;37m{line[2:]}\033[0m"
+        elif line.startswith("  ✓ "):
+            styled = f"  \033[1;32m✓\033[0m {line[4:]}"
+        elif line.startswith("✓ "):
             styled = f"\033[1;32m{line}\033[0m"
         elif line.startswith("⚠️"):
             styled = f"\033[1;33m{line}\033[0m"
         elif line.startswith("Conflicto:") or "falló" in line.casefold() or "error" in line.casefold():
             styled = f"\033[1;31m{line}\033[0m"
-        elif is_header:
+        elif line.endswith(":") and not line.startswith(" "):
             styled = f"\033[1;36m{line}\033[0m"
-        elif is_tip:
-            if ":" in line:
-                label, cmd = line.split(":", 1)
-                prefix_icon = "🚀" if "aplicar" in label.casefold() else "💡"
-                color = "\033[1;35m" if "aplicar" in label.casefold() else "\033[1;34m"
-                styled = f"{color}{prefix_icon} {label.strip()}:\033[0m\n   \033[1;37m{cmd.strip()}\033[0m"
+        elif line.startswith("Tip:"):
+            body = line[4:].strip()
+            if ":" in body:
+                desc, cmd = body.split(":", 1)
+                styled = f"\033[1;33mTip:\033[0m {desc.strip()}:\n  \033[1;37m{cmd.strip()}\033[0m"
+            else:
+                styled = f"\033[1;33mTip:\033[0m {body}"
         elif line.strip().startswith("• "):
             parts = line.split("• ", 1)
             tokens = parts[1].split(" ", 1)
@@ -85,7 +84,6 @@ def _print_update_report(report) -> None:
             styled = f"\033[2m{file_part}|\033[0m{stat_colored}"
 
         print(styled)
-        last_was_blank = not bool(line.strip())
 
 
 def main(argv: list[str] | None = None) -> int:
