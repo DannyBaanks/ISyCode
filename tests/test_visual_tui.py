@@ -339,6 +339,13 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
             for width, height in [(200, 60), (120, 40), (80, 24), (200, 60)]:
                 await pilot.resize_terminal(width, height)
                 board = app.query_one('#idle-board')
+                if height <= 28:
+                    composer = app.query_one('#composer')
+                    assert composer.region.bottom <= height
+                    board_lines = plain_text(board).splitlines()
+                    assert len(board_lines) <= 2
+                    assert "ISYCODE" in plain_text(board)
+                    continue
                 # Resize dispatch and the app's post-layout repaint are separate
                 # refreshes on some Textual/platform combinations. Assert only
                 # after the current layout has a matching panorama.

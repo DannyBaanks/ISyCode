@@ -1,11 +1,9 @@
 """ISyCode Hive — on-disk multi-agent coordination layer.
 
 A git-backed mailbox system where agents exchange messages via inbox/outbox,
-coordinated by a single-committer router. Human-in-the-loop approval surfaces
-in the agent's own terminal (ISyCode lane) and can be approved remotely.
-
-Design mirrors isyco-worlds/src/main/hive.ts but in Python, integrated with
-ISyCode's lanes, Sentinel, and the harness compose pipeline.
+coordinated by a router. This experimental mailbox is not an execution owner
+or an approval channel. Detached external launch is disabled; repair tasks use
+normal ISyCode conversation lanes with their existing Authority/Sentinel gates.
 """
 from __future__ import annotations
 

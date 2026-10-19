@@ -33,7 +33,7 @@ def test_sleeping_cat_sits_beside_the_caption_with_z_on_its_face():
         face = rows[1]
         z_at = face.index("z")
         braille = [i for i, char in enumerate(face) if "\u2800" < char <= "\u28ff"]
-        assert braille and z_at == braille[0] - 1
+        assert braille and 1 <= braille[0] - z_at <= 2
         assert "z" not in face[braille[-1] + 1:]
         assert not rows[2].rstrip().endswith("z")
         tail = [i for i, char in enumerate(rows[2]) if "\u2800" < char <= "\u28ff"]
@@ -75,3 +75,11 @@ def test_resting_cat_fills_all_three_rows_when_the_column_has_room():
     ink = [[i for i, char in enumerate(row) if "⠀" < char <= "⣿"] for row in rows]
     assert all(ink), "ears, body and tail each get a row"
     assert all(i > len("Chat ready") for row in ink for i in row)
+
+
+def test_sleep_symbols_climb_away_from_the_face_without_widening_track():
+    from isycode.cat_activity import sleeping_cat
+    rows = sleeping_cat(30).plain.splitlines()
+    positions = [row.index('z') for row in rows]
+    assert positions[0] == positions[1] + 1 == positions[2] + 2
+    assert all(row.count('z') == 1 and cell_len(row) == 30 for row in rows)

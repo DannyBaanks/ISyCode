@@ -24,6 +24,12 @@ La suite hermética se ejecuta con:
 python -m pytest -q -m "not integration"
 ```
 
+Si el checkout no está instalado en el intérprete actual, ejecuta
+`PYTHONPATH=src python -m pytest -q -m "not integration"` en Linux/macOS.
+El `pythonpath` de pytest no se propaga automáticamente a procesos hijos;
+una instalación de otro checkout puede causar errores de importación engañosos.
+La instalación editable en un entorno virtual sigue siendo la ruta recomendada.
+
 Las pruebas marcadas `integration` pueden hablar con servicios reales. Revisa
 el test y su documentación antes de habilitar una integración externa.
 

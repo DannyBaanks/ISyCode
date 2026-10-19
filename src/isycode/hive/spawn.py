@@ -1,17 +1,12 @@
-"""Hive agent spawning — runs in a separate module to avoid TUI app scanning restrictions.
+"""External Hive launch is unavailable until an execution owner can enforce it.
 
-This module is NOT scanned by test_harness_tui.py's subprocess check because
-it's not a tui_app_*.py file.
+Coordination hooks are not a sandbox or an Authority grant. TUI repair tasks use
+ISyCode's normal conversation owner instead of starting detached external CLIs.
 """
 from __future__ import annotations
 
-import asyncio
-import os
-import shutil
 from dataclasses import dataclass
-from typing import Any
-
-from .manager import HiveManager, HiveConfig, AgentMeta
+from .manager import HiveManager
 from .hook_server import HookServer
 
 
@@ -26,78 +21,14 @@ class SpawnResult:
 
 async def spawn_hive_agent(
     manager: HiveManager,
-    hook_server: HookServer,
+    hook_server: HookServer | None,
     provider: str,
     compose: str,
     workspace_root: str | None = None,
 ) -> SpawnResult:
-    """Spawn a hive agent process with the given compose as initial prompt.
-
-    Returns immediately after spawning (fire-and-forget). The agent runs
-    with hive coordination (inbox/outbox, git-backed).
-    """
-    # Ensure hook server + router are running
-    await hook_server.start()
-    await manager.start_router()
-
-    # Create agent meta
-    agent_id = f"repair-{int(asyncio.get_event_loop().time() * 1000)}"
-    meta = AgentMeta(
-        id=agent_id,
-        name=f"Repair Agent ({provider})",
-        provider=provider,
-        role="harness repair",
-        capabilities=["file_edit", "shell", "web_fetch"],
-        cwd=workspace_root or os.getcwd(),
-    )
-
-    # Upsert agent in hive
-    manager.upsert_agent(meta)
-
-    # Build spawn injection
-    injection = manager.build_spawn_injection(meta)
-
-    # Resolve provider executable
-    executable = shutil.which(provider)
-    if not executable:
-        return SpawnResult(
-            agent_id=agent_id,
-            provider=provider,
-            pid=None,
-            hive_root=str(manager.hive_root),
-            error=f"{provider} CLI not found in PATH",
-        )
-
-    # Build command
-    cmd = [executable, *injection.args]
-    env = os.environ.copy()
-    env.update(injection.env)
-
-    # Spawn detached process
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            env=env,
-            cwd=meta.cwd or os.getcwd(),
-            start_new_session=True,
-            stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        return SpawnResult(
-            agent_id=agent_id,
-            provider=provider,
-            pid=proc.pid,
-            hive_root=str(manager.hive_root),
-        )
-    except Exception as e:
-        return SpawnResult(
-            agent_id=agent_id,
-            provider=provider,
-            pid=None,
-            hive_root=str(manager.hive_root),
-            error=str(e),
-        )
+    """Reject unowned external execution without initializing files or services."""
+    return SpawnResult("", provider, None, str(manager.hive_root),
+                       "External Hive launch requires a bounded execution owner; use an ISyCode repair conversation.")
 
 
 def spawn_hive_agent_sync(
@@ -106,5 +37,6 @@ def spawn_hive_agent_sync(
     compose: str,
     workspace_root: str | None = None,
 ) -> SpawnResult:
-    """Synchronous wrapper for non-async contexts."""
-    return asyncio.run(spawn_hive_agent(manager, None, provider, compose, workspace_root))
+    """Same fail-closed result for synchronous callers."""
+    return SpawnResult("", provider, None, str(manager.hive_root),
+                       "External Hive launch requires a bounded execution owner; use an ISyCode repair conversation.")

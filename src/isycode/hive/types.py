@@ -2,11 +2,19 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, TypedDict
+
+
+def validate_identifier(value: str) -> str:
+    """Identifiers are bounded single path components, never filesystem paths."""
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", value):
+        raise ValueError("Invalid Hive identifier")
+    return value
 
 
 class MessageAct(str, Enum):
@@ -33,6 +41,21 @@ class HiveMessage:
     requires_reply: bool = False
     needs_human: bool = False
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+
+    def __post_init__(self) -> None:
+        for value in (self.id, self.conversation, self.from_agent, self.to_agent):
+            validate_identifier(value)
+        if self.in_reply_to is not None:
+            validate_identifier(self.in_reply_to)
+        if not isinstance(self.act, MessageAct):
+            raise ValueError("Invalid message act")
+        if type(self.hops) is not int or not 0 <= self.hops <= 12:
+            raise ValueError("Invalid hop count")
+        if type(self.requires_reply) is not bool or type(self.needs_human) is not bool:
+            raise ValueError("Invalid message flags")
+        for text, limit in ((self.subject, 4096), (self.body, 262144), (self.created_at, 128)):
+            if not isinstance(text, str) or len(text.encode("utf-8")) > limit:
+                raise ValueError("Invalid or oversized message text")
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -121,6 +144,10 @@ class AgentMeta:
     is_assistant: bool = False  # prep assistant — send-only, excluded from broadcast
 
 
+    def __post_init__(self) -> None:
+        validate_identifier(self.id)
+
+
 @dataclass(frozen=True)
 class RegistryAgent(AgentMeta):
     status: Literal["idle", "working", "blocked", "gone"] = "idle"
@@ -144,10 +171,19 @@ class Registry:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Registry:
+        if not isinstance(d, dict) or not isinstance(d.get("agents", {}), dict):
+            raise ValueError("Invalid Hive registry shape")
         agents = {
             k: RegistryAgent(**v) for k, v in d.get("agents", {}).items()
         }
-        return cls(god_id=d.get("godId"), agents=agents)
+        for key, agent in agents.items():
+            validate_identifier(key)
+            if key != agent.id:
+                raise ValueError("Registry key does not match agent ID")
+        god_id = d.get("godId")
+        if god_id is not None:
+            validate_identifier(god_id)
+        return cls(god_id=god_id, agents=agents)
 
 
 @dataclass(frozen=True)

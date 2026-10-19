@@ -9,6 +9,8 @@ import asyncio
 import json
 import os
 import subprocess
+import shlex
+import sys
 import time
 import uuid
 from contextlib import contextmanager
@@ -18,6 +20,7 @@ from typing import Any
 
 from .guard import hive_write_decision, HiveWriteInput
 from .router import Router
+from .safe_io import checked_path, read_message, create_message
 from .types import (
     AgentMeta,
     HiveMessage,
@@ -26,6 +29,7 @@ from .types import (
     Registry,
     RegistryAgent,
     SpawnInjection,
+    validate_identifier,
 )
 
 
@@ -60,7 +64,9 @@ class HiveManager:
     # ─── Paths ───
 
     def agent_dir(self, agent_id: str) -> Path:
-        return self.hive_root / "agents" / agent_id
+        validate_identifier(agent_id)
+        path = self.hive_root / "agents" / agent_id
+        return checked_path(self.hive_root, path)
 
     def registry_path(self) -> Path:
         return self.hive_root / "registry.json"
@@ -160,6 +166,8 @@ class HiveManager:
         self.ensure_hive()
         agent_dir = self.agent_dir(meta.id)
         agent_dir.mkdir(parents=True, exist_ok=True)
+        checked_path(self.hive_root, agent_dir / "inbox" / ".done")
+        checked_path(self.hive_root, agent_dir / "outbox" / ".sent")
         (agent_dir / "inbox" / ".done").mkdir(parents=True, exist_ok=True)
         (agent_dir / "outbox" / ".sent").mkdir(parents=True, exist_ok=True)
 
@@ -171,6 +179,8 @@ class HiveManager:
             role = "god"
 
         # Write identity.md (refreshed on each spawn)
+        for relative in ("identity.md", "memory.md", "cursor.json", "inbox", "inbox/.done", "outbox", "outbox/.sent"):
+            checked_path(self.hive_root, agent_dir / relative)
         identity = agent_dir / "identity.md"
         identity.write_text(self._identity_text(meta, role or ""), encoding="utf-8")
 
@@ -269,11 +279,15 @@ class HiveManager:
 
     # ─── Router ───
 
-    async def start_router(self) -> None:
+    async def start_router(self, on_message_delivered: Callable[[str, HiveMessage], Any] | None = None) -> None:
+        if on_message_delivered is not None:
+            self._on_message_delivered = on_message_delivered
+        cb = getattr(self, "_on_message_delivered", None)
         if self._router is None:
-            self._router = Router(self.hive_root, self._registry)
+            self._router = Router(self.hive_root, lambda: self._registry, on_message_delivered=cb)
             self._router_task = asyncio.create_task(self._router.start())
         elif self._router_task is None or self._router_task.done():
+            self._router.on_message_delivered = cb
             self._router_task = asyncio.create_task(self._router.start())
 
     async def stop_router(self) -> None:
@@ -325,11 +339,12 @@ class HiveManager:
         )
 
         outbox = self.agent_dir(from_agent) / "outbox"
+        checked_path(self.hive_root, outbox / ".sent")
         outbox.mkdir(parents=True, exist_ok=True)
         (outbox / ".sent").mkdir(exist_ok=True)
 
         msg_file = outbox / f"{msg.id}.json"
-        msg_file.write_text(msg.to_jsonl() + "\n", encoding="utf-8")
+        create_message(self.hive_root, msg_file, msg.to_jsonl() + "\n")
 
         self._append_log({
             "kind": "message_sent",
@@ -351,7 +366,7 @@ class HiveManager:
             if msg_file.name.startswith("."):
                 continue
             try:
-                msgs.append(HiveMessage.from_jsonl(msg_file.read_text(encoding="utf-8")))
+                msgs.append(HiveMessage.from_jsonl(read_message(self.hive_root, msg_file)))
             except Exception:
                 pass
         if include_done:
@@ -359,7 +374,7 @@ class HiveManager:
             if done.exists():
                 for msg_file in sorted(done.glob("*.json")):
                     try:
-                        msgs.append(HiveMessage.from_jsonl(msg_file.read_text(encoding="utf-8")))
+                        msgs.append(HiveMessage.from_jsonl(read_message(self.hive_root, msg_file)))
                     except Exception:
                         pass
         return msgs
@@ -374,7 +389,7 @@ class HiveManager:
             if msg_file.name.startswith("."):
                 continue
             try:
-                msgs.append(HiveMessage.from_jsonl(msg_file.read_text(encoding="utf-8")))
+                msgs.append(HiveMessage.from_jsonl(read_message(self.hive_root, msg_file)))
             except Exception:
                 pass
         if include_sent:
@@ -382,7 +397,7 @@ class HiveManager:
             if sent.exists():
                 for msg_file in sorted(sent.glob("*.json")):
                     try:
-                        msgs.append(HiveMessage.from_jsonl(msg_file.read_text(encoding="utf-8")))
+                        msgs.append(HiveMessage.from_jsonl(read_message(self.hive_root, msg_file)))
                     except Exception:
                         pass
         return msgs
@@ -393,10 +408,12 @@ class HiveManager:
         done = inbox / ".done"
         done.mkdir(exist_ok=True)
         for msg_id in msg_ids:
-            src = inbox / f"{msg_id}.json"
+            validate_identifier(msg_id)
+            src = checked_path(self.hive_root, inbox / f"{msg_id}.json")
+            checked_path(self.hive_root, done)
             if src.exists():
                 try:
-                    src.rename(done / msg_id.name)
+                    src.rename(done / src.name)
                 except Exception:
                     pass
 
@@ -462,72 +479,23 @@ class HiveManager:
 
     def build_spawn_injection(self, meta: AgentMeta, extra_writable: list[str] | None = None) -> SpawnInjection:
         """Build provider-specific args + env that make the process hive-aware."""
-        self.ensure_hive()
-        agent_dir = self.agent_dir(meta.id)
-        root = self.hive_root
-
-        env: dict[str, str] = {
-            "AGENT_ID": meta.id,
-            "AGENT_NAME": meta.name,
-            "HIVE_ROOT": str(root),
-            "AGENT_DIR": str(agent_dir),
-        }
-
         provider = (meta.provider or "claude").lower()
-
-        if provider in HIVE_AWARE_PROVIDERS:
-            # Claude Code: --append-system-prompt + --settings with hook config
-            env["HIVE_SOCK"] = self.sock_path() or ""
-            settings_path = agent_dir / "settings.json"
-            settings_path.write_text(json.dumps(self._hook_settings(meta, str(agent_dir), extra_writable)), encoding="utf-8")
-            args = ["--append-system-prompt", self._injected_prompt(meta, str(agent_dir), str(root)), "--settings", str(settings_path)]
-            return SpawnInjection(args=args, env=env)
-
-        if provider in HOOK_PROVIDERS:
-            # Hook-based providers (codex, opencode, gemini, pi, grok, crush)
-            env["HIVE_SOCK"] = self.sock_path() or ""
-            preset = self._provider_preset(provider)
-            prompt = self._injected_prompt(meta, str(agent_dir), str(root))
-            args = []
-            degraded = None
-
-            if provider == "codex":
-                # Codex needs isolated CODEX_HOME and --dangerously-bypass-hook-trust
-                codex_home = agent_dir / ".codex"
-                codex_home.mkdir(exist_ok=True)
-                (codex_home / "config.toml").write_text(
-                    self._codex_hooks_toml(str(self.sock_path())), encoding="utf-8"
-                )
-                env["CODEX_HOME"] = str(codex_home)
-                args.append("--dangerously-bypass-hook-trust")
-                # Extra writable dirs for auto mode
-                for d in self._sandbox_writable_dirs(meta, str(agent_dir), str(root), extra_writable):
-                    args.extend(["--add-dir", d])
-
-            elif provider == "crush":
-                # Crush: seedDelivery = type-into-tui, no positional prompt
-                env["HIVE_NODE"] = "node"  # fallback
-                return SpawnInjection(args=[], env=env, seed_prompt=prompt)
-
-            elif provider == "grok":
-                pass  # grok takes positional prompt
-
-            if preset.get("initialPromptFlag"):
-                return SpawnInjection(args=args + [preset["initialPromptFlag"], prompt], env=env)
-            if preset.get("positionalInitialPrompt"):
-                return SpawnInjection(args=args + [prompt], env=env)
-            return SpawnInjection(args=args, env=env, seed_prompt=prompt)
-
-        if provider in PROXY_PROVIDERS:
-            # Proxy-based (qwen) — would need a sidecar. For now, degrade.
-            return SpawnInjection(
-                args=[],
-                env=env,
-                degraded=f"{meta.name} (provider {provider}) runs without hive events: proxy sidecar not implemented in Python hive yet."
-            )
-
-        # Unknown provider — spawn bare
-        return SpawnInjection(args=[], env=env)
+        if provider != "claude":
+            raise ValueError(f"Hive hooks for {provider} are not supported")
+        self.ensure_hive()
+        if meta.id not in self.registry.agents:
+            raise ValueError("Register the Hive agent before building hook settings")
+        agent_dir = self.agent_dir(meta.id)
+        settings_path = checked_path(self.hive_root, agent_dir / "settings.json")
+        settings_path.write_text(json.dumps(self._hook_settings(meta, str(agent_dir), extra_writable)), encoding="utf-8")
+        return SpawnInjection(
+            args=["--append-system-prompt", self._injected_prompt(meta, str(agent_dir), str(self.hive_root)),
+                  "--settings", str(settings_path)],
+            env={"AGENT_ID": meta.id, "AGENT_NAME": meta.name,
+                 "HIVE_ROOT": str(self.hive_root), "AGENT_DIR": str(agent_dir),
+                 "HIVE_SOCK": self.sock_path() or ""},
+            degraded="Coordination hooks only; not an ISyCode execution owner or sandbox.",
+        )
 
     # ─── Hook Settings / Prompts ───
 
@@ -569,10 +537,9 @@ class HiveManager:
         }
 
     def _hook_shim_path(self) -> str:
-        """Path to the hook shim script (cth-hook.cjs equivalent in Python)."""
-        # We'll implement the shim as a Python module invoked via the bundled node trick
-        # For now, return a placeholder that the TUI will resolve
-        return str(self.hive_root / "bin" / "isyco-hook")
+        """Invoke the installed Python source, with platform-correct shell quoting."""
+        args = [sys.executable, str(Path(__file__).with_name("hook_shim.py").resolve())]
+        return subprocess.list2cmdline(args) if os.name == "nt" else shlex.join(args)
 
     def _injected_prompt(self, meta: AgentMeta, agent_dir: str, root: str) -> str:
         """The system prompt injected into the agent at spawn."""
@@ -626,14 +593,14 @@ filesystem under `{root}/`:
 ## Human-in-the-loop
 
 - Permission prompts surface in YOUR terminal (ISyCode lane).
-- Approve remotely via the god agent or the TUI.
+- A Hive message or god role cannot approve an ISyCode action.
 - `needs_human: true` routes to god for explicit approval.
 
 ## Guardrails
 
 - You may ONLY write to: your `memory.md`, `inbox/`, `outbox/`, `tasks.json`.
 - God may also write `board.md` and `spawn-requests/`.
-- Any other write inside the hive root is DENIED by the guard.
+- The coordination file guard rejects other Hive paths; it does not sandbox shell commands.
 - To reach another agent, write a message to your outbox.
 
 ## Your Mission
@@ -658,24 +625,6 @@ filesystem under `{root}/`:
 
 ---
 *This file is refreshed on every spawn by the hive manager.*
-"""
-
-    def _provider_preset(self, provider: str) -> dict[str, Any]:
-        presets = {
-            "codex": {"initialPromptFlag": None, "positionalInitialPrompt": True, "hookBridge": "hooks", "shim": "codex"},
-            "opencode": {"initialPromptFlag": None, "positionalInitialPrompt": True, "hookBridge": "hooks", "shim": "opencode"},
-            "gemini": {"initialPromptFlag": None, "positionalInitialPrompt": True, "hookBridge": "hooks", "shim": "gemini"},
-            "pi": {"initialPromptFlag": None, "positionalInitialPrompt": True, "hookBridge": "hooks", "shim": "pi"},
-            "grok": {"initialPromptFlag": None, "positionalInitialPrompt": True, "hookBridge": "hooks", "shim": "grok"},
-            "crush": {"initialPromptFlag": None, "positionalInitialPrompt": False, "hookBridge": "hooks", "shim": "crush", "seedDelivery": "type-into-tui"},
-        }
-        return presets.get(provider, {"initialPromptFlag": None, "positionalInitialPrompt": True})
-
-    def _codex_hooks_toml(self, sock: str) -> str:
-        return f"""[hooks]
-pre_tool_use = [{{ command = "node {self.hive_root}/bin/isyco-hook pre-tool-use" }}]
-post_tool_use = [{{ command = "node {self.hive_root}/bin/isyco-hook post-tool-use" }}]
-stop = [{{ command = "node {self.hive_root}/bin/isyco-hook stop" }}]
 """
 
     def _sandbox_writable_dirs(
@@ -734,12 +683,15 @@ stop = [{{ command = "node {self.hive_root}/bin/isyco-hook stop" }}]
 
     def check_write(self, tool: str, tool_input: dict[str, Any], cwd: str, agent_id: str) -> dict[str, Any]:
         """Check if a file write is allowed in the hive."""
+        agent = self._registry.agents.get(agent_id)
+        if agent is None or agent.archived:
+            return {"deny": True, "reason": "Unknown or archived Hive agent."}
         inp: HiveWriteInput = {
             "tool": tool,
             "toolInput": tool_input,
             "cwd": cwd,
             "agentId": agent_id,
-            "isGod": self._registry.agents.get(agent_id, RegistryAgent(id="", name="")).is_god,
+            "isGod": agent.is_god,
             "hiveRoot": str(self.hive_root),
             "caseInsensitive": os.name == "nt",
         }
@@ -851,7 +803,9 @@ On spawn, the hive injects:
 - `HIVE_SOCK` (Unix socket for hooks)
 - Provider-specific args/env:
   - **Claude**: `--append-system-prompt <identity+protocol>` + `--settings <agent-dir/settings.json>`
-  - **Codex**: positional prompt + `--dangerously-bypass-hook-trust` + `--add-dir`
-  - **Crush**: `seedPrompt` (typed into TUI after boot)
-  - **Proxy (qwen)**: `HIVE_PROXY_SESSION`, loopback proxy sidecar
+  - Other CLIs are unsupported; no trust-bypass flags or fake hook configs are emitted.
+
+External process launch is disabled. A coordination hook is not a sandbox,
+Workspace Authority grant, Sentinel decision or approval channel. Repairs run
+in an ordinary ISyCode conversation using its selected model and execution owners.
 """
