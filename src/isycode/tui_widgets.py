@@ -116,6 +116,10 @@ class Banner(Static):
         header.append(mark, style=CYAN if mode == "Classic" else MUTED)
         self.update(header)
 
+    def on_resize(self, event) -> None:
+        if self.is_mounted and getattr(self, "app", None) and self.app.is_mounted:
+            self.set_compact(True)
+
 
 class ActivityStatus(Static):
     """Repaint the cat after this widget receives its final resized geometry."""
@@ -402,6 +406,13 @@ class SidePanel(Vertical):
         for button in self.query(Button):
             button.compact = True
         self.query_one("#show-overview", Button).add_class("rail-lit")
+
+    def on_resize(self, event) -> None:
+        if self.is_mounted and getattr(self, "app", None) and self.app.is_mounted:
+            try:
+                self.app.query_one(Banner).set_compact(True)
+            except Exception:
+                pass
 
 
 class ToolActivityGroup(ExpandableBox):
