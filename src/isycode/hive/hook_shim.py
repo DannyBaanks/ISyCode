@@ -71,17 +71,21 @@ def connect_sock(sock_path: str) -> socket.socket | None:
         return None
 
 
-def send_to_hive(sock_path: str, payload: dict[str, Any]) -> bool:
-    """Send a payload to the hive socket. Fire-and-forget."""
+def send_to_hive(sock_path: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Send a payload to the hive socket and read optional server response."""
     sock = connect_sock(sock_path)
     if not sock:
-        return False
+        return None
     try:
         data = (json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8")
         sock.sendall(data)
-        return True
+        sock.settimeout(0.5)
+        resp_data = sock.recv(4096)
+        if resp_data:
+            return json.loads(resp_data.decode("utf-8").strip())
+        return None
     except Exception:
-        return False
+        return None
     finally:
         try:
             sock.close()
@@ -113,10 +117,10 @@ def handle_pre_tool_use(data: dict[str, Any], hive_root: Path, agent_id: str) ->
     if decision["deny"]:
         return {"hookSpecificOutput": {"hookEventName": "PreToolUse",
                 "permissionDecision": "deny", "permissionDecisionReason": decision["reason"]}}
-    # Forward to hive for live status
+    # Forward to hive for live status and server-side verification
     sock_path = os.environ.get("HIVE_SOCK")
     if sock_path:
-        send_to_hive(sock_path, {
+        server_resp = send_to_hive(sock_path, {
             "type": "pre_tool_use",
             "agent_id": agent_id,
             "tool_name": tool_name,
@@ -124,6 +128,10 @@ def handle_pre_tool_use(data: dict[str, Any], hive_root: Path, agent_id: str) ->
             "cwd": cwd,
             "ts": time.time(),
         })
+        if server_resp and server_resp.get("decision") == "deny":
+            return {"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": server_resp.get("reason", "Denied by Hive server")}}
     return {}
 
 

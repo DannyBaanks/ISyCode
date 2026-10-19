@@ -15,7 +15,7 @@ from typing import Any
 
 from .manager import HiveManager, HiveConfig
 from .guard import hive_write_decision, HiveWriteInput
-from .types import HiveMessage, MessageAct
+from .types import HiveMessage, MessageAct, RegistryAgent
 
 
 class HookServer:
@@ -84,31 +84,39 @@ class HookServer:
                     payload = json.loads(line.decode("utf-8"))
                 except json.JSONDecodeError:
                     continue
-                await self._dispatch(payload)
+                resp = await self._dispatch(payload)
+                if resp is not None:
+                    writer.write((json.dumps(resp, ensure_ascii=False) + "\n").encode("utf-8"))
+                    await writer.drain()
         except Exception:
             pass
         finally:
             writer.close()
             await writer.wait_closed()
 
-    async def _dispatch(self, payload: dict[str, Any]) -> None:
+    async def _dispatch(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         """Dispatch hook event to appropriate handler."""
         evt_type = payload.get("type")
         agent_id = payload.get("agent_id")
 
         if not agent_id or agent_id not in self.manager.registry.agents:
-            return
+            return {"decision": "deny", "reason": "Unknown or unregistered agent"}
 
         agent = self.manager.registry.agents[agent_id]
+        if agent.archived:
+            return {"decision": "deny", "reason": "Archived Hive agent"}
 
         if evt_type == "pre_tool_use":
-            await self._handle_pre_tool_use(payload, agent)
+            return await self._handle_pre_tool_use(payload, agent)
         elif evt_type == "post_tool_use":
             await self._handle_post_tool_use(payload, agent)
+            return {"decision": "allow"}
         elif evt_type == "stop":
             await self._handle_stop(payload, agent)
+            return {"decision": "allow"}
+        return None
 
-    async def _handle_pre_tool_use(self, payload: dict[str, Any], agent: RegistryAgent) -> None:
+    async def _handle_pre_tool_use(self, payload: dict[str, Any], agent: RegistryAgent) -> dict[str, Any]:
         """PreToolUse: check write guard, update agent status."""
         tool_name = payload.get("tool_name", "")
         tool_input = payload.get("tool_input", {})
@@ -127,12 +135,15 @@ class HookServer:
             }
             decision = hive_write_decision(inp)
             if decision["deny"]:
-                # Send denial back via a response channel (not implemented yet)
+                self.manager._append_log({
+                    "kind": "security_violation",
+                    "agentId": agent.id,
+                    "tool": tool_name,
+                    "reason": decision["reason"],
+                    "ts": time.time(),
+                })
                 print(f"[hive] DENY {agent.id} {tool_name}: {decision['reason']}")
-                # For now, we can't easily send back to the hook; the guard
-                # in isyco-worlds works because the hook reads the decision
-                # from the shim's stdout. Our shim does that.
-                return
+                return {"decision": "deny", "reason": decision["reason"]}
 
         # Update status to working
         self.manager.set_agent_status(agent.id, "working")
@@ -142,6 +153,7 @@ class HookServer:
             "tool": tool_name,
             "ts": time.time(),
         })
+        return {"decision": "allow"}
 
     async def _handle_post_tool_use(self, payload: dict[str, Any], agent: RegistryAgent) -> None:
         """PostToolUse: update status, log."""

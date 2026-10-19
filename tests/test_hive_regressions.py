@@ -199,3 +199,37 @@ def test_malformed_registry_denies_instead_of_crashing_hook(tmp_path, registry):
     response = handle_pre_tool_use({'tool_name': 'Write', 'tool_input': {
         'file_path': str(root / 'board.md')}, 'cwd': str(tmp_path)}, root, 'alice')
     assert response['hookSpecificOutput']['permissionDecision'] == 'deny'
+
+
+@pytest.mark.asyncio
+async def test_hook_server_denies_and_logs_security_violation(tmp_path):
+    import os
+    if os.name == 'nt':
+        pytest.skip('Unix domain socket tests skip on Windows')
+    from isycode.hive.hook_server import HookServer
+    from isycode.hive.hook_shim import send_to_hive
+    manager = hive(tmp_path)
+    server = HookServer(manager)
+    await server.start()
+    try:
+        sock_path = manager.sock_path()
+        assert sock_path and os.path.exists(sock_path)
+        payload = {
+            'type': 'pre_tool_use',
+            'agent_id': 'alice',
+            'tool_name': 'Write',
+            'tool_input': {'file_path': str(manager.agent_dir('bob') / 'memory.md')},
+            'cwd': str(tmp_path),
+        }
+        resp = await asyncio.to_thread(send_to_hive, sock_path, payload)
+        assert resp is not None
+        assert resp.get('decision') == 'deny'
+        assert 'Hive' in resp.get('reason', '') or 'coordination' in resp.get('reason', '')
+    finally:
+        await server.stop()
+
+    log_entries = [json.loads(line) for line in manager.log_path().read_text().splitlines() if line]
+    violations = [e for e in log_entries if e.get('kind') == 'security_violation']
+    assert len(violations) == 1
+    assert violations[0]['agentId'] == 'alice'
+    assert violations[0]['tool'] == 'Write'
