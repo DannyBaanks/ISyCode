@@ -313,6 +313,11 @@ class SessionMixin:
         except NoMatches:
             return
         body = self._idea_box or tr("Capture an idea · Ctrl+Shift+Enter")
+        is_narrow = getattr(self, "size", None) and self.size.width < 100
+        box.border_title = tr("Idea · Space") if is_narrow else tr("Idea · Space expand")
+        if is_narrow:
+            box.update(Text(body, style=TEXT))
+            return
         busy = self._loop_task is not None and not self._loop_task.done()
         label = tr("Idea box") + (" · " + tr("Thinking…") if busy else "")
         heading = Text(label, style=f"bold {TEXT}")

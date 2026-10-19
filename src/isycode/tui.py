@@ -602,7 +602,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 continue
         try:
             self.query_one(PromptArea).placeholder = tr(PromptArea.DEFAULT_PLACEHOLDER)
-            self.query_one("#idea-box").border_title = tr("Space expand / collapse · double-click copy")
+            self.query_one("#idea-box").border_title = tr("Idea · Space expand")
         except (NoMatches, NoScreen):
             pass
         try:
@@ -989,6 +989,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self.query_one("#action-list", OptionList).focus()
                 return
             self._close_menu()
+            return
+        if getattr(self, "_rail_visible", False) and getattr(self, "size", None) and self.size.width < 100:
+            self.action_toggle_sidebar()
             return
         if self._review_request_task and not self._review_request_task.done():
             self._review_request_task.cancel()
@@ -1867,6 +1870,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         if not board.is_mounted or board.has_class("startup-archived"):
             return
+        if getattr(self, "size", None) and self.size.height <= 28:
+            board.styles.height = 2
+            board.styles.padding = (0, 0)
+        else:
+            board.styles.height = "auto"
+            board.styles.padding = (0, 1, 1, 1)
         width = board.content_size.width or self._idle_content_width()
         rows = self._landscape_row_budget()
         board._painted_width = width

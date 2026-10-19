@@ -60,6 +60,17 @@ class RailMixin:
 
     def _apply_rail_width(self, terminal_width: int) -> None:
         """Keep the rail inside the configured range and available columns."""
+        if terminal_width < 100 and getattr(self, "_dedicated_space", False) and getattr(self, "_rail_visible", False):
+            try:
+                self.query_one("#main").display = False
+                self.query_one(SidePanel).styles.width = "100%"
+                return
+            except Exception:
+                pass
+        try:
+            self.query_one("#main").display = True
+        except Exception:
+            pass
         available = max(22, terminal_width - 52)
         preferred = self._rail_width if terminal_width >= 100 else self._rail_compact_width
         requested = min(preferred, available)
@@ -631,9 +642,35 @@ class RailMixin:
         self._rail_visible = not self._rail_visible
         self._rail_visibility_override = self._rail_visible
         self._rail_auto_hidden = False
-        self.query_one(SidePanel).display = self._rail_visible
+        side_panel = self.query_one(SidePanel)
+        side_panel.display = self._rail_visible
+        if self.size.width < 100 and getattr(self, "_dedicated_space", False):
+            self.query_one("#main").display = not self._rail_visible
+            if self._rail_visible:
+                side_panel.styles.width = "100%"
+        else:
+            self.query_one("#main").display = True
+            self._apply_rail_width(self.size.width)
         self._update_model_button_visibility()
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
+
+    def action_toggle_dedicated_space(self) -> None:
+        """Dedicated full-width space view in compact terminals."""
+        self._dedicated_space = not getattr(self, "_dedicated_space", False)
+        if self._dedicated_space:
+            self._rail_visible = True
+            self._rail_visibility_override = True
+            self._rail_auto_hidden = False
+            self.query_one(SidePanel).display = True
+            if self.size.width < 100:
+                self.query_one("#main").display = False
+                self.query_one(SidePanel).styles.width = "100%"
+            else:
+                self._apply_rail_width(self.size.width)
+        else:
+            self.query_one("#main").display = True
+            self._apply_rail_width(self.size.width)
+            self.query_one(SidePanel).display = self._rail_visible
 
     def action_focus_files(self) -> None:
         self._set_rail_view("files")
@@ -647,7 +684,14 @@ class RailMixin:
         self._rail_visible = True
         self._rail_visibility_override = True
         self._rail_auto_hidden = False
-        self.query_one(SidePanel).display = True
+        side_panel = self.query_one(SidePanel)
+        side_panel.display = True
+        if self.size.width < 100 and getattr(self, "_dedicated_space", False):
+            self.query_one("#main").display = False
+            side_panel.styles.width = "100%"
+        else:
+            self.query_one("#main").display = True
+            self._apply_rail_width(self.size.width)
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
         self.call_after_refresh(self._update_model_button_visibility)
         show_files = view == "files"
@@ -703,6 +747,15 @@ class RailMixin:
     def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
         """Cell-accurate landscape, model, and integration columns."""
         width = measured_width or self._idle_content_width()
+        height = getattr(self, "size", None) and self.size.height or 40
+        if height <= 28:
+            body = Text()
+            checking = not self._model_line
+            model = self._model_line or tr("Checking the configured model")
+            mode = self._workspace_mode() if callable(getattr(self, "_workspace_mode", None)) else getattr(self, "_workspace_mode", "Classic")
+            body.append(f"ISYCODE · {model} · {mode}\n", style=MUTED if checking else TEXT)
+            body.append(tr("Conexiones y herramientas (LSPs, MCPs, Skills) en Espacio"), style=MUTED)
+            return body
         body = Text()
         body.append(render_landscape(width, max_rows))
         body.append("\n")

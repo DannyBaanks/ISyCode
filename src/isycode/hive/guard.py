@@ -74,16 +74,8 @@ def hive_write_decision(i: HiveWriteInput) -> HiveWriteDecision:
     physical_inside = is_inside(physical_root, physical_target, i["caseInsensitive"])
     if not lexical_inside and not physical_inside:
         return {"deny": False, "reason": None}
-    if not lexical_inside or not physical_inside or os.path.normcase(os.path.abspath(target)) != os.path.normcase(physical_target):
+    if not lexical_inside or not physical_inside:
         return {"deny": True, "reason": "Hive coordination writes cannot traverse symbolic links."}
-
-    try:
-        rel = os.path.relpath(target_n, hive_root_n).replace(os.sep, "/")
-    except ValueError:
-        return {"deny": False, "reason": None}
-
-    if is_plumbing(rel, i["agentId"], i["isGod"]):
-        return {"deny": False, "reason": None}
 
     reason = (
         "The hive folder is only for coordination: your own memory.md, inbox and outbox, "
@@ -92,4 +84,21 @@ def hive_write_decision(i: HiveWriteInput) -> HiveWriteDecision:
         + ". To reach another agent, write a message into your outbox. "
         "Save documents and other work in your working folder instead."
     )
-    return {"deny": True, "reason": reason}
+
+    try:
+        rel = os.path.relpath(target_n, hive_root_n).replace(os.sep, "/")
+    except ValueError:
+        return {"deny": False, "reason": None}
+
+    if not is_plumbing(rel, i["agentId"], i["isGod"]):
+        return {"deny": True, "reason": reason}
+
+    try:
+        physical_rel = os.path.normpath(norm(os.path.relpath(physical_target, physical_root))).replace(os.sep, "/")
+    except ValueError:
+        return {"deny": True, "reason": "Hive coordination writes cannot traverse symbolic links."}
+
+    if not is_plumbing(physical_rel, i["agentId"], i["isGod"]) or physical_rel != norm(rel):
+        return {"deny": True, "reason": "Hive coordination writes cannot traverse symbolic links."}
+
+    return {"deny": False, "reason": None}

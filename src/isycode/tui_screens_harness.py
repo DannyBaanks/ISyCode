@@ -173,9 +173,16 @@ class ModelsScreen(ModalScreen):
     #models-scroll { height: 1fr; min-height: 4; width: 1fr; }
     #model-detail-scroll { width: 46; height: 1fr; margin-left: 1; padding: 0 1; border-left: solid #3f4d59; }
     #model-detail { height: auto; }
+    ModelsScreen.-narrow #models-card { width: 100%; max-width: 100%; }
     ModelsScreen.-narrow #models-body { layout: vertical; }
-    ModelsScreen.-narrow #model-detail-scroll { width: 100%; height: 6; margin-left: 0; border-left: none; border-top: solid #3f4d59; }
-    ModelsScreen.-short #model-detail-scroll { height: 4; }
+    ModelsScreen.-narrow #model-detail-scroll { width: 100%; height: 5; margin-left: 0; border-left: none; border-top: solid #3f4d59; }
+    ModelsScreen.-short #models-card { height: 100%; max-height: 100%; }
+    ModelsScreen.-short #models-search { height: 3; margin-bottom: 0; }
+    ModelsScreen.-short #models-actions { height: 1; }
+    ModelsScreen.-short #models-actions Button { height: 1; min-height: 1; border: none; padding: 0 1; }
+    ModelsScreen.-short #model-detail-scroll { height: 3; min-height: 3; }
+    ModelsScreen.-short #models-scroll { min-height: 7; }
+    ModelsScreen.-short #models-status { max-height: 1; }
     .model-group { height: auto; background: transparent; }
     .model-group > Contents { padding: 0 1; }
     .model-family-block { height: auto; margin-top: 1; background: transparent; }

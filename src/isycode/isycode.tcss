@@ -107,12 +107,12 @@
     #queue-warning { width: 1fr; height: auto; color: #fbbf24; }
     #queue-steer-help { width: 5; min-width: 5; height: 1; min-height: 1; border: none; padding: 0; }
     #idea-box-row {
-        width: 1fr; height: auto; max-height: 4;
+        width: 1fr; height: auto; max-height: 3;
         align-horizontal: center; margin: 0 1; background: transparent;
     }
-    #shell-box { display: none; width: 60%; height: auto; max-height: 4; padding: 0 1; border: round #514d5a; background: #1e1f22; }
+    #shell-box { display: none; width: 60%; height: auto; max-height: 3; padding: 0 1; border: round #514d5a; background: #1e1f22; }
     #idea-box {
-        width: 60%; height: auto; max-height: 4; padding: 0 1;
+        width: 60%; height: auto; max-height: 3; padding: 0 1;
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
