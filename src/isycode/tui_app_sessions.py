@@ -1545,6 +1545,35 @@ class SessionMixin:
         if getattr(self, "is_running", False):
             self.run_worker(self._refresh_work_list(), group="work-list")
 
+    async def _activate_hive_agent_message(self, agent_id: str, message: HiveMessage) -> None:
+        """Activate an ISyCode conversation turn for the recipient Hive agent."""
+        lane_key = f"hive:{agent_id}"
+        lane = self._lanes.get(lane_key)
+        if lane is None:
+            lane = open_lane(self, lane_key)
+
+        sender = message.from_agent
+        subject = message.subject or "Notification"
+        body = message.body or ""
+        act = message.act.value if hasattr(message.act, "value") else str(message.act)
+
+        prompt = (
+            f"[Hive message from @{sender} · {act.upper()} · {subject}]\n\n"
+            f"{body}\n\n"
+            f"(You are responding as Hive agent @{agent_id}. Coordinate by writing responses "
+            f"to your outbox at agents/{agent_id}/outbox/ or updating your memory at agents/{agent_id}/memory.md)."
+        )
+
+        status = self._post_user_text(lane, prompt)
+        if getattr(self, "is_running", False):
+            self.run_worker(self._refresh_work_list(), group="work-list")
+        if status == "started":
+            self._append(f"  [Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}.", CYAN)
+        elif status == "queued":
+            self._append(f"  [Hive] Queued message for agent @{agent_id} behind its current turn.", YELLOW)
+        elif status == "full":
+            self._append(f"  [Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox.", YELLOW)
+
 
 for _attr, _field in LANE_FIELDS:
     setattr(SessionMixin, _attr, lane_property(_field))

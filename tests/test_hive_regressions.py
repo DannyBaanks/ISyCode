@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from isycode.hive import HiveManager, HiveConfig, AgentMeta, MessageAct
+from isycode.hive import HiveManager, HiveConfig, AgentMeta, MessageAct, HiveMessage
 from isycode.hive.router import Router
 from isycode.hive.spawn import spawn_hive_agent
 
@@ -233,3 +233,68 @@ async def test_hook_server_denies_and_logs_security_violation(tmp_path):
     assert len(violations) == 1
     assert violations[0]['agentId'] == 'alice'
     assert violations[0]['tool'] == 'Write'
+
+
+@pytest.mark.asyncio
+async def test_router_activates_on_message_delivered_callback(tmp_path):
+    manager = hive(tmp_path)
+    delivered_events = []
+
+    def on_delivered(recipient_id: str, msg: HiveMessage):
+        delivered_events.append((recipient_id, msg.from_agent, msg.subject, msg.body))
+
+    manager.send_message('alice', 'bob', MessageAct.INFORM, 'task review', 'please inspect the diff')
+    router = Router(manager.hive_root, manager.registry, on_message_delivered=on_delivered)
+    await router._route_once()
+
+    assert len(delivered_events) == 1
+    recipient, sender, subject, body = delivered_events[0]
+    assert recipient == 'bob'
+    assert sender == 'alice'
+    assert subject == 'task review'
+    assert body == 'please inspect the diff'
+    assert len(manager.read_inbox('bob')) == 1
+
+
+@pytest.mark.asyncio
+async def test_session_mixin_activates_contained_hive_agent_message():
+    from isycode.tui_app_sessions import SessionMixin
+
+    class FakeLane:
+        def __init__(self):
+            self.posted = []
+
+    class App:
+        def __init__(self):
+            self._lanes = {}
+            self.posted_texts = []
+            self.appended = []
+            self.is_running = False
+
+        def _post_user_text(self, lane, text):
+            self.posted_texts.append((lane, text))
+            return "started"
+
+        def _append(self, text, color=None):
+            self.appended.append((text, color))
+
+    app = App()
+    lane = FakeLane()
+    app._lanes["hive:bob"] = lane
+    msg = HiveMessage(
+        id="msg-1",
+        conversation="conv-1",
+        in_reply_to=None,
+        from_agent="alice",
+        to_agent="bob",
+        act=MessageAct.REQUEST,
+        subject="review patch",
+        body="please review",
+    )
+    await SessionMixin._activate_hive_agent_message(app, "bob", msg)
+
+    assert len(app.posted_texts) == 1
+    assert app.posted_texts[0][0] is lane
+    assert "review patch" in app.posted_texts[0][1]
+    assert "alice" in app.posted_texts[0][1]
+    assert any("Dispatched message to agent @bob" in m[0] for m in app.appended)

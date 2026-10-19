@@ -279,11 +279,15 @@ class HiveManager:
 
     # ─── Router ───
 
-    async def start_router(self) -> None:
+    async def start_router(self, on_message_delivered: Callable[[str, HiveMessage], Any] | None = None) -> None:
+        if on_message_delivered is not None:
+            self._on_message_delivered = on_message_delivered
+        cb = getattr(self, "_on_message_delivered", None)
         if self._router is None:
-            self._router = Router(self.hive_root, lambda: self._registry)
+            self._router = Router(self.hive_root, lambda: self._registry, on_message_delivered=cb)
             self._router_task = asyncio.create_task(self._router.start())
         elif self._router_task is None or self._router_task.done():
+            self._router.on_message_delivered = cb
             self._router_task = asyncio.create_task(self._router.start())
 
     async def stop_router(self) -> None:

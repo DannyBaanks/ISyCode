@@ -23,9 +23,15 @@ class Router:
     HOP_CAP = 12
     SCAN_INTERVAL = 1.0  # seconds
 
-    def __init__(self, hive_root: Path, registry: Registry | Callable[[], Registry]) -> None:
+    def __init__(
+        self,
+        hive_root: Path,
+        registry: Registry | Callable[[], Registry],
+        on_message_delivered: Callable[[str, HiveMessage], Any] | None = None,
+    ) -> None:
         self.hive_root = hive_root
         self._registry_source = registry
+        self.on_message_delivered = on_message_delivered
         self._task: asyncio.Task | None = None
         self._running = False
         self._last_route_at = 0.0
@@ -148,7 +154,14 @@ class Router:
             )
             dest = inbox / f"{msg.id}.json"
             if not (inbox / ".done" / dest.name).exists():
-                create_message(self.hive_root, dest, delivered.to_jsonl() + "\n")
+                if create_message(self.hive_root, dest, delivered.to_jsonl() + "\n"):
+                    if self.on_message_delivered:
+                        try:
+                            res = self.on_message_delivered(to_agent_id, delivered)
+                            if asyncio.iscoroutine(res):
+                                await res
+                        except Exception:
+                            pass
 
         # Archive from sender's outbox
         self._archive_sent(from_agent_id, msg_file, "delivered")
