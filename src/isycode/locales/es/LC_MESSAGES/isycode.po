@@ -2375,3 +2375,231 @@ msgstr "Mostrar un cuadro de vista previa debajo del árbol de archivos en la ba
 
 msgid "OpenAI & ChatGPT · choose connection method…"
 msgstr "OpenAI y ChatGPT · elegir método de conexión…"
+
+msgid "Owner"
+msgstr "Propietario"
+
+msgid "Scope"
+msgstr "Alcance"
+
+msgid "Duration"
+msgstr "Duración"
+
+msgid "Not granted"
+msgstr "Exclusiones"
+
+msgid "workspace authority"
+msgstr "autoridad del espacio de trabajo"
+
+msgid "workspace file edit"
+msgstr "edición de archivo del espacio de trabajo"
+
+msgid "local MCP server"
+msgstr "servidor MCP local"
+
+msgid "local MCP tool"
+msgstr "herramienta MCP local"
+
+msgid "tailscale private-access"
+msgstr "acceso privado de Tailscale"
+
+msgid "sandboxed command run"
+msgstr "ejecución de comando en sandbox"
+
+msgid "git commit"
+msgstr "confirmación de git"
+
+msgid "browser page read"
+msgstr "lectura de página del navegador"
+
+msgid "workspace context pack"
+msgstr "paquete de contexto del espacio de trabajo"
+
+msgid "workspace memory"
+msgstr "memoria del espacio de trabajo"
+
+msgid "session deletion"
+msgstr "eliminación de conversación"
+
+msgid "session delete"
+msgstr "eliminación de conversación"
+
+msgid "chat session store"
+msgstr "almacén de sesiones de chat"
+
+msgid "workspace trust"
+msgstr "confianza del espacio de trabajo"
+
+msgid "lsp diagnostics"
+msgstr "diagnósticos LSP"
+
+msgid "git"
+msgstr "git"
+
+msgid "sandboxed commands"
+msgstr "comandos en sandbox"
+
+msgid "external model review"
+msgstr "revisión de modelo externo"
+
+msgid "provider network access"
+msgstr "acceso a red del proveedor"
+
+msgid "Gateway MCP target"
+msgstr "destino MCP de Gateway"
+
+msgid "local LSP process"
+msgstr "proceso LSP local"
+
+msgid "broker preview"
+msgstr "vista previa del broker"
+
+msgid "Gateway MCP tool"
+msgstr "herramienta MCP de Gateway"
+
+msgid "Gateway semantic HTTP"
+msgstr "HTTP semántico de Gateway"
+
+msgid "local LSP search"
+msgstr "búsqueda LSP local"
+
+msgid "semantic broker provision"
+msgstr "aprovisionamiento de broker semántico"
+
+msgid "broker operation"
+msgstr "operación del broker"
+
+msgid "the text shown below"
+msgstr "el texto mostrado a continuación"
+
+msgid "listed workspace files"
+msgstr "archivos del espacio de trabajo listados"
+
+msgid "{count} files"
+msgstr "{count} archivos"
+
+msgid "one-use approval"
+msgstr "aprobación de un solo uso"
+
+msgid "one-use, one HTTP request"
+msgstr "un solo uso, una solicitud HTTP"
+
+msgid "one-use, digest-bound approval"
+msgstr "aprobación de un solo uso ligada al resumen"
+
+msgid "one-use, stops after {timeout} s"
+msgstr "un solo uso, se detiene tras {timeout} s"
+
+msgid "persistent workspace grant"
+msgstr "permiso persistente del espacio de trabajo"
+
+msgid "persistent workspace setting"
+msgstr "configuración persistente del espacio de trabajo"
+
+msgid "persistent workspace trust"
+msgstr "confianza persistente del espacio de trabajo"
+
+msgid "one conversation grant"
+msgstr "permiso para una conversación"
+
+msgid "until ISyCode exits"
+msgstr "hasta que ISyCode se cierre"
+
+msgid "one-use tool call"
+msgstr "llamada a herramienta de un solo uso"
+
+msgid "persistent grant (until revoked)"
+msgstr "permiso persistente (hasta su revocación)"
+
+msgid "persistent grant (every call still approved)"
+msgstr "permiso persistente (cada llamada requiere aprobación)"
+
+msgid "one-use, grants revoked after attempt"
+msgstr "un solo uso, permisos revocados tras el intento"
+
+msgid "one-use, grant revoked after operation"
+msgstr "un solo uso, permiso revocado tras la operación"
+
+msgid "no tools, no file access, no retries"
+msgstr "sin herramientas, sin acceso a archivos, sin reintentos"
+
+msgid "no other host actions, no filesystem access"
+msgstr "sin otras acciones de host, sin acceso al sistema de archivos"
+
+msgid "no other files, no commands, no secrets"
+msgstr "sin otros archivos, sin comandos, sin secretos"
+
+msgid "no push, no hooks, no other files"
+msgstr "sin push, sin hooks, sin otros archivos"
+
+msgid "no writes, no commands, no secrets"
+msgstr "sin escrituras, sin comandos, sin secretos"
+
+msgid "no authority, no grants, no other memory"
+msgstr "sin autoridad, sin permisos, sin otra memoria"
+
+msgid "no other sessions, no filesystem access"
+msgstr "sin otras sesiones, sin acceso al sistema de archivos"
+
+msgid "other conversations, unconfirmed deletions"
+msgstr "otras conversaciones, eliminaciones sin confirmar"
+
+msgid "sensitive files, .isyroot, and unapproved folder writes stay off-limits"
+msgstr "archivos sensibles, .isyroot y carpetas no aprobadas quedan fuera de límites"
+
+msgid "privilege escalation, ungranted capabilities"
+msgstr "escalada de privilegios, capacidades no otorgadas"
+
+msgid "commits, secrets, authority changes"
+msgstr "commits, secretos, cambios de autoridad"
+
+msgid "secrets, credentials, project files"
+msgstr "secretos, credenciales, archivos del proyecto"
+
+msgid "file modifications, network access"
+msgstr "modificación de archivos, acceso a la red"
+
+msgid "remote push, git hooks"
+msgstr "push remoto, hooks de git"
+
+msgid "network access, unsandboxed execution"
+msgstr "acceso a la red, ejecución fuera de sandbox"
+
+msgid "network blocked, no other paths, no undo"
+msgstr "red bloqueada, sin otras rutas, sin deshacer"
+
+msgid "no other MCP calls; runs with user permissions (no filesystem isolation)"
+msgstr "sin otras llamadas MCP; se ejecuta con permisos de usuario (sin aislamiento de archivos)"
+
+msgid "no other MCP servers; runs with user permissions (no filesystem isolation)"
+msgstr "sin otros servidores MCP; se ejecuta con permisos de usuario (sin aislamiento de archivos)"
+
+msgid "no other tool calls, no automatic retries"
+msgstr "sin otras llamadas a herramientas, sin reintentos automáticos"
+
+msgid "no tool execution, no file access, no secrets"
+msgstr "sin ejecución de herramientas, sin acceso a archivos, sin secretos"
+
+msgid "no automatic tool runs, no local filesystem access"
+msgstr "sin ejecuciones automáticas de herramientas, sin acceso a archivos locales"
+
+msgid "no internet, no general commands, no writes"
+msgstr "sin internet, sin comandos generales, sin escrituras"
+
+msgid "no Docker, no containers, no workspace.files.read"
+msgstr "sin Docker, sin contenedores, sin workspace.files.read"
+
+msgid "no other MCP calls, no local filesystem access"
+msgstr "sin otras llamadas MCP, sin acceso a archivos locales"
+
+msgid "no writes, no commands, no model context"
+msgstr "sin escrituras, sin comandos, sin contexto del modelo"
+
+msgid "no writes, no network, no Gateway"
+msgstr "sin escrituras, sin red, sin Gateway"
+
+msgid "no credentials, no host network, no other containers"
+msgstr "sin credenciales, sin red del host, sin otros contenedores"
+
+msgid "no provision, no other containers, no host access"
+msgstr "sin aprovisionamiento, sin otros contenedores, sin acceso al host"

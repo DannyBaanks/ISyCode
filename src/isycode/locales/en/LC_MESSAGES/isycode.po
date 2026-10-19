@@ -2375,3 +2375,231 @@ msgstr "Show a preview box below the file tree in the sidebar."
 
 msgid "OpenAI & ChatGPT · choose connection method…"
 msgstr "OpenAI & ChatGPT · choose connection method…"
+
+msgid "Owner"
+msgstr "Owner"
+
+msgid "Scope"
+msgstr "Scope"
+
+msgid "Duration"
+msgstr "Duration"
+
+msgid "Not granted"
+msgstr "Not granted"
+
+msgid "workspace authority"
+msgstr "workspace authority"
+
+msgid "workspace file edit"
+msgstr "workspace file edit"
+
+msgid "local MCP server"
+msgstr "local MCP server"
+
+msgid "local MCP tool"
+msgstr "local MCP tool"
+
+msgid "tailscale private-access"
+msgstr "tailscale private-access"
+
+msgid "sandboxed command run"
+msgstr "sandboxed command run"
+
+msgid "git commit"
+msgstr "git commit"
+
+msgid "browser page read"
+msgstr "browser page read"
+
+msgid "workspace context pack"
+msgstr "workspace context pack"
+
+msgid "workspace memory"
+msgstr "workspace memory"
+
+msgid "session deletion"
+msgstr "session deletion"
+
+msgid "session delete"
+msgstr "session delete"
+
+msgid "chat session store"
+msgstr "chat session store"
+
+msgid "workspace trust"
+msgstr "workspace trust"
+
+msgid "lsp diagnostics"
+msgstr "lsp diagnostics"
+
+msgid "git"
+msgstr "git"
+
+msgid "sandboxed commands"
+msgstr "sandboxed commands"
+
+msgid "external model review"
+msgstr "external model review"
+
+msgid "provider network access"
+msgstr "provider network access"
+
+msgid "Gateway MCP target"
+msgstr "Gateway MCP target"
+
+msgid "local LSP process"
+msgstr "local LSP process"
+
+msgid "broker preview"
+msgstr "broker preview"
+
+msgid "Gateway MCP tool"
+msgstr "Gateway MCP tool"
+
+msgid "Gateway semantic HTTP"
+msgstr "Gateway semantic HTTP"
+
+msgid "local LSP search"
+msgstr "local LSP search"
+
+msgid "semantic broker provision"
+msgstr "semantic broker provision"
+
+msgid "broker operation"
+msgstr "broker operation"
+
+msgid "the text shown below"
+msgstr "the text shown below"
+
+msgid "listed workspace files"
+msgstr "listed workspace files"
+
+msgid "{count} files"
+msgstr "{count} files"
+
+msgid "one-use approval"
+msgstr "one-use approval"
+
+msgid "one-use, one HTTP request"
+msgstr "one-use, one HTTP request"
+
+msgid "one-use, digest-bound approval"
+msgstr "one-use, digest-bound approval"
+
+msgid "one-use, stops after {timeout} s"
+msgstr "one-use, stops after {timeout} s"
+
+msgid "persistent workspace grant"
+msgstr "persistent workspace grant"
+
+msgid "persistent workspace setting"
+msgstr "persistent workspace setting"
+
+msgid "persistent workspace trust"
+msgstr "persistent workspace trust"
+
+msgid "one conversation grant"
+msgstr "one conversation grant"
+
+msgid "until ISyCode exits"
+msgstr "until ISyCode exits"
+
+msgid "one-use tool call"
+msgstr "one-use tool call"
+
+msgid "persistent grant (until revoked)"
+msgstr "persistent grant (until revoked)"
+
+msgid "persistent grant (every call still approved)"
+msgstr "persistent grant (every call still approved)"
+
+msgid "one-use, grants revoked after attempt"
+msgstr "one-use, grants revoked after attempt"
+
+msgid "one-use, grant revoked after operation"
+msgstr "one-use, grant revoked after operation"
+
+msgid "no tools, no file access, no retries"
+msgstr "no tools, no file access, no retries"
+
+msgid "no other host actions, no filesystem access"
+msgstr "no other host actions, no filesystem access"
+
+msgid "no other files, no commands, no secrets"
+msgstr "no other files, no commands, no secrets"
+
+msgid "no push, no hooks, no other files"
+msgstr "no push, no hooks, no other files"
+
+msgid "no writes, no commands, no secrets"
+msgstr "no writes, no commands, no secrets"
+
+msgid "no authority, no grants, no other memory"
+msgstr "no authority, no grants, no other memory"
+
+msgid "no other sessions, no filesystem access"
+msgstr "no other sessions, no filesystem access"
+
+msgid "other conversations, unconfirmed deletions"
+msgstr "other conversations, unconfirmed deletions"
+
+msgid "sensitive files, .isyroot, and unapproved folder writes stay off-limits"
+msgstr "sensitive files, .isyroot, and unapproved folder writes stay off-limits"
+
+msgid "privilege escalation, ungranted capabilities"
+msgstr "privilege escalation, ungranted capabilities"
+
+msgid "commits, secrets, authority changes"
+msgstr "commits, secrets, authority changes"
+
+msgid "secrets, credentials, project files"
+msgstr "secrets, credentials, project files"
+
+msgid "file modifications, network access"
+msgstr "file modifications, network access"
+
+msgid "remote push, git hooks"
+msgstr "remote push, git hooks"
+
+msgid "network access, unsandboxed execution"
+msgstr "network access, unsandboxed execution"
+
+msgid "network blocked, no other paths, no undo"
+msgstr "network blocked, no other paths, no undo"
+
+msgid "no other MCP calls; runs with user permissions (no filesystem isolation)"
+msgstr "no other MCP calls; runs with user permissions (no filesystem isolation)"
+
+msgid "no other MCP servers; runs with user permissions (no filesystem isolation)"
+msgstr "no other MCP servers; runs with user permissions (no filesystem isolation)"
+
+msgid "no other tool calls, no automatic retries"
+msgstr "no other tool calls, no automatic retries"
+
+msgid "no tool execution, no file access, no secrets"
+msgstr "no tool execution, no file access, no secrets"
+
+msgid "no automatic tool runs, no local filesystem access"
+msgstr "no automatic tool runs, no local filesystem access"
+
+msgid "no internet, no general commands, no writes"
+msgstr "no internet, no general commands, no writes"
+
+msgid "no Docker, no containers, no workspace.files.read"
+msgstr "no Docker, no containers, no workspace.files.read"
+
+msgid "no other MCP calls, no local filesystem access"
+msgstr "no other MCP calls, no local filesystem access"
+
+msgid "no writes, no commands, no model context"
+msgstr "no writes, no commands, no model context"
+
+msgid "no writes, no network, no Gateway"
+msgstr "no writes, no network, no Gateway"
+
+msgid "no credentials, no host network, no other containers"
+msgstr "no credentials, no host network, no other containers"
+
+msgid "no provision, no other containers, no host access"
+msgstr "no provision, no other containers, no host access"
