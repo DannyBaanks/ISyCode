@@ -636,7 +636,11 @@ class ToolMixin:
                 f"Start MCP server · {name}",
                 f"Runs this program from your MCP config in {self._workspace_root} with your "
                 f"user's permissions (network included) until ISyCode exits. Extra environment: "
-                f"{env_keys}.", shlex.join(preview.config.argv), "Start server")):
+                f"{env_keys}.", shlex.join(preview.config.argv), "Start server",
+                owner="local MCP server",
+                scope=name,
+                duration="until ISyCode exits",
+                not_granted="no other MCP servers; runs with user permissions (no filesystem isolation)")):
             self._append(f"  MCP {name} not started.", MUTED)
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
@@ -662,7 +666,11 @@ class ToolMixin:
         if not await self._await_screen(LocalMCPConfirmScreen(
                 f"Call MCP tool · {server}.{tool}",
                 "Sends exactly these arguments to the local server. Its answer is untrusted data.",
-                json.dumps(preview.arguments, ensure_ascii=False, indent=2), "Call once")):
+                json.dumps(preview.arguments, ensure_ascii=False, indent=2), "Call once",
+                owner="local MCP tool",
+                scope=f"{server}.{tool}",
+                duration="one-use tool call",
+                not_granted="no other tool calls, no automatic retries")):
             self._append("  MCP call rejected · nothing was sent", MUTED)
             return json.dumps({"status": "rejected_by_user"})
         outcome = await mcp_owner.call(preview, self._action_approvals.issue(preview.request, ttl_seconds=60))

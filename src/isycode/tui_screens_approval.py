@@ -84,10 +84,10 @@ class ReviewConsentScreen(ModalScreen[bool]):
             yield Static(tr("External model review · GPT 6 Luna · OpenAI API"), id="review-consent-title", classes="isy-dialog-title")
             with VerticalScroll(id="review-consent-body", classes="isy-dialog-body"):
                 yield Static(
-                    "Owner: external model review\n"
-                    "Scope: the text shown below\n"
-                    "Duration: one-use, one HTTP request\n"
-                    "Not granted: no tools, no file access, no retries",
+                    f"{tr('Owner')}: {tr('external model review')}\n"
+                    f"{tr('Scope')}: {tr('the text shown below')}\n"
+                    f"{tr('Duration')}: {tr('one-use, one HTTP request')}\n"
+                    f"{tr('Not granted')}: {tr('no tools, no file access, no retries')}",
                     id="review-consent-structural", markup=False)
                 yield Static(tr("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."), id="review-consent-warning")
                 with Vertical(id="review-consent-artifact", classes="isy-dialog-detail"):
@@ -124,10 +124,10 @@ class ApprovalScreen(ModalScreen[bool]):
                             not_granted: str) -> Static:
         """F-08: the four structural fields every approval must declare."""
         text = Text()
-        text.append(f"Owner: {owner}\n", style="bold")
-        text.append(f"Scope: {scope}\n")
-        text.append(f"Duration: {duration}\n")
-        text.append(f"Not granted: {not_granted}")
+        text.append(f"{tr('Owner')}: {tr(owner)}\n", style="bold")
+        text.append(f"{tr('Scope')}: {tr(scope)}\n")
+        text.append(f"{tr('Duration')}: {tr(duration)}\n")
+        text.append(f"{tr('Not granted')}: {tr(not_granted)}")
         return Static(text, classes="isy-dialog-structural", markup=False)
 
     def action_approve(self) -> None:
@@ -211,20 +211,28 @@ class TailscaleConfirmScreen(ApprovalScreen):
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
 
-    def __init__(self, title: str, details: str, confirm_label: str):
+    def __init__(self, title: str, details: str, confirm_label: str,
+                 *, owner: str = "tailscale private-access",
+                 scope: str | None = None,
+                 duration: str = "one-use approval",
+                 not_granted: str = "no other host actions, no filesystem access"):
         super().__init__()
         self.title_text = tr(title)
         self.details = tr(details)
         self.confirm_label = confirm_label
+        self.owner = owner
+        self.scope = scope if scope is not None else self.title_text
+        self.duration = duration
+        self.not_granted = not_granted
 
     def compose(self) -> ComposeResult:
         with Vertical(id="tailscale-confirm-card", classes="isy-dialog"):
             yield Static(self.title_text, id="tailscale-confirm-title", classes="isy-dialog-title")
             with VerticalScroll(id="tailscale-confirm-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
-                    owner="tailscale private-access", scope=self.title_text,
-                    duration="one-use approval",
-                    not_granted="no other host actions, no filesystem access")
+                    owner=self.owner, scope=self.scope,
+                    duration=self.duration,
+                    not_granted=self.not_granted)
                 with Vertical(id="tailscale-confirm-copy", classes="isy-dialog-detail"):
                     yield Static(Text(self.details))
             with Horizontal(id="tailscale-confirm-actions", classes="isy-dialog-actions"):
@@ -520,18 +528,26 @@ class LocalMCPConfirmScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, title: str, body: str, payload: str, approve_label: str) -> None:
+    def __init__(self, title: str, body: str, payload: str, approve_label: str,
+                 *, owner: str = "local MCP server",
+                 scope: str | None = None,
+                 duration: str = "one-use approval",
+                 not_granted: str = "no other MCP calls; runs with user permissions (no filesystem isolation)") -> None:
         super().__init__()
         self.title_text, self.body, self.payload, self.approve_label = title, body, payload, approve_label
+        self.owner = owner
+        self.scope = scope if scope is not None else title
+        self.duration = duration
+        self.not_granted = not_granted
 
     def compose(self) -> ComposeResult:
         with Vertical(id="local-mcp-card", classes="isy-dialog"):
             yield Static(self.title_text, id="local-mcp-title", classes="isy-dialog-title")
             with VerticalScroll(id="local-mcp-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
-                    owner="local MCP server", scope=self.title_text,
-                    duration="one-use approval",
-                    not_granted="no other MCP calls, no filesystem access")
+                    owner=self.owner, scope=self.scope,
+                    duration=self.duration,
+                    not_granted=self.not_granted)
                 yield Static(Text(self.body))
                 with Vertical(id="local-mcp-payload", classes="isy-dialog-detail"):
                     yield Static(Text(self.payload))

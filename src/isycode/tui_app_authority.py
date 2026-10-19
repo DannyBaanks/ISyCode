@@ -494,12 +494,14 @@ class AuthorityMixin:
             "Allow conversation deletion?" if enabled else "Disable conversation deletion?",
             f"This permission applies only to conversation {session_id or 'previously selected'} in this workspace. "
             "Every deletion still requires reviewing the exact conversation and confirming it.",
-            "Allow deletion" if enabled else "Disable deletion"))
+            "Allow deletion" if enabled else "Disable deletion", owner="session delete",
+            scope=f"conversation {session_id or 'current'}", duration="one conversation grant",
+            not_granted="other conversations, unconfirmed deletions"))
         if accepted:
             authority = WorkspaceAuthority(self._workspace_root)
-            targets = authority.policy().get("grants", {}).get("session.delete", {}).get("targets", [])
-            authority.set_grant("session.delete", enabled=enabled,
-                                targets=sorted(set(targets + ([session_id] if enabled else []))))
+            existing = authority.policy().get("grants", {}).get("session.delete", {}).get("targets", [])
+            targets = [session_id] if (enabled and session_id) else ([t for t in existing if t != session_id] if session_id else [])
+            authority.set_grant("session.delete", enabled=bool(targets), targets=sorted(set(targets)))
         self._open_authority_menu()
 
     async def _change_workspace_write_grant(self, enabled: bool) -> None:
@@ -509,21 +511,19 @@ class AuthorityMixin:
             return
         accepted = await self._await_screen(TailscaleConfirmScreen(
             "Allow file edits in this workspace?" if enabled else "Turn off file edits?",
-            (f"The assistant may propose creating, changing, moving and deleting files inside "
-             f"{self._workspace_root}. File edits follow your per-folder approval setting; other changes "
-             "ask first. A file that changed after review is never touched, and /undo reverts the "
-             "last change. Sensitive files and .isyroot stay off-limits." if enabled else
-             "The assistant can no longer propose file changes in this workspace. Files already "
-             "changed stay as they are."),
-            "Allow edits" if enabled else "Turn off edits"))
+            (f"The assistant may propose creating, changing, moving and deleting files inside {self._workspace_root}. "
+             "File edits follow your per-folder approval setting; other changes ask first. A file that changed after "
+             "review is never touched, and /undo reverts the last change. Sensitive files and .isyroot stay off-limits."
+             if enabled else "The assistant can no longer propose file changes in this workspace. Files already changed stay as they are."),
+            "Allow edits" if enabled else "Turn off edits", owner="workspace authority",
+            scope=str(self._workspace_root), duration="persistent workspace grant",
+            not_granted="sensitive files, .isyroot, and unapproved folder writes stay off-limits"))
         if accepted:
             try:
                 authority = WorkspaceAuthority(self._workspace_root)
                 for action in FILE_CHANGE_GRANTS:
-                    authority.set_grant(action, enabled=enabled,
-                                        path_prefixes=[self._workspace_root] if enabled else [])
-                self._append("  File edits allowed; folder approval settings still apply." if enabled
-                             else "  File edits turned off for this workspace.", GREEN)
+                    authority.set_grant(action, enabled=enabled, path_prefixes=[self._workspace_root] if enabled else [])
+                self._append("  File edits allowed; folder approval settings still apply." if enabled else "  File edits turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
                 self._append(f"  Edit permission could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()

@@ -2375,3 +2375,231 @@ msgstr "在侧边栏文件树下方显示预览框。"
 
 msgid "OpenAI & ChatGPT · choose connection method…"
 msgstr "OpenAI 和 ChatGPT · 选择连接方式…"
+
+msgid "Owner"
+msgstr "所有者"
+
+msgid "Scope"
+msgstr "范围"
+
+msgid "Duration"
+msgstr "期限"
+
+msgid "Not granted"
+msgstr "未授予"
+
+msgid "workspace authority"
+msgstr "工作区权限"
+
+msgid "workspace file edit"
+msgstr "工作区文件编辑"
+
+msgid "local MCP server"
+msgstr "本地 MCP 服务器"
+
+msgid "local MCP tool"
+msgstr "本地 MCP 工具"
+
+msgid "tailscale private-access"
+msgstr "Tailscale 私有访问"
+
+msgid "sandboxed command run"
+msgstr "沙箱命令运行"
+
+msgid "git commit"
+msgstr "git 提交"
+
+msgid "browser page read"
+msgstr "浏览器页面读取"
+
+msgid "workspace context pack"
+msgstr "工作区上下文包"
+
+msgid "workspace memory"
+msgstr "工作区记忆"
+
+msgid "session deletion"
+msgstr "会话删除"
+
+msgid "session delete"
+msgstr "会话删除"
+
+msgid "chat session store"
+msgstr "聊天会话存储"
+
+msgid "workspace trust"
+msgstr "工作区信任"
+
+msgid "lsp diagnostics"
+msgstr "LSP 诊断"
+
+msgid "git"
+msgstr "git"
+
+msgid "sandboxed commands"
+msgstr "沙箱命令"
+
+msgid "external model review"
+msgstr "外部模型审查"
+
+msgid "provider network access"
+msgstr "提供商网络访问"
+
+msgid "Gateway MCP target"
+msgstr "Gateway MCP 目标"
+
+msgid "local LSP process"
+msgstr "本地 LSP 进程"
+
+msgid "broker preview"
+msgstr "代理预览"
+
+msgid "Gateway MCP tool"
+msgstr "Gateway MCP 工具"
+
+msgid "Gateway semantic HTTP"
+msgstr "Gateway 语义 HTTP"
+
+msgid "local LSP search"
+msgstr "本地 LSP 搜索"
+
+msgid "semantic broker provision"
+msgstr "语义代理配置"
+
+msgid "broker operation"
+msgstr "代理操作"
+
+msgid "the text shown below"
+msgstr "下方显示的文本"
+
+msgid "listed workspace files"
+msgstr "列出的工作区文件"
+
+msgid "{count} files"
+msgstr "{count} 个文件"
+
+msgid "one-use approval"
+msgstr "单次使用审批"
+
+msgid "one-use, one HTTP request"
+msgstr "单次使用，一次 HTTP 请求"
+
+msgid "one-use, digest-bound approval"
+msgstr "单次使用、绑定摘要的审批"
+
+msgid "one-use, stops after {timeout} s"
+msgstr "单次使用，{timeout} 秒后停止"
+
+msgid "persistent workspace grant"
+msgstr "持久工作区授权"
+
+msgid "persistent workspace setting"
+msgstr "持久工作区设置"
+
+msgid "persistent workspace trust"
+msgstr "持久工作区信任"
+
+msgid "one conversation grant"
+msgstr "单会话授权"
+
+msgid "until ISyCode exits"
+msgstr "直到 ISyCode 退出"
+
+msgid "one-use tool call"
+msgstr "单次工具调用"
+
+msgid "persistent grant (until revoked)"
+msgstr "持久授权（直到撤销）"
+
+msgid "persistent grant (every call still approved)"
+msgstr "持久授权（每次调用仍需批准）"
+
+msgid "one-use, grants revoked after attempt"
+msgstr "单次使用，尝试后撤销授权"
+
+msgid "one-use, grant revoked after operation"
+msgstr "单次使用，操作后撤销授权"
+
+msgid "no tools, no file access, no retries"
+msgstr "无工具，无文件访问，无重试"
+
+msgid "no other host actions, no filesystem access"
+msgstr "无其他主机操作，无文件系统访问"
+
+msgid "no other files, no commands, no secrets"
+msgstr "无其他文件，无命令，无机密"
+
+msgid "no push, no hooks, no other files"
+msgstr "不推送，无钩子，无其他文件"
+
+msgid "no writes, no commands, no secrets"
+msgstr "无写入，无命令，无机密"
+
+msgid "no authority, no grants, no other memory"
+msgstr "无权限，无授权，无其他记忆"
+
+msgid "no other sessions, no filesystem access"
+msgstr "无其他会话，无文件系统访问"
+
+msgid "other conversations, unconfirmed deletions"
+msgstr "其他会话，未确认的删除"
+
+msgid "sensitive files, .isyroot, and unapproved folder writes stay off-limits"
+msgstr "敏感文件、.isyroot 以及未批准的文件夹写入仍处于禁止状态"
+
+msgid "privilege escalation, ungranted capabilities"
+msgstr "权限提升、未授予的功能"
+
+msgid "commits, secrets, authority changes"
+msgstr "提交、机密、权限更改"
+
+msgid "secrets, credentials, project files"
+msgstr "机密、凭据、项目文件"
+
+msgid "file modifications, network access"
+msgstr "文件修改、网络访问"
+
+msgid "remote push, git hooks"
+msgstr "远程推送、git 钩子"
+
+msgid "network access, unsandboxed execution"
+msgstr "网络访问、非沙箱执行"
+
+msgid "network blocked, no other paths, no undo"
+msgstr "网络已阻止，无其他路径，不可撤销"
+
+msgid "no other MCP calls; runs with user permissions (no filesystem isolation)"
+msgstr "无其他 MCP 调用；以用户权限运行（无文件系统隔离）"
+
+msgid "no other MCP servers; runs with user permissions (no filesystem isolation)"
+msgstr "无其他 MCP 服务器；以用户权限运行（无文件系统隔离）"
+
+msgid "no other tool calls, no automatic retries"
+msgstr "无其他工具调用，无自动重试"
+
+msgid "no tool execution, no file access, no secrets"
+msgstr "无工具执行，无文件访问，无机密"
+
+msgid "no automatic tool runs, no local filesystem access"
+msgstr "无自动工具运行，无本地文件系统访问"
+
+msgid "no internet, no general commands, no writes"
+msgstr "无网络，无通用命令，无写入"
+
+msgid "no Docker, no containers, no workspace.files.read"
+msgstr "无 Docker，无容器，无 workspace.files.read"
+
+msgid "no other MCP calls, no local filesystem access"
+msgstr "无其他 MCP 调用，无本地文件系统访问"
+
+msgid "no writes, no commands, no model context"
+msgstr "无写入，无命令，无模型上下文"
+
+msgid "no writes, no network, no Gateway"
+msgstr "无写入，无网络，无 Gateway"
+
+msgid "no credentials, no host network, no other containers"
+msgstr "无凭据，无主机网络，无其他容器"
+
+msgid "no provision, no other containers, no host access"
+msgstr "无配置，无其他容器，无主机访问"

@@ -20,6 +20,7 @@ async def _wait_for_banner_to_fit(pilot, banner, panel):
         remaining = deadline - asyncio.get_running_loop().time()
         if remaining <= 0:
             raise AssertionError("workspace banner did not fit after sidebar layout")
+        banner.set_compact(True)
         await pilot.pause(min(0.05, remaining))
 
 
