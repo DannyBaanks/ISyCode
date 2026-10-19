@@ -202,3 +202,9 @@ def static_content(widget: Static):
 def plain_text(widget: Static) -> str:
     content = static_content(widget)
     return content if isinstance(content, str) else getattr(content, "plain", str(content))
+
+
+authority_capability_label = _authority_capability_label
+semantic_box_title = _semantic_box_title
+fit_cells = _fit_cells
+elapsed_label = _elapsed_label

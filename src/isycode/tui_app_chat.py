@@ -577,7 +577,9 @@ class ChatMixin:
                     return
                 lane = self._active_lane()
                 content = "".join(step_content)
-                lane.partial = "".join(step_content)
+                if not content.strip():
+                    return
+                lane.partial = content
                 if not self._lane_on_screen():
                     lane.stream_widget = None
                     holder["widget"] = None
@@ -608,7 +610,7 @@ class ChatMixin:
                     if clock:
                         chat_now.mount(Static(Text(clock, style=MUTED), classes="message-clock"))
                     w = SelectableText(RichMarkdown("", code_theme="monokai"),
-                                       selection_text="")
+                                       selection_text="", classes="assistant-turn")
                     holder["widget"] = w
                     lane.stream_widget = w
                     chat_now.mount(w)
@@ -873,7 +875,7 @@ class ChatMixin:
                         steer_trial = None
                         self._steering_try_active = False
                         self._append("Steering accepted · continuing the turn.", CYAN)
-                    if not step_content and isinstance(response.get("text"), str):
+                    if not step_content and isinstance(response.get("text"), str) and response["text"].strip():
                         on_chunk("content", response["text"])
                     _content_line(force=True)
                     finish_step()
@@ -887,7 +889,7 @@ class ChatMixin:
                     if step_reason:
                         lane.lines.append(("reasoning", "".join(step_reason),
                                            _time.monotonic() - thought_started))
-                    if step_content:
+                    if "".join(step_content).strip():
                         lane.lines.append(("assistant", "".join(step_content), assistant_sent_at))
                     lane.partial = ""
                     lane.stream_widget = None

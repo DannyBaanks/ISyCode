@@ -67,3 +67,65 @@ def test_grep_cannot_leave_the_workspace(repo):
     owner, authority, _ = repo
     authority.set_mode("classic")
     assert _grep(owner, "parse", "../outside.txt").decision == "DENY"
+
+
+def test_search_and_grep_handle_large_repos_bfs_and_skip_worktrees(repo):
+    owner, authority, root = repo
+    authority.set_mode("classic")
+    for skipped_dir in (".worktrees", ".codex-worktrees", ".venv-linux", "pkg.egg-info"):
+        heavy = root / skipped_dir / "deep"
+        heavy.mkdir(parents=True)
+        for i in range(50):
+            (heavy / f"ignored_{i}.yml").write_text("PARSE_CONFIG in worktree\n")
+    for idx in range(350):
+        sub = root / f"repo_{idx:03d}" / ".github" / "workflows"
+        sub.mkdir(parents=True)
+        if idx in (0, 175, 349):
+            (sub / "ci.yml").write_text("name: CI\non: push\n")
+
+    search_outcome = owner.execute("workspace.files.search", {"query": ".github/workflows", "path": "/"})
+    assert search_outcome.decision == "ALLOW"
+    search_payload = json.loads(search_outcome.text)
+    assert search_payload["truncated"] is False
+    assert search_payload["directories_scanned"] > 300
+    assert len(search_payload["matches"]) == 353
+
+    file_search = json.loads(
+        owner.execute("workspace.files.search", {"query": "ci.yml", "path": "/"}).text
+    )
+    assert file_search["truncated"] is False
+    assert {m["path"] for m in file_search["matches"]} == {
+        "repo_000/.github/workflows/ci.yml",
+        "repo_175/.github/workflows/ci.yml",
+        "repo_349/.github/workflows/ci.yml",
+    }
+
+    grep_payload = json.loads(_grep(owner, "PARSE_CONFIG", "/").text)
+    assert grep_payload["truncated"] is False
+    assert all(not m["path"].startswith((".worktrees", ".codex-worktrees", ".venv-linux", "pkg.egg-info"))
+               for m in grep_payload["matches"])
+
+
+def test_list_sorts_directories_before_cap_and_output_limit_keeps_valid_json(repo):
+    owner, authority, root = repo
+    authority.set_mode("classic")
+    big_dir = root / "big"
+    big_dir.mkdir()
+    for i in range(1100):
+        (big_dir / f"file_{i:04d}.txt").write_text(f"line {i}\n")
+    (big_dir / "zzz_subdir").mkdir()
+
+    list_outcome = owner.execute("workspace.files.list", {"path": "big"})
+    assert list_outcome.decision == "ALLOW"
+    listed = json.loads(list_outcome.text)
+    assert listed["entries"][0] == {"name": "zzz_subdir", "kind": "directory"}
+    assert len(listed["entries"]) == 1101
+
+    large_file = root / "src" / "large.txt"
+    large_file.write_text("A" * 40_000)
+    read_outcome = owner.execute("workspace.files.read", {"path": "src/large.txt"})
+    assert read_outcome.decision == "ALLOW"
+    parsed_read = json.loads(read_outcome.text)
+    assert parsed_read["path"] == "src/large.txt"
+    assert parsed_read["truncated"] is True
+    assert "[output truncated]" in parsed_read["text"]

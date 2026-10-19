@@ -502,7 +502,15 @@ class ProviderMixin:
             model = resolved_chat_model(name)
             from isycode.model_presentation import model_display_name
             from isycode.tui_theme import _fit_cells
-            return f"{_fit_cells(model_display_name(model), 8)} ▾"
+            term_width = getattr(getattr(self, "size", None), "width", 0) or 100
+            rail_open = False
+            try:
+                rail_open = bool(self.query_one(SidePanel).display)
+            except (NoMatches, Exception):
+                pass
+            main_width = term_width - (40 if rail_open and term_width >= 100 else 0)
+            budget = 24 if main_width >= 110 else (16 if main_width >= 90 else 8)
+            return f"{_fit_cells(model_display_name(model), budget)} ▾"
         except (ConfigurationError, ProviderError):
             return "Model ▾"
 

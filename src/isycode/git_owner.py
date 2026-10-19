@@ -140,6 +140,9 @@ class GitOwner:
                  approvals: ActionApprovalStore | None = None,
                  repository: str | None = None):
         self.root = root.resolve(strict=True)
+        if isinstance(repository, str):
+            cleaned = repository.strip().removeprefix("./").rstrip("/")
+            repository = cleaned or "."
         self.repository = repository
         self.repo_root = self._resolve_repository(repository)
         self.authority = authority
@@ -162,15 +165,20 @@ class GitOwner:
                 return "the selected direct child repository is unavailable"
             candidates = [candidate]
         else:
+            root_problem = self._check_repository_candidate(self.root, git)
+            if root_problem is None:
+                self.repo_root = self.root
+                return None
             candidates = [self.root]
         try:
             with os.scandir(self.root) as entries:
                 inspected = 0
+                child_candidates: list[Path] = []
                 for entry in entries:
-                    if self.repository is not None:
+                    if self.repository is not None and self.repository != ".":
                         break
                     inspected += 1
-                    if inspected > 4096:
+                    if inspected > 16384:
                         return ("the workspace has too many entries for safe repository discovery; "
                                 "retry with the repository field set to one direct child folder")
                     if (entry.name.startswith(".")
@@ -179,12 +187,19 @@ class GitOwner:
                     child = self.root / entry.name
                     try:
                         if stat.S_ISDIR((child / ".git").lstat().st_mode):
-                            if len(candidates) >= 128:
+                            if len(child_candidates) >= 512:
                                 return ("too many direct child repositories for automatic discovery; "
                                         "retry with the repository field set to one folder")
-                            candidates.append(child)
+                            child_candidates.append(child)
                     except (FileNotFoundError, OSError):
                         continue
+                child_candidates.sort(key=lambda item: item.name.casefold())
+                if len(child_candidates) > 1:
+                    self.repo_root = self.root
+                    names = [item.relative_to(self.root).as_posix() for item in child_candidates]
+                    return ("multiple repositories found: " + ", ".join(names[:12])
+                            + "; retry with the repository field set to one folder")
+                candidates.extend(child_candidates)
         except OSError:
             return "the workspace entries could not be inspected safely"
 

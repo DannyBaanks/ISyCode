@@ -36,10 +36,25 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "src"]
+pythonpath = ["src", "."]
 markers = [
   "integration: requires an external ISyCo checkout or running Gateway service",
 ]
 
 [tool.setuptools.package-data]
 isycode = ["*.tcss", "assets/*.rgbz", "assets/*.png", "assets/*.gf", "assets/*.txt", "assets/*.json", "bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md", "locales/*/LC_MESSAGES/*.po"]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = ["src"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["isycode"]
+branch = true

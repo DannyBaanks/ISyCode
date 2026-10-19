@@ -581,11 +581,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         for widget_id, msgid in buttons.items():
             try:
                 self.query_one(widget_id, Button).label = tr(msgid)
-            except Exception:
+            except (NoMatches, NoScreen, ScreenStackError):
                 continue
         try:
             self.query_one("#context-button", Button).label = self._context_button_label()
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         statics = {
             "#composer-hint": "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help",
@@ -598,33 +598,33 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 if widget_id == "#file-preview" and self._selected_file_path is not None:
                     continue
                 self.query_one(widget_id, Static).update(tr(msgid))
-            except Exception:
+            except (NoMatches, NoScreen, ScreenStackError):
                 continue
         try:
             self.query_one(PromptArea).placeholder = tr(PromptArea.DEFAULT_PLACEHOLDER)
             self.query_one("#idea-box").border_title = tr("Idea · Space expand")
-        except (NoMatches, NoScreen):
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         try:
             self.query_one("#action-search", Input).placeholder = tr("Filter this list…")
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         try:
             self.query_one("#provider-key-input", Input).placeholder = tr("Paste API key…")
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         try:
             self.query_one("#file-search", Input).placeholder = tr("Search workspace paths…")
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         try:
             self.query_one("#idea-box").update(
                 tr("Idea box\nCapture an idea · Ctrl+Shift+Enter"))
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         try:
             self.query_one("#shell-box").update(tr("ShellBox · no processes"))
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             pass
         collapsibles = {
             "#rail-sentinel": "IsySentinel",
@@ -641,7 +641,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         for widget_id, msgid in collapsibles.items():
             try:
                 self.query_one(widget_id).title = tr(msgid)
-            except Exception:
+            except (NoMatches, NoScreen, ScreenStackError):
                 continue
         self._refresh_model_button()
         self._paint_idea_box()
@@ -779,7 +779,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self._rail_visible = True
             rail.display = self._rail_visible
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
-        self.call_after_refresh(self._update_model_button_visibility)
+        self.call_after_refresh(self._refresh_model_button)
         self.call_after_refresh(self._paint_idle)
         if getattr(self, "_menu_mode", ""):
             card = self.query_one("#action-card", Vertical)
@@ -1836,7 +1836,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _idle_mounted(self) -> bool:
         try:
             board = self.query_one("#idle-board", IdleBoard)
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             return False
         return bool(board.is_mounted and board.display and not board.has_class("startup-archived"))
 
@@ -1855,7 +1855,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _dismiss_idle(self) -> None:
         try:
             board = self.query_one("#idle-board", IdleBoard)
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             return
         if board.is_mounted and not board.has_class("startup-archived"):
             board.add_class("startup-archived")
@@ -1866,7 +1866,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         try:
             board = self.query_one("#idle-board", IdleBoard)
-        except Exception:
+        except (NoMatches, NoScreen, ScreenStackError):
             return
         if not board.is_mounted or board.has_class("startup-archived"):
             return

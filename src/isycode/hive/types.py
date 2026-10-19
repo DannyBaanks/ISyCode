@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, TypedDict
@@ -40,7 +40,7 @@ class HiveMessage:
     hops: int = 0
     requires_reply: bool = False
     needs_human: bool = False
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
 
     def __post_init__(self) -> None:
         for value in (self.id, self.conversation, self.from_agent, self.to_agent):
@@ -98,7 +98,7 @@ class HiveTask:
     status: Literal["todo", "doing", "blocked", "done"] = "todo"
     depends_on: list[str] = field(default_factory=list)
     priority: int = 0
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
     human_qa: list[HumanQA] = field(default_factory=list)
     result: str | None = None
     slack: dict[str, str] | None = None

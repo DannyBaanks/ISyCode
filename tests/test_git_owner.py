@@ -227,3 +227,19 @@ def test_worktree_config_is_allowed_but_its_file_is_still_checked(repo):
     (root / ".git" / "config.worktree").write_text("[core]\n\tfsmonitor = touch /tmp/x\n")
     outcome = owner.status()
     assert outcome.decision == "DENY" and "core.fsmonitor" in outcome.reason
+
+
+def test_multi_repository_parent_workspace_lists_sorted_children_over_128(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / ".gitconfig").write_text("[user]\n\tname = Test\n\temail = test@example.com\n")
+    workspace = tmp_path / "multi_ws"
+    workspace.mkdir()
+    for i in range(135):
+        child = workspace / f"repo_{i:03d}"
+        (child / ".git").mkdir(parents=True)
+    authority = WorkspaceAuthority(workspace, state_directory=tmp_path / "state" / "authority")
+    _grant(authority, "git.status")
+    outcome = GitOwner(workspace, authority).status()
+    assert outcome.decision == "DENY"
+    assert "multiple repositories found: repo_000, repo_001" in outcome.reason
