@@ -336,14 +336,26 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(200, 60)) as pilot:
+            # F-01: startup keeps the app busy; wait for it before resizing.
+            await app.wait_for_ready()
             await pilot.pause()
             for width, height in [(200, 60), (120, 40), (80, 24), (200, 60)]:
                 await pilot.resize_terminal(width, height)
                 board = app.query_one('#idle-board')
                 if height <= 28:
                     composer = app.query_one('#composer')
-                    assert composer.region.bottom <= height
+                    # The resize and the app's post-layout repaint are separate
+                    # refreshes on some Textual/platform combinations. Assert
+                    # only after the current layout has the compact board.
+                    for _ in range(100):
+                        await pilot.pause(0.05)
+                        board_lines = plain_text(board).splitlines()
+                        if (composer.region.bottom <= height
+                                and len(board_lines) <= 2
+                                and "ISYCODE" in plain_text(board)):
+                            break
                     board_lines = plain_text(board).splitlines()
+                    assert composer.region.bottom <= height
                     assert len(board_lines) <= 2
                     assert "ISYCODE" in plain_text(board)
                     continue

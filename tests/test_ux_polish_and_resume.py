@@ -331,6 +331,8 @@ def test_area_f_interrupted_turn_capture_and_resume(tmp_path, monkeypatch):
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            # F-01: startup keeps the app busy; wait for it before the resume.
+            await app.wait_for_ready()
             await pilot.pause()
 
             # Simulated interrupted turn

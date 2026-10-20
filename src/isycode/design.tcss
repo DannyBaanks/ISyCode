@@ -79,7 +79,7 @@ Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-sur
 #command-bar Button { color: $isy-text; background: $isy-surface !important; }
 #command-bar Button:hover, #command-bar Button:focus { background: $isy-selected-surface !important; color: $isy-focus; }
 #settings-button { width: 5; dock: right; }
-#model-button { max-width: 20; text-wrap: nowrap; text-overflow: ellipsis; }
+#model-button { max-width: 28; text-wrap: nowrap; text-overflow: ellipsis; }
 #prompt-input, #idea-box, #shell-box, #queued-box, #agent-tasks, .user-turn, .external-review, .tool-activity, CommandOutputCard {
     background: $isy-surface !important; color: $isy-text; border: solid $isy-border;
 }

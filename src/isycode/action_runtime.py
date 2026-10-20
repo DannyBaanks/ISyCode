@@ -140,12 +140,25 @@ TOOL_ACTIONS = {
     "workspace_grep": "workspace.files.read",
 }
 GREP_SKIP_DIRECTORIES = frozenset({
-    "node_modules", "__pycache__", ".venv", "venv", ".tox", ".mypy_cache",
-    ".pytest_cache", ".ruff_cache", "dist", "build", "target", ".next",
+    "node_modules", "__pycache__", ".venv", "venv", ".tox", ".nox", ".mypy_cache",
+    ".pytest_cache", ".ruff_cache", "dist", "build", "target", ".next", ".nuxt",
+    ".output", ".cache", ".eggs", "site-packages", ".worktrees", ".codex-worktrees",
+    ".zwork", "htmlcov", "coverage", "Pods", "DerivedData",
 })
-GREP_MAX_FILES = 3000
-GREP_MAX_BYTES = 24 * 1024 * 1024
-GREP_MAX_MATCHES = 200
+GREP_MAX_FILES = 25_000
+GREP_MAX_BYTES = 128 * 1024 * 1024
+GREP_MAX_MATCHES = 500
+SEARCH_MAX_DIRECTORIES = 25_000
+SEARCH_MAX_MATCHES = 500
+LIST_MAX_ENTRIES = 5_000
+
+
+def _is_skipped_scan_directory(name: str) -> bool:
+    folded = name.casefold()
+    return (name in GREP_SKIP_DIRECTORIES
+            or folded in GREP_SKIP_DIRECTORIES
+            or folded.startswith((".venv-", ".venv_", "venv-", "venv_"))
+            or folded.endswith(".egg-info"))
 MAX_FILE_BYTES = 128 * 1024
 MAX_WRITE_BYTES = 128 * 1024
 WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256",
@@ -162,7 +175,7 @@ RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "
 WRITE_PROTECTED_NAMES = frozenset({".isyroot"})
 MAX_OUTPUT_CHARS = 24_000
 MAX_PACK_READ_OUTPUT_CHARS = 1_000_000
-MAX_SCAN_ENTRIES = 6_000
+MAX_SCAN_ENTRIES = 150_000
 # Sandboxed workspace commands (isycode.command_runner). The request binds the
 # exact argv, resolved program, working folder, limits and the set of masked
 # sensitive paths; nothing is expanded by a shell.
@@ -2438,6 +2451,12 @@ class LocalWorkspaceReadOwner:
         if not isinstance(path_value, str) or len(path_value) > 4096:
             return ActionOutcome("Malformed action path.", "DENY", None,
                                  "path must be a bounded string")
+        if (self.owner_id == "workspace_read"
+                and path_value.strip() in {"", "/"}
+                and (action_id in {"workspace.files.list", "workspace.files.search"}
+                     or (action_id == "workspace.files.read" and "query" in arguments))):
+            path_value = "."
+            arguments = {**arguments, "path": "."}
         try:
             target = str(self._lexical_target(path_value))
         except (OSError, RuntimeError, ValueError) as exc:
@@ -2483,10 +2502,14 @@ class LocalWorkspaceReadOwner:
         except (OSError, ValueError) as exc:
             return ActionOutcome("Read action failed; no content was returned.",
                                  "ERROR", None, str(exc)[:300])
-        if len(result) > output_limit and not (
+        effective_limit = (max(output_limit, 96_000)
+                           if (action_id in {"workspace.files.list", "workspace.files.search"}
+                               or (action_id == "workspace.files.read" and "query" in arguments))
+                           else output_limit)
+        if len(result) > effective_limit and not (
                 self.owner_id == CONFIG_OWNER_ID and action_id == "workspace.config.read"
                 and Path(target).relative_to(self.root).as_posix() == ".gitignore"):
-            result = result[:output_limit] + "\n[output truncated]"
+            result = self._fit_json_result(result, effective_limit)
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), action_id, request.digest, "ALLOW", "SUCCESS",
             hashlib.sha256(result.encode("utf-8")).hexdigest())
@@ -2518,6 +2541,54 @@ class LocalWorkspaceReadOwner:
         finally:
             os.close(descriptor)
 
+    @staticmethod
+    def _fit_json_result(result: str, output_limit: int) -> str:
+        if len(result) <= output_limit:
+            return result
+        try:
+            payload = json.loads(result)
+        except Exception:
+            return result[:output_limit] + "\n[output truncated]"
+        if not isinstance(payload, dict):
+            return result[:output_limit] + "\n[output truncated]"
+        if isinstance(payload.get("text"), str):
+            text = payload["text"]
+            suffix = "\n[output truncated]"
+            lo, hi = 0, len(text)
+            best = json.dumps({**payload, "text": suffix.lstrip("\n"), "truncated": True},
+                              ensure_ascii=False)
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                candidate = json.dumps(
+                    {**payload, "text": text[:mid] + suffix, "truncated": True},
+                    ensure_ascii=False,
+                )
+                if len(candidate) <= output_limit:
+                    best = candidate
+                    lo = mid + 1
+                else:
+                    hi = mid - 1
+            return best if len(best) <= output_limit else result[:output_limit]
+        for list_key in ("matches", "entries"):
+            if isinstance(payload.get(list_key), list):
+                items = payload[list_key]
+                lo, hi = 0, len(items)
+                best = json.dumps({**payload, list_key: [], "truncated": True},
+                                  ensure_ascii=False)
+                while lo <= hi:
+                    mid = (lo + hi) // 2
+                    candidate = json.dumps(
+                        {**payload, list_key: items[:mid], "truncated": True},
+                        ensure_ascii=False,
+                    )
+                    if len(candidate) <= output_limit:
+                        best = candidate
+                        lo = mid + 1
+                    else:
+                        hi = mid - 1
+                return best if len(best) <= output_limit else result[:output_limit]
+        return result[:output_limit] + "\n[output truncated]"
+
     def _list(self, target: str) -> str:
         directory = Path(target)
         entries = []
@@ -2526,11 +2597,17 @@ class LocalWorkspaceReadOwner:
                 continue
             kind = "directory" if item.is_dir(follow_symlinks=False) else "file"
             entries.append({"name": item.name, "kind": kind})
-            if len(entries) >= 1000:
-                break
         entries.sort(key=lambda value: (value["kind"] != "directory", value["name"].casefold()))
-        return json.dumps({"path": str(directory.relative_to(self.root) or "."),
-                           "entries": entries}, ensure_ascii=False)
+        truncated = len(entries) > LIST_MAX_ENTRIES
+        if truncated:
+            entries = entries[:LIST_MAX_ENTRIES]
+        payload: dict[str, Any] = {
+            "path": str(directory.relative_to(self.root) or "."),
+            "entries": entries,
+        }
+        if truncated:
+            payload["truncated"] = True
+        return json.dumps(payload, ensure_ascii=False)
 
     def _read(self, target: str, *, max_bytes: int = MAX_FILE_BYTES) -> str:
         path = Path(target)
@@ -2552,42 +2629,47 @@ class LocalWorkspaceReadOwner:
                           ensure_ascii=False)
 
     def _search(self, query: str, start: Path) -> str:
-        pending = [start]
+        from collections import deque
+        pending = deque([start])
         hits: list[dict[str, str]] = []
         visited = 0
         entries_seen = 0
         truncated = False
-        folded = query.casefold()
+        folded = query.casefold().strip("/")
+        match_rel = "/" in folded
         while pending:
-            directory = pending.pop()
-            try:
-                listed = self._entries(directory)
-            except OSError:
-                continue
-            children = []
-            for child in listed:
-                children.append(child)
-                entries_seen += 1
-                if entries_seen >= MAX_SCAN_ENTRIES:
-                    truncated = True
-                    break
-            visited += 1
-            if visited > 300 or truncated:
+            if visited >= SEARCH_MAX_DIRECTORIES:
                 truncated = True
                 break
-            for child in children:
+            directory = pending.popleft()
+            try:
+                listed = sorted(self._entries(directory), key=lambda item: item.name.casefold())
+            except OSError:
+                continue
+            visited += 1
+            for child in listed:
                 if WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink():
                     continue
+                is_dir = child.is_dir(follow_symlinks=False)
+                if is_dir and _is_skipped_scan_directory(child.name):
+                    continue
+                entries_seen += 1
+                if entries_seen > MAX_SCAN_ENTRIES:
+                    truncated = True
+                    break
                 path = directory / child.name
-                if folded in child.name.casefold():
+                rel_posix = path.relative_to(self.root).as_posix()
+                matched = (folded in rel_posix.casefold() if match_rel
+                           else folded in child.name.casefold())
+                if matched:
                     hits.append({
                         "path": str(path.relative_to(self.root)),
-                        "kind": "directory" if child.is_dir(follow_symlinks=False) else "file",
+                        "kind": "directory" if is_dir else "file",
                     })
-                    if len(hits) >= 200:
+                    if len(hits) >= SEARCH_MAX_MATCHES:
                         truncated = True
                         break
-                if child.is_dir(follow_symlinks=False):
+                if is_dir:
                     pending.append(path)
             if truncated:
                 break
@@ -2597,18 +2679,20 @@ class LocalWorkspaceReadOwner:
 
     def _grep(self, query: str, start: Path) -> str:
         """Literal, case-insensitive line search through descriptor-safe reads."""
+        from collections import deque
         folded = query.casefold()
         matches: list[dict[str, Any]] = []
         files = scanned_bytes = 0
         truncated = False
-        pending = [start]
         if start != self.root and not start.is_dir():
-            pending, candidates = [], [start]
+            pending: deque[Path] = deque()
+            candidates: deque[Path] = deque([start])
         else:
-            candidates = []
+            pending = deque([start])
+            candidates = deque()
         while pending or candidates:
             if candidates:
-                path = candidates.pop()
+                path = candidates.popleft()
                 if files >= GREP_MAX_FILES or scanned_bytes >= GREP_MAX_BYTES:
                     truncated = True
                     break
@@ -2639,14 +2723,14 @@ class LocalWorkspaceReadOwner:
                 if truncated:
                     break
                 continue
-            directory = pending.pop()
+            directory = pending.popleft()
             try:
-                children = sorted(self._entries(directory), key=lambda item: item.name)
+                children = sorted(self._entries(directory), key=lambda item: item.name.casefold())
             except OSError:
                 continue
-            for child in reversed(children):
+            for child in children:
                 if (WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink()
-                        or child.name in GREP_SKIP_DIRECTORIES):
+                        or _is_skipped_scan_directory(child.name)):
                     continue
                 if child.is_dir(follow_symlinks=False):
                     pending.append(directory / child.name)

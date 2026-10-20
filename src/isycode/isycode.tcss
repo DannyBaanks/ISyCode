@@ -144,6 +144,9 @@
         height: auto; margin: 1 2; padding: 0 1;
         border: round #c4a35a; background: #241c28;
     }
+    .assistant-turn {
+        height: auto; margin: 0 2;
+    }
     ThoughtBlock {
         height: auto; margin: 1 2; padding: 0 1;
         border: round #514d5a;

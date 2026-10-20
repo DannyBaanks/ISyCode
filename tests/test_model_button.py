@@ -103,3 +103,15 @@ async def test_model_button_label_falls_back_without_provider(monkeypatch):
     app = TUIApp()
     async with app.run_test(size=(100, 30)) as pilot:
         assert app._model_button_label() == "Model ▾"
+
+
+@pytest.mark.asyncio
+async def test_model_button_label_uses_wider_budget_on_wide_terminal(monkeypatch):
+    monkeypatch.setenv("ISYCODE_PROVIDER", "nvidia")
+    monkeypatch.setenv("ISYCODE_MODEL", "stepfun-ai/step-5-preview")
+    app = TUIApp()
+    async with app.run_test(size=(140, 30)) as pilot:
+        await pilot.pause()
+        label = app._model_button_label()
+        assert "Step 5" in label and label.endswith("▾")
+        assert len(label) > 12

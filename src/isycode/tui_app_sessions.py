@@ -1327,7 +1327,8 @@ class SessionMixin:
                 if clock_label(extra):
                     chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
                 chat.mount(SelectableText(
-                    RichMarkdown(text or "", code_theme="monokai"), selection_text=text or ""))
+                    RichMarkdown(text or "", code_theme="monokai"), selection_text=text or "",
+                    classes="assistant-turn"))
             elif kind == "reasoning":
                 block = ThoughtBlock()
                 block.set_text(text)
@@ -1359,7 +1360,8 @@ class SessionMixin:
             lane.stream_block = None
         if lane.partial:
             widget = SelectableText(
-                RichMarkdown(lane.partial, code_theme="monokai"), selection_text=lane.partial)
+                RichMarkdown(lane.partial, code_theme="monokai"), selection_text=lane.partial,
+                classes="assistant-turn")
             chat.mount(widget)
             lane.stream_widget = widget
         else:

@@ -18,10 +18,12 @@ MAX_PACK_FILES = 200
 MAX_PACK_DIRECTORIES = 200
 MAX_PACK_BYTES = 1024 * 1024
 MAX_TOKEN_BUDGET = 100_000
-MAX_LIST_ENTRIES = 1000
+MAX_LIST_ENTRIES = 5000
 SKIP_DIRECTORIES = frozenset({
-    ".git", ".isycode", ".next", ".pytest_cache", ".tox", ".venv", "__pycache__",
-    "build", "dist", "node_modules", "target", "venv",
+    ".git", ".isycode", ".next", ".nuxt", ".output", ".cache", ".eggs",
+    ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".nox", ".venv",
+    ".worktrees", ".codex-worktrees", ".zwork", "__pycache__", "build",
+    "coverage", "dist", "htmlcov", "node_modules", "site-packages", "target", "venv",
 })
 
 

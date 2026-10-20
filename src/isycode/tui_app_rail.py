@@ -236,7 +236,7 @@ class RailMixin:
     def _set_rail_title(self, section: str, title: str) -> None:
         try:
             self.query_one(f"#{section}", Collapsible).title = status_phrase(title)
-        except Exception:
+        except (NoMatches, NoScreen):
             pass
 
     def _refresh_lsp_status(self) -> None:
@@ -460,9 +460,10 @@ class RailMixin:
             tree.root.add(label, allow_expand=entry.get("kind") == "directory", data={"path": child_path, "kind": entry.get("kind"),
                                        "bytes": entry.get("bytes", 0)})
         self._search_mode = False
+        limit_note = " · listing capped" if payload.get("truncated") else ""
         status = verified_receipt_line(outcome.receipt.receipt_id)
         if not self._show_file_preview(
-                f"{len(tree.root.children)} entries · {browser_root}\n"
+                f"{len(tree.root.children)} entries{limit_note} · {browser_root}\n"
                 f"{status}"):
             return
         tree.root.expand()
@@ -563,7 +564,7 @@ class RailMixin:
         try:
             self.query_one("#file-copy-path", Button).disabled = False
             self.query_one("#file-open-preview", Button).disabled = False
-        except Exception:
+        except (NoMatches, NoScreen):
             pass
         if getattr(self, "_sidebar_file_preview", False):
             await self._preview_file(uri, modal=False)
@@ -582,7 +583,7 @@ class RailMixin:
             try:
                 self.query_one("#file-copy-path", Button).disabled = False
                 self.query_one("#file-open-preview", Button).disabled = False
-            except Exception:
+            except (NoMatches, NoScreen):
                 pass
             if getattr(self, "_sidebar_file_preview", False):
                 self.run_worker(self._preview_file(uri, modal=False), group="file-preview")
@@ -591,7 +592,7 @@ class RailMixin:
         try:
             box = self.query_one("#file-preview-box", Vertical)
             box.display = enabled
-        except Exception:
+        except (NoMatches, NoScreen):
             pass
 
     async def _preview_file(self, uri: str, *, modal: bool = False) -> None:
