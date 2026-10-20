@@ -282,6 +282,8 @@ def test_delete_confirmation_removes_only_selected_session_without_recurring_gra
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            # F-01: the chat session owner is created during workspace startup.
+            await app.wait_for_ready()
             await pilot.pause()
             owner = app._chat_session_owner
             _, first = owner.record(None, 'user', 'Keep me')
