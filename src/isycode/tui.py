@@ -482,6 +482,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except (OSError, RuntimeError, ValueError):
             self._lsp_inventory = []
             self._lsp_status_title = ""
+            self._bridge_identity = ""
         self._search_query = ""
         self._search_mode = False
         self._rail_view = "overview"

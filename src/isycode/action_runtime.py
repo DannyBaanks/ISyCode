@@ -217,10 +217,9 @@ EXPLICIT_DENY_ACTIONS = frozenset({
     "lsp.stop",
     "mobile.host.stop",
     "mobile.session.create", "mobile.session.cancel", "mobile.approval.respond",
-    "bridge.connect", "bridge.send", "bridge.lease.claim", "bridge.lease.release",
-    "bridge.wake", "l1.create", "l1.validate", "l1.test", "l1.activate",
+    "l1.create", "l1.validate", "l1.test", "l1.activate",
     "l1.disable", "l1.rollback",
-    "desktop.file_picker", "bridge.peek", "lsp.discover", "mobile.session.read",
+    "desktop.file_picker", "lsp.discover", "mobile.session.read",
     "grit.discover",
 })
 
@@ -291,6 +290,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_memory": frozenset({"WorkspaceMemoryBoundary"}),
     "clipboard": frozenset({"ClipboardBoundary"}),
     "bridge_presence": frozenset({"BridgePresenceBoundary"}),
+    "bridge_coordination": frozenset({"BridgeCoordinationBoundary"}),
 }
 
 
@@ -332,6 +332,10 @@ OWNER_ACTIONS = {
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
     "clipboard": frozenset({"clipboard.copy", "clipboard.paste"}),
     "bridge_presence": frozenset({"bridge.agents"}),
+    "bridge_coordination": frozenset({
+        "bridge.connect", "bridge.peek", "bridge.send", "bridge.wake",
+        "bridge.lease.claim", "bridge.lease.release",
+    }),
 }
 
 
@@ -1803,6 +1807,124 @@ class BridgePresenceSystembility:
             self.name, valid, "presence read is limited to the agents listing")
 
 
+class BridgeCoordinationSystembility:
+    """Allow only one reviewed Bridge coordination operation per request.
+
+    The operation, its recipient, its topic and its exact text are inside the
+    request digest, so the one-use approval a human gives covers exactly that
+    message. A lease may only name a path inside the authorized workspace.
+    """
+
+    name = "BridgeCoordinationBoundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        del authority
+        from isycode.bridge_contract import (
+            BRIDGE_OWNER_ID, IDENTITY_PATTERN, MAX_KIND_CHARS, MAX_MESSAGE_CHARS,
+            MAX_PAYLOAD_CHARS, MAX_TOPIC_CHARS, MAX_TTL_SECONDS, OPERATIONS,
+            OPERATION_ACTIONS, operation_target,
+        )
+        if request.action_id not in OPERATION_ACTIONS.values():
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        params = request.parameters
+        operation = params.get("operation")
+        if not isinstance(operation, str) or operation not in OPERATIONS:
+            return SystembilityResult(self.name, False,
+                                      "the Bridge operation is not a known one")
+        expected = OPERATIONS[operation]
+        if set(params) != set(expected):
+            return SystembilityResult(self.name, False,
+                                      "the Bridge request carries unexpected parameters")
+        if request.action_id != OPERATION_ACTIONS[operation]:
+            return SystembilityResult(self.name, False,
+                                      "the Bridge action does not match its operation")
+        if request.execution_owner != BRIDGE_OWNER_ID:
+            return SystembilityResult(self.name, False,
+                                      "the Bridge request is not bound to the coordination owner")
+        expected_target = operation_target(operation, dict(params))
+        if request.target != expected_target or not expected_target:
+            return SystembilityResult(self.name, False,
+                                      "the Bridge target does not match its operation")
+        handshake = params.get("handshake")
+        base = (
+            isinstance(params.get("executable"), str)
+            and Path(params["executable"]).is_absolute()
+            and isinstance(handshake, str)
+            and Path(handshake).is_absolute()
+            and Path(handshake).name == "handshake.py"
+            and ".." not in Path(handshake).parts
+            and isinstance(params.get("sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", params["sha256"]) is not None
+        )
+        if not base:
+            return SystembilityResult(self.name, False,
+                                      "the Bridge handshake or interpreter is not a reviewed path")
+        if operation == "send":
+            if not isinstance(params.get("to"), str) or not IDENTITY_PATTERN.fullmatch(params["to"]):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge recipient is not a registered identity")
+            if not self._text(params.get("topic"), MAX_TOPIC_CHARS):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge topic is empty or too long")
+            if not self._text(params.get("kind"), MAX_KIND_CHARS):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge message kind is not a short word")
+            if not self._text(params.get("payload"), MAX_PAYLOAD_CHARS, allow_empty=True):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge message is empty or too long")
+        elif operation == "wake":
+            if not isinstance(params.get("to"), str) or not IDENTITY_PATTERN.fullmatch(params["to"]):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge target is not a registered identity")
+            if not self._text(params.get("message"), MAX_MESSAGE_CHARS, allow_empty=True):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge wake note is not a short text")
+        elif operation in {"lease.claim", "lease.release"}:
+            if not self._text(params.get("topic"), MAX_TOPIC_CHARS):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge lease topic is empty or too long")
+        if operation == "lease.claim":
+            ttl = params.get("ttl")
+            if not isinstance(ttl, int) or isinstance(ttl, bool) or not 1 <= ttl <= MAX_TTL_SECONDS:
+                return SystembilityResult(self.name, False,
+                                          "the Bridge lease time is outside the allowed range")
+            if not self._inside_workspace(request, params.get("path")):
+                return SystembilityResult(self.name, False,
+                                          "the Bridge lease path is outside the authorized workspace")
+        return SystembilityResult(self.name, True,
+                                  "one reviewed Bridge coordination operation")
+
+    @staticmethod
+    def _text(value: object, limit: int, *, allow_empty: bool = False) -> bool:
+        if not isinstance(value, str):
+            return False
+        if not value.strip() and not allow_empty:
+            return False
+        if len(value) > limit:
+            return False
+        return "\x00" not in value and not any(ord(char) < 32 for char in value)
+
+    @staticmethod
+    def _inside_workspace(request: ActionRequest, path: object) -> bool:
+        """A lease may only name a logical path inside the authorized workspace."""
+        if not isinstance(path, str) or not path.strip():
+            return False
+        candidate = Path(path)
+        if candidate.is_absolute() or ".." in candidate.parts:
+            return False
+        try:
+            root = request.workspace_root.resolve(strict=True)
+            resolved = (root / candidate).resolve()
+        except OSError:
+            return False
+        try:
+            resolved.relative_to(root)
+        except ValueError:
+            return False
+        return True
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
@@ -1869,7 +1991,7 @@ class ProductActionGate:
             TailscalePrivateServeSystembility(tailscale_facts),
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
-            BridgePresenceSystembility(),
+            BridgePresenceSystembility(), BridgeCoordinationSystembility(),
             WorkspaceMemorySystembility(),
         ])
 

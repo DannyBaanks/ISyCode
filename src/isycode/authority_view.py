@@ -51,6 +51,12 @@ DEDICATED_CONTROLS = {
     "mobile.host.start": "Mobile Host on this computer",
     "mobile.pair": "Mobile Host on this computer",
     "mobile.pair.issue": "Mobile Host on this computer",
+    "bridge.connect": "Coordinate with other agents",
+    "bridge.peek": "Coordinate with other agents",
+    "bridge.send": "Coordinate with other agents",
+    "bridge.wake": "Coordinate with other agents",
+    "bridge.lease.claim": "Coordinate with other agents",
+    "bridge.lease.release": "Coordinate with other agents",
 }
 
 MOBILE_HOST_ADDRESS = "127.0.0.1:8765"

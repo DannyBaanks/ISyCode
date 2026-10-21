@@ -77,6 +77,11 @@ DYNAMIC_ACTION_RESOLVERS = {
         "owner": "tailscale_read",
         "actions": ("tailscale.inspect",),
     },
+    "isycode.bridge_coordination.BridgeCoordinationOwner.prepare": {
+        "owner": "bridge_coordination",
+        "actions": ("bridge.connect", "bridge.peek", "bridge.send", "bridge.wake",
+                    "bridge.lease.claim", "bridge.lease.release"),
+    },
 }
 
 _SECURE_DIRECT_API_METHODS = {
@@ -283,18 +288,28 @@ KNOWN_EFFECT_CALLSITES = (
     # PRIMITIVE_CALLERS below fails secure_closed if any other caller appears.
     ("mobile.pair", "ApiKeyStore.issue", "mobile_host", "COVERED"),
     ("mobile.pair", "ApiKeyStore.revoke", "mobile_host", "COVERED"),
-    # No product module constructs BridgeClient (the Bridge is optional, opt-in
-    # coordination used by integration tests and external agents only).
-    ("bridge.connect", "BridgeClient.hello", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.connect", "BridgeClient.heartbeat", "", "BLOCKED_BY_DESIGN"),
+    # The Bridge coordination owner mediates every primitive it uses: a
+    # message, a wake or a lease passes Workspace Authority, ISySentinel, a
+    # one-use approval bound to the request digest and the action journal
+    # before the handshake runs.
+    ("bridge.connect", "BridgeCoordinationOwner.execute", "bridge_coordination", "COVERED"),
+    ("bridge.connect", "BridgeClient.hello", "bridge_coordination", "COVERED"),
+    ("bridge.connect", "BridgeClient.heartbeat", "bridge_coordination", "COVERED"),
+    ("bridge.connect", "BridgeClient._run", "bridge_coordination", "COVERED"),
+    ("bridge.peek", "BridgeCoordinationOwner.execute", "bridge_coordination", "COVERED"),
+    ("bridge.peek", "BridgeClient.peek", "bridge_coordination", "COVERED"),
+    ("bridge.send", "BridgeCoordinationOwner.execute", "bridge_coordination", "COVERED"),
+    ("bridge.send", "BridgeClient.send", "bridge_coordination", "COVERED"),
+    ("bridge.wake", "BridgeCoordinationOwner.execute", "bridge_coordination", "COVERED"),
+    ("bridge.wake", "BridgeClient.wake", "bridge_coordination", "COVERED"),
+    ("bridge.lease.claim", "BridgeCoordinationOwner.execute", "bridge_coordination", "COVERED"),
+    ("bridge.lease.claim", "BridgeClient.claim", "bridge_coordination", "COVERED"),
+    ("bridge.lease.release", "BridgeCoordinationOwner.execute", "bridge_coordination", "COVERED"),
+    ("bridge.lease.release", "BridgeClient.release", "bridge_coordination", "COVERED"),
+    # The product does not call these BridgeClient helpers.
     ("bridge.connect", "BridgeClient.goodbye", "", "BLOCKED_BY_DESIGN"),
     ("bridge.connect", "BridgeClient.status", "", "BLOCKED_BY_DESIGN"),
     ("bridge.connect", "BridgeClient.agents", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.connect", "BridgeClient._run", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.peek", "BridgeClient.peek", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.lease.claim", "BridgeClient.claim", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.lease.release", "BridgeClient.release", "", "BLOCKED_BY_DESIGN"),
-    ("bridge.send", "BridgeClient.send", "", "BLOCKED_BY_DESIGN"),
     ("credentials.add", "CredentialOwner.add", "credentials", "COVERED"),
     ("credentials.revoke", "CredentialOwner.revoke", "credentials", "COVERED"),
     ("credentials.use", "CredentialUseOwner.secret_for", "credential_use", "COVERED"),

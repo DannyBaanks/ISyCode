@@ -2823,3 +2823,12 @@ msgstr "instalado · sandbox no disponible"
 
 msgid "connected tool services"
 msgstr "servicios de herramientas conectados"
+
+msgid "To: {to}"
+msgstr "Para: {to}"
+
+msgid "Topic: {topic}"
+msgstr "Tema: {topic}"
+
+msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
+msgstr "El mensaje sale de este workspace. Una lease del Bridge es coordinación, no acceso a archivos, comandos ni red."

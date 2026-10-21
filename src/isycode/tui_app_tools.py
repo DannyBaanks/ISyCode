@@ -43,6 +43,8 @@ from rich.markdown import Markdown as RichMarkdown
 from isycode.providers import PRESETS, Provider, ProviderError, load_provider_key, selected_provider_name
 from isycode.streaming import StreamError
 import time as _time
+from isycode.bridge_tools import BRIDGE_TOOL_NAMES, BridgeSendScreen
+from isycode.tui_screens_sessions import BridgePresenceScreen
 from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, SECURITY, _elapsed_label
 from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
@@ -138,6 +140,121 @@ class ToolMixin:
                 group.finish_leaf(card, f"{label} · {state} · {elapsed}")
                 self.query_one(ChatArea).follow_tail()
 
+    def _bridge_tools_enabled(self) -> bool:
+        """Offer the Bridge tools only when the workspace granted them."""
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except Exception:  # noqa: BLE001 - a missing policy only hides the tools
+            return False
+        required = ("bridge.connect", "bridge.peek", "bridge.send", "bridge.wake")
+        return all(isinstance(grants.get(action), dict)
+                   and grants[action].get("enabled") is True
+                   for action in required)
+
+    def _bridge_owner(self):
+        """One coordination owner per session: the identity stays stable."""
+        from isycode.bridge_coordination import BridgeCoordinationOwner
+        owner = getattr(self, "_bridge_coordination_owner", None)
+        if owner is None:
+            owner = BridgeCoordinationOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                self._action_approvals)
+            self._bridge_coordination_owner = owner
+        return owner
+
+    async def _call_bridge_tool(self, name: str, raw_arguments: str) -> str:
+        """Run one Bridge proposal: review first, then the owner's gate."""
+        from isycode.bridge_tools import BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL
+        try:
+            arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
+        except json.JSONDecodeError:
+            arguments = None
+        if not isinstance(arguments, dict):
+            return json.dumps({"error": "bridge tool arguments must be a JSON object"})
+        if name == "bridge_peers":
+            return json.dumps(await self._bridge_peers(), ensure_ascii=False)
+        try:
+            if name == "bridge_send":
+                to = str(arguments.get("to") or "")
+                topic = str(arguments.get("topic") or "")
+                message = str(arguments.get("message") or "")
+                kind = str(arguments.get("kind") or "message")
+                if set(arguments) - {"to", "topic", "message", "kind"}:
+                    raise ValueError("bridge_send accepts to, topic, message and kind")
+                owner = self._bridge_owner()
+                request = owner.prepare("send", to=to, topic=topic, kind=kind,
+                                        payload=message)
+                confirmed = await self._await_screen(BridgeSendScreen(
+                    action="send", to=to, topic=topic, message=message))
+                if not confirmed:
+                    return json.dumps({"status": "declined"})
+                outcome = await asyncio.to_thread(
+                    owner.execute, request, self._action_approvals.issue(request))
+                return json.dumps({"status": outcome.decision.lower(),
+                                   "detail": outcome.reason[:200],
+                                   "receipt": outcome.receipt.receipt_id if outcome.receipt else None},
+                                  ensure_ascii=False)
+            if name == "bridge_wake":
+                to = str(arguments.get("to") or "")
+                message = str(arguments.get("message") or "")
+                if set(arguments) - {"to", "message"}:
+                    raise ValueError("bridge_wake accepts to and message")
+                owner = self._bridge_owner()
+                request = owner.prepare("wake", to=to, message=message)
+                confirmed = await self._await_screen(BridgeSendScreen(
+                    action="wake", to=to, topic="", message=message))
+                if not confirmed:
+                    return json.dumps({"status": "declined"})
+                outcome = await asyncio.to_thread(
+                    owner.execute, request, self._action_approvals.issue(request))
+                return json.dumps({"status": outcome.decision.lower(),
+                                   "detail": outcome.reason[:200],
+                                   "receipt": outcome.receipt.receipt_id if outcome.receipt else None},
+                                  ensure_ascii=False)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return json.dumps({"error": f"bridge action unavailable: {type(exc).__name__}"})
+        return json.dumps({"error": "unknown bridge tool"})
+
+    async def _register_bridge_peer(self) -> bool:
+        """Register this window as a Bridge peer, with the user's approval."""
+        owner = self._bridge_owner()
+        try:
+            request = owner.prepare("connect")
+        except (OSError, ValueError, RuntimeError) as exc:
+            self._append(f"  Bridge is not available here ({type(exc).__name__}).", YELLOW)
+            return False
+        approval = self._action_approvals.issue(request)
+        outcome = await asyncio.to_thread(owner.execute, request, approval)
+        if outcome.decision != "ALLOW":
+            self._append("  Bridge registration was denied.", YELLOW)
+            return False
+        self._bridge_identity = owner.identity
+        self._append(f"  Registered on the Bridge as {owner.identity}.", GREEN)
+        return True
+
+    async def _bridge_peers(self) -> dict:
+        """Read the registered peers through the presence owner."""
+        from isycode.bridge_presence import BridgePresenceOwner
+        confirmed = await self._await_screen(BridgePresenceScreen())
+        if not confirmed:
+            return {"status": "declined"}
+        root = self._workspace_root
+        approvals = self._action_approvals
+        base = WorkspaceAuthority(root)
+        try:
+            request = BridgePresenceOwner(root, base, approvals).prepare()
+            owner = BridgePresenceOwner(
+                root, OneShotActionAuthority(base, request), approvals)
+            outcome, rows = await asyncio.to_thread(
+                owner.read, request, approvals.issue(request))
+        except (OSError, RuntimeError, ValueError):
+            return {"status": "unavailable", "reason": "bridge handshake unavailable"}
+        if outcome.decision != "ALLOW":
+            return {"status": "unavailable", "reason": outcome.reason[:200]}
+        return {"status": "ok",
+                "peers": [{"name": str(row.get("name")), "state": str(row.get("status"))}
+                          for row in rows]}
+
     async def _dispatch_chat_tool_impl(self, call: dict) -> tuple[str, str]:
         """Route one provider function call through the canonical local read owner."""
         function = call.get("function") if isinstance(call, dict) else None
@@ -170,6 +287,8 @@ class ToolMixin:
             except (TypeError, ValueError):
                 result = {"status": "denied", "error": "Delegation requires one bounded task"}
             return tool_call_id, json.dumps(result, ensure_ascii=False)
+        if isinstance(name, str) and name in BRIDGE_TOOL_NAMES:
+            return tool_call_id, await self._call_bridge_tool(name, raw_arguments)
         if isinstance(name, str) and name.startswith("mcp__"):
             try:
                 mcp_arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None

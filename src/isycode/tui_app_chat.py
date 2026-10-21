@@ -405,6 +405,9 @@ class ChatMixin:
             mcp_tools = self._local_mcp_owner().chat_tools() if tools_active else []
             if mcp_tools:
                 chat_tools = chat_tools + mcp_tools
+            if provider_supports_tools and self._bridge_tools_enabled():
+                from isycode.bridge_tools import BRIDGE_PEERS_TOOL, BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL
+                chat_tools = chat_tools + [BRIDGE_PEERS_TOOL, BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL]
             folder_data = []
             try:
                 folder_data = [{'alias': 'main', 'path': str(self._workspace_root)}] + self._folder_store().list()

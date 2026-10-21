@@ -218,3 +218,20 @@ class BridgeClient:
 
     def send(self, to: str, kind: str, topic: str, payload: str = "") -> str:
         return self._run("send", self.identity, to, kind, topic, payload)
+
+    def wake(self, agent: str, message: str = "") -> str:
+        """Wake a registered peer that is idle. The nudge stays off by default."""
+        args = ["wake", agent]
+        if message:
+            args.append(message)
+        return self._run(*args)
+
+
+def bridge_client(identity: str, caps: str = "isycode") -> BridgeClient:
+    """Build the client here.
+
+    The product never constructs BridgeClient directly: the coordination owner
+    asks for a client through this factory so the identity token stays inside
+    one module and never reaches a transcript.
+    """
+    return BridgeClient(identity, caps=caps)

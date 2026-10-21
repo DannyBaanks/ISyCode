@@ -881,7 +881,11 @@ class RailMixin:
             return
         from isycode.bridge_presence import presence_line
         width = panel.content_size.width or panel.size.width
-        panel.update(presence_line(rows, width))
+        line = presence_line(rows, width)
+        identity = getattr(self, "_bridge_identity", "")
+        if identity:
+            line = f"{identity} · {line}" if rows else f"{identity} · Bridge ready"
+        panel.update(line)
 
     async def _show_bridge_presence(self) -> None:
         confirmed = await self._await_screen(BridgePresenceScreen())

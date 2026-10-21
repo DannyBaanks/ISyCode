@@ -25,7 +25,11 @@ def test_owner_coverage_report_exposes_unowned_actions_and_effect_callsites():
     assert callsites["MobileHostOwner.authorize_and_launch"]["status"] == "COVERED"
     assert callsites["MobileHostOwner.shutdown"]["status"] == "BLOCKED_BY_DESIGN"
     assert callsites["BridgeClient.agents"]["status"] == "BLOCKED_BY_DESIGN"
-    assert callsites["BridgeClient._run"]["status"] == "BLOCKED_BY_DESIGN"
+    # The Bridge coordination owner mediates every primitive it uses.
+    assert callsites["BridgeClient._run"]["status"] == "COVERED"
+    assert callsites["BridgeClient.send"]["owner"] == "bridge_coordination"
+    assert callsites["BridgeClient.claim"]["owner"] == "bridge_coordination"
+    assert callsites["BridgeCoordinationOwner.execute"]["status"] == "COVERED"
     assert callsites["ApiKeyStore.issue"] == {"action": "mobile.pair", "callsite": "ApiKeyStore.issue",
                                               "owner": "mobile_host", "status": "COVERED"}
     assert callsites["WorkspaceMixin._inject_agent_context"]["status"] == "COVERED"
@@ -218,7 +222,7 @@ def test_every_catalog_action_has_an_explicit_authority_classification():
     registered = {action for actions in OWNER_ACTIONS.values() for action in actions}
     assert set(EXPLICIT_DENY_ACTIONS).isdisjoint(registered)
     assert set(ACTION_BY_ID) - registered == set(EXPLICIT_DENY_ACTIONS) | {"role.select"}
-    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 24
+    assert sum(row["classification"] == "EXPLICIT_DENY" for row in report["actions"]) == 18
 
 
 def test_unclassified_effectful_catalog_addition_fails_the_frontier(monkeypatch):

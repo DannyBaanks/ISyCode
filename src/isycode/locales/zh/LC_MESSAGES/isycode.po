@@ -2823,3 +2823,12 @@ msgstr "已安装 · 沙箱不可用"
 
 msgid "connected tool services"
 msgstr "已连接的工具服务"
+
+msgid "To: {to}"
+msgstr "发送给：{to}"
+
+msgid "Topic: {topic}"
+msgstr "主题：{topic}"
+
+msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
+msgstr "消息将离开此工作区。Bridge 租约只是协调，不代表可以访问文件、命令或网络。"
