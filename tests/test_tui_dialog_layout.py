@@ -8,7 +8,7 @@ does. These tests pin the geometry that fixed both.
 import asyncio
 
 import pytest
-from textual.widgets import OptionList
+from textual.widgets import Button, OptionList
 
 from isycode.tui import SidePanel, TUIApp
 from isycode.tui_screens_grants import QuickStartScreen, WorkspaceModeScreen
@@ -65,13 +65,50 @@ def test_onboarding_copy_fits_without_hiding_the_choice(tmp_path, monkeypatch, s
             copy = screen.query_one("#quick-start-copy" if screen_name == "quick"
                                     else "#workspace-mode-copy")
             options = screen.query_one(OptionList)
-            # The whole onboarding copy is visible: nothing is cut mid
-            # sentence and the region does not need scrolling.
-            assert copy.max_scroll_y == 0, copy.virtual_size
-            assert copy.content_size.height >= 8
+            # The copy is bounded by its own card, never by the terminal: a
+            # long workspace path wraps, so the region may scroll, but the
+            # choices and the buttons stay inside the terminal.
+            assert copy.styles.max_height.value == 11, copy.styles.max_height
+            assert screen.region.contains_region(copy.region)
+            assert screen.region.y + screen.region.height <= 24, screen.region
             # Choices and both actions stay on screen at 80x24.
             assert screen.region.contains_region(options.region)
             for button in screen.query("Button"):
+                assert screen.region.contains_region(button.region)
+            assert options.content_size.height >= 2
+            app.pop_screen()
+            await pilot.pause()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("screen_name", ["mode", "quick"])
+def test_onboarding_survives_a_very_long_workspace_path(tmp_path, screen_name):
+    """CI and Windows paths wrap to many more lines than a short temp name.
+
+    A long path must not push the choices or the buttons out of an 80x24
+    terminal: the copy scrolls inside its own card instead.
+    """
+    async def scenario():
+        root = tmp_path.joinpath(*["segment-" + "x" * 40 for _ in range(3)])
+        root.mkdir(parents=True)
+        configure(root, pytest.MonkeyPatch())
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            screen = (QuickStartScreen(root, provider_ready=False)
+                      if screen_name == "quick" else WorkspaceModeScreen(root))
+            app.push_screen(screen)
+            await pilot.pause()
+            await pilot.pause()
+            copy = screen.query_one("#quick-start-copy" if screen_name == "quick"
+                                    else "#workspace-mode-copy")
+            options = screen.query_one(OptionList)
+            assert copy.styles.max_height.value == 11
+            assert screen.region.y + screen.region.height <= 24, screen.region
+            assert screen.region.contains_region(options.region)
+            assert screen.region.contains_region(copy.region)
+            for button in screen.query(Button):
                 assert screen.region.contains_region(button.region)
             app.pop_screen()
             await pilot.pause()
