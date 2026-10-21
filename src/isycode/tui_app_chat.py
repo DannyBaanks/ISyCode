@@ -408,6 +408,11 @@ class ChatMixin:
             if provider_supports_tools and self._bridge_tools_enabled():
                 from isycode.bridge_tools import BRIDGE_PEERS_TOOL, BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL
                 chat_tools = chat_tools + [BRIDGE_PEERS_TOOL, BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL]
+            if provider_supports_tools:
+                from isycode.integration_tools import OPENISY_CATALOG_TOOL, L1_STATE_TOOL
+                chat_tools = chat_tools + [OPENISY_CATALOG_TOOL, L1_STATE_TOOL]
+                if self._gateway_mcp_tools_enabled():
+                    chat_tools = chat_tools + self._gateway_chat_tools()
             folder_data = []
             try:
                 folder_data = [{'alias': 'main', 'path': str(self._workspace_root)}] + self._folder_store().list()

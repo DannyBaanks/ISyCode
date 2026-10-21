@@ -2300,6 +2300,13 @@
       "owner": "session_delete"
     },
     {
+      "action": "mcp.invoke",
+      "callable": "isycode.tui_app_tools.ToolMixin._call_gateway_chat_tool",
+      "file": "isycode/tui_app_tools.py",
+      "line": 271,
+      "owner": "gateway_mcp"
+    },
+    {
       "action": "workspace.context.inject",
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "file": "isycode/tui_app_workspace.py",
