@@ -105,6 +105,9 @@ are rejected before fetching.
   terminal, the default is no unless this flag is present.
 - If the only conflict is `docs/security/m15-authority-coverage.json`, the
   updater regenerates it. Other conflicts stop the update.
+- Dependencies are synced with pip inside the isolated environment. An
+  environment that has no pip, as the `uv` installer builds it, is seeded with
+  `ensurepip` first so the sync can run.
 
 ## State and packages
 

@@ -766,6 +766,15 @@ class SelfUpdater:
             "ISyCode se instaló en un entorno virtual aislado.",
         )))
 
+    def _environment_has_pip(self, environment_python: Path, root: Path) -> bool:
+        """True when the environment can run pip. A uv-created environment has none."""
+        probe = self.command_runner(
+            [str(environment_python), "-c", "import pip"],
+            cwd=str(root), env=os.environ.copy(), text=True, capture_output=True,
+            timeout=60, check=False,
+        )
+        return probe.returncode == 0
+
     def _sync_environment(self, root: Path) -> UpdateReport | None:
         if not (root / "pyproject.toml").is_file():
             return None
@@ -777,6 +786,20 @@ class SelfUpdater:
                                               text=True, capture_output=True, timeout=180, check=False)
                 if created.returncode:
                     return UpdateReport("error", ("No se pudo crear el entorno virtual; el checkout se conservó.",))
+            if not self._environment_has_pip(environment_python, root):
+                # The official installer builds the environment with uv, and a uv
+                # environment ships without pip. Seed it before syncing.
+                seeded = self.command_runner(
+                    [str(environment_python), "-m", "ensurepip", "--upgrade"],
+                    cwd=str(root), env=os.environ.copy(), text=True, capture_output=True,
+                    timeout=300, check=False,
+                )
+                if seeded.returncode and not self._environment_has_pip(environment_python, root):
+                    return UpdateReport("error", (
+                        "El código quedó actualizado, pero el entorno virtual no incluye pip "
+                        "y no se pudo añadirlo.",
+                        f"Reintenta: {environment_python} -m ensurepip --upgrade",
+                    ))
             installed = self.command_runner(
                 [str(environment_python), "-m", "pip", "install", "--upgrade", "-e", str(root)],
                 cwd=str(root), env=os.environ.copy(), text=True, capture_output=True,
