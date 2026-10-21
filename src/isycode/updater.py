@@ -768,11 +768,16 @@ class SelfUpdater:
 
     def _environment_has_pip(self, environment_python: Path, root: Path) -> bool:
         """True when the environment can run pip. A uv-created environment has none."""
-        probe = self.command_runner(
-            [str(environment_python), "-c", "import pip"],
-            cwd=str(root), env=os.environ.copy(), text=True, capture_output=True,
-            timeout=60, check=False,
-        )
+        try:
+            probe = self.command_runner(
+                [str(environment_python), "-c", "import pip"],
+                cwd=str(root), env=os.environ.copy(), text=True, capture_output=True,
+                timeout=60, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            # An environment whose interpreter cannot run is treated as one
+            # without pip: the seeding step reports the actionable guidance.
+            return False
         return probe.returncode == 0
 
     def _sync_environment(self, root: Path) -> UpdateReport | None:

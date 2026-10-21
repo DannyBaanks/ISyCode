@@ -663,6 +663,9 @@ def test_bootstrap_installs_source_without_replacing_foreign_launcher(tmp_path, 
     foreign.write_text("another application\n", encoding="utf-8")
 
     def runner(args, **kwargs):
+        if args[1:3] == ["-c", "import pip"]:
+            # The environment under test already has pip.
+            return subprocess.CompletedProcess(args, 0, "", "")
         if args[1:3] == ["-m", "venv"]:
             python = Path(args[-1]) / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             python.parent.mkdir(parents=True, exist_ok=True)
