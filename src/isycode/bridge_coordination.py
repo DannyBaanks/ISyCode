@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import re
 import secrets
 import sys
 from pathlib import Path
@@ -23,17 +22,9 @@ from isycode.action_runtime import ActionOutcome, ActionReceipt, ProductActionGa
 from isycode.bridge import BridgeError, bridge_client, find_handshake
 from isycode.security import ActionRequest
 
-from isycode.bridge_contract import (  # noqa: E402  (kept beside the contract)
-    BRIDGE_OWNER_ID,
-    operation_target,
-    IDENTITY_PATTERN,
-    MAX_KIND_CHARS,
-    MAX_MESSAGE_CHARS,
-    MAX_PAYLOAD_CHARS,
-    MAX_TOPIC_CHARS,
-    MAX_TTL_SECONDS,
-    OPERATIONS,
-    OPERATION_ACTIONS,
+from isycode.bridge_contract import (
+    BRIDGE_OWNER_ID, IDENTITY_PATTERN, MAX_TOPIC_CHARS, OPERATION_ACTIONS,
+    OPERATIONS, operation_target,
 )
 
 

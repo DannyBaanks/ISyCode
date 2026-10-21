@@ -1842,7 +1842,7 @@
       "action": null,
       "callable": "isycode.bridge_coordination.BridgeCoordinationOwner.prepare",
       "file": "isycode/bridge_coordination.py",
-      "line": 98,
+      "line": 89,
       "owner": "bridge_coordination"
     },
     {
@@ -1981,7 +1981,7 @@
       "action": null,
       "callable": "isycode.bridge_coordination.BridgeCoordinationOwner.prepare",
       "file": "isycode/bridge_coordination.py",
-      "line": 98,
+      "line": 89,
       "owner": "bridge_coordination"
     },
     {
