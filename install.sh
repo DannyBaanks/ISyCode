@@ -249,11 +249,14 @@ fi
 
 if [ "$HAS_UV" = true ]; then
     if [ ! -d "$VENV_DIR" ]; then
-        uv venv "$VENV_DIR" --python "$PYTHON_BIN" --quiet || "$PYTHON_BIN" -m venv "$VENV_DIR"
+        # --seed installs pip inside the environment. Without it the environment
+        # has no pip, and the updater cannot sync dependencies with it.
+        uv venv "$VENV_DIR" --python "$PYTHON_BIN" --seed --quiet || "$PYTHON_BIN" -m venv "$VENV_DIR"
     fi
     log_info "Instalando dependencias de ISyCode con uv..."
     if ! VIRTUAL_ENV="$VENV_DIR" uv pip install -e "$PKG_SPEC" --quiet; then
         log_warn "uv pip falló; reintentando con pip estándar..."
+        "$VENV_DIR/bin/python" -m ensurepip --upgrade >/dev/null 2>&1 || true
         "$VENV_DIR/bin/python" -m pip install --upgrade --disable-pip-version-check --quiet -e "$PKG_SPEC" || die "Error instalando dependencias con pip."
     fi
 else

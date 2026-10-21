@@ -663,6 +663,9 @@ def test_bootstrap_installs_source_without_replacing_foreign_launcher(tmp_path, 
     foreign.write_text("another application\n", encoding="utf-8")
 
     def runner(args, **kwargs):
+        if args[1:3] == ["-c", "import pip"]:
+            # The environment under test already has pip.
+            return subprocess.CompletedProcess(args, 0, "", "")
         if args[1:3] == ["-m", "venv"]:
             python = Path(args[-1]) / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             python.parent.mkdir(parents=True, exist_ok=True)
@@ -696,6 +699,62 @@ def test_official_repository_is_accepted_case_insensitively():
     assert updater_._remote_allowed("https://github.com/dannybaanks/isycode")
     assert updater_._remote_allowed("https://github.com/DannyBaanks/ISyCode.git")
     assert not updater_._remote_allowed("https://github.com/DannyBaanks/ISyCode-fork.git")
+
+
+def pip_less_environment(tmp_path: Path) -> tuple[Path, list[list[str]]]:
+    """A root whose environment has no pip, the way the uv installer builds it."""
+    root = tmp_path / "checkout"
+    root.mkdir()
+    (root / "pyproject.toml").write_text("[project]\nname='isycode'\n", encoding="utf-8")
+    python = root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    python.parent.mkdir(parents=True, exist_ok=True)
+    python.write_text("#!/bin/sh\n", encoding="utf-8")
+    python.chmod(0o755)
+    return root, []
+
+
+def test_environment_without_pip_is_seeded_before_dependencies_are_synced(tmp_path):
+    root, calls = pip_less_environment(tmp_path)
+    seeded = {"done": False}
+
+    def runner(args, **kwargs):
+        calls.append(list(args))
+        if args[1:3] == ["-c", "import pip"]:
+            # No pip until ensurepip runs.
+            return subprocess.CompletedProcess(args, 0 if seeded["done"] else 1, "", "")
+        if args[1:3] == ["-m", "ensurepip"]:
+            seeded["done"] = True
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if "-m" in args and "pip" in args and "install" in args:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        return subprocess.run(args, **kwargs)
+
+    instance = SelfUpdater(source_root=root, allow_local_remotes=True, command_runner=runner)
+    report = instance._sync_environment(root)
+
+    seeded_at = next(index for index, call in enumerate(calls) if call[1:3] == ["-m", "ensurepip"])
+    installed_at = next(index for index, call in enumerate(calls) if "install" in call)
+    assert report is None
+    assert seeded_at < installed_at
+
+
+def test_environment_without_pip_reports_guidance_when_seeding_fails(tmp_path):
+    root, calls = pip_less_environment(tmp_path)
+
+    def runner(args, **kwargs):
+        calls.append(list(args))
+        if args[1:3] == ["-c", "import pip"]:
+            return subprocess.CompletedProcess(args, 1, "", "")
+        if args[1:3] == ["-m", "ensurepip"]:
+            return subprocess.CompletedProcess(args, 1, "", "")
+        return subprocess.run(args, **kwargs)
+
+    instance = SelfUpdater(source_root=root, allow_local_remotes=True, command_runner=runner)
+    report = instance._sync_environment(root)
+
+    assert report is not None and report.status == "error"
+    assert any("ensurepip" in line for line in report.lines)
+    assert not any("install" in call for call in calls)
 
 
 def test_declined_merge_leaves_the_branch_untouched(tmp_path):
