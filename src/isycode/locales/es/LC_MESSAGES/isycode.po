@@ -1324,14 +1324,28 @@ msgstr "Cuando ISyCode abre por primera vez una carpeta sin una elección guarda
 msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "Bienvenido a ISyCode · ¿cómo quieres empezar?"
 
-msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n\n{provider_line}\n\nInicio rápido: esta carpeta pasa a ser un espacio recurrente en modo Classic — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más puede encender todas las herramientas de código, y las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\n\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
+msgid "{root}
+{provider_line}
+Quick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.
+Custom setup: choose recurrence, Classic or Security, and each tool step by step.
+Both paths keep IsySentinel and the action journal on everything."
+msgstr "{root}
+{provider_line}
+Inicio rápido: esta carpeta pasa a ser un espacio Classic recurrente — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más enciende todas las herramientas de código; las ediciones, comandos y commits siguen preguntando hasta que las apruebes.
+Configuración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.
+Los dos caminos mantienen IsySentinel y el diario de acciones en todo."
 
 msgid "How should ISyCode work in this folder?"
 msgstr "¿Cómo debe trabajar ISyCode en esta carpeta?"
 
-msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
-msgstr "{root}\n\nClassic: listo para programar. Lectura/búsqueda, propuestas de edición, chat, sesiones guardadas, revisión de Git y comandos en sandbox (cuando hay) están listos. Una confirmación aparte puede confiar en esta carpeta para que las ediciones normales y las pruebas aisladas dejen de preguntar una a una. Hasta que confirmes eso, cada edición, borrado/movimiento, comando y commit sigue preguntando. Los commits, secretos y cambios de autoridad preguntan igual.\nSecurity: no se permite nada hasta que lo actives en Configuración → Authority.\n\nLos dos modos usan IsySentinel y el diario de acciones. Nunca se implica un shell libre ni archivos sensibles. Cambia cuando quieras en Configuración → Authority."
+msgid "{root}
+Classic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.
+Security: nothing is allowed until you turn it on in Settings → Authority.
+Both modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
+msgstr "{root}
+Classic: lectura/búsqueda, propuestas de edición, chat, sesiones guardadas, revisión de Git y comandos en sandbox están listos. Una confirmación puede confiar en esta carpeta para que las ediciones normales dejen de preguntar; las ediciones, borrados, comandos y commits siguen preguntando hasta que los apruebes. Los commits, secretos y cambios de autoridad preguntan siempre.
+Security: no se permite nada hasta que lo actives en Configuración → Authority.
+Los dos modos usan IsySentinel y el diario de acciones. Nunca se implica un shell libre ni archivos sensibles."
 
 msgid "Allow semantic broker preview?"
 msgstr "¿Permitir la vista previa del broker semántico?"

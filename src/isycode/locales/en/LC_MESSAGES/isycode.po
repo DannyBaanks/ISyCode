@@ -1324,14 +1324,28 @@ msgstr "When ISyCode first opens a folder without a saved choice, it will create
 msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "Welcome to ISyCode · how do you want to start?"
 
-msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
+msgid "{root}
+{provider_line}
+Quick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.
+Custom setup: choose recurrence, Classic or Security, and each tool step by step.
+Both paths keep IsySentinel and the action journal on everything."
+msgstr "{root}
+{provider_line}
+Quick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.
+Custom setup: choose recurrence, Classic or Security, and each tool step by step.
+Both paths keep IsySentinel and the action journal on everything."
 
 msgid "How should ISyCode work in this folder?"
 msgstr "How should ISyCode work in this folder?"
 
-msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
-msgstr "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
+msgid "{root}
+Classic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.
+Security: nothing is allowed until you turn it on in Settings → Authority.
+Both modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
+msgstr "{root}
+Classic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.
+Security: nothing is allowed until you turn it on in Settings → Authority.
+Both modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
 
 msgid "Allow semantic broker preview?"
 msgstr "Allow semantic broker preview?"

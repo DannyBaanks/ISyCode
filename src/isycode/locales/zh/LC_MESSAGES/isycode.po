@@ -1324,14 +1324,28 @@ msgstr "当 ISyCode 第一次打开尚未保存选择的文件夹时，会在那
 msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "欢迎使用 ISyCode · 你想如何开始？"
 
-msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n\n{provider_line}\n\n快速开始：此文件夹成为 Classic 模式下的常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和提交在你批准之前仍会询问。\n自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。\n\n两条路径都对所有操作保留 IsySentinel 和操作日志。"
+msgid "{root}
+{provider_line}
+Quick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.
+Custom setup: choose recurrence, Classic or Security, and each tool step by step.
+Both paths keep IsySentinel and the action journal on everything."
+msgstr "{root}
+{provider_line}
+快速开始：此文件夹成为 Classic 常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和提交在你批准之前仍会询问。
+自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。
+两条路径都对所有操作保留 IsySentinel 和操作日志。"
 
 msgid "How should ISyCode work in this folder?"
 msgstr "ISyCode 应如何在此文件夹中工作？"
 
-msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
-msgstr "{root}\n\nClassic：可以开始写代码。读/搜、编辑提议、聊天、已保存会话、Git 审查以及沙箱命令（如可用）均已就绪。另一次确认可以信任此文件夹，使普通编辑和隔离测试不再逐项询问。在你确认之前，每次编辑、删除/移动、命令和提交仍会询问。提交、密钥和授权更改无论哪种模式都会询问。\nSecurity：在 设置 → Authority 中开启之前，不允许任何操作。\n\n两种模式都使用 IsySentinel 和操作日志。绝不隐含自由 shell 或敏感文件。可随时在 设置 → Authority 中切换。"
+msgid "{root}
+Classic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.
+Security: nothing is allowed until you turn it on in Settings → Authority.
+Both modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
+msgstr "{root}
+Classic：读/搜、编辑提议、聊天、已保存会话、Git 审查以及沙箱命令均已就绪。一次确认即可信任此文件夹，使普通编辑不再询问；编辑、删除、命令和提交在你批准之前仍会询问。提交、密钥和授权更改始终询问。
+Security：在 设置 → Authority 中开启之前，不允许任何操作。
+两种模式都使用 IsySentinel 和操作日志。绝不隐含自由 shell 或敏感文件。"
 
 msgid "Allow semantic broker preview?"
 msgstr "允许语义代理预览？"
