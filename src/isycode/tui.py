@@ -481,6 +481,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._lsp_inventory = discover_servers()
         except (OSError, RuntimeError, ValueError):
             self._lsp_inventory = []
+            self._lsp_status_title = ""
         self._search_query = ""
         self._search_mode = False
         self._rail_view = "overview"
@@ -1375,6 +1376,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         widget = self.query_one("#usage-status", Static)
         limit, source = self._context_window()
         total = self._usage.input_tokens + self._usage.output_tokens
+        if (total == 0 and not self._history and self._throughput.last_rate is None
+                and not self._usage.requests and not self._usage.unknown_requests):
+            # Nothing has run yet. Three rows of zeros are noise, not telemetry.
+            # A recorded request keeps its panel even when the provider did not
+            # report its counters, because an unknown count is real information.
+            widget.update("")
+            return
         widget.update(usage_panel(
             self._history, widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),

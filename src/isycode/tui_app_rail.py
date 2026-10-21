@@ -30,6 +30,7 @@ from isycode.workspace import WorkspaceUnavailable
 from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.tui_theme import (
+    status_chip,
     TEXT,
     MUTED,
     YELLOW,
@@ -103,7 +104,7 @@ class RailMixin:
         generation = self._openisy_refresh_generation
         self.query_one("#mcp-status", Static).update(
             switch_row(None, "Checking", status_phrase("connected tool services")))
-        self._set_rail_title("rail-mcp", "MCPs · checking")
+        self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("checking")), chip=True)
         self._populate_skill_tree(
             CatalogSnapshot(True, [], "loading", "Fetching the ISyCode skill catalog."))
         refresh = self.query_one("#refresh-openisy", Button)
@@ -117,7 +118,7 @@ class RailMixin:
                     self.query_one("#mcp-status", Static).update(switch_row(
                         False, "External catalog denied",
                         "grant its host in Settings · Authority & Security"))
-                    self._set_rail_title("rail-mcp", "MCPs · denied")
+                    self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("denied")), chip=True)
                     self._populate_skill_tree(denied)
                     self._provider_auth_snapshot = denied
                     self._openisy_provider_snapshot = denied
@@ -135,7 +136,7 @@ class RailMixin:
                 return
             message = f"Integration configuration error: {exc}"
             self.query_one("#mcp-status", Static).update(switch_row(False, "Configuration error", message))
-            self._set_rail_title("rail-mcp", "MCPs · error")
+            self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("error")), chip=True)
             self._populate_skill_tree(CatalogSnapshot(True, [], "error", message))
             self._provider_auth_snapshot = CatalogSnapshot(True, [], "error", message)
             self._openisy_provider_snapshot = CatalogSnapshot(True, [], "error", message)
@@ -144,7 +145,7 @@ class RailMixin:
                 return
             message = f"Integration refresh failed ({type(exc).__name__})."
             self.query_one("#mcp-status", Static).update(switch_row(False, "Refresh failed", message))
-            self._set_rail_title("rail-mcp", "MCPs · error")
+            self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("error")), chip=True)
             self._populate_skill_tree(CatalogSnapshot(True, [], "error", message))
             self._provider_auth_snapshot = CatalogSnapshot(True, [], "error", message)
             self._openisy_provider_snapshot = CatalogSnapshot(True, [], "error", message)
@@ -153,7 +154,7 @@ class RailMixin:
                 return
             mcp_body, mcp_title = self._format_mcp_snapshot(mcp)
             self.query_one("#mcp-status", Static).update(mcp_body)
-            self._set_rail_title("rail-mcp", mcp_title)
+            self._set_rail_title("rail-mcp", mcp_title, chip=True)
             self._mcp_snapshot = mcp
             self._skill_snapshot = skills
             self._provider_auth_snapshot = auth
@@ -176,19 +177,20 @@ class RailMixin:
     def _format_mcp_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
         """Switch rows for the MCP section, plus its folded title."""
         if snapshot.state == "loading":
-            return switch_row(None, "Checking", snapshot.detail), status_phrase("MCPs · checking")
+            return (switch_row(None, "Checking", snapshot.detail),
+                    status_chip("MCPs · {state}", state=tr("checking")))
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
             inactive = snapshot.state in {"not_configured", "not_checked"}
-            shown = "off" if inactive else state
+            shown = tr("off") if inactive else tr(state)
             return (
                 switch_row(False, status_phrase(state), snapshot.detail, inactive=inactive),
-                status_phrase(f"MCPs · {shown}"),
+                status_chip("MCPs · {state}", state=shown),
             )
         if not snapshot.items:
             return (
                 switch_row(False, "No MCP Servers", status_phrase("none configured"), inactive=True),
-                status_phrase("MCPs · none"),
+                status_chip("MCPs · none"),
             )
         rows, on = [], 0
         for item in snapshot.items:
@@ -198,29 +200,30 @@ class RailMixin:
             note = ("service reports an error" if item.get("has_error") else str(item.get("status", "")))
             rows.append(switch_row(
                 healthy, str(item["name"]), "" if healthy else RailMixin._status_note(note)))
-        return switch_rows(rows), status_phrase(f"MCPs · {on}/{len(snapshot.items)} on")
+        return switch_rows(rows), status_chip("MCPs · {on}/{total} on", on=on, total=len(snapshot.items))
 
     @staticmethod
     def _format_skill_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
         if snapshot.state == "loading":
-            return switch_row(None, "Checking", snapshot.detail), status_phrase("Skills · checking")
+            return (switch_row(None, "Checking", snapshot.detail),
+                    status_chip("Skills · {state}", state=tr("checking")))
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
             inactive = snapshot.state in {"not_configured", "not_checked"}
-            shown = "off" if inactive else state
+            shown = tr("off") if inactive else tr(state)
             return (
                 switch_row(False, status_phrase(state), snapshot.detail, inactive=inactive),
-                status_phrase(f"Skills · {shown}"),
+                status_chip("Skills · {state}", state=shown),
             )
         if not snapshot.items:
             return (
                 switch_row(False, "No Skills", status_phrase("none available for this project"), inactive=True),
-                status_phrase("Skills · none"),
+                status_chip("Skills · none"),
             )
         count = len(snapshot.items)
         return (
             switch_row(False, status_phrase(f"{count} available"), status_phrase("select one below for details"), inactive=True),
-            status_phrase(f"Skills · {count} available"),
+            status_chip("Skills · {count} available", count=count),
         )
 
     @staticmethod
@@ -233,9 +236,11 @@ class RailMixin:
             return text
         return status_phrase(text)
 
-    def _set_rail_title(self, section: str, title: str) -> None:
+    def _set_rail_title(self, section: str, title: str, *, chip: bool = False) -> None:
+        """Folded section title. Translated chips keep their own casing."""
         try:
-            self.query_one(f"#{section}", Collapsible).title = status_phrase(title)
+            label = title if chip else status_phrase(title)
+            self.query_one(f"#{section}", Collapsible).title = label
         except (NoMatches, NoScreen):
             pass
 
@@ -252,7 +257,7 @@ class RailMixin:
             catalog = []
         if not catalog:
             body = switch_row(False, "No Language Servers", status_phrase("none detected"), inactive=True)
-            title = "LSPs · None"
+            title = status_chip("LSPs · none")
         else:
             rows = []
             ready = missing = 0
@@ -269,12 +274,13 @@ class RailMixin:
                     rows.append(switch_row(False, label, status_phrase("installed · sandbox does not run it")))
                 else:
                     rows.append(switch_row(False, label, status_phrase("installed · sandbox unavailable")))
-            title = status_phrase(f"LSPs · {ready} ready")
+            title = status_chip("LSPs · {ready} ready", ready=ready)
             if missing:
-                title = status_phrase(f"{title} · {missing} missing")
+                title = status_chip("LSPs · {ready} ready · {missing} missing", ready=ready, missing=missing)
             body = switch_rows(rows)
+        self._lsp_status_title = title
         self.query_one("#lsp-status", Static).update(body)
-        self._set_rail_title("rail-lsp", title)
+        self._set_rail_title("rail-lsp", title, chip=True)
         self._paint_idle()
 
     # ── IsySentinel ────────────────────────────────────────────────────
@@ -304,7 +310,12 @@ class RailMixin:
             self.screen_stack[0].query_one("#sentinel-status", Static).update(body)
         except NoMatches:
             return
-        self._set_rail_title("rail-sentinel", title)
+        self._set_rail_title(
+            "rail-sentinel",
+            status_chip("IsySentinel · {allowed} allow · {denied} deny",
+                         allowed=self._sentinel_feed.allowed,
+                         denied=self._sentinel_feed.denied),
+            chip=True)
 
     async def _load_sentinel_journal(self) -> None:
         """Verify the hash chain once and show its latest decisions (not counted)."""
@@ -372,7 +383,7 @@ class RailMixin:
         tree.root.remove_children()
         skill_body, skill_title = self._format_skill_snapshot(snapshot)
         self.query_one("#skill-status", Static).update(skill_body)
-        self._set_rail_title("rail-skills", skill_title)
+        self._set_rail_title("rail-skills", skill_title, chip=True)
         has_skills = snapshot.state == "ready" and bool(snapshot.items)
         tree.display = has_skills
         detail = self.query_one("#skill-detail", Static)
@@ -729,14 +740,22 @@ class RailMixin:
         return
 
     def _idle_status_rows(self) -> int:
-        """Model line, the blank under it, the status columns, and board padding."""
-        columns = [
-            self._idle_column("LSPs", self._idle_lsp_rows()),
-            self._idle_column("MCPs", self._idle_mcp_rows(),
-                              empty_label=self._idle_mcp_empty_label()),
-            self._idle_column("Skills", self._idle_skill_rows()),
-        ]
-        return 2 + max(len(column) for column in columns) + 1
+        """Model line, the blank under it, the integration summary, and board padding."""
+        return 4
+
+    def _idle_integration_summary(self) -> Text:
+        """One line of integration state; the right rail keeps the detail.
+
+        The idle board used to repeat every LSP, MCP and Skill name that the
+        rail already lists. Counts plus a pointer keep one detail surface.
+        """
+        lsp = getattr(self, "_lsp_status_title", "") or status_phrase("LSPs · none")
+        mcp = self._format_mcp_snapshot(self._mcp_snapshot)[1]
+        skills = self._format_skill_snapshot(self._skill_snapshot)[1]
+        line = Text()
+        line.append(f"{lsp} · {mcp} · {skills}", style=MUTED)
+        line.append("  " + tr("details in the right rail"), style=MUTED)
+        return line
 
     def _landscape_row_budget(self) -> int:
         """Panorama rows that still leave the model line and status columns visible."""
@@ -746,7 +765,7 @@ class RailMixin:
         return max(1, min(MAX_SCENE_ROWS, chat_h - self._idle_status_rows()))
 
     def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
-        """Cell-accurate landscape, model, and integration columns."""
+        """Cell-accurate landscape, model, and integration summary."""
         width = measured_width or self._idle_content_width()
         height = getattr(self, "size", None) and self.size.height or 40
         if height <= 28:
@@ -755,128 +774,17 @@ class RailMixin:
             model = self._model_line or tr("Checking the configured model")
             mode = self._workspace_mode() if callable(getattr(self, "_workspace_mode", None)) else getattr(self, "_workspace_mode", "Classic")
             body.append(f"ISYCODE · {model} · {mode}\n", style=MUTED if checking else TEXT)
-            body.append(tr("Conexiones y herramientas (LSPs, MCPs, Skills) en Espacio"), style=MUTED)
+            body.append(tr("Connections and tools (LSPs, MCPs, Skills) in the rail"), style=MUTED)
             return body
         body = Text()
         body.append(render_landscape(width, max_rows))
         body.append("\n")
         checking = not self._model_line
-        model = self._model_line or "Checking the configured model"
+        model = self._model_line or tr("Checking the configured model")
         body.append("◇ ", style=MUTED if checking else ACCENT)
         body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
-        columns = [
-            self._idle_column("LSPs", self._idle_lsp_rows()),
-            self._idle_column("MCPs", self._idle_mcp_rows(),
-                              empty_label=self._idle_mcp_empty_label()),
-            self._idle_column("Skills", self._idle_skill_rows()),
-        ]
-        gap = 2
-        budgets = [max(cell_len(line.plain) for line in column) for column in columns]
-        room = width - gap * (len(columns) - 1)
-        if sum(budgets) > room:
-            share = max(8, room // len(columns))
-            budgets = [min(budget, share) for budget in budgets]
-            columns = [[self._clip_idle_line(line, budget) for line in column]
-                       for column, budget in zip(columns, budgets)]
-        height = max(len(column) for column in columns)
-        for row in range(height):
-            for index, column in enumerate(columns):
-                line = column[row] if row < len(column) else Text("")
-                body.append(line)
-                pad = budgets[index] - cell_len(line.plain)
-                if index < len(columns) - 1:
-                    body.append(" " * (pad + gap))
-            if row < height - 1:
-                body.append("\n")
+        body.append(self._idle_integration_summary())
         return body
-
-    @staticmethod
-    def _clip_idle_line(line: Text, width: int) -> Text:
-        if cell_len(line.plain) <= width:
-            return line
-        clipped = Text()
-        used = 0
-        for start, end, style in line._spans:
-            piece = line.plain[start:end]
-            room = width - used
-            if room <= 0:
-                break
-            if cell_len(piece) > room:
-                piece = _fit_cells(piece, room)
-            clipped.append(piece, style=style)
-            used += cell_len(piece)
-        return clipped
-
-    @staticmethod
-    def _idle_column(title: str, rows: list[tuple[str, str]], *,
-                     empty_label: str = "None configured") -> list[Text]:
-        from isycode.tui_theme import ascii_only
-        lines = [Text(tr(title), style=f"bold {TEXT}")]
-        if not rows:
-            lines.append(Text(("- " if ascii_only() else "− ") + tr(empty_label), style=MUTED))
-            return lines
-        shown = rows[:14]
-        for color, name in shown:
-            line = Text()
-            glyph = ("[x]" if ascii_only() else "✓") if color == GREEN else (("[!]" if ascii_only() else "!") if color in {YELLOW, RED} else ("[]" if ascii_only() else "▣"))
-            line.append(glyph + " ", style=color)
-            line.append(name, style=TEXT)
-            lines.append(line)
-        extra = len(rows) - len(shown)
-        if extra:
-            lines.append(Text(f"+{extra} more", style=MUTED))
-        return lines
-
-    def _idle_lsp_rows(self) -> list[tuple[str, str]]:
-        rows = []
-        for server in self._lsp_inventory:
-            state = server.get("state")
-            ready = state == "sandbox_ready"
-            name = str(server.get("label") or server.get("id") or "language server")
-            if ready:
-                color = MUTED
-            elif state in {"installed_unavailable", "installed_unsupported"}:
-                color = RED
-            else:
-                color = YELLOW
-            rows.append((color, name))
-        return rows
-
-    def _idle_mcp_rows(self) -> list[tuple[str, str]]:
-        snapshot = self._mcp_snapshot
-        if snapshot.state != "ready":
-            return []
-        rows = []
-        for item in snapshot.items:
-            status = str(item.get("status", "")).lower()
-            healthy = status in {"connected", "ready", "running", "ok", "active"} and not item.get("has_error")
-            starting = "start" in status or status in {"checking", "loading"}
-            color = GREEN if healthy else YELLOW if starting or status else MUTED
-            rows.append((color, str(item.get("name") or "mcp")))
-        return rows
-
-    def _idle_mcp_empty_label(self) -> str:
-        """Honest empty-state for the MCP column: loading is not 'none configured' (F-06)."""
-        state = self._mcp_snapshot.state
-        if state == "ready":
-            return "None configured"
-        if state in {"error", "denied", "unavailable"}:
-            return "Not checked"
-        return "Loading…"
-
-    def _idle_skill_rows(self) -> list[tuple[str, str]]:
-        names: list[str] = []
-        try:
-            from isycode.skill_catalog import skills
-            names.extend(str(name) for name in skills())
-        except (OSError, ValueError):
-            names = []
-        if self._skill_snapshot.state == "ready":
-            for item in self._skill_snapshot.items:
-                name = str(item.get("name") or "")
-                if name and name not in names:
-                    names.append(name)
-        return [(MUTED, name) for name in names]
 
     def action_find_console(self) -> None:
         """Open console-wide search regardless of which main view has focus."""

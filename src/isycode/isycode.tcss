@@ -37,8 +37,8 @@
     #overview-view Collapsible {
         background: transparent; border: none; padding: 0; margin: 0; height: auto;
     }
-    #rail-card > Collapsible { border-bottom: solid #2c313a; }
-    #rail-card > Collapsible:last-of-type { border-bottom: none; }
+    /* Flat rail sections: the collapsed title is its own separator. */
+    #rail-card > Collapsible { border-bottom: none; }
     #overview-view Collapsible:focus-within { border-bottom: solid #bb8cff; }
     #overview-view #rail-connections > Contents { padding: 0 1 0 2; }
     #overview-view CollapsibleTitle {
