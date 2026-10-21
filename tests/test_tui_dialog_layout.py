@@ -83,16 +83,19 @@ def test_onboarding_copy_fits_without_hiding_the_choice(tmp_path, monkeypatch, s
 
 
 @pytest.mark.parametrize("screen_name", ["mode", "quick"])
-def test_onboarding_survives_a_very_long_workspace_path(tmp_path, screen_name):
+def test_onboarding_survives_a_very_long_workspace_path(tmp_path, monkeypatch, screen_name):
     """CI and Windows paths wrap to many more lines than a short temp name.
 
     A long path must not push the choices or the buttons out of an 80x24
-    terminal: the copy scrolls inside its own card instead.
+    terminal: the copy scrolls inside its own card instead. The monkeypatch is
+    the fixture, not a fresh instance: an unreverted patch leaks into the rest
+    of the session and breaks the tests that run after this one.
     """
+
     async def scenario():
         root = tmp_path.joinpath(*["segment-" + "x" * 40 for _ in range(3)])
         root.mkdir(parents=True)
-        configure(root, pytest.MonkeyPatch())
+        configure(root, monkeypatch)
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
