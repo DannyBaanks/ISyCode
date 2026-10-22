@@ -57,6 +57,17 @@ class ActionApprovalStore:
             self._tokens[approval.token] = approval
         return approval
 
+    def clear(self) -> int:
+        """Drop every pending approval; returns how many were invalidated.
+
+        Used when a workspace changes mode (ADR 0010): an approval issued under
+        the previous mode must never be consumable under the new one.
+        """
+        with self._lock:
+            count = len(self._tokens)
+            self._tokens = {}
+            return count
+
     def consume(self, request: ActionRequest, approval: ActionApproval | None) -> bool:
         if not isinstance(request, ActionRequest) or not isinstance(approval, ActionApproval):
             return False

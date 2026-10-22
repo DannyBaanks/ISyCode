@@ -96,32 +96,101 @@ class AuthorityMixin:
         except (OSError, ValueError, WorkspaceAuthorityError):
             self._append("  Trust was not saved. Each edit and command still asks.", YELLOW)
 
+    _MODE_NAMES = {"classic": "Classic", "security": "Security", "flow": "Flow"}
+
+    _MODE_WARNINGS = {
+        "classic": ("Reading/searching, edit proposals, chat, sessions and Git review work without "
+                    "granting each capability. Sandbox commands are ready when supported. "
+                    "The next screen can trust this folder for ordinary edits and isolated tests. "
+                    "Until then, edits, delete/move, commands and commits still ask. "
+                    "Commits, secrets and authority changes keep asking. "
+                    "Integrations still need explicit permission; free shell and sensitive files "
+                    "stay unavailable."),
+        "security": ("Everything starts off; you allow each capability in Settings → Authority. "
+                     "Permissions you granted explicitly stay as they are."),
+        "flow": ("Flow works on its own: reading, edits, moves, deletes and sandboxed commands "
+                 "run without asking, and a shell is available inside the sandbox. Each turn is "
+                 "recorded so you can undo it with /undo. Push, credentials, provider and "
+                 "authority changes, integrations and network for commands still ask or stay off. "
+                 "Classic is recommended for large work, if you are new to the TUI or want more "
+                 "control; Security is for sensitive files and explicit permissions."),
+    }
+
     async def _change_workspace_mode(self, mode: str) -> None:
-        classic = mode == "classic"
+        if mode not in self._MODE_NAMES:
+            return
+        name = self._MODE_NAMES[mode]
         if not await self._await_screen(TailscaleConfirmScreen(
-                "Switch this workspace to Classic?" if classic else "Switch this workspace to Security?",
-                ("Reading/searching, edit proposals, chat, sessions and Git review work without "
-                 "granting each capability. Sandbox commands are ready when supported. "
-                 "The next screen can trust this folder for ordinary edits and isolated tests. "
-                 "Until then, edits, delete/move, commands and commits still ask. "
-                 "Commits, secrets and authority changes keep asking. "
-                 "Integrations still need explicit permission; free shell and sensitive files "
-                 "stay unavailable." if classic else
-                 "Everything starts off; you allow each capability in Settings → Authority. "
-                 "Permissions you granted explicitly stay as they are."),
-                "Use Classic" if classic else "Use Security")):
+                tr("Switch this workspace to {mode}?", mode=name),
+                tr(self._MODE_WARNINGS[mode]), tr("Use {mode}", mode=name))):
             self._open_authority_menu()
             return
+        await self._switch_engine_mode(mode)
+        if mode == "classic":
+            await self._offer_quiet_trust(WorkspaceAuthority(self._workspace_root), again=True)
+        self._update_workspace_identity_ui()
+        self._open_authority_menu()
+
+    async def _switch_engine_mode(self, mode: str) -> None:
+        """Reconfigure the engine for a new mode without losing the conversation (ADR 0010).
+
+        Stops an active turn, invalidates pending approvals and session
+        permissions, closes a running Flow turn, writes the mode, and lets the
+        next action re-read the fresh policy through a new authority.
+        """
+        name = self._MODE_NAMES[mode]
+        if await self._stop_active_turn_for_switch(name) is False:
+            self._append(f"  Staying in {self._MODE_NAMES.get(self._workspace_mode(), '')} mode.", MUTED)
+            return
+        # Approvals issued under the old mode must never be consumable under the new one.
+        cleared = self._action_approvals.clear()
+        # Flow turn records belong to the mode that produced them; close the open one.
+        try:
+            from isycode.turn_journal import TurnJournal
+            active = TurnJournal.active(self._workspace_root)
+            if active is not None:
+                active.finish()
+        except Exception:
+            pass
         try:
             authority = WorkspaceAuthority(self._workspace_root)
             authority.set_mode(mode)
-            self._append(f"  This workspace now uses {'Classic' if classic else 'Security'} mode.", GREEN)
-            if classic:
-                await self._offer_quiet_trust(authority, again=True)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Mode could not be changed ({type(exc).__name__}).", RED)
-        self._update_workspace_identity_ui()
-        self._open_authority_menu()
+            self._append(f"  Mode could not be changed ({type(exc).__name__}); nothing was switched.", RED)
+            return
+        if mode == "flow":
+            try:
+                from isycode.turn_journal import TurnJournal
+                TurnJournal.begin(self._workspace_root)
+            except Exception:
+                pass
+        note = f"  Engine restarted in {name} mode."
+        if cleared:
+            note += f" {cleared} pending approval{'s' if cleared != 1 else ''} invalidated."
+        self._append(note, GREEN)
+
+    async def _stop_active_turn_for_switch(self, name: str) -> bool:
+        """Cancel a running turn before a mode switch. False means the user kept the mode."""
+        task = getattr(self, "_chat_turn_task", None)
+        loop = getattr(self, "_loop_task", None)
+        running = (task is not None and not task.done()) or (loop is not None and not loop.done())
+        if not running:
+            return True
+        if not await self._await_screen(TailscaleConfirmScreen(
+                tr("A turn is running. Switch to {mode} anyway?", mode=name),
+                tr("The current turn is cancelled before the engine restarts. Completed effects "
+                   "stay in the action journal and can be undone; nothing new is started."),
+                tr("Cancel the turn and switch"))):
+            return False
+        import asyncio
+        for candidate in (task, loop):
+            if candidate is not None and not candidate.done():
+                candidate.cancel()
+                try:
+                    await candidate
+                except (asyncio.CancelledError, Exception):
+                    pass
+        return True
 
     def _open_authority_menu(self) -> None:
         entries: list[dict] = [self._entry(
