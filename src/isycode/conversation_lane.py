@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 
+from isycode.localization import tr
 from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 
@@ -46,7 +47,7 @@ class ConversationLane:
         self.steering_restore_positions: dict = {}
         self.selected_queued_message = None
         self.idea_nudge_due = False
-        self.activity_message = "Chat ready"
+        self.activity_message = tr("Chat ready")
         self.activity_color = None
         # ("user"|"note"|"assistant", text, sent_at or color)
         self.lines: list = []

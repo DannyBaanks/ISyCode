@@ -227,6 +227,7 @@ from isycode.tui_theme import (
     plain_text,
 )
 from isycode.tui_widgets import (
+    fit_rail_button,
     PreviewOptionList,
     Banner,
     ActivityStatus,
@@ -592,17 +593,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "#show-files": "Files",
             "#refresh-openisy": "Refresh integrations",
             "#file-up": "↑ Up",
-            "#file-refresh": "Refresh",
+            "#file-refresh": ("Refresh", "file rail"),
             "#workspace-folders": "Folders",
             "#file-copy-path": "Copy path",
-            "#file-open-preview": "Open preview",
+            "#file-open-preview": ("Open preview", "file rail"),
             "#lsp-install-hint": "Install commands",
             "#save-provider-key": "Save key",
             "#cancel-provider-key": "Cancel",
         }
         for widget_id, msgid in buttons.items():
+            msgid, context = msgid if isinstance(msgid, tuple) else (msgid, None)
             try:
-                self.query_one(widget_id, Button).label = tr(msgid)
+                button = self.query_one(widget_id, Button)
+                button.label = tr(msgid, context=context)
+                if widget_id == "#file-up":
+                    fit_rail_button(button, str(button.label))
             except (NoMatches, NoScreen, ScreenStackError):
                 continue
         try:
@@ -2062,10 +2067,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 lane.activity_message = "Interrupted"
                 lane.activity_color = YELLOW
             elif failed is not None:
-                lane.activity_message = f"Failed · {type(failed).__name__}"
+                lane.activity_message = tr("Failed · {kind}", kind=type(failed).__name__)
                 lane.activity_color = RED
             else:
-                lane.activity_message = "Chat ready"
+                lane.activity_message = tr("Chat ready")
                 lane.activity_color = MUTED
         if not cancelled and not followed:
             self.notify("A conversation failed" if failed is not None else "A conversation finished")

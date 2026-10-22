@@ -143,7 +143,7 @@ msgid "Paste API key…"
 msgstr "Pegar clave de API…"
 
 msgid "Search workspace paths…"
-msgstr "Buscar rutas del espacio…"
+msgstr "Buscar rutas…"
 
 msgid "Chat ready"
 msgstr "Chat listo"
@@ -2979,3 +2979,14 @@ msgstr "Workspace Authority denegó la solicitud o no pudo verificarla"
 
 msgid "Provider failure without a recognized diagnostic"
 msgstr "Fallo del proveedor sin un diagnóstico reconocido"
+
+msgid "Failed · {kind}"
+msgstr "Falló · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "Recargar"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "Vista previa"

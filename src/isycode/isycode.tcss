@@ -81,14 +81,20 @@
     #lsp-install-note { display: none; height: auto; width: 1fr; min-width: 0; }
     #files-view { display: none; }
     #file-controls { height: 1; }
-    #file-controls Button { width: 1fr; }
+    /* No side padding: three labels share a 25-column rail at 80x24. A label
+       that still does not fit ends in an ellipsis instead of wrapping away. */
+    #file-controls Button, #file-actions Button {
+        width: 1fr; padding: 0; text-wrap: nowrap; text-overflow: ellipsis;
+    }
+    /* One blank cell between neighbours; "Up" is sized to its label in code. */
+    #file-controls #file-refresh, #file-controls #workspace-folders,
+    #file-actions #file-open-preview { margin-left: 1; }
     #filter-controls { height: 3; }
     #filter-controls Button { width: 1fr; }
     #file-search { height: 3; }
     #workspace-tree { height: 1fr; min-height: 6; background: #11151b; border: round #414650; }
     #file-preview-box { height: auto; max-height: 50%; }
     #file-actions { height: 1; }
-    #file-actions Button { width: 1fr; }
     #file-preview-scroll { height: 7; min-height: 4; border: round #414650; background: #11151b; }
     #chat {
         height: 1fr; background: $surface; padding: 1 2;

@@ -891,7 +891,7 @@ class RailMixin:
         if self._loop_task is not None and not self._loop_task.done():
             self._animate_activity()
         else:
-            self._set_activity(getattr(self, "_activity_message", "Chat ready"),
+            self._set_activity(getattr(self, "_activity_message", tr("Chat ready")),
                                getattr(self, "_activity_color", MUTED))
 
     def _rail_identity_line(self) -> str:

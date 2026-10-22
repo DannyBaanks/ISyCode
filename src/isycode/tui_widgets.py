@@ -348,6 +348,22 @@ class ActivateTree(Tree):
         self.select_node(node)
 
 
+def _rail_file_button(label: str, *, fit: bool = False, **kwargs) -> Button:
+    """A Files-view action; a ``fit`` one is exactly as wide as its label.
+
+    At 80×24 three actions share a 25-column rail, so the shortest label
+    gives its spare cells to its neighbours.
+    """
+    button = Button(label, **kwargs)
+    if fit:
+        fit_rail_button(button, label)
+    return button
+
+
+def fit_rail_button(button: Button, label: str) -> None:
+    button.styles.width = cell_len(label)
+
+
 class SidePanel(Vertical):
     """Right rail for live integration status and the authorized file browser."""
 
@@ -391,14 +407,15 @@ class SidePanel(Vertical):
             yield Button(tr("No plan pending"), id="review-plan", disabled=True)
         with Vertical(id="files-view"):
             with Horizontal(id="file-controls"):
-                yield Button(tr("↑ Up"), id="file-up")
-                yield Button(tr("Refresh"), id="file-refresh")
-                yield Button(tr("Folders"), id="workspace-folders")
+                yield _rail_file_button(tr("↑ Up"), fit=True, id="file-up")
+                yield _rail_file_button(tr("Refresh", context="file rail"), id="file-refresh")
+                yield _rail_file_button(tr("Folders"), id="workspace-folders")
             yield Input(placeholder=tr("Search workspace paths…"), id="file-search")
             yield ActivateTree(tr("Workspace"), id="workspace-tree")
             with Horizontal(id="file-actions"):
-                yield Button(tr("Copy path"), id="file-copy-path", disabled=True)
-                yield Button(tr("Open preview"), id="file-open-preview", disabled=True)
+                yield _rail_file_button(tr("Copy path"), id="file-copy-path", disabled=True)
+                yield _rail_file_button(tr("Open preview", context="file rail"),
+                                        id="file-open-preview", disabled=True)
             with Vertical(id="file-preview-box"):
                 yield Static("", id="file-preview-meta", markup=False)
                 with VerticalScroll(id="file-preview-scroll"):

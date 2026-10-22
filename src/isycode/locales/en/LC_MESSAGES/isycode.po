@@ -2979,3 +2979,14 @@ msgstr "Workspace Authority denied or could not verify the request"
 
 msgid "Provider failure without a recognized diagnostic"
 msgstr "Provider failure without a recognized diagnostic"
+
+msgid "Failed · {kind}"
+msgstr "Failed · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "Refresh"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "Open preview"

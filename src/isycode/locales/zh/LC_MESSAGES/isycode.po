@@ -2979,3 +2979,14 @@ msgstr "Workspace Authority 拒绝了请求或无法验证"
 
 msgid "Provider failure without a recognized diagnostic"
 msgstr "提供商故障，无可识别的诊断"
+
+msgid "Failed · {kind}"
+msgstr "失败 · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "刷新"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "预览"
