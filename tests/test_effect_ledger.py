@@ -447,10 +447,10 @@ def test_a_command_over_the_cap_is_not_promoted(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    fake.write_text(fake_module.FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
+    fake.write_text(fake_module.FAKE_BWRAP.format(python=Path(sys.executable).resolve(),
+                                                  log=str(tmp_path / "bwrap.json")), encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
-    monkeypatch.setenv("FAKE_BWRAP_LOG", str(tmp_path / "bwrap.json"))
     root = tmp_path / "project"
     root.mkdir()
     (root / ".isyroot").write_text("id\n", encoding="utf-8")

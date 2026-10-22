@@ -73,3 +73,47 @@ def test_lsp_sandbox_denies_sockets_and_workspace_writes(tmp_path):
             stderr=subprocess.PIPE, text=True, timeout=10, check=False)
         assert result.returncode == 0, result.stderr
         assert result.stdout.strip() == expected
+
+
+def test_lsp_sandbox_drops_capabilities(tmp_path):
+    sandbox = tmp_path / "bwrap"
+    sandbox.write_text("#!/bin/sh\n")
+    sandbox.chmod(0o755)
+    script = tmp_path / "langserver.index.js"
+    script.write_text("")
+    node = tmp_path / "node"
+    node.write_text("#!/bin/sh\n")
+    node.chmod(0o755)
+    root = tmp_path / "project"
+    root.mkdir()
+    server = {"id": "pyright", "sandbox_executable": str(sandbox),
+              "server_executable": str(script), "node_executable": str(node)}
+    command = _sandbox_command(root, server)
+    drop = command.index("--cap-drop")
+    assert command[drop + 1] == "ALL"
+    assert "--clearenv" in command
+
+
+def test_lsp_process_is_launched_without_the_host_environment(tmp_path, monkeypatch):
+    sandbox = tmp_path / "bwrap"
+    sandbox.write_text("#!/bin/sh\n")
+    sandbox.chmod(0o755)
+    script = tmp_path / "langserver.index.js"
+    script.write_text("")
+    node = tmp_path / "node"
+    node.write_text("#!/bin/sh\n")
+    node.chmod(0o755)
+    root = tmp_path / "project"
+    root.mkdir()
+    server = {"id": "pyright", "sandbox_executable": str(sandbox),
+              "server_executable": str(script), "node_executable": str(node)}
+    captured = {}
+
+    async def fake_exec(*command, **kwargs):
+        captured.update(kwargs)
+        raise RuntimeError("stop before launch")
+
+    monkeypatch.setattr("isycode.lsp.asyncio.create_subprocess_exec", fake_exec)
+    with pytest.raises(RuntimeError, match="stop before launch"):
+        asyncio.run(pyright_workspace_symbols(root, "symbol", server))
+    assert captured["env"] == {}

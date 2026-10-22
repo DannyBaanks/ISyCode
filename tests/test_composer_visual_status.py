@@ -70,7 +70,7 @@ def test_friendly_model_stays_visible_and_startup_does_not_repeat_path(tmp_path,
             await pilot.pause()
             app._paint_idea_box()
             label = "Nemotron 3 Ultra 550b a55b / Default · NVIDIA NIM"
-            assert "Idea box     " + label in plain_text(app.query_one('#idea-box'))
+            assert "Idea box · " + label in plain_text(app.query_one('#idea-box'))
             assert str(app._workspace_root) not in app._idle_board_text().plain
             await check_model(app)
             assert label in app._model_line
@@ -128,12 +128,21 @@ def test_overview_rail_shows_the_chat_scrollbar_only_when_it_grows(tmp_path, mon
             bar = overview.vertical_scrollbar
             assert isinstance(bar, QuietScrollBar)
             assert bar.display
-            lines = bar.render().plain.splitlines()
+
+            async def bar_lines():
+                for _ in range(50):
+                    rendered = bar.render().plain.splitlines()
+                    if rendered:
+                        return rendered
+                    await pilot.pause(0.02)
+                return bar.render().plain.splitlines()
+
+            lines = await bar_lines()
             assert lines[0] == ' ▲ ' and lines[-1] == ' ▼ '
             top = lines.index('━━━')
             overview.scroll_end(animate=False)
             await pilot.pause()
-            moved = bar.render().plain.splitlines()
+            moved = await bar_lines()
             assert moved.index('━━━') > top
             assert moved[0] == ' ▲ ' and moved[-1] == ' ▼ '
             await probe.remove()

@@ -2289,14 +2289,14 @@
       "action": "session.delete",
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "file": "isycode/tui_app_sessions.py",
-      "line": 987,
+      "line": 989,
       "owner": "session_delete"
     },
     {
       "action": "session.delete",
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "file": "isycode/tui_app_sessions.py",
-      "line": 1027,
+      "line": 1029,
       "owner": "session_delete"
     },
     {
