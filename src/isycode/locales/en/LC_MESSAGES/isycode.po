@@ -2990,3 +2990,96 @@ msgstr "Refresh"
 msgctxt "file rail"
 msgid "Open preview"
 msgstr "Open preview"
+
+msgid "1. Open {url} and sign in."
+msgstr "1. Open {url} and sign in."
+
+msgid "2. Create an API key and copy it. Most consoles show it only once."
+msgstr "2. Create an API key and copy it. Most consoles show it only once."
+
+msgid "3. Paste it below and choose Save key."
+msgstr "3. Paste it below and choose Save key."
+
+msgid "Connect {name}"
+msgstr "Connect {name}"
+
+msgid "Create an access token with permission to call Inference Providers."
+msgstr "Create an access token with permission to call Inference Providers."
+
+msgid "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+msgstr "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+
+msgid "No API key was entered; nothing was saved."
+msgstr "No API key was entered; nothing was saved."
+
+msgid "Open API Keys in the Cerebras Cloud console and create a key."
+msgstr "Open API Keys in the Cerebras Cloud console and create a key."
+
+msgid "Open API keys in the Token Factory console and create a key."
+msgstr "Open API keys in the Token Factory console and create a key."
+
+msgid "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+msgstr "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+
+msgid "Open page"
+msgstr "Open page"
+
+msgid "OpenCode Go needs an active Go subscription on the same account."
+msgstr "OpenCode Go needs an active Go subscription on the same account."
+
+msgid "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+msgstr "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+
+msgid "Paste a key first."
+msgstr "Paste a key first."
+
+msgid "Paste the key below and choose Save key."
+msgstr "Paste the key below and choose Save key."
+
+msgid "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+msgstr "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+
+msgid "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+msgstr "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+
+msgid "This preset uses the GLM coding endpoint: use a Coding Plan key."
+msgstr "This preset uses the GLM coding endpoint: use a Coding Plan key."
+
+msgid "You can also set {env} in your environment and restart ISyCode."
+msgstr "You can also set {env} in your environment and restart ISyCode."
+
+msgid "key available"
+msgstr "key available"
+
+msgid "key needed"
+msgstr "key needed"
+
+msgid "{name} needs an API key before ISyCode can list its models or chat."
+msgstr "{name} needs an API key before ISyCode can list its models or chat."
+
+msgid "{name} · {status} · add or replace"
+msgstr "{name} · {status} · add or replace"
+
+msgid "3. Paste it below and choose Use for this session."
+msgstr "3. Paste it below and choose Use for this session."
+
+msgid "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+msgstr "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+
+msgid "No secure OS keyring is available here; nothing was saved."
+msgstr "No secure OS keyring is available here; nothing was saved."
+
+msgid "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+msgstr "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+
+msgid "Paste the key below and choose Use for this session."
+msgstr "Paste the key below and choose Use for this session."
+
+msgid "Use for this session"
+msgstr "Use for this session"
+
+msgid "key for this session"
+msgstr "key for this session"
+
+msgid "{name} key kept in memory for this session only; nothing was saved."
+msgstr "{name} key kept in memory for this session only; nothing was saved."

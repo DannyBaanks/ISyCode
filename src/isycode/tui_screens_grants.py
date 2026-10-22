@@ -14,6 +14,7 @@ from pathlib import Path
 from isycode.workspace_setup import broad_workspace_reason
 from isycode.tui_screens_approval import ApprovalScreen, DECISION_CSS, decision_hint
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 
 
 
@@ -501,3 +502,105 @@ class AddCredentialScreen(ModalScreen[dict[str, str] | None]):
 
     def action_cancel(self) -> None:
         self.dismiss(None)
+
+
+class ProviderKeyScreen(Dialog):
+    """Ask for a provider's API key: where to create it, then one masked field.
+
+    Returns the pasted text, or None. The field keeps the id the clipboard
+    guard refuses to copy from, and is emptied before the screen closes.
+    Saving still goes through the credential owner and its confirmation.
+    Without an OS keyring (``keyring=False``) the dialog says so before the
+    paste, and its action keeps the key for this session only.
+    """
+
+    dialog_width = "normal"
+    dialog_cancel_result = None
+
+    def __init__(self, label: str, *, url: str = "", note: str = "", env: str = "",
+                 keyring: bool = True) -> None:
+        self.label = label
+        self.url = url
+        self.note = note
+        self.env = env
+        self.keyring = keyring
+        super().__init__(id="provider-key")
+
+    def dialog_heading(self) -> str:
+        return tr("Connect {name}", name=self.label)
+
+    def dialog_note(self) -> str:
+        lines = [tr("{name} needs an API key before ISyCode can list its models or chat.",
+                    name=self.label), ""]
+        if self.url:
+            lines += [tr("1. Open {url} and sign in.", url=self.url),
+                      tr("2. Create an API key and copy it. Most consoles show it only once."),
+                      tr("3. Paste it below and choose Save key.") if self.keyring
+                      else tr("3. Paste it below and choose Use for this session.")]
+        else:
+            lines.append(tr("Paste the key below and choose Save key.") if self.keyring
+                         else tr("Paste the key below and choose Use for this session."))
+        if self.note:
+            lines += ["", tr(self.note)]
+        if not self.keyring:
+            # After the steps: getting the key matters first, where it lives second.
+            lines += ["", tr("No secure OS keyring is available on this machine, so the key cannot be "
+                             "saved. It can still be used for this session; you will paste it again "
+                             "next time.")]
+        if self.env:
+            lines += ["", tr("You can also set {env} in your environment and restart ISyCode.",
+                             env=self.env)]
+        return "\n".join(lines)
+
+    def dialog_hint(self) -> str:
+        if not self.keyring:
+            return tr("Kept in memory for this run only; never written to disk, this project, "
+                      "its logs or the chat.")
+        return tr("Saved in your OS keyring for your user; never in this project, its logs or the chat.")
+
+    def compose_body(self) -> ComposeResult:
+        yield Input(placeholder=tr("Paste API key…"), password=True, id="provider-key-input")
+        yield Static("", id="provider-key-error", markup=False)
+
+    def dialog_actions(self) -> tuple[DialogAction, ...]:
+        actions = [DialogAction("provider-key-cancel", tr("Cancel"))]
+        if self.url:
+            actions.append(DialogAction("provider-key-open", tr("Open page")))
+        actions.append(DialogAction("provider-key-save",
+                                    tr("Save key") if self.keyring else tr("Use for this session"),
+                                    "primary"))
+        return tuple(actions)
+
+    def on_mount(self, event) -> None:
+        # The frame would focus the first action; a key dialog starts in its field.
+        event.prevent_default()
+        self.query_one("#provider-key-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        event.stop()
+        self._save()
+
+    def dismiss_action(self, action_id: str) -> None:
+        if action_id == "provider-key-save":
+            self._save()
+        elif action_id == "provider-key-open":
+            self.app.open_url(self.url)
+        else:
+            self._clear_and_dismiss(None)
+
+    def action_cancel(self) -> None:
+        self._clear_and_dismiss(None)
+
+    def _save(self) -> None:
+        field = self.query_one("#provider-key-input", Input)
+        if not field.value.strip():
+            error = self.query_one("#provider-key-error", Static)
+            error.update(tr("Paste a key first."))
+            error.display = True
+            field.focus()
+            return
+        self._clear_and_dismiss(field.value.strip())
+
+    def _clear_and_dismiss(self, result: str | None) -> None:
+        self.query_one("#provider-key-input", Input).value = ""
+        self.dismiss(result)

@@ -104,6 +104,48 @@ PRESETS: dict[str, dict[str, Any]] = {
 }
 
 
+# Where a person creates the API key for a provider, shown in the key dialog.
+# Display text only: ISyCode never fetches these pages. Where a console moves
+# its key page around, the link is the console and the note names the section.
+KEY_PAGES: dict[str, str] = {
+    "openai": "https://platform.openai.com/api-keys",
+    "nvidia": "https://build.nvidia.com/settings/api-keys",
+    "nebius": "https://tokenfactory.nebius.com",
+    "groq": "https://console.groq.com/keys",
+    "openrouter": "https://openrouter.ai/settings/keys",
+    "anthropic": "https://console.anthropic.com/settings/keys",
+    "xai": "https://console.x.ai",
+    "deepseek": "https://platform.deepseek.com/api_keys",
+    "fireworks": "https://fireworks.ai/account/api-keys",
+    "cerebras": "https://cloud.cerebras.ai",
+    "huggingface": "https://huggingface.co/settings/tokens",
+    "moonshot": "https://platform.moonshot.ai/console/api-keys",
+    "zai": "https://z.ai/manage-apikey/apikey-list",
+    "opencode": "https://opencode.ai/auth",
+    "opencode-go": "https://opencode.ai/auth",
+    "mistral": "https://console.mistral.ai/api-keys",
+    "google": "https://aistudio.google.com/apikey",
+    "vercel": "https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys",
+    "alibaba": "https://modelstudio.console.alibabacloud.com",
+    "venice": "https://venice.ai/settings/api",
+    "scaleway": "https://console.scaleway.com/iam/api-keys",
+    "deepinfra": "https://deepinfra.com/dash/api_keys",
+}
+
+# One extra line for providers whose key page or key type needs a word.
+# Values are English msgids; the dialog translates them.
+KEY_NOTES: dict[str, str] = {
+    "nvidia": "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-.",
+    "nebius": "Open API keys in the Token Factory console and create a key.",
+    "cerebras": "Open API Keys in the Cerebras Cloud console and create a key.",
+    "huggingface": "Create an access token with permission to call Inference Providers.",
+    "zai": "This preset uses the GLM coding endpoint: use a Coding Plan key.",
+    "opencode-go": "OpenCode Go needs an active Go subscription on the same account.",
+    "vercel": "Create the key under AI Gateway → API Keys in your Vercel dashboard.",
+    "alibaba": "Open API-KEY management in Model Studio and create a pay-as-you-go key.",
+}
+
+
 # Provider screen, in the order it is painted. A key that is absent from PRESETS
 # is listed only: selecting it does not send traffic.
 # group, key, label, blurb
@@ -487,10 +529,26 @@ def resolved_chat_model(provider_name: str | None = None) -> str:
             or DEFAULT_MODEL)
 
 
+# Keys typed for this run when no OS keyring can hold them. Process memory only:
+# never written to disk or exported to the environment, so child processes do
+# not inherit them, and gone when ISyCode exits. Same trust as an exported
+# variable, which the provider already accepts.
+_SESSION_KEYS: dict[str, str] = {}
+
+
+def use_session_key(name: str, secret: str) -> None:
+    """Keep a provider key in memory for this run only."""
+    if name not in PRESETS or not secret.strip():
+        raise ValueError("unknown provider or empty key")
+    _SESSION_KEYS[name] = secret.strip()
+
+
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
     if name == "chatgpt":
         return ""
+    if name in _SESSION_KEYS:
+        return _SESSION_KEYS[name]
     if name == "xai":
         from isycode.grok_session import access_token, xai_auth_mode
         if xai_auth_mode() == "session":
@@ -524,6 +582,8 @@ def provider_credential_state(name: str) -> str:
         return "environment"
     if provider == active and os.environ.get("ISYMOTRON_API_KEY", "").strip():
         return "environment"
+    if provider in _SESSION_KEYS:
+        return "session"
     vault_error = False
     try:
         from isycode.credentials import CredentialVault, CredentialVaultError, saved_secret_exists
