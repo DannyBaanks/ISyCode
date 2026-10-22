@@ -6,12 +6,8 @@ ISySentinel and the action journal accept the request.
 """
 from __future__ import annotations
 
-from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
-from textual.screen import ModalScreen
-from textual.widgets import Button, Static
-
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 
 BRIDGE_PEERS_TOOL = {
     "type": "function",
@@ -75,38 +71,25 @@ BRIDGE_WAKE_TOOL = {
 BRIDGE_TOOL_NAMES = frozenset({"bridge_peers", "bridge_send", "bridge_wake"})
 
 
-class BridgeSendScreen(ModalScreen[bool]):
+class BridgeSendScreen(Dialog):
     """Show the exact recipient and text before a Bridge message is sent."""
 
-    CSS = """
-    BridgeSendScreen { align: center middle; background: #000000 65%; }
-    #bridge-send-card { width: 84; max-width: 94%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
-    #bridge-send-title { height: auto; color: #edf1f5; text-style: bold; margin-bottom: 1; }
-    #bridge-send-copy { height: auto; max-height: 14; overflow-y: auto; margin-bottom: 1; }
-    #bridge-send-actions { height: 3; align-horizontal: right; }
-    #bridge-send-actions Button { margin-left: 1; }
-    """
-    BINDINGS = [Binding("escape", "cancel", "Cancel", show=False),
-                Binding("ctrl+c", "cancel", "Cancel", show=False)]
+    dialog_title = "Send this Bridge message?"
+    dialog_width = "normal"
+    dialog_tone = "approval"
+    dialog_cancel_result = False
 
     def __init__(self, *, action: str, to: str, topic: str, message: str) -> None:
-        super().__init__(id="bridge-send")
         self.action = action
         self.to = to
         self.topic = topic
         self.message = message
+        super().__init__(id="bridge-send")
 
-    def compose(self):
-        title = ("Wake this session?" if self.action == "wake"
-                 else "Send this Bridge message?")
-        with Vertical(id="bridge-send-card", classes="isy-dialog"):
-            yield Static(tr(title), id="bridge-send-title", classes="isy-dialog-title")
-            yield Static(self._copy(), id="bridge-send-copy", markup=False)
-            with Horizontal(id="bridge-send-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel"), id="bridge-send-no")
-                yield Button(tr("Send"), id="bridge-send-yes", variant="primary")
+    def dialog_heading(self) -> str:
+        return tr("Wake this session?") if self.action == "wake" else tr("Send this Bridge message?")
 
-    def _copy(self) -> str:
+    def dialog_note(self) -> str:
         lines = [tr("To: {to}").format(to=self.to)]
         if self.topic:
             lines.append(tr("Topic: {topic}").format(topic=self.topic))
@@ -118,15 +101,13 @@ class BridgeSendScreen(ModalScreen[bool]):
                         "not access to files, commands or the network."))
         return "\n".join(lines)
 
-    def on_mount(self) -> None:
-        self.query_one("#bridge-send-no", Button).focus()
+    def dialog_actions(self):
+        return (
+            DialogAction("bridge-send-no", tr("Cancel"), focused=True),
+            DialogAction("bridge-send-yes", tr("Send"), "primary"),
+        )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        event.stop()
-        if event.button.id == "bridge-send-yes":
-            self.dismiss(True)
-        else:
-            self.dismiss(False)
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id == "bridge-send-yes")
 
-    def action_cancel(self) -> None:
-        self.dismiss(False)
+

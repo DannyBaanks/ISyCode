@@ -8,11 +8,10 @@ from time import monotonic
 from rich.cells import cell_len
 from rich.text import Text
 from rich.syntax import Syntax
-from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea
+from textual.containers import VerticalScroll
+from textual.widgets import Static, TextArea
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 
 
 def extract_range(text, selection):
@@ -122,50 +121,42 @@ def selectable_markdown(markdown):
     return result
 
 
-class CopyMenuScreen(ModalScreen[tuple[str, str] | None]):
-    CSS = """
-    CopyMenuScreen { align: center middle; background: #000000 65%; }
-    #copy-card { width: 76; max-width: 96%; height: auto; max-height: 90%; padding: 1 2; border: solid #718291; background: #000000; }
-    #copy-heading { height: auto; text-style: bold; margin-bottom: 1; }
-    #copy-note { height: auto; }
-    #copy-preview { height: auto; max-height: 6; margin: 1 0; }
-    #copy-preview Static { height: auto; }
-    #copy-actions { height: 3; }
-    #copy-actions Button { width: 1fr; min-width: 0; height: 3; }
-    """
-    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+class CopyMenuScreen(Dialog):
+    """Selection or whole box, never a silent fallback."""
+
+    dialog_title = "Copy text"
+    dialog_width = "narrow"
+    dialog_default_action = "copy-selection"
 
     def __init__(self, selected: str, whole: str):
         super().__init__()
         self.selected = selected
         self.whole = whole
 
-    def compose(self):
-        with Vertical(id="copy-card", classes="isy-dialog"):
-            yield Static(tr("Copy text"), id="copy-heading", classes="isy-dialog-title")
-            yield Static(tr("Only the selected characters are copied. Whole-box copy is a separate choice."), id="copy-note")
-            with VerticalScroll(id="copy-preview"):
-                yield Static(Text(self.selected) if self.selected else tr("No text selected."), markup=False)
-            with Horizontal(id="copy-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Copy selection"), id="copy-selection", disabled=not self.selected)
-                yield Button(tr("Copy whole box"), id="copy-whole", disabled=not self.whole)
-                yield Button(tr("Cancel"), id="copy-cancel")
+    def dialog_note(self) -> str:
+        return tr("Only the selected characters are copied. Whole-box copy is a separate choice.")
 
-    def on_mount(self):
-        target = "#copy-selection" if self.selected else "#copy-whole" if self.whole else "#copy-cancel"
-        self.query_one(target, Button).focus()
+    def compose_body(self):
+        with VerticalScroll(id="copy-preview", classes="isy-dialog-preview"):
+            yield Static(Text(self.selected) if self.selected else tr("No text selected."),
+                         markup=False, classes="isy-dialog-copy")
 
-    def on_button_pressed(self, event):
-        event.stop()
-        if event.button.id == "copy-selection" and self.selected:
+    def dialog_actions(self):
+        return (
+            DialogAction("copy-selection", tr("Copy selection"), "primary",
+                         focused=bool(self.selected), disabled=not self.selected),
+            DialogAction("copy-whole", tr("Copy whole box"),
+                         focused=not self.selected, disabled=not self.whole),
+            DialogAction("copy-cancel", tr("Cancel")),
+        )
+
+    def dismiss_action(self, action_id: str) -> None:
+        if action_id == "copy-selection" and self.selected:
             self.dismiss((self.selected, "selection"))
-        elif event.button.id == "copy-whole" and self.whole:
+        elif action_id == "copy-whole" and self.whole:
             self.dismiss((self.whole, "content_box"))
         else:
             self.dismiss(None)
-
-    def action_cancel(self):
-        self.dismiss(None)
 
 
 def remember_copy_selection(widget):

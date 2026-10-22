@@ -355,6 +355,7 @@ class SidePanel(Vertical):
         with Horizontal(id="rail-tabs"):
             yield Button(tr("Overview"), id="show-overview")
             yield Button(tr("Files"), id="show-files")
+        yield Button("", id="rail-identity", compact=True)
         with QuietVerticalScroll(id="overview-view"):
             with Vertical(id="rail-card"):
                 with Collapsible(title=tr("IsySentinel"), id="rail-sentinel"):

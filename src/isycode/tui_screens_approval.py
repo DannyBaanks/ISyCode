@@ -12,10 +12,10 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from pathlib import Path
-from rich.syntax import Syntax
 from rich.text import Text
 from isycode.workspace_write import WritePreview
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 import shlex
 
 
@@ -65,46 +65,42 @@ def review_diff(diff: str) -> Text:
     return text
 
 
-class ReviewConsentScreen(ModalScreen[bool]):
+class ReviewConsentScreen(Dialog):
     """Show the exact user-provided text before sending it to a reviewer API."""
 
-    CSS = DECISION_CSS + """
-    ReviewConsentScreen { align: center middle; background: #000000 58%; }
-    #review-consent { width: 90; }
-    """
-    BINDINGS = [Binding("escape", "cancel_review", "Cancel"),
-                Binding("ctrl+c", "cancel_review", "Cancel", show=False)]
+    dialog_title = "External model review · GPT 6 Luna · OpenAI API"
+    dialog_width = "wide"
+    dialog_height = "fill"
+    dialog_tone = "approval"
+    dialog_cancel_result = False
 
     def __init__(self, artifact: str) -> None:
-        super().__init__()
         self.artifact = artifact
+        super().__init__()
 
-    def compose(self) -> ComposeResult:
-        with Vertical(id="review-consent", classes="isy-dialog"):
-            yield Static(tr("External model review · GPT 6 Luna · OpenAI API"), id="review-consent-title", classes="isy-dialog-title")
-            with VerticalScroll(id="review-consent-body", classes="isy-dialog-body"):
-                yield Static(
-                    f"{tr('Owner')}: {tr('external model review')}\n"
-                    f"{tr('Scope')}: {tr('the text shown below')}\n"
-                    f"{tr('Duration')}: {tr('one-use, one HTTP request')}\n"
-                    f"{tr('Not granted')}: {tr('no tools, no file access, no retries')}",
-                    id="review-consent-structural", markup=False)
-                yield Static(tr("Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."), id="review-consent-warning")
-                with Vertical(id="review-consent-artifact", classes="isy-dialog-detail"):
-                    yield Static(Text(self.artifact))
-            with Horizontal(id="review-consent-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel"), id="review-cancel", classes="-refuse")
-                yield Button(tr("Send this text"), id="review-send", variant="primary")
-            yield decision_hint()
+    def compose_body(self) -> ComposeResult:
+        structural = Text()
+        structural.append(f"{tr('Owner')}: {tr('external model review')}\n", style="bold")
+        structural.append(f"{tr('Scope')}: {tr('the text shown below')}\n")
+        structural.append(f"{tr('Duration')}: {tr('one-use, one HTTP request')}\n")
+        structural.append(f"{tr('Not granted')}: {tr('no tools, no file access, no retries')}")
+        yield Static(structural, classes="isy-dialog-structural", markup=False)
+        yield Static(tr("Only the text below will be sent. The reviewer has no tools. One HTTP "
+                        "request, max 1,200 output tokens; automatic retries are disabled."),
+                     classes="isy-dialog-copy")
+        yield Static(Text(self.artifact), classes="isy-dialog-detail")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "review-send")
+    def dialog_hint(self) -> str:
+        return tr("↑↓ scroll · Tab actions · Enter choose · Esc cancel")
 
-    def on_mount(self) -> None:
-        self.query_one("#review-cancel", Button).focus()
+    def dialog_actions(self):
+        return (
+            DialogAction("review-cancel", tr("Cancel"), focused=True),
+            DialogAction("review-send", tr("Send this text"), "primary"),
+        )
 
-    def action_cancel_review(self) -> None:
-        self.dismiss(False)
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id == "review-send")
 
 
 class ApprovalScreen(ModalScreen[bool]):

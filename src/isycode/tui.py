@@ -714,6 +714,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one(Banner).set_compact(True)
         self.query_one("#workspace-authority-label", Static).update(
             "Filesystem Authority · loading ISyCode grants…")
+        self._paint_rail_identity()
         commands = self._plugins.command_items()
         self._command_names = [name for name, _ in commands]
         self._command_entries = [
@@ -840,6 +841,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                           if enabled else
                           "Filesystem Authority · no read grant; tree enumeration is unavailable")
         self.query_one("#workspace-authority-label", Static).update(authority_text)
+        self._paint_rail_identity()
         await self._load_directory(self._file_path)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -853,6 +855,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self._set_activity(
                     "Review cancelled · no automatic retry; inspect before requesting again",
                     YELLOW)
+        elif button_id == "rail-identity":
+            self._show_identity()
         elif button_id in {"show-overview", "show-files"}:
             self._set_rail_view("files" if button_id == "show-files" else "overview")
         elif button_id == "sidebar-button":
@@ -2477,6 +2481,26 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except (ValueError, UnicodeError):
             self.notify("Clipboard content could not be attached", severity="warning")
         prompt.focus()
+
+    def action_open_copy_menu(self) -> None:
+        """Keyboard door to the copy menu: the same choices as a double click."""
+        from textual.screen import ModalScreen
+        from isycode.tui_copy import CopyTextArea, open_copy_menu
+        from isycode.tui_widgets import ExpandableBox, SelectableText
+        if isinstance(self.screen, ModalScreen):
+            return
+        widget = self.focused
+        if isinstance(widget, CopyTextArea):
+            open_copy_menu(widget, widget.text, widget.selected_text)
+            return
+        if isinstance(widget, SelectableText):
+            container = next(
+                (parent for parent in widget.ancestors
+                 if isinstance(parent, (ExpandableBox, CommandOutputCard))), None)
+            whole = container.copy_text() if container is not None else widget._selection_plain
+            open_copy_menu(widget, whole)
+            return
+        self._append("  Focus a message or a preview, then press Copy.", MUTED)
 
     async def _request_clipboard_copy(self, text: str, source: str) -> None:
         authority = WorkspaceAuthority(self._workspace_root)
