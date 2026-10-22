@@ -34,7 +34,7 @@ DECISION_CSS = """
 .isy-dialog-actions Button.-refuse { border: solid #f7888e; color: #f7888e; background: #000000; }
 .isy-dialog-actions Button:focus { border: solid #00d7ff; color: #00d7ff; background: #002c36; text-style: bold; }
 .isy-dialog-actions Button:disabled { border: solid #46545f; color: #718291; background: #000000; }
-.isy-dialog-hint { height: 2; margin-top: 1; border-top: solid #718291; color: #a8b7c5; text-style: none; }
+.isy-dialog-hint { height: auto; max-height: 2; margin-top: 1; border-top: solid #718291; color: #a8b7c5; text-style: none; }
 .isy-dialog-structural { height: auto; margin-bottom: 1; color: #a8b7c5; text-style: none; }
 .isy-dialog-options { height: 4; min-height: 4; border: none; background: #000000; }
 .isy-dialog-options > .option-list--option { text-style: none; }

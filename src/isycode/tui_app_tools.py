@@ -26,6 +26,7 @@ from isycode.file_picker import ContextFilePickerOwner, FilePickerUnavailable
 from isycode.action_runtime import (
     CHAT_WORKSPACE_TOOLS,
     CONTEXT_ACCESS_TOOL_NAME,
+    GatewayMCPInvocationOwner,
     LocalWorkspaceReadOwner,
     ProviderNetworkOwner,
     TOOL_ACTIONS,
@@ -43,6 +44,11 @@ from rich.markdown import Markdown as RichMarkdown
 from isycode.providers import PRESETS, Provider, ProviderError, load_provider_key, selected_provider_name
 from isycode.streaming import StreamError
 import time as _time
+from isycode.bridge_tools import BRIDGE_TOOL_NAMES, BridgeSendScreen
+from isycode.integration_tools import (
+    GATEWAY_TOOL_PREFIX, INTEGRATION_TOOL_NAMES, gateway_tool_target,
+)
+from isycode.tui_screens_sessions import BridgePresenceScreen
 from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, SECURITY, _elapsed_label
 from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
@@ -51,6 +57,11 @@ from isycode.tui_screens_approval import (
     MemoryConfirmScreen, BrowserReadPreviewScreen,
 )
 from isycode.workspace_memory import MEMORY_TOOL_OPERATIONS, WorkspaceMemoryOwner
+from isycode.gateway_client import GatewayClient
+from isycode.decision_view import verified_receipt_line
+from isycode.security import ActionRequest
+from isycode.tui_screens_mcp import MCPInvocationConfirmScreen
+from urllib.parse import urlparse
 from isycode.tui_screens_sessions import AgentQuestionScreen
 
 
@@ -138,6 +149,216 @@ class ToolMixin:
                 group.finish_leaf(card, f"{label} · {state} · {elapsed}")
                 self.query_one(ChatArea).follow_tail()
 
+    def _bridge_tools_enabled(self) -> bool:
+        """Offer the Bridge tools only when the workspace granted them."""
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except Exception:  # noqa: BLE001 - a missing policy only hides the tools
+            return False
+        required = ("bridge.connect", "bridge.peek", "bridge.send", "bridge.wake")
+        return all(isinstance(grants.get(action), dict)
+                   and grants[action].get("enabled") is True
+                   for action in required)
+
+    def _bridge_owner(self):
+        """One coordination owner per session: the identity stays stable."""
+        from isycode.bridge_coordination import BridgeCoordinationOwner
+        owner = getattr(self, "_bridge_coordination_owner", None)
+        if owner is None:
+            owner = BridgeCoordinationOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                self._action_approvals)
+            self._bridge_coordination_owner = owner
+        return owner
+
+    async def _call_bridge_tool(self, name: str, raw_arguments: str) -> str:
+        """Run one Bridge proposal: review first, then the owner's gate."""
+        from isycode.bridge_tools import BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL
+        try:
+            arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
+        except json.JSONDecodeError:
+            arguments = None
+        if not isinstance(arguments, dict):
+            return json.dumps({"error": "bridge tool arguments must be a JSON object"})
+        if name == "bridge_peers":
+            return json.dumps(await self._bridge_peers(), ensure_ascii=False)
+        try:
+            if name == "bridge_send":
+                to = str(arguments.get("to") or "")
+                topic = str(arguments.get("topic") or "")
+                message = str(arguments.get("message") or "")
+                kind = str(arguments.get("kind") or "message")
+                if set(arguments) - {"to", "topic", "message", "kind"}:
+                    raise ValueError("bridge_send accepts to, topic, message and kind")
+                owner = self._bridge_owner()
+                request = owner.prepare("send", to=to, topic=topic, kind=kind,
+                                        payload=message)
+                confirmed = await self._await_screen(BridgeSendScreen(
+                    action="send", to=to, topic=topic, message=message))
+                if not confirmed:
+                    return json.dumps({"status": "declined"})
+                outcome = await asyncio.to_thread(
+                    owner.execute, request, self._action_approvals.issue(request))
+                return json.dumps({"status": outcome.decision.lower(),
+                                   "detail": outcome.reason[:200],
+                                   "receipt": outcome.receipt.receipt_id if outcome.receipt else None},
+                                  ensure_ascii=False)
+            if name == "bridge_wake":
+                to = str(arguments.get("to") or "")
+                message = str(arguments.get("message") or "")
+                if set(arguments) - {"to", "message"}:
+                    raise ValueError("bridge_wake accepts to and message")
+                owner = self._bridge_owner()
+                request = owner.prepare("wake", to=to, message=message)
+                confirmed = await self._await_screen(BridgeSendScreen(
+                    action="wake", to=to, topic="", message=message))
+                if not confirmed:
+                    return json.dumps({"status": "declined"})
+                outcome = await asyncio.to_thread(
+                    owner.execute, request, self._action_approvals.issue(request))
+                return json.dumps({"status": outcome.decision.lower(),
+                                   "detail": outcome.reason[:200],
+                                   "receipt": outcome.receipt.receipt_id if outcome.receipt else None},
+                                  ensure_ascii=False)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return json.dumps({"error": f"bridge action unavailable: {type(exc).__name__}"})
+        return json.dumps({"error": "unknown bridge tool"})
+
+    def _gateway_mcp_tools_enabled(self) -> bool:
+        """Offer the Gateway tools once the catalog is discovered and granted."""
+        snapshot = getattr(self, "_gateway_mcp_snapshot", None)
+        if snapshot is None or snapshot.state != "ready" or not snapshot.items:
+            return False
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except Exception:  # noqa: BLE001 - an unavailable policy only hides the tools
+            return False
+        return grants.get("mcp.invoke", {}).get("enabled") is True
+
+    def _gateway_chat_tools(self) -> list[dict]:
+        """The discovered Gateway MCP catalog as chat tool schemas."""
+        from isycode.integration_tools import gateway_chat_tools
+        snapshot = getattr(self, "_gateway_mcp_snapshot", None)
+        return gateway_chat_tools(list(snapshot.items)) if snapshot is not None else []
+
+    async def _call_gateway_chat_tool(self, name: str, raw_arguments: str) -> str:
+        """One proposed Gateway call: review it, then the owner's gate."""
+        from isycode.gateway_mcp import tool_schema_digest
+        from isycode.integration_tools import gateway_tool_target
+        try:
+            arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
+        except json.JSONDecodeError:
+            arguments = None
+        if not isinstance(arguments, dict):
+            return json.dumps({"error": "gateway tool arguments must be a JSON object"})
+        snapshot = getattr(self, "_gateway_mcp_snapshot", None)
+        tool = next((item for item in (snapshot.items if snapshot else [])
+                     if item.get("name") == gateway_tool_target(name)), None)
+        if tool is None:
+            return json.dumps({"error": "tool is absent from the discovered Gateway catalog"})
+        endpoint = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787").rstrip("/")
+        try:
+            GatewayClient._validate_base_url(endpoint)
+            if urlparse(endpoint).path not in {"", "/"}:
+                raise ValueError("Gateway endpoint must be an origin without a path")
+        except ValueError:
+            return json.dumps({"error": "Gateway URL is invalid; no MCP request was sent"})
+        accepted = await self._await_screen(MCPInvocationConfirmScreen(
+            gateway_tool_target(name), str(tool.get("description", "")), arguments, endpoint))
+        if not accepted:
+            return json.dumps({"status": "declined"})
+        try:
+            request = ActionRequest(
+                "mcp.invoke", self._workspace_root,
+                GatewayMCPInvocationOwner.target_for(endpoint),
+                {"server": GatewayMCPInvocationOwner.SERVER_ID,
+                 "tool": gateway_tool_target(name), "arguments": arguments,
+                 "url": endpoint, "schema_digest": tool_schema_digest(tool)},
+                execution_owner="gateway_mcp")
+            approval = self._action_approvals.issue(request, ttl_seconds=30)
+            owner = GatewayMCPInvocationOwner(
+                self._workspace_root, WorkspaceAuthority(self._workspace_root),
+                self._action_approvals)
+            self._set_activity(f"MCP · awaiting local grant for {gateway_tool_target(name)}", YELLOW)
+            outcome = await owner.invoke(
+                gateway_tool_target(name), arguments, endpoint,
+                tool_schema_digest(tool), list(snapshot.items), approval)
+        except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+            return json.dumps({"status": "denied",
+                               "detail": f"Gateway call denied before dispatch ({type(exc).__name__})"})
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            return json.dumps({"status": outcome.decision.lower(),
+                               "detail": outcome.reason[:200]})
+        self._append(f"  MCP {gateway_tool_target(name)} · Gateway returned a result", CYAN)
+        self._append(f"  {verified_receipt_line(outcome.receipt.receipt_id)}", GREEN)
+        return outcome.text
+
+    async def _call_integration_read_tool(self, name: str) -> str:
+        """Read-only integration state: what exists, never what it can do."""
+        if name == "openisy_catalog":
+            payload = {
+                "openisy": self._catalog_state(getattr(self, "_openisy_provider_snapshot", None)),
+                "mcp": self._catalog_state(getattr(self, "_mcp_snapshot", None)),
+                "skills": self._catalog_state(getattr(self, "_skill_snapshot", None)),
+                "gateway_tools": [item.get("name") for item in
+                                  (getattr(self, "_gateway_mcp_snapshot", None).items
+                                   if getattr(self, "_gateway_mcp_snapshot", None) else [])],
+            }
+        else:
+            from isycode.integration_tools import l1_state_rows
+            payload = {"l1": l1_state_rows()}
+        return json.dumps(payload, ensure_ascii=False)
+
+    @staticmethod
+    def _catalog_state(snapshot) -> dict:
+        if snapshot is None:
+            return {"state": "unknown", "items": 0}
+        try:
+            items = list(snapshot.items)
+        except (AttributeError, TypeError):
+            items = []
+        return {"state": str(snapshot.state), "items": len(items)}
+
+    async def _register_bridge_peer(self) -> bool:
+        """Register this window as a Bridge peer, with the user's approval."""
+        owner = self._bridge_owner()
+        try:
+            request = owner.prepare("connect")
+        except (OSError, ValueError, RuntimeError) as exc:
+            self._append(f"  Bridge is not available here ({type(exc).__name__}).", YELLOW)
+            return False
+        approval = self._action_approvals.issue(request)
+        outcome = await asyncio.to_thread(owner.execute, request, approval)
+        if outcome.decision != "ALLOW":
+            self._append("  Bridge registration was denied.", YELLOW)
+            return False
+        self._bridge_identity = owner.identity
+        self._append(f"  Registered on the Bridge as {owner.identity}.", GREEN)
+        return True
+
+    async def _bridge_peers(self) -> dict:
+        """Read the registered peers through the presence owner."""
+        from isycode.bridge_presence import BridgePresenceOwner
+        confirmed = await self._await_screen(BridgePresenceScreen())
+        if not confirmed:
+            return {"status": "declined"}
+        root = self._workspace_root
+        approvals = self._action_approvals
+        base = WorkspaceAuthority(root)
+        try:
+            request = BridgePresenceOwner(root, base, approvals).prepare()
+            owner = BridgePresenceOwner(
+                root, OneShotActionAuthority(base, request), approvals)
+            outcome, rows = await asyncio.to_thread(
+                owner.read, request, approvals.issue(request))
+        except (OSError, RuntimeError, ValueError):
+            return {"status": "unavailable", "reason": "bridge handshake unavailable"}
+        if outcome.decision != "ALLOW":
+            return {"status": "unavailable", "reason": outcome.reason[:200]}
+        return {"status": "ok",
+                "peers": [{"name": str(row.get("name")), "state": str(row.get("status"))}
+                          for row in rows]}
+
     async def _dispatch_chat_tool_impl(self, call: dict) -> tuple[str, str]:
         """Route one provider function call through the canonical local read owner."""
         function = call.get("function") if isinstance(call, dict) else None
@@ -170,6 +391,12 @@ class ToolMixin:
             except (TypeError, ValueError):
                 result = {"status": "denied", "error": "Delegation requires one bounded task"}
             return tool_call_id, json.dumps(result, ensure_ascii=False)
+        if isinstance(name, str) and name in BRIDGE_TOOL_NAMES:
+            return tool_call_id, await self._call_bridge_tool(name, raw_arguments)
+        if isinstance(name, str) and name.startswith(GATEWAY_TOOL_PREFIX):
+            return tool_call_id, await self._call_gateway_chat_tool(name, raw_arguments)
+        if isinstance(name, str) and name in INTEGRATION_TOOL_NAMES:
+            return tool_call_id, await self._call_integration_read_tool(name)
         if isinstance(name, str) and name.startswith("mcp__"):
             try:
                 mcp_arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None

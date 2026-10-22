@@ -4,6 +4,7 @@ import asyncio
 from isycode.contracts import CatalogSnapshot
 from isycode.tui import GREEN, RED, TUIApp, plain_text, switch_row
 from isycode.tui_widgets import BoxTitle
+from isycode.localization import configure_locale
 from isycode.tui_theme import status_phrase
 from isycode.user_defaults import UserDefaultsStore
 
@@ -63,6 +64,7 @@ def test_palette_meets_wcag_aa_for_its_actual_uses():
 
 
 def test_mcp_snapshot_counts_healthy_services():
+    configure_locale("en")
     snapshot = CatalogSnapshot(True, [{"name": "files", "status": "connected"},
                                       {"name": "web", "status": "connected", "has_error": True}],
                                "ready", "")
@@ -73,6 +75,7 @@ def test_mcp_snapshot_counts_healthy_services():
 
 
 def test_status_chips_use_title_case_and_leave_names_alone():
+    configure_locale("en")
     assert status_phrase("LSPs · 2 ready · 3 missing") == "LSPs · 2 Ready · 3 Missing"
     assert status_phrase("6 available") == "6 Available"
     assert status_phrase("not on PATH") == "Not On PATH"

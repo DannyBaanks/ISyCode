@@ -31,6 +31,9 @@ def test_usage_refresh_does_not_crash_with_an_active_modal(tmp_path, monkeypatch
             await pilot.pause()
             assert app.screen is not main
             app._refresh_usage()
-            assert "tok" in plain_text(main.query_one("#usage-status", Static))
+            status = main.query_one("#usage-status", Static)
+            assert status is not None
+            # No turn has run, so the composer shows no telemetry at all.
+            assert plain_text(status) == ""
             app.pop_screen()
     asyncio.run(scenario())

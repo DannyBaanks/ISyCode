@@ -843,6 +843,8 @@ class MenuMixin:
             operation = self._change_session_grant(turn_on)
         elif value == "session_delete":
             operation = self._change_session_delete_grant(turn_on)
+        elif value == "bridge_coordination":
+            operation = self._change_bridge_grant(turn_on)
         elif value.startswith("network:"):
             operation = self._change_network_action_grant(value[len("network:"):], turn_on)
         else:

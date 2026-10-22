@@ -501,6 +501,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._lsp_inventory = discover_servers()
         except (OSError, RuntimeError, ValueError):
             self._lsp_inventory = []
+            self._lsp_status_title = ""
+            self._bridge_identity = ""
         self._search_query = ""
         self._search_mode = False
         self._rail_view = "overview"
@@ -1408,6 +1410,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         widget = self.query_one("#usage-status", Static)
         limit, source = self._context_window()
         total = self._usage.input_tokens + self._usage.output_tokens
+        if (total == 0 and not self._history and self._throughput.last_rate is None
+                and not self._usage.requests and not self._usage.unknown_requests):
+            # Nothing has run yet. Three rows of zeros are noise, not telemetry.
+            # A recorded request keeps its panel even when the provider did not
+            # report its counters, because an unknown count is real information.
+            widget.update("")
+            return
         widget.update(usage_panel(
             self._history, widget.content_size.width or 18,
             self._throughput.rate_line(total, bool(self._usage.unknown_requests)),
@@ -2072,6 +2081,42 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return json.loads(outcome.text).get("advisory")
         except ValueError:
             return None
+
+    def push_screen(self, screen, callback=None, wait_for_dismiss=False, *, mode=None):
+        """Keep a modal card inside the main column instead of over the rail.
+
+        Modal screens center their card on the whole terminal, so a wide rail
+        used to be painted over and its labels were clipped mid-word. Reserve
+        the visible rail width as right padding: the card stays legible and the
+        rail keeps its content behind the overlay.
+        """
+        if isinstance(screen, ModalScreen):
+            self._reserve_rail_for_modal(screen)
+        return super().push_screen(screen, callback, wait_for_dismiss, mode=mode)
+
+    def _reserve_rail_for_modal(self, screen: ModalScreen) -> None:
+        """Pad a modal screen on the right by the visible rail width."""
+        if not getattr(self, "_rail_visible", False):
+            return
+        try:
+            rail = self.query_one(SidePanel)
+            main = self.query_one("#main", Widget)
+        except Exception:
+            return
+        if not rail.display or not main.display:
+            return
+        width = int(rail.outer_size.width or 0)
+        if width <= 0:
+            width = int(getattr(self, "_rail_width", 0) or 0)
+        if width <= 0:
+            return
+        # Keep the dialog readable: a card squeezed into a narrow column wraps
+        # the copy into more lines than it can show. The rail is only reserved
+        # when the main column still has room for a normal-width dialog.
+        available = int(self.size.width or 0) - width
+        if available < 60:
+            return
+        screen.styles.padding = (0, width, 0, 0)
 
     async def _await_screen(self, screen: Any) -> Any:
         """Show a modal screen and wait for its result from a worker or a plain task.

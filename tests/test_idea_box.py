@@ -70,7 +70,8 @@ def test_idea_box_tool_updates_overlay_without_duration_or_tool_history(monkeypa
     call_id, result, box_text, chat_text, before, after = asyncio.run(scenario())
     assert call_id == "idea-1"
     assert result == {"status": "shown"}
-    assert "Idea box" in box_text and "[redacted]" in box_text
+    from isycode.localization import tr
+    assert tr("Idea box") in box_text and "[redacted]" in box_text
     assert "Tool duration" not in chat_text
     assert after == before
 
