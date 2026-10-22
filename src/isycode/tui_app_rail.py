@@ -50,7 +50,7 @@ from isycode.search import find_text_matches
 from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_sessions import BridgePresenceScreen, ConsoleSearchScreen
-from isycode.tui_theme import ACCENT, GREEN, RED, _fit_cells, static_content
+from isycode.tui_theme import ACCENT, GREEN, RED, static_content
 from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.workspace_authority import OneShotActionAuthority
 from rich.cells import cell_len

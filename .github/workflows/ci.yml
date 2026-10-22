@@ -12,6 +12,26 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    # Names that fail only at runtime (an undefined screen, a shadowed import)
+    # slip past the suite when no test walks that branch.
+    name: Lint (undefined names)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Install ruff
+        run: python -m pip install ruff==0.17.1
+
+      - name: Check undefined and redefined names
+        run: ruff check src --select F821,F811,E9
+
   test:
     name: Tests (Linux)
     runs-on: ubuntu-latest
@@ -154,7 +174,7 @@ jobs:
 
   package:
     name: Package (${{ matrix.target }})
-    needs: [test, test-textual-current, test-windows, gate-evidence]
+    needs: [lint, test, test-textual-current, test-windows, gate-evidence]
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

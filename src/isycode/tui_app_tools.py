@@ -244,7 +244,6 @@ class ToolMixin:
     async def _call_gateway_chat_tool(self, name: str, raw_arguments: str) -> str:
         """One proposed Gateway call: review it, then the owner's gate."""
         from isycode.gateway_mcp import tool_schema_digest
-        from isycode.integration_tools import gateway_tool_target
         try:
             arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
         except json.JSONDecodeError:

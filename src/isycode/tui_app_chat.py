@@ -5,6 +5,7 @@ The phases keep the same statements. TUIApp inherits this mixin.
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 from isycode.asyncio_compat import cancel_requested
 from isycode.hive_bridge import emit as hive_emit
 import json

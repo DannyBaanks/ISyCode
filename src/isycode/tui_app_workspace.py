@@ -887,7 +887,7 @@ class WorkspaceMixin:
         """Window of the selected model: the account catalog first, then the
         vendored models.dev snapshot (exact id match), else unknown."""
         from isycode.model_card import catalog_entry
-        from isycode.providers import model_context_limit, resolved_chat_model, selected_provider_name
+        from isycode.providers import model_context_limit
         provider, model = selected_provider_name(), resolved_chat_model()
         limit, source = model_context_limit(provider, model)
         if limit:

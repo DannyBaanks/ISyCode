@@ -16,6 +16,7 @@ from textual.widgets import (
 )
 from textual.events import Click
 from textual.widgets._collapsible import CollapsibleTitle
+from textual.widgets.tree import TreeNode
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from pathlib import Path

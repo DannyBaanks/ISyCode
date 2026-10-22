@@ -158,7 +158,7 @@ from textual.dom import NoScreen
 from textual.events import Click, Key, Resize
 from textual.widget import Widget
 from textual.widgets import (
-    Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select, Checkbox,
+    Static, Input, Footer, Button, Tree, TextArea, OptionList, Select, Checkbox,
 )
 from textual.widgets import Collapsible as TextualCollapsible
 from textual.widgets.option_list import Option
@@ -2486,7 +2486,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         """Keyboard door to the copy menu: the same choices as a double click."""
         from textual.screen import ModalScreen
         from isycode.tui_copy import CopyTextArea, open_copy_menu
-        from isycode.tui_widgets import ExpandableBox, SelectableText
+        from isycode.tui_widgets import SelectableText
         if isinstance(self.screen, ModalScreen):
             return
         widget = self.focused

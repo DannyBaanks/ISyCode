@@ -26,7 +26,7 @@ from isycode.harness_graph import (
     copyable_default_model,
     present_by_semantic,
 )
-from isycode.hive import HiveManager, HiveConfig, AgentMeta
+from isycode.hive import HiveManager, HiveConfig, AgentMeta, HiveMessage
 from isycode.hive.hook_server import HookServer
 from isycode.harness_probe import (
     probe_catalog,
@@ -119,6 +119,7 @@ from isycode.tui_screens_harness import (
     HarnessModelConfirmScreen,
     HarnessTranscriptConfirmScreen,
     HarnessComposeScreen,
+    HarnessRepairConfirmScreen,
     MultiHarnessScreen,
 )
 from isycode.tui_screens_sessions import (
