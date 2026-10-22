@@ -97,6 +97,6 @@ def implicit_actions(mode: str) -> frozenset[str]:
     """Actions a mode may supply without an explicit grant. Security is empty."""
     if mode == "security":
         return frozenset()
-    if mode == "classic":
+    if mode in {"classic", "flow"}:
         return classic_preset_ids()
     raise ValueError("unknown workspace mode")

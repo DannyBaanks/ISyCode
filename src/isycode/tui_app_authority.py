@@ -53,12 +53,12 @@ class AuthorityMixin:
             return "security"
 
     def _request_is_quiet(self, request) -> bool:
-        """Trusted Classic covers this request, so the per-action modal stays closed."""
-        if self._workspace_mode() != 'classic':
+        """Trusted Classic or Flow covers this request, so the per-action modal stays closed."""
+        if self._workspace_mode() not in {"classic", "flow"}:
             return False
         try:
-            from isycode.workspace_trust import quiet_classic
-            return bool(quiet_classic(WorkspaceAuthority(request.workspace_root), request))
+            from isycode.workspace_trust import quiet_request
+            return bool(quiet_request(WorkspaceAuthority(request.workspace_root), request))
         except Exception:
             return False
 

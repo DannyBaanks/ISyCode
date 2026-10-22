@@ -40,6 +40,10 @@ QUIET_CLASSIC_ACTIONS = frozenset({
     "workspace.command.run",
 })
 
+# Flow (ADR 0010): the same recoverable local work, without the trust ceremony;
+# choosing Flow with its warning is the consent. Everything else still asks.
+QUIET_FLOW_ACTIONS = QUIET_CLASSIC_ACTIONS
+
 
 def onboarding_brief(*, root: Path, mode: str, provider: str,
                      sends_workspace_context: bool) -> str:
@@ -66,7 +70,50 @@ def modal_required(authority, request) -> bool:
     spec = ACTION_BY_ID.get(getattr(request, "action_id", ""))
     if spec is None or not spec.approval_required:
         return False
-    return not quiet_classic(authority, request)
+    return not quiet_request(authority, request)
+
+
+def quiet_request(authority, request) -> bool:
+    """The one place that decides whether a request skips its per-action question.
+
+    Classic needs a trusted root (``quiet_classic``); Flow needs only the mode.
+    Both keep the same action list, sandbox and staging limits. Any error or
+    mismatch says no, so the per-action approval stays.
+    """
+    return quiet_classic(authority, request) or quiet_flow(authority, request)
+
+
+def _sandboxed_default_stage(request) -> bool:
+    from isycode.command_runner import sandbox_executable
+    from isycode.action_runtime import COMMAND_DEFAULT_STAGE_BYTES
+    stage_bytes = request.parameters.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES)
+    if type(stage_bytes) is not int or not 1 <= stage_bytes <= COMMAND_DEFAULT_STAGE_BYTES:
+        return False
+    return bool(sandbox_executable())
+
+
+def quiet_flow(authority, request) -> bool:
+    """Whether a Flow workspace covers this one request without a question.
+
+    Does not grant, consume or execute: the grant, IsySentinel, the ledger and
+    the journal still decide. A broad folder never runs quietly.
+    """
+    try:
+        if request.action_id not in QUIET_FLOW_ACTIONS:
+            return False
+        if request.workspace_root != authority.root:
+            return False
+        if authority.mode() != "flow":
+            return False
+        if broad_workspace_reason(authority.root):
+            return False
+        if not WorkspaceTrust._policy_current(authority):
+            return False
+        if request.action_id == "workspace.command.run" and not _sandboxed_default_stage(request):
+            return False
+        return True
+    except Exception:
+        return False
 
 
 def quiet_classic(authority, request) -> bool:
@@ -83,14 +130,8 @@ def quiet_classic(authority, request) -> bool:
             return False
         if authority.mode() != "classic":
             return False
-        if action_id == "workspace.command.run":
-            from isycode.command_runner import sandbox_executable
-            from isycode.action_runtime import COMMAND_DEFAULT_STAGE_BYTES
-            stage_bytes = request.parameters.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES)
-            if type(stage_bytes) is not int or not 1 <= stage_bytes <= COMMAND_DEFAULT_STAGE_BYTES:
-                return False
-            if not sandbox_executable():
-                return False
+        if action_id == "workspace.command.run" and not _sandboxed_default_stage(request):
+            return False
         return WorkspaceTrust().trusted(authority)
     except Exception:
         return False
@@ -292,6 +333,7 @@ class WorkspaceTrust:
 
 
 __all__ = [
-    "ACCEPT_PHRASE", "PROFILE_VERSION", "QUIET_CLASSIC_ACTIONS", "TRUST_VERSION",
-    "WorkspaceTrust", "modal_required", "onboarding_brief", "quiet_classic",
+    "ACCEPT_PHRASE", "PROFILE_VERSION", "QUIET_CLASSIC_ACTIONS", "QUIET_FLOW_ACTIONS",
+    "TRUST_VERSION", "WorkspaceTrust", "modal_required", "onboarding_brief", "quiet_classic",
+    "quiet_flow", "quiet_request",
 ]
