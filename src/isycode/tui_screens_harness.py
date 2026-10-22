@@ -25,120 +25,107 @@ from isycode.tui_theme import (
 from isycode.tui_widgets import Collapsible, activate_on_second_click
 from isycode.tui_effort_slider import EffortSlider
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 
 
 
-class HarnessFolderConfirmScreen(ModalScreen[bool]):
-    CSS = """
-    HarnessFolderConfirmScreen { align: center middle; background: #000000 68%; }
-    #harness-folder-confirm { width: 86; max-width: 94%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
-    #harness-folder-path { height: auto; color: #edf1f5; margin: 1 0; }
-    #harness-folder-actions { height: 3; align-horizontal: right; }
-    #harness-folder-actions Button { margin-left: 1; }
-    """
-    BINDINGS = [Binding("escape", "decline", "Cancel", show=False),
-                Binding("n", "decline", "Cancel", show=False),
-                Binding("y", "approve", "Use folder", show=False)]
+class HarnessFolderConfirmScreen(Dialog):
+    dialog_title = "Use this folder?"
+    dialog_width = "normal"
+    dialog_tone = "approval"
+    dialog_cancel_result = False
+    BINDINGS = [Binding("n", "cancel", "Cancel", show=False),
+                Binding("y", "confirm", "Use folder", show=False)]
 
     def __init__(self, harness_id: str, path: Path) -> None:
-        super().__init__()
         self.harness_id = harness_id
         self.path = path
+        super().__init__()
 
-    def compose(self) -> ComposeResult:
+    def dialog_note(self) -> str:
         label = self.harness_id.title()
-        with Vertical(id="harness-folder-confirm", classes="isy-dialog"):
-            yield Static(
-                f"Use this folder for {label}? ISyCode will read option names only. "
+        return (f"Use this folder for {label}? ISyCode will read option names only. "
                 "This does not grant workspace access, a network host, or a credential.")
-            yield Static(str(self.path), id="harness-folder-path", markup=False)
-            with Horizontal(id="harness-folder-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel"), id="harness-folder-no")
-                yield Button(tr("Use folder"), id="harness-folder-yes", variant="primary")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "harness-folder-yes")
+    def compose_body(self):
+        yield Static(str(self.path), classes="isy-dialog-copy", markup=False)
 
-    def action_approve(self) -> None:
+    def dialog_actions(self):
+        return (
+            DialogAction("harness-folder-no", tr("Cancel"), focused=True),
+            DialogAction("harness-folder-yes", tr("Use folder"), "primary"),
+        )
+
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id == "harness-folder-yes")
+
+    def action_confirm(self) -> None:
         self.dismiss(True)
 
-    def action_decline(self) -> None:
-        self.dismiss(False)
 
-
-class HarnessModelConfirmScreen(ModalScreen[bool]):
-    CSS = """
-    HarnessModelConfirmScreen { align: center middle; background: #000000 68%; }
-    #harness-model-confirm { width: 92; max-width: 95%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
-    #harness-model-actions { height: 3; align-horizontal: right; margin-top: 1; }
-    #harness-model-actions Button { margin-left: 1; }
-    """
-    BINDINGS = [Binding("escape", "decline", "Cancel", show=False),
-                Binding("n", "decline", "Cancel", show=False),
-                Binding("y", "approve", "Save", show=False)]
+class HarnessModelConfirmScreen(Dialog):
+    dialog_title = "Save this model selection?"
+    dialog_width = "normal"
+    dialog_tone = "approval"
+    dialog_cancel_result = False
+    BINDINGS = [Binding("n", "cancel", "Cancel", show=False),
+                Binding("y", "confirm", "Save", show=False)]
 
     def __init__(self, provider: str, model: str) -> None:
-        super().__init__()
         self.provider = provider
         self.model = model
+        super().__init__()
 
-    def compose(self) -> ComposeResult:
-        with Vertical(id="harness-model-confirm", classes="isy-dialog"):
-            yield Static(
-                f"Save provider {self.provider} and model {self.model} as this process's selection "
+    def dialog_note(self) -> str:
+        return (f"Save provider {self.provider} and model {self.model} as this process's selection "
                 "and in preferences/provider.json? The open chat's state.model is not changed. "
-                "No API key is loaded. No network call is made.", markup=False)
-            with Horizontal(id="harness-model-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel"), id="harness-model-no")
-                yield Button(tr("Save selection"), id="harness-model-yes", variant="primary")
+                "No API key is loaded. No network call is made.")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "harness-model-yes")
+    def dialog_actions(self):
+        return (
+            DialogAction("harness-model-no", tr("Cancel"), focused=True),
+            DialogAction("harness-model-yes", tr("Save selection"), "primary"),
+        )
 
-    def action_approve(self) -> None:
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id == "harness-model-yes")
+
+    def action_confirm(self) -> None:
         self.dismiss(True)
 
-    def action_decline(self) -> None:
-        self.dismiss(False)
 
-
-class HarnessTranscriptConfirmScreen(ModalScreen[bool]):
-    CSS = """
-    HarnessTranscriptConfirmScreen { align: center middle; background: #000000 68%; }
-    #harness-transcript-confirm { width: 92; max-width: 95%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
-    #harness-transcript-path { height: auto; color: #edf1f5; margin: 1 0; }
-    #harness-transcript-actions { height: 3; align-horizontal: right; margin-top: 1; }
-    #harness-transcript-actions Button { margin-left: 1; }
-    """
-    BINDINGS = [Binding("escape", "decline", "Cancel", show=False),
-                Binding("n", "decline", "Cancel", show=False),
-                Binding("y", "approve", "Copy", show=False)]
+class HarnessTranscriptConfirmScreen(Dialog):
+    dialog_title = "Copy this transcript?"
+    dialog_width = "normal"
+    dialog_tone = "approval"
+    dialog_cancel_result = False
+    BINDINGS = [Binding("n", "cancel", "Cancel", show=False),
+                Binding("y", "confirm", "Copy", show=False)]
 
     def __init__(self, harness_id: str, relative_path: str) -> None:
-        super().__init__()
         self.harness_id = harness_id
         self.relative_path = relative_path
+        super().__init__()
 
-    def compose(self) -> ComposeResult:
+    def dialog_note(self) -> str:
         label = self.harness_id.title()
-        with Vertical(id="harness-transcript-confirm", classes="isy-dialog"):
-            yield Static(
-                f"Copy reviewed transcript text from {label} into this chat? The text is data, "
-                "not instructions to ISyCode, and it is not the same process or the same agent.",
-                markup=False)
-            yield Static(self.relative_path, id="harness-transcript-path", markup=False)
-            with Horizontal(id="harness-transcript-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel"), id="harness-transcript-no")
-                yield Button(tr("Copy transcript"), id="harness-transcript-yes", variant="primary")
+        return (f"Copy reviewed transcript text from {label} into this chat? The text is data, "
+                "not instructions to ISyCode, and it is not the same process or the same agent.")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "harness-transcript-yes")
+    def compose_body(self):
+        yield Static(self.relative_path, classes="isy-dialog-copy", markup=False)
 
-    def action_approve(self) -> None:
+    def dialog_actions(self):
+        return (
+            DialogAction("harness-transcript-no", tr("Cancel"), focused=True),
+            DialogAction("harness-transcript-yes", tr("Copy transcript"), "primary"),
+        )
+
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id == "harness-transcript-yes")
+
+    def action_confirm(self) -> None:
         self.dismiss(True)
-
-    def action_decline(self) -> None:
-        self.dismiss(False)
 
 
 class ModelChoice(Button):

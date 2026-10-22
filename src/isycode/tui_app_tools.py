@@ -333,6 +333,7 @@ class ToolMixin:
             self._append("  Bridge registration was denied.", YELLOW)
             return False
         self._bridge_identity = owner.identity
+        self._paint_rail_identity()
         self._append(f"  Registered on the Bridge as {owner.identity}.", GREEN)
         return True
 

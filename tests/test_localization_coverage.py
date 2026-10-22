@@ -35,10 +35,28 @@ def _literal_messages() -> set[str]:
     return messages
 
 
+def _dialog_titles() -> set[str]:
+    """The frame translates `dialog_title`, whose literal `tr()` cannot see."""
+    titles: set[str] = set()
+    for path in sorted(SOURCE.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                name = target.id if isinstance(target, ast.Name) else (
+                    target.attr if isinstance(target, ast.Attribute) else "")
+                if name != "dialog_title":
+                    continue
+                if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                    titles.add(node.value.value)
+    return titles
+
+
 def test_catalogs_cover_every_translated_string():
     catalogs = {locale: {key[1] for key in _load_catalog(locale)} for locale in SUPPORTED_LOCALES}
     missing: dict[str, list[str]] = {}
-    for message in sorted(_literal_messages()):
+    for message in sorted(_literal_messages() | _dialog_titles()):
         if not message.strip():
             # Empty labels are placeholders for widgets without text.
             continue

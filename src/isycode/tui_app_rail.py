@@ -5,6 +5,7 @@ Moved verbatim from tui.py. TUIApp inherits RailMixin.
 from __future__ import annotations
 
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 
 import os
 import asyncio
@@ -30,6 +31,7 @@ from isycode.workspace import WorkspaceUnavailable
 from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.tui_theme import (
+    _fit_cells,
     status_chip,
     TEXT,
     MUTED,
@@ -54,6 +56,27 @@ from isycode.workspace_authority import OneShotActionAuthority
 from rich.cells import cell_len
 from rich.console import Console
 from textual.widgets import Collapsible as TextualCollapsible
+
+
+class IdentityDialog(Dialog):
+    """The full workspace identity, one key press away from the one-line rail."""
+
+    dialog_title = "Workspace identity"
+    dialog_width = "normal"
+    dialog_default_action = "identity-close"
+
+    def __init__(self, lines: list[str]) -> None:
+        self.lines = lines
+        super().__init__()
+
+    def dialog_note(self) -> str:
+        return "\n".join(self.lines)
+
+    def dialog_actions(self):
+        return (DialogAction("identity-close", tr("Close"), "primary", focused=True),)
+
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(None)
 
 
 class RailMixin:
@@ -870,6 +893,38 @@ class RailMixin:
         else:
             self._set_activity(getattr(self, "_activity_message", "Chat ready"),
                                getattr(self, "_activity_color", MUTED))
+
+    def _rail_identity_line(self) -> str:
+        """One line: the three facts that change how a turn is interpreted."""
+        root = self._workspace_root
+        name = root.name or str(root)
+        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
+        bridge = getattr(self, "_bridge_identity", "") or tr("no bridge")
+        return f"{name} · {mode} · {bridge}"
+
+    def _paint_rail_identity(self) -> None:
+        try:
+            button = self.query_one("#rail-identity", Button)
+        except (NoMatches, NoScreen):
+            return
+        line = self._rail_identity_line()
+        width = button.content_size.width or button.size.width or 0
+        button.label = _fit_cells(line, width) if width else line
+        button.tooltip = line
+
+    def _identity_lines(self) -> list[str]:
+        root = self._workspace_root
+        identity = getattr(self, "_bridge_identity", "") or tr("Disabled · No Bridge Handshake")
+        return [
+            f"{tr('Workspace Root')} · {root}",
+            f"{tr('Launch Directory')} · {self._launch_dir}",
+            self._root_source_label(),
+            f"{tr('Bridge')} · {identity}",
+            f"{tr('Model')} · {getattr(self, '_model_line', '') or '—'}",
+        ]
+
+    def _show_identity(self) -> None:
+        self.push_screen(IdentityDialog(self._identity_lines()))
 
     def _paint_bridge_presence(self) -> None:
         rows = self._presence_rows

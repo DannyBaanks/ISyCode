@@ -1588,10 +1588,10 @@ msgstr "下一个 ↓"
 msgid "Save mine as a new conversation (Fork: …) · the saved one stays as it is"
 msgstr "将我的另存为新对话（Fork: …） · 已保存的保持不变"
 
-msgid "Open the saved version · what exists only in this window is discarded"
+msgid "Open the saved version"
 msgstr "打开已保存版本 · 仅存在于此窗口的内容会被丢弃"
 
-msgid "Continue without saving · Esc · nothing is written until you choose"
+msgid "Continue without saving"
 msgstr "不保存继续 · Esc · 在你选择之前不会写入"
 
 msgid "No pending messages."
@@ -2832,3 +2832,36 @@ msgstr "主题：{topic}"
 
 msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
 msgstr "消息将离开此工作区。Bridge 租约只是协调，不代表可以访问文件、命令或网络。"
+
+msgid "Send this Bridge message?"
+msgstr "发送这条 Bridge 消息？"
+
+msgid "Wake this session?"
+msgstr "唤醒此会话？"
+
+msgid "Use this folder?"
+msgstr "使用此文件夹？"
+
+msgid "Save this model selection?"
+msgstr "保存此模型选择？"
+
+msgid "Copy this transcript?"
+msgstr "复制此记录？"
+
+msgid "Save mine as a new conversation"
+msgstr "将我的内容另存为新会话 · 已保存的保持不变"
+
+msgid "Workspace Root"
+msgstr "工作区根目录"
+
+msgid "Launch Directory"
+msgstr "启动目录"
+
+msgid "Model"
+msgstr "模型"
+
+msgid "no bridge"
+msgstr "无 bridge"
+
+msgid "Workspace identity"
+msgstr "工作区身份"

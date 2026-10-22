@@ -141,5 +141,48 @@ ModalScreen { align: center middle; background: #000000 65%; }
 .isy-dialog { background: $isy-surface; color: $isy-text; border: solid $isy-border; }
 .isy-dialog-title { height: auto; max-height: 2; color: $isy-text; text-style: bold; }
 .isy-dialog-body { background: $isy-surface; color: $isy-text; }
-.isy-dialog-actions { height: 3; margin-top: 1; }
+.isy-dialog-actions { height: 3; margin-top: 1; align-horizontal: right; }
 .isy-dialog-hint { height: auto; max-height: 2; color: $isy-muted; }
+
+/* Dialog: the shared decision frame. Three widths, three tones, one anatomy.
+   No screen declares its own card geometry. */
+Dialog { align: center middle; background: #000000 65%; }
+Dialog .isy-dialog-card {
+    width: 84; max-width: 94%; height: auto; max-height: 92%;
+    padding: 1 2; background: $isy-surface; border: solid $isy-border;
+}
+Dialog.dialog-narrow .isy-dialog-card { width: 76; }
+Dialog.dialog-wide .isy-dialog-card { width: 100; }
+Dialog.dialog-fill .isy-dialog-card { height: 92%; }
+/* Consent must be the loudest surface on screen, not another grey card. */
+Dialog.dialog-approval .isy-dialog-card { border: solid $isy-warning; }
+Dialog.dialog-approval .isy-dialog-title { color: $isy-warning; }
+Dialog.dialog-danger .isy-dialog-card { border: solid $isy-error; }
+Dialog.dialog-danger .isy-dialog-title { color: $isy-error; }
+Dialog .isy-dialog-note { height: auto; max-height: 12; margin-bottom: 1; }
+Dialog .isy-dialog-body { height: auto; max-height: 16; }
+Dialog.dialog-fill .isy-dialog-body { height: 1fr; max-height: 100%; }
+Dialog .isy-dialog-structural { height: auto; margin-bottom: 1; color: $isy-muted; }
+Dialog .isy-dialog-detail { height: auto; }
+Dialog .isy-dialog-copy { height: auto; color: $isy-text; }
+Dialog .isy-dialog-preview { height: auto; max-height: 6; margin: 1 0; }
+Dialog .isy-dialog-actions Button {
+    margin-left: 1; min-width: 8; width: 1fr; overflow: hidden;
+}
+Dialog.dialog-actions-vertical .isy-dialog-actions {
+    layout: vertical; height: auto;
+}
+Dialog.dialog-actions-vertical .isy-dialog-actions Button {
+    margin: 0 0 1 0;
+}
+
+/* Identity is one line; the dialog holds the full path and the bridge name. */
+#side-panel #rail-identity {
+    height: 1 !important; min-height: 1; width: 100%;
+    color: $isy-muted; background: $isy-surface !important;
+    text-align: left; text-wrap: nowrap; text-overflow: ellipsis;
+    border: none !important; padding: 0;
+}
+#side-panel #rail-identity:hover, #side-panel #rail-identity:focus {
+    color: $isy-focus; background: $isy-selected-surface !important;
+}

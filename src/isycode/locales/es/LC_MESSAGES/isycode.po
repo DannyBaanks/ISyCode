@@ -1588,10 +1588,10 @@ msgstr "Siguiente ↓"
 msgid "Save mine as a new conversation (Fork: …) · the saved one stays as it is"
 msgstr "Guardar la mía como conversación nueva (Fork: …) · la guardada se queda igual"
 
-msgid "Open the saved version · what exists only in this window is discarded"
+msgid "Open the saved version"
 msgstr "Abrir la versión guardada · se descarta lo que solo existe en esta ventana"
 
-msgid "Continue without saving · Esc · nothing is written until you choose"
+msgid "Continue without saving"
 msgstr "Seguir sin guardar · Esc · no se escribe nada hasta que elijas"
 
 msgid "No pending messages."
@@ -2832,3 +2832,36 @@ msgstr "Tema: {topic}"
 
 msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
 msgstr "El mensaje sale de este workspace. Una lease del Bridge es coordinación, no acceso a archivos, comandos ni red."
+
+msgid "Send this Bridge message?"
+msgstr "¿Enviar este mensaje por el Bridge?"
+
+msgid "Wake this session?"
+msgstr "¿Despertar esta sesión?"
+
+msgid "Use this folder?"
+msgstr "¿Usar esta carpeta?"
+
+msgid "Save this model selection?"
+msgstr "¿Guardar esta selección de modelo?"
+
+msgid "Copy this transcript?"
+msgstr "¿Copiar esta transcripción?"
+
+msgid "Save mine as a new conversation"
+msgstr "Guardar lo mío como conversación nueva · la guardada queda como está"
+
+msgid "Workspace Root"
+msgstr "Raíz del workspace"
+
+msgid "Launch Directory"
+msgstr "Directorio de lanzamiento"
+
+msgid "Model"
+msgstr "Modelo"
+
+msgid "no bridge"
+msgstr "sin bridge"
+
+msgid "Workspace identity"
+msgstr "Identidad del workspace"

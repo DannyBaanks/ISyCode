@@ -16,6 +16,7 @@ from isycode.tui_theme import _fit_cells, TEXT
 from isycode.tui_widgets import Collapsible, ChatArea, SelectableText
 from isycode.tui_screens_approval import DeleteSessionScreen
 from isycode.localization import tr
+from isycode.tui_dialog import Dialog, DialogAction
 
 
 
@@ -301,42 +302,29 @@ class AgentQuestionScreen(ModalScreen[dict]):
         self.dismiss({"status": "cancelled"})
 
 
-class BridgePresenceScreen(ModalScreen[bool]):
+class BridgePresenceScreen(Dialog):
     """Opt in to one name listing. Cancel is the default."""
 
-    CSS = """
-    BridgePresenceScreen { align: center middle; background: #000000 68%; }
-    #bridge-presence-card { width: 78; max-width: 94%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
-    #bridge-presence-title { height: auto; color: #edf1f5; text-style: bold; margin-bottom: 1; }
-    #bridge-presence-copy { height: auto; margin-bottom: 1; }
-    #bridge-presence-actions { height: 3; align-horizontal: right; }
-    #bridge-presence-actions Button { margin-left: 1; }
-    """
-    BINDINGS = [Binding("escape", "decline", "Cancel", show=False),
-                Binding("ctrl+c", "decline", "Cancel", show=False)]
+    dialog_title = "Read Bridge presence?"
+    dialog_width = "narrow"
+    dialog_tone = "approval"
+    dialog_cancel_result = False
 
     def __init__(self) -> None:
         super().__init__(id="bridge-presence")
 
-    def compose(self) -> ComposeResult:
-        with Vertical(id="bridge-presence-card", classes="isy-dialog"):
-            yield Static(tr("Read Bridge presence?"), id="bridge-presence-title", classes="isy-dialog-title")
-            yield Static(tr("This lists recent agent names only. It does not connect, claim a lease, "
-                "send a message, or wake anyone. One confirmation, nothing remembered."),
-                id="bridge-presence-copy")
-            with Horizontal(id="bridge-presence-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel"), id="bridge-presence-no")
-                yield Button(tr("Read names"), id="bridge-presence-yes", variant="primary")
+    def dialog_note(self) -> str:
+        return tr("This lists recent agent names only. It does not connect, claim a lease, "
+                  "send a message, or wake anyone. One confirmation, nothing remembered.")
 
-    def on_mount(self) -> None:
-        self.query_one("#bridge-presence-no", Button).focus()
+    def dialog_actions(self):
+        return (
+            DialogAction("bridge-presence-no", tr("Cancel"), focused=True),
+            DialogAction("bridge-presence-yes", tr("Read names"), "primary"),
+        )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        event.stop()
-        self.dismiss(event.button.id == "bridge-presence-yes")
-
-    def action_decline(self) -> None:
-        self.dismiss(False)
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id == "bridge-presence-yes")
 
 
 class ChatSessionsScreen(ModalScreen[str | None]):
@@ -712,47 +700,40 @@ class ConsoleSearchScreen(ModalScreen[None]):
         self.dismiss(None)
 
 
-class SessionDivergedScreen(ModalScreen[str]):
+class SessionDivergedScreen(Dialog):
     """Another continuity changed this saved conversation: never pick a reality silently.
 
     Returns "fork", "reload" or "unsaved". Esc means "unsaved": nothing is
     written and the choice can be made later with /sessions diverged.
     """
 
-    CSS = """
-    SessionDivergedScreen { align: center middle; background: #000000 58%; }
-    #diverged-card { width: 84; max-width: 95%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
-    #diverged-heading { height: 2; color: #fbbf24; text-style: bold; }
-    #diverged-copy { height: auto; margin-bottom: 1; }
-    #diverged-actions { height: auto; }
-    #diverged-actions Button { width: 1fr; margin-bottom: 1; }
-    """
-    BINDINGS = [Binding("escape", "unsaved", "Continue without saving")]
+    dialog_title = "Session changed elsewhere"
+    dialog_width = "wide"
+    dialog_tone = "danger"
+    dialog_cancel_result = "unsaved"
+    dialog_actions_vertical = True
 
     def __init__(self, title: str) -> None:
-        super().__init__()
         self.title_text = title
+        super().__init__()
 
-    def compose(self) -> ComposeResult:
-        with Vertical(id="diverged-card", classes="isy-dialog"):
-            yield Static(tr("Session changed elsewhere"), id="diverged-heading", classes="isy-dialog-title")
-            yield Static(
-                f"“{self.title_text}” was changed by another ISyCode window or process after this "
+    def dialog_note(self) -> str:
+        return (f"“{self.title_text}” was changed by another ISyCode window or process after this "
                 "one opened it. Both are valid continuities of the same conversation; nothing was "
-                "merged and nothing of yours was written over it.", id="diverged-copy", markup=False)
-            with Vertical(id="diverged-actions"):
-                yield Button(tr("Save mine as a new conversation (Fork: …) · the saved one stays as it is"),
-                             id="diverged-fork", variant="primary")
-                yield Button(tr("Open the saved version · what exists only in this window is discarded"),
-                             id="diverged-reload")
-                yield Button(tr("Continue without saving · Esc · nothing is written until you choose"),
-                             id="diverged-unsaved")
+                "merged and nothing of yours was written over it.")
 
-    def on_mount(self) -> None:
-        self.query_one("#diverged-fork", Button).focus()
+    def dialog_actions(self):
+        return (
+            DialogAction("diverged-fork",
+                         tr("Save mine as a new conversation"),
+                         "primary", focused=True),
+            DialogAction("diverged-reload",
+                         tr("Open the saved version")),
+            DialogAction("diverged-unsaved",
+                         tr("Continue without saving")),
+        )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id.removeprefix("diverged-"))
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(action_id.removeprefix("diverged-"))
 
-    def action_unsaved(self) -> None:
-        self.dismiss("unsaved")
+

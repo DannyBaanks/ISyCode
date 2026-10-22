@@ -22,6 +22,8 @@ APP_SHORTCUTS: tuple[Shortcut, ...] = (
     Shortcut("ctrl+f", "find_console", "Find", "Search rendered console output", True),
     Shortcut("ctrl+shift+f", "open_session_search", "Find in sessions", "Search every saved conversation's titles and transcripts", True),
     Shortcut("ctrl+p", "toggle_commands_menu", "Commands", "Open the semantic command palette"),
+    Shortcut("alt+c,f2", "open_copy_menu", "Copy text",
+             "Open the copy menu for the focused message or preview", True),
     Shortcut("ctrl+b", "toggle_sidebar", "Toggle sidebar", "Show or hide the workspace rail"),
     Shortcut("ctrl+l", "focus_input", "Focus composer", "Move focus to the chat composer"),
     Shortcut("ctrl+t", "toggle_tasks", "Tasks", "Fold or expand the agent's task list", True),
