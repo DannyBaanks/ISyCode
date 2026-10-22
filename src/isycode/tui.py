@@ -155,7 +155,7 @@ from textual.message import Message
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
-from textual.events import Click, Key
+from textual.events import Click, Key, Resize
 from textual.widget import Widget
 from textual.widgets import (
     Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select, Checkbox,
@@ -319,6 +319,26 @@ from isycode.tui_app_workspace import WorkspaceMixin
 from isycode.tui_app_chat import ChatMixin
 from isycode.tui_app_tools import ToolMixin, _tool_display_context
 from isycode.tui_app_menu import MenuMixin
+
+
+_IS_WINDOWS = sys.platform == "win32"
+
+
+def _terminal_grid_size() -> tuple[int, int] | None:
+    """Read the console window grid, not the scrollback buffer size.
+
+    Textual's Windows event loop reports ``WINDOW_BUFFER_SIZE_RECORD.dwSize``.
+    On conhost that is the screen buffer, which can stay larger than the
+    visible window after a monitor or DPI change, leaving the TUI painting the
+    old grid. ``os.get_terminal_size`` asks for the visible window rectangle.
+    """
+    try:
+        size = os.get_terminal_size(sys.__stdout__.fileno())
+    except (AttributeError, OSError, ValueError):
+        return None
+    if size.columns <= 0 or size.lines <= 0:
+        return None
+    return size.columns, size.lines
 
 
 class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin, WorkspaceMixin, ToolMixin, ChatMixin, MenuMixin, App):
@@ -658,6 +678,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self._apply_locale_chrome()
         self._set_activity(tr("Chat ready"), MUTED)
         self.set_interval(1.0, self._paint_work_status)
+        if _IS_WINDOWS and not self.is_headless:
+            self.set_interval(0.5, self._sync_terminal_size)
         add_decision_listener(self._on_journal_decision)
         self.set_interval(5.0, self._paint_sentinel)   # permissions changed in Settings
         self.run_worker(self._load_sentinel_journal(), group="sentinel-journal",
@@ -755,6 +777,17 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             event.stop()
             event.prevent_default()
             self.action_quick_help()
+
+    def _sync_terminal_size(self) -> None:
+        """Re-issue a resize when the console grid changed behind Textual."""
+        if not _IS_WINDOWS:
+            return
+        measured = _terminal_grid_size()
+        if measured is None:
+            return
+        width, height = measured
+        if (width, height) != (self.size.width, self.size.height):
+            self.post_message(Resize.from_dimensions((width, height), None))
 
     def on_resize(self, event) -> None:
         if not self.is_mounted:

@@ -389,6 +389,35 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
         asyncio.run(scenario())
 
 
+def test_windows_terminal_size_watchdog_repaints_idle_board(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setattr('isycode.tui._IS_WINDOWS', True)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
+            await pilot.pause()
+            monkeypatch.setattr('isycode.tui._terminal_grid_size', lambda: (100, 30))
+            app._sync_terminal_size()
+            board = app.query_one('#idle-board')
+            block = '\u2580'
+            lines = []
+            for _ in range(100):
+                await pilot.pause(0.05)
+                lines = [line for line in plain_text(board).splitlines() if block in line]
+                fits = all(line.count(block) == board.content_size.width for line in lines)
+                if app.size.width == 100 and app.size.height == 30 and lines and fits:
+                    break
+            assert (app.size.width, app.size.height) == (100, 30)
+            assert board._painted_width == board.content_size.width
+            assert lines and all(line.count(block) == board.content_size.width for line in lines)
+            assert len(lines) <= 36
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
 def test_external_stylesheet_is_packaged_and_applied(tmp_path, monkeypatch):
     from isycode.tui import TUIApp
     assert (Path(__file__).resolve().parents[1] / "src" / "isycode" / "isycode.tcss").is_file()
