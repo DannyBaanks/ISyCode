@@ -119,6 +119,7 @@ from isycode.tui_screens_harness import (
     HarnessModelConfirmScreen,
     HarnessTranscriptConfirmScreen,
     HarnessComposeScreen,
+    HarnessRepairConfirmScreen,
     MultiHarnessScreen,
 )
 from isycode.tui_screens_sessions import (
@@ -332,12 +333,13 @@ class SessionMixin:
             from isycode.model_presentation import model_display_name
             from isycode.reasoning_options import reasoning_label
             preset = PRESETS.get(name, {})
-            suffix = f" / {reasoning_label(name, model, preset.get('reasoning_effort')).capitalize()} · {preset.get('label', name)}"
-            available = box.content_size.width - cell_len(label) - 5
+            preset_label = preset.get("label") or name
+            suffix = f" / {reasoning_label(name, model, preset.get('reasoning_effort')).capitalize()} · {preset_label}"
+            available = box.content_size.width - cell_len(label) - 3
             model_name = model_display_name(model)
             if box.content_size.width and available > cell_len(suffix):
                 model_name = _fit_cells(model_name, available - cell_len(suffix))
-            heading.append("     " + model_name + suffix, style=CYAN)
+            heading.append(" · " + model_name + suffix, style=CYAN)
         except (ConfigurationError, ProviderError):
             pass
         if box.content_size.width:

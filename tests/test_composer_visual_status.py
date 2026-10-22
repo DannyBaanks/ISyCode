@@ -70,7 +70,7 @@ def test_friendly_model_stays_visible_and_startup_does_not_repeat_path(tmp_path,
             await pilot.pause()
             app._paint_idea_box()
             label = "Nemotron 3 Ultra 550b a55b / Default · NVIDIA NIM"
-            assert "Idea box     " + label in plain_text(app.query_one('#idea-box'))
+            assert "Idea box · " + label in plain_text(app.query_one('#idea-box'))
             assert str(app._workspace_root) not in app._idle_board_text().plain
             await check_model(app)
             assert label in app._model_line

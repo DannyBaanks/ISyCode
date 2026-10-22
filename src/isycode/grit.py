@@ -105,7 +105,7 @@ def _sandbox_command(root: Path, info: dict[str, Any]) -> list[str]:
     # read-only except .grit: SQLite needs to write its WAL sidecar files
     # even for a status read.
     args = [sandbox, "--die-with-parent", "--unshare-all", "--share-net",
-            "--clearenv", "--ro-bind", "/usr", "/usr"]
+            "--cap-drop", "ALL", "--clearenv", "--ro-bind", "/usr", "/usr"]
     for source, destination, alias in (("/bin", "/bin", "/usr/bin"),
                                        ("/lib", "/lib", "/usr/lib"),
                                        ("/lib64", "/lib64", "/usr/lib64")):
@@ -192,7 +192,7 @@ async def read_peer_claims(root: Path, info: dict[str, Any],
     root = root.resolve(strict=True)
     command = _sandbox_command(root, info)
     process = await asyncio.create_subprocess_exec(
-        *command, cwd="/", stdin=asyncio.subprocess.DEVNULL,
+        *command, cwd="/", env={}, stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
         limit=MAX_STATUS_BYTES + 8192)
     try:

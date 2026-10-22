@@ -156,10 +156,10 @@ def test_ordinary_flow_has_zero_per_action_approvals(project, tmp_path, monkeypa
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         fake = bin_dir / "bwrap"
-        fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
+        fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve(),
+                                          log=str(tmp_path / "bwrap.json")), encoding="utf-8")
         fake.chmod(0o755)
         monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
-        monkeypatch.setenv("FAKE_BWRAP_LOG", str(tmp_path / "bwrap.json"))
         for index in range(3):
             preview = runner.prepare(["echo", f"test-{index}"])
             requests.append(preview.request)

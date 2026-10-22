@@ -459,3 +459,35 @@ def test_harness_transcript_import_never_reuses_session_state_or_chat_execution_
     assert "state=None" in segment
     for forbidden in ("_persist_chat_message", "_session_state", "_run_chat", "_dispatch_chat_tool"):
         assert forbidden not in segment
+
+
+def test_compose_all_reaches_the_repair_confirmation_screen(monkeypatch):
+    from isycode.harness_graph import SEED_OPTIONS
+    from isycode.tui_app_sessions import HarnessRepairConfirmScreen, SessionMixin
+    from isycode.tui_screens_harness import MultiHarnessScreen
+
+    semantic_id = next(iter(SEED_OPTIONS))
+    option = SEED_OPTIONS[semantic_id]
+    monkeypatch.setattr(MultiHarnessScreen, "_gap_rows", lambda self: [{
+        "semantic_id": semantic_id, "title": option.title, "status": "ADD",
+        "harnesses": ("claude_code",), "n": 1,
+        "target_label": "Missing in ISyCode", "copy_note": "",
+    }])
+
+    class Stub:
+        _show_multi_harness = SessionMixin._show_multi_harness
+
+        def __init__(self):
+            self.seen = []
+
+        async def _multi_harness_snapshot(self):
+            return [], 0
+
+        async def _await_screen(self, screen):
+            self.seen.append(screen)
+            return "compose:all" if len(self.seen) == 1 else None
+
+    stub = Stub()
+    asyncio.run(stub._show_multi_harness())
+    assert len(stub.seen) == 3
+    assert isinstance(stub.seen[1], HarnessRepairConfirmScreen)

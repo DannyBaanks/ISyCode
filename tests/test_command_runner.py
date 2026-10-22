@@ -49,8 +49,9 @@ while i < len(options):
         i += 2
     else:
         i += 1
-with open(os.environ["FAKE_BWRAP_LOG"], "w") as log:
-    json.dump({{"masks": masks, "readonly": readonly, "options": options}}, log)
+with open({log!r}, "w") as log:
+    json.dump({{"masks": masks, "readonly": readonly, "options": options,
+               "env": dict(os.environ)}}, log)
 mapped = [workspace + item[len("/workspace"):] if item.startswith("/workspace") else item
           for item in rest]
 os.chdir(workspace + chdir[len("/workspace"):])
@@ -64,11 +65,11 @@ def sandbox(tmp_path: Path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
+    log = tmp_path / "bwrap.json"
+    fake.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve(), log=str(log)),
+                    encoding="utf-8")
     fake.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
-    log = tmp_path / "bwrap.json"
-    monkeypatch.setenv("FAKE_BWRAP_LOG", str(log))
     root = tmp_path / "project"
     root.mkdir()
     (root / ".isyroot").write_text("", encoding="utf-8")
@@ -219,6 +220,20 @@ def test_sensitive_paths_are_masked_and_the_marker_is_read_only(sandbox):
     assert command.index("--bind") < command.index("--tmpfs", command.index("--bind"))
     assert "--clearenv" in command and "--die-with-parent" in command
     assert "--share-net" not in command
+    drop = command.index("--cap-drop")
+    assert command[drop + 1] == "ALL"
+
+
+def test_bubblewrap_itself_runs_without_the_host_environment(sandbox, monkeypatch):
+    owner, authority, approvals, fake, log = sandbox
+    _grant(authority, fake)
+    monkeypatch.setenv("ISYCODE_HOST_CANARY", "host-only-secret")
+    _, outcome = _run(owner, approvals, ["python3", "-c", "print('ok')"])
+    assert outcome.decision == "ALLOW", outcome.reason
+    launched = json.loads(log.read_text())["env"]
+    assert set(launched) <= {"LC_CTYPE"}
+    assert "host-only-secret" not in launched.values()
+    assert "host-only-secret" not in outcome.text
 
 
 def test_a_new_secret_after_review_denies_the_run(sandbox):
