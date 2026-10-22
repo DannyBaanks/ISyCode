@@ -59,6 +59,8 @@ MODES = frozenset({"security", "classic", "flow"})
 # Modes that receive the Classic preset of implicit grants. Flow (ADR 0010) uses
 # the same preset; only its approval rule differs (workspace_trust.quiet_request).
 PRESET_MODES = frozenset({"classic", "flow"})
+# Grants only Flow adds to the preset: putting a whole turn back (ADR 0010).
+FLOW_PATH_ACTIONS = frozenset({"workspace.turn.undo"})
 
 # Classic mode is a per-workspace preset of implicit grants, not a bypass.
 # Without a trust record, edits and commands still need a per-action approval.
@@ -217,6 +219,9 @@ class WorkspaceAuthority:
 
         for action in CLASSIC_PATH_ACTIONS:
             merge(action, "path_prefixes", [str(self.root)])
+        if policy.get("mode") == "flow":
+            for action in FLOW_PATH_ACTIONS:
+                merge(action, "path_prefixes", [str(self.root)])
         for action in CLASSIC_GRANTED_ACTIONS:
             merge(action)
         services = _known_services()
@@ -433,4 +438,4 @@ def _trusted_quiet(authority: WorkspaceAuthority, request: ActionRequest) -> boo
         return False
 
 
-__all__ = ["CLASSIC_ACTIONS", "MODES", "PRESET_MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]
+__all__ = ["CLASSIC_ACTIONS", "FLOW_PATH_ACTIONS", "MODES", "PRESET_MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]

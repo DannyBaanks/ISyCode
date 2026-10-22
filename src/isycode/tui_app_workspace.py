@@ -254,10 +254,18 @@ class WorkspaceMixin:
                 reason = str(exc)[:200] or type(exc).__name__
                 self._append(f"  Commit not proposed · {reason}", YELLOW)
                 return json.dumps({"error": "commit cannot be proposed", "reason": reason})
-            self._append(f"  Commit requested · {len(preview.paths)} files · review it", CYAN)
-            if not await self._await_screen(CommitApprovalScreen(preview)):
-                self._append("  Commit rejected · nothing was committed", MUTED)
-                return json.dumps({"status": "rejected_by_user"})
+            attributable = False
+            if self._workspace_mode() == "flow":
+                from isycode.turn_journal import TurnJournal
+                attributable = owner.turn_attributable(
+                    TurnJournal.active(self._workspace_root), preview.paths)
+            if attributable:
+                self._append(f"  Commit · {len(preview.paths)} files from this turn · /undo to revert", CYAN)
+            else:
+                self._append(f"  Commit requested · {len(preview.paths)} files · review it", CYAN)
+                if not await self._await_screen(CommitApprovalScreen(preview)):
+                    self._append("  Commit rejected · nothing was committed", MUTED)
+                    return json.dumps({"status": "rejected_by_user"})
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
             outcome = await asyncio.to_thread(owner.commit, preview, approval)
         action = {"git_status": "git.status", "git_diff": "git.diff"}.get(name, "git.commit")

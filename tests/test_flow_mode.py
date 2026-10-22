@@ -66,9 +66,11 @@ def _fake_sandbox(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
 
 
-def test_flow_is_a_mode_with_the_classic_preset():
+def test_flow_is_a_mode_with_the_classic_preset_plus_turn_undo():
     assert MODES == {"security", "classic", "flow"}
-    assert implicit_actions("flow") == implicit_actions("classic")
+    # Flow is Classic's preset plus one recoverable action: undo a whole turn.
+    assert implicit_actions("flow") == implicit_actions("classic") | {"workspace.turn.undo"}
+    assert "workspace.turn.undo" not in implicit_actions("classic")
     assert implicit_actions("security") == frozenset()
 
 
@@ -144,6 +146,7 @@ def test_quiet_flow_list_is_the_recoverable_local_list():
         "workspace.files.list", "workspace.files.read", "workspace.files.search",
         "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
         "workspace.files.delete", "workspace.files.move", "workspace.command.run",
+        "workspace.turn.undo",
     }
 
 

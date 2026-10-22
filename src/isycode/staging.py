@@ -222,6 +222,35 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
     return result
 
 
+def _turn_capture(staging: Staging, plan: list[dict]):
+    """Keep each promoted path's preimage in the active Flow turn (ADR 0010).
+
+    Runs before any file is applied. A full turn journal denies the whole
+    promotion, so the command's changes stay staged instead of landing quietly.
+    """
+    from isycode.effect_ledger import LedgerDenied
+    from isycode.turn_journal import TurnJournal, TurnJournalFull
+
+    turn = TurnJournal.active(staging.original)
+    if turn is None:
+        return None
+    try:
+        for item in plan:
+            payload = None
+            if item["preimage"] is not None:
+                source = _lexical(staging.original, item["path"])
+                if source is None or not source.is_file() or is_link(source):
+                    raise LedgerDenied("preimage disappeared before the turn record")
+                payload = source.read_bytes()
+                if hashlib.sha256(payload).hexdigest() != item["preimage"]:
+                    raise LedgerDenied("preimage changed before the turn record")
+            turn.capture(item["path"], payload, item["preimage_mode"])
+    except (TurnJournalFull, OSError) as exc:
+        raise LedgerDenied(f"this turn cannot record more changes to undo ({exc}); "
+                           "nothing was promoted and the changes stay staged") from exc
+    return turn
+
+
 def _replay_operation(operations, operation_id: str, ledger, staging: Staging):
     """Return the one recorded effect, or raise when the response was lost."""
     from isycode.effect_ledger import EffectLedger, LedgerDenied
@@ -278,6 +307,7 @@ def _promote_reserved(book, staging: Staging, changes: list[dict[str, str]], ref
             if hashlib.sha256(payload).hexdigest() != item["preimage"]:
                 raise LedgerDenied("preimage changed before backup")
             book.backup_file(reservation, item["path"], payload)
+        turn = _turn_capture(staging, plan)
         _checkpoint(crash_at, interrupt, "after-backup")
         book.store_plan(reservation, plan)
         _checkpoint(crash_at, interrupt, "after-plan")
@@ -304,6 +334,8 @@ def _promote_reserved(book, staging: Staging, changes: list[dict[str, str]], ref
             _checkpoint(crash_at, interrupt, f"after-apply:{index}")
             book.mark_applied(reservation, item["path"])
             applied.append(item["path"])
+            if turn is not None:
+                turn.note_after(item["path"], None if item["kind"] == "delete" else item["target"])
             _checkpoint(crash_at, interrupt, f"after-mark-applied:{index}")
         _checkpoint(crash_at, interrupt, "before-commit")
         book.commit(reservation, applied_paths=tuple(applied),

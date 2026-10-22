@@ -304,7 +304,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
 # nested inside four separately bound owners and are reported as such.
 OWNER_ACTIONS = {
     "workspace_read": READ_ACTIONS,
-    "workspace_write": FILE_CHANGE_ACTIONS,
+    "workspace_write": FILE_CHANGE_ACTIONS | {"workspace.turn.undo"},
     CONFIG_OWNER_ID: CONFIG_ACTIONS,
     "provider_auth": frozenset({"provider.authenticate"}),
     "provider_network": frozenset({"provider.request"}),
@@ -448,6 +448,8 @@ class WorkspaceWriteSystembility:
 
     def evaluate(self, request: ActionRequest,
                  authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id == "workspace.turn.undo":
+            return self._turn_undo(request)
         if request.action_id not in FILE_CHANGE_ACTIONS | CONFIG_WRITE_ACTIONS:
             return SystembilityResult(self.name, True, "not applicable to this action")
         if request.workspace_root != self.root:
@@ -549,6 +551,43 @@ class WorkspaceWriteSystembility:
             except OSError:
                 return SystembilityResult(self.name, False, "target metadata is unavailable")
         return SystembilityResult(self.name, True, "one reviewed file change inside the workspace")
+
+    def _turn_undo(self, request: ActionRequest) -> SystembilityResult:
+        """One reviewed turn undo: restored paths stay inside the workspace (ADR 0010)."""
+        from isycode.turn_journal import TURN_ID
+        params = request.parameters
+        if request.workspace_root != self.root or request.target != str(self.root):
+            return SystembilityResult(self.name, False, "turn undo must target this workspace")
+        if (set(params) != {"turn_id", "paths", "plan_sha256"}
+                or not isinstance(params.get("turn_id"), str)
+                or TURN_ID.fullmatch(params["turn_id"]) is None
+                or not isinstance(params.get("plan_sha256"), str)
+                or re.fullmatch(r"[0-9a-f]{64}", params["plan_sha256"]) is None):
+            return SystembilityResult(self.name, False, "turn undo request shape is not the reviewed one")
+        if not _turn_undo_paths_valid(self.root, params.get("paths")):
+            return SystembilityResult(self.name, False,
+                                      "turn undo names a sensitive, protected, linked or outside path")
+        return SystembilityResult(self.name, True, "one reviewed turn undo inside the workspace")
+
+
+def _turn_undo_paths_valid(root: Path, paths: object) -> bool:
+    if not isinstance(paths, tuple) or not 1 <= len(paths) <= 4000:
+        return False
+    for path in paths:
+        if (not command_relative_path_valid(path)
+                or Path(path).name.casefold() in WRITE_PROTECTED_NAMES):
+            return False
+        current = root
+        for part in path.split("/"):
+            current = current / part
+            try:
+                if stat.S_ISLNK(current.lstat().st_mode):
+                    return False
+            except FileNotFoundError:
+                break
+            except OSError:
+                return False
+    return True
 
 
 class WorkspaceConfigBoundary:

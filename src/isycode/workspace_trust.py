@@ -42,7 +42,8 @@ QUIET_CLASSIC_ACTIONS = frozenset({
 
 # Flow (ADR 0010): the same recoverable local work, without the trust ceremony;
 # choosing Flow with its warning is the consent. Everything else still asks.
-QUIET_FLOW_ACTIONS = QUIET_CLASSIC_ACTIONS
+# Undoing a whole turn is a Flow-only recoverable action and also runs quietly.
+QUIET_FLOW_ACTIONS = QUIET_CLASSIC_ACTIONS | {"workspace.turn.undo"}
 
 
 def onboarding_brief(*, root: Path, mode: str, provider: str,
