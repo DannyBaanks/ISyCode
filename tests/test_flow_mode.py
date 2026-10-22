@@ -217,3 +217,14 @@ def test_an_older_reader_rejects_a_flow_policy(project, monkeypatch):
     monkeypatch.setattr("isycode.workspace_authority.MODES", frozenset({"security", "classic"}))
     with pytest.raises(Exception):
         authority.policy()
+
+
+def test_flow_tells_the_model_about_the_shell_and_nothing_else_changes():
+    from isycode.command_runner import COMMAND_TOOL, command_tool
+
+    flow = command_tool("flow")
+    assert command_tool("classic") is COMMAND_TOOL and command_tool("security") is COMMAND_TOOL
+    assert flow["function"]["parameters"] == COMMAND_TOOL["function"]["parameters"]
+    assert flow["function"]["name"] == COMMAND_TOOL["function"]["name"]
+    assert "bash" in flow["function"]["description"]
+    assert "There is no shell" in COMMAND_TOOL["function"]["description"]

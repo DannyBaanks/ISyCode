@@ -69,7 +69,7 @@ from isycode.idea_box import IDEA_BOX_TOOL, IDEA_BOX_TOOL_NAME, IDEA_NUDGE_SECON
 from isycode.workspace_pack import WORKSPACE_PACK_TOOL
 from isycode.workspace_memory import MEMORY_TOOLS
 from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
-from isycode.command_runner import COMMAND_TOOL
+from isycode.command_runner import command_tool
 from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from textual.widgets import Static
@@ -395,7 +395,7 @@ class ChatMixin:
             if write_active and self._file_action_enabled("workspace.files.move"):
                 chat_tools = chat_tools + [MOVE_TOOL]
             if command_active:
-                chat_tools = chat_tools + [COMMAND_TOOL]
+                chat_tools = chat_tools + [command_tool(self._workspace_mode())]
             git_read_active = tools_active and self._git_enabled()
             git_commit_active = tools_active and self._git_enabled(commit=True)
             if git_read_active:
