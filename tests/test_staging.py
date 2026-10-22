@@ -94,10 +94,10 @@ def test_shell_and_python_mutations_stay_staged_until_promote(tmp_path, monkeypa
     from tests.test_command_runner import FAKE_BWRAP
     import sys
     program = fake / "bwrap"
-    program.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve()), encoding="utf-8")
+    program.write_text(FAKE_BWRAP.format(python=Path(sys.executable).resolve(),
+                                         log=str(tmp_path / "bwrap.json")), encoding="utf-8")
     program.chmod(0o755)
     monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ.get('PATH', '')}")
-    monkeypatch.setenv("FAKE_BWRAP_LOG", str(tmp_path / "bwrap.json"))
     authority.set_grant("workspace.command.run", enabled=True, executables=[str(program.resolve())])
     (root / "src" / "gone.txt").write_text("gone\n", encoding="utf-8")
     script = root / "burst.sh"
@@ -504,3 +504,31 @@ echo DONE
     assert checkpoint.read_text(encoding="utf-8") == "checkpoint\n"
     assert marker.read_text(encoding="utf-8") == "authority\n"
     assert (root / "link").is_symlink()
+
+
+@pytest.mark.skipif(
+    not _bubblewrap_namespace_works(),
+    reason="bubblewrap cannot create a namespace here; host fallback is not used")
+def test_real_bubblewrap_never_lends_the_host_environment(tmp_path, monkeypatch):
+    owner, authority, approvals, _ = _owner(tmp_path, monkeypatch)
+    sandbox = sandbox_executable()
+    assert sandbox is not None
+    authority.set_grant("workspace.command.run", enabled=True, executables=[sandbox])
+    canary = "isycode-host-canary-9f3c"
+    monkeypatch.setenv("ISYCODE_HOST_CANARY", canary)
+    probe = (
+        "import glob, os\n"
+        "seen = b''\n"
+        "for path in glob.glob('/proc/[0-9]*/environ'):\n"
+        "    try:\n"
+        "        seen += open(path, 'rb').read()\n"
+        "    except OSError:\n"
+        "        pass\n"
+        f"print('host-env-visible:' + str({canary!r}.encode() in seen))\n"
+        "print('own-env-visible:' + str('ISYCODE_HOST_CANARY' in os.environ))\n"
+    )
+    preview = owner.prepare(["python3", "-c", probe])
+    outcome = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
+    assert outcome.decision == "ALLOW", outcome.reason
+    assert json.loads(outcome.text)["output"].splitlines() == [
+        "host-env-visible:False", "own-env-visible:False"]

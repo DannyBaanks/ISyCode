@@ -107,6 +107,8 @@ def test_sandbox_command_mounts_workspace_ro_and_only_grit_rw(tmp_path):
     assert f"--bind {(root / '.grit').resolve()} /workspace/.grit" in joined
     assert f"--ro-bind {fake_grit.resolve()} /runtime/grit" in joined
     assert "--setenv NO_COLOR 1" in joined and "--unshare-all" in command
+    drop = command.index("--cap-drop")
+    assert command[drop + 1] == "ALL"
     assert command[-1] == "status"
 
 
@@ -208,3 +210,35 @@ def test_unparseable_output_is_unavailable_not_empty(peers, monkeypatch):
 
     monkeypatch.setattr(grit, "read_peer_claims", garbage)
     assert _run(owner).decision == "ERROR"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="grit bubblewrap command is POSIX-specific")
+def test_grit_process_is_launched_without_the_host_environment(tmp_path, monkeypatch):
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_grit = bin_dir / "grit"
+    fake_grit.write_text("#!/bin/sh\nexit 0\n")
+    fake_grit.chmod(0o755)
+    fake_bwrap = bin_dir / "bwrap"
+    fake_bwrap.write_text("#!/bin/sh\nexit 1\n")
+    fake_bwrap.chmod(0o755)
+    root = tmp_path / "project"
+    (root / ".grit").mkdir(parents=True)
+    info = {"executable": str(fake_grit.resolve()),
+            "sha256": "0" * 64, "sandbox_executable": str(fake_bwrap.resolve())}
+    captured = {}
+
+    class FakeProcess:
+        returncode = 0
+
+        async def communicate(self):
+            return b"No active locks.\n", b""
+
+    async def fake_exec(*command, **kwargs):
+        captured.update(kwargs)
+        return FakeProcess()
+
+    monkeypatch.setattr("isycode.grit.asyncio.create_subprocess_exec", fake_exec)
+    payload = asyncio.run(grit.read_peer_claims(root, info))
+    assert payload["claims"] == []
+    assert captured["env"] == {}

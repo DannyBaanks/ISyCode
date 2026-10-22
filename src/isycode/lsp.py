@@ -336,8 +336,8 @@ def _sandbox_command(root: Path, server: dict[str, Any]) -> list[str]:
     # This host denies a network namespace. Keep the network namespace shared,
     # then install a fail-closed seccomp deny-list before the untrusted server
     # starts. No home directory or credentials are mounted.
-    args = [sandbox, "--die-with-parent", "--unshare-all", "--share-net", "--clearenv",
-            "--ro-bind", "/usr", "/usr"]
+    args = [sandbox, "--die-with-parent", "--unshare-all", "--share-net",
+            "--cap-drop", "ALL", "--clearenv", "--ro-bind", "/usr", "/usr"]
     for source, destination, alias in (("/bin", "/bin", "/usr/bin"),
                                        ("/lib", "/lib", "/usr/lib"),
                                        ("/lib64", "/lib64", "/usr/lib64")):
@@ -397,7 +397,7 @@ async def workspace_symbols(root: Path, query: str,
     root = root.resolve(strict=True)
     command = _sandbox_command(root, server)
     proc = await asyncio.create_subprocess_exec(
-        *command, cwd="/", stdin=asyncio.subprocess.PIPE,
+        *command, cwd="/", env={}, stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
         limit=MAX_FRAME_BYTES + 8192,
     )
@@ -622,7 +622,7 @@ async def pyright_diagnostics(root: Path, relative_path: str, text: str,
     root = root.resolve(strict=True)
     command = _sandbox_command(root, server)
     proc = await asyncio.create_subprocess_exec(
-        *command, cwd="/", stdin=asyncio.subprocess.PIPE,
+        *command, cwd="/", env={}, stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
         limit=MAX_FRAME_BYTES + 8192)
     try:

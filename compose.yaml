@@ -16,10 +16,18 @@ services:
       NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
       NEBIUS_API_KEY: ${NEBIUS_API_KEY:-}
       TERM: xterm-256color
-    # Permite a bubblewrap crear los namespaces del sandbox de comandos.
-    # Sin esto, ISyCode degrada honestamente: comandos apagados, resto funciona.
-    cap_add:
-      - SYS_ADMIN
+    # Bubblewrap needs to mount /proc and remount / as slave. The default
+    # Docker AppArmor/seccomp/systempaths profile denies both, and cap_add:
+    # SYS_ADMIN alone is not enough (measured: "Failed to make / slave",
+    # "Can't mount proc on /proc"). A non-root process cannot acquire the
+    # missing effective capabilities either: Debian's bwrap refuses file caps
+    # and setuid mode. This E2E container therefore needs privileged mode.
+    # The app itself still runs as uid 1000 (Dockerfile USER) and every
+    # sandboxed command is exec'd with --cap-drop ALL, so untrusted commands
+    # keep zero capabilities. The bind-mounted workspace must be writable by
+    # uid 1000; adjust `user:` if your host uid differs.
+    # Do not reuse this compose file as a production deployment.
+    privileged: true
     stdin_open: true
     tty: true
 

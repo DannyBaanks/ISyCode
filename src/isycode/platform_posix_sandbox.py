@@ -70,7 +70,7 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
                     timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
     """Bubblewrap argv: system files read-only, only the workspace writable, sensitive paths masked."""
     args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all",
-            "--clearenv", "--ro-bind", "/usr", "/usr"]
+            "--cap-drop", "ALL", "--clearenv", "--ro-bind", "/usr", "/usr"]
     for source, destination, alias in (("/bin", "/bin", "/usr/bin"), ("/sbin", "/sbin", "/usr/sbin"),
                                        ("/lib", "/lib", "/usr/lib"),
                                        ("/lib64", "/lib64", "/usr/lib64")):
@@ -113,7 +113,17 @@ def command_bootstrap(timeout_s: int) -> str:
               f"resource.setrlimit(resource.RLIMIT_CPU, ({cpu}, {cpu}))\n"
               "resource.setrlimit(resource.RLIMIT_NOFILE, (1024, 1024))\n"
               f"resource.setrlimit(resource.RLIMIT_FSIZE, ({512 * 1024**2}, {512 * 1024**2}))\n")
-    return limits + network_deny_bootstrap(MAX_PROCESSES)
+    # Bubblewrap only drops capabilities by itself when it does not run as root.
+    # Refuse to exec the program if any effective capability survived.
+    capability_check = (
+        "try:\n"
+        "    status = open('/proc/self/status', encoding='ascii').read().splitlines()\n"
+        "    cap_eff = next(line for line in status if line.startswith('CapEff:'))\n"
+        "    if int(cap_eff.split()[1], 16):\n"
+        "        raise SystemExit('sandbox capability check failed')\n"
+        "except (OSError, StopIteration, ValueError):\n"
+        "    raise SystemExit('sandbox capability check failed')\n")
+    return limits + capability_check + network_deny_bootstrap(MAX_PROCESSES)
 
 
 class PosixSandbox:
@@ -140,7 +150,9 @@ class PosixSandbox:
                     identity=None):
         command = sandbox_command(executable or self.executable(), staging, program,
                                   argv, cwd, masks, timeout_s=timeout_s)
-        return await asyncio.create_subprocess_exec(*command, cwd='/',
+        # bwrap is PID 1 in the sandbox: its own environment must carry nothing
+        # from the host, or /proc/1/environ would leak it to the child.
+        return await asyncio.create_subprocess_exec(*command, cwd='/', env={},
             stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT, start_new_session=True)
 
