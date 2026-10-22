@@ -999,8 +999,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if detail["provider_code"]:
             suffix += " · " + detail["provider_code"]
         if detail["retry_after_s"] is not None:
-            suffix += f" · retry after {detail['retry_after_s']:g}s"
-        return f"{operation} failed · {detail['error_kind']}: {detail['provider_hint']}{suffix}."
+            suffix += " · " + tr("retry after {seconds}s", seconds=f"{detail['retry_after_s']:g}")
+        return tr("{operation} failed · {kind}: {hint}{suffix}.", operation=tr(operation),
+                  kind=detail["error_kind"], hint=tr(detail["provider_hint"]), suffix=suffix)
 
     @staticmethod
     def _model_display_label(name: str, model: str) -> str:

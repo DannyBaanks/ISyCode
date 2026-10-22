@@ -2865,3 +2865,117 @@ msgstr "无 bridge"
 
 msgid "Workspace identity"
 msgstr "工作区身份"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "提供商请求 {decision} · {reason}；未再发送任何请求。"
+
+msgid "request was not completed"
+msgstr "请求未完成"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "要在此处聊天：设置 → Authority →“连接到所选 AI 模型”（或“开启所有编码工具…”）。"
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "已保留提示 · /retry 会准备好供你审阅。已完成的工具效果仍然保留；再次发送前请先检查。"
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "聊天失败（{kind}）。请求未完成。"
+
+msgid "Use /resume to retry."
+msgstr "使用 /resume 重试。"
+
+msgid "retry after {seconds}s"
+msgstr "{seconds} 秒后重试"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation}失败 · {kind}：{hint}{suffix}。"
+
+msgid "Chat"
+msgstr "聊天"
+
+msgid "Compaction"
+msgstr "压缩"
+
+msgid "Model catalog"
+msgstr "模型目录"
+
+msgid "Connection check"
+msgstr "连接检查"
+
+msgid "Planning"
+msgstr "规划"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "一次性，{seconds} 秒后停止"
+
+msgid "New conversation."
+msgstr "新对话。"
+
+msgid "Completed"
+msgstr "已完成"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Rejected"
+msgstr "已拒绝"
+
+msgid "Timed out"
+msgstr "已超时"
+
+msgid "Cancelled"
+msgstr "已取消"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Exit {code}"
+msgstr "退出码 {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "提供商表示不支持图像输入"
+
+msgid "Provider reports that steering is not supported"
+msgstr "提供商表示不支持 steer"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "提供商凭据缺失、无效或被拒绝"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "提供商表示配额已用尽或存在计费限制"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "已达到提供商请求上限；请稍后再试"
+
+msgid "Selected model is unavailable to this account"
+msgstr "所选模型对此账户不可用"
+
+msgid "Provider model or endpoint was not found"
+msgstr "未找到提供商模型或端点"
+
+msgid "Provider account lacks permission for this request"
+msgstr "提供商账户无权执行此请求"
+
+msgid "Provider service failed or is overloaded"
+msgstr "提供商服务失败或过载"
+
+msgid "Could not connect to the provider"
+msgstr "无法连接到提供商"
+
+msgid "Provider did not respond in time"
+msgstr "提供商未及时响应"
+
+msgid "Provider response was interrupted"
+msgstr "提供商响应被中断"
+
+msgid "Provider rejected the request parameters"
+msgstr "提供商拒绝了请求参数"
+
+msgid "Request is larger than the model context window"
+msgstr "请求超出模型上下文窗口"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority 拒绝了请求或无法验证"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "提供商故障，无可识别的诊断"

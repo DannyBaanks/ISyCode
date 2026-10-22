@@ -427,7 +427,7 @@ class CommandApprovalScreen(ApprovalScreen):
             with VerticalScroll(id="command-approval-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
                     owner="sandboxed command run", scope=preview.scope,
-                    duration=f"one-use, stops after {preview.timeout_s} s",
+                    duration=tr("one-use, stops after {seconds} s", seconds=preview.timeout_s),
                     not_granted="network blocked, no other paths, no undo")
                 yield Static(tr("Folder: {root}\n", root=preview.request.workspace_root) +
                              tr("Run a command · {cwd}", cwd=preview.cwd if preview.cwd != "." else tr("workspace root")),

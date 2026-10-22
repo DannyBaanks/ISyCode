@@ -2865,3 +2865,117 @@ msgstr "sin bridge"
 
 msgid "Workspace identity"
 msgstr "Identidad del workspace"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "Solicitud al proveedor {decision} · {reason}; no se envió ninguna otra solicitud."
+
+msgid "request was not completed"
+msgstr "la solicitud no se completó"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "Para chatear aquí: Configuración → Authority → «Conectar con el modelo de IA seleccionado» (o «Activar todas las herramientas de código…»)."
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "Prompt conservado · /retry lo prepara para revisarlo. Los efectos de herramientas ya completados se mantienen; revísalos antes de volver a enviar."
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "El chat falló ({kind}). La solicitud no se completó."
+
+msgid "Use /resume to retry."
+msgstr "Usa /resume para reintentar."
+
+msgid "retry after {seconds}s"
+msgstr "reintentar en {seconds} s"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation} falló · {kind}: {hint}{suffix}."
+
+msgid "Chat"
+msgstr "Chat"
+
+msgid "Compaction"
+msgstr "Compactación"
+
+msgid "Model catalog"
+msgstr "Catálogo de modelos"
+
+msgid "Connection check"
+msgstr "Comprobación de conexión"
+
+msgid "Planning"
+msgstr "Planificación"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "un solo uso, se detiene a los {seconds} s"
+
+msgid "New conversation."
+msgstr "Nueva conversación."
+
+msgid "Completed"
+msgstr "Completado"
+
+msgid "Failed"
+msgstr "Falló"
+
+msgid "Rejected"
+msgstr "Rechazado"
+
+msgid "Timed out"
+msgstr "Tiempo agotado"
+
+msgid "Cancelled"
+msgstr "Cancelado"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Exit {code}"
+msgstr "Salida {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "El proveedor indica que no admite imágenes"
+
+msgid "Provider reports that steering is not supported"
+msgstr "El proveedor indica que no admite steer"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "Las credenciales del proveedor faltan, no son válidas o fueron rechazadas"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "El proveedor indica cuota agotada o una restricción de facturación"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "Se alcanzó el límite de solicitudes del proveedor; espera antes de reintentar"
+
+msgid "Selected model is unavailable to this account"
+msgstr "El modelo seleccionado no está disponible para esta cuenta"
+
+msgid "Provider model or endpoint was not found"
+msgstr "No se encontró el modelo o el endpoint del proveedor"
+
+msgid "Provider account lacks permission for this request"
+msgstr "La cuenta del proveedor no tiene permiso para esta solicitud"
+
+msgid "Provider service failed or is overloaded"
+msgstr "El servicio del proveedor falló o está saturado"
+
+msgid "Could not connect to the provider"
+msgstr "No se pudo conectar con el proveedor"
+
+msgid "Provider did not respond in time"
+msgstr "El proveedor no respondió a tiempo"
+
+msgid "Provider response was interrupted"
+msgstr "La respuesta del proveedor se interrumpió"
+
+msgid "Provider rejected the request parameters"
+msgstr "El proveedor rechazó los parámetros de la solicitud"
+
+msgid "Request is larger than the model context window"
+msgstr "La solicitud supera la ventana de contexto del modelo"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority denegó la solicitud o no pudo verificarla"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "Fallo del proveedor sin un diagnóstico reconocido"

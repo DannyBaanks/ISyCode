@@ -2865,3 +2865,117 @@ msgstr "no bridge"
 
 msgid "Workspace identity"
 msgstr "Workspace identity"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "Provider request {decision} · {reason}; no further request was sent."
+
+msgid "request was not completed"
+msgstr "request was not completed"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "Chat failed ({kind}). The request was not completed."
+
+msgid "Use /resume to retry."
+msgstr "Use /resume to retry."
+
+msgid "retry after {seconds}s"
+msgstr "retry after {seconds}s"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation} failed · {kind}: {hint}{suffix}."
+
+msgid "Chat"
+msgstr "Chat"
+
+msgid "Compaction"
+msgstr "Compaction"
+
+msgid "Model catalog"
+msgstr "Model catalog"
+
+msgid "Connection check"
+msgstr "Connection check"
+
+msgid "Planning"
+msgstr "Planning"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "one-use, stops after {seconds} s"
+
+msgid "New conversation."
+msgstr "New conversation."
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Failed"
+msgstr "Failed"
+
+msgid "Rejected"
+msgstr "Rejected"
+
+msgid "Timed out"
+msgstr "Timed out"
+
+msgid "Cancelled"
+msgstr "Cancelled"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Exit {code}"
+msgstr "Exit {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "Provider reports that image input is not supported"
+
+msgid "Provider reports that steering is not supported"
+msgstr "Provider reports that steering is not supported"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "Provider credentials are missing, invalid or rejected"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "Provider reports exhausted quota or a billing restriction"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "Provider request limit reached; wait before retrying"
+
+msgid "Selected model is unavailable to this account"
+msgstr "Selected model is unavailable to this account"
+
+msgid "Provider model or endpoint was not found"
+msgstr "Provider model or endpoint was not found"
+
+msgid "Provider account lacks permission for this request"
+msgstr "Provider account lacks permission for this request"
+
+msgid "Provider service failed or is overloaded"
+msgstr "Provider service failed or is overloaded"
+
+msgid "Could not connect to the provider"
+msgstr "Could not connect to the provider"
+
+msgid "Provider did not respond in time"
+msgstr "Provider did not respond in time"
+
+msgid "Provider response was interrupted"
+msgstr "Provider response was interrupted"
+
+msgid "Provider rejected the request parameters"
+msgstr "Provider rejected the request parameters"
+
+msgid "Request is larger than the model context window"
+msgstr "Request is larger than the model context window"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority denied or could not verify the request"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "Provider failure without a recognized diagnostic"

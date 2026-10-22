@@ -1180,7 +1180,7 @@ class ToolMixin:
         self._armed_context = None
         review = self.query_one("#review-plan", Button)
         review.disabled = True
-        review.label = "No plan pending"
+        review.label = tr("No plan pending")
 
     @staticmethod
     def _plan_digest(plan) -> str:
