@@ -146,6 +146,16 @@ class AuthorityMixin:
                 "One step for read, search, edit, move, delete, undo, sandboxed commands, git and "
                 "Python checks (whatever this computer supports). Each change, command and commit "
                 "still asks you first, and IsySentinel still checks every action."))
+            bridge_ids = ("bridge.connect", "bridge.peek", "bridge.send",
+                          "bridge.wake", "bridge.lease.claim", "bridge.lease.release")
+            bridge_enabled = all(displayed_on(action, grants.get(action, {}))
+                                 for action in bridge_ids)
+            entries.append(self._capability_entry(
+                "Coordinate with other agents · Bridge", "bridge_coordination", bridge_enabled,
+                "Registers this window as a peer so it can read its own messages, send a message to "
+                "another registered agent and wake an idle one. Every message shows the exact "
+                "recipient and text and asks you first. A Bridge lease marks who is working on "
+                "what; it never grants access to files, commands or the network."))
             readonly_ids = {"workspace.files.list", "workspace.files.read", "workspace.files.search",
                             "workspace.context.inject"}
             read_enabled = all(displayed_on(
@@ -612,6 +622,38 @@ class AuthorityMixin:
                              else "  Commands turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
                 self._append(f"  Command permission could not be saved ({type(exc).__name__}).", RED)
+        self._open_authority_menu()
+
+    async def _change_bridge_grant(self, enabled: bool) -> None:
+        """Grant or revoke the Bridge coordination actions for this workspace.
+
+        A Bridge lease is a traffic light between peers, never a grant. Every
+        message still shows its exact recipient and text and asks again.
+        """
+        accepted = await self._await_screen(TailscaleConfirmScreen(
+            "Allow Bridge coordination?" if enabled else "Stop Bridge coordination?",
+            ("ISyCode may register this window as a peer, read its own messages, send a message to "
+             "another registered agent and wake an idle one. Each message shows the exact recipient "
+             "and text and asks you before it is sent. A Bridge lease only marks who is working on "
+             "what; it never grants access to files, commands or the network." if enabled else
+             "ISyCode stops registering as a peer and stops sending or waking agents. Messages that "
+             "were already sent stay in the other agent's inbox."),
+            "Allow coordination" if enabled else "Stop coordination"))
+        if accepted:
+            try:
+                authority = WorkspaceAuthority(self._workspace_root)
+                for action in ("bridge.connect", "bridge.peek", "bridge.send",
+                               "bridge.wake", "bridge.lease.claim",
+                               "bridge.lease.release"):
+                    # A Bridge message names the peer it addresses. The grant
+                    # allows any registered peer; each message still asks again.
+                    authority.set_grant(action, enabled=enabled, targets=["*"])
+                self._append("  Bridge coordination allowed; every message still asks first." if enabled
+                             else "  Bridge coordination turned off for this workspace.", GREEN)
+                if enabled:
+                    await self._register_bridge_peer()
+            except (WorkspaceAuthorityError, OSError, ValueError) as exc:
+                self._append(f"  Bridge permission could not be saved ({type(exc).__name__}).", RED)
         self._open_authority_menu()
 
     async def _remove_saved_grant(self, action_id: str) -> None:

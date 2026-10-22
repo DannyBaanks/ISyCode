@@ -1324,14 +1324,14 @@ msgstr "当 ISyCode 第一次打开尚未保存选择的文件夹时，会在那
 msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "欢迎使用 ISyCode · 你想如何开始？"
 
-msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n\n{provider_line}\n\n快速开始：此文件夹成为 Classic 模式下的常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和提交在你批准之前仍会询问。\n自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。\n\n两条路径都对所有操作保留 IsySentinel 和操作日志。"
+msgid "{root}\n{provider_line}\nQuick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\nBoth paths keep IsySentinel and the action journal on everything."
+msgstr "{root}\n{provider_line}\n快速开始：此文件夹成为 Classic 常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和提交在你批准之前仍会询问。\n自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。\n两条路径都对所有操作保留 IsySentinel 和操作日志。"
 
 msgid "How should ISyCode work in this folder?"
 msgstr "ISyCode 应如何在此文件夹中工作？"
 
-msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
-msgstr "{root}\n\nClassic：可以开始写代码。读/搜、编辑提议、聊天、已保存会话、Git 审查以及沙箱命令（如可用）均已就绪。另一次确认可以信任此文件夹，使普通编辑和隔离测试不再逐项询问。在你确认之前，每次编辑、删除/移动、命令和提交仍会询问。提交、密钥和授权更改无论哪种模式都会询问。\nSecurity：在 设置 → Authority 中开启之前，不允许任何操作。\n\n两种模式都使用 IsySentinel 和操作日志。绝不隐含自由 shell 或敏感文件。可随时在 设置 → Authority 中切换。"
+msgid "{root}\nClassic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
+msgstr "{root}\nClassic：读/搜、编辑提议、聊天、已保存会话、Git 审查以及沙箱命令均已就绪。一次确认即可信任此文件夹，使普通编辑不再询问；编辑、删除、命令和提交在你批准之前仍会询问。提交、密钥和授权更改始终询问。\nSecurity：在 设置 → Authority 中开启之前，不允许任何操作。\n两种模式都使用 IsySentinel 和操作日志。绝不隐含自由 shell 或敏感文件。"
 
 msgid "Allow semantic broker preview?"
 msgstr "允许语义代理预览？"
@@ -2603,3 +2603,232 @@ msgstr "无凭据，无主机网络，无其他容器"
 
 msgid "no provision, no other containers, no host access"
 msgstr "无配置，无其他容器，无主机访问"
+
+# ISyCode status chips, help rows and panel labels.
+msgid "  ·  Current"
+msgstr "  ·  当前"
+
+msgid "Cancel · Esc"
+msgstr "取消 · Esc"
+
+msgid "Capture an idea · Ctrl+Shift+Enter"
+msgstr "记录想法 · Ctrl+Shift+Enter"
+
+msgid "Capture prompt idea to backlog"
+msgstr "将提示中的想法加入待办"
+
+msgid "Chat & Reasoning"
+msgstr "对话与推理"
+
+msgid "Checking Workspace Authority and IsySentinel…"
+msgstr "正在检查 Workspace Authority 与 IsySentinel…"
+
+msgid "Checking the configured model"
+msgstr "正在检查已配置的模型"
+
+msgid "Close (Esc)"
+msgstr "关闭 (Esc)"
+
+msgid "Close popup / return to chat"
+msgstr "关闭弹窗 / 返回对话"
+
+msgid "Connections and tools (LSPs, MCPs, Skills) in the rail"
+msgstr "连接与工具（LSPs、MCPs、Skills）在侧栏中"
+
+msgid "Copy selected text via Workspace Authority"
+msgstr "通过 Workspace Authority 复制所选文本"
+
+msgid "Could not open the browser. Copy the official URL and open it manually."
+msgstr "无法打开浏览器。请复制官方链接并手动打开。"
+
+msgid "Cycle reasoning (title → preview → full)"
+msgstr "切换推理显示（标题 → 预览 → 完整）"
+
+msgid "Double-click"
+msgstr "双击"
+
+msgid "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help"
+msgstr "Enter 发送 · Ctrl+J 换行 · Esc 返回 · Ctrl+P 命令 · F1 帮助"
+
+msgid "Esc / F1 / ? closes · all commands stay behind Workspace Authority"
+msgstr "Esc / F1 / ? 关闭 · 所有命令都受 Workspace Authority 约束"
+
+msgid "External Hive · unavailable"
+msgstr "外部 Hive · 不可用"
+
+msgid "Focus Files / Overview rail"
+msgstr "聚焦 文件 / 概览 侧栏"
+
+msgid "Fold or expand agent task list"
+msgstr "折叠或展开任务列表"
+
+msgid "ISyCode · Keyboard Shortcuts & Quick Help"
+msgstr "ISyCode · 快捷键与快速帮助"
+
+msgid "Idea box"
+msgstr "想法框"
+
+msgid "Idea · Space"
+msgstr "Idea · 空格"
+
+msgid "Idea · Space expand"
+msgstr "Idea · 空格展开"
+
+msgid "Increase / decrease reasoning effort"
+msgstr "提高 / 降低推理强度"
+
+msgid "Insert a newline in composer"
+msgstr "在输入框插入换行"
+
+msgid "Launch repair conversation"
+msgstr "启动修复对话"
+
+msgid "Move focus to chat composer"
+msgstr "将焦点移到聊天输入框"
+
+msgid "Navigation"
+msgstr "导航"
+
+msgid "Open copy menu for block / title"
+msgstr "打开块/标题的复制菜单"
+
+msgid "Open semantic command palette"
+msgstr "打开语义命令面板"
+
+msgid "Open sign-in in browser"
+msgstr "在浏览器中打开登录"
+
+msgid "Read-only · select with mouse or Ctrl+A; Ctrl+C copies"
+msgstr "只读 · 用鼠标或 Ctrl+A 选择；Ctrl+C 复制"
+
+msgid "Repair all gaps"
+msgstr "修复所有缺口"
+
+msgid "Repair plan · choose how to execute"
+msgstr "修复计划 · 选择执行方式"
+
+msgid "Review compacted pasted text"
+msgstr "查看已压缩的粘贴文本"
+
+msgid "Search rendered console output"
+msgstr "搜索已渲染的控制台输出"
+
+msgid "Search session titles and transcripts"
+msgstr "搜索会话标题与记录"
+
+msgid "Select all text in focused block"
+msgstr "选中焦点块中的全部文本"
+
+msgid "Send message / submit prompt"
+msgstr "发送消息 / 提交提示"
+
+msgid "Sign-in link failed safety validation; it will not be opened."
+msgstr "登录链接未通过安全校验；不会被打开。"
+
+msgid "Switch between ShellBox and IdeaBox"
+msgstr "在 ShellBox 与 IdeaBox 之间切换"
+
+msgid "Thinking…"
+msgstr "思考中…"
+
+msgid "Toggle Workspace Rail / sidebar"
+msgstr "切换工作区侧栏"
+
+msgid "Tools & Clipboard"
+msgstr "工具与剪贴板"
+
+msgid "Widen / narrow workspace rail"
+msgstr "加宽或缩窄工作区侧栏"
+
+msgid "details in the right rail"
+msgstr "详情在右侧栏"
+
+msgid "MCPs · {state}"
+msgstr "MCPs · {state}"
+
+msgid "MCPs · {on}/{total} on"
+msgstr "MCPs · {on}/{total} 已启用"
+
+msgid "MCPs · none"
+msgstr "MCPs · 无服务器"
+
+msgid "Skills · {state}"
+msgstr "Skills · {state}"
+
+msgid "Skills · {count} available"
+msgstr "Skills · {count} 个可用"
+
+msgid "Skills · none"
+msgstr "Skills · 未配置"
+
+msgid "LSPs · none"
+msgstr "LSPs · 无服务器"
+
+msgid "LSPs · {ready} ready"
+msgstr "LSPs · {ready} 个就绪"
+
+msgid "LSPs · {ready} ready · {missing} missing"
+msgstr "LSPs · {ready} 个就绪 · {missing} 个缺失"
+
+msgid "not configured"
+msgstr "未配置"
+
+msgid "not checked"
+msgstr "未检查"
+
+msgid "unavailable"
+msgstr "不可用"
+
+msgid "denied"
+msgstr "已拒绝"
+
+msgid "checking"
+msgstr "检查中"
+
+msgid "error"
+msgstr "错误"
+
+msgid "Ready"
+msgstr "就绪"
+
+msgid "IsySentinel · {allowed} allow · {denied} deny"
+msgstr "IsySentinel · 允许 {allowed} · 拒绝 {denied}"
+
+msgid "Describe a task, ask a question, or type / for commands..."
+msgstr "描述任务、提问，或输入 / 调用命令..."
+
+msgid "loading"
+msgstr "加载中"
+
+msgid "none configured"
+msgstr "未配置"
+
+msgid "none available for this project"
+msgstr "此项目没有可用的"
+
+msgid "Not On PATH"
+msgstr "不在 PATH 中"
+
+msgid "no language server"
+msgstr "没有语言服务器"
+
+msgid "workspace symbols"
+msgstr "工作区符号"
+
+msgid "installed · sandbox does not run it"
+msgstr "已安装 · 沙箱无法运行"
+
+msgid "installed · sandbox unavailable"
+msgstr "已安装 · 沙箱不可用"
+
+msgid "connected tool services"
+msgstr "已连接的工具服务"
+
+msgid "To: {to}"
+msgstr "发送给：{to}"
+
+msgid "Topic: {topic}"
+msgstr "主题：{topic}"
+
+msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
+msgstr "消息将离开此工作区。Bridge 租约只是协调，不代表可以访问文件、命令或网络。"

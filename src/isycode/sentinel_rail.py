@@ -22,7 +22,7 @@ from rich.text import Text
 
 from isycode.actions import ACTION_BY_ID
 from isycode.authority_view import DEDICATED_CONTROLS, grant_state
-from isycode.tui_theme import status_phrase, switch_row, switch_rows
+from isycode.tui_theme import status_chip, status_phrase, switch_row, switch_rows
 
 RECENT_DECISIONS = 8
 

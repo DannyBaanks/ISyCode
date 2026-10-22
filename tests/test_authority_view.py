@@ -25,7 +25,10 @@ def test_every_saved_grant_has_a_visible_control_or_row():
 def test_other_saved_rows_mark_ownerless_grants_as_blocked():
     rows = {row.action_id: row for row in other_saved_grants(_all_saved())}
     assert rows["l1.create"].state == "blocked"
-    assert rows["bridge.connect"].state == "blocked"
+    # The Bridge coordination actions have an owner and a dedicated control,
+    # so they are not ownerless rows any more.
+    assert "bridge.connect" not in rows
+    assert "bridge.connect" in DEDICATED_CONTROLS
     assert rows["tailscale.serve.enable"].state == "on"
     assert rows["tailscale.serve.enable"].approval_required is True
 

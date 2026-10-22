@@ -1324,14 +1324,14 @@ msgstr "Cuando ISyCode abre por primera vez una carpeta sin una elección guarda
 msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "Bienvenido a ISyCode · ¿cómo quieres empezar?"
 
-msgid "{root}\n\n{provider_line}\n\nQuick Start: this folder becomes a recurring workspace in Classic mode — read/search, edit proposals and chat are ready. One more confirmation can turn on all coding tools, and edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\n\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n\n{provider_line}\n\nInicio rápido: esta carpeta pasa a ser un espacio recurrente en modo Classic — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más puede encender todas las herramientas de código, y las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\n\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
+msgid "{root}\n{provider_line}\nQuick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\nBoth paths keep IsySentinel and the action journal on everything."
+msgstr "{root}\n{provider_line}\nInicio rápido: esta carpeta pasa a ser un espacio Classic recurrente — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más enciende todas las herramientas de código; las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
 
 msgid "How should ISyCode work in this folder?"
 msgstr "¿Cómo debe trabajar ISyCode en esta carpeta?"
 
-msgid "{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. Until you confirm that, each edit, delete/move, command and commit still asks. Commits, secrets and authority changes keep asking either way.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\n\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied. Switch any time in Settings → Authority."
-msgstr "{root}\n\nClassic: listo para programar. Lectura/búsqueda, propuestas de edición, chat, sesiones guardadas, revisión de Git y comandos en sandbox (cuando hay) están listos. Una confirmación aparte puede confiar en esta carpeta para que las ediciones normales y las pruebas aisladas dejen de preguntar una a una. Hasta que confirmes eso, cada edición, borrado/movimiento, comando y commit sigue preguntando. Los commits, secretos y cambios de autoridad preguntan igual.\nSecurity: no se permite nada hasta que lo actives en Configuración → Authority.\n\nLos dos modos usan IsySentinel y el diario de acciones. Nunca se implica un shell libre ni archivos sensibles. Cambia cuando quieras en Configuración → Authority."
+msgid "{root}\nClassic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
+msgstr "{root}\nClassic: lectura/búsqueda, propuestas de edición, chat, sesiones guardadas, revisión de Git y comandos en sandbox están listos. Una confirmación puede confiar en esta carpeta para que las ediciones normales dejen de preguntar; las ediciones, borrados, comandos y commits siguen preguntando hasta que los apruebes. Los commits, secretos y cambios de autoridad preguntan siempre.\nSecurity: no se permite nada hasta que lo actives en Configuración → Authority.\nLos dos modos usan IsySentinel y el diario de acciones. Nunca se implica un shell libre ni archivos sensibles."
 
 msgid "Allow semantic broker preview?"
 msgstr "¿Permitir la vista previa del broker semántico?"
@@ -2603,3 +2603,232 @@ msgstr "sin credenciales, sin red del host, sin otros contenedores"
 
 msgid "no provision, no other containers, no host access"
 msgstr "sin aprovisionamiento, sin otros contenedores, sin acceso al host"
+
+# ISyCode status chips, help rows and panel labels.
+msgid "  ·  Current"
+msgstr "  ·  Actual"
+
+msgid "Cancel · Esc"
+msgstr "Cancelar · Esc"
+
+msgid "Capture an idea · Ctrl+Shift+Enter"
+msgstr "Captura una idea · Ctrl+Shift+Enter"
+
+msgid "Capture prompt idea to backlog"
+msgstr "Captura la idea del prompt en la lista"
+
+msgid "Chat & Reasoning"
+msgstr "Chat y razonamiento"
+
+msgid "Checking Workspace Authority and IsySentinel…"
+msgstr "Comprobando Workspace Authority e IsySentinel…"
+
+msgid "Checking the configured model"
+msgstr "Comprobando el modelo configurado"
+
+msgid "Close (Esc)"
+msgstr "Cerrar (Esc)"
+
+msgid "Close popup / return to chat"
+msgstr "Cierra el popup / vuelve al chat"
+
+msgid "Connections and tools (LSPs, MCPs, Skills) in the rail"
+msgstr "Conexiones y herramientas (LSPs, MCPs, Skills) en la barra lateral"
+
+msgid "Copy selected text via Workspace Authority"
+msgstr "Copia el texto seleccionado con Workspace Authority"
+
+msgid "Could not open the browser. Copy the official URL and open it manually."
+msgstr "No se pudo abrir el navegador. Copia la URL oficial y ábrela a mano."
+
+msgid "Cycle reasoning (title → preview → full)"
+msgstr "Cambia el razonamiento (título → vista previa → completo)"
+
+msgid "Double-click"
+msgstr "Doble clic"
+
+msgid "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help"
+msgstr "Enter envía · Ctrl+J salto de línea · Esc atrás · Ctrl+P comandos · F1 ayuda"
+
+msgid "Esc / F1 / ? closes · all commands stay behind Workspace Authority"
+msgstr "Esc / F1 / ? cierra · todos los comandos pasan por Workspace Authority"
+
+msgid "External Hive · unavailable"
+msgstr "Hive externo · no disponible"
+
+msgid "Focus Files / Overview rail"
+msgstr "Enfoca la barra Archivos / Resumen"
+
+msgid "Fold or expand agent task list"
+msgstr "Plega o despliega la lista de tareas"
+
+msgid "ISyCode · Keyboard Shortcuts & Quick Help"
+msgstr "ISyCode · Atajos de teclado y ayuda rápida"
+
+msgid "Idea box"
+msgstr "Cuadro de ideas"
+
+msgid "Idea · Space"
+msgstr "Idea · Espacio"
+
+msgid "Idea · Space expand"
+msgstr "Idea · Espacio expande"
+
+msgid "Increase / decrease reasoning effort"
+msgstr "Aumenta / reduce el esfuerzo de razonamiento"
+
+msgid "Insert a newline in composer"
+msgstr "Inserta un salto de línea en el compositor"
+
+msgid "Launch repair conversation"
+msgstr "Inicia la conversación de reparación"
+
+msgid "Move focus to chat composer"
+msgstr "Mueve el foco al compositor del chat"
+
+msgid "Navigation"
+msgstr "Navegación"
+
+msgid "Open copy menu for block / title"
+msgstr "Abre el menú de copia del bloque / título"
+
+msgid "Open semantic command palette"
+msgstr "Abre la paleta de comandos semánticos"
+
+msgid "Open sign-in in browser"
+msgstr "Abre el inicio de sesión en el navegador"
+
+msgid "Read-only · select with mouse or Ctrl+A; Ctrl+C copies"
+msgstr "Solo lectura · selecciona con el ratón o Ctrl+A; Ctrl+C copia"
+
+msgid "Repair all gaps"
+msgstr "Repara todas las brechas"
+
+msgid "Repair plan · choose how to execute"
+msgstr "Plan de reparación · elige cómo ejecutarlo"
+
+msgid "Review compacted pasted text"
+msgstr "Revisa el texto pegado compactado"
+
+msgid "Search rendered console output"
+msgstr "Busca en la salida de la consola"
+
+msgid "Search session titles and transcripts"
+msgstr "Busca títulos y transcripciones de sesión"
+
+msgid "Select all text in focused block"
+msgstr "Selecciona todo el texto del bloque enfocado"
+
+msgid "Send message / submit prompt"
+msgstr "Envía el mensaje / envía el prompt"
+
+msgid "Sign-in link failed safety validation; it will not be opened."
+msgstr "El enlace de inicio de sesión no pasó la validación de seguridad; no se abrirá."
+
+msgid "Switch between ShellBox and IdeaBox"
+msgstr "Cambia entre ShellBox e IdeaBox"
+
+msgid "Thinking…"
+msgstr "Pensando…"
+
+msgid "Toggle Workspace Rail / sidebar"
+msgstr "Muestra u oculta la barra lateral"
+
+msgid "Tools & Clipboard"
+msgstr "Herramientas y portapapeles"
+
+msgid "Widen / narrow workspace rail"
+msgstr "Ensancha o estrecha la barra lateral"
+
+msgid "details in the right rail"
+msgstr "el detalle está en la barra lateral"
+
+msgid "MCPs · {state}"
+msgstr "MCPs · {state}"
+
+msgid "MCPs · {on}/{total} on"
+msgstr "MCPs · {on}/{total} activos"
+
+msgid "MCPs · none"
+msgstr "MCPs · sin servidores"
+
+msgid "Skills · {state}"
+msgstr "Skills · {state}"
+
+msgid "Skills · {count} available"
+msgstr "Skills · {count} disponibles"
+
+msgid "Skills · none"
+msgstr "Skills · sin configurar"
+
+msgid "LSPs · none"
+msgstr "LSPs · sin servidores"
+
+msgid "LSPs · {ready} ready"
+msgstr "LSPs · {ready} listos"
+
+msgid "LSPs · {ready} ready · {missing} missing"
+msgstr "LSPs · {ready} listos · {missing} ausentes"
+
+msgid "not configured"
+msgstr "sin configurar"
+
+msgid "not checked"
+msgstr "sin comprobar"
+
+msgid "unavailable"
+msgstr "no disponible"
+
+msgid "denied"
+msgstr "denegado"
+
+msgid "checking"
+msgstr "comprobando"
+
+msgid "error"
+msgstr "error"
+
+msgid "Ready"
+msgstr "Listo"
+
+msgid "IsySentinel · {allowed} allow · {denied} deny"
+msgstr "IsySentinel · permite {allowed} · deniega {denied}"
+
+msgid "Describe a task, ask a question, or type / for commands..."
+msgstr "Describe una tarea, haz una pregunta o escribe / para comandos..."
+
+msgid "loading"
+msgstr "cargando"
+
+msgid "none configured"
+msgstr "sin configurar"
+
+msgid "none available for this project"
+msgstr "ninguna disponible para este proyecto"
+
+msgid "Not On PATH"
+msgstr "No está en el PATH"
+
+msgid "no language server"
+msgstr "sin servidor de lenguaje"
+
+msgid "workspace symbols"
+msgstr "símbolos del workspace"
+
+msgid "installed · sandbox does not run it"
+msgstr "instalado · el sandbox no lo ejecuta"
+
+msgid "installed · sandbox unavailable"
+msgstr "instalado · sandbox no disponible"
+
+msgid "connected tool services"
+msgstr "servicios de herramientas conectados"
+
+msgid "To: {to}"
+msgstr "Para: {to}"
+
+msgid "Topic: {topic}"
+msgstr "Tema: {topic}"
+
+msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
+msgstr "El mensaje sale de este workspace. Una lease del Bridge es coordinación, no acceso a archivos, comandos ni red."

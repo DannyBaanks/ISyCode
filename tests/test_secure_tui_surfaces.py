@@ -126,7 +126,15 @@ def test_authority_settings_never_presents_an_explicit_deny_as_granted():
             assert displayed_on(action.id, saved, scoped=False) is False, action.id
     assert grant_state("mobile.host.start", saved) == "on"
     assert grant_state("session.create", saved) == "on"
-    assert grant_state("bridge.connect", saved) == "blocked"
+    # The Bridge coordination actions have an owner now, so a saved grant is
+    # real. They are never part of the Classic preset: a message or a lease
+    # still needs its own grant and its own approval.
+    assert grant_state("bridge.connect", saved) == "on"
+    assert grant_state("bridge.send", saved) == "on"
+    from isycode.workspace_authority import CLASSIC_ACTIONS
+    assert "bridge.connect" not in CLASSIC_ACTIONS
+    assert "bridge.send" not in CLASSIC_ACTIONS
+    assert "bridge.lease.claim" not in CLASSIC_ACTIONS
 
 
 def test_authority_menu_derives_every_on_state_from_the_runtime_registry():

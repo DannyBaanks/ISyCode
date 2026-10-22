@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import urlsplit
 
+from isycode.bridge_contract import (
+    ANY_PEER, BRIDGE_COORDINATION_ACTIONS, BRIDGE_PEER_ACTIONS,
+)
 from isycode.security import ACTION_BY_ID, ActionRequest, AuthorityDecision
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.workspace_setup import state_root
@@ -328,6 +331,15 @@ class WorkspaceAuthority:
                         or not connector_scope_matches(connector_grant, identity)):
                     return AuthorityDecision(False, "", "subscription connector and all authentication hosts need explicit grants", digest)
 
+
+        elif request.action_id in BRIDGE_COORDINATION_ACTIONS:
+            # The Bridge is a local, file-backed coordination protocol, not a
+            # network service. It needs its own explicit grant, and a message
+            # names the peer it addresses.
+            if request.action_id in BRIDGE_PEER_ACTIONS:
+                targets = grant.get("targets", [])
+                if ANY_PEER not in targets and request.target not in targets:
+                    return AuthorityDecision(False, "", "bridge target is not explicitly granted", digest)
 
         elif spec.effect == "process":
             executable = (request.parameters or {}).get("executable", "")

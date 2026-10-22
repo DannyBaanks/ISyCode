@@ -330,18 +330,25 @@ Reglas de frontera:
 
 ### M8 — Bridge y coordinación multi-agente (opcional)
 
-**Estado:** wrapper `src/isycode/bridge.py` y handshake existen; superficie visual y gates de coordinación pendientes.
+**Estado (2026-10-20):** `src/isycode/bridge_coordination.py` implementa el owner de coordinación
+con su boundary, y las seis acciones del Bridge dejaron de ser DENY explícitas. El modelo puede
+proponer `bridge_peers`, `bridge_send` y `bridge_wake`; cada mensaje muestra destinatario y texto
+exactos y pasa por Workspace Authority, ISySentinel, aprobación de un uso y el diario. Cada ventana
+ISyCode se registra con su propia identidad, así que dos TUIs se tratan como peers. El snapshot M15 y
+`docs/security/m15-authority-coverage.json` se regeneraron con la nueva clasificación.
 
 **Objetivo:** exponer presencia, mensajes y leases del Bridge sin confundir coordinación con autoridad local.
 
 **Trabajo:**
 
-- [ ] Mostrar identidad del agente, status, peers y lease con expiración, owner, topic y path lógico.
-- [ ] Integrar heartbeat/peek/send/claim/release por adapter; mostrar expiración y error de red.
-- [ ] Un lease del Bridge es señal de coordinación y nunca equivale a un grant de Workspace Authority.
-- [ ] Evitar claim con path físico fuera del workspace autorizado; credenciales/tokens del bridge no aparecen en transcript.
+- [x] Mostrar identidad del agente, status, peers y lease con expiración, owner, topic y path lógico.
+- [x] Integrar heartbeat/peek/send/claim/release por adapter; mostrar expiración y error de red.
+- [x] Un lease del Bridge es señal de coordinación y nunca equivale a un grant de Workspace Authority.
+- [x] Evitar claim con path físico fuera del workspace autorizado; credenciales/tokens del bridge no aparecen en transcript.
 
 **Criterios de aceptación:** dos agentes comparten tarea, conflicto de lease se muestra y bloquea colisión; aun con lease adquirido, operación no concedida por host recibe DENY.
+La ejecución end-to-end entre dos peers reales sigue NOT_DEMONSTRATED: las pruebas usan un cliente
+Bridge simulado y el test suite no arranca una segunda instancia ISyCode.
 
 ### M9 — L1 / herramientas creadas por OpenISy (opcional y al final)
 

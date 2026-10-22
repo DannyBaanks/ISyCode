@@ -152,9 +152,11 @@ IsyMotron's old read adapter remains only as a legacy adapter.
 
 The local Secure frontier is closed: active Workspace, provider, Gateway MCP,
 semantic Gateway, LSP, broker, and session-delete owners use the central gate
-and write their supported receipts. Mobile Host, Bridge, L1, general workspace
-mutation, persistent session creation/resume, clipboard, and file pickers
-remain unavailable because those owners are not connected. This is an
+and write their supported receipts. The Bridge coordination owner joined them
+on 2026-10-20 (M8): connect, peek, send, wake and claim/release pass the same
+gate, and a lease stays a coordination signal. Mobile Host, L1, general
+workspace mutation, persistent session creation/resume, clipboard, and file
+pickers remain unavailable because those owners are not connected. This is an
 intentional Secure boundary, not a claim that these features are implemented.
 The IsyMotron Planner's provider call now runs through `ProviderNetworkOwner`;
 its legacy Executor remains disabled. The action journal has a read-only UI

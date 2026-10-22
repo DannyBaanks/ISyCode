@@ -36,11 +36,15 @@ ModalScreen > Vertical, ModalScreen > VerticalScroll {
     border: solid $isy-border !important; max-height: 95%; max-width: 96%;
 }
 ModalScreen VerticalScroll, ModalScreen OptionList { background: $isy-surface !important; }
+/* Flat action buttons: no second frame inside a dialog. A borderless button
+   declares its own height, so dialog geometry stays what it was. */
 ModalScreen Button {
-    border: solid $isy-border !important; background: $isy-surface !important; color: $isy-text !important;
-    background-tint: transparent; tint: transparent; min-width: 8;
+    border: none !important; background: $isy-surface !important; color: $isy-text !important;
+    background-tint: transparent; tint: transparent; min-width: 8; height: 3;
 }
-ModalScreen Button:hover, ModalScreen Button:focus { border: solid $isy-focus !important; background: $isy-selected-surface !important; }
+ModalScreen Button:hover, ModalScreen Button:focus {
+    border: none !important; background: $isy-selected-surface !important; color: $isy-focus !important;
+}
 ModalScreen Button.-primary { color: $isy-focus !important; }
 ModalScreen Button.-warning { color: $isy-warning !important; }
 ModalScreen Button.-error { color: $isy-error !important; }
@@ -102,8 +106,9 @@ CollapsibleTitle { text-style: none; color: $isy-text; }
 #action-card.wide-detail-menu #action-detail { width: 2fr; height: 1fr; max-height: 100%; margin: 0 0 0 2; padding-left: 1; border-left: solid $isy-separator; overflow-y: auto; }
 #action-detail { border-top: solid $isy-separator; }
 #action-card.provider-menu #action-list > .option-list--option-highlighted { background: $isy-selected-surface; color: $isy-focus; }
-#quick-start-card, #workspace-mode-card, #workspace-setup-card { height: 92% !important; max-height: 95% !important; }
-#quick-start-copy, #workspace-mode-copy, #workspace-setup-copy { height: 1fr !important; min-height: 1; overflow-y: auto; }
+/* Onboarding cards fit their content; only the copy scrolls. */
+#quick-start-card, #workspace-mode-card, #workspace-setup-card { height: auto !important; max-height: 92% !important; }
+#quick-start-copy, #workspace-mode-copy, #workspace-setup-copy { height: auto !important; max-height: 11; min-height: 1; overflow-y: auto; }
 #quick-start-title, #workspace-mode-title, #workspace-setup-title { height: auto !important; max-height: 3; color: $isy-text !important; }
 #quick-start-options, #workspace-mode-options { height: 4 !important; }
 #workspace-setup-options { height: 4 !important; }
@@ -120,9 +125,11 @@ OptionList, Collapsible, Collapsible > Contents, Collapsible > CollapsibleTitle 
 ExpandableBox { border-bottom: solid $isy-separator; }
 
 ModalScreen { align: center middle; background: #000000 65%; }
+/* Selector rows stay one row each: they are choices, not action buttons. */
 .model-choice, .child-model-choice {
     border: none !important; border-left: solid $isy-surface !important;
     padding: 0 1; text-style: none !important; content-align: left top;
+    height: 1; min-height: 1;
 }
 .model-choice:focus, .model-choice:hover, .model-choice.-selected,
 .child-model-choice:focus, .child-model-choice:hover, .child-model-choice.-selected {

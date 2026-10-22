@@ -102,6 +102,20 @@ def status_phrase(text: str) -> str:
     return " ".join(pieces)
 
 
+def status_chip(msgid: str, **values: object) -> str:
+    """A translated status chip.
+
+    The English rendering keeps the title case of a status chip. Other
+    locales use the wording their catalog gives, so the chip never mixes an
+    English status word into a translated rail.
+    """
+    from isycode.localization import current_locale, tr
+
+    if current_locale() == "en":
+        return status_phrase(msgid.format(**values))
+    return tr(msgid, **values)
+
+
 def switch_row(on: bool | None, name: str, note: str = "", *, inactive: bool = False) -> Text:
     """A colored mark and a name. The row itself stays unfilled.
 

@@ -147,11 +147,11 @@ class QuickStartScreen(ModalScreen[str]):
             yield Static(tr("Welcome to ISyCode · how do you want to start?"),
                          id="quick-start-title", classes="isy-dialog-title")
             yield OnboardingCopy(
-                tr("{root}\n\n{provider_line}\n\n"
-                   "Quick Start: this folder becomes a recurring workspace in Classic mode — "
-                   "read/search, edit proposals and chat are ready. One more confirmation can turn on "
-                   "all coding tools, and edits, commands and commits still ask until you approve them.\n"
-                   "Custom setup: choose recurrence, Classic or Security, and each tool step by step.\n\n"
+                tr("{root}\n{provider_line}\n"
+                   "Quick Start: this folder becomes a recurring Classic workspace — read/search, "
+                   "edit proposals and chat are ready. One more confirmation turns on all coding "
+                   "tools; edits, commands and commits still ask until you approve them.\n"
+                   "Custom setup: choose recurrence, Classic or Security, and each tool step by step.\n"
                    "Both paths keep IsySentinel and the action journal on everything.",
                    root=str(self.root), provider_line=provider_line),
                 id="quick-start-copy", classes="isy-dialog-body")
@@ -201,14 +201,15 @@ class WorkspaceModeScreen(ModalScreen[str]):
         with Vertical(id="workspace-mode-card", classes="isy-dialog"):
             yield Static(tr("How should ISyCode work in this folder?"), id="workspace-mode-title", classes="isy-dialog-title")
             yield OnboardingCopy(
-                tr("{root}\n\nClassic: ready to code. Read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands (when available) are ready. "
-                   "A separate confirmation can trust this folder so ordinary edits and isolated tests stop asking one by one. "
-                   "Until you confirm that, each edit, delete/move, command and commit still asks. "
-                   "Commits, secrets and authority changes keep asking either way.\n"
-                   "Security: nothing is allowed until you turn it on in Settings → Authority.\n\n"
-                   "Both modes use IsySentinel and the action journal. "
-                   "Free shell and sensitive files are never implied. Switch any time "
-                   "in Settings → Authority.", root=str(self.root)),
+                tr("{root}\n"
+                   "Classic: read/search, edit proposals, chat, saved sessions, Git review and "
+                   "sandboxed commands are ready. One confirmation can trust this folder so "
+                   "ordinary edits stop asking; edits, deletes, commands and commits keep asking "
+                   "until you approve them. Commits, secrets and authority changes always ask.\n"
+                   "Security: nothing is allowed until you turn it on in Settings → Authority.\n"
+                   "Both modes use IsySentinel and the action journal. Free shell and sensitive "
+                   "files are never implied.",
+                   root=str(self.root)),
                 id="workspace-mode-copy", classes="isy-dialog-body")
             yield OptionList(
                 Option(tr("Classic · Ready To Use"), id="classic"),
