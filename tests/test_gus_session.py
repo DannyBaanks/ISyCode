@@ -155,13 +155,26 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
     seen = []
     monkeypatch.setattr("isycode.chat_transport.provider_complete", _model(seen))
 
+    async def until(pilot, condition, what):
+        # Startup work shares the event loop; a loaded full-suite run needs room.
+        for _ in range(200):
+            if condition():
+                return
+            await pilot.pause(0.05)
+        raise AssertionError(f"timed out waiting for {what}")
+
     async def scenario():
         app = TUIApp()
+        notes = []
+        set_activity = app._set_activity
+        app._set_activity = lambda text, *args, **kwargs: (notes.append(str(text)),
+                                                           set_activity(text, *args, **kwargs))
         async with app.run_test(size=(120, 40)) as pilot:
             await app.wait_for_ready()
             await app._open_gus("hola")
-            status = " ".join(str(app.query_one("#activity-status").render()).split())
-            assert "only in the ISyCode repository" in status
+            # Startup can repaint the activity line later; check what GUS reported.
+            assert any("only in the ISyCode repository" in note for note in notes)
+            assert not isinstance(app.screen, GusScreen)
             assert not app.query_one("#gus-button").display    # not the ISyCode repo
             _checkout(app._workspace_root)
             app._paint_workspace_chrome()
@@ -172,25 +185,16 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert gus_button.region.right <= mode_button.region.x  # just left of the mode chip
 
             task = asyncio.ensure_future(app._open_gus())
-            for _ in range(40):
-                await pilot.pause(0.05)
-                if isinstance(app.screen, TailscaleConfirmScreen):
-                    break
-            assert isinstance(app.screen, TailscaleConfirmScreen)
+            await until(pilot, lambda: isinstance(app.screen, TailscaleConfirmScreen), "the enable prompt")
             app.screen.dismiss(False)                      # declined: nothing enabled
             await task
             assert not GusState(app._workspace_root).enabled()
 
             task = asyncio.ensure_future(app._open_gus("hola GUS"))
-            for _ in range(40):
-                await pilot.pause(0.05)
-                if isinstance(app.screen, TailscaleConfirmScreen):
-                    break
+            await until(pilot, lambda: isinstance(app.screen, TailscaleConfirmScreen), "the enable prompt")
             app.screen.dismiss(True)
-            for _ in range(80):
-                await pilot.pause(0.05)
-                if isinstance(app.screen, GusScreen) and len(app.screen.query(".gus-line")) >= 2:
-                    break
+            await until(pilot, lambda: isinstance(app.screen, GusScreen)
+                        and len(app.screen.query(".gus-line")) >= 2, "GUS's answer")
             screen = app.screen
             assert isinstance(screen, GusScreen)
             assert screen.focused is screen.query_one("#gus-input")   # never the Clear button
@@ -206,11 +210,7 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             await task
 
             await pilot.click("#gus-button")               # the bar button opens the same window
-            for _ in range(40):
-                await pilot.pause(0.05)
-                if isinstance(app.screen, GusScreen):
-                    break
-            assert isinstance(app.screen, GusScreen)
+            await until(pilot, lambda: isinstance(app.screen, GusScreen), "GUS's window from the bar")
             app.screen.dismiss(None)
             await pilot.pause()
 
