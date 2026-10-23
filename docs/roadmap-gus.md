@@ -1,6 +1,6 @@
 # Roadmap: GUS, el modelo mantenedor de ISyCode
 
-Fecha: 2026-10-23. Estado: **MK0 en curso: D1–D4 resueltas en [ADR 0011](decisions/0011-gus-maintainer.md); ninguna puerta aprobada.**
+Fecha: 2026-10-23. Estado: **[ADR 0011](decisions/0011-gus-maintainer.md) aceptado (D1–D4); MK1 en curso; ninguna puerta aprobada.**
 Este documento define el destino y sus puertas; publicarlo no implementa nada ni supera ninguna puerta.
 Los IDs `MK0`–`MK6` y `GK-*` son locales a este roadmap. GUS de ISyCode y GUS de ISyCo-Worlds comparten nombre (D4), no código ni estado.
 

@@ -1,6 +1,6 @@
 # ADR 0011: GUS, el modelo mantenedor de ISyCode
 
-- **Estado:** propuesto en el hito MK0. No es aprobación de ninguna puerta `GK`; cada puerta se evalúa con evidencia ligada a un SHA.
+- **Estado:** aceptado por Danny el 2026-10-23 (hito MK0). Aceptar el ADR no aprueba ninguna puerta `GK`; cada puerta se evalúa con evidencia ligada a un SHA.
 - **Fecha:** 2026-10-23
 - **SHA de partida:** `e5ab364` (`main` tras el PR #73)
 - **Plan:** [roadmap de GUS](../roadmap-gus.md)
@@ -63,7 +63,10 @@ Hoy en ISyCode:
    | 131 072 | 196 608 caracteres | 7 % |
 
    Con una ventana conocida menor de 32k, el slot no se guarda y lo dice. Con una ventana desconocida, se aplica el supuesto de 128k de la cápsula y se avisa.
-6. **Conversación propia.** GUS guarda su transcripción aparte del chat, con tope, como en ISyCo-Worlds. No se crea un sistema de lanes nuevo.
+6. **No es L1.** L1 (`l1.py`, acciones `l1.*`) es el pipeline con puertas para herramientas escritas por el modelo, donde crear una herramienta no la activa ni la concede.
+   GUS no crea herramientas: cambia el código de ISyCode en una rama con las acciones de workspace y Git que ya existen.
+   Su rol no puede pedir acciones `l1.*`.
+7. **Conversación propia.** GUS guarda su transcripción aparte del chat, con tope, como en ISyCo-Worlds. No se crea un sistema de lanes nuevo.
 
 ## Consecuencias
 
