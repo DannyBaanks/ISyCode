@@ -22,7 +22,6 @@ def test_composer_and_idea_note_fit_beside_sidebar(tmp_path, monkeypatch, capsys
             prompt = app.query_one(PromptArea)
             box = app.query_one('#idea-box')
             assert not composer.region.overlaps(rail.region)
-            assert not app.query_one('#banner').region.overlaps(rail.region)
             assert prompt.content_size.height == 1
             assert abs(box.region.width - prompt.region.width * .6) <= 1
             assert abs(box.region.center[0] - prompt.region.center[0]) <= 1
@@ -32,8 +31,12 @@ def test_composer_and_idea_note_fit_beside_sidebar(tmp_path, monkeypatch, capsys
             # With the rail open below 100 columns the model button yields so
             # the bar stays inside the composer; the model shows in the idea
             # box title instead.
-            expected_buttons = 4 if size[0] < 100 else 5
-            assert len([b for b in app.query('#command-bar Button') if b.display]) == expected_buttons
+            # The bar is measured: the model yields first, then the mode chip.
+            shown = [b for b in app.query('#command-bar Button') if b.display]
+            assert all(composer.region.contains_region(b.region) for b in shown)
+            assert not any(a.region.overlaps(b.region) for a in shown for b in shown if a is not b)
+            if size[0] >= 100:
+                assert app.query_one('#mode-button').display
             app._idea_box = 'Reading the parser; next: verify the fix.'
             app._paint_idea_box()
             assert 'Reading the parser' in plain_text(box)

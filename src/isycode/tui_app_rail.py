@@ -35,13 +35,16 @@ from isycode.tui_theme import (
     status_chip,
     TEXT,
     MUTED,
+    CYAN,
     YELLOW,
     status_phrase,
     switch_row,
     switch_rows,
 )
 from isycode.tui_widgets import (
-    Banner,
+    RailHeader,
+    workspace_mode_chip,
+    workspace_mode_name,
     Collapsible,
     SidePanel,
 )
@@ -109,7 +112,7 @@ class RailMixin:
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
         self._set_activity(tr("Sidebar width · {width} columns", width=width), MUTED)
-        self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._paint_workspace_chrome)
 
     def action_narrow_sidebar(self) -> None:
         if self.size.width >= 100:
@@ -120,7 +123,7 @@ class RailMixin:
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
         self._set_activity(tr("Sidebar width · {width} columns", width=width), MUTED)
-        self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._paint_workspace_chrome)
 
     async def _refresh_openisy(self) -> None:
         self._openisy_refresh_generation += 1
@@ -684,7 +687,7 @@ class RailMixin:
             self.query_one("#main").display = True
             self._apply_rail_width(self.size.width)
         self._update_model_button_visibility()
-        self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._paint_workspace_chrome)
 
     def action_toggle_dedicated_space(self) -> None:
         """Dedicated full-width space view in compact terminals."""
@@ -724,7 +727,7 @@ class RailMixin:
         else:
             self.query_one("#main").display = True
             self._apply_rail_width(self.size.width)
-        self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._paint_workspace_chrome)
         self.call_after_refresh(self._update_model_button_visibility)
         show_files = view == "files"
         self._rail_view = "files" if show_files else "overview"
@@ -898,6 +901,19 @@ class RailMixin:
         mode = {"classic": "Classic", "flow": "Flow"}.get(self._workspace_mode(), "Security")
         bridge = getattr(self, "_bridge_identity", "") or tr("no bridge")
         return f"{name} · {mode} · {bridge}"
+
+    def _paint_workspace_chrome(self) -> None:
+        """Wordmark and launch folder in the rail; the workspace mode by Settings."""
+        try:
+            header = self.query_one(RailHeader)
+            button = self.query_one("#mode-button", Button)
+        except (NoMatches, NoScreen):
+            return
+        header.paint()
+        mode = workspace_mode_name(self)
+        button.label = Text(workspace_mode_chip(self), style=CYAN if mode == "Classic" else MUTED)
+        button.tooltip = tr("Workspace mode · click to switch between Classic, Flow and Security")
+        self._update_model_button_visibility()
 
     def _paint_rail_identity(self) -> None:
         try:

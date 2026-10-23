@@ -9,7 +9,7 @@ from textual.geometry import Offset
 from textual.selection import Selection
 from textual.widgets import Button, Input, OptionList, TextArea
 
-from isycode.tui import TUIApp, PromptArea, Banner
+from isycode.tui import TUIApp, PromptArea
 from isycode.tui_copy import CopyMenuScreen, extract_range
 from isycode.tui_widgets import ExpandableBox, BoxTitle, SelectableText, ThoughtBlock
 from test_daily_tui import configure
@@ -304,7 +304,7 @@ def test_settings_reachable_categories_search_motion_and_new_chat_focus(tmp_path
     asyncio.run(scenario())
 
 
-def test_mode_banner_updates_without_resize(tmp_path, monkeypatch):
+def test_mode_chip_updates_without_resize(tmp_path, monkeypatch):
     root = configure(tmp_path, monkeypatch)
     from isycode.workspace_authority import WorkspaceAuthority
     from isycode.tui import plain_text
@@ -322,7 +322,7 @@ def test_mode_banner_updates_without_resize(tmp_path, monkeypatch):
                 app._close_menu()
                 await pilot.pause()
                 assert WorkspaceAuthority(root).mode() == mode
-                assert mode.title() in plain_text(app.query_one(Banner))
+                assert mode.title() in str(app.query_one("#mode-button").label)
     asyncio.run(scenario())
 
 
@@ -348,4 +348,44 @@ def test_sidebar_sections_expand_on_click_and_never_open_the_copy_menu(tmp_path,
             assert section.collapsed is before
             assert not isinstance(app.screen, CopyMenuScreen)
             assert section.in_rail()
+    asyncio.run(scenario())
+
+
+def test_mode_chip_opens_the_mode_dialog_and_escape_keeps_the_mode(tmp_path, monkeypatch):
+    root = configure(tmp_path, monkeypatch)
+    from isycode.tui_screens_grants import WorkspaceModeSwitchScreen
+    from isycode.workspace_authority import WorkspaceAuthority
+    switched = []
+
+    async def change(self, mode, reopen_menu=True):
+        switched.append((mode, reopen_menu))
+    monkeypatch.setattr(TUIApp, "_change_workspace_mode", change)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
+            before = WorkspaceAuthority(root).mode()
+            assert app.query_one("#mode-button").display and not app.query("#banner")
+            await pilot.click("#mode-button")
+            await pilot.pause()
+            dialog = app.screen
+            assert isinstance(dialog, WorkspaceModeSwitchScreen)
+            options = dialog.query_one("#workspace-mode-options")
+            assert [options.get_option_at_index(i).id for i in range(options.option_count)] == [
+                "classic", "flow", "security"]
+            assert options.get_option_at_index(options.highlighted).id == before
+            await pilot.press("escape")
+            await pilot.pause()
+            assert not isinstance(app.screen, WorkspaceModeSwitchScreen)
+            assert switched == [] and WorkspaceAuthority(root).mode() == before
+            # Choosing another mode hands it to the confirmed switch, without the Settings menu.
+            await pilot.click("#mode-button")
+            await pilot.pause()
+            target = "flow" if before != "flow" else "classic"
+            options = app.screen.query_one("#workspace-mode-options")
+            options.highlighted = ["classic", "flow", "security"].index(target)
+            await pilot.press("enter")
+            await pilot.pause()
+            assert switched == [(target, False)]
     asyncio.run(scenario())
