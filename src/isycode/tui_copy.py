@@ -202,26 +202,30 @@ def open_copy_menu(widget, whole: str, selected: str | None = None, *, restore=N
 class CopyTextArea(TextArea):
     """Readonly previews use the same explicit copy menu; editable fields keep typing."""
 
+    # The press that starts a double-click clears the marked range before the
+    # second click arrives. Keep the range by click sequence, not by clock: a
+    # loaded machine can take longer than any grace period between the events,
+    # while Textual already decides from the input times what counts as a chain.
     async def _on_mouse_down(self, event):
         if self.read_only:
-            now = monotonic()
-            if self.selected_text:
-                self._copy_area_snapshot = (now, self.selection, self.selected_text)
-            elif now - getattr(self, "_copy_area_snapshot", (0, None, ""))[0] > 0.6:
-                self._copy_area_snapshot = (0, None, "")
+            self._copy_area_pressed = (self.selection, self.selected_text) if self.selected_text else None
         await super()._on_mouse_down(event)
 
     async def _on_click(self, event):
-        if self.read_only and event.chain == 2:
-            event.prevent_default()
-            event.stop()
-            timestamp, selection, selected = getattr(self, "_copy_area_snapshot", (0, None, ""))
-            if monotonic() - timestamp > 0.6:
-                selection, selected = self.selection, self.selected_text
-            def restore():
-                if selection is not None:
-                    self.selection = selection
-            self._copy_area_snapshot = (0, None, "")
-            open_copy_menu(self, self.text, selected, restore=restore)
-        else:
+        if not self.read_only:
             await super()._on_click(event)
+            return
+        if event.chain == 1:
+            # Only the press that began this chain may carry a range forward.
+            self._copy_area_snapshot = getattr(self, "_copy_area_pressed", None)
+        if event.chain != 2:
+            await super()._on_click(event)
+            return
+        event.prevent_default()
+        event.stop()
+        snapshot = getattr(self, "_copy_area_snapshot", None)
+        selection, selected = snapshot or (self.selection, self.selected_text)
+        self._copy_area_snapshot = None
+        def restore():
+            self.selection = selection
+        open_copy_menu(self, self.text, selected, restore=restore)

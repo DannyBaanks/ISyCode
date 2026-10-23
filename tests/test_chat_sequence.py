@@ -139,8 +139,12 @@ def test_search_history_stays_visible_during_new_output(tmp_path, monkeypatch, c
             app._append('Old searchable marker.')
             for i in range(60):
                 app._append(f'Later message {i}.')
-            await pilot.pause()
             chat = app.query_one(ChatArea)
+            # Following new output scrolls after layout; give a loaded runner time.
+            for _ in range(100):
+                await pilot.pause(0.05)
+                if chat.max_scroll_y and abs(chat.scroll_y - chat.max_scroll_y) <= 1:
+                    break
             assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
             from unittest.mock import Mock
             app._search_console('Old searchable marker', Mock())

@@ -66,6 +66,9 @@ class AutomaticEditsWarningScreen(ModalScreen[bool]):
     #auto-edit-actions Button { width: auto; min-width: 18; margin-left: 1; }
     """
     BINDINGS = [Binding('escape', 'cancel', 'Cancel')]
+    # Textual focuses this when the screen activates; a focus asked for only in
+    # on_mount can lose to the first focusable widget (the scrolling body).
+    AUTO_FOCUS = '#auto-edit-cancel'
 
     def __init__(self, root: Path):
         super().__init__()
