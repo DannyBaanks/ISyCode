@@ -8,7 +8,7 @@ msgid "Temporary input-copy budget: {mib} MiB for this command."
 msgstr "本次命令的临时输入复制预算：{mib} MiB。"
 
 msgid "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
-msgstr "超过默认的 512 MiB：需要更多临时磁盘空间和复制时间。这不会授予额外权限；沙箱和文件更改限制保持不变。磁盘空间不足时仍不会执行命令。"
+msgstr "超过默认的 512 MiB：需要更多临时磁盘空间和复制时间。这不会授予额外权限；sandbox 和文件更改限制保持不变。磁盘空间不足时仍不会执行命令。"
 
 msgid "ISyCode  ·  COMMAND BROWSER"
 msgstr "ISyCode  ·  命令浏览器"
@@ -59,7 +59,7 @@ msgid "The assistant may create or overwrite files here without showing each dif
 msgstr "助手可能在此创建或覆盖文件，而不再逐个显示 diff 供你批准。模型错误或文件中的恶意指令可能损坏你的工作。请用 Git 审查更改并保留备份。"
 
 msgid "This setting persists for this workspace. Disable it from Files → Folders. Authority, ISySentinel, path protections and journaling stay active; they cannot guarantee that an allowed edit is correct. Commands, deletes, moves and commits still require their own approvals."
-msgstr "此设置会保留在本工作区。可在 文件 → 文件夹 中关闭。Authority、ISySentinel、路径保护和日志仍然有效；它们不能保证已允许的编辑是正确的。命令、删除、移动和提交仍需要各自的批准。"
+msgstr "此设置会保留在本工作区。可在 文件 → 文件夹 中关闭。Authority、ISySentinel、路径保护和日志仍然有效；它们不能保证已允许的编辑是正确的。命令、删除、移动和 commit 仍需要各自的批准。"
 
 msgid "Enable automatic edits"
 msgstr "启用自动编辑"
@@ -89,7 +89,7 @@ msgid "Inspecting installation…"
 msgstr "正在检查安装…"
 
 msgid "Checking the binary in the command sandbox…"
-msgstr "正在命令沙箱中检查该二进制…"
+msgstr "正在命令 sandbox 中检查该二进制…"
 
 msgid "Enable this binary"
 msgstr "启用此二进制"
@@ -320,7 +320,7 @@ msgid "Build + Start semantic broker…"
 msgstr "构建 + 启动语义代理…"
 
 msgid "Shows the exact recipe, network effects, root and sandbox; asks before Docker build/start, then verifies health on a loopback-only port."
-msgstr "显示确切配方、网络影响、根目录和沙箱；在 Docker build/start 之前询问，然后在仅回环端口上验证健康。"
+msgstr "显示确切配方、网络影响、根目录和 sandbox；在 Docker build/start 之前询问，然后在仅回环端口上验证健康。"
 
 msgid "Open workspace file browser"
 msgstr "打开工作区文件浏览器"
@@ -653,16 +653,16 @@ msgid "File edits follow folder approval settings; other changes always ask."
 msgstr "文件编辑遵循文件夹批准设置；其他更改始终询问。"
 
 msgid "Turning a permission on lets the assistant propose that kind of action. Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."
-msgstr "打开权限后，助手可以提议该类操作。文件 → 文件夹 控制自动文件编辑。命令、移动、删除和提交仍需批准。"
+msgstr "打开权限后，助手可以提议该类操作。文件 → 文件夹 控制自动文件编辑。命令、移动、删除和 commit 仍需批准。"
 
 msgid "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, and sandboxed commands where supported. Each edit, delete/move, command and commit still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."
-msgstr "Classic 已可用于本地编码循环：读/改、聊天、会话、Git 审查，以及受支持时的沙箱命令。每次编辑、删除/移动、命令和提交仍会先询问。Security 默认关闭授权；使用单项授权或已审查的编码工具包。两者都保留 Sentinel 和日志。"
+msgstr "Classic 已可用于本地编码循环：读/改、聊天、会话、Git 审查，以及受支持时的 sandbox 命令。每次编辑、删除/移动、命令和 commit 仍会先询问。Security 默认关闭授权；使用单项授权或已审查的编码工具包。两者都保留 Sentinel 和日志。"
 
 msgid "Turn on all coding tools…"
 msgstr "开启全部编码工具…"
 
 msgid "One step for read, search, edit, move, delete, undo, sandboxed commands, git and Python checks (whatever this computer supports). Each change, command and commit still asks you first, and IsySentinel still checks every action."
-msgstr "一步开启读、搜、编辑、移动、删除、撤销、沙箱命令、git 和 Python 检查（以本机支持者为准）。每次更改、命令和提交仍会先询问你，IsySentinel 仍检查每项操作。"
+msgstr "一步开启读、搜、编辑、移动、删除、撤销、sandbox 命令、git 和 Python 检查（以本机支持者为准）。每次更改、命令和 commit 仍会先询问你，IsySentinel 仍检查每项操作。"
 
 msgid "Read and search workspace files"
 msgstr "读取并搜索工作区文件"
@@ -695,10 +695,10 @@ msgid "Reads the optional integrations list. It does not enable their tools."
 msgstr "读取可选集成列表。不会启用它们的工具。"
 
 msgid "Allow git commits in this workspace?"
-msgstr "允许在此工作区进行 git 提交？"
+msgstr "允许在此工作区进行 git commit？"
 
 msgid "Turn off git commits?"
-msgstr "关闭 git 提交？"
+msgstr "关闭 git commit？"
 
 msgid "Let ISyCode see git status and diffs?"
 msgstr "允许 ISyCode 查看 git status 和 diff？"
@@ -725,22 +725,22 @@ msgid "See git status and diffs"
 msgstr "查看 git status 和 diffs"
 
 msgid "Lets the assistant see the branch, changed files and diffs. Sensitive files stay hidden, and repositories that configure their own programs are refused."
-msgstr "允许助手查看分支、更改的文件和 diffs。敏感文件保持隐藏，配置了自有程序的仓库会被拒绝。"
+msgstr "允许助手查看 branch、更改的文件和 diffs。敏感文件保持隐藏，配置了自有程序的仓库会被拒绝。"
 
 msgid "Create git commits · asks before every commit"
-msgstr "创建 git 提交 · 每次提交前询问"
+msgstr "创建 git commit · 每次 commit 前询问"
 
 msgid "The assistant can propose a commit. You review the exact files, message and diff. Hooks never run and nothing is pushed."
-msgstr "助手可以提议一次提交。你审查确切文件、说明和 diff。从不运行 hooks，也不会 push。"
+msgstr "助手可以提议一次 commit。你审查确切文件、说明和 diff。从不运行 hooks，也不会 push。"
 
 msgid "Run commands in a sandbox"
-msgstr "在沙箱中运行命令"
+msgstr "在 sandbox 中运行命令"
 
 msgid "The assistant can propose programs like tests or a build. Each exact command asks unless this folder is trusted for quiet Classic. It runs without network, with sensitive files hidden, and can only change files inside this workspace. There is no unsandboxed fallback."
 msgstr "助手可以提议运行测试或构建等程序。除非此文件夹在安静 Classic 下受信任，否则每条确切命令都会询问。无网络运行、敏感文件被隐藏，且只能更改此工作区内的文件。没有非沙箱回退。"
 
 msgid "Run commands · sandbox not available on this computer"
-msgstr "运行命令 · 此计算机没有沙箱"
+msgstr "运行命令 · 此计算机没有 sandbox"
 
 msgid "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off. There is no unsandboxed fallback."
 msgstr "Linux 上需要 bubblewrap、libseccomp 和 python3。命令保持关闭。没有非沙箱回退。"
@@ -911,7 +911,7 @@ msgid "Sign in with browser"
 msgstr "使用浏览器登录"
 
 msgid "The sign-in stays in the grok CLI. ISyCode does not copy the token into the project."
-msgstr "登录保留在 grok CLI 中。ISyCode 不会把令牌复制进项目。"
+msgstr "登录保留在 grok CLI 中。ISyCode 不会把 token 复制进项目。"
 
 msgid "Manually enter API key · separate API quota"
 msgstr "手动输入 API 密钥 · 独立 API 配额"
@@ -1091,7 +1091,7 @@ msgid "Host alive · http://{address}:{port}"
 msgstr "主机在线 · http://{address}:{port}"
 
 msgid "One device exchange; token expires in one hour."
-msgstr "一次设备交换；令牌一小时后过期。"
+msgstr "一次设备交换；token 一小时后过期。"
 
 msgid "Install Tailscale · supported Ubuntu/Debian · three approvals"
 msgstr "安装 Tailscale · 支持的 Ubuntu/Debian · 三次批准"
@@ -1271,7 +1271,7 @@ msgid "Run command · y"
 msgstr "运行命令 · y"
 
 msgid "Commit · y"
-msgstr "提交 · y"
+msgstr "commit · y"
 
 msgid "Read and send once · y"
 msgstr "读取并发送一次 · y"
@@ -1325,7 +1325,7 @@ msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "欢迎使用 ISyCode · 你想如何开始？"
 
 msgid "{root}\n{provider_line}\nQuick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n{provider_line}\n快速开始：此文件夹成为 Classic 常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和提交在你批准之前仍会询问。\n自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。\n两条路径都对所有操作保留 IsySentinel 和操作日志。"
+msgstr "{root}\n{provider_line}\n快速开始：此文件夹成为 Classic 常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和 commit 在你批准之前仍会询问。\n自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。\n两条路径都对所有操作保留 IsySentinel 和操作日志。"
 
 msgid "How should ISyCode work in this folder?"
 msgstr "ISyCode 应如何在此文件夹中工作？"
@@ -1514,7 +1514,7 @@ msgid "Close · Esc"
 msgstr "关闭 · Esc"
 
 msgid "ShellBox · sandbox processes · session lifetime"
-msgstr "ShellBox · 沙箱进程 · 会话期间"
+msgstr "ShellBox · sandbox 进程 · 会话期间"
 
 msgid "Read Bridge presence?"
 msgstr "读取 Bridge 在线状态？"
@@ -2066,7 +2066,7 @@ msgid "Everything starts off; you allow each capability in Settings → Authorit
 msgstr "所有功能默认关闭；可在设置 → 权限中逐项允许。你显式授予的权限保持不变。"
 
 msgid "Reading/searching, edit proposals, chat, sessions and Git review work without granting each capability. Sandbox commands are ready when supported. The next screen can trust this folder for ordinary edits and isolated tests. Until then, edits, delete/move, commands and commits still ask. Commits, secrets and authority changes keep asking. Integrations still need explicit permission; free shell and sensitive files stay unavailable."
-msgstr "读取、搜索、编辑建议、聊天、会话和 Git 审查无需逐项授权。系统支持时可使用沙箱命令。下一屏可将此文件夹设为可信，以进行普通编辑和隔离测试。在此之前，编辑、删除、移动、命令和提交仍需确认。提交、秘密和权限变更始终需确认。集成仍需显式权限；自由 shell 和敏感文件保持不可用。"
+msgstr "读取、搜索、编辑建议、聊天、会话和 Git 审查无需逐项授权。系统支持时可使用 sandbox 命令。下一屏可将此文件夹设为可信，以进行普通编辑和隔离测试。在此之前，编辑、删除、移动、命令和 commit 仍需确认。commit、秘密和权限变更始终需确认。集成仍需显式权限；自由 shell 和敏感文件保持不可用。"
 
 msgid "Folder: {root}\n"
 msgstr "文件夹：{root}\n"
@@ -2170,7 +2170,7 @@ msgid "Manage"
 msgstr "管理"
 
 msgid "Message queue · Select queued + empty Send steers · Esc restores draft"
-msgstr "消息队列 · 选择排队消息并空白发送以引导 · Esc 恢复草稿"
+msgstr "消息队列 · 选择排队消息并空白发送以 steer · Esc 恢复草稿"
 
 msgid "Multi Harness · inspection"
 msgstr "Multi Harness · 查看"
@@ -2401,10 +2401,10 @@ msgid "tailscale private-access"
 msgstr "Tailscale 私有访问"
 
 msgid "sandboxed command run"
-msgstr "沙箱命令运行"
+msgstr "sandbox 命令运行"
 
 msgid "git commit"
-msgstr "git 提交"
+msgstr "git commit"
 
 msgid "browser page read"
 msgstr "浏览器页面读取"
@@ -2434,7 +2434,7 @@ msgid "git"
 msgstr "git"
 
 msgid "sandboxed commands"
-msgstr "沙箱命令"
+msgstr "sandbox 命令"
 
 msgid "external model review"
 msgstr "外部模型审查"
@@ -2548,7 +2548,7 @@ msgid "privilege escalation, ungranted capabilities"
 msgstr "权限提升、未授予的功能"
 
 msgid "commits, secrets, authority changes"
-msgstr "提交、机密、权限更改"
+msgstr "commit、机密、权限更改"
 
 msgid "secrets, credentials, project files"
 msgstr "机密、凭据、项目文件"
@@ -2612,7 +2612,7 @@ msgid "Capture an idea · Ctrl+Shift+Enter"
 msgstr "记录想法 · Ctrl+Shift+Enter"
 
 msgid "Capture prompt idea to backlog"
-msgstr "将提示中的想法加入待办"
+msgstr "将 prompt 中的想法加入待办"
 
 msgid "Chat & Reasoning"
 msgstr "对话与推理"
@@ -2717,7 +2717,7 @@ msgid "Select all text in focused block"
 msgstr "选中焦点块中的全部文本"
 
 msgid "Send message / submit prompt"
-msgstr "发送消息 / 提交提示"
+msgstr "发送消息 / 提交 prompt"
 
 msgid "Sign-in link failed safety validation; it will not be opened."
 msgstr "登录链接未通过安全校验；不会被打开。"
@@ -2813,10 +2813,10 @@ msgid "workspace symbols"
 msgstr "工作区符号"
 
 msgid "installed · sandbox does not run it"
-msgstr "已安装 · 沙箱无法运行"
+msgstr "已安装 · sandbox 无法运行"
 
 msgid "installed · sandbox unavailable"
-msgstr "已安装 · 沙箱不可用"
+msgstr "已安装 · sandbox 不可用"
 
 msgid "connected tool services"
 msgstr "已连接的工具服务"
@@ -2873,7 +2873,7 @@ msgid "To chat here: Settings → Authority → “Connect to the selected AI mo
 msgstr "要在此处聊天：设置 → Authority →“连接到所选 AI 模型”（或“开启所有编码工具…”）。"
 
 msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
-msgstr "已保留提示 · /retry 会准备好供你审阅。已完成的工具效果仍然保留；再次发送前请先检查。"
+msgstr "已保留 prompt · /retry 会准备好供你审阅。已完成的工具效果仍然保留；再次发送前请先检查。"
 
 msgid "Chat failed ({kind}). The request was not completed."
 msgstr "聊天失败（{kind}）。请求未完成。"
@@ -3001,7 +3001,7 @@ msgid "Connect {name}"
 msgstr "连接 {name}"
 
 msgid "Create an access token with permission to call Inference Providers."
-msgstr "创建一个有权调用 Inference Providers 的访问令牌。"
+msgstr "创建一个有权调用 Inference Providers 的访问 token。"
 
 msgid "Create the key under AI Gateway → API Keys in your Vercel dashboard."
 msgstr "在 Vercel 控制台的 AI Gateway → API Keys 中创建密钥。"
@@ -3103,7 +3103,7 @@ msgstr "Classic · 推荐"
 
 # Flow (ADR 0010)
 msgid "Flow could not prepare recovery. Nothing started; prompt kept."
-msgstr "Flow 无法准备恢复记录。未启动操作；提示已保留。"
+msgstr "Flow 无法准备恢复记录。未启动操作；prompt 已保留。"
 
 # Flow (ADR 0010)
 msgid "Flow recovery record could not be closed. Inspect files and the action journal before continuing."
@@ -3111,7 +3111,7 @@ msgstr "无法关闭 Flow 恢复记录。继续之前请检查文件和操作日
 
 # Flow (ADR 0010)
 msgid "Flow turn restored · {count} files. Commits remain in Git history."
-msgstr "Flow 回合已恢复 · {count} 个文件。提交保留在 Git 历史中。"
+msgstr "Flow 回合已恢复 · {count} 个文件。commit 保留在 Git 历史中。"
 
 # Flow (ADR 0010)
 msgid "Flow turn · {count} files · /undo restores this turn; later human edits are kept."
@@ -3163,7 +3163,7 @@ msgstr "{mode} · 当前"
 
 # Flow (ADR 0010)
 msgid "{root}\nClassic (recommended): review edits and commands, or trust this folder for quiet local work.\nFlow: edits, moves, deletes and sandboxed shell commands run without questions. Each chat turn is recorded; /undo restores its files while keeping later human changes. Commits of this turn's own files can run quietly.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel, budgets and receipts. Push, secrets, integrations and authority changes still ask or stay off. Flow commands need a verified sandbox; command network stays off."
-msgstr "{root}\nClassic（推荐）：审核编辑和命令，或信任此文件夹以减少本地操作确认。\nFlow：编辑、移动、删除和隔离环境内的 shell 命令无需逐次确认。每个聊天回合都有记录；/undo 恢复其文件，同时保留后续人工修改。仅属于当前回合的文件可以静默提交。\nSecurity：默认关闭所有权限，直到您允许。\n所有模式都保留 Sentinel、预算和收据。推送、密钥、集成及权限更改仍需确认或保持关闭。Flow 命令需要经过验证的隔离环境；命令网络保持关闭。"
+msgstr "{root}\nClassic（推荐）：审核编辑和命令，或信任此文件夹以减少本地操作确认。\nFlow：编辑、移动、删除和隔离环境内的 shell 命令无需逐次确认。每个聊天回合都有记录；/undo 恢复其文件，同时保留后续人工修改。仅属于当前回合的文件可以静默 commit。\nSecurity：默认关闭所有权限，直到您允许。\n所有模式都保留 Sentinel、预算和收据。推送、密钥、集成及权限更改仍需确认或保持关闭。Flow 命令需要经过验证的隔离环境；命令网络保持关闭。"
 
 # Flow (ADR 0010)
 msgid "Flow works on its own: reading, edits, moves, deletes and sandboxed commands run without asking, and a shell is available inside the sandbox. Each turn is recorded so you can undo it with /undo. Push, credentials, provider and authority changes, integrations and network for commands still ask or stay off. Classic is recommended for large work, if you are new to the TUI or want more control; Security is for sensitive files and explicit permissions."
@@ -3220,7 +3220,7 @@ msgid "Use /rtk recall <64-character SHA-256>"
 msgstr "使用 /rtk recall <64 位 SHA-256>"
 
 msgid "Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\nOff by default. The approved command runs once, unchanged. RTK filters its captured output inside an empty, network-denied sandbox. Authority, Sentinel, approvals and file revocations still apply.\n\nOriginal output stays private and is linked by SHA-256 to the command receipt. Savings are byte/4 estimates, not provider billing or tokenizer measurements. A changed binary needs a new explicit opt-in."
-msgstr "由 RTK 压缩 · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\n默认关闭。已批准的命令只运行一次，内容不变。RTK 在一个空的、禁止网络的沙箱中过滤捕获的输出。Authority、Sentinel、批准和文件撤销仍然适用。\n\n原始输出保持私密，并通过 SHA-256 关联到命令回执。节省量是按 字节/4 的估算，不是提供商计费或分词器测量。二进制文件变更后需要重新明确启用。"
+msgstr "由 RTK 压缩 · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\n默认关闭。已批准的命令只运行一次，内容不变。RTK 在一个空的、禁止网络的 sandbox 中过滤捕获的输出。Authority、Sentinel、批准和文件撤销仍然适用。\n\n原始输出保持私密，并通过 SHA-256 关联到命令回执。节省量是按 字节/4 的估算，不是提供商计费或分词器测量。二进制文件变更后需要重新明确启用。"
 
 msgid "Unavailable · {value}"
 msgstr "不可用 · {value}"
@@ -3289,7 +3289,7 @@ msgid "Stopping response…"
 msgstr "正在停止回复…"
 
 msgid "models.dev snapshot (offline; not verified against this account). reasoning={value} · context={value2} · tool_call={value3}"
-msgstr "models.dev 快照（离线；未针对此账户验证）。reasoning={value} · context={value2} · tool_call={value3}"
+msgstr "models.dev snapshot（离线；未针对此账户验证）。reasoning={value} · context={value2} · tool_call={value3}"
 
 msgid "yes"
 msgstr "是"
@@ -3415,13 +3415,13 @@ msgid "Pending messages cleared"
 msgstr "已清除待发送消息"
 
 msgid "Steer attempt pending; draft kept"
-msgstr "引导尝试待处理；草稿已保留"
+msgstr "steer 尝试待处理；草稿已保留"
 
 msgid "Steering queue is full; this draft is kept."
-msgstr "引导队列已满；此草稿已保留。"
+msgstr "steer 队列已满；此草稿已保留。"
 
 msgid "Steering queued · current tool effects remain; pending calls will be skipped."
-msgstr "引导已排队 · 当前工具的效果保留；待处理的调用将被跳过。"
+msgstr "steer 已排队 · 当前工具的效果保留；待处理的调用将被跳过。"
 
 msgid "Message queue is full; draft kept"
 msgstr "消息队列已满；草稿已保留"
@@ -3532,10 +3532,10 @@ msgid "Git {value} {value2} for this workspace."
 msgstr "此工作区的 Git {value}：{value2}。"
 
 msgid "commits"
-msgstr "提交"
+msgstr "commit"
 
 msgid "status and diffs"
-msgstr "状态和差异"
+msgstr "状态和 diff"
 
 msgid "Git permission could not be saved ({name})."
 msgstr "无法保存 Git 权限（{name}）。"
@@ -3544,7 +3544,7 @@ msgid "Clipboard permission could not be saved ({name})."
 msgstr "无法保存剪贴板权限（{name}）。"
 
 msgid "The command sandbox is not available here; commands stay off."
-msgstr "此处无法使用命令沙箱；命令保持关闭。"
+msgstr "此处无法使用命令 sandbox；命令保持关闭。"
 
 msgid "Command permission could not be saved ({name})."
 msgstr "无法保存命令权限（{name}）。"
@@ -3583,10 +3583,10 @@ msgid "This folder is too broad for the quiet Classic profile. Each edit and com
 msgstr "此文件夹范围过大，不适用 Classic 免询问配置。每次编辑和命令仍会询问。"
 
 msgid "LSP sandbox changed or is unavailable; no process grant was changed."
-msgstr "LSP 沙箱已更改或不可用；未更改任何进程授权。"
+msgstr "LSP sandbox 已更改或不可用；未更改任何进程授权。"
 
 msgid "Sandboxed LSP process {value} for this workspace."
-msgstr "此工作区的沙箱 LSP 进程：{value}。"
+msgstr "此工作区的 sandbox LSP 进程：{value}。"
 
 msgid "LSP process grant could not be saved; the server remains denied."
 msgstr "无法保存 LSP 进程授权；服务器仍被拒绝。"
@@ -3598,7 +3598,7 @@ msgid "Turn on coding tools"
 msgstr "开启编码工具"
 
 msgid "Coding tools on · {len} permissions saved; changes, commands and commits follow their approval settings."
-msgstr "编码工具已开启 · 已保存 {len} 项权限；更改、命令和提交遵循各自的批准设置。"
+msgstr "编码工具已开启 · 已保存 {len} 项权限；更改、命令和 commit 遵循各自的批准设置。"
 
 msgid "Coding tools could not be saved ({name})."
 msgstr "无法保存编码工具（{name}）。"
@@ -3613,10 +3613,10 @@ msgid "Workspace grant could not be saved ({name})."
 msgstr "无法保存工作区授权（{name}）。"
 
 msgid "Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."
-msgstr "Classic 免询问已对常规编辑和沙箱测试开启。提交、密钥和权限变更仍会询问。"
+msgstr "Classic 免询问已对常规编辑和 sandbox 测试开启。commit、密钥和权限变更仍会询问。"
 
 msgid "Time: {strftime}\nRequest: {value}… · Authority: {authority}\nSystembilities: {checks}\nFailed checks: {value2}\nReceipt binds a request digest and result digest, but the request/result payload is not retained. Target and successful Systembility details are not persisted; no secret or prompt is shown."
-msgstr "时间：{strftime}\n请求：{value}… · Authority：{authority}\nSystembilities：{checks}\n失败的检查：{value2}\n回执绑定了请求摘要和结果摘要，但不保留请求/结果内容。目标及成功的 Systembility 详情不会持久保存；不会显示任何密钥或提示词。"
+msgstr "时间：{strftime}\n请求：{value}… · Authority：{authority}\nSystembilities：{checks}\n失败的检查：{value2}\n回执绑定了请求摘要和结果摘要，但不保留请求/结果内容。目标及成功的 Systembility 详情不会持久保存；不会显示任何密钥或 prompt。"
 
 msgid "Quiet Classic stays off. Each edit and command still asks."
 msgstr "Classic 免询问保持关闭。每次编辑和命令仍会询问。"
@@ -3631,13 +3631,13 @@ msgid "Response stopped; no partial answer was received."
 msgstr "回复已停止；未收到任何部分回答。"
 
 msgid "Stream interrupted ({transport_reason}). Use /resume to continue without repeating completed tools."
-msgstr "流式传输中断（{transport_reason}）。使用 /resume 继续，不会重复已完成的工具。"
+msgstr "stream 中断（{transport_reason}）。使用 /resume 继续，不会重复已完成的工具。"
 
 msgid "The stream failed before an answer ({transport_reason}). Use /resume to retry."
-msgstr "在得到回答前流式传输失败（{transport_reason}）。使用 /resume 重试。"
+msgstr "在得到回答前 stream 失败（{transport_reason}）。使用 /resume 重试。"
 
 msgid "Stream interrupted · use /resume"
-msgstr "流式传输中断 · 使用 /resume"
+msgstr "stream 中断 · 使用 /resume"
 
 msgid "Compacting · summarizing {len} earlier messages to free up context"
 msgstr "正在压缩 · 汇总 {len} 条较早的消息以释放上下文"
@@ -3646,10 +3646,10 @@ msgid "(the provider ended the response during reasoning; its endpoint may have 
 msgstr "（提供商在推理过程中结束了回复；其端点可能已达到自身的输出或上下文限制）"
 
 msgid "Unapplied steering kept in the composer for review."
-msgstr "未应用的引导已保留在输入框中供你查看。"
+msgstr "未应用的 steer 已保留在输入框中供你查看。"
 
 msgid "The model provider rejected turn continuation ({text}). Use /retry to submit the prompt again."
-msgstr "模型提供商拒绝继续该回合（{text}）。使用 /retry 重新提交提示词。"
+msgstr "模型提供商拒绝继续该回合（{text}）。使用 /retry 重新提交 prompt。"
 
 msgid "Turn continuation rejected by provider"
 msgstr "提供商拒绝继续该回合"
@@ -3664,7 +3664,7 @@ msgid "No interrupted turn to resume"
 msgstr "没有可恢复的中断回合"
 
 msgid "No interrupted prompt to retry."
-msgstr "没有可重试的中断提示词。"
+msgstr "没有可重试的中断 prompt。"
 
 msgid "Your current draft is kept. Clear it before using /retry."
 msgstr "你当前的草稿已保留。使用 /retry 前请先清空。"
@@ -3694,7 +3694,7 @@ msgid "/{name} found in {workspace_commands_dir} but it could not be read · {va
 msgstr "在 {workspace_commands_dir} 中找到 /{name}，但无法读取 · {value}"
 
 msgid "/{name} · {source} prompt · {description}"
-msgstr "/{name} · {source} 提示词 · {description}"
+msgstr "/{name} · {source} prompt · {description}"
 
 msgid "Attached @{path} · receipt {receipt_id}"
 msgstr "已附加 @{path} · 回执 {receipt_id}"
@@ -3703,13 +3703,13 @@ msgid "@{path} not attached · {value}"
 msgstr "未附加 @{path} · {value}"
 
 msgid "Tool batch · {len} proposed writes · one review for all"
-msgstr "工具批次 · {len} 项拟议写入 · 一次审查全部"
+msgstr "工具 batch · {len} 项拟议写入 · 一次审查全部"
 
 msgid "✓ Batch approved · {len} one-use approvals, one per file"
-msgstr "✓ 批次已批准 · {len} 个一次性批准，每个文件一个"
+msgstr "✓ batch 已批准 · {len} 个一次性批准，每个文件一个"
 
 msgid "✗ Batch rejected · {len} files unchanged"
-msgstr "✗ 批次已拒绝 · {len} 个文件未更改"
+msgstr "✗ batch 已拒绝 · {len} 个文件未更改"
 
 msgid "Resuming interrupted turn…"
 msgstr "正在恢复中断的回合…"
@@ -3718,7 +3718,7 @@ msgid "Picture not sent · this model does not take images. The question goes as
 msgstr "图片未发送 · 此模型不支持图片。问题将以文本发送。"
 
 msgid "Trying steering · original turn retained until response."
-msgstr "正在尝试引导 · 在收到回复前保留原回合。"
+msgstr "正在尝试 steer · 在收到回复前保留原回合。"
 
 msgid "Picture not accepted · sending the question as text."
 msgstr "图片未被接受 · 正在以文本发送问题。"
@@ -3736,7 +3736,7 @@ msgid "⚠ Recovery stopped after 1 automatic attempt · {reason} · no tool eff
 msgstr "⚠ 自动尝试 1 次后停止恢复 · {reason} · 未重复任何工具效果。"
 
 msgid "Provider stream interrupted for steering; partial output is retained on screen."
-msgstr "为引导而中断了提供商的流式传输；部分输出保留在屏幕上。"
+msgstr "为 steer 而中断了提供商的 stream；部分输出保留在屏幕上。"
 
 msgid "✓ Response recovered after {count} automatic retries · no tool effects repeated"
 msgstr "✓ 经过 {count} 次自动重试后已恢复回复 · 未重复任何工具效果"
@@ -3748,7 +3748,7 @@ msgid "Response recovered"
 msgstr "回复已恢复"
 
 msgid "Steering accepted · continuing the turn."
-msgstr "已接受引导 · 继续该回合。"
+msgstr "已接受 steer · 继续该回合。"
 
 msgid "Tool result reused · {name_str} · already executed"
 msgstr "已复用工具结果 · {name_str} · 已执行"
@@ -3883,7 +3883,7 @@ msgid "Folder not removed · {value}"
 msgstr "未移除文件夹 · {value}"
 
 msgid "Usage: /commit <message> · commits every changed file after review"
-msgstr "用法：/commit <消息> · 审查后提交所有已更改的文件"
+msgstr "用法：/commit <消息> · 审查后 commit 所有已更改的文件"
 
 msgid "Choose a role first; no default was changed."
 msgstr "请先选择一个角色；未更改任何默认值。"
@@ -3961,7 +3961,7 @@ msgid "Allow Grok sign-in chat?"
 msgstr "允许使用 Grok 登录进行聊天？"
 
 msgid "ISyCode may send this workspace's chat to cli-chat-proxy.grok.com using the grok sign-in on this machine. The token stays in the grok CLI. File permissions stay separate."
-msgstr "ISyCode 可以使用本机的 grok 登录将此工作区的聊天发送到 cli-chat-proxy.grok.com。令牌保留在 grok CLI 中。文件权限仍然分开。"
+msgstr "ISyCode 可以使用本机的 grok 登录将此工作区的聊天发送到 cli-chat-proxy.grok.com。token 保留在 grok CLI 中。文件权限仍然分开。"
 
 msgid "Allow"
 msgstr "允许"
@@ -3979,7 +3979,7 @@ msgid "Sign in to Grok for ISyCode?"
 msgstr "为 ISyCode 登录 Grok？"
 
 msgid "Runs the official grok login. The sign-in stays in the grok CLI. After it finishes, ISyCode can send chat with that sign-in. The token is not copied into this project or the chat."
-msgstr "运行官方 grok 登录。登录信息保留在 grok CLI 中。完成后，ISyCode 可以使用该登录发送聊天。令牌不会复制到此项目或聊天中。"
+msgstr "运行官方 grok 登录。登录信息保留在 grok CLI 中。完成后，ISyCode 可以使用该登录发送聊天。token 不会复制到此项目或聊天中。"
 
 msgid "Sign in"
 msgstr "登录"
@@ -4315,7 +4315,7 @@ msgid "Grant these actions"
 msgstr "授权这些操作"
 
 msgid "Allow `mobile.host.start` only at {mobile_host_address}, `mobile.pair` only for the one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN (each new PIN still asks first). The listener binds loopback only; if a private Tailscale route to it is enabled, tailnet devices can reach it through that route. Pair-issued tokens can read the runtime inventory, request runtime selection, and send heartbeats; they cannot read files, execute runtimes, or access sessions."
-msgstr "仅在 {mobile_host_address} 允许 `mobile.host.start`，仅为一次性 Mobile Host 配对挑战允许 `mobile.pair`，并允许 `mobile.pair.issue` 替换该 PIN（每个新 PIN 仍会先询问）。监听器只绑定回环地址；如果启用了通向它的私有 Tailscale 路由，tailnet 设备可通过该路由访问。配对发放的令牌可以读取运行时清单、请求选择运行时并发送心跳；不能读取文件、执行运行时或访问会话。"
+msgstr "仅在 {mobile_host_address} 允许 `mobile.host.start`，仅为一次性 Mobile Host 配对挑战允许 `mobile.pair`，并允许 `mobile.pair.issue` 替换该 PIN（每个新 PIN 仍会先询问）。监听器只绑定回环地址；如果启用了通向它的私有 Tailscale 路由，tailnet 设备可通过该路由访问。配对发放的 token 可以读取运行时清单、请求选择运行时并发送心跳；不能读取文件、执行运行时或访问会话。"
 
 msgid "Bound to loopback. {value}"
 msgstr "仅绑定回环地址。{value}"
@@ -4417,7 +4417,7 @@ msgid "Semantic broker {operation} completed · local receipt verified"
 msgstr "语义代理 {operation} 已完成 · 本地回执已验证"
 
 msgid "This LSP adapter is not available in a supported sandbox."
-msgstr "此 LSP 适配器在受支持的沙箱中不可用。"
+msgstr "此 LSP 适配器在受支持的 sandbox 中不可用。"
 
 msgid "Workspace Authority is unavailable; LSP process is denied."
 msgstr "Workspace Authority 不可用；LSP 进程被拒绝。"
@@ -4441,7 +4441,7 @@ msgid "Mobile Host start cancelled; no listener started."
 msgstr "已取消启动 Mobile Host；未启动任何监听器。"
 
 msgid "LSP · awaiting local grant and starting sandbox"
-msgstr "LSP · 等待本地授权并启动沙箱"
+msgstr "LSP · 等待本地授权并启动 sandbox"
 
 msgid "LSP request denied before start ({name})."
 msgstr "LSP 请求在启动前被拒绝（{name}）。"
@@ -4450,13 +4450,13 @@ msgid "LSP request {decision} · {value}"
 msgstr "LSP 请求 {decision} · {value}"
 
 msgid "LSP request blocked · grant sandbox in Authority settings"
-msgstr "LSP 请求被阻止 · 请在 Authority 设置中授权沙箱"
+msgstr "LSP 请求被阻止 · 请在 Authority 设置中授权 sandbox"
 
 msgid "{label} LSP · {query} · verified workspace/symbol response"
 msgstr "{label} LSP · {query} · 已验证 workspace/symbol 响应"
 
 msgid "LSP request completed · sandbox closed"
-msgstr "LSP 请求已完成 · 沙箱已关闭"
+msgstr "LSP 请求已完成 · sandbox 已关闭"
 
 msgid "Mobile Host granted for this workspace. Starting it still asks first."
 msgstr "已为此工作区授权 Mobile Host。启动时仍会先询问。"
@@ -4468,7 +4468,7 @@ msgid "Revoke Mobile Host for this workspace"
 msgstr "撤销此工作区的 Mobile Host"
 
 msgid "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` grants. New starts, new PINs and new pairing are denied. A host already running keeps serving devices paired earlier until ISyCode exits; their tokens still expire within an hour."
-msgstr "移除已保存的 `mobile.host.start`、`mobile.pair` 和 `mobile.pair.issue` 授权。新的启动、新 PIN 和新配对都将被拒绝。已在运行的主机会继续为先前配对的设备服务，直到 ISyCode 退出；它们的令牌仍会在一小时内过期。"
+msgstr "移除已保存的 `mobile.host.start`、`mobile.pair` 和 `mobile.pair.issue` 授权。新的启动、新 PIN 和新配对都将被拒绝。已在运行的主机会继续为先前配对的设备服务，直到 ISyCode 退出；它们的 token 仍会在一小时内过期。"
 
 msgid "Revoke Mobile Host grants"
 msgstr "撤销 Mobile Host 授权"
@@ -4528,7 +4528,7 @@ msgid "/sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import 
 msgstr "/sessions list|new|resume ID|search 文本|rename 标题|fork|export|import JSON|delete|diverged"
 
 msgid "Session changed elsewhere · this window stopped saving to it; nothing was merged or overwritten."
-msgstr "会话已在别处更改 · 此窗口已停止保存到该会话；未合并或覆盖任何内容。"
+msgstr "会话已在别处更改 · 此窗口已停止保存到该会话；未 merge 或覆盖任何内容。"
 
 msgid "Not saved as a new conversation · {value}"
 msgstr "未另存为新对话 · {value}"
@@ -4588,22 +4588,22 @@ msgid "Sent to {title}. It answers there as your message."
 msgstr "已发送到 {title}。它会在那里作为你的消息作答。"
 
 msgid "[Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}."
-msgstr "[Hive] 已向对话通道 {lane_key} 中的代理 @{agent_id} 发送消息。"
+msgstr "[Hive] 已向对话 lane {lane_key} 中的代理 @{agent_id} 发送消息。"
 
 msgid "[Hive] Queued message for agent @{agent_id} behind its current turn."
 msgstr "[Hive] 已为代理 @{agent_id} 排队，排在其当前回合之后。"
 
 msgid "[Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox."
-msgstr "[Hive] 代理 @{agent_id} 的通道队列已满；消息仍在收件箱中等待。"
+msgstr "[Hive] 代理 @{agent_id} 的 lane 队列已满；消息仍在收件箱中等待。"
 
 msgid "Keep the draft; Send must be empty to steer a selected queued message"
-msgstr "保留草稿；要用所选的排队消息进行引导，发送框必须为空"
+msgstr "保留草稿；要用所选的排队消息进行 steer，发送框必须为空"
 
 msgid "A steer attempt is still pending; this message stays queued"
-msgstr "仍有引导尝试待处理；此消息保持排队"
+msgstr "仍有 steer 尝试待处理；此消息保持排队"
 
 msgid "Steer got no confirmed response · message returned to the queue"
-msgstr "引导未获得确认的回复 · 消息已退回队列"
+msgstr "steer 未获得确认的回复 · 消息已退回队列"
 
 msgid "Draft kept; queued message stays pending"
 msgstr "草稿已保留；排队消息仍待发送"
@@ -4654,7 +4654,7 @@ msgid "Repair conversation opened · running the compose in the background."
 msgstr "已打开修复对话 · 正在后台运行修复内容。"
 
 msgid "Repair lane is busy; the compose is queued."
-msgstr "修复通道繁忙；修复内容已排队。"
+msgstr "修复 lane 繁忙；修复内容已排队。"
 
 msgid "Repair compose queued behind the current turn."
 msgstr "修复内容已排在当前回合之后。"
@@ -4843,10 +4843,10 @@ msgid "Tool denied · {name} · invalid arguments"
 msgstr "工具被拒绝 · {name} · 参数无效"
 
 msgid "✗ Batch rejected · nothing was written"
-msgstr "✗ 批次已拒绝 · 未写入任何内容"
+msgstr "✗ batch 已拒绝 · 未写入任何内容"
 
 msgid "Applying batch-approved write · {get}"
-msgstr "正在应用批量批准的写入 · {get}"
+msgstr "正在应用 batch 批准的写入 · {get}"
 
 msgid "Tool denied · {action_id} · authority/owner unavailable"
 msgstr "工具被拒绝 · {action_id} · 授权/所有者不可用"
@@ -4951,7 +4951,7 @@ msgid "MCP {decision} · {value}"
 msgstr "MCP {decision} · {value}"
 
 msgid "Browser snapshot contained no readable page text; raw output withheld."
-msgstr "浏览器快照中没有可读的页面文本；已隐藏原始输出。"
+msgstr "浏览器 snapshot 中没有可读的页面文本；已隐藏原始输出。"
 
 msgid "Browser text discarded · it was not shared with the model."
 msgstr "已丢弃浏览器文本 · 未与模型共享。"
@@ -5002,16 +5002,16 @@ msgid "Undo {decision} · {value}"
 msgstr "撤销 {decision} · {value}"
 
 msgid "Commit not proposed · {reason}"
-msgstr "未提议提交 · {reason}"
+msgstr "未提议 commit · {reason}"
 
 msgid "Commit · {len} files from this turn · /undo to revert"
-msgstr "提交 · 本回合的 {len} 个文件 · /undo 可撤回"
+msgstr "commit · 本回合的 {len} 个文件 · /undo 可撤回"
 
 msgid "Commit requested · {len} files · review it"
-msgstr "已请求提交 · {len} 个文件 · 请审查"
+msgstr "已请求 commit · {len} 个文件 · 请审查"
 
 msgid "Commit rejected · nothing was committed"
-msgstr "提交已拒绝 · 未提交任何内容"
+msgstr "commit 已拒绝 · 未 commit 任何内容"
 
 msgid "Git {decision} · {action} · {value}"
 msgstr "Git {decision} · {action} · {value}"
@@ -5083,7 +5083,7 @@ msgid "Tool {decision} · {action} · {value}"
 msgstr "工具 {decision} · {action} · {value}"
 
 msgid "Diff · {path} · +{added} −{removed} · applied without a review screen"
-msgstr "差异 · {path} · +{added} −{removed} · 未经审查界面直接应用"
+msgstr "diff · {path} · +{added} −{removed} · 未经审查界面直接应用"
 
 msgid "Tool denied · workspace.files.write · file editing is off"
 msgstr "工具被拒绝 · workspace.files.write · 文件编辑已关闭"
@@ -5104,7 +5104,7 @@ msgid "Tool · quiet {title} · {verb} · {path}"
 msgstr "工具 · {title} 免询问 · {verb} · {path}"
 
 msgid "Tool · batch-approved · {verb} · {path}"
-msgstr "工具 · 已批量批准 · {verb} · {path}"
+msgstr "工具 · 已 batch 批准 · {verb} · {path}"
 
 msgid "ISyCode local receipt {value} verified PASS. Content stays in this process memory."
 msgstr "ISyCode 本地回执 {value} 验证 PASS。内容仅保留在此进程内存中。"
@@ -5113,7 +5113,7 @@ msgid "Tool · session trust · {verb} · {path}"
 msgstr "工具 · 会话信任 · {verb} · {path}"
 
 msgid "Tool requested · {verb} · {path} · review the diff{value}"
-msgstr "已请求工具 · {verb} · {path} · 请审查差异{value}"
+msgstr "已请求工具 · {verb} · {path} · 请审查 diff{value}"
 
 msgid "matched ignoring {match}"
 msgstr "忽略 {match} 后匹配"
@@ -5191,7 +5191,7 @@ msgid "No compacted text in this draft."
 msgstr "此草稿中没有压缩的文本。"
 
 msgid "Enter: steer · Space: expand · Esc: undo"
-msgstr "Enter：引导 · 空格：展开 · Esc：撤销"
+msgstr "Enter：steer · 空格：展开 · Esc：撤销"
 
 msgid "Owner: agent context load\nScope: {path}\nDuration: one-use approval\nNot granted: no edits, no commands, no secrets, no other files"
 msgstr "所有者：代理上下文加载\n范围：{path}\n期限：一次性批准\n未授予：编辑、命令、密钥或其他文件"
@@ -5200,7 +5200,7 @@ msgid "Review {len} proposed changes in one go"
 msgstr "一次审查 {len} 项拟议更改"
 
 msgid "Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets"
-msgstr "所有者：工作区文件编辑（批量）\n范围：{len} 个文件 · +{added} / -{removed} 行\n期限：每项更改一次性、绑定摘要的批准\n未授予：其他文件、命令或密钥"
+msgstr "所有者：工作区文件编辑（batch）\n范围：{len} 个文件 · +{added} / -{removed} 行\n期限：每项更改一次性、绑定摘要的批准\n未授予：其他文件、命令或密钥"
 
 msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
 msgstr "共 {len} 个文件 +{added} / -{removed} 行。在此批准会为每项更改发放一次性、绑定摘要的批准——不会创建持久权限，应用前发生变化的文件将被拒绝。"
@@ -5212,13 +5212,13 @@ msgid "Executes the original once; output compression by native RTK pipe.\n{vers
 msgstr "原命令执行一次；输出由原生 RTK 管道压缩。\n{version} · SHA-256 {sha256}"
 
 msgid "Commit {count} files"
-msgstr "提交 {count} 个文件"
+msgstr "commit {count} 个文件"
 
 msgid "Commit 1 file"
-msgstr "提交 1 个文件"
+msgstr "commit 1 个文件"
 
 msgid "{message_}\n\nFiles: {files}\nHooks do not run and nothing is pushed. If a file changes before you approve, the commit is refused."
-msgstr "{message_}\n\n文件：{files}\n不会运行钩子，也不会推送。如果在你批准前有文件变化，提交将被拒绝。"
+msgstr "{message_}\n\n文件：{files}\n不会运行钩子，也不会推送。如果在你批准前有文件变化，commit 将被拒绝。"
 
 msgid "Share page text with the model? · {page_title}"
 msgstr "与模型共享页面文本？· {page_title}"
@@ -5272,10 +5272,10 @@ msgid "{label} · workspace symbol search"
 msgstr "{label} · 工作区符号搜索"
 
 msgid "Local workspace: {root}\nQuery goes only to the sandboxed local language server."
-msgstr "本地工作区：{root}\n查询只会发送给沙箱中的本地语言服务器。"
+msgstr "本地工作区：{root}\n查询只会发送给 sandbox 中的本地语言服务器。"
 
 msgid "Server: {label} · operation: workspace/symbol\nQuery: {query_text}\nWorkspace root: {root}\n\nISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), and output/time limits apply. No Gateway or provider receives this query."
-msgstr "服务器：{label} · 操作：workspace/symbol\n查询：{query_text}\n工作区根目录：{root}\n\nISyCode 在检查 workspace.files.read 授权后启动已批准的 Bubblewrap 沙箱。工作区为只读；seccomp 禁止网络访问（TypeScript 使用匿名本地 IPC），并适用输出和时间限制。任何 Gateway 或提供商都不会收到此查询。"
+msgstr "服务器：{label} · 操作：workspace/symbol\n查询：{query_text}\n工作区根目录：{root}\n\nISyCode 在检查 workspace.files.read 授权后启动已批准的 Bubblewrap sandbox。工作区为只读；seccomp 禁止网络访问（TypeScript 使用匿名本地 IPC），并适用输出和时间限制。任何 Gateway 或提供商都不会收到此查询。"
 
 msgid "Project root: {project}\nRecipe root: {source_root}\nRecipe SHA-256: {digest}\nImage: {image}\nFiles:\n{file_rows}\n\nBuild effect: Docker daemon builds this recipe and may download base images and Python packages. Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, 1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to this root and recipe digest, then revoke those grants after the attempt. Failed health checks remove only the container/network created by this request."
 msgstr "项目根目录：{project}\n配方根目录：{source_root}\n配方 SHA-256：{digest}\n镜像：{image}\n文件：\n{file_rows}\n\n构建影响：Docker 守护进程会构建此配方，并可能下载基础镜像和 Python 软件包。运行时：仅内部的 Docker 网络、随机的 127.0.0.1 端口、项目以只读方式挂载于 /workspace、只读的容器文件系统、移除所有 Linux 能力、no-new-privileges、128 个 PID、1 个 CPU、2 GiB 内存、有限的临时存储，且不挂载任何凭据。ISyCode 将为这两个操作授权确切的 Docker 可执行文件，把一次性批准绑定到此根目录和配方摘要，并在尝试后撤销这些授权。健康检查失败时，只会删除本次请求创建的容器和网络。"
@@ -5374,13 +5374,13 @@ msgid "show credential status grouped by setup state"
 msgstr "按设置状态分组显示凭据状态"
 
 msgid "undo ISyCode's last file change (shows the diff first)"
-msgstr "撤销 ISyCode 的上一次文件更改（先显示差异）"
+msgstr "撤销 ISyCode 的上一次文件更改（先显示 diff）"
 
 msgid "native RTK settings; recall <sha256> shows captured original output"
 msgstr "原生 RTK 设置；recall <sha256> 显示捕获的原始输出"
 
 msgid "run one command in the workspace sandbox (asks first)"
-msgstr "在工作区沙箱中运行一条命令（先询问）"
+msgstr "在工作区 sandbox 中运行一条命令（先询问）"
 
 msgid "expand the current idea note"
 msgstr "展开当前的想法笔记"
@@ -5404,13 +5404,13 @@ msgid "bundled workflow guidance: list, use <name>, clear"
 msgstr "内置流程指导：list、use <名称>、clear"
 
 msgid "show git branch and changed files"
-msgstr "显示 git 分支和已更改的文件"
+msgstr "显示 git branch 和已更改的文件"
 
 msgid "show the git diff (optional path, --staged)"
-msgstr "显示 git 差异（可选路径，--staged）"
+msgstr "显示 git diff（可选路径，--staged）"
 
 msgid "commit changed files after reviewing the diff"
-msgstr "审查差异后提交已更改的文件"
+msgstr "审查 diff 后 commit 已更改的文件"
 
 msgid "list commands"
 msgstr "列出命令"
@@ -5428,7 +5428,7 @@ msgid "open the read-only Multi Harness settings map"
 msgstr "打开只读的 Multi Harness 设置图"
 
 msgid "prepare interrupted prompt for review; never auto-replays tools"
-msgstr "准备中断的提示词以供审查；绝不会自动重放工具"
+msgstr "准备中断的 prompt 以供审查；绝不会自动重放工具"
 
 msgid "resume an interrupted turn without repeating completed tools"
 msgstr "恢复中断的回合，不重复已完成的工具"
@@ -5482,7 +5482,7 @@ msgid "Read ISyCode workspace preferences"
 msgstr "读取 ISyCode 工作区偏好"
 
 msgid "List ISyCode workspace prompt commands"
-msgstr "列出 ISyCode 工作区提示词命令"
+msgstr "列出 ISyCode 工作区 prompt 命令"
 
 msgid "Initialize or update ISyCode workspace config"
 msgstr "初始化或更新 ISyCode 工作区配置"
@@ -5497,7 +5497,7 @@ msgid "Undo every file change of one ISyCode turn"
 msgstr "撤销某个 ISyCode 回合的所有文件更改"
 
 msgid "Run a command in the workspace sandbox"
-msgstr "在工作区沙箱中运行命令"
+msgstr "在工作区 sandbox 中运行命令"
 
 msgid "Git"
 msgstr "Git"
@@ -5506,10 +5506,10 @@ msgid "See git status of the workspace"
 msgstr "查看工作区的 git 状态"
 
 msgid "See git diffs of the workspace"
-msgstr "查看工作区的 git 差异"
+msgstr "查看工作区的 git diff"
 
 msgid "Create a git commit"
-msgstr "创建 git 提交"
+msgstr "创建 git commit"
 
 msgid "Publish one reviewed ref to one remote"
 msgstr "将一个已审查的引用发布到一个远程"
@@ -5533,7 +5533,7 @@ msgid "Network"
 msgstr "网络"
 
 msgid "Send prompts to the selected model provider"
-msgstr "向所选模型提供商发送提示词"
+msgstr "向所选模型提供商发送 prompt"
 
 msgid "Sign in with the official grok CLI"
 msgstr "使用官方 grok CLI 登录"
@@ -5755,7 +5755,7 @@ msgid "Edit workspace files"
 msgstr "编辑工作区文件"
 
 msgid "Create git commits"
-msgstr "创建 git 提交"
+msgstr "创建 git commit"
 
 msgid "Local MCP servers"
 msgstr "本地 MCP 服务器"
@@ -5923,10 +5923,10 @@ msgid "copy selected text to the clipboard"
 msgstr "将所选文本复制到剪贴板"
 
 msgid "run approved commands in the sandbox"
-msgstr "在沙箱中运行已批准的命令"
+msgstr "在 sandbox 中运行已批准的命令"
 
 msgid "git status, diffs and approved commits"
-msgstr "git 状态、差异和已批准的提交"
+msgstr "git 状态、diff 和已批准的 commit"
 
 msgid "check Python files after edits"
 msgstr "编辑后检查 Python 文件"
@@ -5941,7 +5941,7 @@ msgid "git (no repository here)"
 msgstr "git（此处没有仓库）"
 
 msgid "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
-msgstr "在 {root} 中为以下内容保存授权：{labels}。文件编辑遵循你的文件夹批准设置；命令、删除、移动和提交会先询问。IsySentinel 检查每个操作，日志会记录它。你可以在此菜单中逐项关闭。"
+msgstr "在 {root} 中为以下内容保存授权：{labels}。文件编辑遵循你的文件夹批准设置；命令、删除、移动和 commit 会先询问。IsySentinel 检查每个操作，日志会记录它。你可以在此菜单中逐项关闭。"
 
 msgid "Not available here: {missing}."
 msgstr "此处不可用：{missing}。"
@@ -5959,7 +5959,7 @@ msgid "This confirmation does not send the folder contents by itself."
 msgstr "此确认本身不会发送文件夹内容。"
 
 msgid "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{context}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
-msgstr "工作区根目录：{root}\n模式：{mode}\n提供商：{provider}\n{context}\n信任此文件夹后，Classic 可以读取和搜索它，在效果预算内进行可恢复的编辑、创建、移动和删除，并运行隔离的沙箱测试，而无需逐项询问。提交、密钥、权限变更、新的网络目标以及任何没有沙箱的操作仍会询问或保持关闭。已撤销的权限仍然优先。这不是对所有工具的永久批准，也不会开启或关闭 Security。"
+msgstr "工作区根目录：{root}\n模式：{mode}\n提供商：{provider}\n{context}\n信任此文件夹后，Classic 可以读取和搜索它，在效果预算内进行可恢复的编辑、创建、移动和删除，并运行隔离的 sandbox 测试，而无需逐项询问。commit、密钥、权限变更、新的网络目标以及任何没有 sandbox 的操作仍会询问或保持关闭。已撤销的权限仍然优先。这不是对所有工具的永久批准，也不会开启或关闭 Security。"
 
 msgid "output limit reached"
 msgstr "已达输出上限"

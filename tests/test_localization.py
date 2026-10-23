@@ -151,7 +151,7 @@ def test_spanish_and_chinese_option_catalogs_cover_chrome_first_run_and_approval
     assert tr("Allow once · y") == "Permitir una vez · y"
     assert tr("Apply change · y") == "Aplicar cambio · y"
     assert tr("Cancel · n") == "Cancelar · n"
-    assert tr("Read and search workspace files") == "Leer y buscar archivos del espacio de trabajo"
+    assert tr("Read and search workspace files") == "Leer y buscar archivos del workspace"
     configure_locale("zh")
     assert tr("Sidebar") == "侧栏"
     assert tr("Sessions") == "会话"
@@ -262,7 +262,7 @@ def test_chinese_chrome_and_approval_buttons_render(tmp_path, monkeypatch, capsy
 
 def test_spanish_and_chinese_authority_palette_and_defaults_options():
     configure_locale("es")
-    assert tr("Read and search workspace files") == "Leer y buscar archivos del espacio de trabajo"
+    assert tr("Read and search workspace files") == "Leer y buscar archivos del workspace"
     assert tr("Turn on all coding tools…") == "Activar todas las herramientas de código…"
     assert tr("Ask me when I open a new folder") == "Preguntarme al abrir una carpeta nueva"
     assert tr("Guidance available to ISyCode") == "Guía disponible para ISyCode"
@@ -311,7 +311,7 @@ def test_spanish_authority_and_palette_options_render(tmp_path, monkeypatch, cap
             app._open_authority_menu()
             await pilot.pause()
             labels = [entry["label"] for entry in app._menu_entries]
-            assert "Leer y buscar archivos del espacio de trabajo" in labels
+            assert "Leer y buscar archivos del workspace" in labels
             assert "Activar todas las herramientas de código…" in labels
             assert "Flujo de trabajo · Classic" in labels
             app._open_palette()

@@ -8,7 +8,7 @@ msgid "Temporary input-copy budget: {mib} MiB for this command."
 msgstr "Presupuesto de copia temporal: {mib} MiB para este comando."
 
 msgid "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
-msgstr "Supera los 512 MiB predeterminados: necesita más disco temporal y tiempo de copia. No concede permisos adicionales; el sandbox y los límites de cambios de archivos se mantienen. Si falta espacio, el comando no se ejecuta."
+msgstr "Supera los 512 MiB predeterminados: necesita más disco temporal y tiempo de copia. No concede permisos adicionales; el sandbox y los límites de cambios de archivos se mantienen. Si falta workspace, el comando no se ejecuta."
 
 msgid "ISyCode  ·  COMMAND BROWSER"
 msgstr "ISyCode  ·  EXPLORADOR DE COMANDOS"
@@ -20,7 +20,7 @@ msgid "Choose an action"
 msgstr "Elige una acción"
 
 msgid "Agent · Workspace · Integrations · Providers · Session · Settings"
-msgstr "Agente · Espacio · Integraciones · Proveedores · Sesión · Configuración"
+msgstr "Agente · Workspace · Integraciones · Proveedores · Sesión · Configuración"
 
 msgid "Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands."
 msgstr "Escribe para filtrar; Tab pasa a la lista. ↑/↓ y Enter inspeccionan una acción. Ctrl+O la abre; Esc limpia el filtro o vuelve. En el chat, escribe / para comandos rápidos."
@@ -59,7 +59,7 @@ msgid "The assistant may create or overwrite files here without showing each dif
 msgstr "El asistente puede crear o sobrescribir archivos aquí sin mostrar cada diff para aprobarlo. Errores del modelo o instrucciones maliciosas en archivos pueden dañar tu trabajo. Revisa los cambios con Git y guarda copias."
 
 msgid "This setting persists for this workspace. Disable it from Files → Folders. Authority, ISySentinel, path protections and journaling stay active; they cannot guarantee that an allowed edit is correct. Commands, deletes, moves and commits still require their own approvals."
-msgstr "Este ajuste permanece en este espacio. Desactívalo en Archivos → Carpetas. Authority, ISySentinel, las protecciones de ruta y el diario siguen activos; no garantizan que una edición permitida sea correcta. Comandos, borrados, movimientos y commits siguen pidiendo su propia aprobación."
+msgstr "Este ajuste permanece en este workspace. Desactívalo en Archivos → Carpetas. Authority, ISySentinel, las protecciones de ruta y el diario siguen activos; no garantizan que una edición permitida sea correcta. Comandos, borrados, movimientos y commits siguen pidiendo su propia aprobación."
 
 msgid "Enable automatic edits"
 msgstr "Activar ediciones automáticas"
@@ -122,16 +122,16 @@ msgid "off"
 msgstr "desactivado"
 
 msgid "Settings · Workspace preferences"
-msgstr "Configuración · Preferencias del espacio"
+msgstr "Configuración · Preferencias del workspace"
 
 msgid "Workspace command migration"
-msgstr "Migración de comandos del espacio"
+msgstr "Migración de comandos del workspace"
 
 msgid "Settings · Integrations"
 msgstr "Configuración · Integraciones"
 
 msgid "Workspace folders · explicit access"
-msgstr "Carpetas del espacio · acceso explícito"
+msgstr "Carpetas del workspace · acceso explícito"
 
 msgid "Settings · My defaults"
 msgstr "Configuración · Mis valores"
@@ -185,13 +185,13 @@ msgid "Settings"
 msgstr "Configuración"
 
 msgid "Workspace preferences"
-msgstr "Preferencias del espacio"
+msgstr "Preferencias del workspace"
 
 msgid "These personal defaults follow you between workspaces."
-msgstr "Estos valores personales te siguen entre espacios de trabajo."
+msgstr "Estos valores personales te siguen entre workspaces."
 
 msgid "Access stays separate for each workspace; these defaults never turn on permissions."
-msgstr "El acceso sigue siendo distinto en cada espacio; estos valores nunca encienden permisos."
+msgstr "El acceso sigue siendo distinto en cada workspace; estos valores nunca encienden permisos."
 
 msgid "Change it from Providers; model selection is already saved globally."
 msgstr "Cámbialo en Proveedores; la elección de modelo ya se guarda de forma global."
@@ -239,7 +239,7 @@ msgid "Language · {name}"
 msgstr "Idioma · {name}"
 
 msgid "Interface language for ISyCode. This does not change permissions or workspace files."
-msgstr "Idioma de la interfaz de ISyCode. No cambia permisos ni archivos del espacio de trabajo."
+msgstr "Idioma de la interfaz de ISyCode. No cambia permisos ni archivos del workspace."
 
 msgid "Choose role"
 msgstr "Elegir rol"
@@ -248,7 +248,7 @@ msgid "Context"
 msgstr "Contexto"
 
 msgid "My defaults · all workspaces"
-msgstr "Mis valores · todos los espacios de trabajo"
+msgstr "Mis valores · todos los workspaces"
 
 msgid "Compact text scroll · {state}"
 msgstr "Desplazamiento compacto de texto · {state}"
@@ -293,7 +293,7 @@ msgid "Clear my default role"
 msgstr "Quitar mi rol por defecto"
 
 msgid "Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."
-msgstr "Solo aplica a carpetas abiertas por primera vez; cada espacio guarda su modo y puedes cambiarlo en Configuración → Authority."
+msgstr "Solo aplica a carpetas abiertas por primera vez; cada workspace guarda su modo y puedes cambiarlo en Configuración → Authority."
 
 msgid "Clear selected skills"
 msgstr "Quitar skills seleccionadas"
@@ -323,7 +323,7 @@ msgid "Shows the exact recipe, network effects, root and sandbox; asks before Do
 msgstr "Muestra la receta exacta, efectos de red, raíz y sandbox; pregunta antes de Docker build/start y luego verifica salud en un puerto solo loopback."
 
 msgid "Open workspace file browser"
-msgstr "Abrir explorador de archivos del espacio"
+msgstr "Abrir explorador de archivos del workspace"
 
 msgid "Open provider selector"
 msgstr "Abrir selector de proveedores"
@@ -335,7 +335,7 @@ msgid "/help"
 msgstr "/help"
 
 msgid "Opaque workspace match label; it does not grant access."
-msgstr "Etiqueta opaca de coincidencia del espacio; no concede acceso."
+msgstr "Etiqueta opaca de coincidencia del workspace; no concede acceso."
 
 msgid "Open Files view"
 msgstr "Abrir vista Archivos"
@@ -344,7 +344,7 @@ msgid "Current · {name} ({kind})"
 msgstr "Actual · {name} ({kind})"
 
 msgid "Initialize this workspace's .isycode/"
-msgstr "Inicializar .isycode/ de este espacio"
+msgstr "Inicializar .isycode/ de este workspace"
 
 msgid "Keeps non-security preferences local; file writes still need a separate review."
 msgstr "Deja las preferencias no de seguridad en local; las escrituras siguen pidiendo revisión aparte."
@@ -353,7 +353,7 @@ msgid "Overrides personal defaults for this .isyroot only; permissions are unaff
 msgstr "Sustituye los valores personales solo para este .isyroot; los permisos no cambian."
 
 msgid "Copy legacy workspace commands…"
-msgstr "Copiar comandos heredados del espacio…"
+msgstr "Copiar comandos heredados del workspace…"
 
 msgid "Copies validated .isycode-commands/*.md files after diff approval; originals remain."
 msgstr "Copia archivos .isycode-commands/*.md validados tras aprobar el diff; los originales se quedan."
@@ -377,7 +377,7 @@ msgid "Commands & shortcuts"
 msgstr "Comandos y atajos"
 
 msgid "Workspace files"
-msgstr "Archivos del espacio de trabajo"
+msgstr "Archivos del workspace"
 
 msgid "Workspace folders & automatic edits"
 msgstr "Carpetas y ediciones automáticas"
@@ -392,13 +392,13 @@ msgid "This folder has no .isyroot marker; preferences are not persisted here."
 msgstr "Esta carpeta no tiene marcador .isyroot; aquí no se guardan preferencias."
 
 msgid "Workspace preferences unavailable · {error}"
-msgstr "Preferencias del espacio no disponibles · {error}"
+msgstr "Preferencias del workspace no disponibles · {error}"
 
 msgid "Initialize .isycode/ before saving preferences."
 msgstr "Inicializa .isycode/ antes de guardar preferencias."
 
 msgid "Migration is available only in a workspace with its own .isyroot."
-msgstr "La migración solo está disponible en un espacio con su propio .isyroot."
+msgstr "La migración solo está disponible en un workspace con su propio .isyroot."
 
 msgid "Migration unavailable · {error}"
 msgstr "Migración no disponible · {error}"
@@ -431,7 +431,7 @@ msgid "Previously selected model; not verified against this account."
 msgstr "Modelo elegido antes; no está verificado contra esta cuenta."
 
 msgid "The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."
-msgstr "La petición del catálogo en vivo fue denegada; esto pregunta una vez, guarda el permiso del host en este espacio y recarga los modelos reales del proveedor."
+msgstr "La petición del catálogo en vivo fue denegada; esto pregunta una vez, guarda el permiso del host en este workspace y recarga los modelos reales del proveedor."
 
 msgid "Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."
 msgstr "Modelo preset fijo, no verificado contra esta cuenta; carga el catálogo de la cuenta para la lista real del proveedor."
@@ -455,7 +455,7 @@ msgid "Role · {name}"
 msgstr "Rol · {name}"
 
 msgid "Workspace Root · {path}"
-msgstr "Raíz del espacio · {path}"
+msgstr "Raíz del workspace · {path}"
 
 msgid "Launch Directory · {path}"
 msgstr "Directorio de arranque · {path}"
@@ -485,7 +485,7 @@ msgid "Only file creation/edits. Authority and ISySentinel stay active."
 msgstr "Solo creación/edición de archivos. Authority e ISySentinel siguen activos."
 
 msgid "Files and standalone workspace settings are kept. This chat loses access."
-msgstr "Los archivos y ajustes independientes del espacio se conservan. Este chat pierde el acceso."
+msgstr "Los archivos y ajustes independientes del workspace se conservan. Este chat pierde el acceso."
 
 msgid "Folder settings unavailable · {error}"
 msgstr "Ajustes de carpeta no disponibles · {error}"
@@ -536,7 +536,7 @@ msgid "Config warning · {error}"
 msgstr "Aviso de configuración · {error}"
 
 msgid "Clear this workspace's default role"
-msgstr "Quitar el rol por defecto de este espacio"
+msgstr "Quitar el rol por defecto de este workspace"
 
 msgid "ON — dangerous; disable"
 msgstr "ON — peligroso; desactivar"
@@ -608,10 +608,10 @@ msgid "Save key"
 msgstr "Guardar clave"
 
 msgid "Use {name} as this workspace's default role"
-msgstr "Usar {name} como rol predeterminado de este espacio"
+msgstr "Usar {name} como rol predeterminado de este workspace"
 
 msgid "workspace symbol search"
-msgstr "búsqueda de símbolos del espacio"
+msgstr "búsqueda de símbolos del workspace"
 
 msgid "Settings · Authority & Security"
 msgstr "Configuración · Authority & Security"
@@ -620,7 +620,7 @@ msgid "Security · Action journal (read-only)"
 msgstr "Security · Diario de acciones (solo lectura)"
 
 msgid "Choose what ISyCode can do in this workspace. Everything else stays off."
-msgstr "Elige qué puede hacer ISyCode en este espacio. Todo lo demás sigue apagado."
+msgstr "Elige qué puede hacer ISyCode en este workspace. Todo lo demás sigue apagado."
 
 msgid "Some actions ask again before they run, even when turned on. Press ? on any option to see what it does."
 msgstr "Algunas acciones preguntan otra vez antes de ejecutarse, aunque estén activadas. Pulsa ? en una opción para ver qué hace."
@@ -647,7 +647,7 @@ msgid "Protection is always on"
 msgstr "La protección siempre está activa"
 
 msgid "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, and sensitive actions still ask you first."
-msgstr "ISyCode comprueba cada acción antes de ejecutarla. Activar una opción nunca da acceso fuera de este espacio, y las acciones sensibles siguen preguntándote."
+msgstr "ISyCode comprueba cada acción antes de ejecutarla. Activar una opción nunca da acceso fuera de este workspace, y las acciones sensibles siguen preguntándote."
 
 msgid "File edits follow folder approval settings; other changes always ask."
 msgstr "Las ediciones de archivo siguen los ajustes de la carpeta; otros cambios siempre preguntan."
@@ -665,7 +665,7 @@ msgid "One step for read, search, edit, move, delete, undo, sandboxed commands, 
 msgstr "Un paso para leer, buscar, editar, mover, borrar, deshacer, comandos en sandbox, git y comprobaciones Python (lo que este equipo soporte). Cada cambio, comando y commit sigue preguntándote, e IsySentinel sigue comprobando cada acción."
 
 msgid "Read and search workspace files"
-msgstr "Leer y buscar archivos del espacio de trabajo"
+msgstr "Leer y buscar archivos del workspace"
 
 msgid "Lets ISyCode list, read, and find files here. It cannot change or delete them."
 msgstr "Deja que ISyCode liste, lea y encuentre archivos aquí. No puede cambiarlos ni borrarlos."
@@ -695,7 +695,7 @@ msgid "Reads the optional integrations list. It does not enable their tools."
 msgstr "Lee la lista opcional de integraciones. No activa sus herramientas."
 
 msgid "Allow git commits in this workspace?"
-msgstr "¿Permitir commits de git en este espacio?"
+msgstr "¿Permitir commits de git en este workspace?"
 
 msgid "Turn off git commits?"
 msgstr "¿Desactivar los commits de git?"
@@ -710,13 +710,13 @@ msgid "JOURNAL_INVALID · verifier unavailable"
 msgstr "JOURNAL_INVALID · verificador no disponible"
 
 msgid "Save conversations in this workspace"
-msgstr "Guardar conversaciones en este espacio"
+msgstr "Guardar conversaciones en este workspace"
 
 msgid "Keeps this workspace's chats in your private ISyCode state folder, outside the project, so you can resume them. Common secrets are redacted before saving."
-msgstr "Guarda los chats de este espacio en tu carpeta privada de estado de ISyCode, fuera del proyecto, para reanudarlos. Los secretos comunes se ocultan antes de guardar."
+msgstr "Guarda los chats de este workspace en tu carpeta privada de estado de ISyCode, fuera del proyecto, para reanudarlos. Los secretos comunes se ocultan antes de guardar."
 
 msgid "Save conversations · recurring workspaces only"
-msgstr "Guardar conversaciones · solo espacios recurrentes"
+msgstr "Guardar conversaciones · solo workspaces recurrentes"
 
 msgid "Temporary runs never keep chat history."
 msgstr "Las ejecuciones temporales nunca guardan historial de chat."
@@ -725,7 +725,7 @@ msgid "See git status and diffs"
 msgstr "Ver git status y diffs"
 
 msgid "Lets the assistant see the branch, changed files and diffs. Sensitive files stay hidden, and repositories that configure their own programs are refused."
-msgstr "Deja que el asistente vea la rama, archivos cambiados y diffs. Los archivos sensibles se ocultan, y se rechazan repos que configuran sus propios programas."
+msgstr "Deja que el asistente vea la branch, archivos cambiados y diffs. Los archivos sensibles se ocultan, y se rechazan repos que configuran sus propios programas."
 
 msgid "Create git commits · asks before every commit"
 msgstr "Crear commits de git · pregunta antes de cada commit"
@@ -737,7 +737,7 @@ msgid "Run commands in a sandbox"
 msgstr "Ejecutar comandos en un sandbox"
 
 msgid "The assistant can propose programs like tests or a build. Each exact command asks unless this folder is trusted for quiet Classic. It runs without network, with sensitive files hidden, and can only change files inside this workspace. There is no unsandboxed fallback."
-msgstr "El asistente puede proponer programas como tests o un build. Cada comando exacto pregunta salvo que esta carpeta sea de confianza en Classic silencioso. Corre sin red, con archivos sensibles ocultos, y solo puede cambiar archivos de este espacio. No hay fallback sin sandbox."
+msgstr "El asistente puede proponer programas como tests o un build. Cada comando exacto pregunta salvo que esta carpeta sea de confianza en Classic silencioso. Corre sin red, con archivos sensibles ocultos, y solo puede cambiar archivos de este workspace. No hay fallback sin sandbox."
 
 msgid "Run commands · sandbox not available on this computer"
 msgstr "Ejecutar comandos · el sandbox no está disponible en este equipo"
@@ -794,7 +794,7 @@ msgid "— Other saved permissions —"
 msgstr "— Otros permisos guardados —"
 
 msgid "Every other permission saved for this workspace."
-msgstr "Cualquier otro permiso guardado para este espacio."
+msgstr "Cualquier otro permiso guardado para este workspace."
 
 msgid "blocked · no Secure owner · saved grant ignored"
 msgstr "bloqueado · sin owner Secure · el permiso guardado se ignora"
@@ -809,7 +809,7 @@ msgid "Integrity · {status} · {records} records · {decisions} decisions · {r
 msgstr "Integridad · {status} · {records} registros · {decisions} decisiones · {receipts} recibos"
 
 msgid "No durable decisions recorded for this workspace"
-msgstr "No hay decisiones duraderas registradas para este espacio"
+msgstr "No hay decisiones duraderas registradas para este workspace"
 
 msgid "Delete current conversation · asks every time"
 msgstr "Eliminar la conversación actual · pregunta siempre"
@@ -965,7 +965,7 @@ msgid "Check the user-private state directory and permissions."
 msgstr "Revisa el directorio privado de estado y los permisos."
 
 msgid "Each use is decided and recorded in this workspace's action journal."
-msgstr "Cada uso se decide y se registra en el diario de acciones de este espacio."
+msgstr "Cada uso se decide y se registra en el diario de acciones de este workspace."
 
 msgid "Provider credential configuration could not be loaded."
 msgstr "No se pudo cargar la configuración de credenciales del proveedor."
@@ -1082,7 +1082,7 @@ msgid "Manual installation steps"
 msgstr "Pasos de instalación manual"
 
 msgid "This permission is scoped to this workspace and exact executable. Mutations still need a fresh approval."
-msgstr "Este permiso está acotado a este espacio y al ejecutable exacto. Las mutaciones siguen pidiendo una aprobación nueva."
+msgstr "Este permiso está acotado a este workspace y al ejecutable exacto. Las mutaciones siguen pidiendo una aprobación nueva."
 
 msgid "Authority policy unavailable · all actions deny"
 msgstr "Política de Authority no disponible · todas las acciones se niegan"
@@ -1163,16 +1163,16 @@ msgid "MCP"
 msgstr "MCP"
 
 msgid "Load workspace AGENTS.md"
-msgstr "Cargar AGENTS.md del espacio"
+msgstr "Cargar AGENTS.md del workspace"
 
 msgid "Reads only this workspace's AGENTS.md through its read permission."
-msgstr "Lee solo el AGENTS.md de este espacio con su permiso de lectura."
+msgstr "Lee solo el AGENTS.md de este workspace con su permiso de lectura."
 
 msgid "Choose a document here or in a sibling project; external files ask for explicit permission."
 msgstr "Elige un documento aquí o en un proyecto hermano; los archivos externos piden permiso explícito."
 
 msgid "Context · workspace documents"
-msgstr "Contexto · documentos del espacio de trabajo"
+msgstr "Contexto · documentos del workspace"
 
 msgid "Context: {name}"
 msgstr "Contexto: {name}"
@@ -1223,7 +1223,7 @@ msgid "Remember permission for this exact file"
 msgstr "Recordar el permiso para este archivo exacto"
 
 msgid "Workspace context pack · review before reading"
-msgstr "Paquete de contexto del espacio · revisar antes de leer"
+msgstr "Paquete de contexto del workspace · revisar antes de leer"
 
 msgid "{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion."
 msgstr "{title}\n\n{detail} Antes de borrar se comprobará una aprobación de un solo uso, ligada a la sesión."
@@ -1295,7 +1295,7 @@ msgid "Always allow…"
 msgstr "Permitir siempre…"
 
 msgid "Caution: {reason}. A marker here would make every folder below it without its own .isyroot share this workspace's grants and sessions. Your 'recurring' default is not applied here.\n\n"
-msgstr "Cuidado: {reason}. Un marcador aquí haría que cada carpeta debajo sin su propio .isyroot comparta los permisos y sesiones de este espacio. Tu valor 'recurrente' no se aplica aquí.\n\n"
+msgstr "Cuidado: {reason}. Un marcador aquí haría que cada carpeta debajo sin su propio .isyroot comparta los permisos y sesiones de este workspace. Tu valor 'recurrente' no se aplica aquí.\n\n"
 
 msgid "Your provider key is already in the environment, so chat works right away."
 msgstr "La clave del proveedor ya está en el entorno, así que el chat funciona de inmediato."
@@ -1304,28 +1304,28 @@ msgid "No provider key detected yet; you can add one later in Settings → Provi
 msgstr "Aún no hay clave de proveedor; puedes añadirla después en Configuración → Proveedores."
 
 msgid "ISyCode will stop listing, reading, and searching files in this workspace. Your files and conversations stay where they are."
-msgstr "ISyCode dejará de listar, leer y buscar archivos en este espacio. Tus archivos y conversaciones se quedan donde están."
+msgstr "ISyCode dejará de listar, leer y buscar archivos en este workspace. Tus archivos y conversaciones se quedan donde están."
 
 msgid "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md to understand your project. It cannot edit or delete files, run commands, or access folders outside this workspace. You will still be asked before sensitive actions."
-msgstr "ISyCode puede listar carpetas, leer archivos de texto, encontrar nombres y usar un AGENTS.md elegido para entender tu proyecto. No puede editar ni borrar archivos, ejecutar comandos ni acceder a carpetas fuera de este espacio. Antes de acciones sensibles te seguirá preguntando."
+msgstr "ISyCode puede listar carpetas, leer archivos de texto, encontrar nombres y usar un AGENTS.md elegido para entender tu proyecto. No puede editar ni borrar archivos, ejecutar comandos ni acceder a carpetas fuera de este workspace. Antes de acciones sensibles te seguirá preguntando."
 
 msgid "Set up this workspace?"
-msgstr "¿Configurar este espacio de trabajo?"
+msgstr "¿Configurar este workspace?"
 
 msgid "Launch directory:\n{path}\n\n{warning}If this is a recurring project, Yes creates an empty .isyroot here and saves chat sessions in your private ISyCode state directory. .isyroot identifies the workspace; it does not grant filesystem access. Not now keeps this run temporary, and its chat history is removed when ISyCode exits."
-msgstr "Directorio de arranque:\n{path}\n\n{warning}Si este es un proyecto recurrente, Sí crea un .isyroot vacío aquí y guarda las sesiones de chat en tu directorio privado de estado de ISyCode. .isyroot identifica el espacio; no concede acceso al sistema de archivos. Ahora no deja esta ejecución temporal, y su historial se elimina al salir de ISyCode."
+msgstr "Directorio de arranque:\n{path}\n\n{warning}Si este es un proyecto recurrente, Sí crea un .isyroot vacío aquí y guarda las sesiones de chat en tu directorio privado de estado de ISyCode. .isyroot identifica el workspace; no concede acceso al sistema de archivos. Ahora no deja esta ejecución temporal, y su historial se elimina al salir de ISyCode."
 
 msgid "Use recurring mode for new folders?"
 msgstr "¿Usar modo recurrente para carpetas nuevas?"
 
 msgid "When ISyCode first opens a folder without a saved choice, it will create an empty .isyroot marker there. This remembers the workspace identity only; it does not grant file access or copy permissions from another workspace. Broad folders such as your home directory, its parents, the temporary directory, or a mount point still ask first, so unrelated projects never share one workspace by accident."
-msgstr "Cuando ISyCode abre por primera vez una carpeta sin una elección guardada, crea ahí un marcador .isyroot vacío. Solo recuerda la identidad del espacio; no concede acceso a archivos ni copia permisos de otro espacio. Carpetas amplias como tu directorio de inicio, sus padres, el temporal o un punto de montaje siguen preguntando primero, para que proyectos distintos no compartan un espacio por accidente."
+msgstr "Cuando ISyCode abre por primera vez una carpeta sin una elección guardada, crea ahí un marcador .isyroot vacío. Solo recuerda la identidad del workspace; no concede acceso a archivos ni copia permisos de otro workspace. Carpetas amplias como tu directorio de inicio, sus padres, el temporal o un punto de montaje siguen preguntando primero, para que proyectos distintos no compartan un workspace por accidente."
 
 msgid "Welcome to ISyCode · how do you want to start?"
 msgstr "Bienvenido a ISyCode · ¿cómo quieres empezar?"
 
 msgid "{root}\n{provider_line}\nQuick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\nBoth paths keep IsySentinel and the action journal on everything."
-msgstr "{root}\n{provider_line}\nInicio rápido: esta carpeta pasa a ser un espacio Classic recurrente — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más enciende todas las herramientas de código; las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
+msgstr "{root}\n{provider_line}\nInicio rápido: esta carpeta pasa a ser un workspace Classic recurrente — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más enciende todas las herramientas de código; las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
 
 msgid "How should ISyCode work in this folder?"
 msgstr "¿Cómo debe trabajar ISyCode en esta carpeta?"
@@ -1340,13 +1340,13 @@ msgid "Saved in the operating system keyring and never shown after saving. Use s
 msgstr "Se guarda en el llavero del sistema y no se vuelve a mostrar. Usa el id de servicio `isyco-gateway` para el Gateway MCP."
 
 msgid "Yes · recurring workspace"
-msgstr "Sí · espacio recurrente"
+msgstr "Sí · workspace recurrente"
 
 msgid "No · temporary run"
 msgstr "No · ejecución temporal"
 
 msgid "Yes, remember this workspace"
-msgstr "Sí, recordar este espacio"
+msgstr "Sí, recordar este workspace"
 
 msgid "No, keep it temporary"
 msgstr "No, dejarlo temporal"
@@ -1370,7 +1370,7 @@ msgid "Turn off file reading?"
 msgstr "¿Desactivar la lectura de archivos?"
 
 msgid "Allow ISyCode to read workspace files?"
-msgstr "¿Permitir que ISyCode lea archivos del espacio?"
+msgstr "¿Permitir que ISyCode lea archivos del workspace?"
 
 msgid "Turn off this option?"
 msgstr "¿Desactivar esta opción?"
@@ -1631,7 +1631,7 @@ msgid "No plan pending"
 msgstr "Sin plan pendiente"
 
 msgid "Workspace"
-msgstr "Espacio de trabajo"
+msgstr "Workspace"
 
 msgid "↑ Up"
 msgstr "↑ Subir"
@@ -1766,7 +1766,7 @@ msgid "Language server status"
 msgstr "Estado de los language servers"
 
 msgid "Workspace files and directories"
-msgstr "Archivos y directorios del espacio"
+msgstr "Archivos y directorios del workspace"
 
 msgid "Roles"
 msgstr "Roles"
@@ -1784,7 +1784,7 @@ msgid "Session actions and current state"
 msgstr "Acciones de sesión y estado actual"
 
 msgid "Workspace root and navigation"
-msgstr "Raíz del espacio y navegación"
+msgstr "Raíz del workspace y navegación"
 
 msgid "Slash commands and keyboard shortcuts"
 msgstr "Comandos slash y atajos de teclado"
@@ -1862,13 +1862,13 @@ msgid "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permission
 msgstr "Compresión por RTK · https://github.com/rtk-ai/rtk · opt-in, los permisos no cambian."
 
 msgid "Personal defaults shared across your workspaces."
-msgstr "Valores personales compartidos entre tus espacios."
+msgstr "Valores personales compartidos entre tus workspaces."
 
 msgid "Create workspace preferences after reviewing the proposed files."
-msgstr "Crea preferencias del espacio tras revisar los archivos propuestos."
+msgstr "Crea preferencias del workspace tras revisar los archivos propuestos."
 
 msgid "Preferences for this workspace; permissions are separate."
-msgstr "Preferencias de este espacio; los permisos van aparte."
+msgstr "Preferencias de este workspace; los permisos van aparte."
 
 msgid "Review and copy legacy commands; preserve their originals."
 msgstr "Revisa y copia comandos legado; conserva los originales."
@@ -1889,7 +1889,7 @@ msgid "Scroll completed text in collapsed headers. Click header text to toggle o
 msgstr "Desplaza el texto terminado en cabeceras plegadas. Clic en el texto de cabecera alterna un bloque; la flecha lo abre."
 
 msgid "Inspect or change workspace permissions and approval settings."
-msgstr "Inspecciona o cambia permisos del espacio y ajustes de aprobación."
+msgstr "Inspecciona o cambia permisos del workspace y ajustes de aprobación."
 
 msgid "Manage named API credentials and their allowed uses."
 msgstr "Gestiona credenciales API con nombre y sus usos permitidos."
@@ -1898,7 +1898,7 @@ msgid "Inspect recorded actions and verify their receipts."
 msgstr "Inspecciona acciones registradas y verifica sus recibos."
 
 msgid "Review workspace folders and per-folder automatic edit settings."
-msgstr "Revisa carpetas del espacio y los ajustes de edición automática por carpeta."
+msgstr "Revisa carpetas del workspace y los ajustes de edición automática por carpeta."
 
 msgid "Inspect other harness settings; copying requires a separate confirmation."
 msgstr "Inspecciona ajustes de otros harness; copiar pide una confirmación aparte."
@@ -1907,7 +1907,7 @@ msgid "Manage MCP, LSP, Gateway and remote connections with separate permissions
 msgstr "Gestiona MCP, LSP, Gateway y conexiones remotas con permisos aparte."
 
 msgid "Browse workspace files."
-msgstr "Explora los archivos del espacio."
+msgstr "Explora los archivos del workspace."
 
 msgid "key in environment"
 msgstr "clave en el entorno"
@@ -2051,10 +2051,10 @@ msgid "Ctrl+C or Copy selection copies only the marked text. Copy whole box and 
 msgstr "Ctrl+C o Copiar selección copia solo el texto marcado. Copiar bloque completo y Copiar ruta son opciones explícitas aparte. El asistente no puede copiar. El registro guarda el tamaño, nunca el texto. Las claves API nunca se copian."
 
 msgid "Switch this workspace to Classic?"
-msgstr "¿Cambiar este espacio de trabajo a Classic?"
+msgstr "¿Cambiar este workspace a Classic?"
 
 msgid "Switch this workspace to Security?"
-msgstr "¿Cambiar este espacio de trabajo a Security?"
+msgstr "¿Cambiar este workspace a Security?"
 
 msgid "Use Classic"
 msgstr "Usar Classic"
@@ -2081,10 +2081,10 @@ msgid "Run a command · {cwd}"
 msgstr "Ejecutar un comando · {cwd}"
 
 msgid "workspace root"
-msgstr "raíz del espacio de trabajo"
+msgstr "raíz del workspace"
 
 msgid "Program: {program}\nStops after {timeout} s · network blocked · {hidden} sensitive paths hidden\nIt may change files in this workspace; those changes cannot be undone with /undo. Nothing runs unless you approve it."
-msgstr "Programa: {program}\nSe detiene tras {timeout} s · red bloqueada · {hidden} rutas sensibles ocultas\nPuede cambiar archivos de este espacio de trabajo; esos cambios no se pueden deshacer con /undo. Nada se ejecuta hasta que lo apruebes."
+msgstr "Programa: {program}\nSe detiene tras {timeout} s · red bloqueada · {hidden} rutas sensibles ocultas\nPuede cambiar archivos de este workspace; esos cambios no se pueden deshacer con /undo. Nada se ejecuta hasta que lo apruebes."
 
 msgid "Command · review"
 msgstr "Comando · revisión"
@@ -2386,10 +2386,10 @@ msgid "Not granted"
 msgstr "Exclusiones"
 
 msgid "workspace authority"
-msgstr "autoridad del espacio de trabajo"
+msgstr "autoridad del workspace"
 
 msgid "workspace file edit"
-msgstr "edición de archivo del espacio de trabajo"
+msgstr "edición de archivo del workspace"
 
 msgid "local MCP server"
 msgstr "servidor MCP local"
@@ -2410,10 +2410,10 @@ msgid "browser page read"
 msgstr "lectura de página del navegador"
 
 msgid "workspace context pack"
-msgstr "paquete de contexto del espacio de trabajo"
+msgstr "paquete de contexto del workspace"
 
 msgid "workspace memory"
-msgstr "memoria del espacio de trabajo"
+msgstr "memoria del workspace"
 
 msgid "session deletion"
 msgstr "eliminación de conversación"
@@ -2425,7 +2425,7 @@ msgid "chat session store"
 msgstr "almacén de sesiones de chat"
 
 msgid "workspace trust"
-msgstr "confianza del espacio de trabajo"
+msgstr "confianza del workspace"
 
 msgid "lsp diagnostics"
 msgstr "diagnósticos LSP"
@@ -2470,7 +2470,7 @@ msgid "the text shown below"
 msgstr "el texto mostrado a continuación"
 
 msgid "listed workspace files"
-msgstr "archivos del espacio de trabajo listados"
+msgstr "archivos del workspace listados"
 
 msgid "{count} files"
 msgstr "{count} archivos"
@@ -2488,13 +2488,13 @@ msgid "one-use, stops after {timeout} s"
 msgstr "un solo uso, se detiene tras {timeout} s"
 
 msgid "persistent workspace grant"
-msgstr "permiso persistente del espacio de trabajo"
+msgstr "permiso persistente del workspace"
 
 msgid "persistent workspace setting"
-msgstr "configuración persistente del espacio de trabajo"
+msgstr "configuración persistente del workspace"
 
 msgid "persistent workspace trust"
-msgstr "confianza persistente del espacio de trabajo"
+msgstr "confianza persistente del workspace"
 
 msgid "one conversation grant"
 msgstr "permiso para una conversación"
@@ -3095,7 +3095,7 @@ msgstr "Cancelar el turno y cambiar"
 
 # Flow (ADR 0010)
 msgid "Choose Classic, Flow or Security for this workspace."
-msgstr "Elige Classic, Flow o Security para este espacio de trabajo."
+msgstr "Elige Classic, Flow o Security para este workspace."
 
 # Flow (ADR 0010)
 msgid "Classic · recommended"
@@ -3135,7 +3135,7 @@ msgstr "No se deshizo nada · {reason}"
 
 # Flow (ADR 0010)
 msgid "Switch this workspace to {mode}?"
-msgstr "¿Cambiar este espacio de trabajo a {mode}?"
+msgstr "¿Cambiar este workspace a {mode}?"
 
 # Flow (ADR 0010)
 msgid "The current turn is cancelled before the engine restarts. Completed effects stay in the action journal and can be undone; nothing new is started."
@@ -3155,7 +3155,7 @@ msgstr "Flujo de trabajo · {mode}"
 
 # Flow (ADR 0010)
 msgid "Workspace now uses {mode} mode."
-msgstr "El espacio de trabajo ahora usa el modo {mode}."
+msgstr "El workspace ahora usa el modo {mode}."
 
 # Flow (ADR 0010)
 msgid "{mode} · current"
@@ -3173,7 +3173,7 @@ msgid "Local work follows the selected workflow; sensitive actions still ask or 
 msgstr "El trabajo local sigue el flujo elegido; las acciones sensibles siguen pidiendo aprobación o apagadas."
 
 msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
-msgstr "Flow registra los cambios recuperables del espacio de trabajo para /undo. Se mantienen las denegaciones explícitas, los presupuestos y los límites del aislamiento."
+msgstr "Flow registra los cambios recuperables del workspace para /undo. Se mantienen las denegaciones explícitas, los presupuestos y los límites del aislamiento."
 
 # Role switch and Flow /run
 msgid "Shift+Tab role"
@@ -3289,7 +3289,7 @@ msgid "Stopping response…"
 msgstr "Deteniendo la respuesta…"
 
 msgid "models.dev snapshot (offline; not verified against this account). reasoning={value} · context={value2} · tool_call={value3}"
-msgstr "Instantánea de models.dev (sin conexión; no verificada para esta cuenta). reasoning={value} · context={value2} · tool_call={value3}"
+msgstr "Snapshot de models.dev (sin conexión; no verificada para esta cuenta). reasoning={value} · context={value2} · tool_call={value3}"
 
 msgid "yes"
 msgstr "sí"
@@ -3322,16 +3322,16 @@ msgid "Folder unavailable · {value}"
 msgstr "Carpeta no disponible · {value}"
 
 msgid ".isycode/ is available only in a workspace with its own .isyroot marker."
-msgstr ".isycode/ solo está disponible en un espacio de trabajo con su propio marcador .isyroot."
+msgstr ".isycode/ solo está disponible en un workspace con su propio marcador .isyroot."
 
 msgid "Workspace config unavailable · {value}"
-msgstr "Configuración del espacio no disponible · {value}"
+msgstr "Configuración del workspace no disponible · {value}"
 
 msgid "Initialization stopped · {path} unchanged"
 msgstr "Inicialización detenida · {path} sin cambios"
 
 msgid "Workspace setup {decision} · {value}"
-msgstr "Configuración del espacio {decision} · {value}"
+msgstr "Configuración del workspace {decision} · {value}"
 
 msgid "{text} · receipt {receipt_id}"
 msgstr "{text} · recibo {receipt_id}"
@@ -3346,13 +3346,13 @@ msgid "Use Classic for new folders"
 msgstr "Usar Classic en carpetas nuevas"
 
 msgid "Default mode saved for new workspaces"
-msgstr "Modo predeterminado guardado para espacios nuevos"
+msgstr "Modo predeterminado guardado para workspaces nuevos"
 
 msgid "Could not save the default mode; existing settings remain"
 msgstr "No se pudo guardar el modo predeterminado; la configuración actual se mantiene"
 
 msgid "Default saved for new workspaces"
-msgstr "Predeterminado guardado para espacios nuevos"
+msgstr "Predeterminado guardado para workspaces nuevos"
 
 msgid "Could not save your global default; existing settings remain"
 msgstr "No se pudo guardar tu predeterminado global; la configuración actual se mantiene"
@@ -3376,7 +3376,7 @@ msgid "Focus a message or a preview, then press Copy."
 msgstr "Enfoca un mensaje o una vista previa y pulsa Copiar."
 
 msgid "Allow copying in this workspace?"
-msgstr "¿Permitir copiar en este espacio de trabajo?"
+msgstr "¿Permitir copiar en este workspace?"
 
 msgid "Copies text or paths you select to the OS clipboard. Other applications may read it. The model receives no clipboard tool; copied contents are not written to the journal."
 msgstr "Copia al portapapeles del sistema el texto o las rutas que selecciones. Otras aplicaciones pueden leerlo. El modelo no recibe ninguna herramienta de portapapeles; lo copiado no se escribe en el diario."
@@ -3397,7 +3397,7 @@ msgid "Copied {len} characters to the {where}."
 msgstr "{len} caracteres copiados al {where}."
 
 msgid "Copying is off for this workspace · turn on “Copy selected text” in Settings → Authority."
-msgstr "Copiar está apagado en este espacio · activa “Copiar texto seleccionado” en Configuración → Authority."
+msgstr "Copiar está apagado en este workspace · activa “Copiar texto seleccionado” en Configuración → Authority."
 
 msgid "Nothing copied · {value}"
 msgstr "No se copió nada · {value}"
@@ -3415,13 +3415,13 @@ msgid "Pending messages cleared"
 msgstr "Mensajes pendientes borrados"
 
 msgid "Steer attempt pending; draft kept"
-msgstr "Intento de redirección pendiente; borrador conservado"
+msgstr "Steer pendiente; borrador conservado"
 
 msgid "Steering queue is full; this draft is kept."
-msgstr "La cola de redirección está llena; se conserva este borrador."
+msgstr "La cola de steer está llena; se conserva este borrador."
 
 msgid "Steering queued · current tool effects remain; pending calls will be skipped."
-msgstr "Redirección en cola · los efectos de la herramienta actual se mantienen; las llamadas pendientes se omitirán."
+msgstr "Steer en cola · los efectos de la herramienta actual se mantienen; las llamadas pendientes se omitirán."
 
 msgid "Message queue is full; draft kept"
 msgstr "La cola de mensajes está llena; borrador conservado"
@@ -3502,13 +3502,13 @@ msgid "Open a saved conversation before granting its deletion."
 msgstr "Abre una conversación guardada antes de permitir borrarla."
 
 msgid "This permission applies only to conversation {value} in this workspace. Every deletion still requires reviewing the exact conversation and confirming it."
-msgstr "Este permiso aplica solo a la conversación {value} en este espacio. Cada borrado sigue exigiendo revisar la conversación exacta y confirmarlo."
+msgstr "Este permiso aplica solo a la conversación {value} en este workspace. Cada borrado sigue exigiendo revisar la conversación exacta y confirmarlo."
 
 msgid "previously selected"
 msgstr "seleccionada antes"
 
 msgid "Turn on reading workspace files first; editing builds on it."
-msgstr "Primero activa la lectura de archivos del espacio; editar depende de ella."
+msgstr "Primero activa la lectura de archivos del workspace; editar depende de ella."
 
 msgid "Edit permission could not be saved ({name})."
 msgstr "No se pudo guardar el permiso de edición ({name})."
@@ -3529,7 +3529,7 @@ msgid "Check permission could not be saved ({name})."
 msgstr "No se pudo guardar el permiso de comprobación ({name})."
 
 msgid "Git {value} {value2} for this workspace."
-msgstr "Git {value} para este espacio: {value2}."
+msgstr "Git {value} para este workspace: {value2}."
 
 msgid "commits"
 msgstr "commits"
@@ -3562,7 +3562,7 @@ msgid "Remove permission"
 msgstr "Quitar permiso"
 
 msgid "Remove the saved permission for {group} · {label} (`{action_id}`) in this workspace, including its saved scope?"
-msgstr "¿Quitar el permiso guardado para {group} · {label} (`{action_id}`) en este espacio, incluido su alcance guardado?"
+msgstr "¿Quitar el permiso guardado para {group} · {label} (`{action_id}`) en este workspace, incluido su alcance guardado?"
 
 msgid "Saved permission removed · {action_id}."
 msgstr "Permiso guardado eliminado · {action_id}."
@@ -3574,7 +3574,7 @@ msgid "Gateway URL is invalid; no MCP grant was changed."
 msgstr "La URL del Gateway no es válida; no cambió ningún permiso MCP."
 
 msgid "Gateway MCP invocation {value} for this workspace. Each tool call still needs an explicit one-use approval."
-msgstr "Invocación MCP del Gateway para este espacio: {value}. Cada llamada a una herramienta sigue necesitando una aprobación explícita de un solo uso."
+msgstr "Invocación MCP del Gateway para este workspace: {value}. Cada llamada a una herramienta sigue necesitando una aprobación explícita de un solo uso."
 
 msgid "MCP invocation grant could not be saved; calls remain denied."
 msgstr "No se pudo guardar el permiso de invocación MCP; las llamadas siguen denegadas."
@@ -3586,7 +3586,7 @@ msgid "LSP sandbox changed or is unavailable; no process grant was changed."
 msgstr "El sandbox del LSP cambió o no está disponible; no cambió ningún permiso de proceso."
 
 msgid "Sandboxed LSP process {value} for this workspace."
-msgstr "Proceso LSP en sandbox para este espacio: {value}."
+msgstr "Proceso LSP en sandbox para este workspace: {value}."
 
 msgid "LSP process grant could not be saved; the server remains denied."
 msgstr "No se pudo guardar el permiso del proceso LSP; el servidor sigue denegado."
@@ -3610,7 +3610,7 @@ msgid "Trust this folder"
 msgstr "Confiar en esta carpeta"
 
 msgid "Workspace grant could not be saved ({name})."
-msgstr "No se pudo guardar el permiso del espacio ({name})."
+msgstr "No se pudo guardar el permiso del workspace ({name})."
 
 msgid "Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."
 msgstr "Classic sin preguntas está activo para ediciones normales y pruebas en sandbox. Commits, secretos y cambios de autoridad siguen preguntando."
@@ -3631,13 +3631,13 @@ msgid "Response stopped; no partial answer was received."
 msgstr "Respuesta detenida; no se recibió ninguna respuesta parcial."
 
 msgid "Stream interrupted ({transport_reason}). Use /resume to continue without repeating completed tools."
-msgstr "Transmisión interrumpida ({transport_reason}). Usa /resume para continuar sin repetir las herramientas completadas."
+msgstr "Stream interrumpido ({transport_reason}). Usa /resume para continuar sin repetir las herramientas completadas."
 
 msgid "The stream failed before an answer ({transport_reason}). Use /resume to retry."
-msgstr "La transmisión falló antes de una respuesta ({transport_reason}). Usa /resume para reintentar."
+msgstr "El stream falló antes de una respuesta ({transport_reason}). Usa /resume para reintentar."
 
 msgid "Stream interrupted · use /resume"
-msgstr "Transmisión interrumpida · usa /resume"
+msgstr "Stream interrumpido · usa /resume"
 
 msgid "Compacting · summarizing {len} earlier messages to free up context"
 msgstr "Compactando · resumiendo {len} mensajes anteriores para liberar contexto"
@@ -3646,7 +3646,7 @@ msgid "(the provider ended the response during reasoning; its endpoint may have 
 msgstr "(el proveedor terminó la respuesta durante el razonamiento; su endpoint pudo alcanzar su propio límite de salida o de contexto)"
 
 msgid "Unapplied steering kept in the composer for review."
-msgstr "La redirección no aplicada se conserva en el compositor para revisarla."
+msgstr "El steer no aplicado se conserva en el compositor para revisarlo."
 
 msgid "The model provider rejected turn continuation ({text}). Use /retry to submit the prompt again."
 msgstr "El proveedor del modelo rechazó continuar el turno ({text}). Usa /retry para enviar el prompt de nuevo."
@@ -3703,13 +3703,13 @@ msgid "@{path} not attached · {value}"
 msgstr "@{path} no adjuntado · {value}"
 
 msgid "Tool batch · {len} proposed writes · one review for all"
-msgstr "Lote de herramientas · {len} escrituras propuestas · una sola revisión"
+msgstr "Batch de herramientas · {len} escrituras propuestas · una sola revisión"
 
 msgid "✓ Batch approved · {len} one-use approvals, one per file"
-msgstr "✓ Lote aprobado · {len} aprobaciones de un solo uso, una por archivo"
+msgstr "✓ Batch aprobado · {len} aprobaciones de un solo uso, una por archivo"
 
 msgid "✗ Batch rejected · {len} files unchanged"
-msgstr "✗ Lote rechazado · {len} archivos sin cambios"
+msgstr "✗ Batch rechazado · {len} archivos sin cambios"
 
 msgid "Resuming interrupted turn…"
 msgstr "Reanudando el turno interrumpido…"
@@ -3718,7 +3718,7 @@ msgid "Picture not sent · this model does not take images. The question goes as
 msgstr "Imagen no enviada · este modelo no acepta imágenes. La pregunta va como texto."
 
 msgid "Trying steering · original turn retained until response."
-msgstr "Probando la redirección · el turno original se conserva hasta la respuesta."
+msgstr "Probando el steer · el turno original se conserva hasta la respuesta."
 
 msgid "Picture not accepted · sending the question as text."
 msgstr "Imagen no aceptada · enviando la pregunta como texto."
@@ -3736,7 +3736,7 @@ msgid "⚠ Recovery stopped after 1 automatic attempt · {reason} · no tool eff
 msgstr "⚠ La recuperación se detuvo tras 1 intento automático · {reason} · no se repitió ningún efecto de herramientas."
 
 msgid "Provider stream interrupted for steering; partial output is retained on screen."
-msgstr "Transmisión del proveedor interrumpida para redirigir; la salida parcial se mantiene en pantalla."
+msgstr "Stream del proveedor interrumpido para hacer steer; la salida parcial se mantiene en pantalla."
 
 msgid "✓ Response recovered after {count} automatic retries · no tool effects repeated"
 msgstr "✓ Respuesta recuperada tras {count} reintentos automáticos · no se repitió ningún efecto de herramientas"
@@ -3748,7 +3748,7 @@ msgid "Response recovered"
 msgstr "Respuesta recuperada"
 
 msgid "Steering accepted · continuing the turn."
-msgstr "Redirección aceptada · continuando el turno."
+msgstr "Steer aceptado · continuando el turno."
 
 msgid "Tool result reused · {name_str} · already executed"
 msgstr "Resultado de herramienta reutilizado · {name_str} · ya ejecutada"
@@ -3757,7 +3757,7 @@ msgid "Tool denied · decision preserved from interrupted turn"
 msgstr "Herramienta denegada · decisión conservada del turno interrumpido"
 
 msgid "Tool denied · no explicit workspace read grant"
-msgstr "Herramienta denegada · sin permiso explícito de lectura del espacio"
+msgstr "Herramienta denegada · sin permiso explícito de lectura del workspace"
 
 msgid "Tool note not retained: malformed tool metadata."
 msgstr "Nota de herramienta no conservada: metadatos de herramienta mal formados."
@@ -3793,7 +3793,7 @@ msgid "Your commands (~/.config/isycode/commands):"
 msgstr "Tus comandos (~/.config/isycode/commands):"
 
 msgid "Workspace commands live in {workspace_commands_dir}/<name>.md; @path attaches a workspace file to your message."
-msgstr "Los comandos del espacio están en {workspace_commands_dir}/<nombre>.md; @ruta adjunta un archivo del espacio a tu mensaje."
+msgstr "Los comandos del workspace están en {workspace_commands_dir}/<nombre>.md; @ruta adjunta un archivo del workspace a tu mensaje."
 
 msgid "New here? /help tour shows the lay of the land."
 msgstr "¿Eres nuevo? /help tour te muestra cómo está organizado todo."
@@ -3802,7 +3802,7 @@ msgid "README picker blocked · desktop.file_picker has no registered action own
 msgstr "Selector de README bloqueado · desktop.file_picker no tiene un owner de acción registrado"
 
 msgid "Workspace · {workspace_root}"
-msgstr "Espacio de trabajo · {workspace_root}"
+msgstr "Workspace · {workspace_root}"
 
 msgid "Model · {model_display_label}"
 msgstr "Modelo · {model_display_label}"
@@ -3892,7 +3892,7 @@ msgid "Subagent · {model_display_label} · {status}"
 msgstr "Subagente · {model_display_label} · {status}"
 
 msgid "Default role saved for all workspaces"
-msgstr "Rol predeterminado guardado para todos los espacios"
+msgstr "Rol predeterminado guardado para todos los workspaces"
 
 msgid "Could not save the default role"
 msgstr "No se pudo guardar el rol predeterminado"
@@ -3961,7 +3961,7 @@ msgid "Allow Grok sign-in chat?"
 msgstr "¿Permitir el chat con la sesión de Grok?"
 
 msgid "ISyCode may send this workspace's chat to cli-chat-proxy.grok.com using the grok sign-in on this machine. The token stays in the grok CLI. File permissions stay separate."
-msgstr "ISyCode puede enviar el chat de este espacio a cli-chat-proxy.grok.com usando la sesión de grok de este equipo. El token se queda en la CLI de grok. Los permisos de archivos siguen separados."
+msgstr "ISyCode puede enviar el chat de este workspace a cli-chat-proxy.grok.com usando la sesión de grok de este equipo. El token se queda en la CLI de grok. Los permisos de archivos siguen separados."
 
 msgid "Allow"
 msgstr "Permitir"
@@ -4006,7 +4006,7 @@ msgid "Signed in with grok, but ISyCode was not allowed to use it."
 msgstr "Sesión iniciada con grok, pero ISyCode no tiene permiso para usarla."
 
 msgid "Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes."
-msgstr "Ejecuta el app-server oficial de Codex en {executable}. Almacenamiento de la cuenta: {home} en el llavero del sistema. Contacta auth.openai.com y chatgpt.com. Conectar concede explícitamente este conector y las solicitudes de la suscripción en este espacio; los permisos de archivos siguen separados. Aplican los límites del plan de ChatGPT; la facturación por API key sigue aparte. Nunca compartas códigos de inicio de sesión."
+msgstr "Ejecuta el app-server oficial de Codex en {executable}. Almacenamiento de la cuenta: {home} en el llavero del sistema. Contacta auth.openai.com y chatgpt.com. Conectar concede explícitamente este conector y las solicitudes de la suscripción en este workspace; los permisos de archivos siguen separados. Aplican los límites del plan de ChatGPT; la facturación por API key sigue aparte. Nunca compartas códigos de inicio de sesión."
 
 msgid "ChatGPT sign-in blocked · {value}"
 msgstr "Sesión de ChatGPT bloqueada · {value}"
@@ -4060,7 +4060,7 @@ msgid "Allow managing {label} API keys?"
 msgstr "¿Permitir gestionar las API keys de {label}?"
 
 msgid "ISyCode may save, use and remove {label} API keys in your operating-system keyring. Keys are stored for your user (every workspace), never in the project, the action journal or chat history. Each use is recorded in this workspace's journal; each save and each removal still asks you first."
-msgstr "ISyCode puede guardar, usar y eliminar API keys de {label} en el llavero de tu sistema operativo. Las claves se guardan para tu usuario (todos los espacios), nunca en el proyecto, el diario de acciones ni el historial del chat. Cada uso queda registrado en el diario de este espacio; cada guardado y cada eliminación siguen preguntándote antes."
+msgstr "ISyCode puede guardar, usar y eliminar API keys de {label} en el llavero de tu sistema operativo. Las claves se guardan para tu usuario (todos los workspaces), nunca en el proyecto, el diario de acciones ni el historial del chat. Cada uso queda registrado en el diario de este workspace; cada guardado y cada eliminación siguen preguntándote antes."
 
 msgid "No secure OS keyring is available here; nothing was saved. Set {env} in your environment instead."
 msgstr "No hay un llavero seguro del sistema aquí; no se guardó nada. Define {env} en tu entorno."
@@ -4153,7 +4153,7 @@ msgid "Stopped"
 msgstr "Detenido"
 
 msgid "Installed CLI: {value}\nTailnet identity: {value2}\nServe inventory: {serve_state}\nGateway: {value3} · {value4}\nTailnet login, Serve reachability, Gateway API keys, and workspace grants are separate."
-msgstr "CLI instalada: {value}\nIdentidad en tailnet: {value2}\nInventario de Serve: {serve_state}\nGateway: {value3} · {value4}\nEl inicio de sesión en tailnet, el alcance de Serve, las API keys del Gateway y los permisos del espacio son independientes."
+msgstr "CLI instalada: {value}\nIdentidad en tailnet: {value2}\nInventario de Serve: {serve_state}\nGateway: {value3} · {value4}\nEl inicio de sesión en tailnet, el alcance de Serve, las API keys del Gateway y los permisos del workspace son independientes."
 
 msgid "not detected"
 msgstr "no detectada"
@@ -4171,13 +4171,13 @@ msgid "Workspace Authority · Tailscale"
 msgstr "Workspace Authority · Tailscale"
 
 msgid "{value} `{action}` for this workspace?\n\nExact executable: {executable}\n\nA grant permits only this owner and executable to request the action. It does not log in, install packages, expose the Gateway, or bypass IsySentinel. Every mutation still needs its own one-use approval."
-msgstr "¿{value} `{action}` para este espacio?\n\nEjecutable exacto: {executable}\n\nUn permiso solo deja que este owner y este ejecutable soliciten la acción. No inicia sesión, no instala paquetes, no expone el Gateway ni evita IsySentinel. Cada cambio sigue necesitando su propia aprobación de un solo uso."
+msgstr "¿{value} `{action}` para este workspace?\n\nEjecutable exacto: {executable}\n\nUn permiso solo deja que este owner y este ejecutable soliciten la acción. No inicia sesión, no instala paquetes, no expone el Gateway ni evita IsySentinel. Cada cambio sigue necesitando su propia aprobación de un solo uso."
 
 msgid "Tailscale authority change cancelled; no grant changed."
 msgstr "Cambio de autoridad de Tailscale cancelado; ningún permiso cambió."
 
 msgid "Workspace grant {value} · {action}."
-msgstr "Permiso del espacio {value} · {action}."
+msgstr "Permiso del workspace {value} · {action}."
 
 msgid "saved"
 msgstr "guardado"
@@ -4309,7 +4309,7 @@ msgid "New PIN denied · {value}"
 msgstr "Nuevo PIN denegado · {value}"
 
 msgid "Grant Mobile Host for this workspace"
-msgstr "Conceder Mobile Host para este espacio"
+msgstr "Conceder Mobile Host para este workspace"
 
 msgid "Grant these actions"
 msgstr "Conceder estas acciones"
@@ -4354,7 +4354,7 @@ msgid "MCP tool completed · {name}"
 msgstr "Herramienta MCP completada · {name}"
 
 msgid "Workspace root could not be resolved; no Gateway request was sent."
-msgstr "No se pudo resolver la raíz del espacio; no se envió ninguna solicitud al Gateway."
+msgstr "No se pudo resolver la raíz del workspace; no se envió ninguna solicitud al Gateway."
 
 msgid "Gateway URL is invalid; no semantic request was sent."
 msgstr "La URL del Gateway no es válida; no se envió ninguna solicitud semántica."
@@ -4375,13 +4375,13 @@ msgid "Gateway {operation} {decision} · {value}"
 msgstr "Gateway {operation} {decision} · {value}"
 
 msgid "Gateway {operation} blocked · check workspace binding, host grant, and isyco.semantic key scope"
-msgstr "Gateway {operation} bloqueado · revisa la vinculación del espacio, el permiso del host y el alcance de la clave isyco.semantic"
+msgstr "Gateway {operation} bloqueado · revisa la vinculación del workspace, el permiso del host y el alcance de la clave isyco.semantic"
 
 msgid "Gateway semantic {operation} · response from configured workspace"
-msgstr "Gateway semántico {operation} · respuesta del espacio configurado"
+msgstr "Gateway semántico {operation} · respuesta del workspace configurado"
 
 msgid "{verified_receipt_line} · configured workspace IDs matched"
-msgstr "{verified_receipt_line} · los ID del espacio configurado coinciden"
+msgstr "{verified_receipt_line} · los ID del workspace configurado coinciden"
 
 msgid "Native Gateway {operation} completed"
 msgstr "Gateway nativo {operation} completado"
@@ -4459,13 +4459,13 @@ msgid "LSP request completed · sandbox closed"
 msgstr "Solicitud LSP completada · sandbox cerrado"
 
 msgid "Mobile Host granted for this workspace. Starting it still asks first."
-msgstr "Mobile Host concedido para este espacio. Iniciarlo sigue preguntando antes."
+msgstr "Mobile Host concedido para este workspace. Iniciarlo sigue preguntando antes."
 
 msgid "Mobile Host grant cancelled; nothing changed."
 msgstr "Permiso de Mobile Host cancelado; no cambió nada."
 
 msgid "Revoke Mobile Host for this workspace"
-msgstr "Revocar Mobile Host para este espacio"
+msgstr "Revocar Mobile Host para este workspace"
 
 msgid "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` grants. New starts, new PINs and new pairing are denied. A host already running keeps serving devices paired earlier until ISyCode exits; their tokens still expire within an hour."
 msgstr "Quita los permisos guardados `mobile.host.start`, `mobile.pair` y `mobile.pair.issue`. Se deniegan nuevos inicios, nuevos PIN y nuevos emparejamientos. Un host que ya está en ejecución sigue atendiendo a los dispositivos emparejados antes hasta que ISyCode se cierre; sus tokens caducan igualmente en menos de una hora."
@@ -4474,7 +4474,7 @@ msgid "Revoke Mobile Host grants"
 msgstr "Revocar permisos de Mobile Host"
 
 msgid "Mobile Host grants revoked for this workspace."
-msgstr "Permisos de Mobile Host revocados para este espacio."
+msgstr "Permisos de Mobile Host revocados para este workspace."
 
 msgid "Mobile Host grants unchanged."
 msgstr "Permisos de Mobile Host sin cambios."
@@ -4504,7 +4504,7 @@ msgid "Conversation not saved · {value}"
 msgstr "Conversación no guardada · {value}"
 
 msgid "Session management needs a recurring workspace and session permissions."
-msgstr "La gestión de sesiones necesita un espacio recurrente y permisos de sesión."
+msgstr "La gestión de sesiones necesita un workspace recurrente y permisos de sesión."
 
 msgid "This conversation has not diverged; it saves normally."
 msgstr "Esta conversación no ha divergido; se guarda con normalidad."
@@ -4528,7 +4528,7 @@ msgid "/sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import 
 msgstr "/sessions list|new|resume ID|search TEXTO|rename TÍTULO|fork|export|import JSON|delete|diverged"
 
 msgid "Session changed elsewhere · this window stopped saving to it; nothing was merged or overwritten."
-msgstr "La sesión cambió en otro lugar · esta ventana dejó de guardar en ella; no se fusionó ni se sobrescribió nada."
+msgstr "La sesión cambió en otro lugar · esta ventana dejó de guardar en ella; no se hizo merge ni se sobrescribió nada."
 
 msgid "Not saved as a new conversation · {value}"
 msgstr "No se guardó como conversación nueva · {value}"
@@ -4588,22 +4588,22 @@ msgid "Sent to {title}. It answers there as your message."
 msgstr "Enviado a {title}. Responde allí como si fuera tu mensaje."
 
 msgid "[Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}."
-msgstr "[Hive] Mensaje enviado al agente @{agent_id} en el carril de conversación {lane_key}."
+msgstr "[Hive] Mensaje enviado al agente @{agent_id} en la lane de conversación {lane_key}."
 
 msgid "[Hive] Queued message for agent @{agent_id} behind its current turn."
 msgstr "[Hive] Mensaje en cola para el agente @{agent_id} detrás de su turno actual."
 
 msgid "[Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox."
-msgstr "[Hive] La cola del carril del agente @{agent_id} está llena; el mensaje sigue pendiente en la bandeja."
+msgstr "[Hive] La cola de la lane del agente @{agent_id} está llena; el mensaje sigue pendiente en la bandeja."
 
 msgid "Keep the draft; Send must be empty to steer a selected queued message"
-msgstr "Se conserva el borrador; Enviar debe estar vacío para redirigir con un mensaje en cola seleccionado"
+msgstr "Se conserva el borrador; Enviar debe estar vacío para hacer steer con un mensaje en cola seleccionado"
 
 msgid "A steer attempt is still pending; this message stays queued"
-msgstr "Aún hay un intento de redirección pendiente; este mensaje sigue en cola"
+msgstr "Aún hay un steer pendiente; este mensaje sigue en cola"
 
 msgid "Steer got no confirmed response · message returned to the queue"
-msgstr "La redirección no obtuvo respuesta confirmada · mensaje devuelto a la cola"
+msgstr "El steer no obtuvo respuesta confirmada · mensaje devuelto a la cola"
 
 msgid "Draft kept; queued message stays pending"
 msgstr "Borrador conservado; el mensaje en cola sigue pendiente"
@@ -4654,7 +4654,7 @@ msgid "Repair conversation opened · running the compose in the background."
 msgstr "Conversación de reparación abierta · ejecutando la composición en segundo plano."
 
 msgid "Repair lane is busy; the compose is queued."
-msgstr "El carril de reparación está ocupado; la composición queda en cola."
+msgstr "La lane de reparación está ocupada; la composición queda en cola."
 
 msgid "Repair compose queued behind the current turn."
 msgstr "Composición de la reparación en cola detrás del turno actual."
@@ -4666,7 +4666,7 @@ msgid "Iteration sessions unavailable; ordinary sessions preserved."
 msgstr "Sesiones de iteración no disponibles; las sesiones normales se conservan."
 
 msgid "Only recurring workspaces keep conversations; this run stays in memory."
-msgstr "Solo los espacios recurrentes conservan conversaciones; esta ejecución queda en memoria."
+msgstr "Solo los workspaces recurrentes conservan conversaciones; esta ejecución queda en memoria."
 
 msgid "Iteration unavailable or denied."
 msgstr "Iteración no disponible o denegada."
@@ -4816,7 +4816,7 @@ msgid "Local read-only execution; write capabilities were removed from this runt
 msgstr "Ejecución local de solo lectura; las capacidades de escritura se quitaron de este runtime."
 
 msgid "Demo execution only; real workspace writes are not enabled here."
-msgstr "Solo ejecución de demostración; aquí no están habilitadas las escrituras reales en el espacio."
+msgstr "Solo ejecución de demostración; aquí no están habilitadas las escrituras reales en el workspace."
 
 msgid "Tool duration · {label} · {elapsed}"
 msgstr "Duración de la herramienta · {label} · {elapsed}"
@@ -4843,10 +4843,10 @@ msgid "Tool denied · {name} · invalid arguments"
 msgstr "Herramienta denegada · {name} · argumentos no válidos"
 
 msgid "✗ Batch rejected · nothing was written"
-msgstr "✗ Lote rechazado · no se escribió nada"
+msgstr "✗ Batch rechazado · no se escribió nada"
 
 msgid "Applying batch-approved write · {get}"
-msgstr "Aplicando escritura aprobada en lote · {get}"
+msgstr "Aplicando escritura aprobada en batch · {get}"
 
 msgid "Tool denied · {action_id} · authority/owner unavailable"
 msgstr "Herramienta denegada · {action_id} · autoridad/owner no disponible"
@@ -4921,7 +4921,7 @@ msgid "Allow this server"
 msgstr "Permitir este servidor"
 
 msgid "Allow MCP server {name} in this workspace?"
-msgstr "¿Permitir el servidor MCP {name} en este espacio?"
+msgstr "¿Permitir el servidor MCP {name} en este workspace?"
 
 msgid "Saves a grant for {executable} and for calls to {name}. Starting it and every tool call still ask first. The server runs with your user's permissions."
 msgstr "Guarda un permiso para {executable} y para las llamadas a {name}. Iniciarlo y cada llamada a una herramienta siguen preguntando antes. El servidor se ejecuta con los permisos de tu usuario."
@@ -4960,16 +4960,16 @@ msgid "MCP ALLOW · {server}.{tool} · receipt {receipt_id}"
 msgstr "MCP ALLOW · {server}.{tool} · recibo {receipt_id}"
 
 msgid "Workspace pack cancelled · no file contents were read"
-msgstr "Paquete del espacio cancelado · no se leyó el contenido de ningún archivo"
+msgstr "Paquete del workspace cancelado · no se leyó el contenido de ningún archivo"
 
 msgid "Workspace pack failed · {value}"
-msgstr "Falló el paquete del espacio · {value}"
+msgstr "Falló el paquete del workspace · {value}"
 
 msgid "Workspace pack · {len} files · ~{estimated_tokens} tokens"
-msgstr "Paquete del espacio · {len} archivos · ~{estimated_tokens} tokens"
+msgstr "Paquete del workspace · {len} archivos · ~{estimated_tokens} tokens"
 
 msgid "Memory action denied · explicitly revoked in workspace authority"
-msgstr "Acción de memoria denegada · revocada explícitamente en la autoridad del espacio"
+msgstr "Acción de memoria denegada · revocada explícitamente en la autoridad del workspace"
 
 msgid "Memory {operation} rejected · nothing was read or changed"
 msgstr "Memoria {operation} rechazada · no se leyó ni cambió nada"
@@ -5059,7 +5059,7 @@ msgid "Command outcome · {decision}"
 msgstr "Resultado del comando · {decision}"
 
 msgid "Tool denied · {action} · not enabled for this workspace"
-msgstr "Herramienta denegada · {action} · no está activada en este espacio"
+msgstr "Herramienta denegada · {action} · no está activada en este workspace"
 
 msgid "Tool denied · {action} · {reason}"
 msgstr "Herramienta denegada · {action} · {reason}"
@@ -5104,7 +5104,7 @@ msgid "Tool · quiet {title} · {verb} · {path}"
 msgstr "Herramienta · {title} sin preguntas · {verb} · {path}"
 
 msgid "Tool · batch-approved · {verb} · {path}"
-msgstr "Herramienta · aprobada en lote · {verb} · {path}"
+msgstr "Herramienta · aprobada en batch · {verb} · {path}"
 
 msgid "ISyCode local receipt {value} verified PASS. Content stays in this process memory."
 msgstr "Recibo local de ISyCode {value} verificado PASS. El contenido queda en la memoria de este proceso."
@@ -5140,7 +5140,7 @@ msgid "Context picker unavailable · {error}"
 msgstr "Selector de contexto no disponible · {error}"
 
 msgid "Workspace preference not prepared · {value}"
-msgstr "Preferencia del espacio no preparada · {value}"
+msgstr "Preferencia del workspace no preparada · {value}"
 
 msgid "Preference unchanged · {path}"
 msgstr "Preferencia sin cambios · {path}"
@@ -5191,7 +5191,7 @@ msgid "No compacted text in this draft."
 msgstr "No hay texto compactado en este borrador."
 
 msgid "Enter: steer · Space: expand · Esc: undo"
-msgstr "Enter: redirigir · Espacio: expandir · Esc: deshacer"
+msgstr "Enter: steer · Espacio: expandir · Esc: deshacer"
 
 msgid "Owner: agent context load\nScope: {path}\nDuration: one-use approval\nNot granted: no edits, no commands, no secrets, no other files"
 msgstr "Owner: carga de contexto del agente\nAlcance: {path}\nDuración: aprobación de un solo uso\nNo concedido: ni ediciones, ni comandos, ni secretos, ni otros archivos"
@@ -5200,7 +5200,7 @@ msgid "Review {len} proposed changes in one go"
 msgstr "Revisar {len} cambios propuestos de una vez"
 
 msgid "Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets"
-msgstr "Owner: edición de archivos del espacio (lote)\nAlcance: {len} archivos · +{added} / -{removed} líneas\nDuración: aprobación de un solo uso ligada al digest de cada cambio\nNo concedido: ni otros archivos, ni comandos, ni secretos"
+msgstr "Owner: edición de archivos del workspace (batch)\nAlcance: {len} archivos · +{added} / -{removed} líneas\nDuración: aprobación de un solo uso ligada al digest de cada cambio\nNo concedido: ni otros archivos, ni comandos, ni secretos"
 
 msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
 msgstr "Total +{added} / -{removed} líneas en {len} archivos. Aprobar aquí emite una aprobación de un solo uso ligada al digest por cada cambio — no se crea ningún permiso duradero, y un archivo que cambie antes de aplicarse se rechaza."
@@ -5236,7 +5236,7 @@ msgid "The listed files will be read and their contents returned to the selected
 msgstr "Los archivos listados se leerán y su contenido se devolverá al modelo elegido. El número de tokens es aproximado. El contenido de los archivos es información no confiable, nunca instrucciones."
 
 msgid "Workspace memory · {operation}"
-msgstr "Memoria del espacio · {operation}"
+msgstr "Memoria del workspace · {operation}"
 
 msgid "{copy}\n\nHost: {host}"
 msgstr "{copy}\n\nHost: {host}"
@@ -5245,7 +5245,7 @@ msgid "Host: {host}"
 msgstr "Host: {host}"
 
 msgid "Workspace: {root}\n\nThis stores only the broker.preview grant for this .isyroot. The selected project still needs its own workspace.files.read grant. Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container."
-msgstr "Espacio de trabajo: {root}\n\nEsto solo guarda el permiso broker.preview para este .isyroot. El proyecto elegido sigue necesitando su propio permiso workspace.files.read. La vista previa lee metadatos y hashes de la receta, no lanza Docker y no puede iniciar un contenedor."
+msgstr "Workspace: {root}\n\nEsto solo guarda el permiso broker.preview para este .isyroot. El proyecto elegido sigue necesitando su propio permiso workspace.files.read. La vista previa lee metadatos y hashes de la receta, no lanza Docker y no puede iniciar un contenedor."
 
 msgid "Click a model. Context, reasoning and tools show here."
 msgstr "Haz clic en un modelo. Aquí se muestran contexto, razonamiento y herramientas."
@@ -5260,22 +5260,22 @@ msgid "{value}\nEndpoint: {endpoint}\nThis sends the exact arguments below to th
 msgstr "{value}\nEndpoint: {endpoint}\nEsto envía exactamente los argumentos de abajo al MCP del Gateway. Se requiere una aprobación de un solo uso; el Gateway remoto valida su propia clave y su política de operaciones."
 
 msgid "Endpoint: {endpoint}\nConfigured workspace ID: {workspace_id}\nThe ID is an operator-managed binding, not a filesystem grant. Each request is denied if the Gateway reports a different ID."
-msgstr "Endpoint: {endpoint}\nID del espacio configurado: {workspace_id}\nEl ID es una vinculación gestionada por el operador, no un permiso del sistema de archivos. Cada solicitud se deniega si el Gateway informa un ID distinto."
+msgstr "Endpoint: {endpoint}\nID del workspace configurado: {workspace_id}\nEl ID es una vinculación gestionada por el operador, no un permiso del sistema de archivos. Cada solicitud se deniega si el Gateway informa un ID distinto."
 
 msgid "Confirm native Gateway · {operation}"
 msgstr "Confirmar Gateway nativo · {operation}"
 
 msgid "POST {endpoint}/v1/{operation}\nExpected workspace ID: {workspace_id}\n\nExact payload:\n{payload}\n\nThis is native HTTP, not MCP. The Gateway independently checks its isyco.semantic scope and workspace ID. The result stays in this TUI and is not added to model context. A one-use local approval is required."
-msgstr "POST {endpoint}/v1/{operation}\nID de espacio esperado: {workspace_id}\n\nContenido exacto:\n{payload}\n\nEsto es HTTP nativo, no MCP. El Gateway comprueba por su cuenta su alcance isyco.semantic y el ID del espacio. El resultado se queda en esta TUI y no se añade al contexto del modelo. Se requiere una aprobación local de un solo uso."
+msgstr "POST {endpoint}/v1/{operation}\nID de workspace esperado: {workspace_id}\n\nContenido exacto:\n{payload}\n\nEsto es HTTP nativo, no MCP. El Gateway comprueba por su cuenta su alcance isyco.semantic y el ID del workspace. El resultado se queda en esta TUI y no se añade al contexto del modelo. Se requiere una aprobación local de un solo uso."
 
 msgid "{label} · workspace symbol search"
-msgstr "{label} · búsqueda de símbolos del espacio"
+msgstr "{label} · búsqueda de símbolos del workspace"
 
 msgid "Local workspace: {root}\nQuery goes only to the sandboxed local language server."
-msgstr "Espacio local: {root}\nLa consulta solo va al servidor de lenguaje local en sandbox."
+msgstr "Workspace local: {root}\nLa consulta solo va al servidor de lenguaje local en sandbox."
 
 msgid "Server: {label} · operation: workspace/symbol\nQuery: {query_text}\nWorkspace root: {root}\n\nISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), and output/time limits apply. No Gateway or provider receives this query."
-msgstr "Servidor: {label} · operación: workspace/symbol\nConsulta: {query_text}\nRaíz del espacio: {root}\n\nISyCode inicia el sandbox Bubblewrap aprobado después de comprobar el permiso workspace.files.read. El espacio es de solo lectura; seccomp deniega el acceso a la red (TypeScript usa IPC local anónimo) y se aplican límites de salida y de tiempo. Ningún Gateway ni proveedor recibe esta consulta."
+msgstr "Servidor: {label} · operación: workspace/symbol\nConsulta: {query_text}\nRaíz del workspace: {root}\n\nISyCode inicia el sandbox Bubblewrap aprobado después de comprobar el permiso workspace.files.read. El workspace es de solo lectura; seccomp deniega el acceso a la red (TypeScript usa IPC local anónimo) y se aplican límites de salida y de tiempo. Ningún Gateway ni proveedor recibe esta consulta."
 
 msgid "Project root: {project}\nRecipe root: {source_root}\nRecipe SHA-256: {digest}\nImage: {image}\nFiles:\n{file_rows}\n\nBuild effect: Docker daemon builds this recipe and may download base images and Python packages. Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, 1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to this root and recipe digest, then revoke those grants after the attempt. Failed health checks remove only the container/network created by this request."
 msgstr "Raíz del proyecto: {project}\nRaíz de la receta: {source_root}\nSHA-256 de la receta: {digest}\nImagen: {image}\nArchivos:\n{file_rows}\n\nEfecto de la construcción: el daemon de Docker construye esta receta y puede descargar imágenes base y paquetes de Python. Ejecución: red de Docker solo interna, puerto aleatorio en 127.0.0.1, proyecto montado en solo lectura en /workspace, sistema de archivos del contenedor de solo lectura, todas las capacidades de Linux eliminadas, no-new-privileges, 128 PID, 1 CPU, 2 GiB de memoria, almacenamiento temporal limitado y sin credenciales montadas. ISyCode concederá el ejecutable exacto de Docker para estas dos acciones, ligará aprobaciones de un solo uso a esta raíz y a este digest de receta, y revocará esos permisos tras el intento. Si las comprobaciones de salud fallan, solo se eliminan el contenedor y la red creados por esta solicitud."
@@ -5305,10 +5305,10 @@ msgid "{count} calls"
 msgstr "{count} llamadas"
 
 msgid "{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}"
-msgstr "{name}  ·  espacio {workspace_root}  ·  inicio {launch_dir}"
+msgstr "{name}  ·  workspace {workspace_root}  ·  inicio {launch_dir}"
 
 msgid "Workspace Root · {workspace_root}"
-msgstr "Raíz del espacio · {workspace_root}"
+msgstr "Raíz del workspace · {workspace_root}"
 
 msgid "Launch Directory · {launch_dir}"
 msgstr "Carpeta de inicio · {launch_dir}"
@@ -5365,7 +5365,7 @@ msgid "plan an intent via IsyMotron"
 msgstr "planificar una intención con IsyMotron"
 
 msgid "choose and preview a workspace README.md"
-msgstr "elegir y previsualizar un README.md del espacio"
+msgstr "elegir y previsualizar un README.md del workspace"
 
 msgid "open the provider selector"
 msgstr "abrir el selector de proveedores"
@@ -5380,7 +5380,7 @@ msgid "native RTK settings; recall <sha256> shows captured original output"
 msgstr "ajustes nativos de RTK; recall <sha256> muestra la salida original capturada"
 
 msgid "run one command in the workspace sandbox (asks first)"
-msgstr "ejecutar un comando en el sandbox del espacio (pregunta antes)"
+msgstr "ejecutar un comando en el sandbox del workspace (pregunta antes)"
 
 msgid "expand the current idea note"
 msgstr "expandir la nota de idea actual"
@@ -5404,7 +5404,7 @@ msgid "bundled workflow guidance: list, use <name>, clear"
 msgstr "guía de flujo incluida: list, use <nombre>, clear"
 
 msgid "show git branch and changed files"
-msgstr "mostrar la rama de git y los archivos cambiados"
+msgstr "mostrar la branch de git y los archivos cambiados"
 
 msgid "show the git diff (optional path, --staged)"
 msgstr "mostrar el diff de git (ruta opcional, --staged)"
@@ -5416,7 +5416,7 @@ msgid "list commands"
 msgstr "listar comandos"
 
 msgid "show current workspace, provider, and chat role"
-msgstr "mostrar el espacio, el proveedor y el rol del chat actuales"
+msgstr "mostrar el workspace, el proveedor y el rol del chat actuales"
 
 msgid "list/new/resume/search/rename/fork/export/import conversations"
 msgstr "list/new/resume/search/rename/fork/export/import de conversaciones"
@@ -5443,13 +5443,13 @@ msgid "show provider-reported chat token usage"
 msgstr "mostrar el uso de tokens del chat informado por el proveedor"
 
 msgid "read workspace AGENTS.md with permission, or clear"
-msgstr "leer el AGENTS.md del espacio con permiso, o borrarlo"
+msgstr "leer el AGENTS.md del workspace con permiso, o borrarlo"
 
 msgid "ask GPT-6 Luna for one explicit external review"
 msgstr "pedir a GPT-6 Luna una revisión externa explícita"
 
 msgid "workspace setup preference"
-msgstr "preferencia de configuración del espacio"
+msgstr "preferencia de configuración del workspace"
 
 msgid "future folders without a saved choice"
 msgstr "carpetas futuras sin una elección guardada"
@@ -5458,13 +5458,13 @@ msgid "persistent user preference"
 msgstr "preferencia persistente del usuario"
 
 msgid "no file access, no permissions copied between workspaces"
-msgstr "sin acceso a archivos, sin copiar permisos entre espacios"
+msgstr "sin acceso a archivos, sin copiar permisos entre workspaces"
 
 msgid "workspace file read"
-msgstr "lectura de archivos del espacio"
+msgstr "lectura de archivos del workspace"
 
 msgid "no edits, no commands, no folders outside workspace"
-msgstr "ni ediciones, ni comandos, ni carpetas fuera del espacio"
+msgstr "ni ediciones, ni comandos, ni carpetas fuera del workspace"
 
 msgid "List files"
 msgstr "Listar archivos"
@@ -5479,13 +5479,13 @@ msgid "Inject selected context document"
 msgstr "Inyectar el documento de contexto elegido"
 
 msgid "Read ISyCode workspace preferences"
-msgstr "Leer las preferencias del espacio de ISyCode"
+msgstr "Leer las preferencias del workspace de ISyCode"
 
 msgid "List ISyCode workspace prompt commands"
-msgstr "Listar los comandos de prompt del espacio de ISyCode"
+msgstr "Listar los comandos de prompt del workspace de ISyCode"
 
 msgid "Initialize or update ISyCode workspace config"
-msgstr "Inicializar o actualizar la configuración del espacio de ISyCode"
+msgstr "Inicializar o actualizar la configuración del workspace de ISyCode"
 
 msgid "Create or edit files"
 msgstr "Crear o editar archivos"
@@ -5497,16 +5497,16 @@ msgid "Undo every file change of one ISyCode turn"
 msgstr "Deshacer todos los cambios de archivos de un turno de ISyCode"
 
 msgid "Run a command in the workspace sandbox"
-msgstr "Ejecutar un comando en el sandbox del espacio"
+msgstr "Ejecutar un comando en el sandbox del workspace"
 
 msgid "Git"
 msgstr "Git"
 
 msgid "See git status of the workspace"
-msgstr "Ver el estado de git del espacio"
+msgstr "Ver el estado de git del workspace"
 
 msgid "See git diffs of the workspace"
-msgstr "Ver los diffs de git del espacio"
+msgstr "Ver los diffs de git del workspace"
 
 msgid "Create a git commit"
 msgstr "Crear un commit de git"
@@ -5704,10 +5704,10 @@ msgid "Memory"
 msgstr "Memoria"
 
 msgid "Read this workspace's private memory"
-msgstr "Leer la memoria privada de este espacio"
+msgstr "Leer la memoria privada de este workspace"
 
 msgid "Write or consolidate this workspace's private memory"
-msgstr "Escribir o consolidar la memoria privada de este espacio"
+msgstr "Escribir o consolidar la memoria privada de este workspace"
 
 msgid "Permanently forget one memory"
 msgstr "Olvidar un recuerdo de forma permanente"
@@ -5752,7 +5752,7 @@ msgid "Select conversational guidance"
 msgstr "Elegir guía conversacional"
 
 msgid "Edit workspace files"
-msgstr "Editar archivos del espacio"
+msgstr "Editar archivos del workspace"
 
 msgid "Create git commits"
 msgstr "Crear commits de git"
@@ -5761,10 +5761,10 @@ msgid "Local MCP servers"
 msgstr "Servidores MCP locales"
 
 msgid "Write this workspace's private memory"
-msgstr "Escribir la memoria privada de este espacio"
+msgstr "Escribir la memoria privada de este workspace"
 
 msgid "Forget memories in this workspace"
-msgstr "Olvidar recuerdos en este espacio"
+msgstr "Olvidar recuerdos en este workspace"
 
 msgid "Paste images or text from the clipboard"
 msgstr "Pegar imágenes o texto desde el portapapeles"
@@ -5893,7 +5893,7 @@ msgid "Disable conversation deletion?"
 msgstr "¿Desactivar el borrado de conversaciones?"
 
 msgid "Allow file edits in this workspace?"
-msgstr "¿Permitir editar archivos en este espacio?"
+msgstr "¿Permitir editar archivos en este workspace?"
 
 msgid "Turn off file edits?"
 msgstr "¿Apagar la edición de archivos?"
@@ -5959,7 +5959,7 @@ msgid "This confirmation does not send the folder contents by itself."
 msgstr "Esta confirmación no envía por sí sola el contenido de la carpeta."
 
 msgid "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{context}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
-msgstr "Raíz del espacio: {root}\nModo: {mode}\nProveedor: {provider}\n{context}\nConfiar en esta carpeta permite que Classic la lea y busque en ella, y haga ediciones, creaciones, movimientos y borrados recuperables dentro del presupuesto de efectos, y ejecute pruebas aisladas en sandbox, sin preguntar por cada una. Commits, secretos, cambios de autoridad, nuevos destinos de red y todo lo que no tenga sandbox siguen preguntando o quedan apagados. Un permiso revocado sigue mandando. No es una aprobación permanente para todas las herramientas y no activa ni desactiva Security."
+msgstr "Raíz del workspace: {root}\nModo: {mode}\nProveedor: {provider}\n{context}\nConfiar en esta carpeta permite que Classic la lea y busque en ella, y haga ediciones, creaciones, movimientos y borrados recuperables dentro del presupuesto de efectos, y ejecute pruebas aisladas en sandbox, sin preguntar por cada una. Commits, secretos, cambios de autoridad, nuevos destinos de red y todo lo que no tenga sandbox siguen preguntando o quedan apagados. Un permiso revocado sigue mandando. No es una aprobación permanente para todas las herramientas y no activa ni desactiva Security."
 
 msgid "output limit reached"
 msgstr "límite de salida alcanzado"
@@ -5974,7 +5974,7 @@ msgid "Waiting for output…"
 msgstr "Esperando salida…"
 
 msgid "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
-msgstr "Un espacio recurrente recibe un marcador .isyroot vacío la primera vez que se abre. Esto identifica el espacio; no da acceso a archivos. Home, sus carpetas superiores, temp y los puntos de montaje siguen preguntando antes."
+msgstr "Un workspace recurrente recibe un marcador .isyroot vacío la primera vez que se abre. Esto identifica el workspace; no da acceso a archivos. Home, sus carpetas superiores, temp y los puntos de montaje siguen preguntando antes."
 
 msgid "Applies only when this folder has no saved choice yet."
 msgstr "Solo aplica cuando esta carpeta aún no tiene una elección guardada."
@@ -6037,7 +6037,7 @@ msgid "Blocked in Secure · no Bridge owner"
 msgstr "Bloqueado en Secure · sin owner de Bridge"
 
 msgid "Filesystem Authority · list/read/name-search granted for this workspace"
-msgstr "Autoridad de archivos · listar/leer/buscar nombres permitido en este espacio"
+msgstr "Autoridad de archivos · listar/leer/buscar nombres permitido en este workspace"
 
 msgid "Filesystem Authority · no read grant; tree enumeration is unavailable"
 msgstr "Autoridad de archivos · sin permiso de lectura; no se puede listar el árbol"

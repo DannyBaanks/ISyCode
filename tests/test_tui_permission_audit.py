@@ -22,9 +22,9 @@ def test_spanish_structural_summary_labels_and_values():
     )
     rendered = widget._Static__content.plain
 
-    assert "Propietario: autoridad del espacio de trabajo" in rendered
+    assert "Propietario: autoridad del workspace" in rendered
     assert "Alcance: /workspace" in rendered
-    assert "Duración: permiso persistente del espacio de trabajo" in rendered
+    assert "Duración: permiso persistente del workspace" in rendered
     assert "Exclusiones: archivos sensibles, .isyroot y carpetas no aprobadas quedan fuera de límites" in rendered
     assert "Owner:" not in rendered
     assert "Scope:" not in rendered
