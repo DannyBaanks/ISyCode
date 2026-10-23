@@ -3186,3 +3186,7 @@ msgstr "角色 · 无"
 # Role switch and Flow /run
 msgid "Flow could not prepare recovery. Nothing ran."
 msgstr "Flow 无法准备恢复记录。未执行任何操作。"
+
+# Sidebar sections
+msgid "Click or Space expand / collapse"
+msgstr "点击或空格 展开 / 折叠"

@@ -324,3 +324,28 @@ def test_mode_banner_updates_without_resize(tmp_path, monkeypatch):
                 assert WorkspaceAuthority(root).mode() == mode
                 assert mode.title() in plain_text(app.query_one(Banner))
     asyncio.run(scenario())
+
+
+def test_sidebar_sections_expand_on_click_and_never_open_the_copy_menu(tmp_path, monkeypatch):
+    from test_daily_tui import configure
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(140, 40)) as pilot:
+            await app.wait_for_ready()
+            if not app.query_one("#side-panel").display:
+                app.action_toggle_sidebar()
+            await pilot.pause()
+            section = app.query_one("#rail-sentinel", ExpandableBox)
+            title = section.query_one(BoxTitle)
+            before = section.collapsed
+            await pilot.click(title)
+            await pilot.pause()
+            assert section.collapsed is not before
+            await pilot.click(title, times=2)          # a double-click opens or closes, once
+            await pilot.pause()
+            assert section.collapsed is before
+            assert not isinstance(app.screen, CopyMenuScreen)
+            assert section.in_rail()
+    asyncio.run(scenario())

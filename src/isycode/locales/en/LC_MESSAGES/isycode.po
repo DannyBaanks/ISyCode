@@ -3186,3 +3186,7 @@ msgstr "Role · none"
 # Role switch and Flow /run
 msgid "Flow could not prepare recovery. Nothing ran."
 msgstr "Flow could not prepare recovery. Nothing ran."
+
+# Sidebar sections
+msgid "Click or Space expand / collapse"
+msgstr "Click or Space expand / collapse"

@@ -163,7 +163,15 @@ class BoxTitle(CollapsibleTitle, inherit_bindings=False):
         event.stop()
         self.focus(scroll_visible=False)
         parent = self.parent
-        if event.chain == 2 and isinstance(parent, ExpandableBox):
+        if not isinstance(parent, ExpandableBox):
+            return
+        if parent.in_rail():
+            # A sidebar section is an option, not a text box: a click (or the
+            # first click of a double-click) opens or closes it. Its text is
+            # copied by selecting it, never through the copy menu.
+            if event.chain == 1:
+                parent.action_toggle_box()
+        elif event.chain == 2:
             open_copy_menu(parent, parent.copy_text())
 
 
@@ -280,7 +288,9 @@ class ExpandableBox(Collapsible, inherit_bindings=False):
         self.on_focus()
 
     def _paint_expand_hint(self) -> None:
-        self.border_subtitle = Text(tr("Space expand / collapse · double-click copy"), style=MUTED) if self.has_focus or self.has_focus_within else ""
+        hint = ("Click or Space expand / collapse" if self.in_rail()
+                else "Space expand / collapse · double-click copy")
+        self.border_subtitle = Text(tr(hint), style=MUTED) if self.has_focus or self.has_focus_within else ""
 
     def copy_text(self) -> str:
         if hasattr(self, "_full_text"):
@@ -291,6 +301,10 @@ class ExpandableBox(Collapsible, inherit_bindings=False):
     def action_toggle_box(self) -> None:
         self.collapsed = not self.collapsed
 
+    def in_rail(self) -> bool:
+        """Whether this box is a sidebar section rather than a chat text box."""
+        return any(isinstance(node, SidePanel) for node in self.ancestors)
+
     def on_mouse_down(self, event):
         if event.widget is self:
             remember_copy_selection(self)
@@ -299,7 +313,7 @@ class ExpandableBox(Collapsible, inherit_bindings=False):
         if event.widget is not self:
             return
         self.focus(scroll_visible=False)
-        if event.chain == 2:
+        if event.chain == 2 and not self.in_rail():
             event.prevent_default()
             event.stop()
             open_copy_menu(self, self.copy_text())

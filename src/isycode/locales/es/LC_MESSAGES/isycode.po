@@ -3186,3 +3186,7 @@ msgstr "Rol · ninguno"
 # Role switch and Flow /run
 msgid "Flow could not prepare recovery. Nothing ran."
 msgstr "Flow no pudo preparar la recuperación. No se ejecutó nada."
+
+# Sidebar sections
+msgid "Click or Space expand / collapse"
+msgstr "Clic o Espacio expande / contrae"
