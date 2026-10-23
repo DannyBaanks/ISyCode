@@ -144,9 +144,11 @@ def test_space_expands_content_and_second_click_activates_tree_node(tmp_path, mo
             await pilot.pause()
             section = app.query_one("#rail-mcp")
             title = section.query_one(BoxTitle)
+            # A sidebar section is an option: a click opens it, another closes it.
             await pilot.click(title)
             await pilot.pause()
-            assert section.collapsed
+            assert not section.collapsed
+            await pilot.pause(0.6)                       # a separate click, not a double-click
             await pilot.click(title, offset=(max(0, title.size.width - 2), 0))
             await pilot.pause()
             assert section.collapsed
