@@ -145,3 +145,17 @@ def test_self_approval_is_rejected_and_independent_acceptance_passes(tmp_path):
 
 def test_cli_accepts_the_explicit_release_check():
     assert _validator().main(["--root", str(ROOT), "--require-approved"]) == 1
+
+
+def test_flow_gate_requires_all_seven_cases_and_independent_acceptance():
+    validator = _validator()
+    document = {'hito': 'MF', 'puerta': 'GF', 'estado': 'EN_REVISION',
+                'sha_evaluado': 'a' * 40,
+                'casos': [{'id': f'GF-{i:02d}', 'resultado': 'PASS'} for i in range(1, 8)]}
+    required = validator.REQUIRED_BY_GATE.get('GF')
+    assert required == {f'GF-{i:02d}' for i in range(1, 8)}
+    assert validator.validate_document(document, required_ids=required) == []
+    document['casos'].pop()
+    assert any('GF-07' in error for error in validator.validate_document(document, required_ids=required))
+    document['estado'] = 'APROBADO'
+    assert any('independent' in error for error in validator.validate_document(document, required_ids=required))

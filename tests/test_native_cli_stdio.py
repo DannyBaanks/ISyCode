@@ -1,9 +1,11 @@
 """CLI pipes use an explicit UTF-8 contract, including legacy Windows locales."""
 import os,subprocess,sys
+from pathlib import Path
 
 
 def test_launcher_reconfigures_legacy_redirected_output(tmp_path):
-    env=dict(os.environ,ISYCODE_STATE_HOME=str(tmp_path/'state'),XDG_CONFIG_HOME=str(tmp_path/'config'))
+    env=dict(os.environ,ISYCODE_STATE_HOME=str(tmp_path/'state'),XDG_CONFIG_HOME=str(tmp_path/'config'),
+             PYTHONPATH=str(Path(__file__).resolve().parents[1]/'src'))
     script="import sys;sys.stdout.reconfigure(encoding='cp1252');from isycode.launcher import main;raise SystemExit(main(['--help']))"
     result=subprocess.run([sys.executable,'-c',script],capture_output=True,env=env,timeout=20)
     assert result.returncode==0,result.stderr

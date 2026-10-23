@@ -124,7 +124,7 @@ def test_workspace_mode_continue_applies_focused_choice_without_implicit_change(
             assert_visible(app.screen.query_one("#workspace-mode-continue"), (80, 24))
             await pilot.click("#workspace-mode-continue")
             await pilot.pause()
-            assert app.results == ["security"]
+            assert app.results == ["flow"]
     asyncio.run(scenario())
 
 

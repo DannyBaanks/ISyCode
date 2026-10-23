@@ -99,4 +99,7 @@ def implicit_actions(mode: str) -> frozenset[str]:
         return frozenset()
     if mode == "classic":
         return classic_preset_ids()
+    if mode == "flow":
+        from isycode.workspace_authority import FLOW_PATH_ACTIONS
+        return classic_preset_ids() | FLOW_PATH_ACTIONS
     raise ValueError("unknown workspace mode")

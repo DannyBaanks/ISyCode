@@ -53,12 +53,12 @@ class AuthorityMixin:
             return "security"
 
     def _request_is_quiet(self, request) -> bool:
-        """Trusted Classic covers this request, so the per-action modal stays closed."""
-        if self._workspace_mode() != 'classic':
+        """Trusted Classic or Flow covers this request, so the per-action modal stays closed."""
+        if self._workspace_mode() not in {"classic", "flow"}:
             return False
         try:
-            from isycode.workspace_trust import quiet_classic
-            return bool(quiet_classic(WorkspaceAuthority(request.workspace_root), request))
+            from isycode.workspace_trust import quiet_request
+            return bool(quiet_request(WorkspaceAuthority(request.workspace_root), request))
         except Exception:
             return False
 
@@ -96,32 +96,108 @@ class AuthorityMixin:
         except (OSError, ValueError, WorkspaceAuthorityError):
             self._append("  Trust was not saved. Each edit and command still asks.", YELLOW)
 
+    _MODE_NAMES = {"classic": "Classic", "security": "Security", "flow": "Flow"}
+
+    _MODE_WARNINGS = {
+        "classic": ("Reading/searching, edit proposals, chat, sessions and Git review work without "
+                    "granting each capability. Sandbox commands are ready when supported. "
+                    "The next screen can trust this folder for ordinary edits and isolated tests. "
+                    "Until then, edits, delete/move, commands and commits still ask. "
+                    "Commits, secrets and authority changes keep asking. "
+                    "Integrations still need explicit permission; free shell and sensitive files "
+                    "stay unavailable."),
+        "security": ("Everything starts off; you allow each capability in Settings → Authority. "
+                     "Permissions you granted explicitly stay as they are."),
+        "flow": ("Flow works on its own: reading, edits, moves, deletes and sandboxed commands "
+                 "run without asking, and a shell is available inside the sandbox. Each turn is "
+                 "recorded so you can undo it with /undo. Push, credentials, provider and "
+                 "authority changes, integrations and network for commands still ask or stay off. "
+                 "Classic is recommended for large work, if you are new to the TUI or want more "
+                 "control; Security is for sensitive files and explicit permissions."),
+    }
+
     async def _change_workspace_mode(self, mode: str) -> None:
-        classic = mode == "classic"
-        if not await self._await_screen(TailscaleConfirmScreen(
-                "Switch this workspace to Classic?" if classic else "Switch this workspace to Security?",
-                ("Reading/searching, edit proposals, chat, sessions and Git review work without "
-                 "granting each capability. Sandbox commands are ready when supported. "
-                 "The next screen can trust this folder for ordinary edits and isolated tests. "
-                 "Until then, edits, delete/move, commands and commits still ask. "
-                 "Commits, secrets and authority changes keep asking. "
-                 "Integrations still need explicit permission; free shell and sensitive files "
-                 "stay unavailable." if classic else
-                 "Everything starts off; you allow each capability in Settings → Authority. "
-                 "Permissions you granted explicitly stay as they are."),
-                "Use Classic" if classic else "Use Security")):
-            self._open_authority_menu()
+        if mode not in self._MODE_NAMES:
             return
+        name = self._MODE_NAMES[mode]
+        if not await self._await_screen(TailscaleConfirmScreen(
+                tr("Switch this workspace to {mode}?", mode=name),
+                tr(self._MODE_WARNINGS[mode]), tr("Use {mode}", mode=name))):
+            self._open_workflow_menu()
+            return
+        if not await self._switch_engine_mode(mode):
+            return
+        if mode == "classic":
+            await self._offer_quiet_trust(WorkspaceAuthority(self._workspace_root), again=True)
+        self._update_workspace_identity_ui()
+        self._open_workflow_menu()
+
+    async def _switch_engine_mode(self, mode: str) -> bool:
+        """Reconfigure the engine for a new mode without losing the conversation (ADR 0010).
+
+        Stops an active turn, invalidates pending approvals and session
+        permissions, closes a running Flow turn, writes the mode, and lets the
+        next action re-read the fresh policy through a new authority.
+        """
+        name = self._MODE_NAMES[mode]
+        if await self._stop_active_turn_for_switch(name) is False:
+            self._append(f"  Staying in {self._MODE_NAMES.get(self._workspace_mode(), '')} mode.", MUTED)
+            return False
+        # Approvals issued under the old mode must never be consumable under the new one.
+        cleared = self._action_approvals.clear()
+        self._session_auto_edits.clear()
+        # Flow turn records belong to the mode that produced them; close the open one.
+        try:
+            from isycode.turn_journal import TurnJournal
+            active = TurnJournal.active(self._workspace_root)
+            if active is not None:
+                active.finish()
+        except Exception:
+            pass
         try:
             authority = WorkspaceAuthority(self._workspace_root)
             authority.set_mode(mode)
-            self._append(f"  This workspace now uses {'Classic' if classic else 'Security'} mode.", GREEN)
-            if classic:
-                await self._offer_quiet_trust(authority, again=True)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Mode could not be changed ({type(exc).__name__}).", RED)
-        self._update_workspace_identity_ui()
-        self._open_authority_menu()
+            self._append(f"  Mode could not be changed ({type(exc).__name__}); nothing was switched.", RED)
+            return False
+        note = "  " + tr("Workspace now uses {mode} mode.", mode=name)
+        if cleared:
+            note += f" {cleared} pending approval{'s' if cleared != 1 else ''} invalidated."
+        self._append(note, GREEN)
+        return True
+
+    async def _stop_active_turn_for_switch(self, name: str) -> bool:
+        """Cancel a running turn before a mode switch. False means the user kept the mode."""
+        task = getattr(self, "_chat_turn_task", None)
+        loop = getattr(self, "_loop_task", None)
+        running = (task is not None and not task.done()) or (loop is not None and not loop.done())
+        if not running:
+            return True
+        if not await self._await_screen(TailscaleConfirmScreen(
+                tr("A turn is running. Switch to {mode} anyway?", mode=name),
+                tr("The current turn is cancelled before the engine restarts. Completed effects "
+                   "stay in the action journal and can be undone; nothing new is started."),
+                tr("Cancel the turn and switch"))):
+            return False
+        import asyncio
+        for candidate in (task, loop):
+            if candidate is not None and not candidate.done():
+                candidate.cancel()
+                try:
+                    await candidate
+                except (asyncio.CancelledError, Exception):
+                    pass
+        return True
+
+    def _open_workflow_menu(self) -> None:
+        current = self._workspace_mode()
+        entries = [self._entry(
+            tr("{mode} · current", mode=self._MODE_NAMES[mode]) if mode == current else self._MODE_NAMES[mode],
+            "workspace_mode", mode, tr(self._MODE_WARNINGS[mode]))
+            for mode in ("classic", "flow", "security")]
+        if self._menu_mode != "workflow":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("workflow", tr("Workflow"), entries)
 
     def _open_authority_menu(self) -> None:
         entries: list[dict] = [self._entry(
@@ -133,14 +209,9 @@ class AuthorityMixin:
             authority = WorkspaceAuthority(self._workspace_root)
             policy = authority.effective_policy()
             grants = policy.get("grants", {})
-            classic = authority.mode() == "classic"
-            entries.append(self._entry(
-                ("Mode · Classic · Ready To Use; switch to Security…" if classic
-                 else "Mode · Security · nothing runs until you allow it; switch to Classic…"),
-                "workspace_mode", "security" if classic else "classic",
-                "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, "
-                "and sandboxed commands where supported. Each edit, delete/move, command and commit "
-                "still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."))
+            mode = self._MODE_NAMES.get(authority.mode(), "Security")
+            entries.append(self._entry(tr("Workflow · {mode}", mode=mode), "workflow_open", "",
+                                       tr("Choose Classic, Flow or Security for this workspace.")))
             entries.append(self._entry(
                 "Turn on all coding tools…", "coding_toolkit", "",
                 "One step for read, search, edit, move, delete, undo, sandboxed commands, git and "
@@ -354,9 +425,8 @@ class AuthorityMixin:
             "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, "
             "and sensitive actions still ask you first."))
         entries.append(self._entry(
-            "File edits follow folder approval settings; other changes always ask.",
-            "info", "", "Turning a permission on lets the assistant propose that kind of action. "
-            "Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."))
+            tr("Local work follows the selected workflow; sensitive actions still ask or stay off."),
+            "info", "", tr("Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply.")))
         entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))

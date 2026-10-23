@@ -119,7 +119,7 @@ def _methods():
 
 def test_chat_turn_has_no_automatic_caps_and_can_be_stopped_as_a_whole():
     methods = _methods()
-    chat = methods["_run_chat"]
+    chat = methods["_run_chat"] + methods["_run_chat_turn"]
     assert "limits.step_allowed(tool_round)" not in chat
     assert "max_tool_calls" not in chat and "per-response" not in chat
     assert "self._history[-20:]" not in chat and "compact_turn(messages)" not in chat

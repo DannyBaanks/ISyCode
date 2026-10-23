@@ -55,7 +55,12 @@ class OneShotActionAuthority:
         return self.authority.evaluate(request, approvals=approvals, approval=approval)
 
 
-MODES = frozenset({"security", "classic"})
+MODES = frozenset({"security", "classic", "flow"})
+# Modes that receive the Classic preset of implicit grants. Flow (ADR 0010) uses
+# the same preset; only its approval rule differs (workspace_trust.quiet_request).
+PRESET_MODES = frozenset({"classic", "flow"})
+# Grants only Flow adds to the preset: putting a whole turn back (ADR 0010).
+FLOW_PATH_ACTIONS = frozenset({"workspace.turn.undo"})
 
 # Classic mode is a per-workspace preset of implicit grants, not a bypass.
 # Without a trust record, edits and commands still need a per-action approval.
@@ -199,7 +204,7 @@ class WorkspaceAuthority:
     def effective_policy(self) -> dict[str, Any]:
         """Explicit grants plus the Classic preset; what evaluate() decides on."""
         policy = self.policy()
-        if policy.get("mode") != "classic":
+        if policy.get("mode") not in PRESET_MODES:
             return policy
         grants = {action: dict(grant) for action, grant in policy["grants"].items()}
 
@@ -214,6 +219,9 @@ class WorkspaceAuthority:
 
         for action in CLASSIC_PATH_ACTIONS:
             merge(action, "path_prefixes", [str(self.root)])
+        if policy.get("mode") == "flow":
+            for action in FLOW_PATH_ACTIONS:
+                merge(action, "path_prefixes", [str(self.root)])
         for action in CLASSIC_GRANTED_ACTIONS:
             merge(action)
         services = _known_services()
@@ -422,12 +430,12 @@ class WorkspaceAuthority:
 
 
 def _trusted_quiet(authority: WorkspaceAuthority, request: ActionRequest) -> bool:
-    """Fail closed: a broken trust lookup keeps the per-action approval."""
+    """Fail closed: a broken trust or Flow lookup keeps the per-action approval."""
     try:
-        from isycode.workspace_trust import quiet_classic
-        return bool(quiet_classic(authority, request))
+        from isycode.workspace_trust import quiet_request
+        return bool(quiet_request(authority, request))
     except Exception:
         return False
 
 
-__all__ = ["CLASSIC_ACTIONS", "MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]
+__all__ = ["CLASSIC_ACTIONS", "FLOW_PATH_ACTIONS", "MODES", "PRESET_MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]

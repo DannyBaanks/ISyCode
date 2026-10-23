@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
-CASE_ID = re.compile(r"^G[0-9]+A?-[0-9]{2}$")
+CASE_ID = re.compile(r"^(?:G[0-9]+A?|GF)-[0-9]{2}$")
 RESULTS = {"PASS", "FAIL", "UNKNOWN", "SKIP", "EN_REVISION"}
 STATES = {"PENDIENTE", "EN_CURSO", "BLOQUEADO", "EN_REVISION", "APROBADO", "REABIERTO"}
 REQUIRED = ("hito", "puerta", "estado", "sha_evaluado", "casos")
@@ -32,7 +32,7 @@ REQUIRED_BY_GATE = {
     gate: {f"{gate}-{number:02d}" for number in range(1, count + 1)}
     for gate, count in (("G0", 4), ("G1", 4), ("G2", 5), ("G3", 6),
                         ("G4", 5), ("G5", 5), ("G6", 5), ("G6A", 8),
-                        ("G7", 5), ("G8", 5), ("G9", 6), ("G10", 4))
+                        ("G7", 5), ("G8", 5), ("GF", 7), ("G9", 6), ("G10", 4))
 }
 
 

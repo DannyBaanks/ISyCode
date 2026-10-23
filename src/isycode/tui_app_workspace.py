@@ -190,10 +190,52 @@ class WorkspaceMixin:
         return ActionRequest(action_id, owner.root, str(target), arguments,
                              execution_owner="workspace_read")
 
+    async def _settled_file_effect(self, operation, *args):
+        """A cancelled Flow turn must await a mutating thread before sealing its journal."""
+        if self._workspace_mode() != "flow":
+            return await asyncio.to_thread(operation, *args)
+        task = asyncio.create_task(asyncio.to_thread(operation, *args))
+        try:
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            # Cancellation cannot stop a Python worker thread. Keep recovery alive
+            # until its actual effect settles, including repeated Escape presses.
+            while not task.done():
+                try:
+                    await asyncio.shield(task)
+                except asyncio.CancelledError:
+                    continue
+                except Exception:
+                    break
+            if task.done() and not task.cancelled():
+                task.exception()  # retrieve a failed operation; the turn still cancels
+            raise
+
     async def _undo_last_change(self) -> None:
         """User-only: show the undo diff for the most recent ISyCode change and apply on approval."""
         owner = WorkspaceWriteOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
                                     self._action_approvals)
+        if self._workspace_mode() == "flow":
+            from isycode.turn_journal import TurnJournal
+            try:
+                if TurnJournal.active(self._workspace_root) is not None:
+                    raise ValueError(tr("A turn is still running. Stop it before undoing."))
+                turn = await asyncio.to_thread(TurnJournal.latest, self._workspace_root)
+                if turn is None:
+                    raise ValueError(tr("No recorded Flow turn to undo."))
+                preview = await asyncio.to_thread(owner.preview_turn_undo, turn.turn_id)
+                outcome = await self._settled_file_effect(owner.apply_turn_undo, preview, None)
+            except (OSError, ValueError) as exc:
+                self._append("  " + tr("Nothing undone · {reason}", reason=str(exc)[:200]), YELLOW)
+                return
+            if outcome.decision == "ALLOW":
+                self._append("  " + tr("Flow turn restored · {count} files. Commits remain in Git history.",
+                                      count=len(preview.steps)), GREEN)
+            else:
+                self._append("  " + tr("Nothing undone · {reason}", reason=outcome.reason[:200]), SECURITY)
+            for path in preview.conflicts:
+                self._append("  " + tr("Kept later change · {path}", path=path), YELLOW)
+            return
         try:
             preview = await asyncio.to_thread(owner.preview_undo)
         except (OSError, ValueError) as exc:
@@ -203,7 +245,7 @@ class WorkspaceMixin:
             self._append(f"  Undo cancelled · {preview.path} unchanged", MUTED)
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW":
             self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
         else:
@@ -254,12 +296,20 @@ class WorkspaceMixin:
                 reason = str(exc)[:200] or type(exc).__name__
                 self._append(f"  Commit not proposed · {reason}", YELLOW)
                 return json.dumps({"error": "commit cannot be proposed", "reason": reason})
-            self._append(f"  Commit requested · {len(preview.paths)} files · review it", CYAN)
-            if not await self._await_screen(CommitApprovalScreen(preview)):
-                self._append("  Commit rejected · nothing was committed", MUTED)
-                return json.dumps({"status": "rejected_by_user"})
+            attributable = False
+            if self._workspace_mode() == "flow":
+                from isycode.turn_journal import TurnJournal
+                attributable = owner.turn_attributable(
+                    TurnJournal.active(self._workspace_root), preview.paths)
+            if attributable:
+                self._append(f"  Commit · {len(preview.paths)} files from this turn · /undo to revert", CYAN)
+            else:
+                self._append(f"  Commit requested · {len(preview.paths)} files · review it", CYAN)
+                if not await self._await_screen(CommitApprovalScreen(preview)):
+                    self._append("  Commit rejected · nothing was committed", MUTED)
+                    return json.dumps({"status": "rejected_by_user"})
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-            outcome = await asyncio.to_thread(owner.commit, preview, approval)
+            outcome = await self._settled_file_effect(owner.commit, preview, approval)
         action = {"git_status": "git.status", "git_diff": "git.diff"}.get(name, "git.commit")
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             self._append(f"  Git {outcome.decision} · {action} · {outcome.reason[:180]}", SECURITY)
@@ -334,7 +384,7 @@ class WorkspaceMixin:
         shown = shlex.join(preview.argv)
         quiet = self._request_is_quiet(preview.request)
         if quiet:
-            self._append(f"  Command · quiet Classic · {shown[:160]}", CYAN)
+            self._append(f"  Command · quiet {self._workspace_mode().title()} · {shown[:160]}", CYAN)
             approval = None
         else:
             self._append(f"  Command requested · {shown[:160]} · review it", CYAN)
@@ -439,7 +489,7 @@ class WorkspaceMixin:
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         quiet = self._request_is_quiet(preview.request)
         if quiet:
-            self._append(f"  Tool · quiet Classic · {action} · {preview.path}", CYAN)
+            self._append(f"  Tool · quiet {self._workspace_mode().title()} · {action} · {preview.path}", CYAN)
             approval = None
         else:
             self._append(f"  Tool requested · {action} · {preview.path} · review it", CYAN)
@@ -449,7 +499,7 @@ class WorkspaceMixin:
                                    "path": preview.path})
             self._append(f"  ✓ You approved · {action.rsplit('.', 1)[-1]} {preview.path}", MUTED)
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             self._append(f"  Tool ALLOW · {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
             if quiet:
@@ -533,7 +583,7 @@ class WorkspaceMixin:
         batch_approved = batch_digest is not None and batch_digest == preview.request.digest
         session_trusted = self._session_trust_active(folder_alias)
         if quiet:
-            self._append(f"  Tool · quiet Classic · {verb} · "
+            self._append(f"  Tool · quiet {self._workspace_mode().title()} · {verb} · "
                          f"{preview.path}", CYAN)
             delegated = False
             choice = True
@@ -586,7 +636,7 @@ class WorkspaceMixin:
         except (OSError, ValueError) as exc:
             return json.dumps({'error': str(exc)[:180]})
         if quiet:
-            self._append(f"  ✓ Quiet Classic · {folder_alias} · {preview.path}", MUTED)
+            self._append(f"  ✓ Quiet {self._workspace_mode().title()} · {folder_alias} · {preview.path}", MUTED)
             approval = None
         else:
             label = ('Batch-approved' if batch_approved else
@@ -598,7 +648,7 @@ class WorkspaceMixin:
             approval = self._action_approvals.issue(
                 preview.request, ttl_seconds=60,
                 mode="delegated" if delegated or session_trusted else "user")
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             if not diff_reviewed and not batch_approved:
                 self._show_applied_diff(preview)
@@ -729,7 +779,7 @@ class WorkspaceMixin:
             self._open_workspace_config_menu()
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW":
             self._workspace_config_values = None
             self._workspace_config_warning = ""
@@ -784,7 +834,7 @@ class WorkspaceMixin:
             await self._open_workspace_migration_menu()
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
-        outcome = await asyncio.to_thread(owner.apply, preview, approval)
+        outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW":
             self._append(f"  Copied /{name} · legacy original kept · receipt "
                          f"{outcome.receipt.receipt_id}", GREEN)

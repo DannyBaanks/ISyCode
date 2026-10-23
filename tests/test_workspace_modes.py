@@ -142,7 +142,7 @@ def test_mode_screen_defaults_to_security_on_escape_and_offers_classic(tmp_path)
     asyncio.run(scenario(["escape"]))
     asyncio.run(scenario(["enter"]))
     asyncio.run(scenario(["down", "enter"]))
-    assert results == ["security", "classic", "security"]
+    assert results == ["security", "classic", "flow"]
 
 
 def test_tui_checks_use_effective_grants_and_writes_use_explicit_ones():

@@ -30,8 +30,9 @@ def test_preferences_directory_and_file_are_private(tmp_path,monkeypatch):
 def test_observation_writers_do_not_interleave(tmp_path,monkeypatch):
     from isycode import capability_observations as c
     monkeypatch.setenv('ISYCODE_STATE_HOME',str(tmp_path/'state'))
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'))
     code="from isycode.capability_observations import record; import sys; assert all(record('parity',sys.argv[1]+str(i),'steer',True) for i in range(12))"
-    jobs=[subprocess.Popen([sys.executable,'-c',code,str(i)],stdout=subprocess.PIPE,stderr=subprocess.PIPE) for i in range(3)]
+    jobs=[subprocess.Popen([sys.executable,'-c',code,str(i)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env) for i in range(3)]
     for job in jobs:
         out,err=job.communicate(timeout=40)
         assert job.returncode==0,err.decode(errors='replace')

@@ -898,7 +898,7 @@ class RailMixin:
         """One line: the three facts that change how a turn is interpreted."""
         root = self._workspace_root
         name = root.name or str(root)
-        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
+        mode = {"classic": "Classic", "flow": "Flow"}.get(self._workspace_mode(), "Security")
         bridge = getattr(self, "_bridge_identity", "") or tr("no bridge")
         return f"{name} · {mode} · {bridge}"
 

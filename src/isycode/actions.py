@@ -24,6 +24,7 @@ _ENTRIES = [
     ("workspace.config.write", "Files", "Initialize or update ISyCode workspace config", "write", True),
     ("workspace.files.write", "Files", "Create or edit files", "write", True),
     ("workspace.files.restore", "Files", "Undo an ISyCode file change", "write", True),
+    ("workspace.turn.undo", "Files", "Undo every file change of one ISyCode turn", "write", True),
     ("workspace.command.run", "Commands", "Run a command in the workspace sandbox", "process", True),
     ("git.status", "Git", "See git status of the workspace", "read", False),
     ("git.diff", "Git", "See git diffs of the workspace", "read", False),

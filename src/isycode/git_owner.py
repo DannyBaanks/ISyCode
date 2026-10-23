@@ -402,6 +402,67 @@ class GitOwner:
         return self._finish(request, {"path": ".isycode", "tracked": bool(paths),
                                       "tracked_paths": paths})
 
+    def _head_blob_oid(self, path: str) -> str | None:
+        """Git OID of ``path`` at HEAD, or None when HEAD does not track it."""
+        try:
+            text, truncated = self._git("rev-parse", "--verify", "--quiet",
+                                        f"HEAD:{path}", ok_codes=(0, 1))
+        except ValueError:
+            return None
+        oid = text.strip()
+        return oid if (not truncated and len(oid) == 40 and all(c in "0123456789abcdef" for c in oid)) else None
+
+    def _blob_oid_of(self, payload: bytes) -> str | None:
+        """Git OID the given bytes would have, without writing to the object store."""
+        git = git_executable()
+        if git is None:
+            return None
+        try:
+            done = subprocess.run([git, *_SAFE_OVERRIDES, "hash-object", "--stdin"],
+                                  cwd=self.repo_root, env=self._environment(), input=payload,
+                                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                  timeout=GIT_TIMEOUT_S, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        oid = done.stdout.decode("ascii", "replace").strip()
+        return oid if done.returncode == 0 and len(oid) == 40 else None
+
+    def turn_attributable(self, journal, paths: tuple[str, ...]) -> bool:
+        """Flow (ADR 0010): are all commit paths changes of this turn with no prior human work?
+
+        A path is attributable when the turn changed it, the file still holds the
+        turn's result (nothing edited it after the turn), and the pre-turn content
+        matched HEAD (created files must be absent in HEAD). Any uncertainty is
+        not attributable, so the commit keeps its question. Read-only.
+        """
+        if journal is None or not paths or self._repository_problem():
+            return False
+        try:
+            staged, truncated = self._git("diff", "--cached", "--no-ext-diff", "--no-textconv",
+                                          "--name-only", "--", *paths)
+            if truncated or staged.strip():
+                return False  # A human's staged version must keep its review.
+            changes = {row["path"]: row for row in journal.changes()}
+            for path in paths:
+                row = changes.get(path)
+                if row is None:
+                    return False
+                target = self.root / path
+                current = target.read_bytes() if target.is_file() and not target.is_symlink() else None
+                current_sha = None if current is None else hashlib.sha256(current).hexdigest()
+                if current_sha != row["after_sha256"]:
+                    return False
+                head_oid = self._head_blob_oid(path)
+                before = journal.read_before(path)
+                if before is None:
+                    if head_oid is not None:
+                        return False          # created in the turn, yet HEAD has it
+                elif head_oid is None or head_oid != self._blob_oid_of(before):
+                    return False              # pre-turn content was not the committed one
+            return True
+        except (OSError, ValueError):
+            return False
+
     def diff(self, path: str = ".", staged: bool = False) -> ActionOutcome:
         path = (path or ".").removeprefix("./").rstrip("/") or "."
         try:

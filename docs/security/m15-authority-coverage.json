@@ -160,6 +160,22 @@
       "variants": []
     },
     {
+      "action": "workspace.turn.undo",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
+      "owners": [
+        "workspace_write"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "WorkspaceWriteBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
       "action": "workspace.command.run",
       "approval_required": true,
       "authority": "Workspace Authority",
@@ -1463,6 +1479,12 @@
       "status": "COVERED"
     },
     {
+      "action": "workspace.turn.undo",
+      "callsite": "WorkspaceWriteOwner.apply_turn_undo",
+      "owner": "workspace_write",
+      "status": "COVERED"
+    },
+    {
       "action": "mcp.invoke",
       "callsite": "GatewayMCPInvocationOwner.invoke",
       "owner": "gateway_mcp",
@@ -1835,7 +1857,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "file": "isycode/action_runtime.py",
-      "line": 2595,
+      "line": 2634,
       "owner": "workspace_read"
     },
     {
@@ -1870,7 +1892,7 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 877,
+      "line": 947,
       "owner": "remote_catalog"
     },
     {
@@ -1904,77 +1926,77 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 2312,
+      "line": 2351,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "file": "isycode/action_runtime.py",
-      "line": 2438,
+      "line": 2477,
       "owner": "grit_peers"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 2093,
+      "line": 2132,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 2165,
+      "line": 2204,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 2235,
+      "line": 2274,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 2321,
+      "line": 2360,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 2372,
+      "line": 2411,
       "owner": "lsp_symbols"
     },
     {
       "action": "lsp.diagnostics",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 2380,
+      "line": 2419,
       "owner": "lsp_symbols"
     },
     {
       "action": "grit.claims.read",
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "file": "isycode/action_runtime.py",
-      "line": 2446,
+      "line": 2485,
       "owner": "grit_peers"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 2508,
+      "line": 2547,
       "owner": "provider_network"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "file": "isycode/action_runtime.py",
-      "line": 2595,
+      "line": 2634,
       "owner": "workspace_read"
     },
     {
@@ -2051,7 +2073,7 @@
       "action": "workspace.command.run",
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "file": "isycode/command_runner.py",
-      "line": 216,
+      "line": 238,
       "owner": "workspace_command"
     },
     {
@@ -2261,7 +2283,7 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 877,
+      "line": 947,
       "owner": "remote_catalog"
     },
     {
@@ -2338,48 +2360,55 @@
       "action": "workspace.files.restore",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_undo",
       "file": "isycode/workspace_write.py",
-      "line": 461,
+      "line": 477,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.delete",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_delete",
       "file": "isycode/workspace_write.py",
-      "line": 478,
+      "line": 494,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.move",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner._preview_move",
       "file": "isycode/workspace_write.py",
-      "line": 501,
+      "line": 517,
+      "owner": "workspace_write"
+    },
+    {
+      "action": "workspace.turn.undo",
+      "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_turn_undo",
+      "file": "isycode/workspace_write.py",
+      "line": 681,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.config.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 412,
+      "line": 428,
       "owner": "workspace_config"
     },
     {
       "action": "workspace.files.write",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview",
       "file": "isycode/workspace_write.py",
-      "line": 415,
+      "line": 431,
       "owner": "workspace_write"
     }
   ],
   "secure_tui_direct_api_bypasses": [],
   "stale_callsites": [],
   "summary": {
-    "actions": 84,
+    "actions": 85,
     "ambiguous": 0,
     "authority_frontier_pass": true,
-    "effectful": 63,
+    "effectful": 64,
     "explicit_deny": 18,
     "owner_shared_read": 1,
-    "owner_valid": 63,
+    "owner_valid": 64,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

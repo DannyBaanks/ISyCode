@@ -72,6 +72,9 @@ Una instrucción incrustada nunca concede permisos ni modifica un presupuesto.
 | Fraccionar el daño | Ledger persistente compartido, reservas atómicas y límites por workspace | Mismo coste con N llamadas, reinicios y N workers |
 | Crash/cancelación/retry | Estado durable, limpieza de árbol y reconciliación de resultados inciertos | Sin replay de efectos no verificados ni pérdida del trabajo humano |
 | UI engañosa/inyección | Datos no confiables separados de autoridad; recibos verificados | Un texto «éxito» del modelo no vuelve verde una acción fallida |
+| Flow: inyección sin preguntas | Sandbox, ledger compartido, `TurnJournal` y deshacer turno; lo irreversible sigue preguntando | Un README malicioso en Flow no logra push, `.env`, escritura externa ni red |
+| Flow: aprobaciones heredadas al cambiar de modo | El controlador vacía aprobaciones y permisos de sesión antes de `set_mode` | Una aprobación emitida antes del cambio no se consume después |
+| Flow: red concedida | Apagada por defecto; permiso de sesión revocable y con caducidad; sin secretos montados | Sin permiso, un socket falla; con permiso revocado, vuelve a fallar |
 
 El kernel y el OS forman parte de la base confiable declarada; documentar límites por plataforma y riesgos residuales.
 Un backup no evita exfiltración y un sandbox con todo el checkout escribible no evita destruir ese checkout.
@@ -155,7 +158,8 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | M6A | Agentes observables e instrucciones en cola | M6 | APROBADO (G6A, revisor Danny Baanks, evidencia ae616fbe) | G6A |
 | M7 | Flujos cotidianos completos | M6A | APROBADO (G7, revisor Danny Baanks, evidencia 0eaa4eb2) | G7 |
 | M8 | Pulido visual, teclado y accesibilidad | M7 | APROBADO (G8, revisor Danny Baanks, evidencia 1d588426) | G8 |
-| M9 | Matriz adversarial, dogfood y rendimiento | M8 | PENDIENTE | G9 |
+| MF | Flow: tercer modo sin preguntas repetitivas, mismo kernel ([ADR 0010](decisions/0010-flow-mode.md)) | M8 | EN_REVISION (implementación; aceptación GF pendiente) | GF |
+| M9 | Matriz adversarial, dogfood y rendimiento | M8, MF | PENDIENTE | G9 |
 | M10 | Release gradual y rollback ensayado | M9 | PENDIENTE | G10 |
 
 M4 y M5 pueden avanzar en paralelo después de G3; prototipos visuales sin efectos pueden investigarse antes de M8, sin declarar G8 aprobado.
@@ -355,6 +359,23 @@ Teclado completo, foco visible, ayuda contextual, copy seguro y scroll que respe
 - `G8-05`: recibos compactos expanden decisión, paths seguros, presupuesto restante y recuperación; canarios de secretos ausentes incluso en errores.
 
 Aceptación: snapshots automatizados más revisión en terminal real; un snapshot aislado no prueba foco, teclado ni resize.
+
+### MF — Flow: tercer modo sin preguntas repetitivas
+
+Trabajo: añadir `flow` a los modos con el preset de Classic y una única regla de aprobación silenciosa compartida; shell dentro del sandbox; red de sesión opcional y revocable donde el backend la imponga; `TurnJournal` con preimágenes y «Deshacer turno» por owner propio; commits silenciosos solo de rutas atribuibles al turno; cambio de modo en caliente que invalida aprobaciones y permisos de sesión; Configuración → Flujo de trabajo, advertencia, onboarding con Classic recomendado. Decisiones D1–D6 del owner en [ADR 0010](decisions/0010-flow-mode.md).
+Dependencias: M8. M9 incluye Flow en su matriz adversarial.
+
+- `GF-01`: matriz de permisos de los tres modos; Flow no pide en `QUIET_FLOW_ACTIONS` y pide o niega todo lo demás; Classic y Security sin cambios observables.
+- `GF-02`: comandos reales (`bash -c`, intérprete, test runner) en el sandbox desde Flow; `.env`, `/proc/1/environ`, escritura externa, symlink/hardlink y red sin permiso siguen bloqueados.
+- `GF-03`: deshacer turno con ida y vuelta reproducible (texto, binario, permisos, creados, borrados, movidos); un cambio humano posterior se reporta como conflicto y no se sobrescribe.
+- `GF-04`: commit silencioso solo de rutas atribuibles; una ruta con trabajo humano previo vuelve a preguntar.
+- `GF-05`: Classic → Flow → Security → Classic en caliente, con y sin turno activo; ninguna aprobación ni permiso de sesión sobrevive al cambio; la conversación se conserva.
+- `GF-06`: la experiencia completa (elegir Flow, trabajar, revisar, deshacer, cambiar de modo) desde la TUI, en en/es/zh y a 80×24, 100×30 y 140×40.
+- `GF-07`: plataformas: Linux con bubblewrap verificado; donde no haya aislamiento equivalente demostrado, Flow no ejecuta comandos ni concede red.
+
+Guía de uso e integración F5: [Flow](flow-mode.md). F1–F4 aportan el núcleo; F5 conecta selección, turnos y `/undo` a la TUI. La implementación no es una aprobación de puerta.
+
+Aceptación: GF con evidencia en `docs/evidence/classic-security-ux/MF/<sha>/`. Implementar MF no aprueba GF, M9 ni M10.
 
 ### M9 — Matriz adversarial, rendimiento y dogfood
 

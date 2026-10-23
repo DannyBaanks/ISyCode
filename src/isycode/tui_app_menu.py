@@ -417,6 +417,7 @@ class MenuAction(str, Enum):
     USER_DEFAULT_WORKSPACE = "user_default_workspace"
     USER_DEFAULT_ROLE_SAVE = "user_default_role_save"
     USER_DEFAULT_ROLE_CLEAR = "user_default_role_clear"
+    WORKFLOW_OPEN = "workflow_open"
     WORKSPACE_MODE = "workspace_mode"
     CODING_TOOLKIT = "coding_toolkit"
     AUTHORITY_TOGGLE = "authority_toggle"
@@ -540,6 +541,7 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.USER_DEFAULT_WORKSPACE: "_menu_user_default_workspace",
     MenuAction.USER_DEFAULT_ROLE_SAVE: "_menu_user_default_role_save",
     MenuAction.USER_DEFAULT_ROLE_CLEAR: "_menu_user_default_role_clear",
+    MenuAction.WORKFLOW_OPEN: "_menu_workflow_open",
     MenuAction.WORKSPACE_MODE: "_menu_workspace_mode",
     MenuAction.CODING_TOOLKIT: "_menu_coding_toolkit",
     MenuAction.AUTHORITY_TOGGLE: "_menu_authority_toggle",
@@ -791,6 +793,9 @@ class MenuMixin:
             self._set_activity("Could not clear the default role", RED)
         self._open_user_defaults_menu()
         return
+
+    def _menu_workflow_open(self, entry) -> None:
+        self._open_workflow_menu()
 
     def _menu_workspace_mode(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]

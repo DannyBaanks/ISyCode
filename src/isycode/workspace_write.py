@@ -221,6 +221,22 @@ class WritePreview:
         return self.request.action_id.rsplit(".", 1)[-1]
 
 
+TURN_UNDO_ACTION = "workspace.turn.undo"
+
+
+@dataclass(frozen=True)
+class TurnUndoPreview:
+    """The reviewed plan to put one turn's files back (ADR 0010).
+
+    ``steps`` restores each path, newest change first; ``conflicts`` lists the
+    paths changed after the turn, which undo leaves exactly as they are.
+    """
+    request: ActionRequest
+    turn_id: str
+    steps: tuple[dict[str, Any], ...]
+    conflicts: tuple[str, ...]
+
+
 class CheckpointStore:
     """Private per-workspace history of pre-change content, outside the checkout."""
 
@@ -635,7 +651,112 @@ class WorkspaceWriteOwner:
             raise TypeError("preview has the wrong type")
         return spill_bytes(preview.content.encode("utf-8"))
 
+    def preview_turn_undo(self, turn_id: str) -> TurnUndoPreview:
+        """Plan the undo of one recorded turn. Raises ValueError when it cannot be undone."""
+        from isycode.turn_journal import TurnJournal
+        journal = TurnJournal.load(self.root, turn_id)
+        if journal.undone:
+            raise ValueError("this turn was already undone")
+        if TurnJournal.active(self.root) is not None:
+            raise ValueError("a turn is still running; undo after it finishes")
+        steps: list[dict[str, Any]] = []
+        conflicts: list[str] = []
+        for row in reversed(journal.changes()):
+            path = row["path"]
+            target = self._target(path)
+            current = self._read_back(target)
+            current_sha = None if current is None else _sha(current)
+            current_mode = None if current is None else stat.S_IMODE(target.lstat().st_mode)
+            if (current_sha != row["after_sha256"]
+                    or current_mode != row.get("after_mode", current_mode)):
+                conflicts.append(path)
+                continue
+            journal.read_before(path)   # the preimage must still verify
+            steps.append({"path": path, "current_sha256": current_sha,
+                          "restore_sha256": row["before_sha256"], "mode": row["before_mode"],
+                          "current_mode": current_mode,
+                          "churn": (0 if current is None else len(current))})
+        plan = json.dumps({"turn": turn_id, "steps": steps, "conflicts": conflicts},
+                          sort_keys=True).encode("utf-8")
+        request = ActionRequest("workspace.turn.undo", self.root, str(self.root), {
+            "turn_id": turn_id, "paths": tuple(step["path"] for step in steps),
+            "plan_sha256": _sha(plan),
+        }, execution_owner="workspace_write")
+        return TurnUndoPreview(request, turn_id, tuple(steps), tuple(conflicts))
+
+    def apply_turn_undo(self, preview: TurnUndoPreview,
+                        approval: ActionApproval | None) -> ActionOutcome:
+        """Restore one turn's files through Authority, IsySentinel, the ledger and the journal."""
+        from isycode.effect_fs import apply_file
+        from isycode.turn_journal import TurnJournal
+        if not isinstance(preview, TurnUndoPreview):
+            return ActionOutcome("Turn undo denied.", "DENY", None, "preview has the wrong type")
+        try:
+            fresh = self.preview_turn_undo(preview.turn_id)
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Turn undo denied.", "DENY", None, str(exc)[:200])
+        if fresh != preview:
+            return ActionOutcome("Turn undo denied.", "DENY", None,
+                                 "files changed since the undo was reviewed; review it again")
+        if not preview.steps:
+            return ActionOutcome("Nothing to undo.", "DENY", None,
+                                 "every changed file was edited after the turn" if preview.conflicts
+                                 else "the turn changed no files")
+        paths = tuple(step["path"] for step in preview.steps)
+        deletes = sum(step["restore_sha256"] is None for step in preview.steps)
+        journal = TurnJournal.load(self.root, preview.turn_id)
+        payloads = {step["path"]: journal.read_before(step["path"]) for step in preview.steps}
+        churn = sum(step["churn"] for step in preview.steps) + sum(
+            len(payload) for payload in payloads.values() if payload is not None)
+        reservation = self._reserve_effect("Turn undo denied.", paths, deletes, churn)
+        if isinstance(reservation, ActionOutcome):
+            return reservation
+        denied = self._authorize(preview.request, approval)
+        if denied is not None:
+            self._cancel_effect(reservation)
+            return ActionOutcome("Turn undo denied.", "DENY", None, denied)
+        book = self._effect_book
+        restored: list[str] = []
+        try:
+            plan = []
+            for step in preview.steps:
+                current = self._read_back(self.root / step["path"])
+                if current is not None:
+                    book.backup_file(reservation, step["path"], current)
+                plan.append({"path": step["path"],
+                             "kind": "delete" if step["restore_sha256"] is None else "write",
+                             "preimage": step["current_sha256"], "target": step["restore_sha256"],
+                             "churn": step["churn"], "preimage_mode": step["current_mode"],
+                             "target_mode": step["mode"], "typed": True})
+            book.store_plan(reservation, plan)
+            for step in preview.steps:
+                book.mark_applying(reservation, step["path"])
+                apply_file(self.root, step["path"], payloads[step["path"]],
+                           expected=step["current_sha256"], mode=step["mode"] if step["mode"] is not None else 0o644)
+                book.mark_applied(reservation, step["path"])
+                restored.append(step["path"])
+            book.commit(reservation, applied_paths=paths, deletes=deletes, churn_bytes=churn)
+        except Exception as exc:
+            from isycode.effect_ledger import LedgerDenied
+            if not isinstance(exc, (OSError, ValueError, LedgerDenied)):
+                raise
+            self._cancel_effect(reservation)
+            return ActionOutcome("Turn undo stopped; finished files were rolled back by the ledger.",
+                                 "ERROR", None, str(exc)[:300])
+        finally:
+            if self._effect_book is not None:
+                self._effect_book._release()
+                self._effect_book = None
+        journal.mark_undone()
+        note = f"{len(restored)} file(s) restored"
+        if preview.conflicts:
+            note += f"; {len(preview.conflicts)} changed after the turn and kept as they are"
+        return self._finish(preview.request, f"turn-undone:{preview.turn_id}",
+                            f"Undid turn · {len(restored)} file(s)", note)
+
     def apply(self, preview: WritePreview, approval: ActionApproval | None) -> ActionOutcome:
+        if isinstance(preview, TurnUndoPreview):
+            return self.apply_turn_undo(preview, approval)
         if not isinstance(preview, WritePreview):
             return ActionOutcome("File change denied.", "DENY", None, "preview has the wrong type")
         if preview.request.action_id == "workspace.files.restore":
@@ -668,9 +789,10 @@ class WorkspaceWriteOwner:
         params = preview.request.parameters
         target = Path(preview.request.target)
         try:
+            turn = self._turn_capture(target)
             checkpoint = self._prepare_effect(reservation, preview)
             staged = self.stage_preview(preview)
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError) as exc:   # TurnJournalFull is a ValueError
             self._cancel_effect(reservation)
             return ActionOutcome("File change denied.", "DENY", None,
                                  f"durable recovery could not be prepared: {str(exc)[:200]}")
@@ -692,6 +814,7 @@ class WorkspaceWriteOwner:
             written = self._read_back(target)
             if written is None or _sha(written) != params["after_sha256"]:
                 raise ValueError("written content does not match the approved digest")
+            self._turn_note(turn, self.root, target, params["after_sha256"])
         except (OSError, ValueError) as exc:
             self._cancel_effect(reservation)
             receipt = self._receipt(preview.request, "FAILURE", "write_failed")
@@ -742,11 +865,13 @@ class WorkspaceWriteOwner:
             return ActionOutcome("Undo denied.", "DENY", None, denied)
         target = Path(preview.request.target)
         try:
+            turn = self._turn_capture(target)
             self._prepare_effect(reservation, preview)
             if preview.removes:
                 self._remove(target, params["current_sha256"])
                 if self._read_back(target) is not None:
                     raise ValueError("the file is still present")
+                self._turn_note(turn, self.root, target, None)
             else:
                 missing = self._missing_folders(target) if params["current_sha256"] == "absent" else ()
                 self._replace(target, preview.content.encode("utf-8"),
@@ -754,6 +879,7 @@ class WorkspaceWriteOwner:
                 written = self._read_back(target)
                 if written is None or _sha(written) != params["restore_sha256"]:
                     raise ValueError("restored content does not match the checkpoint")
+                self._turn_note(turn, self.root, target, params["restore_sha256"])
             self.checkpoints.mark_undone(params["checkpoint_id"])
             self._commit_effect(reservation, paths, deletes, churn)
         except (OSError, ValueError) as exc:
@@ -801,10 +927,12 @@ class WorkspaceWriteOwner:
         params = preview.request.parameters
         target = Path(preview.request.target)
         try:
+            turn = self._turn_capture(target)
             checkpoint = self._prepare_effect(reservation, preview)
             self._remove(target, params["before_sha256"])
             if self._exists(target):
                 raise ValueError("the file is still present")
+            self._turn_note(turn, self.root, target, None)
             self._commit_effect(reservation, paths, deletes, churn)
         except (OSError, ValueError) as exc:
             self._cancel_effect(reservation)
@@ -843,10 +971,13 @@ class WorkspaceWriteOwner:
             return ActionOutcome("Move denied.", "DENY", None, denied)
         destination = self.root / params["to"]
         try:
+            turn = self._turn_capture(source, destination)
             checkpoint = self._prepare_effect(reservation, preview)
             self._move(source, destination, params["sha256"], tuple(params["new_folders"]))
             if self._file_digest(destination) != params["sha256"] or self._exists(source):
                 raise ValueError("the moved file could not be verified")
+            self._turn_note(turn, self.root, source, None)
+            self._turn_note(turn, self.root, destination, params["sha256"])
             self._commit_effect(reservation, paths, deletes, churn)
         except (OSError, ValueError) as exc:
             self._cancel_effect(reservation)
@@ -866,6 +997,27 @@ class WorkspaceWriteOwner:
         return self._finish(preview.request, f"moved:{params['path']}:{params['to']}",
                             f"{verb} {params['path']} → {params['to']}",
                             "reviewed move applied" + ("" if checkpoint else "; undo unavailable"))
+
+    def _turn_capture(self, *targets: Path):
+        """Record each target's state before a Flow turn first changes it (ADR 0010).
+
+        Returns the active turn, or None outside a turn. Raises TurnJournalFull or
+        OSError when the preimage cannot be kept; callers then make no change.
+        """
+        from isycode.turn_journal import TurnJournal
+        journal = TurnJournal.active(self.root)
+        if journal is None:
+            return None
+        for target in targets:
+            current = self._read_back(target)
+            mode = target.lstat().st_mode if current is not None else None
+            journal.capture(target.relative_to(self.root).as_posix(), current, mode)
+        return journal
+
+    @staticmethod
+    def _turn_note(journal, root: Path, target: Path, digest: str | None) -> None:
+        if journal is not None:
+            journal.note_after(target.relative_to(root).as_posix(), digest)
 
     def _receipt(self, request: ActionRequest, outcome: str, event: str) -> ActionReceipt | None:
         receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), request.action_id,
@@ -1097,6 +1249,6 @@ class WorkspaceWriteOwner:
             os.close(parent_fd)
 
 
-__all__ = ["CheckpointStore", "DELETE_TOOL", "DELETE_TOOL_NAME", "EDIT_TOOL", "EDIT_TOOL_NAME",
+__all__ = ["TURN_UNDO_ACTION", "TurnUndoPreview", "CheckpointStore", "DELETE_TOOL", "DELETE_TOOL_NAME", "EDIT_TOOL", "EDIT_TOOL_NAME",
            "MOVE_TOOL", "MOVE_TOOL_NAME", "WRITE_TOOL", "WRITE_TOOL_NAME",
            "WorkspaceWriteOwner", "WritePreview"]

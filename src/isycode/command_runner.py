@@ -70,6 +70,28 @@ COMMAND_TOOL = {"type": "function", "function": {
 }}
 
 
+FLOW_COMMAND_DESCRIPTION = (
+    "Run a command in a sandbox of this workspace. Flow mode: commands run without asking the "
+    "user. A shell is available inside the sandbox: for pipes, &&, redirects, globs or "
+    "variables pass [\"bash\", \"-c\", \"...\"]; plain programs can still be passed as a list. "
+    "Only this workspace is visible and writable; sensitive files are hidden and the network "
+    "is blocked unless the user granted it for this session. Changes are measured before they "
+    "reach the workspace and the user can undo the whole turn. Push, credentials and anything "
+    "outside the workspace still need the user.")
+
+
+def command_tool(mode: str | None) -> dict:
+    """The command tool as the model sees it in this workspace mode.
+
+    Only the wording changes: the sandbox, staging, limits and the grant are the
+    same, and Flow decides nothing by itself (workspace_trust.quiet_request).
+    """
+    if mode != "flow":
+        return COMMAND_TOOL
+    function = {**COMMAND_TOOL["function"], "description": FLOW_COMMAND_DESCRIPTION}
+    return {**COMMAND_TOOL, "function": function}
+
+
 def _no_symlinks(root: Path, relative: str) -> bool:
     current = root
     for part in relative.split("/"):
@@ -90,7 +112,7 @@ def resolve_program(root: Path, name: str) -> str:
     return sandbox_backend.resolve_program(root, name)
 
 
-def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
+def sensitive_entries(root: Path, *, reject_hardlinks: bool = False) -> tuple[tuple[str, bool], ...]:
     """Every sensitive file or folder in the workspace, as (relative path, is_folder).
 
     Symlinks are not masked: only the workspace is mounted, so their targets
@@ -141,7 +163,7 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
                     stack.append(Path(entry.path))
                 elif entry.is_file(follow_symlinks=False) and (facts := inode(entry)) and facts[1] > 1:
                     linked.append((Path(entry.path).relative_to(root).as_posix(), facts[0]))
-    found.extend((relative, False) for relative, key in linked if key in secret_inodes)
+    found.extend((relative, False) for relative, key in linked if reject_hardlinks or key in secret_inodes)
     return tuple(sorted(found))
 
 
@@ -228,7 +250,7 @@ class CommandRunOwner:
         return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope, max_stage_bytes)
 
     def _scope_masks(self, scope: str) -> tuple[tuple[str, bool], ...]:
-        entries = sensitive_entries(self.root / scope)
+        entries = sensitive_entries(self.root / scope, reject_hardlinks=self.authority.mode() == "flow")
         return entries if scope == "." else tuple((scope + "/" + path, folder) for path, folder in entries)
 
     async def run(self, preview: CommandPreview,
@@ -451,7 +473,7 @@ class CommandRunOwner:
 
 
 __all__ = [
-    "COMMAND_TOOL", "COMMAND_TOOL_NAME", "CommandPreview", "CommandRunOwner", "DEFAULT_TIMEOUT_S",
+    "COMMAND_TOOL", "COMMAND_TOOL_NAME", "FLOW_COMMAND_DESCRIPTION", "command_tool", "CommandPreview", "CommandRunOwner", "DEFAULT_TIMEOUT_S",
     "masked_digest", "resolve_program", "sandbox_command", "sandbox_executable",
     "sensitive_entries",
 ]

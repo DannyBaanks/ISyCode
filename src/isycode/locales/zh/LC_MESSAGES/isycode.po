@@ -1330,9 +1330,6 @@ msgstr "{root}\n{provider_line}\n快速开始：此文件夹成为 Classic 常�
 msgid "How should ISyCode work in this folder?"
 msgstr "ISyCode 应如何在此文件夹中工作？"
 
-msgid "{root}\nClassic: read/search, edit proposals, chat, saved sessions, Git review and sandboxed commands are ready. One confirmation can trust this folder so ordinary edits stop asking; edits, deletes, commands and commits keep asking until you approve them. Commits, secrets and authority changes always ask.\nSecurity: nothing is allowed until you turn it on in Settings → Authority.\nBoth modes use IsySentinel and the action journal. Free shell and sensitive files are never implied."
-msgstr "{root}\nClassic：读/搜、编辑提议、聊天、已保存会话、Git 审查以及沙箱命令均已就绪。一次确认即可信任此文件夹，使普通编辑不再询问；编辑、删除、命令和提交在你批准之前仍会询问。提交、密钥和授权更改始终询问。\nSecurity：在 设置 → Authority 中开启之前，不允许任何操作。\n两种模式都使用 IsySentinel 和操作日志。绝不隐含自由 shell 或敏感文件。"
-
 msgid "Allow semantic broker preview?"
 msgstr "允许语义代理预览？"
 
@@ -3083,3 +3080,97 @@ msgstr "本次会话的密钥"
 
 msgid "{name} key kept in memory for this session only; nothing was saved."
 msgstr "{name} 密钥仅在本次会话中保存在内存中；未保存任何内容。"
+
+# Flow (ADR 0010)
+msgid "A turn is running. Switch to {mode} anyway?"
+msgstr "回合正在运行。仍要切换到 {mode} 吗？"
+
+# Flow (ADR 0010)
+msgid "A turn is still running. Stop it before undoing."
+msgstr "回合仍在运行。请先停止，再撤销。"
+
+# Flow (ADR 0010)
+msgid "Cancel the turn and switch"
+msgstr "取消回合并切换"
+
+# Flow (ADR 0010)
+msgid "Choose Classic, Flow or Security for this workspace."
+msgstr "为此工作区选择 Classic、Flow 或 Security。"
+
+# Flow (ADR 0010)
+msgid "Classic · recommended"
+msgstr "Classic · 推荐"
+
+# Flow (ADR 0010)
+msgid "Flow could not prepare recovery. Nothing started; prompt kept."
+msgstr "Flow 无法准备恢复记录。未启动操作；提示已保留。"
+
+# Flow (ADR 0010)
+msgid "Flow recovery record could not be closed. Inspect files and the action journal before continuing."
+msgstr "无法关闭 Flow 恢复记录。继续之前请检查文件和操作日志。"
+
+# Flow (ADR 0010)
+msgid "Flow turn restored · {count} files. Commits remain in Git history."
+msgstr "Flow 回合已恢复 · {count} 个文件。提交保留在 Git 历史中。"
+
+# Flow (ADR 0010)
+msgid "Flow turn · {count} files · /undo restores this turn; later human edits are kept."
+msgstr "Flow 回合 · {count} 个文件 · /undo 恢复此回合；保留之后的人工修改。"
+
+# Flow (ADR 0010)
+msgid "Flow · recoverable local work without questions"
+msgstr "Flow · 无需逐次确认的可恢复本地工作"
+
+# Flow (ADR 0010)
+msgid "Kept later change · {path}"
+msgstr "已保留后续修改 · {path}"
+
+# Flow (ADR 0010)
+msgid "No recorded Flow turn to undo."
+msgstr "没有可撤销的 Flow 回合记录。"
+
+# Flow (ADR 0010)
+msgid "Nothing undone · {reason}"
+msgstr "未撤销任何操作 · {reason}"
+
+# Flow (ADR 0010)
+msgid "Switch this workspace to {mode}?"
+msgstr "将此工作区切换到 {mode} 吗？"
+
+# Flow (ADR 0010)
+msgid "The current turn is cancelled before the engine restarts. Completed effects stay in the action journal and can be undone; nothing new is started."
+msgstr "切换模式前将取消当前回合。已完成的效果保留在操作日志中并可撤销；不会启动新操作。"
+
+# Flow (ADR 0010)
+msgid "Use {mode}"
+msgstr "使用 {mode}"
+
+# Flow (ADR 0010)
+msgid "Workflow"
+msgstr "工作模式"
+
+# Flow (ADR 0010)
+msgid "Workflow · {mode}"
+msgstr "工作模式 · {mode}"
+
+# Flow (ADR 0010)
+msgid "Workspace now uses {mode} mode."
+msgstr "工作区现已使用 {mode} 模式。"
+
+# Flow (ADR 0010)
+msgid "{mode} · current"
+msgstr "{mode} · 当前"
+
+# Flow (ADR 0010)
+msgid "{root}\nClassic (recommended): review edits and commands, or trust this folder for quiet local work.\nFlow: edits, moves, deletes and sandboxed shell commands run without questions. Each chat turn is recorded; /undo restores its files while keeping later human changes. Commits of this turn's own files can run quietly.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel, budgets and receipts. Push, secrets, integrations and authority changes still ask or stay off. Flow commands need a verified sandbox; command network stays off."
+msgstr "{root}\nClassic（推荐）：审核编辑和命令，或信任此文件夹以减少本地操作确认。\nFlow：编辑、移动、删除和隔离环境内的 shell 命令无需逐次确认。每个聊天回合都有记录；/undo 恢复其文件，同时保留后续人工修改。仅属于当前回合的文件可以静默提交。\nSecurity：默认关闭所有权限，直到您允许。\n所有模式都保留 Sentinel、预算和收据。推送、密钥、集成及权限更改仍需确认或保持关闭。Flow 命令需要经过验证的隔离环境；命令网络保持关闭。"
+
+# Flow (ADR 0010)
+msgid "Flow works on its own: reading, edits, moves, deletes and sandboxed commands run without asking, and a shell is available inside the sandbox. Each turn is recorded so you can undo it with /undo. Push, credentials, provider and authority changes, integrations and network for commands still ask or stay off. Classic is recommended for large work, if you are new to the TUI or want more control; Security is for sensitive files and explicit permissions."
+msgstr "Flow 自主工作：读取、编辑、移动、删除及隔离环境内的命令无需逐次确认，shell 仅在隔离环境内可用。每个回合都有记录，可通过 /undo 撤销。推送、密钥、提供商和权限更改、集成及命令网络仍需确认或保持关闭。大型任务、初次使用或需要更多控制时推荐 Classic；敏感文件和显式授权使用 Security。"
+
+msgid "Local work follows the selected workflow; sensitive actions still ask or stay off."
+msgstr "本地工作遵循所选工作模式；敏感操作仍需确认或保持关闭。"
+
+msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
+msgstr "Flow 记录可通过 /undo 恢复的工作区修改。显式拒绝、预算和隔离边界仍然适用。"
