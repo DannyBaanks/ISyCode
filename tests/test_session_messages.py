@@ -62,7 +62,7 @@ def test_message_reaches_another_conversation_as_the_user(tmp_path, monkeypatch)
             assert seen[-1] == "ping-from-danny"
             target = app._lanes[sid]
             assert any(kind == "user" and text == "ping-from-danny"
-                       for kind, text, _extra in target.lines)
+                       for kind, text, *_ in target.lines)
             assert app._foreground_key == home
             assert "ping-from-danny" not in _chat_text(app)
             assert "Sent to" in _chat_text(app)
@@ -116,7 +116,7 @@ def test_message_waits_when_the_other_conversation_is_working(tmp_path, monkeypa
             assert task.done() and not task.cancelled()
             assert seen[-1] == "ping-from-danny"
             assert any(kind == "user" and text == "ping-from-danny"
-                       for kind, text, _extra in first.lines)
+                       for kind, text, *_ in first.lines)
 
     asyncio.run(scenario())
 
@@ -133,9 +133,11 @@ def test_same_title_does_not_guess_and_the_open_chat_is_refused(tmp_path, monkey
             prompt = app.query_one("#prompt-input")
             prompt.load_text("hello-a")
             await pilot.press("enter")
+            # The first chat must be saved under its title before a second one opens.
             for _ in range(200):
                 await pilot.pause(0.05)
-                if seen:
+                task = app._loop_task
+                if seen and app._active_chat_session_id and (task is None or task.done()):
                     break
             app._start_new_conversation()
             await pilot.pause()

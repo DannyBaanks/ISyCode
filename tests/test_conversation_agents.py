@@ -63,7 +63,7 @@ def test_switching_leaves_the_other_conversation_running(tmp_path, monkeypatch):
                 if task.done():
                     break
             assert task.done() and not task.cancelled()
-            assert any(kind == "note" and "FROM keep-going" in text for kind, text, _extra in first.lines)
+            assert any(kind == "note" and "FROM keep-going" in text for kind, text, *_ in first.lines)
             app._show_lane(first)
             await pilot.pause()
             assert "FROM keep-going" in _chat_text(app)
