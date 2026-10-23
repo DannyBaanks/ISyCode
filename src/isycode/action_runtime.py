@@ -1976,6 +1976,26 @@ class BridgeCoordinationSystembility:
         return True
 
 
+class GusL0Systembility:
+    """Inside a GUS turn: only GUS's role, and never a change to ISyCode's L0 (ADR 0013).
+
+    Outside a GUS turn this check always passes; it never widens anything.
+    """
+
+    name = "GusL0Boundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        from isycode.gus_l0 import l0_refusal
+        try:
+            reason = l0_refusal(request)
+        except Exception:
+            reason = "the GUS boundary could not be evaluated"
+        if reason:
+            return SystembilityResult(self.name, False, reason)
+        return SystembilityResult(self.name, True, "not a GUS change to L0")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
@@ -2043,7 +2063,7 @@ class ProductActionGate:
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
             BridgePresenceSystembility(), BridgeCoordinationSystembility(),
-            WorkspaceMemorySystembility(),
+            WorkspaceMemorySystembility(), GusL0Systembility(),
         ])
 
     def preview(self, request: ActionRequest):

@@ -13,12 +13,21 @@ execution owner (a class named ``...Owner``) is L0.
 
 The fingerprint is a SHA-256 per L0 file, taken before a GUS turn and compared
 after it. It is a hash check, not a filesystem lock (ADR 0013, "no demostrado").
+
+A GUS turn is marked with ``gus_turn(root)``, a ContextVar that tasks and threads
+started inside the turn inherit. While it is set for a workspace, ``l0_refusal``
+(checked by IsySentinel for every owner request) refuses an action outside GUS's
+role and any change that names an L0 path, and command staging refuses to
+promote a measured change to L0. Reading L0 stays allowed: GUS must know it.
 """
 from __future__ import annotations
 
 import hashlib
 import os
 import posixpath
+import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -217,5 +226,83 @@ def manifest_text(current: L0Fingerprint) -> str:
             f"{listed}\n{folders}")
 
 
+# ── the GUS turn boundary ─────────────────────────────────────
+
+_GUS_TURN: ContextVar[str | None] = ContextVar("isycode_gus_turn", default=None)
+# Actions whose request names the paths it changes; reads and the turn undo are not here.
+_CHANGE_ACTIONS = frozenset({
+    "workspace.files.write", "workspace.files.restore", "workspace.files.delete",
+    "workspace.files.move", "workspace.config.write", "git.commit"})
+_GUS_BRANCH = re.compile(r"ref: refs/heads/gus/[a-z0-9][a-z0-9-]{0,47}")
+
+
+def _root_key(root) -> str:
+    return str(Path(root).resolve())
+
+
+@contextmanager
+def gus_turn(root: Path):
+    """Mark work started inside this block as GUS's, for one workspace."""
+    token = _GUS_TURN.set(_root_key(root))
+    try:
+        yield
+    finally:
+        _GUS_TURN.reset(token)
+
+
+def gus_turn_active(root) -> bool:
+    current = _GUS_TURN.get()
+    try:
+        return current is not None and current == _root_key(root)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return False
+
+
+def on_gus_branch(root: Path) -> bool:
+    """Whether the checkout's HEAD is a ``gus/<topic>`` branch (a plain .git folder only)."""
+    try:
+        head = (Path(root) / ".git" / "HEAD")
+        if (Path(root) / ".git").is_symlink() or not head.is_file() or head.is_symlink():
+            return False
+        return _GUS_BRANCH.fullmatch(head.read_text(encoding="utf-8").strip()) is not None
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
+def _named_paths(parameters) -> list[str]:
+    named = [parameters.get("path"), parameters.get("to")]
+    many = parameters.get("paths")
+    if isinstance(many, (list, tuple)):
+        named.extend(many)
+    return [item for item in named if isinstance(item, str)]
+
+
+def l0_refusal(request) -> str | None:
+    """Why this request may not run inside a GUS turn, or None (also outside one)."""
+    if not gus_turn_active(request.workspace_root):
+        return None
+    from isycode.gus_role import GUS_ACTION_CEILING  # gus_role reaches the trust module
+    if request.action_id not in GUS_ACTION_CEILING:
+        return f"{request.action_id} is outside GUS's role"
+    if request.action_id in _CHANGE_ACTIONS:
+        for path in _named_paths(request.parameters):
+            if touches_l0(path):
+                return f"{path} is ISyCode L0; a GUS turn cannot change it (ADR 0013)"
+    return None
+
+
+def l0_change_refusal(root: Path, changes) -> str | None:
+    """Why measured command changes may not be promoted in a GUS turn, or None."""
+    if not gus_turn_active(root):
+        return None
+    for change in changes:
+        for key in ("path", "from"):
+            path = change.get(key) if isinstance(change, dict) else None
+            if isinstance(path, str) and touches_l0(path):
+                return f"{path} is ISyCode L0; a GUS turn cannot change it (ADR 0013)"
+    return None
+
+
 __all__ = ["L0Fingerprint", "L0_DIRECTORIES", "L0_FILES", "L0_RULE", "fingerprint",
-           "manifest_text", "repository_path", "touches_l0"]
+           "gus_turn", "gus_turn_active", "l0_change_refusal", "l0_refusal", "manifest_text",
+           "on_gus_branch", "repository_path", "touches_l0"]
