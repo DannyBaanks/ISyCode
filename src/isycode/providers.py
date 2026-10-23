@@ -415,9 +415,12 @@ def add_custom_model(provider: str, model: str) -> str:
     return model
 
 
+MODEL_SLOTS = ("small", "gus")
+
+
 def model_slot(slot: str) -> dict[str, str] | None:
     """Return one optional model role; slots carry metadata, never authority."""
-    if slot != "small":
+    if slot not in MODEL_SLOTS:
         return None
     item = _load_preferences().get("slots", {}).get(slot)
     if (not isinstance(item, dict) or set(item) != {"provider", "model"}
@@ -433,7 +436,7 @@ def save_model_slot(slot: str, provider: str, model: str) -> None:
     """Persist a bounded non-secret model role in the same private preferences file."""
     provider = provider.casefold()
     model = model.strip()
-    if slot != "small":
+    if slot not in MODEL_SLOTS:
         raise ValueError("unknown model slot")
     if (provider not in PRESETS or not model or len(model) > 256
             or any(ord(char) < 32 for char in model)):
