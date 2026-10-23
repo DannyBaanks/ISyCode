@@ -118,6 +118,14 @@ No se crea un sistema de lanes nuevo.
 Diseño según `.agents/skills/isycode-design`.
 Dependencias: MK3.
 
+Implementación:
+- `gus_session.py`: habilitación por workspace (`GusState`, registros privados ligados a la ruta resuelta), transcripción propia con tope de 80 entradas y `gus_reply`.
+  - `gus_reply` revisa el checkout, la habilitación, el rol, el slot y el paquete, y arma la petición con `plan_gus_request`.
+  - La manda por `ProviderNetworkOwner` (autorización y recibo).
+  - Si la petición planeada no deja un 25 % de la ventana para la respuesta, no la manda; así se cubre un mensaje más grande que la ventana.
+  - En este hito GUS no tiene herramientas: lee su contexto fijo y responde. Las ediciones llegan en MK5.
+- `tui_screens_gus.py` (ventana) y `tui_app_gus.py` (`/gus`, «GUS en este workspace» y «Hablar con GUS» en Configuración). GUS usa el color del rol `maintainer`.
+
 - `GK4-00`: GUS se habilita por workspace solo con una confirmación explícita de la persona, guardada por la identidad de ese workspace en `StateIndex`. `is_isycode_checkout` (dos marcadores) solo decide si se ofrece la entrada en Configuración; nunca habilita GUS. Otro proyecto que copie esos archivos ve la entrada, pero GUS no actúa hasta que la persona lo habilite ahí.
 - `GK4-03`: las peticiones de GUS se presupuestan con `gus_slot.planning_window`: la ventana conocida o, si es desconocida, 32 000 tokens. Ninguna petición supera esa ventana.
 - `GK4-01`: abrir, conversar, cerrar y retomar GUS sin mezclar su transcripción con la del chat.

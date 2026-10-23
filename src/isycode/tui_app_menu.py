@@ -139,6 +139,9 @@ async def _mcp_cmd(app: "TUIApp", arg: str) -> None:
 async def _idea_cmd(app: "TUIApp", arg: str) -> None:
     app._open_idea_note()
 
+async def _gus_cmd(app: "TUIApp", arg: str) -> None:
+    await app._open_gus(arg.strip())
+
 async def _compact_cmd(app: "TUIApp", arg: str) -> None:
     await app._compact_conversation(arg.strip())
 
@@ -424,6 +427,8 @@ class MenuAction(str, Enum):
     USER_DEFAULT_ROLE_CLEAR = "user_default_role_clear"
     WORKFLOW_OPEN = "workflow_open"
     GUS_SLOT_OPEN = "gus_slot_open"
+    GUS_TOGGLE = "gus_toggle"
+    GUS_OPEN = "gus_open"
     GUS_SLOT_PROVIDER = "gus_slot_provider"
     GUS_SLOT_MODEL = "gus_slot_model"
     WORKSPACE_MODE = "workspace_mode"
@@ -551,6 +556,8 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.USER_DEFAULT_ROLE_CLEAR: "_menu_user_default_role_clear",
     MenuAction.WORKFLOW_OPEN: "_menu_workflow_open",
     MenuAction.GUS_SLOT_OPEN: "_menu_gus_slot_open",
+    MenuAction.GUS_TOGGLE: "_menu_gus_toggle",
+    MenuAction.GUS_OPEN: "_menu_gus_open",
     MenuAction.GUS_SLOT_PROVIDER: "_menu_gus_slot_provider",
     MenuAction.GUS_SLOT_MODEL: "_menu_gus_slot_model",
     MenuAction.WORKSPACE_MODE: "_menu_workspace_mode",
@@ -731,6 +738,7 @@ class MenuMixin:
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("idea", "expand the current idea note", _idea_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
+                PluginCommand("gus", "talk to GUS, the ISyCode maintainer (ISyCode repository only)", _gus_cmd),
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
                 PluginCommand("iteration", "sequential iteration with three chosen models; /iteration retry <id>", _iteration_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
@@ -808,6 +816,13 @@ class MenuMixin:
 
     def _menu_gus_slot_open(self, entry) -> None:
         self._open_gus_slot_menu()
+
+    def _menu_gus_toggle(self, entry) -> None:
+        self.run_worker(self._toggle_gus_here(), exclusive=True, group="gus")
+
+    def _menu_gus_open(self, entry) -> None:
+        self._close_menu()
+        self.run_worker(self._open_gus(), exclusive=True, group="gus")
 
     def _menu_gus_slot_provider(self, entry) -> None:
         self._open_gus_models_menu(str(entry["value"]))

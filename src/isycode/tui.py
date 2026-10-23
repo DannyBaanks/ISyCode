@@ -315,6 +315,7 @@ from isycode.tui_screens_sessions import (
 from isycode.tui_app_sessions import SessionMixin
 from isycode.tui_app_rail import RailMixin
 from isycode.tui_app_providers import ProviderMixin
+from isycode.tui_app_gus import GusMixin
 from isycode.tui_app_authority import FILE_CHANGE_GRANTS, AuthorityMixin
 from isycode.tui_app_remote import RemoteMixin
 from isycode.tui_app_workspace import WorkspaceMixin
@@ -343,7 +344,7 @@ def _terminal_grid_size() -> tuple[int, int] | None:
     return size.columns, size.lines
 
 
-class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin, WorkspaceMixin, ToolMixin, ChatMixin, MenuMixin, App):
+class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, RemoteMixin, WorkspaceMixin, ToolMixin, ChatMixin, MenuMixin, App):
     """ISyCode TUI — Crush-inspired, chat-first, IsyMotron as a plugin."""
 
     ENABLE_COMMAND_PALETTE = False
@@ -1257,8 +1258,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("Show a preview box below the file tree in the sidebar.")),
         ]
         if is_isycode_checkout(self._workspace_root):
-            entries.append(self._entry(tr("GUS model · {model}", model=self._gus_slot_label()),
-                                       "gus_slot_open", ""))
+            on = tr("on") if self._gus_enabled_here() else tr("off")
+            entries.extend([
+                self._entry(tr("GUS in this workspace · {state}", state=on), "gus_toggle", ""),
+                self._entry(tr("Talk to GUS"), "gus_open", ""),
+                self._entry(tr("GUS model · {model}", model=self._gus_slot_label()),
+                            "gus_slot_open", ""),
+            ])
         if self._workspace_identity.workspace_root_source == "isyroot":
             entries.extend([
                 self._entry("Initialize this workspace's .isycode/", "workspace_config_init", "",
@@ -1288,6 +1294,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "models_open": "Choose the model used for this conversation.",
                 "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
                 "gus_slot_open": "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more.",
+                "gus_toggle": "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript.",
+                "gus_open": "Open GUS's own conversation. It reads its project context and answers; it has no tools yet.",
                 "roles_open": "Choose instructions for how the agent should work.",
                 "clear_role": "Remove the selected role from this conversation.",
                 "context_menu": "Review the context available to the agent.",

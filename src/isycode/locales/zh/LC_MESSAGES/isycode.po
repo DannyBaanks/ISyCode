@@ -6134,3 +6134,84 @@ msgstr "窗口小于 32k token：GUS 的固定上下文放不下。"
 
 msgid "GUS has no model yet. Choose one in Settings → GUS model."
 msgstr "GUS 还没有模型。请在“设置 → GUS 模型”中选择。"
+
+msgid "Clear conversation"
+msgstr "清空对话"
+
+msgid "Conversation cleared."
+msgstr "对话已清空。"
+
+msgid "Enable GUS"
+msgstr "启用 GUS"
+
+msgid "Enable GUS in this workspace?"
+msgstr "在此工作区启用 GUS？"
+
+msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
+msgstr "Enter 发送 · Esc 关闭 · GUS 还没有工具：它读取项目上下文并回答"
+
+msgid "GUS could not answer · {reason}"
+msgstr "GUS 无法回答 · {reason}"
+
+msgid "GUS could not be enabled · {reason}"
+msgstr "无法启用 GUS · {reason}"
+
+msgid "GUS enabled in this workspace"
+msgstr "已在此工作区启用 GUS"
+
+msgid "GUS in this workspace · {state}"
+msgstr "此工作区中的 GUS · {state}"
+
+msgid "GUS is still answering."
+msgstr "GUS 仍在回答。"
+
+msgid "GUS is thinking…"
+msgstr "GUS 正在思考…"
+
+msgid "GUS maintains ISyCode with its own model ({destination}). Enabling it here lets GUS read its fixed project context (AGENTS.md, the design skill and standard, ADR titles) with receipts and send it, with your messages to GUS, to that model. In this version GUS has no tools: it reads and answers. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS 使用自己的模型（{destination}）维护 ISyCode。在此启用后，GUS 会带收据读取其固定项目上下文（AGENTS.md、设计 skill 和标准、ADR 标题），并将其连同你发给 GUS 的消息发送到该模型。此版本中 GUS 没有工具：只读取和回答。它不会给自己授予任何权限；可随时在“设置”中关闭。"
+
+msgid "GUS role not loaded · {reason}"
+msgstr "GUS 角色未加载 · {reason}"
+
+msgid "GUS turned off in this workspace"
+msgstr "已在此工作区关闭 GUS"
+
+msgid "GUS works only in the ISyCode repository."
+msgstr "GUS 只在 ISyCode 仓库中工作。"
+
+msgid "GUS · {model}"
+msgstr "GUS · {model}"
+
+msgid "Talk to GUS"
+msgstr "与 GUS 对话"
+
+msgid "Write to GUS…"
+msgstr "给 GUS 写消息…"
+
+msgid "You"
+msgstr "你"
+
+msgid "no model chosen yet"
+msgstr "尚未选择模型"
+
+msgid "{provider} / {model}"
+msgstr "{provider} / {model}"
+
+msgid "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
+msgstr "与 ISyCode 维护者 GUS 对话（仅限 ISyCode 仓库）"
+
+msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
+msgstr "只有在你为此工作区启用后，GUS 才会在这里回答；关闭它会保留其对话记录。"
+
+msgid "Open GUS's own conversation. It reads its project context and answers; it has no tools yet."
+msgstr "打开 GUS 自己的对话。它读取项目上下文并回答；还没有工具。"
+
+msgid "GUS is not enabled for this workspace."
+msgstr "此工作区未启用 GUS。"
+
+msgid "This message is too large for GUS's model window."
+msgstr "此消息对 GUS 模型的窗口来说太大。"
+
+msgid "GUS's model returned no answer."
+msgstr "GUS 的模型没有返回回答。"

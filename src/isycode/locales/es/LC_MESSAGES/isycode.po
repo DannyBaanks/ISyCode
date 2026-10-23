@@ -6134,3 +6134,84 @@ msgstr "Ventana menor de 32k tokens: el contexto fijo de GUS no cabría."
 
 msgid "GUS has no model yet. Choose one in Settings → GUS model."
 msgstr "GUS todavía no tiene modelo. Elige uno en Configuración → Modelo de GUS."
+
+msgid "Clear conversation"
+msgstr "Limpiar conversación"
+
+msgid "Conversation cleared."
+msgstr "Conversación limpia."
+
+msgid "Enable GUS"
+msgstr "Habilitar GUS"
+
+msgid "Enable GUS in this workspace?"
+msgstr "¿Habilitar GUS en este workspace?"
+
+msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
+msgstr "Enter envía · Esc cierra · GUS todavía no tiene herramientas: lee su contexto del proyecto y responde"
+
+msgid "GUS could not answer · {reason}"
+msgstr "GUS no pudo responder · {reason}"
+
+msgid "GUS could not be enabled · {reason}"
+msgstr "No se pudo habilitar GUS · {reason}"
+
+msgid "GUS enabled in this workspace"
+msgstr "GUS habilitado en este workspace"
+
+msgid "GUS in this workspace · {state}"
+msgstr "GUS en este workspace · {state}"
+
+msgid "GUS is still answering."
+msgstr "GUS todavía está respondiendo."
+
+msgid "GUS is thinking…"
+msgstr "GUS está pensando…"
+
+msgid "GUS maintains ISyCode with its own model ({destination}). Enabling it here lets GUS read its fixed project context (AGENTS.md, the design skill and standard, ADR titles) with receipts and send it, with your messages to GUS, to that model. In this version GUS has no tools: it reads and answers. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS mantiene ISyCode con su propio modelo ({destination}). Habilitarlo aquí permite que GUS lea su contexto fijo del proyecto (AGENTS.md, la skill y el estándar de diseño, los títulos de los ADR) con recibos y lo envíe, junto con tus mensajes a GUS, a ese modelo. En esta versión GUS no tiene herramientas: lee y responde. No se concede nada a sí mismo; apágalo cuando quieras en Configuración."
+
+msgid "GUS role not loaded · {reason}"
+msgstr "El rol de GUS no cargó · {reason}"
+
+msgid "GUS turned off in this workspace"
+msgstr "GUS apagado en este workspace"
+
+msgid "GUS works only in the ISyCode repository."
+msgstr "GUS solo funciona en el repositorio de ISyCode."
+
+msgid "GUS · {model}"
+msgstr "GUS · {model}"
+
+msgid "Talk to GUS"
+msgstr "Hablar con GUS"
+
+msgid "Write to GUS…"
+msgstr "Escríbele a GUS…"
+
+msgid "You"
+msgstr "Tú"
+
+msgid "no model chosen yet"
+msgstr "todavía sin modelo"
+
+msgid "{provider} / {model}"
+msgstr "{provider} / {model}"
+
+msgid "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
+msgstr "hablar con GUS, el mantenedor de ISyCode (solo en el repositorio de ISyCode)"
+
+msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
+msgstr "GUS responde aquí solo después de que lo habilites en este workspace; apagarlo conserva su transcripción."
+
+msgid "Open GUS's own conversation. It reads its project context and answers; it has no tools yet."
+msgstr "Abre la conversación propia de GUS. Lee su contexto del proyecto y responde; todavía no tiene herramientas."
+
+msgid "GUS is not enabled for this workspace."
+msgstr "GUS no está habilitado en este workspace."
+
+msgid "This message is too large for GUS's model window."
+msgstr "Este mensaje es demasiado grande para la ventana del modelo de GUS."
+
+msgid "GUS's model returned no answer."
+msgstr "El modelo de GUS no devolvió respuesta."
