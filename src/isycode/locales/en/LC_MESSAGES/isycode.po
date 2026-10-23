@@ -6198,8 +6198,8 @@ msgstr "no model chosen yet"
 msgid "{provider} / {model}"
 msgstr "{provider} / {model}"
 
-msgid "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
-msgstr "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic> (ISyCode repository only)"
+msgstr "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic> (ISyCode repository only)"
 
 msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
 msgstr "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
@@ -6218,3 +6218,36 @@ msgstr "GUS's model returned no answer."
 
 msgid "GUS, the ISyCode maintainer · click to talk to it"
 msgstr "GUS, the ISyCode maintainer · click to talk to it"
+
+msgid "Create {branch} for GUS?"
+msgstr "Create {branch} for GUS?"
+
+msgid "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+msgstr "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+
+msgid "Create branch · y"
+msgstr "Create branch · y"
+
+msgid "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+msgstr "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+
+msgid "git branch"
+msgstr "git branch"
+
+msgid "GUS branch not proposed · {reason}"
+msgstr "GUS branch not proposed · {reason}"
+
+msgid "GUS branch rejected · nothing changed"
+msgstr "GUS branch rejected · nothing changed"
+
+msgid "GUS branch {decision} · {reason}"
+msgstr "GUS branch {decision} · {reason}"
+
+msgid "On {branch} · receipt {receipt_id}"
+msgstr "On {branch} · receipt {receipt_id}"
+
+msgid "Create GUS branches"
+msgstr "Create GUS branches"
+
+msgid "Create and switch to a new gus/* branch"
+msgstr "Create and switch to a new gus/* branch"

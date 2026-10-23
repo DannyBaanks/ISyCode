@@ -140,7 +140,11 @@ async def _idea_cmd(app: "TUIApp", arg: str) -> None:
     app._open_idea_note()
 
 async def _gus_cmd(app: "TUIApp", arg: str) -> None:
-    await app._open_gus(arg.strip())
+    text = arg.strip()
+    if text.split(maxsplit=1)[:1] == ["branch"]:
+        await app._create_gus_branch(text[len("branch"):].strip())
+        return
+    await app._open_gus(text)
 
 async def _compact_cmd(app: "TUIApp", arg: str) -> None:
     await app._compact_conversation(arg.strip())
@@ -738,7 +742,7 @@ class MenuMixin:
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("idea", "expand the current idea note", _idea_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
-                PluginCommand("gus", "talk to GUS, the ISyCode maintainer (ISyCode repository only)", _gus_cmd),
+                PluginCommand("gus", "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic> (ISyCode repository only)", _gus_cmd),
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
                 PluginCommand("iteration", "sequential iteration with three chosen models; /iteration retry <id>", _iteration_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),

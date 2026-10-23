@@ -1,12 +1,15 @@
-"""GUS entry points in the TUI (ADR 0011, MK4): /gus and the Settings switch."""
+"""GUS entry points in the TUI (ADR 0011, MK4): /gus, the Settings switch and gus/* branches."""
 from __future__ import annotations
 
+import asyncio
+
 from isycode import gus_slot
+from isycode.git_owner import GitOwner
 from isycode.gus_role import GusRoleError, is_isycode_checkout, load_gus_role
 from isycode.gus_session import GusState
 from isycode.localization import tr
 from isycode.providers import PRESETS
-from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_approval import GusBranchApprovalScreen, TailscaleConfirmScreen
 from isycode.tui_screens_gus import GusScreen
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
 from isycode.workspace_authority import WorkspaceAuthority
@@ -57,6 +60,31 @@ class GusMixin:
         root = self._workspace_root
         await self._await_screen(GusScreen(
             root, lambda: WorkspaceAuthority(root), self._gus_slot_label(), initial=initial))
+
+    async def _create_gus_branch(self, topic: str) -> str | None:
+        """MK5b: create and switch to ``gus/<topic>`` after an exact approval; the branch or None."""
+        if not is_isycode_checkout(self._workspace_root):
+            self._set_activity(tr("GUS works only in the ISyCode repository."), YELLOW)
+            return None
+        root = self._workspace_root
+        try:
+            owner = GitOwner(root, WorkspaceAuthority(root), self._action_approvals)
+            preview = await asyncio.to_thread(owner.preview_gus_branch, topic)
+        except (OSError, ValueError) as exc:
+            self._set_activity(tr("GUS branch not proposed · {reason}", reason=str(exc)[:160]), YELLOW)
+            return None
+        if not await self._await_screen(GusBranchApprovalScreen(preview)):
+            self._set_activity(tr("GUS branch rejected · nothing changed"), MUTED)
+            return None
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.create_gus_branch, preview, approval)
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            self._set_activity(tr("GUS branch {decision} · {reason}", decision=outcome.decision,
+                                  reason=outcome.reason[:160]), RED)
+            return None
+        self._set_activity(tr("On {branch} · receipt {receipt_id}", branch=preview.branch,
+                              receipt_id=outcome.receipt.receipt_id), GREEN)
+        return preview.branch
 
     async def _toggle_gus_here(self) -> None:
         if self._gus_enabled_here():

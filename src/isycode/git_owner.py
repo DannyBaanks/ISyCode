@@ -125,6 +125,28 @@ def _sensitive(path: str) -> bool:
     return any(WorkspaceReadSystembility.is_sensitive_name(part) for part in path.split("/"))
 
 
+# The only branches ISyCode creates are GUS's (ADR 0011 D1, ADR 0013 L2).
+GUS_BRANCH_RE = re.compile(r"^gus/[a-z0-9][a-z0-9-]{0,47}$")
+
+
+def gus_branch_name(topic: str) -> str:
+    """``gus/<topic>`` from free text: lowercase letters, digits and dashes, at most 48."""
+    if not isinstance(topic, str):
+        raise ValueError("the branch topic must be text")
+    slug = re.sub(r"[^a-z0-9]+", "-", topic.casefold()).strip("-")[:48].strip("-")
+    if not slug:
+        raise ValueError("the branch topic needs at least one letter or digit")
+    return f"gus/{slug}"
+
+
+@dataclass(frozen=True)
+class BranchPreview:
+    request: ActionRequest
+    branch: str
+    base: str
+    current: str
+
+
 @dataclass(frozen=True)
 class CommitPreview:
     request: ActionRequest
@@ -134,7 +156,7 @@ class CommitPreview:
 
 
 class GitOwner:
-    """The only execution owner for git.status, git.diff and git.commit."""
+    """The only execution owner for git.status, git.diff, git.commit and git.branch.create."""
 
     def __init__(self, root: Path, authority: WorkspaceAuthority,
                  approvals: ActionApprovalStore | None = None,
@@ -564,6 +586,55 @@ class GitOwner:
         return self._finish(request, {"commit": commit_id.strip(), "paths": list(preview.paths),
                                       "message": preview.message})
 
+    # ── GUS branches ─────────────────────────────────────────────
 
-__all__ = ["GIT_COMMIT_TOOL", "GIT_TOOLS", "GIT_TOOL_NAMES", "CommitPreview", "GitOwner",
+    def _branch_exists(self, branch: str) -> bool:
+        _, _ = self._git("check-ref-format", "--branch", branch)
+        text, _ = self._git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", ok_codes=(0, 1))
+        return bool(text.strip())
+
+    def _head(self) -> tuple[str, str]:
+        commit, _ = self._git("rev-parse", "--verify", "HEAD")
+        current, _ = self._git("rev-parse", "--abbrev-ref", "HEAD")
+        return commit.strip(), current.strip()
+
+    def preview_gus_branch(self, topic: str) -> BranchPreview:
+        """The reviewed ``gus/<topic>`` branch at the current commit. Raises ValueError."""
+        problem = self._repository_problem()
+        if problem:
+            raise ValueError(problem)
+        branch = gus_branch_name(topic)
+        if self._branch_exists(branch):
+            raise ValueError(f"{branch} already exists")
+        base, current = self._head()
+        return BranchPreview(self._request("git.branch.create", branch=branch, base=base), branch, base, current)
+
+    def create_gus_branch(self, preview: BranchPreview, approval: ActionApproval | None) -> ActionOutcome:
+        """Create the reviewed branch and switch to it; the working tree is left as it is."""
+        request = preview.request
+        try:
+            base, _ = self._head()
+            exists = self._branch_exists(preview.branch)
+        except ValueError as exc:
+            return ActionOutcome("Branch denied.", "DENY", None, str(exc)[:300])
+        if base != preview.base:
+            return ActionOutcome("Branch denied.", "DENY", None,
+                                 "HEAD moved after review; no branch was created")
+        if exists:
+            return ActionOutcome("Branch denied.", "DENY", None, f"{preview.branch} already exists")
+        reason = self._authorize(request, approval)
+        if reason:
+            return ActionOutcome("Branch denied.", "DENY", None, reason)
+        try:
+            self._git("switch", "--no-guess", "-c", preview.branch)
+            now, current = self._head()
+        except ValueError as exc:
+            return ActionOutcome("Branch failed.", "ERROR", None, str(exc)[:300])
+        if current != preview.branch or now != preview.base:
+            return ActionOutcome("Branch failed.", "ERROR", None, "git did not switch to the reviewed branch")
+        return self._finish(request, {"branch": preview.branch, "base": preview.base,
+                                      "from": preview.current})
+
+
+__all__ = ["BranchPreview", "GIT_COMMIT_TOOL", "GUS_BRANCH_RE", "gus_branch_name", "GIT_TOOLS", "GIT_TOOL_NAMES", "CommitPreview", "GitOwner",
            "git_executable"]

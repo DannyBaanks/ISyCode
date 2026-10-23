@@ -240,6 +240,22 @@
       "variants": []
     },
     {
+      "action": "git.branch.create",
+      "approval_required": true,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "write",
+      "owners": [
+        "workspace_git"
+      ],
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN",
+      "sentinel": [
+        "GitBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
       "action": "git.push",
       "approval_required": true,
       "authority": "Workspace Authority",
@@ -1545,6 +1561,12 @@
       "status": "COVERED"
     },
     {
+      "action": "git.branch.create",
+      "callsite": "GitOwner.create_gus_branch",
+      "owner": "workspace_git",
+      "status": "COVERED"
+    },
+    {
       "action": "git.push",
       "callsite": "PublishOwner.run",
       "owner": "workspace_publish",
@@ -1857,7 +1879,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "file": "isycode/action_runtime.py",
-      "line": 2634,
+      "line": 2641,
       "owner": "workspace_read"
     },
     {
@@ -1878,7 +1900,7 @@
       "action": null,
       "callable": "isycode.git_owner.GitOwner._request",
       "file": "isycode/git_owner.py",
-      "line": 317,
+      "line": 339,
       "owner": "workspace_git"
     },
     {
@@ -1926,77 +1948,77 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 2351,
+      "line": 2358,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "file": "isycode/action_runtime.py",
-      "line": 2477,
+      "line": 2484,
       "owner": "grit_peers"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 2132,
+      "line": 2139,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 2204,
+      "line": 2211,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 2274,
+      "line": 2281,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 2360,
+      "line": 2367,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 2411,
+      "line": 2418,
       "owner": "lsp_symbols"
     },
     {
       "action": "lsp.diagnostics",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 2419,
+      "line": 2426,
       "owner": "lsp_symbols"
     },
     {
       "action": "grit.claims.read",
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "file": "isycode/action_runtime.py",
-      "line": 2485,
+      "line": 2492,
       "owner": "grit_peers"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 2547,
+      "line": 2554,
       "owner": "provider_network"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "file": "isycode/action_runtime.py",
-      "line": 2634,
+      "line": 2641,
       "owner": "workspace_read"
     },
     {
@@ -2101,7 +2123,7 @@
       "action": null,
       "callable": "isycode.git_owner.GitOwner._request",
       "file": "isycode/git_owner.py",
-      "line": 317,
+      "line": 339,
       "owner": "workspace_git"
     },
     {
@@ -2402,13 +2424,13 @@
   "secure_tui_direct_api_bypasses": [],
   "stale_callsites": [],
   "summary": {
-    "actions": 85,
+    "actions": 86,
     "ambiguous": 0,
     "authority_frontier_pass": true,
-    "effectful": 64,
+    "effectful": 65,
     "explicit_deny": 18,
     "owner_shared_read": 1,
-    "owner_valid": 64,
+    "owner_valid": 65,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

@@ -48,7 +48,7 @@ DYNAMIC_ACTION_RESOLVERS = {
     },
     "isycode.git_owner.GitOwner._request": {
         "owner": "workspace_git",
-        "actions": ("git.status", "git.diff", "git.commit"),
+        "actions": ("git.status", "git.diff", "git.commit", "git.branch.create"),
     },
     "isycode.broker.BrokerManagementOwner.request_for": {
         "owner": "broker_management",
@@ -267,6 +267,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("git.status", "GitOwner.is_path_tracked", "workspace_git", "COVERED"),
     ("git.diff", "GitOwner.diff", "workspace_git", "COVERED"),
     ("git.commit", "GitOwner.commit", "workspace_git", "COVERED"),
+    ("git.branch.create", "GitOwner.create_gus_branch", "workspace_git", "COVERED"),
     ("git.push", "PublishOwner.run", "workspace_publish", "COVERED"),
     ("mcp.local.start", "LocalMCPOwner.start", "mcp_local", "COVERED"),
     ("mcp.local.invoke", "LocalMCPOwner.call", "mcp_local", "COVERED"),

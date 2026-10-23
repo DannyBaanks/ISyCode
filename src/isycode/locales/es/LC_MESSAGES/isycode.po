@@ -6198,8 +6198,8 @@ msgstr "todavía sin modelo"
 msgid "{provider} / {model}"
 msgstr "{provider} / {model}"
 
-msgid "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
-msgstr "hablar con GUS, el mantenedor de ISyCode (solo en el repositorio de ISyCode)"
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic> (ISyCode repository only)"
+msgstr "hablar con GUS, el mantenedor de ISyCode; /gus branch <tema> crea gus/<tema> (solo en el repositorio de ISyCode)"
 
 msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
 msgstr "GUS responde aquí solo después de que lo habilites en este workspace; apagarlo conserva su transcripción."
@@ -6218,3 +6218,36 @@ msgstr "El modelo de GUS no devolvió respuesta."
 
 msgid "GUS, the ISyCode maintainer · click to talk to it"
 msgstr "GUS, el mantenedor de ISyCode · clic para hablar con él"
+
+msgid "Create {branch} for GUS?"
+msgstr "¿Crear {branch} para GUS?"
+
+msgid "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+msgstr "ISyCode crea {branch} en {base} (desde {current}) y cambia a esa rama. Tus archivos no cambian. GUS edita solo en esta rama; activas su trabajo al mergearla y lo deshaces al revertir ese merge."
+
+msgid "Create branch · y"
+msgstr "Crear rama · y"
+
+msgid "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+msgstr "sin push, sin hooks, ninguna otra rama; L0 queda fuera del alcance de GUS"
+
+msgid "git branch"
+msgstr "git branch"
+
+msgid "GUS branch not proposed · {reason}"
+msgstr "Rama de GUS no propuesta · {reason}"
+
+msgid "GUS branch rejected · nothing changed"
+msgstr "Rama de GUS rechazada · nada cambió"
+
+msgid "GUS branch {decision} · {reason}"
+msgstr "Rama de GUS {decision} · {reason}"
+
+msgid "On {branch} · receipt {receipt_id}"
+msgstr "En {branch} · recibo {receipt_id}"
+
+msgid "Create GUS branches"
+msgstr "Crear ramas de GUS"
+
+msgid "Create and switch to a new gus/* branch"
+msgstr "Crear y cambiar a una rama gus/* nueva"
