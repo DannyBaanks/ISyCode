@@ -10,10 +10,11 @@ from textual.containers import Vertical
 from textual.widgets import Input, Static
 
 from isycode.catalog import role_color
+from isycode.gus_l0 import on_gus_branch
 from isycode.gus_session import GusState, GusUnavailable, gus_reply
 from isycode.localization import tr
 from isycode.tui_dialog import Dialog, DialogAction
-from isycode.tui_theme import MUTED, RED, TEXT, YELLOW
+from isycode.tui_theme import CYAN, MUTED, RED, TEXT, YELLOW
 
 # GUS is the maintainer: it takes the maintainer role's identifying color.
 GUS_COLOR = role_color("maintainer") or TEXT
@@ -30,13 +31,16 @@ class GusScreen(Dialog):
     AUTO_FOCUS = "#gus-input"
 
     def __init__(self, root: Path, authority_factory: Callable[[], Any], model_label: str,
-                 *, initial: str = "", complete=None) -> None:
+                 *, initial: str = "", complete=None, work=None, report_text=None) -> None:
         super().__init__()
         self.root = root
         self.authority_factory = authority_factory
         self.model_label = model_label
         self.initial = initial
         self.complete = complete
+        # MK5c: on a gus/* branch a turn uses GUS's tools through ``work``.
+        self.work = work
+        self.report_text = report_text or (lambda report: "")
         self.state = GusState(root)
         self.busy = False
 
@@ -44,7 +48,7 @@ class GusScreen(Dialog):
         return tr("GUS · {model}", model=self.model_label)
 
     def dialog_hint(self) -> str:
-        return tr("Enter send · Esc close · GUS has no tools yet: it reads its project context and answers")
+        return tr("Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers")
 
     def compose_body(self) -> ComposeResult:
         with Vertical(id="gus-transcript"):
@@ -100,15 +104,29 @@ class GusScreen(Dialog):
         self.run_worker(self._ask(text), exclusive=True, group="gus-reply")
 
     async def _ask(self, text: str) -> None:
+        report = None
         try:
-            reply = await gus_reply(self.root, self.authority_factory(), text,
-                                    complete=self.complete, state=self.state)
+            if self.work is not None and on_gus_branch(self.root):
+                reply, report = await self.work(
+                    text, self.state, complete=self.complete,
+                    on_status=lambda value: self._status(tr("GUS · {value}", value=value)))
+            else:
+                reply = await gus_reply(self.root, self.authority_factory(), text,
+                                        complete=self.complete, state=self.state)
         except GusUnavailable as exc:
             self._status(tr("GUS could not answer · {reason}", reason=tr(str(exc))), RED)
         else:
             self.query_one("#gus-transcript").mount(self._line("assistant", reply.text))
-            self._status(tr("Window unknown: GUS plans for 32k until the real window is known.")
-                         if not reply.window_known else "", YELLOW)
+            note = self.report_text(report) if report else ""
+            if report and report.get("l0"):
+                self._status(note, RED)
+            elif note:
+                self._status(note, CYAN)
+            elif self.work is not None and not on_gus_branch(self.root):
+                self._status(tr("GUS edits only on a gus/* branch · /gus branch <topic>"), MUTED)
+            else:
+                self._status(tr("Window unknown: GUS plans for 32k until the real window is known.")
+                             if not reply.window_known else "", YELLOW)
         finally:
             self.busy = False
             self._scroll_end()

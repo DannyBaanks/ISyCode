@@ -6147,8 +6147,8 @@ msgstr "Enable GUS"
 msgid "Enable GUS in this workspace?"
 msgstr "Enable GUS in this workspace?"
 
-msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
-msgstr "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
 
 msgid "GUS could not answer · {reason}"
 msgstr "GUS could not answer · {reason}"
@@ -6251,3 +6251,33 @@ msgstr "Create GUS branches"
 
 msgid "Create and switch to a new gus/* branch"
 msgstr "Create and switch to a new gus/* branch"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS edits only on a gus/* branch · /gus branch <topic>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 changed and is still changed: {paths}. Review it with git."
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 changed ({paths}); the whole turn was undone."
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "Changed {count} files · /undo puts this turn back."
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "Another turn is recording this workspace; try again when it ends."
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "GUS's model returned an invalid tool batch."
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "GUS's model returned a tool call without identity."
+
+msgid "A tool result did not match its request."
+msgstr "A tool result did not match its request."

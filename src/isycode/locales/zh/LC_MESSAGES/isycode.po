@@ -6147,8 +6147,8 @@ msgstr "启用 GUS"
 msgid "Enable GUS in this workspace?"
 msgstr "在此工作区启用 GUS？"
 
-msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
-msgstr "Enter 发送 · Esc 关闭 · GUS 还没有工具：它读取项目上下文并回答"
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter 发送 · Esc 关闭 · 在 gus/* 分支上 GUS 用其工具编辑；其他情况下只阅读并回答"
 
 msgid "GUS could not answer · {reason}"
 msgstr "GUS 无法回答 · {reason}"
@@ -6251,3 +6251,33 @@ msgstr "创建 GUS 分支"
 
 msgid "Create and switch to a new gus/* branch"
 msgstr "创建并切换到新的 gus/* 分支"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS 只在 gus/* 分支上编辑 · /gus branch <主题>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 已更改且仍未恢复：{paths}。请用 git 检查。"
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 已更改（{paths}）；整个回合已撤销。"
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "已更改 {count} 个文件 · /undo 可撤销此回合。"
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS 只在 gus/* 分支上编辑。用 /gus branch <主题> 创建一个。"
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "另一个回合正在记录此工作区；请在其结束后重试。"
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "GUS 的模型返回了无效的工具批次。"
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "GUS 的模型返回了没有标识的工具调用。"
+
+msgid "A tool result did not match its request."
+msgstr "工具结果与其请求不匹配。"

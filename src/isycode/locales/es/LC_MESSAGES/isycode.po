@@ -6147,8 +6147,8 @@ msgstr "Habilitar GUS"
 msgid "Enable GUS in this workspace?"
 msgstr "¿Habilitar GUS en este workspace?"
 
-msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
-msgstr "Enter envía · Esc cierra · GUS todavía no tiene herramientas: lee su contexto del proyecto y responde"
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter envía · Esc cierra · en una rama gus/* GUS edita con sus herramientas; fuera de ella lee y responde"
 
 msgid "GUS could not answer · {reason}"
 msgstr "GUS no pudo responder · {reason}"
@@ -6251,3 +6251,33 @@ msgstr "Crear ramas de GUS"
 
 msgid "Create and switch to a new gus/* branch"
 msgstr "Crear y cambiar a una rama gus/* nueva"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS edita solo en una rama gus/* · /gus branch <tema>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 cambió y sigue cambiado: {paths}. Revísalo con git."
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 cambió ({paths}); se deshizo todo el turno."
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "{count} archivos cambiados · /undo deshace este turno."
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS edita solo en una rama gus/*. Crea una con /gus branch <tema>."
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "Otro turno está registrando este workspace; inténtalo cuando termine."
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "El modelo de GUS devolvió un lote de herramientas inválido."
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "El modelo de GUS devolvió una llamada a herramienta sin identidad."
+
+msgid "A tool result did not match its request."
+msgstr "El resultado de una herramienta no coincidió con su petición."
