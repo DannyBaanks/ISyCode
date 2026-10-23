@@ -559,6 +559,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                         yield Button(tr("Inject context"), id="inject-context-button")
                         yield Button(tr("Model ▾"), id="model-button")
                         yield BarSpacer(id="bar-spacer")
+                        yield Button("GUS", id="gus-button")
                         yield Button("", id="mode-button")
                         yield Button(tr("⚙"), id="settings-button")
             yield SidePanel(id="side-panel")
@@ -894,6 +895,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._open_role_menu()
         elif button_id == "settings-button":
             self._open_settings_menu()
+        elif button_id == "gus-button":
+            self.run_worker(self._open_gus(), exclusive=True, group="gus")
         elif button_id == "mode-button":
             self.run_worker(self._switch_mode_from_chip(), exclusive=True, group="authority-grant")
         elif button_id == "workspace-folders":

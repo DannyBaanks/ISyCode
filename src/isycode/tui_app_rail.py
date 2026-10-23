@@ -913,6 +913,16 @@ class RailMixin:
         mode = workspace_mode_name(self)
         button.label = Text(workspace_mode_chip(self), style=CYAN if mode == "Classic" else MUTED)
         button.tooltip = tr("Workspace mode · click to switch between Classic, Flow and Security")
+        try:
+            gus = self.query_one("#gus-button", Button)
+        except (NoMatches, NoScreen):
+            gus = None
+        if gus is not None:
+            from isycode.gus_role import is_isycode_checkout
+            from isycode.tui_screens_gus import GUS_COLOR
+            self._gus_offered = is_isycode_checkout(self._workspace_root)
+            gus.label = Text("GUS", style=GUS_COLOR if self._gus_enabled_here() else MUTED)
+            gus.tooltip = tr("GUS, the ISyCode maintainer · click to talk to it")
         self._update_model_button_visibility()
 
     def _paint_rail_identity(self) -> None:

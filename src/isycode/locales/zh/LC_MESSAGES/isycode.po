@@ -6215,3 +6215,6 @@ msgstr "此消息对 GUS 模型的窗口来说太大。"
 
 msgid "GUS's model returned no answer."
 msgstr "GUS 的模型没有返回回答。"
+
+msgid "GUS, the ISyCode maintainer · click to talk to it"
+msgstr "GUS，ISyCode 维护者 · 点击与它对话"

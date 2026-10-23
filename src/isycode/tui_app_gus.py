@@ -39,6 +39,7 @@ class GusMixin:
             self._set_activity(tr("GUS could not be enabled · {reason}", reason=type(exc).__name__), RED)
             return False
         self._set_activity(tr("GUS enabled in this workspace"), GREEN)
+        self._paint_workspace_chrome()
         return True
 
     async def _open_gus(self, initial: str = "") -> None:
@@ -61,6 +62,7 @@ class GusMixin:
         if self._gus_enabled_here():
             GusState(self._workspace_root).disable()
             self._set_activity(tr("GUS turned off in this workspace"), MUTED)
+            self._paint_workspace_chrome()
         else:
             await self._enable_gus_here()
         self._menu_stack = []

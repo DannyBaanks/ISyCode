@@ -162,7 +162,14 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             await app._open_gus("hola")
             status = " ".join(str(app.query_one("#activity-status").render()).split())
             assert "only in the ISyCode repository" in status
+            assert not app.query_one("#gus-button").display    # not the ISyCode repo
             _checkout(app._workspace_root)
+            app._paint_workspace_chrome()
+            await pilot.pause()
+            gus_button = app.query_one("#gus-button")
+            assert gus_button.display
+            mode_button = app.query_one("#mode-button")
+            assert gus_button.region.right <= mode_button.region.x  # just left of the mode chip
 
             task = asyncio.ensure_future(app._open_gus())
             for _ in range(40):
@@ -197,6 +204,15 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert GusState(app._workspace_root).transcript() == []
             screen.dismiss(None)
             await task
+
+            await pilot.click("#gus-button")               # the bar button opens the same window
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if isinstance(app.screen, GusScreen):
+                    break
+            assert isinstance(app.screen, GusScreen)
+            app.screen.dismiss(None)
+            await pilot.pause()
 
             await app._toggle_gus_here()                   # Settings switch turns it off
             assert not GusState(app._workspace_root).enabled()

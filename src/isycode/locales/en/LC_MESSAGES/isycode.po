@@ -6215,3 +6215,6 @@ msgstr "This message is too large for GUS's model window."
 
 msgid "GUS's model returned no answer."
 msgstr "GUS's model returned no answer."
+
+msgid "GUS, the ISyCode maintainer · click to talk to it"
+msgstr "GUS, the ISyCode maintainer · click to talk to it"
