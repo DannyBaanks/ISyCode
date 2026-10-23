@@ -18,10 +18,6 @@
     ModalScreen Button.-primary:hover { background: #875db4; }
     ModalScreen Button.-warning { background: #8a6526; color: #fff4d6; }
     ModalScreen Button.-error { background: #8c3f4a; color: #ffe5e8; }
-    #banner {
-        dock: top; height: 1; background: $surface; color: $text;
-        text-align: left; padding: 0 1;
-    }
     #workspace-layout { height: 1fr; width: 100%; }
     #main { height: 100%; width: 1fr; min-width: 0; }
     #side-panel {
@@ -191,6 +187,9 @@
     #command-bar Button:hover { background: #424348; color: #e0e0e0; }
     #command-bar Button:focus { background: #2d2440; color: #c9a7ff; }
     #bar-spacer { width: 1fr; }
+    /* ⚙ docks right (width 5); the mode chip sits just left of it. */
+    #mode-button { margin-right: 5; }
+    #rail-header { height: 2; text-wrap: nowrap; text-overflow: clip; }
     Footer { display: none; }
     #action-menu {
         display: none; layer: overlay; dock: top; width: 100%; height: 100%;

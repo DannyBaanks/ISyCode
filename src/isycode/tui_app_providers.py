@@ -4,6 +4,8 @@ Moved verbatim from tui.py. TUIApp inherits ProviderMixin.
 """
 from __future__ import annotations
 
+from rich.cells import cell_len
+
 import os
 import asyncio
 from textual.css.query import NoMatches
@@ -534,15 +536,30 @@ class ProviderMixin:
         self._update_model_button_visibility()
 
     def _update_model_button_visibility(self) -> None:
-        """Keep the bar inside the composer: with the rail open below 100
-        columns there is no room for every button, and the model already
-        shows in the idea box title."""
+        """Keep the bar inside the composer by measuring it. The model yields
+        first (the idea box title names it), then the mode chip (the rail
+        identity line and Settings → Authority name the mode)."""
         try:
-            button = self.query_one("#model-button", Button)
+            bar = self.query_one("#command-bar")
+            model = self.query_one("#model-button", Button)
+            mode = self.query_one("#mode-button", Button)
             rail = self.query_one(SidePanel)
         except NoMatches:
             return
-        button.display = not (bool(rail.display) and self.size.width < 100)
+        # Predict from the rail's set width so a toggle hides buttons before the
+        # next layout pass: the bar spans the main column minus its padding.
+        rail_width = rail.styles.width
+        rail_cells = int(rail_width.value) if rail.display and rail_width is not None and rail_width.is_cells else 0
+        width = self.size.width - rail_cells - 2
+
+        def cells(button: Button) -> int:
+            return cell_len(str(button.label)) + 4      # padding and frame cells of a bar button
+
+        fixed = 5 + sum(cells(button) for button in bar.query(Button)
+                        if button.display and button.id not in {"model-button", "mode-button", "settings-button"})
+        mode_cells = cells(mode)
+        mode.display = fixed + mode_cells <= width
+        model.display = mode.display and fixed + mode_cells + min(cells(model), 28) <= width
 
     def _select_provider(self, name: str, model: str | None = None) -> bool:
         """Select a provider; True when it can be used now, False when it needs a key."""

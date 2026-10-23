@@ -230,7 +230,6 @@ from isycode.tui_theme import (
 from isycode.tui_widgets import (
     fit_rail_button,
     PreviewOptionList,
-    Banner,
     ActivityStatus,
     IdleBoard,
     BoxTitle,
@@ -525,7 +524,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     # ── layout ───────────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
-        yield Banner(id="banner")
         with Horizontal(id="workspace-layout"):
             with Vertical(id="main"):
                 yield WorkList(id="work-list")
@@ -559,6 +557,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         yield Button(tr("Inject context"), id="inject-context-button")
                         yield Button(tr("Model ▾"), id="model-button")
                         yield BarSpacer(id="bar-spacer")
+                        yield Button("", id="mode-button")
                         yield Button(tr("⚙"), id="settings-button")
             yield SidePanel(id="side-panel")
         with Vertical(id="action-menu"):
@@ -705,7 +704,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._open_role_menu()
         elif self._initial_view == "settings":
             self._open_settings_menu()
-        self.query_one(Banner).set_compact(True)
+        self._paint_workspace_chrome()
         self._apply_rail_width(self.size.width)
         if self.size.width < 80 or (self.size.width < 88 and self._rail_visibility_override is None):
             self._rail_auto_hidden = True
@@ -716,7 +715,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#workspace-label", Static).update(tr("Workspace Root · {workspace_root}", workspace_root=self._workspace_root))
         self.query_one("#workspace-launch-label", Static).update(tr("Launch Directory · {launch_dir}", launch_dir=self._launch_dir))
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
-        self.query_one(Banner).set_compact(True)
+        self._paint_workspace_chrome()
         self.query_one("#workspace-authority-label", Static).update(
             tr("Filesystem Authority · loading ISyCode grants…"))
         self._paint_rail_identity()
@@ -801,7 +800,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         # The context bar is drawn to the column's width; redraw it once the new layout lands.
         self.call_after_refresh(self._refresh_usage)
         rail = self.query_one(SidePanel)
-        self.query_one(Banner).set_compact(True)
+        self._paint_workspace_chrome()
         self._apply_rail_width(event.size.width)
         if event.size.width < 80:
             self._rail_auto_hidden = True
@@ -819,7 +818,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 self._rail_auto_hidden = False
                 self._rail_visible = True
             rail.display = self._rail_visible
-        self.call_after_refresh(self.query_one(Banner).set_compact, True)
+        self.call_after_refresh(self._paint_workspace_chrome)
         self.call_after_refresh(self._refresh_model_button)
         self.call_after_refresh(self._paint_idle)
         if getattr(self, "_menu_mode", ""):
@@ -893,6 +892,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._open_role_menu()
         elif button_id == "settings-button":
             self._open_settings_menu()
+        elif button_id == "mode-button":
+            self.run_worker(self._switch_mode_from_chip(), exclusive=True, group="authority-grant")
         elif button_id == "workspace-folders":
             self._open_workspace_folders_menu()
         elif button_id == "context-button":
@@ -2490,7 +2491,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 if self._quick_start:
                     await self._enable_coding_toolkit(open_menu=False)
                     self._append_startup("  Quick Start done · type below to chat. /help tour shows the lay of the land.", GREEN)
-                self.query_one(Banner).set_compact(True)
+                self._paint_workspace_chrome()
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
             self._update_workspace_identity_ui()
@@ -2525,7 +2526,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.query_one("#workspace-label", Static).update(tr("Workspace Root · {workspace_root}", workspace_root=self._workspace_root))
         self.query_one("#workspace-launch-label", Static).update(tr("Launch Directory · {launch_dir}", launch_dir=self._launch_dir))
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
-        self.query_one(Banner).set_compact(True)
+        self._paint_workspace_chrome()
 
     async def _load_project_context(self) -> bool:
         """Explicitly read root AGENTS.md; the file never supplies grants or tools."""

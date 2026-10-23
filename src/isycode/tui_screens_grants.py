@@ -201,16 +201,7 @@ class WorkspaceModeScreen(ModalScreen[str]):
     def compose(self) -> ComposeResult:
         with Vertical(id="workspace-mode-card", classes="isy-dialog"):
             yield Static(tr("How should ISyCode work in this folder?"), id="workspace-mode-title", classes="isy-dialog-title")
-            yield OnboardingCopy(
-                tr("{root}\nClassic (recommended): review edits and commands, or trust this folder for quiet local work.\n"
-                   "Flow: edits, moves, deletes and sandboxed shell commands run without questions. "
-                   "Each chat turn is recorded; /undo restores its files while keeping later human changes. "
-                   "Commits of this turn's own files can run quietly.\n"
-                   "Security: everything off until you allow it.\n"
-                   "All modes keep Sentinel, budgets and receipts. Push, secrets, integrations and authority "
-                   "changes still ask or stay off. Flow commands need a verified sandbox; command network stays off.",
-                   root=str(self.root)),
-                id="workspace-mode-copy", classes="isy-dialog-body")
+            yield self._mode_copy()
             yield OptionList(
                 Option(tr("Classic · recommended"), id="classic"),
                 Option(tr("Flow · recoverable local work without questions"), id="flow"),
@@ -220,6 +211,18 @@ class WorkspaceModeScreen(ModalScreen[str]):
                 yield Button(tr("Security"), id="workspace-mode-security")
                 yield Button(tr("Continue"), id="workspace-mode-continue", variant="primary")
             yield decision_hint()
+
+    def _mode_copy(self) -> OnboardingCopy:
+        return OnboardingCopy(
+            tr("{root}\nClassic (recommended): review edits and commands, or trust this folder for quiet local work.\n"
+               "Flow: edits, moves, deletes and sandboxed shell commands run without questions. "
+               "Each chat turn is recorded; /undo restores its files while keeping later human changes. "
+               "Commits of this turn's own files can run quietly.\n"
+               "Security: everything off until you allow it.\n"
+               "All modes keep Sentinel, budgets and receipts. Push, secrets, integrations and authority "
+               "changes still ask or stay off. Flow commands need a verified sandbox; command network stays off.",
+               root=str(self.root)),
+            id="workspace-mode-copy", classes="isy-dialog-body")
 
     def on_mount(self) -> None:
         self.query_one("#workspace-mode-options", OptionList).focus()
@@ -238,6 +241,54 @@ class WorkspaceModeScreen(ModalScreen[str]):
 
     def action_security(self) -> None:
         self.dismiss("security")
+
+
+class WorkspaceModeSwitchScreen(WorkspaceModeScreen):
+    """Switch an open workspace between Classic, Flow and Security.
+
+    Opened from the bottom-bar mode chip. Escape and Cancel keep the current
+    mode; the caller confirms and performs the switch through the same path
+    as Settings → Authority → Workflow.
+    """
+
+    BINDINGS = [Binding("escape", "cancel", "Back")]
+    _LABELS = {
+        "classic": "Classic · recommended",
+        "flow": "Flow · recoverable local work without questions",
+        "security": "Security · everything off until I allow it",
+    }
+
+    def __init__(self, root: Path, current: str) -> None:
+        super().__init__(root)
+        self.current = current
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="workspace-mode-card", classes="isy-dialog"):
+            yield Static(tr("Workflow"), id="workspace-mode-title", classes="isy-dialog-title")
+            yield self._mode_copy()
+            yield OptionList(*(
+                Option(tr("{mode} · current", mode=tr(label)) if mode == self.current else tr(label), id=mode)
+                for mode, label in self._LABELS.items()),
+                id="workspace-mode-options", classes="isy-dialog-options")
+            with Horizontal(id="workspace-mode-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Cancel"), id="workspace-mode-cancel")
+                yield Button(tr("Continue"), id="workspace-mode-continue", variant="primary")
+            yield decision_hint()
+
+    def on_mount(self) -> None:
+        options = self.query_one("#workspace-mode-options", OptionList)
+        options.highlighted = list(self._LABELS).index(self.current) if self.current in self._LABELS else 0
+        options.focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "workspace-mode-cancel":
+            event.stop()
+            self.dismiss(None)
+            return
+        super().on_button_pressed(event)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 class GrantWorkspaceReadScreen(ApprovalScreen):
