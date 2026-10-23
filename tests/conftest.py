@@ -6,6 +6,18 @@ import pytest
 from pathlib import Path
 
 
+@pytest.fixture(autouse=True)
+def english_after_each_test():
+    """A TUI started without a saved locale loads Spanish, the product default.
+
+    That catalog is process-wide, so restore English after every test instead of
+    letting the next test's expectations depend on the order the suite runs in.
+    """
+    yield
+    from isycode.localization import configure_locale
+    configure_locale("en")
+
+
 @pytest.fixture
 def synthetic_windows_storage(tmp_path, monkeypatch):
     """Native process controls only; this fake certifies NO physical quota."""
