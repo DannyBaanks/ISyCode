@@ -209,6 +209,44 @@ def test_readonly_double_click_preserves_marked_range_until_copy_or_cancel():
     asyncio.run(scenario())
 
 
+def test_readonly_double_click_keeps_the_range_on_a_slow_machine():
+    """The range survives however long the app takes between the two clicks."""
+    from isycode.tui_copy import CopyTextArea
+    from textual import events
+    from textual.document._document import Selection as AreaSelection
+    class Host(App):
+        def compose(self):
+            yield CopyTextArea("one\ntwo\nthree\n", read_only=True)
+    async def press(pilot, field, chain, delay):
+        screen = pilot.app.screen
+        offset = field.region.offset + (2, 1)
+        for cls in (events.MouseDown, events.MouseUp, events.Click):
+            kwargs = dict(widget=field, x=offset.x, y=offset.y, delta_x=0, delta_y=0, button=1,
+                          shift=False, meta=False, ctrl=False, screen_x=offset.x, screen_y=offset.y)
+            if cls is events.Click:
+                kwargs["chain"] = chain
+            screen._forward_event(cls(**kwargs))
+            await pilot.pause()
+            await asyncio.sleep(delay)
+    async def scenario():
+        async with Host().run_test() as pilot:
+            field = pilot.app.query_one(CopyTextArea)
+            field.selection = AreaSelection((0, 0), (2, 0))
+            await press(pilot, field, 1, 0.4)
+            await press(pilot, field, 2, 0.4)          # > 0.6 s after the first press
+            await _wait_for_copy_button(pilot, "#copy-selection")
+            assert pilot.app.screen.selected == "one\ntwo\n"
+            await pilot.press("escape")
+            # A later, separate double-click with nothing marked copies no stale range.
+            await pilot.pause()
+            field.selection = AreaSelection((0, 0), (0, 0))
+            await press(pilot, field, 1, 0)
+            await press(pilot, field, 2, 0)
+            await _wait_for_copy_button(pilot, "#copy-whole")
+            assert pilot.app.screen.selected == ""
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize("reduced", [False, True])
 def test_real_thinking_motion_and_timers_stop_on_completion_and_unmount(reduced):
     class Host(App):
