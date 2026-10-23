@@ -7,7 +7,7 @@ from __future__ import annotations
 from textual.binding import Binding
 from textual.widgets import Button, Checkbox, Static
 from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, CommandPreview
-from isycode.git_owner import CommitPreview
+from isycode.git_owner import BranchPreview, CommitPreview
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
@@ -498,6 +498,52 @@ class CommitApprovalScreen(ApprovalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "commit-approval-apply")
+
+    def action_reject(self) -> None:
+        self.dismiss(False)
+
+
+class GusBranchApprovalScreen(ApprovalScreen):
+    """Show the exact gus/* branch and the commit it starts from; Reject is the default."""
+
+    CSS = DECISION_CSS + """
+    GusBranchApprovalScreen { align: center middle; background: #000000 58%; }
+    #gus-branch-card { width: 84; }
+    """
+    BINDINGS = [Binding("escape", "reject", "Reject")]
+    # Textual focuses this when the screen activates; a focus asked for only in
+    # on_mount can lose to the first focusable widget (the scrolling body).
+    AUTO_FOCUS = "#gus-branch-reject"
+
+    def __init__(self, preview: BranchPreview) -> None:
+        super().__init__()
+        self.preview = preview
+
+    def compose(self) -> ComposeResult:
+        preview = self.preview
+        with Vertical(id="gus-branch-card", classes="isy-dialog"):
+            yield Static(tr("Create {branch} for GUS?", branch=preview.branch),
+                         id="gus-branch-title", classes="isy-dialog-title", markup=False)
+            with VerticalScroll(id="gus-branch-body", classes="isy-dialog-body"):
+                yield self._structural_summary(
+                    owner="git branch", scope=preview.branch, duration="one-use approval",
+                    not_granted="no push, no hooks, no other branch; L0 stays out of GUS's reach")
+                yield Static(Text(tr(
+                    "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your "
+                    "files are not changed. GUS edits only on this branch; you activate its work by "
+                    "merging it, and undo it by reverting that merge.",
+                    branch=preview.branch, base=preview.base[:12], current=preview.current)),
+                    id="gus-branch-summary")
+            with Horizontal(id="gus-branch-actions", classes="isy-dialog-actions"):
+                yield Button(tr("Reject · n"), id="gus-branch-reject", classes="-refuse")
+                yield Button(tr("Create branch · y"), id="gus-branch-apply", variant="warning")
+            yield decision_hint()
+
+    def on_mount(self) -> None:
+        self.query_one("#gus-branch-reject", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "gus-branch-apply")
 
     def action_reject(self) -> None:
         self.dismiss(False)

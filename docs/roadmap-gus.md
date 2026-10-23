@@ -19,7 +19,7 @@ Se toma el patrón, no el código.
 | Modelo dedicado | Un único slot opcional, `small` (`providers.model_slot`), usado para compactar | Slot `gus` con proveedor/modelo propios, local incluido, ventana ≥32k |
 | Credenciales | API keys por proveedor, no por slot (`load_provider_key`) | Sin cambios (D2): otro proveedor o modelo local |
 | Contexto | Compactación en tres capas (ver §2); nada queda fijado | Paquete de contexto fijo que nunca se compacta |
-| Cambios | Owners, Sentinel, journal, aprobaciones por modo; Flow silencioso para acciones recuperables; Git sin acción de rama | Edita solo en ramas `gus/*` (D1), tests en sandbox, rutas protegidas siempre con revisión humana |
+| Cambios | Owners, Sentinel, journal, aprobaciones por modo; Flow silencioso para acciones recuperables; Git sin acción de rama | Edita solo en ramas `gus/*` (D1), tests en sandbox, L0 fuera de su alcance (ADR 0013) |
 
 No objetivos:
 
@@ -63,7 +63,7 @@ Resumen y cápsula son contexto, nunca autoridad. La conversación guardada cons
 
 | ID | Pregunta | Decisión |
 | --- | --- | --- |
-| D1 | Alcance | Edita y corre tests en el sandbox sin preguntar, solo dentro de una rama `gus/*`; rutas protegidas siempre preguntan |
+| D1 | Alcance | Edita y corre tests en el sandbox sin preguntar, solo dentro de una rama `gus/*`; L0 queda fuera de su alcance (ADR 0013) |
 | D2 | Credencial | Otro proveedor o modelo local, con las keys por proveedor existentes; sin key por slot |
 | D3 | Workspace | Solo el repo de ISyCode |
 | D4 | Nombre | GUS |
@@ -131,21 +131,37 @@ Implementación:
 - `GK4-01`: abrir, conversar, cerrar y retomar GUS sin mezclar su transcripción con la del chat.
 - `GK4-02`: en/es/zh a 80×24, 100×30 y 140×40.
 
-### MK5 — Flujo de cambio seguro
+### MK5 — Flujo de cambio seguro (L1/L0, [ADR 0013](decisions/0013-gus-l1-l0.md))
 
-Trabajo: una acción de Git propia para crear y cambiar a una rama `gus/*`, siempre con aprobación (hoy el owner de Git no crea ramas). GUS solo edita en silencio en una rama `gus/*` y entrega diff, resultado de tests en sandbox y resumen.
-Hay una lista de rutas protegidas (`security.py`, `workspace_authority.py`, owners, `action_audit.py`, approvals, pantallas de aprobación, `docs/decisions`) que siempre pide revisión humana, también en Flow.
-Nunca push sin aprobación, nunca recarga en caliente.
-Dependencias: MK4 y D1.
+Trabajo: GUS trabaja en L1 y conoce L0. L0 no pide revisión: queda fuera del alcance de GUS (decisión L1). Un cambio de GUS es una generación en una rama `gus/<tema>` que activa el merge de Danny (decisión L2). Nunca push, nunca recarga en caliente.
+Dependencias: MK4, D1 y ADR 0013. Se entrega en cuatro PRs apilados:
 
-- `GK5-01`: un cambio en una ruta protegida nunca se aplica en silencio, en ningún modo. La verificación también corre en la promoción del staging de comandos (`command_runner`, junto a `_revoked_effect`), no solo en `workspace.files.write`: un script que modifica una ruta protegida dentro del staging no la promueve sin revisión. Lo comprueba una prueba adversarial con un comando real.
-- `GK5-04`: fuera de una rama `gus/*`, cada edición de GUS pide aprobación.
+- **MK5a — manifiesto y huella de L0.** `gus_l0.py` lista L0 de forma explícita (`L0_FILES`, `L0_DIRECTORIES`) y `touches_l0` también marca las carpetas que contienen L0: mover o borrar `src/isycode` toca L0. La huella es un SHA-256 por archivo, con CRLF normalizado para que sea igual en todas las plataformas. Un archivo cambiado por un enlace cuenta como cambio. El paquete de contexto incluye el manifiesto, la regla y la huella: medido en 19 287 caracteres con 15 archivos.
+- **MK5b — rama `gus/*`.** La acción `git.branch.create` del owner de Git crea `gus/<tema>` en el commit actual y cambia a ella con `git switch -c`, sin tocar el árbol de trabajo ni correr hooks. Es la única rama que ISyCode crea. GitBoundary rechaza otro nombre y exige el commit revisado; si HEAD se movió o la rama ya existe, no se crea. Siempre pide aprobación (`GusBranchApprovalScreen`, con Rechazar por defecto), también en Flow. Classic y Flow la conceden; Security no. Se abre con `/gus branch <tema>`.
+- **MK5c-1 — la frontera del turno.** `gus_turn(root)` marca el trabajo de un turno de GUS con un ContextVar que heredan las tareas e hilos que nacen dentro. Mientras está puesto para ese workspace:
+  - `GusL0Boundary` (en IsySentinel, para todo owner) rechaza cualquier acción fuera del rol de GUS y cualquier cambio que nombre una ruta de L0: escritura, restauración, borrado, movimiento (origen o destino) y commit. Leer L0 sigue permitido.
+  - La promoción del staging de comandos rechaza el diff entero si toca L0.
+  - `quiet_gus` deja que GUS actúe sin preguntar solo con la lista de Flow, en Classic o Flow, sin carpeta amplia, con comandos en sandbox y solo si `.git/HEAD` es una rama `gus/*`. Fuera de esa rama pregunta como siempre.
+- **MK5c-2 — turno de GUS con herramientas.** `gus_work` le da a GUS las herramientas de su rol solo en una rama `gus/*`: leer, editar, borrar, mover, comandos en sandbox y git status/diff/commit. Fuera de esa rama GUS conversa sin herramientas (GK5-04). Cada llamada corre dentro de `gus_turn`; las peticiones al modelo no. El turno tiene un tope de 24 pasos y de la ventana, y lo dice cuando se detiene. La TUI (`_run_gus_turn`) registra el turno en un `TurnJournal` en cualquier modo, así que `/undo` lo deshace (GK5-03). Toma la huella de L0 antes y después: si cambió, deshace el turno y nombra lo que no pudo restaurar. Classic concede `workspace.turn.undo` (enmienda al ADR 0010) y pregunta antes de cada deshacer.
+- **MK5d — generaciones.** `gus_generation.py` (L0) arma la generación con lo que GUS commiteó en su rama desde el commit donde nació: `/gus branch` guarda ese commit y la huella de L0 en el estado privado. `PREPARADA → VALIDADA → PROBADA → SELLADA`, con salida a `RECHAZADA`:
+  - **V:** árbol limpio, algo commiteado, ningún cambio (ni origen de un rename) en L0, el diff completo y la huella de L0 igual a la del inicio de la rama.
+  - **T:** las pruebas de los archivos tocados. Un cambio que ninguna prueba cubre no pasa.
+  - **A:** las pruebas del auditor de cobertura, de m15 y de L0.
+  - **L:** `ruff check` como en CI o, si el sandbox no tiene ruff, una compilación de los archivos cambiados, y lo dice.
+  - **S:** SHA-256 del rango, las rutas, el diff y la evidencia de V/T/A/L.
+
+  T, A y L corren con el owner de comandos en el sandbox, dentro de `gus_turn`. Si el Python del sandbox no puede correr las pruebas, quedan `NOT_RUN` y no se sella. La suite completa la corre CI en el PR de la rama: el tope de un comando es 600 s. Se abre con `/gus seal` o con «Correr las puertas» en la ventana de GUS. Activar es el merge de Danny.
+
+Puertas:
+- `GK5-00`: el manifiesto está fijado por una prueba (`PINNED_MANIFEST`), cada entrada existe y todo módulo que define un owner (`class …Owner`) está en L0. El manifiesto y su prueba son L0.
+- `GK5-01`: ningún turno de GUS escribe, mueve, borra ni promueve una ruta de L0, en ningún modo. La verificación también corre en la promoción del staging de comandos (`command_runner`, junto a `_revoked_effect`), no solo en `workspace.files.write`. Lo comprueba una prueba adversarial con un comando real.
+- `GK5-04`: fuera de una rama `gus/*`, GUS no edita.
 - `GK5-02`: un cambio que rompe la suite no se ofrece como listo; se reporta con la salida real.
 - `GK5-03`: deshacer el trabajo de GUS con `/undo` o descartar su rama deja el repo como estaba.
 
-### MK6 — Matriz adversarial y dogfood
+### MK6 — SEAM de GUS y dogfood
 
-Trabajo: inyección en archivos del repo, intento de tocar rutas protegidas, de leer credenciales y de salirse del workspace; agotamiento de presupuesto; cambio de modo durante un turno.
+Trabajo: la matriz adversarial es una auditoría con roster fijo y evidencia encadenada (ADR 0013, punto 5): inyección en archivos del repo, intento de tocar L0 (escritura, comando, enlace, movimiento o borrado), de leer credenciales y de salirse del workspace; agotamiento de presupuesto; cambio de modo durante un turno.
 Dogfood: cambios reales a ISyCode hechos con GUS y revisados por Danny.
 Dependencias: MK5.
 

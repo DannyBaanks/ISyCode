@@ -6147,8 +6147,8 @@ msgstr "Enable GUS"
 msgid "Enable GUS in this workspace?"
 msgstr "Enable GUS in this workspace?"
 
-msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
-msgstr "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
 
 msgid "GUS could not answer · {reason}"
 msgstr "GUS could not answer · {reason}"
@@ -6198,8 +6198,8 @@ msgstr "no model chosen yet"
 msgid "{provider} / {model}"
 msgstr "{provider} / {model}"
 
-msgid "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
-msgstr "talk to GUS, the ISyCode maintainer (ISyCode repository only)"
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)"
+msgstr "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)"
 
 msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
 msgstr "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
@@ -6218,3 +6218,93 @@ msgstr "GUS's model returned no answer."
 
 msgid "GUS, the ISyCode maintainer · click to talk to it"
 msgstr "GUS, the ISyCode maintainer · click to talk to it"
+
+msgid "Create {branch} for GUS?"
+msgstr "Create {branch} for GUS?"
+
+msgid "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+msgstr "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+
+msgid "Create branch · y"
+msgstr "Create branch · y"
+
+msgid "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+msgstr "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+
+msgid "git branch"
+msgstr "git branch"
+
+msgid "GUS branch not proposed · {reason}"
+msgstr "GUS branch not proposed · {reason}"
+
+msgid "GUS branch rejected · nothing changed"
+msgstr "GUS branch rejected · nothing changed"
+
+msgid "GUS branch {decision} · {reason}"
+msgstr "GUS branch {decision} · {reason}"
+
+msgid "On {branch} · receipt {receipt_id}"
+msgstr "On {branch} · receipt {receipt_id}"
+
+msgid "Create GUS branches"
+msgstr "Create GUS branches"
+
+msgid "Create and switch to a new gus/* branch"
+msgstr "Create and switch to a new gus/* branch"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS edits only on a gus/* branch · /gus branch <topic>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 changed and is still changed: {paths}. Review it with git."
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 changed ({paths}); the whole turn was undone."
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "Changed {count} files · /undo puts this turn back."
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "Another turn is recording this workspace; try again when it ends."
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "GUS's model returned an invalid tool batch."
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "GUS's model returned a tool call without identity."
+
+msgid "A tool result did not match its request."
+msgstr "A tool result did not match its request."
+
+msgid "Generations are sealed on a gus/* branch · /gus branch <topic>"
+msgstr "Generations are sealed on a gus/* branch · /gus branch <topic>"
+
+msgid "Seal GUS's work on {branch}?"
+msgstr "Seal GUS's work on {branch}?"
+
+msgid "ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. T: the tests of the touched code. A: the coverage auditor and L0 tests. L: lint. T, A and L run in the command sandbox. Only if all pass is the work sealed; you activate it by merging the branch."
+msgstr "ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. T: the tests of the touched code. A: the coverage auditor and L0 tests. L: lint. T, A and L run in the command sandbox. Only if all pass is the work sealed; you activate it by merging the branch."
+
+msgid "Run the gates"
+msgstr "Run the gates"
+
+msgid "GUS generation not prepared · {reason}"
+msgstr "GUS generation not prepared · {reason}"
+
+msgid "GUS gates running on {branch}…"
+msgstr "GUS gates running on {branch}…"
+
+msgid "Sealed {branch} · {gates} · seal {seal}"
+msgstr "Sealed {branch} · {gates} · seal {seal}"
+
+msgid "Rejected {branch} · {gates} · {reason}"
+msgstr "Rejected {branch} · {gates} · {reason}"
+
+msgid "GUS gates running…"
+msgstr "GUS gates running…"

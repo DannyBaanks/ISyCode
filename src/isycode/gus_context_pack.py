@@ -1,7 +1,7 @@
 """GUS's fixed context (ADR 0011, MK3): read with receipts, sent every turn, never compacted.
 
-The pack is AGENTS.md, the design skill, the visual standard and the ADR title
-index of the ISyCode repository. Each file is read through the workspace read
+The pack is AGENTS.md, the design skill, the visual standard, the ADR title
+index and the L0 manifest (ADR 0013) of the ISyCode repository. Each file is read through the workspace read
 owner, so every read is authorized, journaled and receipted. A file is read
 again only when its size or modification time changes.
 
@@ -19,6 +19,7 @@ from pathlib import Path
 
 from isycode.continuity_capsule import (
     CHARS_PER_TOKEN, history_budget_chars, plan_context, capsule_message)
+from isycode.gus_l0 import fingerprint as l0_fingerprint, manifest_text as l0_manifest
 
 PACK_FILES = (
     "AGENTS.md",
@@ -124,6 +125,8 @@ class ContextPackReader:
             entries.append(PackEntry(path, len(text),
                                      hashlib.sha256(text.encode("utf-8")).hexdigest(), receipt_id))
         sections.append("--- ADR index ---\n" + "\n".join(titles))
+        # ADR 0013: GUS knows L0, so it plans around the kernel instead of hitting it.
+        sections.append(l0_manifest(l0_fingerprint(self.root)))
         pack = "\n\n".join(sections)
         if len(pack) > MAX_PACK_CHARS:
             raise ContextPackError(f"the fixed context is {len(pack)} characters, over {MAX_PACK_CHARS}")
