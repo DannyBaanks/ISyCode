@@ -74,8 +74,7 @@ class AuthorityMixin:
             if authority.mode() != "classic":
                 return
             if broad_workspace_reason(authority.root):
-                self._append("  This folder is too broad for the quiet Classic profile. "
-                             "Each edit and command still asks.", YELLOW)
+                self._append("  " + tr("This folder is too broad for the quiet Classic profile. Each edit and command still asks."), YELLOW)
                 return
             if trust.trusted(authority):
                 return
@@ -88,13 +87,12 @@ class AuthorityMixin:
                 "Trust this folder?", brief, "Trust this folder"))
             if confirmed:
                 trust.accept(authority, ACCEPT_PHRASE)
-                self._append("  Quiet Classic is on for ordinary edits and sandboxed tests. "
-                             "Commits, secrets and authority changes still ask.", GREEN)
+                self._append("  " + tr("Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."), GREEN)
             else:
                 trust.decline(authority)
-                self._append("  Quiet Classic stays off. Each edit and command still asks.", MUTED)
+                self._append("  " + tr("Quiet Classic stays off. Each edit and command still asks."), MUTED)
         except (OSError, ValueError, WorkspaceAuthorityError):
-            self._append("  Trust was not saved. Each edit and command still asks.", YELLOW)
+            self._append("  " + tr("Trust was not saved. Each edit and command still asks."), YELLOW)
 
     _MODE_NAMES = {"classic": "Classic", "security": "Security", "flow": "Flow"}
 
@@ -141,7 +139,7 @@ class AuthorityMixin:
         """
         name = self._MODE_NAMES[mode]
         if await self._stop_active_turn_for_switch(name) is False:
-            self._append(f"  Staying in {self._MODE_NAMES.get(self._workspace_mode(), '')} mode.", MUTED)
+            self._append("  " + tr("Staying in {get} mode.", get=self._MODE_NAMES.get(self._workspace_mode(), '')), MUTED)
             return False
         # Approvals issued under the old mode must never be consumable under the new one.
         cleared = self._action_approvals.clear()
@@ -158,11 +156,12 @@ class AuthorityMixin:
             authority = WorkspaceAuthority(self._workspace_root)
             authority.set_mode(mode)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Mode could not be changed ({type(exc).__name__}); nothing was switched.", RED)
+            self._append("  " + tr("Mode could not be changed ({name}); nothing was switched.", name=type(exc).__name__), RED)
             return False
         note = "  " + tr("Workspace now uses {mode} mode.", mode=name)
         if cleared:
-            note += f" {cleared} pending approval{'s' if cleared != 1 else ''} invalidated."
+            note += " " + (tr("{count} pending approvals invalidated.", count=cleared) if cleared != 1
+                           else tr("1 pending approval invalidated."))
         self._append(note, GREEN)
         return True
 
@@ -481,12 +480,12 @@ class AuthorityMixin:
         selected_name = selected_provider_name()
         preset = PRESETS.get(selected_name)
         if preset is None:
-            self._append("  Selected provider is unknown; no network grant was changed.", RED)
+            self._append("  " + tr("Selected provider is unknown; no network grant was changed."), RED)
             self._open_authority_menu()
             return
         host = self._selected_provider_host()
         if host is None:
-            self._append("  Provider endpoint is invalid; no network grant was changed.", RED)
+            self._append("  " + tr("Provider endpoint is invalid; no network grant was changed."), RED)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(GrantProviderNetworkScreen(
@@ -503,10 +502,9 @@ class AuthorityMixin:
                 authority.set_grant(
                     "provider.request", enabled=bool(hosts), network_hosts=sorted(hosts))
                 self._append(
-                    f"  Provider network {'granted' if enabled else 'revoked'} for {host}. "
-                    "Credential and tool permissions remain separate.", GREEN)
+                    "  " + tr("Provider network {value} for {host}. Credential and tool permissions remain separate.", value=tr("granted") if enabled else tr("revoked"), host=host), GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  Provider network policy could not be saved; requests remain denied.", RED)
+                self._append("  " + tr("Provider network policy could not be saved; requests remain denied."), RED)
         self._open_authority_menu()
 
     async def _change_network_action_grant(self, payload: str, enabled: bool) -> None:
@@ -523,7 +521,7 @@ class AuthorityMixin:
             if not host:
                 raise ValueError("endpoint host is missing")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError):
-            self._append("  Invalid network grant request; no permission changed.", RED)
+            self._append("  " + tr("Invalid network grant request; no permission changed."), RED)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(GrantProviderNetworkScreen(
@@ -539,9 +537,9 @@ class AuthorityMixin:
                     hosts.discard(host)
                 authority.set_grant(action_id, enabled=bool(hosts), network_hosts=sorted(hosts))
                 self._append(
-                    f"  {'Granted' if enabled else 'Revoked'} {label} access for {host}.", GREEN)
+                    "  " + tr("{value} {label} access for {host}.", value=tr("Granted") if enabled else tr("Revoked"), label=label, host=host), GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  Network grant could not be saved; access remains denied.", RED)
+                self._append("  " + tr("Network grant could not be saved; access remains denied."), RED)
         self._open_authority_menu()
 
     async def _change_session_grant(self, enabled: bool) -> None:
@@ -561,19 +559,18 @@ class AuthorityMixin:
                 self._append("  Conversations will be saved for this workspace." if enabled
                              else "  Conversations are no longer saved for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-                self._append(f"  Session permission could not be saved ({type(exc).__name__}).", RED)
+                self._append("  " + tr("Session permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _change_session_delete_grant(self, enabled: bool) -> None:
         session_id = self._active_chat_session_id
         if enabled and not session_id:
-            self._append("  Open a saved conversation before granting its deletion.", YELLOW)
+            self._append("  " + tr("Open a saved conversation before granting its deletion."), YELLOW)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(TailscaleConfirmScreen(
             "Allow conversation deletion?" if enabled else "Disable conversation deletion?",
-            f"This permission applies only to conversation {session_id or 'previously selected'} in this workspace. "
-            "Every deletion still requires reviewing the exact conversation and confirming it.",
+            tr("This permission applies only to conversation {value} in this workspace. Every deletion still requires reviewing the exact conversation and confirming it.", value=session_id or tr("previously selected")),
             "Allow deletion" if enabled else "Disable deletion", owner="session delete",
             scope=f"conversation {session_id or 'current'}", duration="one conversation grant",
             not_granted="other conversations, unconfirmed deletions"))
@@ -586,7 +583,7 @@ class AuthorityMixin:
 
     async def _change_workspace_write_grant(self, enabled: bool) -> None:
         if enabled and not self._workspace_chat_tools_enabled():
-            self._append("  Turn on reading workspace files first; editing builds on it.", YELLOW)
+            self._append("  " + tr("Turn on reading workspace files first; editing builds on it."), YELLOW)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(TailscaleConfirmScreen(
@@ -605,14 +602,14 @@ class AuthorityMixin:
                     authority.set_grant(action, enabled=enabled, path_prefixes=[self._workspace_root] if enabled else [])
                 self._append("  File edits allowed; folder approval settings still apply." if enabled else "  File edits turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-                self._append(f"  Edit permission could not be saved ({type(exc).__name__}).", RED)
+                self._append("  " + tr("Edit permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _change_lsp_diagnostics_grant(self, enabled: bool) -> None:
         server = next((item for item in self._lsp_inventory
                        if item.get("id") == "pyright" and item.get("state") == "sandbox_ready"), None)
         if server is None:
-            self._append("  Local code help is not ready yet; nothing changed.", YELLOW)
+            self._append("  " + tr("Local code help is not ready yet; nothing changed."), YELLOW)
             self._open_authority_menu()
             return
         if not await self._await_screen(TailscaleConfirmScreen(
@@ -628,10 +625,9 @@ class AuthorityMixin:
             WorkspaceAuthority(self._workspace_root).set_grant(
                 "lsp.diagnostics", enabled=enabled,
                 executables=[server["sandbox_executable"]] if enabled else [])
-            self._append("  Python checks after edits "
-                         f"{'allowed' if enabled else 'turned off'}.", GREEN)
+            self._append("  " + tr("Python checks after edits {value}.", value=tr("allowed") if enabled else tr("turned off")), GREEN)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Check permission could not be saved ({type(exc).__name__}).", RED)
+            self._append("  " + tr("Check permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _change_git_grant(self, commit: bool, enabled: bool) -> None:
@@ -653,10 +649,9 @@ class AuthorityMixin:
             authority = WorkspaceAuthority(self._workspace_root)
             for action in actions:
                 authority.set_grant(action, enabled=enabled)
-            self._append(f"  Git {'commits' if commit else 'status and diffs'} "
-                         f"{'allowed' if enabled else 'turned off'} for this workspace.", GREEN)
+            self._append("  " + tr("Git {value} {value2} for this workspace.", value=tr("commits") if commit else tr("status and diffs"), value2=tr("allowed") if enabled else tr("turned off")), GREEN)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Git permission could not be saved ({type(exc).__name__}).", RED)
+            self._append("  " + tr("Git permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _change_clipboard_grant(self, enabled: bool) -> None:
@@ -666,13 +661,13 @@ class AuthorityMixin:
             self._append("  Copy on select is on; select text with the mouse to copy it."
                          if enabled else "  Copy on select is off for this workspace.", GREEN)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Clipboard permission could not be saved ({type(exc).__name__}).", RED)
+            self._append("  " + tr("Clipboard permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _change_command_grant(self, enabled: bool) -> None:
         sandbox = sandbox_executable()
         if enabled and sandbox is None:
-            self._append("  The command sandbox is not available here; commands stay off.", YELLOW)
+            self._append("  " + tr("The command sandbox is not available here; commands stay off."), YELLOW)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(TailscaleConfirmScreen(
@@ -691,7 +686,7 @@ class AuthorityMixin:
                 self._append("  Sandboxed commands allowed; each one still asks first." if enabled
                              else "  Commands turned off for this workspace.", GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-                self._append(f"  Command permission could not be saved ({type(exc).__name__}).", RED)
+                self._append("  " + tr("Command permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _change_bridge_grant(self, enabled: bool) -> None:
@@ -723,26 +718,25 @@ class AuthorityMixin:
                 if enabled:
                     await self._register_bridge_peer()
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-                self._append(f"  Bridge permission could not be saved ({type(exc).__name__}).", RED)
+                self._append("  " + tr("Bridge permission could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     async def _remove_saved_grant(self, action_id: str) -> None:
         if action_id not in ACTION_BY_ID:
-            self._append("  Unknown permission; nothing changed.", YELLOW)
+            self._append("  " + tr("Unknown permission; nothing changed."), YELLOW)
             return
         action = ACTION_BY_ID[action_id]
         if await self._await_screen(TailscaleConfirmScreen(
                 "Remove saved permission",
-                f"Remove the saved permission for {action.group} · {action.label} "
-                f"(`{action_id}`) in this workspace, including its saved scope?",
+                tr("Remove the saved permission for {group} · {label} (`{action_id}`) in this workspace, including its saved scope?", group=action.group, label=action.label, action_id=action_id),
                 "Remove permission")):
             try:
                 WorkspaceAuthority(self._workspace_root).set_grant(
                     action_id, enabled=False, path_prefixes=[], network_hosts=[],
                     executables=[], targets=[])
-                self._append(f"  Saved permission removed · {action_id}.", GREEN)
+                self._append("  " + tr("Saved permission removed · {action_id}.", action_id=action_id), GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  Saved permission could not be removed.", RED)
+                self._append("  " + tr("Saved permission could not be removed."), RED)
         self._open_authority_menu()
 
     async def _change_mcp_invocation_grant(self, enabled: bool) -> None:
@@ -751,7 +745,7 @@ class AuthorityMixin:
             target = GatewayMCPInvocationOwner.target_for(endpoint)
             GatewayClient._validate_base_url(endpoint)
         except ValueError:
-            self._append("  Gateway URL is invalid; no MCP grant was changed.", RED)
+            self._append("  " + tr("Gateway URL is invalid; no MCP grant was changed."), RED)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(GrantMCPInvocationScreen(
@@ -767,10 +761,9 @@ class AuthorityMixin:
                     targets.discard(target)
                 authority.set_grant("mcp.invoke", enabled=bool(targets), targets=sorted(targets))
                 self._append(
-                    f"  Gateway MCP invocation {'granted' if enabled else 'revoked'} for this workspace. "
-                    "Each tool call still needs an explicit one-use approval.", GREEN)
+                    "  " + tr("Gateway MCP invocation {value} for this workspace. Each tool call still needs an explicit one-use approval.", value=tr("granted") if enabled else tr("revoked")), GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  MCP invocation grant could not be saved; calls remain denied.", RED)
+                self._append("  " + tr("MCP invocation grant could not be saved; calls remain denied."), RED)
         self._open_authority_menu()
 
     async def _change_lsp_process_grant(self, executable: str, enabled: bool) -> None:
@@ -778,7 +771,7 @@ class AuthorityMixin:
                        if item.get("sandbox_executable") == executable
                        and item.get("state") == "sandbox_ready"), None)
         if server is None:
-            self._append("  LSP sandbox changed or is unavailable; no process grant was changed.", RED)
+            self._append("  " + tr("LSP sandbox changed or is unavailable; no process grant was changed."), RED)
             self._open_authority_menu()
             return
         accepted = await self._await_screen(GrantLSPProcessScreen(
@@ -795,10 +788,10 @@ class AuthorityMixin:
                 authority.set_grant(
                     "lsp.start", enabled=bool(executables), executables=sorted(executables))
                 self._append(
-                    f"  Sandboxed LSP process {'granted' if enabled else 'revoked'} for this workspace.",
+                    "  " + tr("Sandboxed LSP process {value} for this workspace.", value=tr("granted") if enabled else tr("revoked")),
                     GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError):
-                self._append("  LSP process grant could not be saved; the server remains denied.", RED)
+                self._append("  " + tr("LSP process grant could not be saved; the server remains denied."), RED)
         self._open_authority_menu()
 
     def _coding_toolkit_grants(self) -> list[tuple[str, dict[str, Any], str]]:
@@ -859,10 +852,9 @@ class AuthorityMixin:
             authority = WorkspaceAuthority(self._workspace_root)
             for action, scope, _ in grants:
                 authority.set_grant(action, enabled=True, **scope)
-            self._append(f"  Coding tools on · {len(grants)} permissions saved; changes, commands "
-                         "and commits follow their approval settings.", GREEN)
+            self._append("  " + tr("Coding tools on · {len} permissions saved; changes, commands and commits follow their approval settings.", len=len(grants)), GREEN)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Coding tools could not be saved ({type(exc).__name__}).", RED)
+            self._append("  " + tr("Coding tools could not be saved ({name}).", name=type(exc).__name__), RED)
         if open_menu:
             self._open_authority_menu()
 
@@ -883,7 +875,7 @@ class AuthorityMixin:
                              if enabled else "  Read-only workspace tools revoked for this workspace.",
                              GREEN)
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-                self._append(f"  Workspace grant could not be saved ({type(exc).__name__}).", RED)
+                self._append("  " + tr("Workspace grant could not be saved ({name}).", name=type(exc).__name__), RED)
         self._open_authority_menu()
 
     def _open_action_journal(self) -> None:
@@ -922,12 +914,7 @@ class AuthorityMixin:
                     for check in item.get("checks", [])) or "not recorded"
                 entries.append(self._entry(
                     f"{item['sentinel']} · {item['action']} · {item['owner'] or 'owner unknown'} · {result_state}",
-                    "info", "", f"Time: {_time.strftime('%Y-%m-%d %H:%M:%S', _time.localtime(item['time']))}\n"
-                    f"Request: {digest[:12]}… · Authority: {authority}\n"
-                    f"Systembilities: {checks}\n"
-                    f"Failed checks: {', '.join(item['failed_checks']) or 'none'}\n"
-                    "Receipt binds a request digest and result digest, but the request/result payload is not retained. "
-                    "Target and successful Systembility details are not persisted; no secret or prompt is shown."))
+                    "info", "", tr("Time: {strftime}\nRequest: {value}… · Authority: {authority}\nSystembilities: {checks}\nFailed checks: {value2}\nReceipt binds a request digest and result digest, but the request/result payload is not retained. Target and successful Systembility details are not persisted; no secret or prompt is shown.", strftime=_time.strftime('%Y-%m-%d %H:%M:%S', _time.localtime(item['time'])), value=digest[:12], authority=authority, checks=checks, value2=', '.join(item['failed_checks']) or tr("none"))))
             if not report.recent:
                 entries.append(self._entry("No durable decisions recorded for this workspace", "info"))
         entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))

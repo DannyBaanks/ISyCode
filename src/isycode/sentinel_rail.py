@@ -22,6 +22,7 @@ from rich.text import Text
 
 from isycode.actions import ACTION_BY_ID
 from isycode.authority_view import DEDICATED_CONTROLS, grant_state
+from isycode.localization import tr
 from isycode.tui_theme import status_chip, status_phrase, switch_row, switch_rows
 
 RECENT_DECISIONS = 8
@@ -92,38 +93,38 @@ def render(feed: SentinelFeed, policy: Mapping[str, Any] | None, *,
     rows: list[Text] = []
     mode = (policy or {}).get("mode") if isinstance(policy, Mapping) else None
     if mode == "classic":
-        mode_text = "Classic · trusted folder" if trusted else "Classic · asks before each change"
+        mode_text = tr("Classic · trusted folder") if trusted else tr("Classic · asks before each change")
     elif mode == "security":
-        mode_text = "Security · everything off until granted"
+        mode_text = tr("Security · everything off until granted")
     else:
-        mode_text = "Mode unknown · nothing is assumed granted"
-    rows.append(Text(f"Mode · {mode_text}"))
+        mode_text = tr("Mode unknown · nothing is assumed granted")
+    rows.append(Text(tr("Mode · {mode}", mode=mode_text)))
     if policy is None:
-        rows.append(switch_row(None, "Permissions", status_phrase("unavailable")))
+        rows.append(switch_row(None, tr("Permissions"), status_phrase(tr("unavailable"))))
     else:
         labels = active_permissions(policy)
-        rows.append(Text(f"Active permissions · {len(labels)}"))
-        rows += [switch_row(True, label, "" if complete else "partial · some actions denied")
-                 for label, complete in labels] or [switch_row(False, "None", inactive=True)]
+        rows.append(Text(tr("Active permissions · {count}", count=len(labels))))
+        rows += [switch_row(True, tr(label), "" if complete else tr("partial · some actions denied"))
+                 for label, complete in labels] or [switch_row(False, tr("None"), inactive=True)]
     rows.append(Text(""))
     if feed.recent:
-        rows.append(Text("Latest decisions"))
+        rows.append(Text(tr("Latest decisions")))
         for entry in reversed(feed.recent):
-            note = "allow" if entry["allowed"] else "deny"
+            note = tr("allow") if entry["allowed"] else tr("deny")
             if entry["failed"]:
                 note += " · " + ", ".join(entry["failed"])
             elif entry["approval"] == "user":
-                note += " · you approved"
+                note += " · " + tr("you approved")
             elif entry["approval"] == "delegated":
-                note += " · by your setting"
+                note += " · " + tr("by your setting")
             if entry["time"] is not None:
                 note += " · " + time.strftime("%H:%M:%S", time.localtime(entry["time"]))
             rows.append(switch_row(entry["allowed"], entry["action"], note))
     else:
-        rows.append(Text("No decisions yet in this session"))
+        rows.append(Text(tr("No decisions yet in this session")))
     if feed.journal:
-        rows.append(Text(f"Journal · {feed.journal}"))
-    title = f"IsySentinel · {feed.allowed} allow · {feed.denied} deny"
+        rows.append(Text(tr("Journal · {journal}", journal=feed.journal)))
+    title = tr("IsySentinel · {allowed} allow · {denied} deny", allowed=feed.allowed, denied=feed.denied)
     return switch_rows(rows), title
 
 

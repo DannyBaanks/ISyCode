@@ -38,13 +38,7 @@ class RTKSettingsScreen(ModalScreen):
             with VerticalScroll(id='rtk-settings-body', classes='isy-dialog-body'):
                 yield Static(tr('Inspecting installation…'), id='rtk-state', markup=False)
                 yield Static(tr('Checking the binary in the command sandbox…'), id='rtk-identity', markup=False)
-                yield Static(Text('Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\n'
-                                  'Off by default. The approved command runs once, unchanged. '
-                                  'RTK filters its captured output inside an empty, network-denied sandbox. '
-                                  'Authority, Sentinel, approvals and file revocations still apply.\n\n'
-                                  'Original output stays private and is linked by SHA-256 to the command receipt. '
-                                  'Savings are byte/4 estimates, not provider billing or tokenizer measurements. '
-                                  'A changed binary needs a new explicit opt-in.'))
+                yield Static(Text(tr("Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\nOff by default. The approved command runs once, unchanged. RTK filters its captured output inside an empty, network-denied sandbox. Authority, Sentinel, approvals and file revocations still apply.\n\nOriginal output stays private and is linked by SHA-256 to the command receipt. Savings are byte/4 estimates, not provider billing or tokenizer measurements. A changed binary needs a new explicit opt-in.")))
             with Horizontal(id='rtk-settings-actions', classes='isy-dialog-actions'):
                 yield Button(tr('Enable this binary'), id='rtk-enable', disabled=True, variant='success')
                 yield Button(tr('Disable'), id='rtk-disable')
@@ -59,11 +53,11 @@ class RTKSettingsScreen(ModalScreen):
             current = await asyncio.to_thread(settings.load)
             self.candidate = await asyncio.to_thread(settings.inspect)
         except (OSError, ValueError, RuntimeError) as exc:
-            self.query_one('#rtk-state', Static).update(Text('Unavailable · ' + str(exc)[:200]))
+            self.query_one('#rtk-state', Static).update(Text(tr("Unavailable · {value}", value=str(exc)[:200])))
             return
         value = self.candidate
         self.query_one('#rtk-identity', Static).update(Text(
-            value['version'] + '\n' + value['path'] + '\nSHA-256 ' + value['sha256']))
+            tr("{version}\n{path}\nSHA-256 {sha256}", version=value['version'], path=value['path'], sha256=value['sha256'])))
         self.query_one('#rtk-enable', Button).disabled = False
         self._show_state(current)
 
@@ -88,7 +82,7 @@ class RTKSettingsScreen(ModalScreen):
             else:
                 return
         except (OSError, ValueError, RuntimeError) as exc:
-            self.query_one('#rtk-state', Static).update(Text('Not changed · ' + str(exc)[:200]))
+            self.query_one('#rtk-state', Static).update(Text(tr("Not changed · {value}", value=str(exc)[:200])))
             return
         self._show_state(value)
 
@@ -110,7 +104,7 @@ class RTKRawOutputScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id='rtk-raw-card'):
-            yield Static(Text('Captured original output · SHA-256 ' + self.digest))
+            yield Static(Text(tr("Captured original output · SHA-256 {digest}", digest=self.digest)))
             with VerticalScroll(id='rtk-raw-body'):
                 yield Static(Text(self.output))
             yield Button(tr('Close'), id='rtk-raw-close')
@@ -127,7 +121,7 @@ async def command(app, argument: str):
     if argument.startswith('recall '):
         digest = argument.removeprefix('recall ').strip()
         if HASH.fullmatch(digest) is None:
-            app.notify('Use /rtk recall <64-character SHA-256>', severity='warning')
+            app.notify(tr("Use /rtk recall <64-character SHA-256>"), severity='warning')
             return
         try:
             path = _directory('outputs') / (digest + '.bin')

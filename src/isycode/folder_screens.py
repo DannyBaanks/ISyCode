@@ -30,7 +30,7 @@ class AddWorkspaceFolderScreen(ModalScreen[dict | None]):
         with Vertical(id='folder-card', classes='isy-dialog'):
             yield Static(tr('Add sibling folder'), classes='isy-dialog-title', markup=False)
             with VerticalScroll(id='folder-content', classes='isy-dialog-body'):
-                yield Static(f'Selected sibling folder: {self.selected_folder}', markup=False)
+                yield Static(tr("Selected sibling folder: {selected_folder}", selected_folder=self.selected_folder), markup=False)
                 yield Input(placeholder=tr('Alias, e.g. other-project'), id='folder-alias')
                 yield Checkbox(tr('Allow proposed file edits'), value=True, id='folder-editable')
                 yield Static(tr('This grants reads/searches and optionally edits for this exact folder. '
@@ -75,7 +75,7 @@ class AutomaticEditsWarningScreen(ModalScreen[bool]):
         with Vertical(id='auto-edit-card', classes='isy-dialog'):
             yield Static(tr('Danger: allow automatic file edits'), classes='isy-dialog-title', markup=False)
             with VerticalScroll(id='auto-edit-content', classes='isy-dialog-body'):
-                yield Static(f'Folder: {self.root}', markup=False)
+                yield Static(tr("Folder: {root}", root=self.root), markup=False)
                 yield Static(tr('The assistant may create or overwrite files here without showing '
                              'each diff for approval. Model mistakes or malicious instructions in '
                              'files can damage your work. Review changes with Git and keep backups.'), markup=False)

@@ -78,7 +78,7 @@ class QueuedBox(ExpandableBox):
         return "\n".join(self.app._queued_messages)
 
     def _paint_expand_hint(self):
-        self.border_subtitle = Text("Enter: steer · Space: expand · Esc: undo", style=MUTED) if self.has_focus or self.has_focus_within else ""
+        self.border_subtitle = Text(tr("Enter: steer · Space: expand · Esc: undo"), style=MUTED) if self.has_focus or self.has_focus_within else ""
 
     def action_send_queued(self):
         self.app._promote_queued_message()
@@ -139,7 +139,7 @@ class PromptArea(TextArea):
         if text.strip():
             self.app._idea_backlog.append(text)
             self.load_text("")
-            self.app.notify(f"Idea captured · {len(self.app._idea_backlog)} pending · /ideas reviews")
+            self.app.notify(tr("Idea captured · {len} pending · /ideas reviews", len=len(self.app._idea_backlog)))
 
     def action_paste_clipboard(self):
         self.app.run_worker(self.app._request_clipboard_paste(self), group="clipboard-user")
@@ -153,7 +153,7 @@ class PromptArea(TextArea):
         if active:
             self.app.push_screen(PastedTextScreen(self, active))
         else:
-            self.app.notify("No compacted text in this draft.")
+            self.app.notify(tr("No compacted text in this draft."))
 
     def action_slash_up(self) -> None:
         app = self.app

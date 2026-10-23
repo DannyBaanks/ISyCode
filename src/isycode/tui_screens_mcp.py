@@ -68,7 +68,7 @@ class MCPArgumentsScreen(ModalScreen[dict | None]):
         if isinstance(schema, dict) and len(json.dumps(schema, ensure_ascii=False)) > 12_000:
             schema_text += "\n… schema display truncated …"
         with Vertical(id="mcp-arguments-card", classes="isy-dialog"):
-            yield Static(f"Gateway MCP · {name}", id="mcp-arguments-title", classes="isy-dialog-title", markup=False)
+            yield Static(tr("Gateway MCP · {name}", name=name), id="mcp-arguments-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="mcp-arguments-metadata", classes="isy-dialog-body"):
                 yield Static(description, id="mcp-arguments-description", markup=False)
                 yield Static(tr("Discovered input schema\n") + schema_text, id="mcp-arguments-schema", markup=False)
@@ -128,15 +128,14 @@ class MCPInvocationConfirmScreen(ApprovalScreen):
     def compose(self) -> ComposeResult:
         payload = json.dumps(self.arguments, ensure_ascii=False, indent=2)
         with Vertical(id="mcp-confirm-card", classes="isy-dialog"):
-            yield Static(f"Confirm Gateway MCP call · {self.tool_name}", id="mcp-confirm-title", classes="isy-dialog-title", markup=False)
+            yield Static(tr("Confirm Gateway MCP call · {tool_name}", tool_name=self.tool_name), id="mcp-confirm-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="mcp-confirm-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
                     owner="Gateway MCP tool", scope=self.tool_name,
                     duration="one-use approval",
                     not_granted="no other MCP calls, no local filesystem access")
                 yield Static(
-                    f"{self.description[:800]}\nEndpoint: {self.endpoint}\nThis sends the exact arguments below to the Gateway MCP. "
-                    "A one-use approval is required; the remote Gateway validates its own key and operation policy.",
+                    tr("{value}\nEndpoint: {endpoint}\nThis sends the exact arguments below to the Gateway MCP. A one-use approval is required; the remote Gateway validates its own key and operation policy.", value=self.description[:800], endpoint=self.endpoint),
                     id="mcp-confirm-warning", markup=False)
                 with Vertical(id="mcp-confirm-payload", classes="isy-dialog-detail"):
                     yield Static(payload, markup=False)
@@ -183,9 +182,7 @@ class GatewaySemanticQueryScreen(ModalScreen[tuple[str, dict] | None]):
             yield Static(tr("ISyCo Gateway · semantic operations"), id="semantic-query-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="semantic-query-metadata", classes="isy-dialog-body"):
                 yield Static(
-                    f"Endpoint: {self.endpoint}\nConfigured workspace ID: {self.workspace_id}\n"
-                    "The ID is an operator-managed binding, not a filesystem grant. Each request is "
-                    "denied if the Gateway reports a different ID.", id="semantic-query-copy", markup=False)
+                    tr("Endpoint: {endpoint}\nConfigured workspace ID: {workspace_id}\nThe ID is an operator-managed binding, not a filesystem grant. Each request is denied if the Gateway reports a different ID.", endpoint=self.endpoint, workspace_id=self.workspace_id), id="semantic-query-copy", markup=False)
             yield Select([(operation, operation) for operation in self.OPERATIONS],
                          value="symbols/search", id="semantic-operation")
             yield Static(tr("Operation payload · JSON (fields are validated for the selected operation)"),
@@ -210,7 +207,7 @@ class GatewaySemanticQueryScreen(ModalScreen[tuple[str, dict] | None]):
             from isycode.semantic_gateway import validate_semantic_payload
             payload = validate_semantic_payload(operation, payload)
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
-            self.query_one("#semantic-query-error", Static).update(f"Invalid request: {exc}")
+            self.query_one("#semantic-query-error", Static).update(tr("Invalid request: {exc}", exc=exc))
             return
         self.dismiss((operation, payload))
 
@@ -242,18 +239,14 @@ class GatewaySemanticConfirmScreen(ApprovalScreen):
         payload = json.dumps({**self.payload, "workspace_id": self.workspace_id},
                              ensure_ascii=False, indent=2)
         with Vertical(id="semantic-confirm-card", classes="isy-dialog"):
-            yield Static(f"Confirm native Gateway · {self.operation}", id="semantic-confirm-title", classes="isy-dialog-title", markup=False)
+            yield Static(tr("Confirm native Gateway · {operation}", operation=self.operation), id="semantic-confirm-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="semantic-confirm-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
                     owner="Gateway semantic HTTP", scope=self.operation,
                     duration="one-use approval",
                     not_granted="no writes, no commands, no model context")
                 yield Static(
-                    f"POST {self.endpoint}/v1/{self.operation}\nExpected workspace ID: {self.workspace_id}\n\n"
-                    "Exact payload:\n" + payload +
-                    "\n\nThis is native HTTP, not MCP. The Gateway independently checks its "
-                    "isyco.semantic scope and workspace ID. The result stays in this TUI and is "
-                    "not added to model context. A one-use local approval is required.",
+                    tr("POST {endpoint}/v1/{operation}\nExpected workspace ID: {workspace_id}\n\nExact payload:\n{payload}\n\nThis is native HTTP, not MCP. The Gateway independently checks its isyco.semantic scope and workspace ID. The result stays in this TUI and is not added to model context. A one-use local approval is required.", endpoint=self.endpoint, operation=self.operation, workspace_id=self.workspace_id, payload=payload),
                     id="semantic-confirm-copy", markup=False)
             with Horizontal(id="semantic-confirm-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="semantic-confirm-cancel", classes="-refuse")
@@ -287,9 +280,9 @@ class LSPQueryScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="lsp-query-card", classes="isy-dialog"):
-            yield Static(f"{self.label} · workspace symbol search", id="lsp-query-title", classes="isy-dialog-title", markup=False)
+            yield Static(tr("{label} · workspace symbol search", label=self.label), id="lsp-query-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="lsp-query-metadata", classes="isy-dialog-body"):
-                yield Static(f"Local workspace: {self.root}\nQuery goes only to the sandboxed local language server.", id="lsp-query-copy", markup=False)
+                yield Static(tr("Local workspace: {root}\nQuery goes only to the sandboxed local language server.", root=self.root), id="lsp-query-copy", markup=False)
             yield Input(placeholder=tr("Symbol name…"), id="lsp-query-input", max_length=256)
             with Horizontal(id="lsp-query-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel"), id="lsp-query-cancel")
@@ -338,10 +331,7 @@ class LSPConfirmScreen(ApprovalScreen):
                     duration="one-use approval",
                     not_granted="no writes, no network, no Gateway")
                 yield Static(
-                    f"Server: {self.label} · operation: workspace/symbol\nQuery: {self.query_text}\nWorkspace root: {self.root}\n\n"
-                    "ISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. "
-                    "The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), "
-                    "and output/time limits apply. No Gateway or provider receives this query.",
+                    tr("Server: {label} · operation: workspace/symbol\nQuery: {query_text}\nWorkspace root: {root}\n\nISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), and output/time limits apply. No Gateway or provider receives this query.", label=self.label, query_text=self.query_text, root=self.root),
                     id="lsp-confirm-copy", markup=False)
             with Horizontal(id="lsp-confirm-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="lsp-confirm-cancel", classes="-refuse")
@@ -383,15 +373,7 @@ class BrokerProvisionConfirmScreen(ApprovalScreen):
                     duration="one-use, grants revoked after attempt",
                     not_granted="no credentials, no host network, no other containers")
                 yield Static(
-                    f"Project root: {self.project}\nRecipe root: {self.recipe.source_root}\n"
-                    f"Recipe SHA-256: {self.recipe.digest}\nImage: {self.image}\nFiles:\n{file_rows}\n\n"
-                    "Build effect: Docker daemon builds this recipe and may download base images and Python packages. "
-                    "Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, "
-                    "read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, "
-                    "1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. "
-                    "ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to "
-                    "this root and recipe digest, then revoke those grants after the attempt. Failed health checks "
-                    "remove only the container/network created by this request.", id="broker-provision-copy", markup=False)
+                    tr("Project root: {project}\nRecipe root: {source_root}\nRecipe SHA-256: {digest}\nImage: {image}\nFiles:\n{file_rows}\n\nBuild effect: Docker daemon builds this recipe and may download base images and Python packages. Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, 1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to this root and recipe digest, then revoke those grants after the attempt. Failed health checks remove only the container/network created by this request.", project=self.project, source_root=self.recipe.source_root, digest=self.recipe.digest, image=self.image, file_rows=file_rows), id="broker-provision-copy", markup=False)
             with Horizontal(id="broker-provision-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="broker-provision-cancel", classes="-refuse")
                 yield Button(tr("Approve · Build + Start · y"), id="broker-provision-confirm", variant="warning")
@@ -426,12 +408,7 @@ class BrokerManagementScreen(ModalScreen[str | None]):
             yield Static(tr("Manage semantic broker"), id="broker-manage-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="broker-manage-body", classes="isy-dialog-body"):
                 yield Static(
-                    f"Project: {self.project}\nStatus: {self.item.get('status')} · "
-                    f"127.0.0.1:{self.item.get('host_port')}\nContainer: {self.item.get('container')}\n"
-                    f"Recipe: {self.item.get('recipe_digest')}\n\n"
-                    "Logs are capped and common credential patterns are redacted. Stop and Remove require a second "
-                    "one-use confirmation. Start reuses this registered container. Remove deletes this container and "
-                    "its dedicated network; the shared image stays.",
+                    tr("Project: {project}\nStatus: {get} · 127.0.0.1:{get2}\nContainer: {get3}\nRecipe: {get4}\n\nLogs are capped and common credential patterns are redacted. Stop and Remove require a second one-use confirmation. Start reuses this registered container. Remove deletes this container and its dedicated network; the shared image stays.", project=self.project, get=self.item.get('status'), get2=self.item.get('host_port'), get3=self.item.get('container'), get4=self.item.get('recipe_digest')),
                     id="broker-manage-copy", markup=False)
             with Horizontal(id="broker-manage-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Close"), id="broker-manage-close")
@@ -466,7 +443,7 @@ class BrokerOperationConfirmScreen(ApprovalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="broker-operation-card", classes="isy-dialog"):
-            yield Static(f"Confirm broker {self.operation}", id="broker-operation-title", classes="isy-dialog-title", markup=False)
+            yield Static(tr("Confirm broker {operation}", operation=self.operation), id="broker-operation-title", classes="isy-dialog-title", markup=False)
             effect = {
                 "logs": "Read up to 200 log lines. The output is redacted and capped.",
                 "start": "Start this exact registered container and verify its loopback health endpoint.",
@@ -479,9 +456,7 @@ class BrokerOperationConfirmScreen(ApprovalScreen):
                     duration="one-use, grant revoked after operation",
                     not_granted="no provision, no other containers, no host access")
                 yield Static(
-                    f"Project: {self.project}\nContainer: {self.container}\n\n{effect}\n"
-                    "This grants only the exact Docker executable and broker target for this single operation; "
-                    "the temporary grant is revoked afterward.", id="broker-operation-copy", markup=False)
+                    tr("Project: {project}\nContainer: {container}\n\n{effect}\nThis grants only the exact Docker executable and broker target for this single operation; the temporary grant is revoked afterward.", project=self.project, container=self.container, effect=effect), id="broker-operation-copy", markup=False)
             with Horizontal(id="broker-operation-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="broker-operation-cancel", classes="-refuse")
                 yield Button(tr("Approve once · y"), id="broker-operation-approve", variant="warning")

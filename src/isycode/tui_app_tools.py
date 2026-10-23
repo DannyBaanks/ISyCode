@@ -142,7 +142,7 @@ class ToolMixin:
             raise
         finally:
             elapsed = _elapsed_label(_time.monotonic() - started_at)
-            self._append(f"Tool duration · {label} · {elapsed}", MUTED)
+            self._append(tr("Tool duration · {label} · {elapsed}", label=label, elapsed=elapsed), MUTED)
             if token is not None:
                 _tool_display_context.reset(token)
             if group is not None and card.is_mounted and self._lane_on_screen():
@@ -278,7 +278,7 @@ class ToolMixin:
             owner = GatewayMCPInvocationOwner(
                 self._workspace_root, WorkspaceAuthority(self._workspace_root),
                 self._action_approvals)
-            self._set_activity(f"MCP · awaiting local grant for {gateway_tool_target(name)}", YELLOW)
+            self._set_activity(tr("MCP · awaiting local grant for {gateway_tool_target}", gateway_tool_target=gateway_tool_target(name)), YELLOW)
             outcome = await owner.invoke(
                 gateway_tool_target(name), arguments, endpoint,
                 tool_schema_digest(tool), list(snapshot.items), approval)
@@ -288,7 +288,7 @@ class ToolMixin:
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             return json.dumps({"status": outcome.decision.lower(),
                                "detail": outcome.reason[:200]})
-        self._append(f"  MCP {gateway_tool_target(name)} · Gateway returned a result", CYAN)
+        self._append("  " + tr("MCP {gateway_tool_target} · Gateway returned a result", gateway_tool_target=gateway_tool_target(name)), CYAN)
         self._append(f"  {verified_receipt_line(outcome.receipt.receipt_id)}", GREEN)
         return outcome.text
 
@@ -324,16 +324,16 @@ class ToolMixin:
         try:
             request = owner.prepare("connect")
         except (OSError, ValueError, RuntimeError) as exc:
-            self._append(f"  Bridge is not available here ({type(exc).__name__}).", YELLOW)
+            self._append("  " + tr("Bridge is not available here ({name}).", name=type(exc).__name__), YELLOW)
             return False
         approval = self._action_approvals.issue(request)
         outcome = await asyncio.to_thread(owner.execute, request, approval)
         if outcome.decision != "ALLOW":
-            self._append("  Bridge registration was denied.", YELLOW)
+            self._append("  " + tr("Bridge registration was denied."), YELLOW)
             return False
         self._bridge_identity = owner.identity
         self._paint_rail_identity()
-        self._append(f"  Registered on the Bridge as {owner.identity}.", GREEN)
+        self._append("  " + tr("Registered on the Bridge as {identity}.", identity=owner.identity), GREEN)
         return True
 
     async def _bridge_peers(self) -> dict:
@@ -421,11 +421,11 @@ class ToolMixin:
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
                                  ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
             outcome = {"error": "tool is not registered by ISyCode"}
-            self._append("  Tool denied · unregistered tool name", SECURITY)
+            self._append("  " + tr("Tool denied · unregistered tool name"), SECURITY)
             return tool_call_id, json.dumps(outcome)
         if not isinstance(raw_arguments, str) or len(raw_arguments) > 64 * 1024:
             outcome = {"error": "tool arguments are malformed or too large"}
-            self._append(f"  Tool denied · {name} · invalid arguments", SECURITY)
+            self._append("  " + tr("Tool denied · {name} · invalid arguments", name=name), SECURITY)
             return tool_call_id, json.dumps(outcome)
         try:
             arguments = json.loads(raw_arguments)
@@ -433,7 +433,7 @@ class ToolMixin:
             arguments = None
         if not isinstance(arguments, dict):
             outcome = {"error": "tool arguments must be a JSON object"}
-            self._append(f"  Tool denied · {name} · invalid arguments", SECURITY)
+            self._append("  " + tr("Tool denied · {name} · invalid arguments", name=name), SECURITY)
             return tool_call_id, json.dumps(outcome)
         if name == CONTEXT_ACCESS_TOOL_NAME:
             if (set(arguments) != {"path"} or not isinstance(arguments.get("path"), str)
@@ -496,12 +496,12 @@ class ToolMixin:
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             batch_decision = self._batch_decisions.pop(tool_call_id, None)
             if batch_decision == "reject":
-                self._append("  ✗ Batch rejected · nothing was written", MUTED)
+                self._append("  " + tr("✗ Batch rejected · nothing was written"), MUTED)
                 return tool_call_id, json.dumps({"status": "rejected_by_user",
                                                  "approved_by_user": False,
                                                  "path": arguments.get("path")})
             if batch_decision:
-                self._set_activity(f"Applying batch-approved write · {arguments.get('path')}")
+                self._set_activity(tr("Applying batch-approved write · {get}", get=arguments.get('path')))
             return tool_call_id, await self._dispatch_write_tool(
                 arguments, edit=name == EDIT_TOOL_NAME, root=root, folder_alias=alias,
                 batch_digest=batch_decision or None)
@@ -529,7 +529,7 @@ class ToolMixin:
                 root, WorkspaceAuthority(root))
             result = await asyncio.to_thread(owner.execute, action_id, arguments)
         except Exception:
-            self._append(f"  Tool denied · {action_id} · authority/owner unavailable", SECURITY)
+            self._append("  " + tr("Tool denied · {action_id} · authority/owner unavailable", action_id=action_id), SECURITY)
             return tool_call_id, json.dumps({"error": "ISyCode authorization or read owner unavailable"})
         if result.decision != "ALLOW" or result.receipt is None:
             reason = result.reason or result.decision
@@ -537,7 +537,7 @@ class ToolMixin:
             return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
         # The outcome and its receipt live inside the tool's own card; no
         # separate box per call.
-        self._append(f"  ✓ {alias} · {summary[:160]} · completed", TEXT)
+        self._append("  " + tr("✓ {alias} · {value} · completed", alias=alias, value=summary[:160]), TEXT)
         self._append(self._receipt_text(result, summary), MUTED)
         return tool_call_id, result.text
 
@@ -578,7 +578,7 @@ class ToolMixin:
         return IterationOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
 
     def _show_iteration_state(self, state):
-        self._append("Iteration · " + state["title"] + " · " + state["status"], CYAN)
+        self._append(tr("Iteration · {title} · {status}", title=state["title"], status=state["status"]), CYAN)
         participants = {p["participant_id"]: p for p in state["participants"]}
         for turn in state["turns"]:
             p = participants.get(turn["actor_id"])
@@ -587,17 +587,17 @@ class ToolMixin:
             self.query_one(ChatArea).mount(SelectableText(RichMarkdown(turn["content"], code_theme="monokai"), selection_text=turn["content"]))
         self.query_one(ChatArea).follow_tail()
         if state["status"] == "PARTICIPANT_ERROR":
-            self._append("Iteration paused · " + str(state["receipts"][-1].get("error_kind")) + " · /iteration retry " + state["iteration_session_id"], YELLOW)
+            self._append(tr("Iteration paused · {text} · /iteration retry {iteration_session_id}", text=str(state["receipts"][-1].get("error_kind")), iteration_session_id=state["iteration_session_id"]), YELLOW)
 
     async def _run_iteration_window(self, objective):
         from isycode.iteration import run_iteration
         from isycode.providers import child_model_choices
         from isycode.subagent_screen import SubagentModelScreen
         if self._subagent_running or (self._loop_task and self._loop_task is not asyncio.current_task() and not self._loop_task.done()):
-            self._append("Finish the active task before starting an iteration.", YELLOW)
+            self._append(tr("Finish the active task before starting an iteration."), YELLOW)
             return
         if not objective:
-            self._append("Usage: /iteration <objective> · choose three participants. Esc cancels.", MUTED)
+            self._append(tr("Usage: /iteration <objective> · choose three participants. Esc cancels."), MUTED)
             return
         self._subagent_running = True
         self._subagent_task = asyncio.current_task()
@@ -618,18 +618,18 @@ class ToolMixin:
                 sid = owner.create_iteration(objective[:100], participants)
                 owner.human(sid, objective)
             self._show_chat_again()
-            self._append("Iteration order · " + " → ".join(self._model_display_label(p["provider"], p["model"]) for p in owner.inspect(sid)["participants"]), CYAN)
+            self._append(tr("Iteration order · {join}", join=" → ".join(self._model_display_label(p["provider"], p["model"]) for p in owner.inspect(sid)["participants"])), CYAN)
             def factory(p):
                 return Provider(name=p["provider"], model=p["model"],
                     base_url=PRESETS[p["provider"]]["base_url"], api_key=load_provider_key(p["provider"]) or None)
             state = await run_iteration(owner, sid, factory,
-                on_status=lambda status: self._set_activity("Iteration · " + status, CYAN))
+                on_status=lambda status: self._set_activity(tr("Iteration · {status}", status=status), CYAN))
             self._show_iteration_state(state)
         except asyncio.CancelledError:
-            self._append("Iteration aborted; durable contributions preserved.", YELLOW)
+            self._append(tr("Iteration aborted; durable contributions preserved."), YELLOW)
             raise
         except (OSError, RuntimeError, ValueError) as exc:
-            self._append("Iteration unavailable · " + type(exc).__name__, YELLOW)
+            self._append(tr("Iteration unavailable · {name}", name=type(exc).__name__), YELLOW)
         finally:
             self._subagent_running = False
             self._subagent_task = None
@@ -711,11 +711,11 @@ class ToolMixin:
             if self._active_skills:
                 from isycode.skill_catalog import guidance
                 context.append({"role": "system", "content": guidance(self._active_skills)})
-            card = Static(Text(f"Subagent · {self._model_display_label(provider.name, provider.model)} · starting", style=CYAN))
+            card = Static(Text(tr("Subagent · {model_display_label} · starting", model_display_label=self._model_display_label(provider.name, provider.model)), style=CYAN))
             chat = self.query_one(ChatArea)
             chat.mount(card); chat.follow_tail()
             def status(value):
-                card.update(Text(f"Subagent · {self._model_display_label(provider.name, provider.model)} · {value}", style=CYAN))
+                card.update(Text(tr("Subagent · {model_display_label} · {value}", model_display_label=self._model_display_label(provider.name, provider.model), value=value), style=CYAN))
                 chat.follow_tail()
             owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
             async def complete(messages):
@@ -731,7 +731,7 @@ class ToolMixin:
                     raise PermissionError("Child provider request denied or unverifiable")
                 return response
             async def dispatch(call):
-                self._append(f"  Subagent tool · {call['function']['name']}", CYAN)
+                self._append("  " + tr("Subagent tool · {name}", name=call['function']['name']), CYAN)
                 self._tool_history = record_tool_result(self._tool_history, call,
                     "Child tool attempt started; completion unverified. Cancellation does not prove no effect.")
                 self._save_draft()
@@ -748,19 +748,19 @@ class ToolMixin:
                 shown = reply.strip()[:4000]
                 chat = self.query_one(ChatArea)
                 chat.mount(SelectableText(Text(
-                    f"Subagent · {self._model_display_label(identity.get('provider', ''), identity.get('model', ''))}\n{shown}"),
+                    tr("Subagent · {model_display_label}\n{shown}", model_display_label=self._model_display_label(identity.get('provider', ''), identity.get('model', '')), shown=shown)),
                     selection_text=shown))
                 chat.follow_tail()
             return result
         except asyncio.CancelledError:
             if card is not None:
-                card.update(Text("Subagent · cancelled; completed effects remain in the action journal", style=YELLOW))
+                card.update(Text(tr("Subagent · cancelled; completed effects remain in the action journal"), style=YELLOW))
             raise
         except (OSError, ValueError, ProviderError, ConfigurationError, StreamError) as exc:
             from isycode.provider_errors import classify_provider_error
             detail = classify_provider_error(exc)
             if card is not None:
-                card.update(Text("Subagent · " + detail["provider_hint"], style=YELLOW))
+                card.update(Text(tr("Subagent · {provider_hint}", provider_hint=detail["provider_hint"]), style=YELLOW))
             self._play_notification_sound("error")
             return {**identity, **detail, "status": "blocked" if isinstance(exc, PermissionError) else "error",
                     "error": detail["provider_hint"]}
@@ -780,7 +780,7 @@ class ToolMixin:
             self._active_skills = proposed
             self._append("  Selected skills · " + (", ".join(proposed) or "none"), CYAN)
         except (OSError, ValueError):
-            self._append("  Skill unavailable or selection too large; existing guidance preserved.", YELLOW)
+            self._append("  " + tr("Skill unavailable or selection too large; existing guidance preserved."), YELLOW)
 
     def _show_agent_tasks(self, tasks: list[dict[str, str]]) -> None:
         """Replace the on-screen task list; an empty or all-done list collapses after a turn."""
@@ -808,33 +808,32 @@ class ToolMixin:
         from isycode.mcp_presets import add_preset
         try:
             add_preset(name)
-            self._append(f"  MCP {name} configured. /mcp start {name} reviews the npm download/process before starting.", GREEN)
+            self._append("  " + tr("MCP {name} configured. /mcp start {name} reviews the npm download/process before starting.", name=name), GREEN)
         except (OSError, ValueError):
-            self._append("  MCP preset could not be added; inspect the private config, existing name and available presets.", YELLOW)
+            self._append("  " + tr("MCP preset could not be added; inspect the private config, existing name and available presets."), YELLOW)
 
     async def _list_local_mcp(self) -> None:
         try:
             configs = load_mcp_config()
         except (OSError, ValueError) as exc:
-            self._append(f"  MCP config problem · {str(exc)[:200]}", YELLOW)
+            self._append("  " + tr("MCP config problem · {value}", value=str(exc)[:200]), YELLOW)
             return
         if not configs:
-            self._append(f"  No local MCP servers configured. Add them to {mcp_config_path()} as "
-                         '{"servers": {"name": {"command": ["program", "arg"]}}}.', MUTED)
+            self._append("  " + tr("No local MCP servers configured. Add them to {mcp_config_path} as {{\"servers\": {{\"name\": {{\"command\": [\"program\", \"arg\"]}}}}}}.", mcp_config_path=mcp_config_path()), MUTED)
             return
         running = self._local_mcp_owner().sessions
         for name, config in configs.items():
             state = (f"running · {len(running[name].tools)} tools" if name in running
                      and running[name].process.returncode is None else "stopped")
             self._append(f"  {name} · {state} · {shlex.join(config.argv)[:120]}", MUTED)
-        self._append("  /mcp start <name> asks before starting; each tool call asks again.", MUTED)
+        self._append("  " + tr("/mcp start <name> asks before starting; each tool call asks again."), MUTED)
 
     async def _start_local_mcp(self, name: str) -> None:
         mcp_owner = self._local_mcp_owner()
         try:
             preview = await asyncio.to_thread(mcp_owner.prepare_start, name)
         except (OSError, ValueError) as exc:
-            self._append(f"  MCP {name} cannot start · {str(exc)[:200]}", YELLOW)
+            self._append("  " + tr("MCP {name} cannot start · {value}", name=name, value=str(exc)[:200]), YELLOW)
             return
         executable = preview.request.parameters["executable"]
         authority = WorkspaceAuthority(self._workspace_root)
@@ -844,11 +843,10 @@ class ToolMixin:
         if (executable not in start_grant.get("executables", [])
                 or name not in invoke_grant.get("targets", [])):
             if not await self._await_screen(TailscaleConfirmScreen(
-                    f"Allow MCP server {name} in this workspace?",
-                    f"Saves a grant for {executable} and for calls to {name}. Starting it and every "
-                    "tool call still ask first. The server runs with your user's permissions.",
+                    tr("Allow MCP server {name} in this workspace?", name=name),
+                    tr("Saves a grant for {executable} and for calls to {name}. Starting it and every tool call still ask first. The server runs with your user's permissions.", executable=executable, name=name),
                     "Allow this server")):
-                self._append(f"  MCP {name} not allowed; nothing started.", MUTED)
+                self._append("  " + tr("MCP {name} not allowed; nothing started.", name=name), MUTED)
                 return
             try:
                 authority.set_grant("mcp.local.start", enabled=True, executables=sorted(
@@ -856,7 +854,7 @@ class ToolMixin:
                 authority.set_grant("mcp.local.invoke", enabled=True, targets=sorted(
                     set(invoke_grant.get("targets", [])) | {name}))
             except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-                self._append(f"  MCP grant could not be saved ({type(exc).__name__}).", RED)
+                self._append("  " + tr("MCP grant could not be saved ({name}).", name=type(exc).__name__), RED)
                 return
         env_keys = ", ".join(preview.request.parameters["env_keys"]) or "none"
         if not await self._await_screen(LocalMCPConfirmScreen(
@@ -868,16 +866,15 @@ class ToolMixin:
                 scope=name,
                 duration="until ISyCode exits",
                 not_granted="no other MCP servers; runs with user permissions (no filesystem isolation)")):
-            self._append(f"  MCP {name} not started.", MUTED)
+            self._append("  " + tr("MCP {name} not started.", name=name), MUTED)
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await mcp_owner.start(preview, approval)
         if outcome.decision == "ALLOW":
             tools = json.loads(outcome.text)["tools"]
-            self._append(f"  MCP {name} started · {len(tools)} tools · receipt "
-                         f"{outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("MCP {name} started · {len} tools · receipt {receipt_id}", name=name, len=len(tools), receipt_id=outcome.receipt.receipt_id), GREEN)
         else:
-            self._append(f"  MCP {name} {outcome.decision} · {outcome.reason[:180]}", SECURITY)
+            self._append("  " + tr("MCP {name} {decision} · {value}", name=name, decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
 
     async def _call_local_mcp(self, function: str, arguments) -> str:
         mcp_owner = self._local_mcp_owner()
@@ -889,7 +886,7 @@ class ToolMixin:
             preview = mcp_owner.prepare_call(server, tool, arguments)
         except ValueError as exc:
             return json.dumps({"error": str(exc)[:200]})
-        self._append(f"  MCP call requested · {server}.{tool} · review it", CYAN)
+        self._append("  " + tr("MCP call requested · {server}.{tool} · review it", server=server, tool=tool), CYAN)
         if not await self._await_screen(LocalMCPConfirmScreen(
                 f"Call MCP tool · {server}.{tool}",
                 "Sends exactly these arguments to the local server. Its answer is untrusted data.",
@@ -898,11 +895,11 @@ class ToolMixin:
                 scope=f"{server}.{tool}",
                 duration="one-use tool call",
                 not_granted="no other tool calls, no automatic retries")):
-            self._append("  MCP call rejected · nothing was sent", MUTED)
+            self._append("  " + tr("MCP call rejected · nothing was sent"), MUTED)
             return json.dumps({"status": "rejected_by_user"})
         outcome = await mcp_owner.call(preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  MCP {outcome.decision} · {outcome.reason[:180]}", SECURITY)
+            self._append("  " + tr("MCP {decision} · {value}", decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
         try:
             payload = json.loads(outcome.text)
@@ -911,7 +908,7 @@ class ToolMixin:
         if payload.get("browser_read") is True:
             content = payload.get("content")
             if not isinstance(content, str) or not content.strip():
-                self._append("  Browser snapshot contained no readable page text; raw output withheld.", YELLOW)
+                self._append("  " + tr("Browser snapshot contained no readable page text; raw output withheld."), YELLOW)
                 return json.dumps({"status": "no_readable_page_text", "content_shared": False})
             title = content.splitlines()[0][:180]
             raw_processing_ms = payload.get("processing_ms")
@@ -927,9 +924,9 @@ class ToolMixin:
                     title, content, int(payload.get("input_chars", 0)),
                     int(payload.get("filtered_chars", len(content))),
                     bool(payload.get("truncated")), processing_ms)):
-                self._append("  Browser text discarded · it was not shared with the model.", MUTED)
+                self._append("  " + tr("Browser text discarded · it was not shared with the model."), MUTED)
                 return json.dumps({"status": "rejected_by_user", "content_shared": False})
-        self._append(f"  MCP ALLOW · {server}.{tool} · receipt {outcome.receipt.receipt_id}", GREEN)
+        self._append("  " + tr("MCP ALLOW · {server}.{tool} · receipt {receipt_id}", server=server, tool=tool, receipt_id=outcome.receipt.receipt_id), GREEN)
         return outcome.text
 
     async def _call_workspace_pack(self, arguments) -> str:
@@ -957,15 +954,15 @@ class ToolMixin:
             + "\n".join(rows)
         )
         if not await self._await_screen(WorkspacePackConfirmScreen(details)):
-            self._append("  Workspace pack cancelled · no file contents were read", MUTED)
+            self._append("  " + tr("Workspace pack cancelled · no file contents were read"), MUTED)
             return json.dumps({"status": "cancelled", "files_read": 0})
         try:
             result = await asyncio.to_thread(owner.execute, preview)
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
-            self._append(f"  Workspace pack failed · {str(exc)[:180]}", YELLOW)
+            self._append("  " + tr("Workspace pack failed · {value}", value=str(exc)[:180]), YELLOW)
             return json.dumps({"error": f"workspace pack failed: {str(exc)[:240]}"})
         self._append(
-            f"  Workspace pack · {len(preview.files)} files · ~{result['estimated_tokens']:,} tokens",
+            "  " + tr("Workspace pack · {len} files · ~{estimated_tokens} tokens", len=len(preview.files), estimated_tokens=format(result['estimated_tokens'], ',')),
             GREEN,
         )
         return result["content"]
@@ -987,7 +984,7 @@ class ToolMixin:
         except (OSError, RuntimeError, ValueError):
             return json.dumps({"error": "workspace memory authority is unavailable"})
         if configured.get("enabled") is False:
-            self._append("  Memory action denied · explicitly revoked in workspace authority", SECURITY)
+            self._append("  " + tr("Memory action denied · explicitly revoked in workspace authority"), SECURITY)
             return json.dumps({"error": "workspace memory action was explicitly revoked",
                                "decision": "DENY"})
         sends_to_model = operation in {
@@ -996,16 +993,16 @@ class ToolMixin:
         if not await self._await_screen(MemoryConfirmScreen(
                 operation, json.dumps(preview.arguments, ensure_ascii=False, indent=2),
                 sends_to_model=sends_to_model)):
-            self._append(f"  Memory {operation} rejected · nothing was read or changed", MUTED)
+            self._append("  " + tr("Memory {operation} rejected · nothing was read or changed", operation=operation), MUTED)
             return json.dumps({"status": "rejected_by_user"})
         one_shot = OneShotActionAuthority(authority, preview.request)
         owner = WorkspaceMemoryOwner(self._workspace_root, one_shot, self._action_approvals)
         outcome = await asyncio.to_thread(owner.execute, preview)
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  Memory {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+            self._append("  " + tr("Memory {decision} · {value}", decision=outcome.decision, value=outcome.reason[:180]), YELLOW)
             return json.dumps({"error": "workspace memory action did not complete",
                                "decision": outcome.decision, "reason": outcome.reason[:240]})
-        self._append(f"  Memory {operation} · receipt {outcome.receipt.receipt_id}", GREEN)
+        self._append("  " + tr("Memory {operation} · receipt {receipt_id}", operation=operation, receipt_id=outcome.receipt.receipt_id), GREEN)
         return outcome.text
 
     def _menu_skill_use(self, entry: dict[str, str | bool]) -> None:
@@ -1044,42 +1041,41 @@ class ToolMixin:
             outcome = await runtime.plan(intent, on_chunk=on_chunk)
             plan = outcome.plan
             from isycode.model_presentation import model_display_name
-            self._append(f"  Model: {model_display_name(outcome.model)} · {outcome.provider_label}", MUTED)
-            self._append(f"  Host: {outcome.host_name}", MUTED)
+            self._append("  " + tr("Model: {model_display_name} · {provider_label}", model_display_name=model_display_name(outcome.model), provider_label=outcome.provider_label), MUTED)
+            self._append("  " + tr("Host: {host_name}", host_name=outcome.host_name), MUTED)
 
             if plan.verdict() == "PLANNED":
-                self._append(f"\n  Understood: {plan.understood}", TEXT)
-                self._append(f"  Plan ({len(plan.steps)} steps):", YELLOW)
+                self._append(tr("\n  Understood: {understood}", understood=plan.understood), TEXT)
+                self._append("  " + tr("Plan ({len} steps):", len=len(plan.steps)), YELLOW)
                 for i, step in enumerate(plan.steps, 1):
                     params_str = ", ".join(f"{k}={v}" for k, v in step.params.items())
                     self._append(f"    {i}. [{step.host}] {step.capability}({params_str})", TEXT)
                     self._append(f"       ↳ {step.why}", MUTED)
-                self._append("\n  Proposal only · it carries no authority.", MUTED)
+                self._append(tr("\n  Proposal only · it carries no authority."), MUTED)
                 self._append(
-                    "  Execution is disabled in Secure until each step has an ISyCode owner, "
-                    "grant, Sentinel decision and required approval.", MUTED)
+                    "  " + tr("Execution is disabled in Secure until each step has an ISyCode owner, grant, Sentinel decision and required approval."), MUTED)
                 if plan.completion and plan.completion.prompt_tokens is not None and plan.completion.completion_tokens is not None:
-                    self._append(f"  Tokens: {plan.completion.prompt_tokens + plan.completion.completion_tokens}", MUTED)
+                    self._append("  " + tr("Tokens: {value}", value=plan.completion.prompt_tokens + plan.completion.completion_tokens), MUTED)
                 self._clear_pending_plan()
                 if self._lane_on_screen():
                     review = self.query_one("#review-plan", Button)
                     review.disabled = True
-                    review.label = "Execution unavailable in Secure"
+                    review.label = tr("Execution unavailable in Secure")
                 self._append(
-                    f"\n  {outcome.origin} proposal is ready for inspection; it cannot be run through IsyMotron.",
+                    tr("\n  {origin} proposal is ready for inspection; it cannot be run through IsyMotron.", origin=outcome.origin),
                     YELLOW)
             else:
-                self._append(f"\n  Refused: {plan.refused or 'no plan possible'}", RED)
-                self._append("  This is correct behavior, not a failure.", MUTED)
+                self._append(tr("\n  Refused: {value}", value=plan.refused or tr("no plan possible")), RED)
+                self._append("  " + tr("This is correct behavior, not a failure."), MUTED)
 
         except PlanRejected as e:
             reason = getattr(e, "reason", str(e))
-            self._append(f"\n  Plan rejected: {reason}. No executable plan was retained.", RED)
+            self._append(tr("\n  Plan rejected: {reason}. No executable plan was retained.", reason=reason), RED)
         except ProviderError as e:
             self._append(f"\n  {self._provider_failure(e, 'Planning')}", RED)
         except Exception as e:
             self._append(
-                f"\n  Planning failed ({type(e).__name__}). No executable plan was retained.", RED)
+                tr("\n  Planning failed ({name}). No executable plan was retained.", name=type(e).__name__), RED)
         finally:
             if block is not None and block.is_mounted and self._lane_on_screen():
                 block.collapse_to(_time.monotonic() - t0)
@@ -1087,25 +1083,24 @@ class ToolMixin:
     def action_run_plan(self) -> None:
         """Review and confirm a demo plan through its contextual button."""
         if self._last_plan is None or self._last_runtime is None:
-            self._append("  No plan to run. Use /plan <intent> first.", MUTED)
+            self._append("  " + tr("No plan to run. Use /plan <intent> first."), MUTED)
             return
         if self._loop_task and not self._loop_task.done():
-            self._append("  Wait for the current task to finish before running a plan.", YELLOW)
+            self._append("  " + tr("Wait for the current task to finish before running a plan."), YELLOW)
             return
         try:
             current_context = self._last_runtime.approval_context()
         except Exception as e:
             self._clear_pending_plan()
-            self._set_activity("Plan cleared · authority could not be revalidated", RED)
+            self._set_activity(tr("Plan cleared · authority could not be revalidated"), RED)
             self._append(
-                f"  Authority could not be revalidated ({type(e).__name__}); plan cleared.", RED)
+                "  " + tr("Authority could not be revalidated ({name}); plan cleared.", name=type(e).__name__), RED)
             return
         if current_context != self._last_plan_context:
             self._clear_pending_plan()
-            self._set_activity("Plan cleared · authority changed", RED)
+            self._set_activity(tr("Plan cleared · authority changed"), RED)
             self._append(
-                "  Host identity, grants, capabilities, or scopes changed after planning. "
-                "Create a new plan before execution.", RED)
+                "  " + tr("Host identity, grants, capabilities, or scopes changed after planning. Create a new plan before execution."), RED)
             return
         now = _time.time()
         plan_digest = self._plan_digest(self._last_plan)
@@ -1117,9 +1112,9 @@ class ToolMixin:
                 authority = self._last_runtime.approval_summary()
             except Exception as e:
                 self._clear_pending_plan()
-                self._set_activity("Plan cleared · authority details unavailable", RED)
+                self._set_activity(tr("Plan cleared · authority details unavailable"), RED)
                 self._append(
-                    f"  Authority details could not be loaded ({type(e).__name__}); plan cleared.",
+                    "  " + tr("Authority details could not be loaded ({name}); plan cleared.", name=type(e).__name__),
                     RED)
                 return
             self._armed_at = now
@@ -1133,14 +1128,13 @@ class ToolMixin:
             effect = ("local filesystem.read only" if is_local_read
                       else "simulated host; no real workspace effects")
             self._append(
-                f"\n  Review {self._last_plan_origin} plan ({n} steps; {effect}):",
+                tr("\n  Review {last_plan_origin} plan ({n} steps; {effect}):", last_plan_origin=self._last_plan_origin, n=n, effect=effect),
                 YELLOW)
-            self._append(f"  Host: {self._last_plan_host}", MUTED)
+            self._append("  " + tr("Host: {last_plan_host}", last_plan_host=self._last_plan_host), MUTED)
             identity = authority.get("identity", {})
             if isinstance(identity, dict):
                 self._append(
-                    f"  Host identity: {identity.get('host_id', 'unknown')} · "
-                    f"{identity.get('engine', 'unknown')} · {identity.get('os_family', 'unknown')}",
+                    "  " + tr("Host identity: {get} · {get2} · {get3}", get=identity.get('host_id', 'unknown'), get2=identity.get('engine', 'unknown'), get3=identity.get('os_family', 'unknown')),
                     MUTED)
             capabilities = authority.get("granted", [])
             if isinstance(capabilities, list):
@@ -1151,13 +1145,13 @@ class ToolMixin:
             if isinstance(bounds, dict):
                 for capability, scope in sorted(bounds.items()):
                     scope_text = json.dumps(scope, sort_keys=True, ensure_ascii=False, default=str)
-                    self._append(f"  Scope {capability}: {scope_text}", MUTED)
+                    self._append("  " + tr("Scope {capability}: {scope_text}", capability=capability, scope_text=scope_text), MUTED)
             for i, s in enumerate(self._last_plan.steps, 1):
                 params = ", ".join(f"{key}={value}" for key, value in s.params.items())
                 self._append(f"    {i}. [{s.host}] {s.capability}({params})", TEXT)
             self._append(
-                f"  Select {review.label} in Overview within 10s to execute it.", YELLOW)
-            self._set_activity("Awaiting confirmation · expires in 10s", YELLOW)
+                "  " + tr("Select {label} in Overview within 10s to execute it.", label=review.label), YELLOW)
+            self._set_activity(tr("Awaiting confirmation · expires in 10s"), YELLOW)
             return
         plan, runtime = self._last_plan, self._last_runtime
         origin, host_name = self._last_plan_origin, self._last_plan_host
@@ -1242,25 +1236,24 @@ class ToolMixin:
         *, expected_context: str,
     ) -> None:
         """Execute only the plan explicitly reviewed against this host."""
-        self._append(f"\n  Executing on {host_name}...", CYAN)
+        self._append(tr("\n  Executing on {host_name}...", host_name=host_name), CYAN)
         try:
             execution = await runtime.execute(plan, expected_context=expected_context)
         except AuthorityContextChanged as e:
             self._append(
-                f"  DENY before execution: {e} No step was submitted to the host; plan cleared.",
+                "  " + tr("DENY before execution: {e} No step was submitted to the host; plan cleared.", e=e),
                 RED)
             return
         except Exception as e:
             self._append(
-                f"  Execution returned no status ({type(e).__name__}); the host outcome is unknown. "
-                "Do not retry until host state or receipts are checked.", RED)
+                "  " + tr("Execution returned no status ({name}); the host outcome is unknown. Do not retry until host state or receipts are checked.", name=type(e).__name__), RED)
             return
         try:
             verifications = await asyncio.to_thread(runtime.verify_execution, execution)
         except Exception as e:
             verifications = {}
             self._append(
-                f"  Receipt verification unavailable ({type(e).__name__}); allowed steps remain untrusted.",
+                "  " + tr("Receipt verification unavailable ({name}); allowed steps remain untrusted.", name=type(e).__name__),
                 YELLOW)
         ok_count = deny_count = unknown_count = 0
         for step in execution.steps:
@@ -1276,38 +1269,38 @@ class ToolMixin:
                     unknown_count += 1
                     detail = result.get("error", "engine outcome is not demonstrated") if isinstance(result, dict) else "engine outcome is unknown"
                     self._append(
-                        f"    {step.index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
+                        "    " + tr("{index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {value} · verify {verify_status}", index=step.index, detail=detail, value=receipt.receipt_id[:12], verify_status=verify_status),
                         YELLOW)
                     continue
                 if verify_status != "PASS":
                     unknown_count += 1
                     self._append(
-                        f"    {step.index}. ALLOW decision · execution evidence not trusted · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
+                        "    " + tr("{index}. ALLOW decision · execution evidence not trusted · receipt {value} · verify {verify_status}", index=step.index, value=receipt.receipt_id[:12], verify_status=verify_status),
                         RED if verify_status == "REJECT" else YELLOW)
                     continue
                 ok_count += 1
                 self._append(
-                    f"    {step.index}. ALLOW — receipt {receipt.receipt_id[:12]} · verify PASS", GREEN)
+                    "    " + tr("{index}. ALLOW — receipt {value} · verify PASS", index=step.index, value=receipt.receipt_id[:12]), GREEN)
                 result = receipt.result or {}
                 if origin == "local-read-only":
                     if isinstance(result, dict) and isinstance(result.get("text"), str):
                         preview = result["text"][:4000]
                         if len(result["text"]) > 4000:
                             preview += "\n… output truncated at 4,000 characters …"
-                        self._append(f"       Read result:\n{preview}", TEXT)
+                        self._append("       " + tr("Read result:\n{preview}", preview=preview), TEXT)
                     elif isinstance(result, dict) and result.get("kind") == "directory":
                         self._append(
-                            "       Directory listed. Use Files for the filtered browser view.", MUTED)
+                            "       " + tr("Directory listed. Use Files for the filtered browser view."), MUTED)
             else:
                 deny_count += 1
                 self._append(
-                    f"    {step.index}. DENY — {receipt.decision.reason} · receipt {receipt.receipt_id[:12]} · verify {verify_status}",
+                    "    " + tr("{index}. DENY — {reason} · receipt {value} · verify {verify_status}", index=step.index, reason=receipt.decision.reason, value=receipt.receipt_id[:12], verify_status=verify_status),
                     YELLOW if verify_status == "PASS" else RED)
         if execution.stopped_at is not None:
-            self._append(f"    Stopped at step {execution.stopped_at}: {execution.stop_reason}", YELLOW)
+            self._append("    " + tr("Stopped at step {stopped_at}: {stop_reason}", stopped_at=execution.stopped_at, stop_reason=execution.stop_reason), YELLOW)
         self._append(
-            f"\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown.", CYAN)
+            tr("\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown.", ok_count=ok_count, deny_count=deny_count, unknown_count=unknown_count), CYAN)
         if origin == "local-read-only":
-            self._append("  Local read-only execution; write capabilities were removed from this runtime.", MUTED)
+            self._append("  " + tr("Local read-only execution; write capabilities were removed from this runtime."), MUTED)
         else:
-            self._append("  Demo execution only; real workspace writes are not enabled here.", MUTED)
+            self._append("  " + tr("Demo execution only; real workspace writes are not enabled here."), MUTED)

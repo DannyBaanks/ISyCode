@@ -169,6 +169,10 @@ def _semantic_box_title(title: str) -> Text:
             part = tr(part)
         elif part.startswith("Exit ") and part[5:].lstrip("-").isdigit():
             part = tr("Exit {code}", code=part[5:])
+        elif part.endswith("Running"):     # "Running" or "<spinner> Running"
+            part = part[: -len("Running")] + tr("Running")
+        elif part.endswith(" calls") and part[: -len(" calls")].isdigit():
+            part = tr("{count} calls", count=part[: -len(" calls")])
         result.append(part, style=color)
     return result
 

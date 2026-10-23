@@ -185,8 +185,9 @@ def test_authority_settings_exposes_semantic_controls_without_raw_policy_labels(
 def test_action_journal_inspector_displays_authority_and_all_sentinel_checks():
     source = AUTHORITY.read_text(encoding="utf-8")
 
-    assert '"Systembilities: {checks}\\n"' in source
-    assert '"Request: {digest[:12]}… · Authority: {authority}\\n"' in source
+    # One translated template carries the whole inspector entry.
+    assert 'Request: {value}… · Authority: {authority}\\nSystembilities: {checks}\\n' in source
+    assert 'value=digest[:12], authority=authority, checks=checks' in source
 
 
 def test_semantic_navigation_keeps_lsp_and_files_branches_reachable(monkeypatch):

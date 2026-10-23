@@ -108,7 +108,7 @@ class RailMixin:
             self._rail_compact_width = min(34, self._rail_compact_width + 2)
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
-        self._set_activity(f"Sidebar width · {width} columns", MUTED)
+        self._set_activity(tr("Sidebar width · {width} columns", width=width), MUTED)
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     def action_narrow_sidebar(self) -> None:
@@ -119,7 +119,7 @@ class RailMixin:
             self._rail_compact_width = max(22, self._rail_compact_width - 2)
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
-        self._set_activity(f"Sidebar width · {width} columns", MUTED)
+        self._set_activity(tr("Sidebar width · {width} columns", width=width), MUTED)
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     async def _refresh_openisy(self) -> None:
@@ -390,7 +390,7 @@ class RailMixin:
                 note.append(f"  {row['label']}: {reason}\n", style=MUTED)
         target.display = True
         target.update(note)
-        self._set_activity("Language servers were not installed · commands are under LSPs", YELLOW)
+        self._set_activity(tr("Language servers were not installed · commands are under LSPs"), YELLOW)
 
     def _populate_skill_tree(self, snapshot: CatalogSnapshot) -> None:
         from isycode.skill_catalog import skills
@@ -449,7 +449,7 @@ class RailMixin:
             browser_root = self._workspace_read_owner().root
             relative_dir = Path(logical_path).relative_to(browser_root).as_posix()
         except (OSError, ValueError) as exc:
-            self.query_one("#file-preview", Static).update(f"Folder unavailable: {exc}")
+            self.query_one("#file-preview", Static).update(tr("Folder unavailable: {exc}", exc=exc))
             return
         if relative_dir == ".":
             relative_dir = ""
@@ -457,7 +457,7 @@ class RailMixin:
         tree.root.set_label(f"📁 {current_label}/")
         tree.root.data = {"path": logical_path, "kind": "directory"}
         self._file_path = logical_path
-        self.query_one("#file-preview", Static).update("Checking Workspace Authority and IsySentinel…")
+        self.query_one("#file-preview", Static).update(tr("Checking Workspace Authority and IsySentinel…"))
         try:
             outcome = await asyncio.to_thread(
                 self._workspace_read_owner().execute, "workspace.files.list", {"path": logical_path})
@@ -517,7 +517,7 @@ class RailMixin:
         tree = self.query_one("#workspace-tree", Tree)
         tree.root.remove_children()
         tree.root.set_label(f"Searching: {query}")
-        self.query_one("#file-preview", Static).update("Checking Workspace Authority and IsySentinel…")
+        self.query_one("#file-preview", Static).update(tr("Checking Workspace Authority and IsySentinel…"))
         try:
             browser_root = self._workspace_read_owner().root
             outcome = await asyncio.to_thread(self._workspace_read_owner().execute,
@@ -551,8 +551,7 @@ class RailMixin:
         skipped_note = ""
         self._file_path = str(browser_root)
         self.query_one("#file-preview", Static).update(
-            f"{len(payload.get('matches', []))} results · {payload.get('directories_scanned', 0)} directories scanned"
-            f"{skipped_note}{limit_note}")
+            tr("{len} results · {get} directories scanned{skipped_note}{limit_note}", len=len(payload.get('matches', [])), get=payload.get('directories_scanned', 0), skipped_note=skipped_note, limit_note=limit_note))
         tree.root.expand()
 
     async def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
@@ -567,14 +566,12 @@ class RailMixin:
                 self._select_skill(name)
                 state = "Active" if name in self._active_skills else "Inactive"
                 detail.update(Text(
-                    f"{name} · {state}\n"
-                    "Workflow guidance only. /skills clear removes selected guidance."))
+                    tr("{name} · {state}\nWorkflow guidance only. /skills clear removes selected guidance.", name=name, state=state)))
                 return
             origin = self._origin_tag(skill.get("origin", "workspace"))
             description = skill.get("description") or "No description provided by the skill manifest."
             detail.update(Text(
-                f"{name} · {origin}\n{description}\n"
-                "Discovery only. This does not activate the skill."))
+                tr("{name} · {origin}\n{description}\nDiscovery only. This does not activate the skill.", name=name, origin=origin, description=description)))
             return
         data = event.node.data
         if not isinstance(data, dict) or self._workspace is None:
@@ -657,7 +654,7 @@ class RailMixin:
             relative = Path(uri).relative_to(browser_root).as_posix() or browser_root.name
             size = len(result.get("text", "").encode("utf-8"))
             self.query_one("#file-preview-meta", Static).update(
-                f"{relative} · {size} bytes · UTF-8\n{verified_receipt_line(read.receipt.receipt_id)}")
+                tr("{relative} · {size} bytes · UTF-8\n{verified_receipt_line}", relative=relative, size=size, verified_receipt_line=verified_receipt_line(read.receipt.receipt_id)))
             from rich.syntax import Syntax
             lexer = Syntax.guess_lexer(uri, code=preview)
             highlighted = Syntax(preview, lexer, background_color="default").highlight(preview)
@@ -947,7 +944,7 @@ class RailMixin:
         panel = self.query_one("#work-presence", Static)
         if not confirmed:
             self._presence_rows = None
-            panel.update("Bridge presence off")
+            panel.update(tr("Bridge presence off"))
             return
         root = self._workspace_root
         approvals = self._action_approvals
@@ -960,11 +957,11 @@ class RailMixin:
                 owner.read, request, approvals.issue(request))
         except (OSError, RuntimeError, ValueError):
             self._presence_rows = None
-            panel.update("Presence unavailable")
+            panel.update(tr("Presence unavailable"))
             return
         if outcome.decision != "ALLOW":
             self._presence_rows = None
-            panel.update("Presence unavailable")
+            panel.update(tr("Presence unavailable"))
             return
         self._presence_rows = rows
         self._paint_bridge_presence()

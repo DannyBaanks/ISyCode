@@ -228,13 +228,13 @@ class IdeaBacklogScreen(QueuedMessagesScreen):
                 return
             if button_id.startswith("idea-promote-"):
                 if len(self.host._queued_messages) >= 8:
-                    self.host.notify("Message queue is full", severity="warning")
+                    self.host.notify(tr("Message queue is full"), severity="warning")
                     return
                 self.host._queued_messages.append(text)
-                self.host.notify("Idea promoted · queued for the next turn")
+                self.host.notify(tr("Idea promoted · queued for the next turn"))
             self.host._idea_backlog.remove(text)
             event.button.disabled = True
-            event.button.label = "Processed"
+            event.button.label = tr("Processed")
 
 
 class AgentQuestionScreen(ModalScreen[dict]):
@@ -671,13 +671,13 @@ class ConsoleSearchScreen(ModalScreen[None]):
     def update_results(self, index: int, total: int, snippet: str) -> None:
         if total:
             self.query_one("#console-search-count", Static).update(
-                f"{index + 1} / {total} matches  ·  Enter next  ·  Shift+Enter previous")
+                tr("{value} / {total} matches  ·  Enter next  ·  Shift+Enter previous", value=index + 1, total=total))
             self.query_one("#console-search-snippet", Static).update(snippet)
         elif self.query_one("#console-search-input", Input).value:
-            self.query_one("#console-search-count", Static).update("No matches")
+            self.query_one("#console-search-count", Static).update(tr("No matches"))
             self.query_one("#console-search-snippet", Static).update("")
         else:
-            self.query_one("#console-search-count", Static).update("Type to search the current console")
+            self.query_one("#console-search-count", Static).update(tr("Type to search the current console"))
             self.query_one("#console-search-snippet", Static).update("")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

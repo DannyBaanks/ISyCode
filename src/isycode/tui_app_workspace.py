@@ -55,8 +55,8 @@ class WorkspaceMixin:
                                "Choose a document here or in a sibling project; external files ask for explicit permission.")]
         if self._agent_context:
             entries.insert(0, self._entry(
-                f"Injected · {self._agent_context['path']}", "context_info", "",
-                f"ISyCode local receipt {self._agent_context['receipt_id'][:12]} verified PASS. Content stays in this process memory."))
+                tr("Injected · {path}", path=self._agent_context['path']), "context_info", "",
+                tr("ISyCode local receipt {value} verified PASS. Content stays in this process memory.", value=self._agent_context['receipt_id'][:12])))
             entries.append(self._entry("Remove injected context", "context_clear", ""))
         self._menu_stack = []
         self._render_menu("context_menu", tr("Context · workspace documents"), entries)
@@ -72,10 +72,10 @@ class WorkspaceMixin:
             picker = ContextFilePickerOwner(self._workspace_root)
             selected = await picker.choose()
         except FilePickerUnavailable as error:
-            self._set_activity(f"Context picker unavailable · {error}", YELLOW)
+            self._set_activity(tr("Context picker unavailable · {error}", error=error), YELLOW)
             return
         if selected is None:
-            self._set_activity("Context selection cancelled", MUTED)
+            self._set_activity(tr("Context selection cancelled"), MUTED)
             return
         source_root = picker.project_root_for(selected)
         if source_root == self._workspace_root.resolve(strict=True):
@@ -93,12 +93,12 @@ class WorkspaceMixin:
             if ContextFilePickerOwner(self._workspace_root).project_root_for(selected) != source_root:
                 raise ValueError("the selected project folder changed")
         except (FilePickerUnavailable, OSError, ValueError) as exc:
-            self._append(f"  Context request denied · {str(exc)[:180]}", SECURITY)
+            self._append("  " + tr("Context request denied · {value}", value=str(exc)[:180]), SECURITY)
             return None
         consent = await self._await_screen(ContextAccessScreen(
             selected, requested_by_agent=requested_by_agent))
         if not consent or not consent.get("allowed"):
-            self._append("  Context access declined · no file was read", MUTED)
+            self._append("  " + tr("Context access declined · no file was read"), MUTED)
             return None
         relative = selected.relative_to(source_root).as_posix()
         arguments = {"path": relative}
@@ -117,11 +117,11 @@ class WorkspaceMixin:
             outcome = await asyncio.to_thread(
                 owner.execute, "workspace.context.inject", arguments)
         except (OSError, RuntimeError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Context access failed · {type(exc).__name__}", YELLOW)
+            self._append("  " + tr("Context access failed · {name}", name=type(exc).__name__), YELLOW)
             return None
         text = read_result_text(outcome.text) if outcome.decision == "ALLOW" else ""
         if not text or outcome.receipt is None:
-            self._append(f"  Context not loaded · {outcome.reason[:180]}", YELLOW)
+            self._append("  " + tr("Context not loaded · {value}", value=outcome.reason[:180]), YELLOW)
             return None
         source = str(selected)
         self._agent_context = {"path": source, "text": text,
@@ -130,8 +130,7 @@ class WorkspaceMixin:
         persistence = ("permission remembered for this file" if consent.get("remember")
                        else "one-time permission")
         requester = "agent request" if requested_by_agent else "user selection"
-        self._append(f"  Context loaded · {source} · {requester} · {persistence} · "
-                     f"receipt {outcome.receipt.receipt_id}", GREEN)
+        self._append("  " + tr("Context loaded · {source} · {requester} · {persistence} · receipt {receipt_id}", source=source, requester=requester, persistence=persistence, receipt_id=outcome.receipt.receipt_id), GREEN)
         self.query_one("#context-button", Button).label = self._context_button_label()
         return text
 
@@ -153,15 +152,14 @@ class WorkspaceMixin:
                                self._action_approvals)
         outcome = await owner.diagnostics("pyright", path, text, self._lsp_inventory)
         if outcome.decision != "ALLOW":
-            self._append(f"  Pyright check skipped · {outcome.reason[:160]}", MUTED)
+            self._append("  " + tr("Pyright check skipped · {value}", value=outcome.reason[:160]), MUTED)
             return None
         problems = [item for item in json.loads(outcome.text)["diagnostics"]
                     if item["severity"] in {"error", "warning"}]
         if not problems:
-            self._append(f"  Pyright · {path} · no errors or warnings", GREEN)
+            self._append("  " + tr("Pyright · {path} · no errors or warnings", path=path), GREEN)
         for item in problems[:15]:
-            self._append(f"  Pyright {item['severity']} · {path}:{item['line']}:{item['column']} · "
-                         f"{item['message'][:200]}", YELLOW if item["severity"] == "warning" else RED)
+            self._append("  " + tr("Pyright {severity} · {path}:{line}:{column} · {value}", severity=item['severity'], path=path, line=item['line'], column=item['column'], value=item['message'][:200]), YELLOW if item["severity"] == "warning" else RED)
         return problems
 
     def _workspace_chat_tools_enabled(self, root: Path | None = None) -> bool:
@@ -239,17 +237,17 @@ class WorkspaceMixin:
         try:
             preview = await asyncio.to_thread(owner.preview_undo)
         except (OSError, ValueError) as exc:
-            self._append(f"  Nothing undone · {str(exc)[:200]}", YELLOW)
+            self._append("  " + tr("Nothing undone · {value}", value=str(exc)[:200]), YELLOW)
             return
         if not await self._await_screen(WriteApprovalScreen(preview)):
-            self._append(f"  Undo cancelled · {preview.path} unchanged", MUTED)
+            self._append("  " + tr("Undo cancelled · {path} unchanged", path=preview.path), MUTED)
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW":
-            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("{text} · receipt {receipt_id}", text=outcome.text, receipt_id=outcome.receipt.receipt_id), GREEN)
         else:
-            self._append(f"  Undo {outcome.decision} · {outcome.reason[:180]}", SECURITY)
+            self._append("  " + tr("Undo {decision} · {value}", decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
 
     def _workspace_write_tool_enabled(self, root: Path | None = None) -> bool:
         """The write tool needs read tools plus a root-scoped write grant."""
@@ -294,7 +292,7 @@ class WorkspaceMixin:
                 preview = await asyncio.to_thread(owner.preview_commit, message, paths)
             except (OSError, ValueError) as exc:
                 reason = str(exc)[:200] or type(exc).__name__
-                self._append(f"  Commit not proposed · {reason}", YELLOW)
+                self._append("  " + tr("Commit not proposed · {reason}", reason=reason), YELLOW)
                 return json.dumps({"error": "commit cannot be proposed", "reason": reason})
             attributable = False
             if self._workspace_mode() == "flow":
@@ -302,31 +300,29 @@ class WorkspaceMixin:
                 attributable = owner.turn_attributable(
                     TurnJournal.active(self._workspace_root), preview.paths)
             if attributable:
-                self._append(f"  Commit · {len(preview.paths)} files from this turn · /undo to revert", CYAN)
+                self._append("  " + tr("Commit · {len} files from this turn · /undo to revert", len=len(preview.paths)), CYAN)
             else:
-                self._append(f"  Commit requested · {len(preview.paths)} files · review it", CYAN)
+                self._append("  " + tr("Commit requested · {len} files · review it", len=len(preview.paths)), CYAN)
                 if not await self._await_screen(CommitApprovalScreen(preview)):
-                    self._append("  Commit rejected · nothing was committed", MUTED)
+                    self._append("  " + tr("Commit rejected · nothing was committed"), MUTED)
                     return json.dumps({"status": "rejected_by_user"})
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
             outcome = await self._settled_file_effect(owner.commit, preview, approval)
         action = {"git_status": "git.status", "git_diff": "git.diff"}.get(name, "git.commit")
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            self._append(f"  Git {outcome.decision} · {action} · {outcome.reason[:180]}", SECURITY)
+            self._append("  " + tr("Git {decision} · {action} · {value}", decision=outcome.decision, action=action, value=outcome.reason[:180]), SECURITY)
             return json.dumps({"error": "ISyCode denied the git action", "reason": outcome.reason[:300]})
         if action == "git.status":
             result = json.loads(outcome.text)
             changes = result["changes"]
-            self._append(f"  Git · {result['branch']} · "
-                         + (f"{len(changes)} changed file{'s' if len(changes) != 1 else ''}"
-                            if changes else "clean"), GREEN)
+            self._append("  " + tr("Git · {branch} · {value}", branch=result['branch'], value=(tr("{count} changed files", count=len(changes)) if len(changes) != 1 else tr("1 changed file")) if changes else tr("clean")), GREEN)
             for entry in changes[:40]:
                 self._append(f"    {entry['status']} {entry['path']}", MUTED)
         elif action == "git.commit":
             commit_id = json.loads(outcome.text)["commit"][:12]
-            self._append(f"  Committed {commit_id} · receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("Committed {commit_id} · receipt {receipt_id}", commit_id=commit_id, receipt_id=outcome.receipt.receipt_id), GREEN)
         else:
-            self._append(f"  Git ALLOW · {action} · receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("Git ALLOW · {action} · receipt {receipt_id}", action=action, receipt_id=outcome.receipt.receipt_id), GREEN)
         return outcome.text
 
     def _command_tool_enabled(self) -> bool:
@@ -349,7 +345,7 @@ class WorkspaceMixin:
 
     def _paint_shell_box(self):
         active = sum(job["status"] in {"queued", "running", "stopping"} for job in self._shell_jobs.values())
-        self.query_one("#shell-box", ShellBox).update(f"ShellBox · {active} active · {len(self._shell_jobs)} total\nEnter / Space: processes · Ctrl+S: IdeaBox")
+        self.query_one("#shell-box", ShellBox).update(tr("ShellBox · {active} active · {len} total\nEnter / Space: processes · Ctrl+S: IdeaBox", active=active, len=len(self._shell_jobs)))
 
     def _open_shell_box(self):
         self.push_screen(ShellProcessesScreen())
@@ -362,7 +358,7 @@ class WorkspaceMixin:
                           "There is no unsandboxed fallback.")
             else:
                 reason = "commands are off here"
-            self._append(f"  Command denied · workspace.command.run · {reason}", SECURITY)
+            self._append("  " + tr("Command denied · workspace.command.run · {reason}", reason=reason), SECURITY)
             return json.dumps({"error": "sandboxed commands are not enabled for this workspace",
                                "reason": reason})
         background = arguments.get("background", False)
@@ -379,20 +375,20 @@ class WorkspaceMixin:
                 max_stage_bytes=arguments.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES))
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
-            self._append(f"  Command denied · {reason}", SECURITY)
+            self._append("  " + tr("Command denied · {reason}", reason=reason), SECURITY)
             return json.dumps({"error": "command cannot run", "reason": reason})
         shown = shlex.join(preview.argv)
         quiet = self._request_is_quiet(preview.request)
         if quiet:
-            self._append(f"  Command · quiet {self._workspace_mode().title()} · {shown[:160]}", CYAN)
+            self._append("  " + tr("Command · quiet {title} · {value}", title=self._workspace_mode().title(), value=shown[:160]), CYAN)
             approval = None
         else:
-            self._append(f"  Command requested · {shown[:160]} · review it", CYAN)
+            self._append("  " + tr("Command requested · {value} · review it", value=shown[:160]), CYAN)
             if not await self._await_screen(CommandApprovalScreen(preview)):
-                self._append("  Command rejected · nothing ran", MUTED)
-                self.notify_semantic("Command denied by user", kind="denied")
+                self._append("  " + tr("Command rejected · nothing ran"), MUTED)
+                self.notify_semantic(tr("Command denied by user"), kind="denied")
                 return json.dumps({"status": "rejected_by_user", "argv": list(preview.argv)})
-            self.notify_semantic("Command authorized", kind="authorized")
+            self.notify_semantic(tr("Command authorized"), kind="authorized")
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         self._dismiss_idle()
         chat = self.query_one(ChatArea)
@@ -446,7 +442,7 @@ class WorkspaceMixin:
             raise
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             card.finish(outcome.decision, output=outcome.reason[:300])
-            self.notify_semantic(f"Command outcome · {outcome.decision}",
+            self.notify_semantic(tr("Command outcome · {decision}", decision=outcome.decision),
                                  kind="denied" if outcome.decision == "DENY" else "error")
             return json.dumps({"error": "command did not run", "decision": outcome.decision,
                                "reason": outcome.reason[:300]})
@@ -470,7 +466,7 @@ class WorkspaceMixin:
         """Delete or move one file after the user approves exactly that change."""
         action = "workspace.files.delete" if name == DELETE_TOOL_NAME else "workspace.files.move"
         if not self._workspace_write_tool_enabled() or not self._file_action_enabled(action):
-            self._append(f"  Tool denied · {action} · not enabled for this workspace", SECURITY)
+            self._append("  " + tr("Tool denied · {action} · not enabled for this workspace", action=action), SECURITY)
             return json.dumps({"error": f"{action} is not enabled for this workspace",
                                "how_to_enable": "Settings → Authority → Turn on all coding tools…"})
         path, destination = arguments.get("path"), arguments.get("to")
@@ -485,29 +481,29 @@ class WorkspaceMixin:
                 preview = await asyncio.to_thread(owner.preview_move, path, destination)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
-            self._append(f"  Tool denied · {action} · {reason}", SECURITY)
+            self._append("  " + tr("Tool denied · {action} · {reason}", action=action, reason=reason), SECURITY)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         quiet = self._request_is_quiet(preview.request)
         if quiet:
-            self._append(f"  Tool · quiet {self._workspace_mode().title()} · {action} · {preview.path}", CYAN)
+            self._append("  " + tr("Tool · quiet {title} · {action} · {path}", title=self._workspace_mode().title(), action=action, path=preview.path), CYAN)
             approval = None
         else:
-            self._append(f"  Tool requested · {action} · {preview.path} · review it", CYAN)
+            self._append("  " + tr("Tool requested · {action} · {path} · review it", action=action, path=preview.path), CYAN)
             if not await self._await_screen(WriteApprovalScreen(preview)):
-                self._append(f"  ✗ You rejected · {preview.path} · nothing changed", MUTED)
+                self._append("  " + tr("✗ You rejected · {path} · nothing changed", path=preview.path), MUTED)
                 return json.dumps({"status": "rejected_by_user", "approved_by_user": False,
                                    "path": preview.path})
-            self._append(f"  ✓ You approved · {action.rsplit('.', 1)[-1]} {preview.path}", MUTED)
+            self._append("  " + tr("✓ You approved · {value} {path}", value=action.rsplit('.', 1)[-1], path=preview.path), MUTED)
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
-            self._append(f"  Tool ALLOW · {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("Tool ALLOW · {text} · receipt {receipt_id}", text=outcome.text, receipt_id=outcome.receipt.receipt_id), GREEN)
             if quiet:
                 self._show_applied_diff(preview)
             return json.dumps({"status": "done", "approved_by_user": not quiet,
                                "approval_mode": "quiet-profile" if quiet else "reviewed",
                                "result": outcome.text, "receipt": outcome.receipt.receipt_id})
-        self._append(f"  Tool {outcome.decision} · {action} · {outcome.reason[:180]}", SECURITY)
+        self._append("  " + tr("Tool {decision} · {action} · {value}", decision=outcome.decision, action=action, value=outcome.reason[:180]), SECURITY)
         return json.dumps({"error": "change was not applied", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
 
@@ -523,7 +519,7 @@ class WorkspaceMixin:
         chat = self.query_one(ChatArea)
         chat.mount(Collapsible(
             Static(Syntax(diff, "diff", theme="monokai", word_wrap=True)),
-            title=f"Diff · {preview.path} · +{added} −{removed} · applied without a review screen",
+            title=tr("Diff · {path} · +{added} −{removed} · applied without a review screen", path=preview.path, added=added, removed=removed),
             collapsed=len(lines) > 40, classes="applied-diff"))
         chat.follow_tail()
 
@@ -548,19 +544,19 @@ class WorkspaceMixin:
         except (OSError, ValueError) as exc:
             return json.dumps({"error": str(exc)[:180]})
         if not self._workspace_write_tool_enabled(root):
-            self._append("  Tool denied · workspace.files.write · file editing is off", SECURITY)
+            self._append("  " + tr("Tool denied · workspace.files.write · file editing is off"), SECURITY)
             return json.dumps({"error": "file editing is not enabled for this workspace"})
         if edit:
             old_text, new_text = arguments.get("old_text"), arguments.get("new_text")
             replace_all = arguments.get("replace_all", False)
             if (not isinstance(path, str) or not isinstance(old_text, str)
                     or not isinstance(new_text, str) or not isinstance(replace_all, bool)):
-                self._append("  Tool denied · workspace_edit · invalid arguments", SECURITY)
+                self._append("  " + tr("Tool denied · workspace_edit · invalid arguments"), SECURITY)
                 return json.dumps({"error": "path, old_text and new_text must be strings"})
         else:
             content = arguments.get("content")
             if not isinstance(path, str) or not isinstance(content, str):
-                self._append("  Tool denied · workspace.files.write · invalid arguments", SECURITY)
+                self._append("  " + tr("Tool denied · workspace.files.write · invalid arguments"), SECURITY)
                 return json.dumps({"error": "path and content must be strings"})
         owner = WorkspaceWriteOwner(root, WorkspaceAuthority(root),
                                     self._action_approvals)
@@ -572,7 +568,7 @@ class WorkspaceMixin:
                 preview = await asyncio.to_thread(owner.preview, path, content)
         except (OSError, ValueError) as exc:
             reason = str(exc)[:200] or type(exc).__name__
-            self._append(f"  Tool denied · workspace.files.write · {reason}", SECURITY)
+            self._append("  " + tr("Tool denied · workspace.files.write · {reason}", reason=reason), SECURITY)
             return json.dumps({"error": "change cannot be previewed", "reason": reason})
         replaces = not edit and not preview.created
         verb = "create" if preview.created else "replace whole file" if replaces else "edit"
@@ -583,24 +579,19 @@ class WorkspaceMixin:
         batch_approved = batch_digest is not None and batch_digest == preview.request.digest
         session_trusted = self._session_trust_active(folder_alias)
         if quiet:
-            self._append(f"  Tool · quiet {self._workspace_mode().title()} · {verb} · "
-                         f"{preview.path}", CYAN)
+            self._append("  " + tr("Tool · quiet {title} · {verb} · {path}", title=self._workspace_mode().title(), verb=verb, path=preview.path), CYAN)
             delegated = False
             choice = True
         elif batch_approved:
-            self._append(f"  Tool · batch-approved · {verb} · "
-                         f"{preview.path}", CYAN)
+            self._append("  " + tr("Tool · batch-approved · {verb} · {path}", verb=verb, path=preview.path), CYAN)
             delegated = False
             choice = True
         elif session_trusted:
-            self._append(f"  Tool · session trust · {verb} · "
-                         f"{preview.path}", CYAN)
+            self._append("  " + tr("Tool · session trust · {verb} · {path}", verb=verb, path=preview.path), CYAN)
             delegated = False
             choice = True
         else:
-            self._append(f"  Tool requested · {verb} · "
-                         f"{preview.path} · review the diff"
-                         + (f" · matched ignoring {preview.match}" if preview.match != "exact" else ""),
+            self._append("  " + tr("Tool requested · {verb} · {path} · review the diff{value}", verb=verb, path=preview.path, value=" · " + tr("matched ignoring {match}", match=preview.match) if preview.match != "exact" else ""),
                          CYAN)
             try:
                 delegated = self._folder_store().auto_edit_allowed(folder_alias)
@@ -617,11 +608,10 @@ class WorkspaceMixin:
         if choice == 'session':
             self._session_auto_edits.add(folder_alias)
             session_trusted = True
-            self._append(f"  Trust granted for this session only · folder {folder_alias} · "
-                         "writes apply without asking until ISyCode closes; nothing is saved", MUTED)
+            self._append("  " + tr("Trust granted for this session only · folder {folder_alias} · writes apply without asking until ISyCode closes; nothing is saved", folder_alias=folder_alias), MUTED)
             choice = True
         if not choice:
-            self._append(f"  ✗ You rejected · {preview.path} · nothing was written", MUTED)
+            self._append("  " + tr("✗ You rejected · {path} · nothing was written", path=preview.path), MUTED)
             return json.dumps({"status": "rejected_by_user", "approved_by_user": False,
                                "path": preview.path})
         try:
@@ -636,7 +626,7 @@ class WorkspaceMixin:
         except (OSError, ValueError) as exc:
             return json.dumps({'error': str(exc)[:180]})
         if quiet:
-            self._append(f"  ✓ Quiet {self._workspace_mode().title()} · {folder_alias} · {preview.path}", MUTED)
+            self._append("  " + tr("✓ Quiet {title} · {folder_alias} · {path}", title=self._workspace_mode().title(), folder_alias=folder_alias, path=preview.path), MUTED)
             approval = None
         else:
             label = ('Batch-approved' if batch_approved else
@@ -652,8 +642,7 @@ class WorkspaceMixin:
         if outcome.decision == "ALLOW" and outcome.receipt is not None:
             if not diff_reviewed and not batch_approved:
                 self._show_applied_diff(preview)
-            self._append(f"  Tool ALLOW · workspace.files.write · {preview.path} · "
-                         f"receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("Tool ALLOW · workspace.files.write · {path} · receipt {receipt_id}", path=preview.path, receipt_id=outcome.receipt.receipt_id), GREEN)
             if quiet:
                 approval_mode, approved_by_user = "quiet-profile", False
             elif batch_approved:
@@ -682,8 +671,7 @@ class WorkspaceMixin:
             if advisory:
                 result["peer_advisory"] = advisory
             return json.dumps(result)
-        self._append(f"  Tool {outcome.decision} · workspace.files.write · "
-                     f"{outcome.reason[:180]}", SECURITY)
+        self._append("  " + tr("Tool {decision} · workspace.files.write · {value}", decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
         return json.dumps({"error": "change was not written", "decision": outcome.decision,
                            "reason": outcome.reason[:300]})
 
@@ -746,8 +734,8 @@ class WorkspaceMixin:
 
     def _menu_context_clear(self, entry: dict[str, str | bool]) -> None:
         self._agent_context = None
-        self.query_one("#context-button", Button).label = "Context"
-        self._set_activity("Injected AGENTS.md context removed", MUTED)
+        self.query_one("#context-button", Button).label = tr("Context")
+        self._set_activity(tr("Injected AGENTS.md context removed"), MUTED)
         self._open_context_menu()
         return
 
@@ -771,11 +759,11 @@ class WorkspaceMixin:
                                          self._action_approvals)
             preview = await asyncio.to_thread(owner.preview_update, {key: value})
         except (OSError, ValueError) as exc:
-            self._append(f"  Workspace preference not prepared · {str(exc)[:180]}", YELLOW)
+            self._append("  " + tr("Workspace preference not prepared · {value}", value=str(exc)[:180]), YELLOW)
             self._open_workspace_config_menu()
             return
         if not await self._await_screen(WriteApprovalScreen(preview)):
-            self._append(f"  Preference unchanged · {preview.path}", MUTED)
+            self._append("  " + tr("Preference unchanged · {path}", path=preview.path), MUTED)
             self._open_workspace_config_menu()
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
@@ -784,9 +772,9 @@ class WorkspaceMixin:
             self._workspace_config_values = None
             self._workspace_config_warning = ""
             self._active_role = self._load_global_default_role()
-            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("{text} · receipt {receipt_id}", text=outcome.text, receipt_id=outcome.receipt.receipt_id), GREEN)
         else:
-            self._append(f"  Preference not saved · {outcome.reason[:160]}", YELLOW)
+            self._append("  " + tr("Preference not saved · {value}", value=outcome.reason[:160]), YELLOW)
         self._open_workspace_config_menu()
 
     async def _open_workspace_migration_menu(self) -> None:
@@ -826,20 +814,19 @@ class WorkspaceMixin:
                                          self._action_approvals)
             preview = await asyncio.to_thread(owner.preview_migrate_legacy, name)
         except (OSError, ValueError) as exc:
-            self._append(f"  Command not copied · {str(exc)[:180]}", YELLOW)
+            self._append("  " + tr("Command not copied · {value}", value=str(exc)[:180]), YELLOW)
             await self._open_workspace_migration_menu()
             return
         if not await self._await_screen(WriteApprovalScreen(preview)):
-            self._append(f"  Command unchanged · /{name}", MUTED)
+            self._append("  " + tr("Command unchanged · /{name}", name=name), MUTED)
             await self._open_workspace_migration_menu()
             return
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
         outcome = await self._settled_file_effect(owner.apply, preview, approval)
         if outcome.decision == "ALLOW":
-            self._append(f"  Copied /{name} · legacy original kept · receipt "
-                         f"{outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("Copied /{name} · legacy original kept · receipt {receipt_id}", name=name, receipt_id=outcome.receipt.receipt_id), GREEN)
         else:
-            self._append(f"  Command not copied · {outcome.reason[:160]}", YELLOW)
+            self._append("  " + tr("Command not copied · {value}", value=outcome.reason[:160]), YELLOW)
         await self._open_workspace_migration_menu()
 
 
@@ -847,7 +834,7 @@ class WorkspaceMixin:
         try:
             selected_path = await SiblingFolderPickerOwner(self._workspace_root).choose()
         except (FilePickerUnavailable, OSError, ValueError) as exc:
-            self._append(f"  Folder picker unavailable · {str(exc)[:160]}", YELLOW)
+            self._append("  " + tr("Folder picker unavailable · {value}", value=str(exc)[:160]), YELLOW)
             self._open_workspace_folders_menu()
             return
         if selected_path is None:
@@ -858,9 +845,9 @@ class WorkspaceMixin:
         if selected is not None:
             try:
                 self._folder_store().add(selected['alias'], selected['path'], editable=selected['editable'])
-                self._append(f"  Folder added · {selected['alias']} · {selected['path']}", GREEN)
+                self._append("  " + tr("Folder added · {alias} · {path}", alias=selected['alias'], path=selected['path']), GREEN)
             except (OSError, ValueError, WorkspaceAuthorityError) as exc:
-                self._append(f"  Folder not added · {str(exc)[:180]}", YELLOW)
+                self._append("  " + tr("Folder not added · {value}", value=str(exc)[:180]), YELLOW)
         self._open_workspace_folders_menu()
 
     async def _set_folder_auto_edit(self, alias: str, enabled: bool) -> bool:
@@ -876,9 +863,9 @@ class WorkspaceMixin:
                 raise ValueError('Folder changed during confirmation')
             store.set_auto_edit(alias, enabled)
         except (OSError, ValueError) as exc:
-            self._append(f"  Automatic edit setting unchanged · {str(exc)[:160]}", YELLOW)
+            self._append("  " + tr("Automatic edit setting unchanged · {value}", value=str(exc)[:160]), YELLOW)
             return False
-        self._append(f"  Automatic file edits · {alias} · {'ON — dangerous' if enabled else 'OFF — each edit asks'}", YELLOW if enabled else GREEN)
+        self._append("  " + tr("Automatic file edits · {alias} · {value}", alias=alias, value=tr("ON — dangerous") if enabled else tr("OFF — each edit asks")), YELLOW if enabled else GREEN)
         return True
 
 

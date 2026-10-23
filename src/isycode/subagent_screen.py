@@ -36,7 +36,7 @@ class SubagentModelScreen(ModalScreen[dict | None]):
         with Vertical(id='child-card', classes='isy-dialog'):
             yield Static(tr('Subagent · select a model from your providers'), id='child-heading', classes='isy-dialog-title', markup=False)
             if self.error:
-                yield Static(Text(self.error["provider_hint"] + "\nChoose another model or Cancel. Completed effects remain; retry may repeat work.", style="#e9c778"), id="child-error")
+                yield Static(Text(tr("{provider_hint}\nChoose another model or Cancel. Completed effects remain; retry may repeat work.", provider_hint=self.error["provider_hint"]), style="#e9c778"), id="child-error")
             with VerticalScroll(id='child-task'):
                 yield Static(self.assigned_task,markup=False)
             yield Static(tr('Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing.'),id='child-copy',markup=False)
@@ -49,7 +49,7 @@ class SubagentModelScreen(ModalScreen[dict | None]):
                 groups.setdefault(item['provider'], []).append((index, item))
             with VerticalScroll(id='child-models'):
                 for provider, items in groups.items():
-                    with ExpandableBox(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(items)} models",
+                    with ExpandableBox(title=tr("{get} · {len} models", get=PRESETS.get(provider, {}).get('label', provider), len=len(items)),
                                        collapsed=True, classes='child-group'):
                         for index, item in items:
                             label = Text(model_display_name(item['model']), style='#edf1f5')
