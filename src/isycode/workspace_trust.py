@@ -54,14 +54,14 @@ def onboarding_brief(*, root: Path, mode: str, provider: str,
                if sends_workspace_context else
                tr("This confirmation does not send the folder contents by itself."))
     return tr(
-        "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{context}\n"
+        "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{note}\n"
         "Trusting this folder lets Classic read and search it, and make recoverable "
         "edits, creates, moves and deletes inside the effect budget, and run isolated "
         "sandboxed tests, without a question for each one. Commits, secrets, authority "
         "changes, new network destinations and anything without a sandbox still ask or "
         "stay off. A revoked permission still wins. This is not a permanent approval "
         "for every tool, and it does not turn Security on or off.",
-        root=root, mode=mode, provider=provider, context=context)
+        root=root, mode=mode, provider=provider, note=context)
 
 
 def modal_required(authority, request) -> bool:

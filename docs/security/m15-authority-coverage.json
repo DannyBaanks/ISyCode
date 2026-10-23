@@ -1892,14 +1892,14 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 947,
+      "line": 937,
       "owner": "remote_catalog"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 190,
+      "line": 188,
       "owner": "workspace_read"
     },
     {
@@ -2283,28 +2283,28 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 947,
+      "line": 937,
       "owner": "remote_catalog"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
       "file": "isycode/tui_app_remote.py",
-      "line": 632,
+      "line": 605,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_semantic_search",
       "file": "isycode/tui_app_remote.py",
-      "line": 684,
+      "line": 657,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui_app_remote.RemoteMixin._open_lsp_server",
       "file": "isycode/tui_app_remote.py",
-      "line": 815,
+      "line": 787,
       "owner": "lsp_symbols"
     },
     {
@@ -2339,7 +2339,7 @@
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 190,
+      "line": 188,
       "owner": "workspace_read"
     },
     {
