@@ -6068,3 +6068,6 @@ msgstr "正常"
 
 msgid "owned"
 msgstr "自有"
+
+msgid "Selected skills · {names}"
+msgstr "已选技能 · {names}"

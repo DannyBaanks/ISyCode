@@ -152,6 +152,7 @@ from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
+from textual.actions import SkipAction
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
@@ -1072,11 +1073,15 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         return Static(line, classes="message-clock")
 
     def action_cycle_role(self) -> None:
-        """Shift+Tab in the composer: next primary role, then back to no role.
+        """Shift+Tab in the main chat: next primary role, then back to no role.
 
         Uses the same role contract as the Role menu: the role's workflow is
-        sent as guidance with the next message and grants nothing.
+        sent as guidance with the next message and grants nothing. It works
+        wherever focus sits in the chat (composer, command bar, rail); a
+        dialog or the command menu keeps Shift+Tab for its own focus moves.
         """
+        if isinstance(self.screen, ModalScreen) or self.query_one("#action-menu").display:
+            raise SkipAction()
         current = self._active_role["name"] if self._active_role else None
         names = [role["name"] for role in ROLE_CYCLE]
         index = names.index(current) + 1 if current in names else 0

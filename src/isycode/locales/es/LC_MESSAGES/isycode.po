@@ -6068,3 +6068,6 @@ msgstr "ok"
 
 msgid "owned"
 msgstr "propio"
+
+msgid "Selected skills · {names}"
+msgstr "Skills seleccionadas · {names}"

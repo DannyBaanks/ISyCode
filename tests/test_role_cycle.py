@@ -108,3 +108,30 @@ def test_design_tokens_record_the_runtime_role_colors():
                         .read_text(encoding="utf-8"))
     roles = ISYCODE_AGENTS + ISYCODE_SUBAGENTS + ISYCO_MOTORS
     assert tokens["role_colors"] == {role["name"]: role["color"] for role in roles}
+
+
+def test_shift_tab_cycles_roles_wherever_focus_sits_in_the_chat(tmp_path, monkeypatch, capsys):
+    """Focus on the command bar or rail must not turn Shift+Tab back into focus-previous."""
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 32)) as pilot:
+            await app.wait_for_ready()
+            button = app.query_one("#sidebar-button")
+            button.focus()
+            await pilot.pause()
+            await pilot.press("shift+tab")
+            await pilot.pause()
+            assert app._active_role["name"] == "Build"
+            assert app.focused is button                  # no focus jump
+            # The command menu keeps Shift+Tab for its own search field.
+            app._open_settings_menu()
+            await pilot.pause()
+            assert app.query_one("#action-menu").display
+            await pilot.press("shift+tab")
+            await pilot.pause()
+            assert app._active_role["name"] == "Build"
+
+    with capsys.disabled():
+        asyncio.run(scenario())
