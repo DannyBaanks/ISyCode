@@ -31,6 +31,7 @@ DEDICATED_CONTROLS = {
     "git.status": "See git status and diffs",
     "git.diff": "See git status and diffs",
     "git.commit": "Create git commits",
+    "git.branch.create": "Create GUS branches",
     "mcp.local.start": "Local MCP servers",
     "mcp.local.invoke": "Local MCP servers",
     "session.create": "Save conversations in this workspace",

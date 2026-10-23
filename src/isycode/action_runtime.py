@@ -196,12 +196,13 @@ COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
 COMMAND_DEFAULT_STAGE_BYTES = 512 * 1024 * 1024
 COMMAND_MAX_STAGE_BYTES = 8 * 1024 * 1024 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
-GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
+GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit", "git.branch.create"})
 PUBLISH_PARAMETER_KEYS = frozenset({"remote", "ref", "content_sha256"})
 GIT_PARAMETER_KEYS = {
     "git.status": frozenset({"git", "workspace_root", "repo_path", "inspect_path"}),
     "git.diff": frozenset({"git", "workspace_root", "repo_path", "staged", "path"}),
     "git.commit": frozenset({"git", "workspace_root", "repo_path", "message", "paths", "diff_sha256"}),
+    "git.branch.create": frozenset({"git", "workspace_root", "repo_path", "branch", "base"}),
 }
 MCP_SERVER_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
@@ -756,6 +757,12 @@ class GitSystembility:
             digest = params.get("diff_sha256")
             if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
                 return SystembilityResult(self.name, False, "commit must be bound to its reviewed diff")
+        elif request.action_id == "git.branch.create":
+            branch, base = params.get("branch"), params.get("base")
+            if not isinstance(branch, str) or re.fullmatch(r"gus/[a-z0-9][a-z0-9-]{0,47}", branch) is None:
+                return SystembilityResult(self.name, False, "only a gus/<topic> branch can be created")
+            if not isinstance(base, str) or re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", base) is None:
+                return SystembilityResult(self.name, False, "the branch must be bound to its reviewed commit")
         elif params.get("inspect_path") is not None:
             if params.get("inspect_path") != ".isycode":
                 return SystembilityResult(self.name, False,
