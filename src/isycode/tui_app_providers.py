@@ -1088,6 +1088,7 @@ class ProviderMixin:
         shortcuts.extend([
             ("ENTER          Send message / activate highlighted item", "info"),
             ("SHIFT+ENTER    Insert a newline in the composer", "info"),
+            ("SHIFT+TAB      Next role in the composer (Build, Plan, motors, none)", "info"),
             ("ESCAPE         Close popup / cancel current operation", "info"),
             ("Session list   Type to search; arrows select; Enter resumes", "info"),
         ])

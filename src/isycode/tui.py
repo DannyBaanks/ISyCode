@@ -71,8 +71,8 @@ from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
-    ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_KERNEL,
-    SEMANTIC_BRANCHES,
+    ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_CYCLE, ROLE_KERNEL,
+    SEMANTIC_BRANCHES, role_color,
 )
 from isycode.credentials import (
     CredentialVault, CredentialVaultError, saved_secret_exists, set_saved_secret_reader,
@@ -690,7 +690,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.run_worker(self._load_sentinel_journal(), group="sentinel-journal",
                         exit_on_error=False)
         prompt = self.query_one("#prompt-input", PromptArea)
-        self.query_one("#role-button", Button).label = self._role_button_label()
+        self._paint_role_chrome()
         self._refresh_model_button()
         if self._initial_prompt:
             prompt.load_text(self._initial_prompt)
@@ -1021,6 +1021,77 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return "Role"
         name = self._active_role["name"]
         return f"Role: {name[:12]}"
+
+    @property
+    def _active_role(self) -> dict[str, str] | None:
+        return getattr(self, "_active_role_value", None)
+
+    @_active_role.setter
+    def _active_role(self, role: dict[str, str] | None) -> None:
+        # Every way of choosing a role (menu, Shift+Tab, session restore,
+        # default) repaints the composer, so its color never goes stale.
+        self._active_role_value = role
+        self._paint_role_chrome()
+
+    def _role_mark(self, name: str) -> str:
+        return ("* " if self._ascii_only else "● ") + name
+
+    def _paint_role_chrome(self) -> None:
+        """Frame the composer in the selected role's color and name it in the title."""
+        try:
+            prompt = self.query_one("#prompt-input", PromptArea)
+        except Exception:   # before compose, or while the app tears down
+            return
+        role = self._active_role
+        color = role_color(role["name"]) if role else None
+        if color is None:
+            prompt.styles.border = None     # back to the stylesheet's neutral/focus frame
+            prompt.border_title = None
+            prompt.border_subtitle = None
+        else:
+            prompt.styles.border = ("solid", color)
+            prompt.border_title = Text(self._role_mark(role["name"]), style=f"bold {color}")
+            prompt.border_subtitle = Text(tr("Shift+Tab role"), style=MUTED)
+        try:
+            self.query_one("#role-button", Button).label = self._role_button_label()
+        except Exception:
+            pass
+
+    def _paint_role_turn(self, widget, role_name: str | None) -> None:
+        """Mark an assistant answer with the color of the role that wrote it."""
+        color = role_color(role_name)
+        if color is not None:
+            widget.styles.border_left = ("solid", color)
+            widget.styles.padding = (0, 0, 0, 1)
+
+    def _assistant_clock(self, clock: str, role_name: str | None) -> Static:
+        """The time above an answer, followed by its role so it reads without color."""
+        line = Text(clock, style=MUTED)
+        color = role_color(role_name)
+        if color is not None:
+            line.append("  " + self._role_mark(role_name), style=color)
+        return Static(line, classes="message-clock")
+
+    def action_cycle_role(self) -> None:
+        """Shift+Tab in the composer: next primary role, then back to no role.
+
+        Uses the same role contract as the Role menu: the role's workflow is
+        sent as guidance with the next message and grants nothing.
+        """
+        current = self._active_role["name"] if self._active_role else None
+        names = [role["name"] for role in ROLE_CYCLE]
+        index = names.index(current) + 1 if current in names else 0
+        if index >= len(names):
+            self._active_role = None
+            self._set_activity(tr("Role · none"), MUTED)
+            return
+        role = ROLE_CYCLE[index]
+        self._active_role = {
+            "name": role["name"], "kind": role["kind"],
+            "description": role.get("description", ""),
+            "engine": role.get("engine", "ISyCode selected provider and model"),
+        }
+        self._set_activity(tr("Role · {name}", name=role["name"]), role_color(role["name"]) or GREEN)
 
     def action_escape_to_chat(self) -> None:
         """Cancel active model output; otherwise back out and keep the draft."""

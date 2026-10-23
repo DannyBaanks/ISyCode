@@ -101,6 +101,7 @@ class PromptArea(TextArea):
         Binding("up", "slash_up", show=False, priority=True),
         Binding("down", "slash_down", show=False, priority=True),
         Binding("tab", "slash_complete", show=False, priority=True),
+        Binding("shift+tab", "cycle_role", "Next role", show=False, priority=True),
         Binding("ctrl+v", "paste_clipboard", "Paste clipboard", show=False, priority=True),
         # ctrl+p belongs to the app-wide command palette (see APP_SHORTCUTS
         # and the composer hint). A focused composer must not shadow it.
@@ -191,6 +192,9 @@ class PromptArea(TextArea):
 
     def action_escape_to_app(self) -> None:
         self.app.action_escape_to_chat()
+
+    def action_cycle_role(self) -> None:
+        self.app.action_cycle_role()
 
 
 class TasksPanel(Static):

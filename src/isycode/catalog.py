@@ -6,12 +6,14 @@ ISYCODE_AGENTS = [
     {
         "name": "Build",
         "kind": "Agent",
+        "color": "#5fb3ff",
         "description": "General implementation guidance for the active ISyCode workspace.",
         "engine": "ISyCode selected provider and model",
     },
     {
         "name": "Plan",
         "kind": "Agent",
+        "color": "#c792ea",
         "description": "Plan-mode guidance for the active ISyCode workspace.",
         "engine": "ISyCode selected provider and model",
     },
@@ -23,11 +25,12 @@ ISYCODE_SUBAGENTS = [
         "kind": "Specialist",
         "description": description,
         "engine": "ISyCode selected provider and model",
+        "color": color,
     }
-    for name, description in [
-        ("General", "General-purpose help grounded in the active ISyCode workspace."),
-        ("Explore", "Read-only exploration of the active ISyCode workspace; report paths and evidence."),
-        ("Scout", "Fast, focused search in the active ISyCode workspace; return exact matches and locations."),
+    for name, description, color in [
+        ("General", "General-purpose help grounded in the active ISyCode workspace.", "#9cdcfe"),
+        ("Explore", "Read-only exploration of the active ISyCode workspace; report paths and evidence.", "#b5e890"),
+        ("Scout", "Fast, focused search in the active ISyCode workspace; return exact matches and locations.", "#f78c6c"),
     ]
 ]
 
@@ -38,6 +41,7 @@ ISYCO_MOTORS = [
     {
         "name": "coder",
         "kind": "ISyCo motor",
+        "color": "#4fd6a3",
         "description": "Implementation and software repair.",
         "engine": "INSPECT → PLAN → MODIFY → TEST → VERIFY → REPORT",
         "commands": ["isyco coder pre [--strict]", "isyco coder post -- <cmd>"],
@@ -46,6 +50,7 @@ ISYCO_MOTORS = [
     {
         "name": "researcher",
         "kind": "ISyCo motor",
+        "color": "#ffb86c",
         "description": "Hypotheses, experiments, and measured evidence.",
         "engine": "QUESTION → PRIOR_EVIDENCE → HYPOTHESIS → METRIC → EXPERIMENT → MEASURE → VERIFY → CONCLUDE",
         "commands": ["isyco researcher pack build ...", "isyco researcher pack verify DIR"],
@@ -54,6 +59,7 @@ ISYCO_MOTORS = [
     {
         "name": "planner",
         "kind": "ISyCo motor",
+        "color": "#8fa8ff",
         "description": "Milestone plans with dependencies, risks, and a coder handoff.",
         "engine": "INTAKE → DISCOVER → CONSTRAINTS → MILESTONES → DEPENDENCIES → RISKS → WRITE_MD → VERIFY_MD → HANDOFF_CODER",
         "commands": ["isyco planner new --slug S --goal G", "isyco planner verify FILE", "isyco planner list"],
@@ -63,6 +69,7 @@ ISYCO_MOTORS = [
     {
         "name": "librarian",
         "kind": "ISyCo motor",
+        "color": "#e6c07b",
         "description": "Knowledge inventory, documentation reconciliation, and provenance.",
         "engine": "FIND → READ → MAP → CROSS_CHECK → ORGANIZE → REPORT",
         "commands": ["isyco librarian check FILE"],
@@ -71,6 +78,7 @@ ISYCO_MOTORS = [
     {
         "name": "maintainer",
         "kind": "ISyCo motor",
+        "color": "#a3b8cc",
         "description": "Platform, plugins, MCP, brokers, and daemon integration.",
         "engine": "BRIDGE_PR_INBOX → DISCOVER → CLASSIFY → CHECK → DIFF → SNAPSHOT → INTEGRATE → STARTUP_TEST → FAILURE_TEST → DOCUMENT → REPORT",
         "commands": ["isyco maintainer check", "isyco maintainer fix --yes", "isyco maintainer sticky <sub>"],
@@ -80,6 +88,7 @@ ISYCO_MOTORS = [
     {
         "name": "devils-advocate",
         "kind": "ISyCo motor",
+        "color": "#ff6ac1",
         "description": "Adversarial review, counterexamples, and risk challenges.",
         "engine": "DISCOVER → STEELMAN → ATTACK → TRACE → FALSIFY → MITIGATE → VERDICT → REPORT",
         "commands": ["isyco devils-advocate verdicts [--keyword K] [--verdict V]", "isyco devils-advocate tally"],
@@ -89,6 +98,7 @@ ISYCO_MOTORS = [
     {
         "name": "historian",
         "kind": "ISyCo motor",
+        "color": "#d19a66",
         "description": "Tracks staleness and records the verified project timeline.",
         "engine": "PROBE → GATHER → TRACE → CROSSCHECK → CHRONICLE → STATE → VERIFY → REGISTER",
         "commands": ["isyco historian status", "isyco historian register", "isyco historian show", "isyco historian chronicle"],
@@ -98,6 +108,7 @@ ISYCO_MOTORS = [
     {
         "name": "orchestrator",
         "kind": "ISyCo motor",
+        "color": "#ffe066",
         "description": "Supervises Bridge leases, agent health, dispatch, and escalation.",
         "engine": "RECEIVE_ORDER → SNAPSHOT → READ_REGISTRY → DETECT → DECIDE → WAKE → VERIFY → ESCALATE → REPORT",
         "commands": ["isyco orchestrator watch", "isyco orchestrator sweep-leases [--apply]", "isyco orchestrator sweep-dormant [--apply]", "isyco orchestrator sweep-ghosts [--apply]", "isyco orchestrator sweep-testagents [--apply]"],
@@ -105,6 +116,21 @@ ISYCO_MOTORS = [
         "rule": "Sweeps are dry-run unless --apply is explicitly supplied.",
     },
 ]
+
+# Shift+Tab in the composer walks this order, then back to no role (opencode's
+# agent switch). Specialists stay in the Role menu: they are not primary roles.
+ROLE_CYCLE = tuple(ISYCODE_AGENTS + ISYCO_MOTORS)
+
+
+def role_color(name: str | None) -> str | None:
+    """The identifying color of a role, or None for no role or an unknown name."""
+    if not name:
+        return None
+    for role in ISYCODE_AGENTS + ISYCODE_SUBAGENTS + ISYCO_MOTORS:
+        if role["name"] == name:
+            return role.get("color")
+    return None
+
 
 ROLE_KERNEL = (
     "Shared role kernel: follow the Bridge coordination contract; preserve each role's "

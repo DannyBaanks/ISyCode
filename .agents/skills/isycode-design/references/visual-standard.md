@@ -14,6 +14,10 @@ Accepted by Danny on 2026-10-11. Scope: the Python/Textual ISyCode TUI in this r
 
 The palette and profile are in [tokens.json](../assets/tokens.json). Common scoped TCSS is in [tokens.tcss](../assets/tokens.tcss). These are reusable authoring assets; they have not been wired into production.
 
+## Role colors
+
+Added 2026-10-23 at Danny's request (opencode-style agent switch). Each ISyCode role has one identifying color in `role_colors` of [tokens.json](../assets/tokens.json); `catalog.py` is the runtime source. With a role selected, the composer frame takes that color and names the role in its title (`● coder`, `* coder` in ASCII mode), and each answer gets a thin left rule in the color of the role it was asked under, with the role name after its time. The name always accompanies the color, so the role reads without color. No role keeps the neutral/cyan frame. Shift+Tab in the composer walks Build, Plan and the ISyCo motors, then back to no role; specialists stay in the Role menu. A role color is identity, not a state: it never means success, warning or a grant.
+
 ## Typography and compatibility
 
 The accepted comparator profile is **Ubuntu Sans Mono / Unicode / 14 CSS px / 1.3 line-height**. Textual does not set a terminal's font family or point size. Preserve the user's terminal settings unless their request specifically changes them. Calibrate terminal cell metrics separately; 14 CSS px is not a tested GNOME Terminal point size.

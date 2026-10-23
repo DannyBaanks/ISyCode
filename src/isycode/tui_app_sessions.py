@@ -1320,17 +1320,20 @@ class SessionMixin:
         if not lane.lines and not lane.partial and not partial_reason and not lane.tool_history:
             self._mount_idle_board()
             return
-        for kind, text, extra in list(lane.lines):
+        for kind, text, extra, *role in list(lane.lines):
             if kind == "user":
                 if clock_label(extra):
                     chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
                 chat.mount(SelectableText(Text(text, style=TEXT), selection_text=text, classes="user-turn"))
             elif kind == "assistant":
+                role_name = role[0] if role else None
                 if clock_label(extra):
-                    chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
-                chat.mount(SelectableText(
+                    chat.mount(self._assistant_clock(clock_label(extra), role_name))
+                answer = SelectableText(
                     RichMarkdown(text or "", code_theme="monokai"), selection_text=text or "",
-                    classes="assistant-turn"))
+                    classes="assistant-turn")
+                self._paint_role_turn(answer, role_name)
+                chat.mount(answer)
             elif kind == "reasoning":
                 block = ThoughtBlock()
                 block.set_text(text)
@@ -1364,6 +1367,7 @@ class SessionMixin:
             widget = SelectableText(
                 RichMarkdown(lane.partial, code_theme="monokai"), selection_text=lane.partial,
                 classes="assistant-turn")
+            self._paint_role_turn(widget, lane.stream_role)
             chat.mount(widget)
             lane.stream_widget = widget
         else:

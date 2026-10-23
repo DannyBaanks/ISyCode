@@ -392,6 +392,10 @@ class ChatMixin:
             self._mount_user_turn(original_prompt, sent_at)
         completed = False
         self._chat_turn_task = asyncio.current_task()
+        # The answer keeps the color of the role it was asked under, even if
+        # the user switches roles while it streams.
+        turn_role = self._active_role["name"] if self._active_role else None
+        self._active_lane().stream_role = turn_role
         block = None
         t0 = _time.monotonic()
         # None until the stream stores a trial. Absence used to skip the restore; None does too.
@@ -663,9 +667,10 @@ class ChatMixin:
                     assistant_sent_at = assistant_sent_at or datetime.now().astimezone().isoformat(timespec="seconds")
                     clock = clock_label(assistant_sent_at)
                     if clock:
-                        chat_now.mount(Static(Text(clock, style=MUTED), classes="message-clock"))
+                        chat_now.mount(self._assistant_clock(clock, turn_role))
                     w = SelectableText(RichMarkdown("", code_theme="monokai"),
                                        selection_text="", classes="assistant-turn")
+                    self._paint_role_turn(w, turn_role)
                     holder["widget"] = w
                     lane.stream_widget = w
                     chat_now.mount(w)
@@ -946,7 +951,8 @@ class ChatMixin:
                         lane.lines.append(("reasoning", "".join(step_reason),
                                            _time.monotonic() - thought_started))
                     if "".join(step_content).strip():
-                        lane.lines.append(("assistant", "".join(step_content), assistant_sent_at))
+                        lane.lines.append(("assistant", "".join(step_content), assistant_sent_at,
+                                           turn_role))
                     lane.partial = ""
                     lane.stream_widget = None
                     messages.append(assistant_turn(response))
@@ -1089,7 +1095,7 @@ class ChatMixin:
                     done_lane.lines.append(("reasoning", "".join(step_reason),
                                             _time.monotonic() - thought_started))
                 done_lane.lines.append(("assistant", "".join(step_content).strip() or full,
-                                        assistant_sent_at))
+                                        assistant_sent_at, turn_role))
                 completed = True
                 self._retry_prompt = None
             elif reason_buf:
