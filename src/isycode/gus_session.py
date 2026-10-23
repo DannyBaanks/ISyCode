@@ -9,9 +9,12 @@ the repository.
 A GUS turn sends the role, the fixed context pack and GUS's own transcript to
 the GUS model slot through the provider network owner, which authorizes the
 request with IsySentinel and receipts it. The request is budgeted against the
-model's known window, or 32k tokens when it is unknown. This milestone gives
-GUS no tools: it reads its fixed context and talks. Edits arrive in MK5 with
-the gus/* branch and protected paths.
+model's known window, or 32k tokens when it is unknown.
+
+``gus_reply`` talks without tools. ``gus_work`` (MK5c) also gives GUS the tools
+of its role, only on a ``gus/*`` branch: every tool call runs inside
+``gus_turn``, so IsySentinel refuses L0 and anything outside the role, and the
+caller records the turn in a turn journal and checks the L0 fingerprint.
 """
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from isycode.gus_context_pack import ContextPackError, ContextPackReader, plan_gus_request, window_chars
+from isycode.gus_l0 import gus_turn, on_gus_branch
 from isycode.gus_role import GusRoleError, is_isycode_checkout, load_gus_role
 from isycode.gus_slot import GusSlotError, check_gus_model, gus_provider, planning_window
 from isycode.state_index import get_state_index
@@ -32,8 +36,12 @@ RECORD_VERSION = 1
 MAX_RECORD_BYTES = 4 * 1024 * 1024
 MAX_TRANSCRIPT_ENTRIES = 80
 MAX_ENTRY_CHARS = 32_000
+MAX_GENERATIONS = 50
 # Share of the planning window a request may fill; the rest is left for the answer.
 REQUEST_WINDOW_SHARE = 0.75
+# One GUS turn: model steps and tool calls per step.
+MAX_GUS_STEPS = 24
+MAX_GUS_CALLS_PER_STEP = 16
 
 
 class GusUnavailable(RuntimeError):
@@ -100,6 +108,26 @@ class GusState:
             if temporary.exists():
                 temporary.unlink()
 
+    # Branches and generations (MK5) -------------------------------------
+    def record_branch(self, branch: str, base: str, l0_digest: str) -> None:
+        """Remember where a gus/* branch started and the L0 fingerprint at that moment."""
+        branches = dict((self._read("branches.json") or {}).get("branches") or {})
+        branches[branch] = {"base": base, "l0": l0_digest, "at": _now()}
+        self._write("branches.json", {"branches": dict(list(branches.items())[-50:])})
+
+    def branch(self, branch: str) -> dict[str, Any] | None:
+        record = ((self._read("branches.json") or {}).get("branches") or {}).get(branch)
+        return record if isinstance(record, dict) and isinstance(record.get("base"), str) else None
+
+    def save_generation(self, generation: dict[str, Any]) -> None:
+        entries = [entry for entry in (self._read("generations.json") or {}).get("entries") or []
+                   if isinstance(entry, dict)]
+        self._write("generations.json", {"entries": (entries + [generation])[-MAX_GENERATIONS:]})
+
+    def generations(self) -> list[dict[str, Any]]:
+        return [entry for entry in (self._read("generations.json") or {}).get("entries") or []
+                if isinstance(entry, dict)]
+
     # Enablement (GK4-00) -------------------------------------------------
     def enabled(self) -> bool:
         record = self._read("enabled.json")
@@ -140,17 +168,32 @@ class GusReply:
     model: str
     window_known: bool
     receipt_id: str
+    steps: int = 1
+    tools_used: tuple[str, ...] = ()
+    stopped: str = ""
 
 
 Complete = Callable[..., Awaitable[dict]]
+Dispatch = Callable[[dict], Awaitable[tuple[str, str]]]
 
 
-async def gus_reply(workspace_root: Path, authority, text: str, *,
-                    complete: Complete | None = None, state: GusState | None = None) -> GusReply:
-    """Answer one message as GUS, or raise GusUnavailable with the reason."""
-    from isycode.action_runtime import LocalWorkspaceReadOwner, ProviderNetworkOwner
-    root = Path(workspace_root).resolve(strict=True)
-    state = state or GusState(root)
+def gus_tools() -> list[dict]:
+    """The tool schemas of GUS's role: read, edit, delete, move, sandboxed commands, git."""
+    from isycode.action_runtime import CHAT_WORKSPACE_TOOLS
+    from isycode.command_runner import command_tool
+    from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
+    from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, MOVE_TOOL, WRITE_TOOL
+    tools = [*CHAT_WORKSPACE_TOOLS, EDIT_TOOL, WRITE_TOOL, DELETE_TOOL, MOVE_TOOL,
+             command_tool("flow"), *GIT_TOOLS, GIT_COMMIT_TOOL]
+    return json.loads(json.dumps(tools))
+
+
+def _size(messages: list[dict]) -> int:
+    return sum(len(json.dumps(message, ensure_ascii=False, default=str)) for message in messages)
+
+
+def _prepare(root: Path, authority, text: str, state: "GusState"):
+    from isycode.action_runtime import LocalWorkspaceReadOwner
     if not is_isycode_checkout(root):
         raise GusUnavailable("GUS works only in the ISyCode repository.")
     if not state.enabled():
@@ -175,26 +218,109 @@ async def gus_reply(workspace_root: Path, authority, text: str, *,
     if sum(len(str(message["content"])) for message in messages) \
             > window_chars(planning_window(check)) * REQUEST_WINDOW_SHARE:
         raise GusUnavailable("This message is too large for GUS's model window.")
-    if complete is None:
-        from isycode.chat_transport import provider_complete as complete
+    return provider, check, messages
+
+
+async def _send(root: Path, authority, provider, messages: list[dict], tools, complete: Complete):
+    from isycode.action_runtime import ProviderNetworkOwner
 
     async def send():
-        return await complete(provider, messages, max_tokens=None, tools=None)
+        return await complete(provider, messages, max_tokens=None, tools=tools)
 
     response, outcome = await ProviderNetworkOwner(root, authority).execute(provider, {
         "operation": "gus.reply", "messages": messages, "max_tokens": None,
         "token_limit_field": provider.token_limit_field,
         "reasoning_effort": provider.reasoning_effort,
-        "temperature_supported": provider.temperature_supported, "tools": None,
+        "temperature_supported": provider.temperature_supported, "tools": tools,
     }, send)
     if outcome.decision != "ALLOW" or not isinstance(response, dict) or outcome.receipt is None:
         raise GusUnavailable(f"The request to GUS's model was not allowed: {outcome.reason[:160]}")
+    return response, outcome.receipt.receipt_id
+
+
+async def gus_reply(workspace_root: Path, authority, text: str, *,
+                    complete: Complete | None = None, state: GusState | None = None) -> GusReply:
+    """Answer one message as GUS without tools, or raise GusUnavailable with the reason."""
+    root = Path(workspace_root).resolve(strict=True)
+    state = state or GusState(root)
+    provider, check, messages = _prepare(root, authority, text, state)
+    if complete is None:
+        from isycode.chat_transport import provider_complete as complete
+    response, receipt_id = await _send(root, authority, provider, messages, None, complete)
     answer = str(response.get("text") or "").strip()
     if not answer:
         raise GusUnavailable("GUS's model returned no answer.")
     state.append("user", text)
     state.append("assistant", answer)
-    return GusReply(answer, provider.model, check.window is not None, outcome.receipt.receipt_id)
+    return GusReply(answer, provider.model, check.window is not None, receipt_id)
 
 
-__all__ = ["GusReply", "GusState", "GusUnavailable", "gus_reply"]
+async def gus_work(workspace_root: Path, authority, text: str, dispatch: Dispatch, *,
+                   complete: Complete | None = None, state: GusState | None = None,
+                   on_status: Callable[[str], None] | None = None) -> GusReply:
+    """One GUS turn with the tools of its role (MK5c); only on a ``gus/*`` branch.
+
+    Every tool call runs inside ``gus_turn``. The model requests themselves do
+    not: they go through the provider network owner like any GUS reply. The
+    turn stops after MAX_GUS_STEPS model steps or when the window is full, and
+    says so; it never claims work it did not do.
+    """
+    from isycode.chat_transport import assistant_turn
+    root = Path(workspace_root).resolve(strict=True)
+    state = state or GusState(root)
+    if not on_gus_branch(root):
+        raise GusUnavailable("GUS edits only on a gus/* branch. Create one with /gus branch <topic>.")
+    provider, check, messages = _prepare(root, authority, text, state)
+    if complete is None:
+        from isycode.chat_transport import provider_complete as complete
+    tools = gus_tools()
+    allowed = {tool["function"]["name"] for tool in tools}
+    budget = window_chars(planning_window(check)) * REQUEST_WINDOW_SHARE
+    used: list[str] = []
+    answer, stopped, receipt_id, step = "", "", "", 0
+    while True:
+        if step >= MAX_GUS_STEPS:
+            stopped = "steps"
+            break
+        if _size(messages) > budget:
+            stopped = "window"
+            break
+        if on_status:
+            on_status(f"step {step + 1}")
+        response, receipt_id = await _send(root, authority, provider, messages, tools, complete)
+        step += 1
+        answer = str(response.get("text") or "").strip()
+        calls = response.get("tool_calls") or []
+        if not isinstance(calls, list) or len(calls) > MAX_GUS_CALLS_PER_STEP:
+            raise GusUnavailable("GUS's model returned an invalid tool batch.")
+        if not calls:
+            break
+        messages.append(assistant_turn(response))
+        for call in calls:
+            function = call.get("function") if isinstance(call, dict) else None
+            name = function.get("name") if isinstance(function, dict) else None
+            call_id = call.get("id") if isinstance(call, dict) else None
+            if not isinstance(call_id, str) or not call_id or not isinstance(name, str):
+                raise GusUnavailable("GUS's model returned a tool call without identity.")
+            if name not in allowed:
+                output = json.dumps({"error": f"{name} is not one of GUS's tools"})
+            else:
+                if on_status:
+                    on_status(f"tool · {name}")
+                with gus_turn(root):
+                    returned_id, output = await dispatch(call)
+                if returned_id != call_id or not isinstance(output, str):
+                    raise GusUnavailable("A tool result did not match its request.")
+                used.append(name)
+            messages.append({"role": "tool", "tool_call_id": call_id, "content": output})
+    if not answer:
+        answer = {"steps": "GUS stopped after its step limit before answering.",
+                  "window": "GUS stopped: this turn filled its model window."}.get(
+                      stopped, "GUS finished without a written answer.")
+    state.append("user", text)
+    state.append("assistant", answer)
+    return GusReply(answer, provider.model, check.window is not None, receipt_id,
+                    steps=step, tools_used=tuple(used), stopped=stopped)
+
+
+__all__ = ["GusReply", "GusState", "GusUnavailable", "gus_reply", "gus_tools", "gus_work"]

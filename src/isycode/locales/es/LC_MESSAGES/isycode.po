@@ -6147,8 +6147,8 @@ msgstr "Habilitar GUS"
 msgid "Enable GUS in this workspace?"
 msgstr "¿Habilitar GUS en este workspace?"
 
-msgid "Enter send · Esc close · GUS has no tools yet: it reads its project context and answers"
-msgstr "Enter envía · Esc cierra · GUS todavía no tiene herramientas: lee su contexto del proyecto y responde"
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter envía · Esc cierra · en una rama gus/* GUS edita con sus herramientas; fuera de ella lee y responde"
 
 msgid "GUS could not answer · {reason}"
 msgstr "GUS no pudo responder · {reason}"
@@ -6198,8 +6198,8 @@ msgstr "todavía sin modelo"
 msgid "{provider} / {model}"
 msgstr "{provider} / {model}"
 
-msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic> (ISyCode repository only)"
-msgstr "hablar con GUS, el mantenedor de ISyCode; /gus branch <tema> crea gus/<tema> (solo en el repositorio de ISyCode)"
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)"
+msgstr "hablar con GUS, el mantenedor de ISyCode; /gus branch <tema> crea gus/<tema>, /gus seal corre las puertas (solo en el repositorio de ISyCode)"
 
 msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
 msgstr "GUS responde aquí solo después de que lo habilites en este workspace; apagarlo conserva su transcripción."
@@ -6251,3 +6251,60 @@ msgstr "Crear ramas de GUS"
 
 msgid "Create and switch to a new gus/* branch"
 msgstr "Crear y cambiar a una rama gus/* nueva"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS edita solo en una rama gus/* · /gus branch <tema>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 cambió y sigue cambiado: {paths}. Revísalo con git."
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 cambió ({paths}); se deshizo todo el turno."
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "{count} archivos cambiados · /undo deshace este turno."
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS edita solo en una rama gus/*. Crea una con /gus branch <tema>."
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "Otro turno está registrando este workspace; inténtalo cuando termine."
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "El modelo de GUS devolvió un lote de herramientas inválido."
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "El modelo de GUS devolvió una llamada a herramienta sin identidad."
+
+msgid "A tool result did not match its request."
+msgstr "El resultado de una herramienta no coincidió con su petición."
+
+msgid "Generations are sealed on a gus/* branch · /gus branch <topic>"
+msgstr "Las generaciones se sellan en una rama gus/* · /gus branch <tema>"
+
+msgid "Seal GUS's work on {branch}?"
+msgstr "¿Sellar el trabajo de GUS en {branch}?"
+
+msgid "ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. T: the tests of the touched code. A: the coverage auditor and L0 tests. L: lint. T, A and L run in the command sandbox. Only if all pass is the work sealed; you activate it by merging the branch."
+msgstr "ISyCode revisa lo que GUS commiteó en esta rama. V: nada de L0 cambió. T: las pruebas del código tocado. A: el auditor de cobertura y las pruebas de L0. L: lint. T, A y L corren en el sandbox de comandos. Solo si todas pasan se sella el trabajo; lo activas al mergear la rama."
+
+msgid "Run the gates"
+msgstr "Correr las puertas"
+
+msgid "GUS generation not prepared · {reason}"
+msgstr "Generación de GUS no preparada · {reason}"
+
+msgid "GUS gates running on {branch}…"
+msgstr "Puertas de GUS corriendo en {branch}…"
+
+msgid "Sealed {branch} · {gates} · seal {seal}"
+msgstr "Sellada {branch} · {gates} · sello {seal}"
+
+msgid "Rejected {branch} · {gates} · {reason}"
+msgstr "Rechazada {branch} · {gates} · {reason}"
+
+msgid "GUS gates running…"
+msgstr "Puertas de GUS corriendo…"

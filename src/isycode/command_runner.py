@@ -450,8 +450,13 @@ class CommandRunOwner:
 
         The command approval covers running the program; its file effects still
         answer to the file grants. An explicit denial (which Classic does not
-        override) or a path outside a grant's prefixes refuses the whole diff.
+        override), a path outside a grant's prefixes, or an L0 path in a GUS
+        turn (ADR 0013) refuses the whole diff.
         """
+        from isycode.gus_l0 import l0_change_refusal
+        refusal = l0_change_refusal(self.root, changes)
+        if refusal:
+            return refusal
         grants = self.authority.effective_policy().get("grants", {})
         for change in changes:
             action = ("workspace.files.delete" if change.get("kind") == "delete"
