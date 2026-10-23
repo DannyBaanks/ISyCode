@@ -6198,8 +6198,8 @@ msgstr "尚未选择模型"
 msgid "{provider} / {model}"
 msgstr "{provider} / {model}"
 
-msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic> (ISyCode repository only)"
-msgstr "与 ISyCode 维护者 GUS 对话；/gus branch <主题> 会创建 gus/<主题>（仅限 ISyCode 仓库）"
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)"
+msgstr "与 ISyCode 维护者 GUS 对话；/gus branch <主题> 会创建 gus/<主题>，/gus seal 运行检查门（仅限 ISyCode 仓库）"
 
 msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
 msgstr "只有在你为此工作区启用后，GUS 才会在这里回答；关闭它会保留其对话记录。"
@@ -6281,3 +6281,30 @@ msgstr "GUS 的模型返回了没有标识的工具调用。"
 
 msgid "A tool result did not match its request."
 msgstr "工具结果与其请求不匹配。"
+
+msgid "Generations are sealed on a gus/* branch · /gus branch <topic>"
+msgstr "生成只在 gus/* 分支上封存 · /gus branch <主题>"
+
+msgid "Seal GUS's work on {branch}?"
+msgstr "要封存 GUS 在 {branch} 上的工作吗？"
+
+msgid "ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. T: the tests of the touched code. A: the coverage auditor and L0 tests. L: lint. T, A and L run in the command sandbox. Only if all pass is the work sealed; you activate it by merging the branch."
+msgstr "ISyCode 检查 GUS 在此分支上提交的内容。V：L0 没有任何更改。T：所改代码的测试。A：覆盖率审计和 L0 测试。L：lint。T、A 和 L 在命令沙箱中运行。只有全部通过才会封存；合并该分支即可启用。"
+
+msgid "Run the gates"
+msgstr "运行检查门"
+
+msgid "GUS generation not prepared · {reason}"
+msgstr "未准备 GUS 生成 · {reason}"
+
+msgid "GUS gates running on {branch}…"
+msgstr "GUS 检查门正在 {branch} 上运行…"
+
+msgid "Sealed {branch} · {gates} · seal {seal}"
+msgstr "已封存 {branch} · {gates} · 封印 {seal}"
+
+msgid "Rejected {branch} · {gates} · {reason}"
+msgstr "已拒绝 {branch} · {gates} · {reason}"
+
+msgid "GUS gates running…"
+msgstr "GUS 检查门正在运行…"

@@ -61,7 +61,8 @@ class GusMixin:
         root = self._workspace_root
         await self._await_screen(GusScreen(
             root, lambda: WorkspaceAuthority(root), self._gus_slot_label(), initial=initial,
-            work=self._run_gus_turn, report_text=self._gus_report_text))
+            work=self._run_gus_turn, report_text=self._gus_report_text,
+            seal=self._seal_gus_generation, generation_text=self._generation_text))
 
     async def _create_gus_branch(self, topic: str) -> str | None:
         """MK5b: create and switch to ``gus/<topic>`` after an exact approval; the branch or None."""
@@ -84,6 +85,11 @@ class GusMixin:
             self._set_activity(tr("GUS branch {decision} · {reason}", decision=outcome.decision,
                                   reason=outcome.reason[:160]), RED)
             return None
+        try:
+            digest = (await asyncio.to_thread(l0_fingerprint, root)).digest
+            GusState(root).record_branch(preview.branch, preview.base, digest)
+        except (OSError, ValueError):
+            pass                              # gate V then reports the unknown start
         self._set_activity(tr("On {branch} · receipt {receipt_id}", branch=preview.branch,
                               receipt_id=outcome.receipt.receipt_id), GREEN)
         return preview.branch
@@ -124,6 +130,69 @@ class GusMixin:
                 raise GusUnavailable(f"{failure} {self._gus_report_text(report)}") from failure
             raise failure
         return reply, report
+
+    async def _seal_gus_generation(self) -> dict | None:
+        """MK5d: run the V/T/A/L/S gates on GUS's committed work and keep the result privately."""
+        import json
+        from isycode.command_runner import CommandRunOwner
+        from isycode.gus_generation import build_generation
+        from isycode.gus_l0 import current_gus_branch, gus_turn
+        root = self._workspace_root
+        branch = current_gus_branch(root) if is_isycode_checkout(root) else None
+        if branch is None:
+            self._set_activity(tr("Generations are sealed on a gus/* branch · /gus branch <topic>"), YELLOW)
+            return None
+        state = GusState(root)
+        if not await self._await_screen(TailscaleConfirmScreen(
+                tr("Seal GUS's work on {branch}?", branch=branch),
+                tr("ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. "
+                   "T: the tests of the touched code. A: the coverage auditor and L0 tests. "
+                   "L: lint. T, A and L run in the command sandbox. Only if all pass is the work "
+                   "sealed; you activate it by merging the branch."),
+                tr("Run the gates"))):
+            return None
+        recorded = state.branch(branch)
+        authority = WorkspaceAuthority(root)
+        if recorded is None:
+            changes = {"clean": True, "changes": [], "base": "", "head": "", "diff": ""}
+        else:
+            outcome = await asyncio.to_thread(
+                GitOwner(root, authority, self._action_approvals).generation_changes, recorded["base"])
+            if outcome.decision != "ALLOW" or outcome.receipt is None:
+                self._set_activity(tr("GUS generation not prepared · {reason}", reason=outcome.reason[:160]), RED)
+                return None
+            changes = json.loads(outcome.text)
+        digest = (await asyncio.to_thread(l0_fingerprint, root)).digest
+        owner = CommandRunOwner(root, authority, self._action_approvals)
+
+        async def runner(argv):
+            try:
+                preview = await asyncio.to_thread(owner.prepare, list(argv), ".", 600)
+            except (OSError, ValueError) as exc:
+                return None, str(exc)
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+            with gus_turn(root):              # a gate that touches L0 is not promoted
+                result = await owner.run(preview, approval)
+            if result.decision != "ALLOW":
+                return None, result.reason
+            payload = json.loads(result.text)
+            return (None if payload.get("timed_out") else payload.get("exit_code")), payload.get("output", "")
+
+        self._set_activity(tr("GUS gates running on {branch}…", branch=branch), MUTED)
+        record = await build_generation(root, branch, changes, recorded, digest, runner)
+        state.save_generation(record)
+        self._set_activity(self._generation_text(record), GREEN if record["state"] == "SEALED" else RED)
+        return record
+
+    @staticmethod
+    def _generation_text(record: dict) -> str:
+        gates = " ".join(f"{gate['gate']}:{gate['status']}" for gate in record["gates"])
+        if record["state"] == "SEALED":
+            return tr("Sealed {branch} · {gates} · seal {seal}", branch=record["branch"], gates=gates,
+                      seal=record["seal"][:12])
+        failed = next((gate for gate in record["gates"] if gate["status"] != "PASS"), None)
+        return tr("Rejected {branch} · {gates} · {reason}", branch=record["branch"], gates=gates,
+                  reason=(failed or {}).get("detail", "")[:160])
 
     async def _undo_gus_turn(self, turn_id: str) -> None:
         """Put one GUS turn back after L0 changed; ISyCode starts this, not the model."""

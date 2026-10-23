@@ -31,7 +31,8 @@ class GusScreen(Dialog):
     AUTO_FOCUS = "#gus-input"
 
     def __init__(self, root: Path, authority_factory: Callable[[], Any], model_label: str,
-                 *, initial: str = "", complete=None, work=None, report_text=None) -> None:
+                 *, initial: str = "", complete=None, work=None, report_text=None,
+                 seal=None, generation_text=None) -> None:
         super().__init__()
         self.root = root
         self.authority_factory = authority_factory
@@ -41,6 +42,9 @@ class GusScreen(Dialog):
         # MK5c: on a gus/* branch a turn uses GUS's tools through ``work``.
         self.work = work
         self.report_text = report_text or (lambda report: "")
+        # MK5d: ISyCode runs the gates on GUS's committed work.
+        self.seal = seal
+        self.generation_text = generation_text or (lambda record: record.get("state", ""))
         self.state = GusState(root)
         self.busy = False
 
@@ -59,8 +63,11 @@ class GusScreen(Dialog):
 
     def dialog_actions(self) -> tuple[DialogAction, ...]:
         # Refuse-first (I-03): the harmless action comes first; Clear is never focused.
-        return (DialogAction("gus-close", tr("Close")),
-                DialogAction("gus-clear", tr("Clear conversation")))
+        actions = (DialogAction("gus-close", tr("Close")),
+                   DialogAction("gus-clear", tr("Clear conversation")))
+        if self.seal is not None:
+            actions += (DialogAction("gus-seal", tr("Run the gates")),)
+        return actions
 
     def on_mount(self, event) -> None:
         # Dialog would focus its first action; the conversation starts in the input.
@@ -131,7 +138,25 @@ class GusScreen(Dialog):
             self.busy = False
             self._scroll_end()
 
+    async def _run_seal(self) -> None:
+        self.busy = True
+        self._status(tr("GUS gates running…"))
+        try:
+            record = await self.seal()
+        finally:
+            self.busy = False
+        if record:
+            self._status(self.generation_text(record), CYAN if record["state"] == "SEALED" else RED)
+        else:
+            self._status("")
+
     def dismiss_action(self, action_id: str) -> None:
+        if action_id == "gus-seal":
+            if self.busy:
+                self._status(tr("GUS is still answering."), YELLOW)
+            else:
+                self.run_worker(self._run_seal(), exclusive=True, group="gus-reply")
+            return
         if action_id == "gus-clear":
             self.state.clear()
             self.query_one("#gus-transcript").remove_children()

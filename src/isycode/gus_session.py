@@ -36,6 +36,7 @@ RECORD_VERSION = 1
 MAX_RECORD_BYTES = 4 * 1024 * 1024
 MAX_TRANSCRIPT_ENTRIES = 80
 MAX_ENTRY_CHARS = 32_000
+MAX_GENERATIONS = 50
 # Share of the planning window a request may fill; the rest is left for the answer.
 REQUEST_WINDOW_SHARE = 0.75
 # One GUS turn: model steps and tool calls per step.
@@ -106,6 +107,26 @@ class GusState:
         finally:
             if temporary.exists():
                 temporary.unlink()
+
+    # Branches and generations (MK5) -------------------------------------
+    def record_branch(self, branch: str, base: str, l0_digest: str) -> None:
+        """Remember where a gus/* branch started and the L0 fingerprint at that moment."""
+        branches = dict((self._read("branches.json") or {}).get("branches") or {})
+        branches[branch] = {"base": base, "l0": l0_digest, "at": _now()}
+        self._write("branches.json", {"branches": dict(list(branches.items())[-50:])})
+
+    def branch(self, branch: str) -> dict[str, Any] | None:
+        record = ((self._read("branches.json") or {}).get("branches") or {}).get(branch)
+        return record if isinstance(record, dict) and isinstance(record.get("base"), str) else None
+
+    def save_generation(self, generation: dict[str, Any]) -> None:
+        entries = [entry for entry in (self._read("generations.json") or {}).get("entries") or []
+                   if isinstance(entry, dict)]
+        self._write("generations.json", {"entries": (entries + [generation])[-MAX_GENERATIONS:]})
+
+    def generations(self) -> list[dict[str, Any]]:
+        return [entry for entry in (self._read("generations.json") or {}).get("entries") or []
+                if isinstance(entry, dict)]
 
     # Enablement (GK4-00) -------------------------------------------------
     def enabled(self) -> bool:
