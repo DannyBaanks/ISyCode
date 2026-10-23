@@ -62,7 +62,8 @@ Hoy en ISyCode:
    | 32 768 | 49 152 caracteres | 29 % |
    | 131 072 | 196 608 caracteres | 7 % |
 
-   Con una ventana conocida menor de 32k, el slot no se guarda y lo dice. Con una ventana desconocida, se aplica el supuesto de 128k de la cápsula y se avisa.
+   Con una ventana conocida menor de 32 000 tokens, el slot no se guarda y lo dice; el umbral deja pasar los modelos de 32 000 y de 32 768. Con una ventana desconocida, se aplica el supuesto de 128k de la cápsula y se avisa.
+   Tampoco se guarda un modelo que el catálogo marca sin tool calls: GUS edita mediante herramientas.
 6. **No es L1.** L1 (`l1.py`, acciones `l1.*`) es el pipeline con puertas para herramientas escritas por el modelo, donde crear una herramienta no la activa ni la concede.
    GUS no crea herramientas: cambia el código de ISyCode en una rama con las acciones de workspace y Git que ya existen.
    Su rol no puede pedir acciones `l1.*`.

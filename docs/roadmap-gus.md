@@ -92,7 +92,7 @@ Dependencias: MK0.
 ### MK2 — Slot de modelo `gus`
 
 Trabajo: extender `model_slot`/`save_model_slot` con `gus` y agregar su selector en Configuración.
-Admite proveedor y modelo local, con las keys por proveedor existentes (D2). Rechaza un modelo con ventana conocida menor de 32k (ADR 0011).
+Admite proveedor y modelo local, con las keys por proveedor existentes (D2). Rechaza un modelo con ventana conocida menor de 32 000 tokens (ADR 0011) y uno que el catálogo marca sin tool calls, porque GUS no podría editar. Solo se ofrece en el repo de ISyCode (D3).
 Dependencias: MK1.
 
 - `GK2-01`: con el slot vacío, GUS no arranca y explica por qué; no cae al modelo del chat sin avisar.

@@ -70,6 +70,7 @@ from isycode.tool_history import record_tool_result, sanitize_historical_text, t
 from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 from isycode.shortcuts import APP_SHORTCUTS
+from isycode.gus_role import is_isycode_checkout
 from isycode.catalog import (
     ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_CYCLE, ROLE_KERNEL,
     SEMANTIC_BRANCHES, role_color,
@@ -1255,6 +1256,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         "sidebar_preview_toggle", "",
                         tr("Show a preview box below the file tree in the sidebar.")),
         ]
+        if is_isycode_checkout(self._workspace_root):
+            entries.append(self._entry(tr("GUS model · {model}", model=self._gus_slot_label()),
+                                       "gus_slot_open", ""))
         if self._workspace_identity.workspace_root_source == "isyroot":
             entries.extend([
                 self._entry("Initialize this workspace's .isycode/", "workspace_config_init", "",
@@ -1283,6 +1287,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "providers_open": "Choose the provider and model used for this conversation.",
                 "models_open": "Choose the model used for this conversation.",
                 "reasoning_open": "Choose supported reasoning settings for the active provider and model.",
+                "gus_slot_open": "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more.",
                 "roles_open": "Choose instructions for how the agent should work.",
                 "clear_role": "Remove the selected role from this conversation.",
                 "context_menu": "Review the context available to the agent.",

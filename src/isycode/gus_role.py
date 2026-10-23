@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from importlib import resources
+from pathlib import Path
 
 from isycode.actions import ACTION_BY_ID
 from isycode.workspace_trust import QUIET_FLOW_ACTIONS
@@ -100,6 +101,15 @@ def parse_role_document(text: str) -> GusRole:
                    actions=frozenset(actions), instructions=instructions)
 
 
+def is_isycode_checkout(root: Path) -> bool:
+    """D3: GUS is offered only in the ISyCode repository (two marker files, never read)."""
+    try:
+        return ((root / "src" / "isycode" / "gus_role.py").is_file()
+                and (root / "src" / "isycode" / "agents" / "gus.md").is_file())
+    except OSError:
+        return False
+
+
 def load_gus_role() -> GusRole:
     """The shipped GUS role, verified against ADR 0011."""
     try:
@@ -109,5 +119,5 @@ def load_gus_role() -> GusRole:
     return parse_role_document(text)
 
 
-__all__ = ["GUS_ACTION_CEILING", "GusRole", "GusRoleError", "load_gus_role",
-           "parse_role_document"]
+__all__ = ["GUS_ACTION_CEILING", "GusRole", "GusRoleError", "is_isycode_checkout",
+           "load_gus_role", "parse_role_document"]

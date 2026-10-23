@@ -423,6 +423,9 @@ class MenuAction(str, Enum):
     USER_DEFAULT_ROLE_SAVE = "user_default_role_save"
     USER_DEFAULT_ROLE_CLEAR = "user_default_role_clear"
     WORKFLOW_OPEN = "workflow_open"
+    GUS_SLOT_OPEN = "gus_slot_open"
+    GUS_SLOT_PROVIDER = "gus_slot_provider"
+    GUS_SLOT_MODEL = "gus_slot_model"
     WORKSPACE_MODE = "workspace_mode"
     CODING_TOOLKIT = "coding_toolkit"
     AUTHORITY_TOGGLE = "authority_toggle"
@@ -547,6 +550,9 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.USER_DEFAULT_ROLE_SAVE: "_menu_user_default_role_save",
     MenuAction.USER_DEFAULT_ROLE_CLEAR: "_menu_user_default_role_clear",
     MenuAction.WORKFLOW_OPEN: "_menu_workflow_open",
+    MenuAction.GUS_SLOT_OPEN: "_menu_gus_slot_open",
+    MenuAction.GUS_SLOT_PROVIDER: "_menu_gus_slot_provider",
+    MenuAction.GUS_SLOT_MODEL: "_menu_gus_slot_model",
     MenuAction.WORKSPACE_MODE: "_menu_workspace_mode",
     MenuAction.CODING_TOOLKIT: "_menu_coding_toolkit",
     MenuAction.AUTHORITY_TOGGLE: "_menu_authority_toggle",
@@ -799,6 +805,15 @@ class MenuMixin:
 
     def _menu_workflow_open(self, entry) -> None:
         self._open_workflow_menu()
+
+    def _menu_gus_slot_open(self, entry) -> None:
+        self._open_gus_slot_menu()
+
+    def _menu_gus_slot_provider(self, entry) -> None:
+        self._open_gus_models_menu(str(entry["value"]))
+
+    def _menu_gus_slot_model(self, entry) -> None:
+        self._choose_gus_model(str(entry["value"]))
 
     def _menu_workspace_mode(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]

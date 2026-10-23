@@ -6074,3 +6074,63 @@ msgstr "已选技能 · {names}"
 
 msgid "Workspace mode · click to switch between Classic, Flow and Security"
 msgstr "工作区模式 · 点击在 Classic、Flow 和 Security 之间切换"
+
+msgid "GUS model · {model}"
+msgstr "GUS 模型 · {model}"
+
+msgid "GUS model"
+msgstr "GUS 模型"
+
+msgid "GUS model · {provider}"
+msgstr "GUS 模型 · {provider}"
+
+msgid "Current · {model}"
+msgstr "当前 · {model}"
+
+msgid "GUS never falls back to the chat model. It needs tool calls and a window of 32k tokens or more."
+msgstr "GUS 绝不会退回使用聊天模型。它需要 tool calls 和至少 32k token 的上下文窗口。"
+
+msgid "Tool calls are off for this provider; GUS needs them to edit."
+msgstr "此提供商的 tool calls 已关闭；GUS 需要它们来编辑。"
+
+msgid "No provider is ready yet"
+msgstr "还没有可用的提供商"
+
+msgid "Add a key in Providers & models, or start a local model server (Ollama, LM Studio, llama.cpp)."
+msgstr "在“提供商与模型”中添加密钥，或启动本地模型服务（Ollama、LM Studio、llama.cpp）。"
+
+msgid "window unknown"
+msgstr "窗口未知"
+
+msgid "not set"
+msgstr "未设置"
+
+msgid "Window unknown: GUS assumes 128k and warns when it starts."
+msgstr "窗口未知：GUS 假定为 128k，并在启动时提示。"
+
+msgid "No models listed for this provider"
+msgstr "此提供商没有列出模型"
+
+msgid "Type a model id for it in Providers & models first."
+msgstr "请先在“提供商与模型”中为它输入模型 ID。"
+
+msgid "GUS model not saved · {reason}"
+msgstr "GUS 模型未保存 · {reason}"
+
+msgid "GUS model · {model} · window unknown, 128k assumed"
+msgstr "GUS 模型 · {model} · 窗口未知，假定为 128k"
+
+msgid "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."
+msgstr "GUS 用于维护 ISyCode 的模型：其他提供商或本地模型，窗口至少 32k token。"
+
+msgid "GUS cannot use this provider."
+msgstr "GUS 无法使用此提供商。"
+
+msgid "This model has no tool calls; GUS needs them to edit."
+msgstr "此模型不支持 tool calls；GUS 需要它们来编辑。"
+
+msgid "Window below 32k tokens: GUS's fixed context would not fit."
+msgstr "窗口小于 32k token：GUS 的固定上下文放不下。"
+
+msgid "GUS has no model yet. Choose one in Settings → GUS model."
+msgstr "GUS 还没有模型。请在“设置 → GUS 模型”中选择。"

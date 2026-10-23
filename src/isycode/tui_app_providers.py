@@ -47,6 +47,7 @@ from isycode.providers import (
     featured_models,
     load_provider_key,
     provider_credential_state,
+    provider_supports_tools,
     resolved_chat_model,
     save_provider_selection,
     selected_provider_name,
@@ -66,6 +67,7 @@ from textual.widgets import Button
 from isycode.tui_widgets import ExpandableBox, SidePanel
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
 from isycode.localization import configure_locale, next_locale, tr
+from isycode import gus_slot
 from isycode.user_defaults import UserDefaultsStore
 from isycode.chat_transport import provider_complete
 from isycode.contracts import CatalogSnapshot
@@ -560,6 +562,72 @@ class ProviderMixin:
         mode_cells = cells(mode)
         mode.display = fixed + mode_cells <= width
         model.display = mode.display and fixed + mode_cells + min(cells(model), 28) <= width
+
+    @staticmethod
+    def _window_label(window: int | None) -> str:
+        if window is None:
+            return tr("window unknown")
+        if window >= 1_000_000:
+            return f"{window / 1_000_000:g}M"
+        return f"{window // 1000}k"
+
+    def _gus_slot_label(self) -> str:
+        slot = gus_slot.gus_model()
+        if slot is None:
+            return tr("not set")
+        return f"{PRESETS[slot['provider']]['label']} / {slot['model']}"
+
+    def _open_gus_slot_menu(self) -> None:
+        """Settings → GUS model: providers GUS can use with keys the user already set up."""
+        entries = [self._entry(
+            tr("Current · {model}", model=self._gus_slot_label()), "info", "",
+            "GUS never falls back to the chat model. It needs tool calls and a window of 32k tokens or more.")]
+        providers = gus_slot.gus_providers()
+        for name in providers:
+            ready = provider_supports_tools(name)
+            entries.append(self._entry(
+                PRESETS[name]["label"], "gus_slot_provider" if ready else "info", name,
+                "" if ready else tr("Tool calls are off for this provider; GUS needs them to edit."),
+                translate=False))
+        if not providers:
+            entries.append(self._entry(
+                "No provider is ready yet", "info", "",
+                "Add a key in Providers & models, or start a local model server (Ollama, LM Studio, llama.cpp)."))
+        if self._menu_mode != "gus_slot":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("gus_slot", tr("GUS model"), entries)
+
+    def _open_gus_models_menu(self, provider: str) -> None:
+        entries = []
+        for model in gus_slot.gus_model_choices(provider):
+            check = gus_slot.check_gus_model(provider, model)
+            label = f"{model} · {self._window_label(check.window)}"
+            entries.append(self._entry(
+                label, "gus_slot_model" if check.allowed else "info", f"{provider}\n{model}",
+                tr(check.reason) if check.reason else (
+                    tr("Window unknown: GUS assumes 128k and warns when it starts.")
+                    if check.window is None else ""),
+                translate=False))
+        if not entries:
+            entries.append(self._entry(
+                "No models listed for this provider", "info", "",
+                "Type a model id for it in Providers & models first."))
+        self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("gus_models", tr("GUS model · {provider}", provider=PRESETS[provider]["label"]), entries)
+
+    def _choose_gus_model(self, value: str) -> None:
+        provider, _, model = value.partition("\n")
+        try:
+            check = gus_slot.save_gus_model(provider, model)
+        except (gus_slot.GusSlotError, ValueError, OSError) as exc:
+            reason = str(exc) if isinstance(exc, gus_slot.GusSlotError) else type(exc).__name__
+            self._set_activity(tr("GUS model not saved · {reason}", reason=tr(reason)), RED)
+            return
+        note = (tr("GUS model · {model} · window unknown, 128k assumed", model=model)
+                if check.window is None else tr("GUS model · {model}", model=model))
+        self._set_activity(note, GREEN if check.window is not None else YELLOW)
+        self._menu_stack = []
+        self._open_settings_menu()
 
     def _select_provider(self, name: str, model: str | None = None) -> bool:
         """Select a provider; True when it can be used now, False when it needs a key."""

@@ -6074,3 +6074,63 @@ msgstr "Skills seleccionadas · {names}"
 
 msgid "Workspace mode · click to switch between Classic, Flow and Security"
 msgstr "Modo del workspace · clic para cambiar entre Classic, Flow y Security"
+
+msgid "GUS model · {model}"
+msgstr "Modelo de GUS · {model}"
+
+msgid "GUS model"
+msgstr "Modelo de GUS"
+
+msgid "GUS model · {provider}"
+msgstr "Modelo de GUS · {provider}"
+
+msgid "Current · {model}"
+msgstr "Actual · {model}"
+
+msgid "GUS never falls back to the chat model. It needs tool calls and a window of 32k tokens or more."
+msgstr "GUS nunca usa el modelo del chat como respaldo. Necesita tool calls y una ventana de 32k tokens o más."
+
+msgid "Tool calls are off for this provider; GUS needs them to edit."
+msgstr "Las tool calls están apagadas para este proveedor; GUS las necesita para editar."
+
+msgid "No provider is ready yet"
+msgstr "Todavía no hay un proveedor listo"
+
+msgid "Add a key in Providers & models, or start a local model server (Ollama, LM Studio, llama.cpp)."
+msgstr "Agrega una key en Proveedores y modelos, o inicia un servidor de modelos local (Ollama, LM Studio, llama.cpp)."
+
+msgid "window unknown"
+msgstr "ventana desconocida"
+
+msgid "not set"
+msgstr "sin asignar"
+
+msgid "Window unknown: GUS assumes 128k and warns when it starts."
+msgstr "Ventana desconocida: GUS supone 128k y avisa al empezar."
+
+msgid "No models listed for this provider"
+msgstr "No hay modelos para este proveedor"
+
+msgid "Type a model id for it in Providers & models first."
+msgstr "Primero escribe un id de modelo para él en Proveedores y modelos."
+
+msgid "GUS model not saved · {reason}"
+msgstr "Modelo de GUS sin guardar · {reason}"
+
+msgid "GUS model · {model} · window unknown, 128k assumed"
+msgstr "Modelo de GUS · {model} · ventana desconocida, se supone 128k"
+
+msgid "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."
+msgstr "El modelo que GUS usa para mantener ISyCode: otro proveedor o un modelo local, de 32k tokens o más."
+
+msgid "GUS cannot use this provider."
+msgstr "GUS no puede usar este proveedor."
+
+msgid "This model has no tool calls; GUS needs them to edit."
+msgstr "Este modelo no tiene tool calls; GUS las necesita para editar."
+
+msgid "Window below 32k tokens: GUS's fixed context would not fit."
+msgstr "Ventana menor de 32k tokens: el contexto fijo de GUS no cabría."
+
+msgid "GUS has no model yet. Choose one in Settings → GUS model."
+msgstr "GUS todavía no tiene modelo. Elige uno en Configuración → Modelo de GUS."
