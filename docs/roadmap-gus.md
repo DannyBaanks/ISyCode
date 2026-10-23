@@ -143,7 +143,14 @@ Dependencias: MK4, D1 y ADR 0013. Se entrega en cuatro PRs apilados:
   - La promoción del staging de comandos rechaza el diff entero si toca L0.
   - `quiet_gus` deja que GUS actúe sin preguntar solo con la lista de Flow, en Classic o Flow, sin carpeta amplia, con comandos en sandbox y solo si `.git/HEAD` es una rama `gus/*`. Fuera de esa rama pregunta como siempre.
 - **MK5c-2 — turno de GUS con herramientas.** `gus_work` le da a GUS las herramientas de su rol solo en una rama `gus/*`: leer, editar, borrar, mover, comandos en sandbox y git status/diff/commit. Fuera de esa rama GUS conversa sin herramientas (GK5-04). Cada llamada corre dentro de `gus_turn`; las peticiones al modelo no. El turno tiene un tope de 24 pasos y de la ventana, y lo dice cuando se detiene. La TUI (`_run_gus_turn`) registra el turno en un `TurnJournal` en cualquier modo, así que `/undo` lo deshace (GK5-03). Toma la huella de L0 antes y después: si cambió, deshace el turno y nombra lo que no pudo restaurar. Classic concede `workspace.turn.undo` (enmienda al ADR 0010) y pregunta antes de cada deshacer.
-- **MK5d — generaciones.** `PREPARADA → VALIDADA → PROBADA → SELLADA`, con salida a `RECHAZADA`, y las puertas V/T/A/L/S del ADR 0013 corridas por ISyCode, nunca reportadas por el modelo. La generación y su evidencia van al estado privado.
+- **MK5d — generaciones.** `gus_generation.py` (L0) arma la generación con lo que GUS commiteó en su rama desde el commit donde nació: `/gus branch` guarda ese commit y la huella de L0 en el estado privado. `PREPARADA → VALIDADA → PROBADA → SELLADA`, con salida a `RECHAZADA`:
+  - **V:** árbol limpio, algo commiteado, ningún cambio (ni origen de un rename) en L0, el diff completo y la huella de L0 igual a la del inicio de la rama.
+  - **T:** las pruebas de los archivos tocados. Un cambio que ninguna prueba cubre no pasa.
+  - **A:** las pruebas del auditor de cobertura, de m15 y de L0.
+  - **L:** `ruff check` como en CI o, si el sandbox no tiene ruff, una compilación de los archivos cambiados, y lo dice.
+  - **S:** SHA-256 del rango, las rutas, el diff y la evidencia de V/T/A/L.
+
+  T, A y L corren con el owner de comandos en el sandbox, dentro de `gus_turn`. Si el Python del sandbox no puede correr las pruebas, quedan `NOT_RUN` y no se sella. La suite completa la corre CI en el PR de la rama: el tope de un comando es 600 s. Se abre con `/gus seal` o con «Correr las puertas» en la ventana de GUS. Activar es el merge de Danny.
 
 Puertas:
 - `GK5-00`: el manifiesto está fijado por una prueba (`PINNED_MANIFEST`), cada entrada existe y todo módulo que define un owner (`class …Owner`) está en L0. El manifiesto y su prueba son L0.
