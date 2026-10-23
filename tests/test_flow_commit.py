@@ -92,3 +92,13 @@ def test_commit_is_not_quiet_by_the_mode_rule_alone(repo):
     request = ActionRequest("git.commit", root, str(root), {"message": "m"},
                             execution_owner="workspace_git")
     assert quiet_flow(git.authority, request) is False
+
+
+def test_human_staged_content_requires_review_even_if_worktree_was_clean(repo):
+    writer, git, root = repo
+    (root / 'tracked.py').write_text('human staged\n')
+    _git(root, 'add', 'tracked.py')
+    (root / 'tracked.py').write_text('x = 1\n')
+    journal = TurnJournal.begin(root)
+    assert writer.apply(writer.preview('tracked.py', 'agent\n'), None).decision == 'ALLOW'
+    assert git.turn_attributable(journal, ('tracked.py',)) is False

@@ -1189,6 +1189,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                             "Copies validated .isycode-commands/*.md files after diff approval; originals remain."),
             ])
         entries.extend([
+            self._entry(tr("Workflow"), "workflow_open", ""),
             self._entry(tr("Authority & Security"), "authority_open", ""),
             self._entry(tr("Multi Harness · settings & repair Compose"), "harness_open", ""),
             self._entry(tr("Named API keys"), "named_credentials", ""),
@@ -1226,6 +1227,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 "locale_cycle": tr("Interface language for ISyCode. This does not change permissions or workspace files."),
             }),
             tr("Permissions"): (YELLOW, {
+                "workflow_open": "Choose Classic, Flow or Security for this workspace.",
                 "authority_open": "Inspect or change workspace permissions and approval settings.",
                 "named_credentials": "Manage named API credentials and their allowed uses.",
                 "security_journal": "Inspect recorded actions and verify their receipts.",
@@ -1276,6 +1278,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "sidebar_preview_toggle": ("Sidebar file preview", on if self._sidebar_file_preview else off),
             "user_defaults": ("My defaults", tr("All workspaces")),
             "workspace_config_preferences": ("Workspace preferences", tr("This workspace")),
+            "workflow_open": ("Workflow", self._workspace_mode().title()),
             "authority_open": ("Authority & Security", self._workspace_mode().title()),
             "shortcuts": ("Commands & shortcuts", tr("Browse")),
             "named_credentials": ("Named API keys", tr("Manage")),
@@ -2738,7 +2741,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _root_source_label(self) -> str:
         source = ".isyroot" if self._workspace_identity.workspace_root_source == "isyroot" else "Fallback"
         broad = " · Broad Shared Root" if self._shared_root_warning() else ""
-        mode = "Classic" if self._workspace_mode() == "classic" else "Security"
+        mode = {"classic": "Classic", "flow": "Flow"}.get(self._workspace_mode(), "Security")
         return f"Root Source · {source}{broad} · {mode} Mode"
 
     async def _load_context_file(self, relative_path: str) -> bool:

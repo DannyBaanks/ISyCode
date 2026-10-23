@@ -158,7 +158,7 @@ Una PR de bypass deliberado debe fallar como prueba negativa. Si no hay permiso 
 | M6A | Agentes observables e instrucciones en cola | M6 | APROBADO (G6A, revisor Danny Baanks, evidencia ae616fbe) | G6A |
 | M7 | Flujos cotidianos completos | M6A | APROBADO (G7, revisor Danny Baanks, evidencia 0eaa4eb2) | G7 |
 | M8 | Pulido visual, teclado y accesibilidad | M7 | APROBADO (G8, revisor Danny Baanks, evidencia 1d588426) | G8 |
-| MF | Flow: tercer modo sin preguntas repetitivas, mismo kernel ([ADR 0010](decisions/0010-flow-mode.md)) | M8 | EN CURSO | GF |
+| MF | Flow: tercer modo sin preguntas repetitivas, mismo kernel ([ADR 0010](decisions/0010-flow-mode.md)) | M8 | EN_REVISION (implementación; aceptación GF pendiente) | GF |
 | M9 | Matriz adversarial, dogfood y rendimiento | M8, MF | PENDIENTE | G9 |
 | M10 | Release gradual y rollback ensayado | M9 | PENDIENTE | G10 |
 
@@ -372,6 +372,8 @@ Dependencias: M8. M9 incluye Flow en su matriz adversarial.
 - `GF-05`: Classic → Flow → Security → Classic en caliente, con y sin turno activo; ninguna aprobación ni permiso de sesión sobrevive al cambio; la conversación se conserva.
 - `GF-06`: la experiencia completa (elegir Flow, trabajar, revisar, deshacer, cambiar de modo) desde la TUI, en en/es/zh y a 80×24, 100×30 y 140×40.
 - `GF-07`: plataformas: Linux con bubblewrap verificado; donde no haya aislamiento equivalente demostrado, Flow no ejecuta comandos ni concede red.
+
+Guía de uso e integración F5: [Flow](flow-mode.md). F1–F4 aportan el núcleo; F5 conecta selección, turnos y `/undo` a la TUI. La implementación no es una aprobación de puerta.
 
 Aceptación: GF con evidencia en `docs/evidence/classic-security-ux/MF/<sha>/`. Implementar MF no aprueba GF, M9 ni M10.
 

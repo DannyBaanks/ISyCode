@@ -666,12 +666,15 @@ class WorkspaceWriteOwner:
             target = self._target(path)
             current = self._read_back(target)
             current_sha = None if current is None else _sha(current)
-            if current_sha != row["after_sha256"]:
+            current_mode = None if current is None else stat.S_IMODE(target.lstat().st_mode)
+            if (current_sha != row["after_sha256"]
+                    or current_mode != row.get("after_mode", current_mode)):
                 conflicts.append(path)
                 continue
             journal.read_before(path)   # the preimage must still verify
             steps.append({"path": path, "current_sha256": current_sha,
                           "restore_sha256": row["before_sha256"], "mode": row["before_mode"],
+                          "current_mode": current_mode,
                           "churn": (0 if current is None else len(current))})
         plan = json.dumps({"turn": turn_id, "steps": steps, "conflicts": conflicts},
                           sort_keys=True).encode("utf-8")
@@ -723,13 +726,13 @@ class WorkspaceWriteOwner:
                 plan.append({"path": step["path"],
                              "kind": "delete" if step["restore_sha256"] is None else "write",
                              "preimage": step["current_sha256"], "target": step["restore_sha256"],
-                             "churn": step["churn"], "preimage_mode": None,
+                             "churn": step["churn"], "preimage_mode": step["current_mode"],
                              "target_mode": step["mode"], "typed": True})
             book.store_plan(reservation, plan)
             for step in preview.steps:
                 book.mark_applying(reservation, step["path"])
                 apply_file(self.root, step["path"], payloads[step["path"]],
-                           expected=step["current_sha256"], mode=step["mode"] or 0o644)
+                           expected=step["current_sha256"], mode=step["mode"] if step["mode"] is not None else 0o644)
                 book.mark_applied(reservation, step["path"])
                 restored.append(step["path"])
             book.commit(reservation, applied_paths=paths, deletes=deletes, churn_bytes=churn)

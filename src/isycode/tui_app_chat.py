@@ -334,6 +334,35 @@ class ChatMixin:
         return {}
 
     async def _run_chat(self, text: str, *, resume: Any | None = None) -> None:
+        """One recoverable Flow unit per provider turn, including cancellation/failure."""
+        from isycode.turn_journal import TurnJournal
+        turn = None
+        if self._workspace_mode() == "flow":
+            try:
+                if TurnJournal.active(self._workspace_root) is not None:
+                    raise ValueError("another Flow turn is already recording this workspace")
+                turn = TurnJournal.begin(self._workspace_root)
+            except (OSError, ValueError):
+                self._append("  " + tr("Flow could not prepare recovery. Nothing started; prompt kept."), RED)
+                self._retry_prompt = text
+                self.query_one("#prompt-input", PromptArea).load_text(text)
+                return
+        try:
+            await self._run_chat_turn(text, resume=resume)
+        finally:
+            if turn is not None:
+                try:
+                    turn.finish()
+                    changes = turn.changes()
+                    if changes:
+                        self._append("  " + tr("Flow turn · {count} files · /undo restores this turn; later human edits are kept.",
+                                              count=len(changes)), CYAN)
+                        for change in changes:
+                            self._append(f"    {change['path']}", MUTED)
+                except (OSError, ValueError):
+                    self._append("  " + tr("Flow recovery record could not be closed. Inspect files and the action journal before continuing."), RED)
+
+    async def _run_chat_turn(self, text: str, *, resume: Any | None = None) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
         self._ensure_lane_session()
         original_prompt = text

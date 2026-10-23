@@ -231,3 +231,60 @@ def test_flow_tells_the_model_about_the_shell_and_nothing_else_changes():
     assert flow["function"]["name"] == COMMAND_TOOL["function"]["name"]
     assert "bash" in flow["function"]["description"]
     assert "There is no shell" in COMMAND_TOOL["function"]["description"]
+
+
+def test_real_flow_sandbox_keeps_host_environment_secrets_and_paths_out(project, tmp_path, monkeypatch):
+    import socket
+    from isycode.command_runner import sandbox_executable
+    if sandbox_executable() is None:
+        pytest.skip('a verified native sandbox is not available on this platform')
+    authority, root = project
+    authority.set_mode('flow')
+    outside = tmp_path / 'outside.txt'
+    outside.write_text('human outside\n')
+    (root / '.env').write_text('FLOW_TEST_SECRET=must-stay-hidden\n')
+    monkeypatch.setenv('FLOW_HOST_SECRET', 'host-environment-canary')
+    if os.name == 'posix':
+        (root / 'linked.txt').symlink_to(outside)
+        os.link(outside, root / 'hardlinked.txt')
+    listener = socket.socket()
+    listener.bind(('127.0.0.1', 0))
+    listener.listen()
+    port = listener.getsockname()[1]
+    code = f'''import os,socket,pathlib,json
+assert 'FLOW_HOST_SECRET' not in os.environ
+assert b'host-environment-canary' not in pathlib.Path('/proc/1/environ').read_bytes()
+for name in ('.env', 'linked.txt', 'hardlinked.txt', {str(outside)!r}):
+    try:
+        data = pathlib.Path(name).read_bytes()
+    except OSError:
+        continue
+    assert b'must-stay-hidden' not in data and b'human outside' not in data, name
+try:
+    pathlib.Path({str(outside)!r}).write_text('escape')
+except OSError:
+    pass
+else:
+    raise AssertionError('outside write succeeded')
+try:
+    s=socket.socket();s.settimeout(1)
+    assert s.connect_ex(('127.0.0.1', {port})) != 0
+except OSError:
+    pass
+print('FLOW_ISOLATION_OK')
+'''
+    journal = None
+    try:
+        from isycode.turn_journal import TurnJournal
+        journal = TurnJournal.begin(root)
+        runner = CommandRunOwner(root, authority, ActionApprovalStore())
+        preview = runner.prepare(['bash', '-c', "python3 -c " + __import__('shlex').quote(code)])
+        outcome = asyncio.run(runner.run(preview, None))
+        assert outcome.decision == 'ALLOW', outcome.reason
+        result = json.loads(outcome.text)
+        assert 'FLOW_ISOLATION_OK' in result['output'], result
+        assert outside.read_text() == 'human outside\n'
+    finally:
+        listener.close()
+        if journal is not None:
+            journal.finish()

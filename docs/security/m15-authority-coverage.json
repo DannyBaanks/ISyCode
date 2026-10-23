@@ -1892,7 +1892,7 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 877,
+      "line": 947,
       "owner": "remote_catalog"
     },
     {
@@ -2283,7 +2283,7 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 877,
+      "line": 947,
       "owner": "remote_catalog"
     },
     {
@@ -2381,7 +2381,7 @@
       "action": "workspace.turn.undo",
       "callable": "isycode.workspace_write.WorkspaceWriteOwner.preview_turn_undo",
       "file": "isycode/workspace_write.py",
-      "line": 678,
+      "line": 681,
       "owner": "workspace_write"
     },
     {

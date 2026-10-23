@@ -101,10 +101,10 @@ class Banner(Static):
         workspace_mode = getattr(self.app, "_workspace_mode", None)
         if callable(workspace_mode):
             try:
-                mode = "Classic" if workspace_mode() == "classic" else "Security"
+                mode = {"classic": "Classic", "flow": "Flow"}.get(workspace_mode(), "Security")
             except Exception:
                 mode = "Security"
-        mark = f"  {'[C]' if mode == 'Classic' else '[S]'} {mode}" if getattr(self.app, "_ascii_only", False) else f"  ◇ {mode}"
+        mark = f"  {'[C]' if mode == 'Classic' else '[F]' if mode == 'Flow' else '[S]'} {mode}" if getattr(self.app, "_ascii_only", False) else f"  ◇ {mode}"
         # Two spaces are prepended to the path, and two more stay clear of the frame.
         available = max(1, width - 4 - cell_len(wordmark + mark))
         if cell_len(path) > available:

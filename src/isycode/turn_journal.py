@@ -131,6 +131,27 @@ class TurnJournal:
         journal.undone = bool(data.get("undone"))
         return journal
 
+    @classmethod
+    def latest(cls, root: Path) -> "TurnJournal | None":
+        """Newest nonempty, not-undone turn, also after a process restart.
+
+        A corrupt newest record is an error: never silently undo an older turn.
+        An interrupted process may leave finished=False; no in-process active
+        turn exists after restart, so its verified preimages remain recoverable.
+        """
+        directory = cls.base_directory(root)
+        if not directory.exists():
+            return None
+        candidates = sorted((p for p in directory.iterdir()
+                             if TURN_ID.fullmatch(p.name)), reverse=True)
+        for path in candidates:
+            if path.is_symlink() or not path.is_dir():
+                raise ValueError("turn journal directory is unsafe")
+            journal = cls.load(root, path.name)
+            if not journal.undone and journal.changes():
+                return journal
+        return None
+
     def finish(self) -> None:
         """The turn ended; its record stays for review and undo."""
         with _LOCK:
@@ -164,7 +185,7 @@ class TurnJournal:
         self.entries[relative] = {
             "order": len(self.entries), "before_sha256": before,
             "before_mode": None if mode is None else stat.S_IMODE(mode),
-            "after_sha256": before,
+            "after_sha256": before, "after_mode": None if mode is None else stat.S_IMODE(mode),
         }
         self.preimage_bytes += size
         self._save()
@@ -175,6 +196,8 @@ class TurnJournal:
         if entry is None:
             return
         entry["after_sha256"] = after_sha256
+        entry["after_mode"] = (stat.S_IMODE((self.root / relative).lstat().st_mode)
+                               if after_sha256 is not None else None)
         self._save()
 
     def mark_undone(self) -> None:
@@ -203,7 +226,7 @@ class TurnJournal:
         rows = []
         for path, entry in sorted(self.entries.items(), key=lambda item: item[1]["order"]):
             before, after = entry["before_sha256"], entry["after_sha256"]
-            if before == after:
+            if before == after and entry.get("before_mode") == entry.get("after_mode"):
                 continue
             kind = "created" if before is None else "deleted" if after is None else "modified"
             rows.append({"path": path, "kind": kind, **entry})

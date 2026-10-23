@@ -25,6 +25,7 @@ EXPECTED = {
     "user_default_workspace",
     "user_default_role_save",
     "user_default_role_clear",
+    "workflow_open",
     "workspace_mode",
     "coding_toolkit",
     "authority_toggle",

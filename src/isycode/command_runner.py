@@ -112,7 +112,7 @@ def resolve_program(root: Path, name: str) -> str:
     return sandbox_backend.resolve_program(root, name)
 
 
-def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
+def sensitive_entries(root: Path, *, reject_hardlinks: bool = False) -> tuple[tuple[str, bool], ...]:
     """Every sensitive file or folder in the workspace, as (relative path, is_folder).
 
     Symlinks are not masked: only the workspace is mounted, so their targets
@@ -163,7 +163,7 @@ def sensitive_entries(root: Path) -> tuple[tuple[str, bool], ...]:
                     stack.append(Path(entry.path))
                 elif entry.is_file(follow_symlinks=False) and (facts := inode(entry)) and facts[1] > 1:
                     linked.append((Path(entry.path).relative_to(root).as_posix(), facts[0]))
-    found.extend((relative, False) for relative, key in linked if key in secret_inodes)
+    found.extend((relative, False) for relative, key in linked if reject_hardlinks or key in secret_inodes)
     return tuple(sorted(found))
 
 
@@ -250,7 +250,7 @@ class CommandRunOwner:
         return CommandPreview(request, argv, program, cwd, timeout_s, masks, scope, max_stage_bytes)
 
     def _scope_masks(self, scope: str) -> tuple[tuple[str, bool], ...]:
-        entries = sensitive_entries(self.root / scope)
+        entries = sensitive_entries(self.root / scope, reject_hardlinks=self.authority.mode() == "flow")
         return entries if scope == "." else tuple((scope + "/" + path, folder) for path, folder in entries)
 
     async def run(self, preview: CommandPreview,

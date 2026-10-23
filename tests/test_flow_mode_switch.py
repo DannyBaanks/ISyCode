@@ -15,7 +15,7 @@ def _request(root):
                          {"path": "app.py"}, execution_owner="workspace_write")
 
 
-def test_switch_clears_approvals_opens_and_closes_the_flow_turn_and_keeps_the_chat(tmp_path, monkeypatch, capsys):
+def test_switch_clears_approvals_without_starting_a_chat_turn_and_keeps_the_chat(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     root = (tmp_path / "project").resolve()
 
@@ -32,13 +32,15 @@ def test_switch_clears_approvals_opens_and_closes_the_flow_turn_and_keeps_the_ch
             lines_before = list(app._active_lane().lines)
 
             # An approval issued under the current mode must not survive a switch.
+            app._session_auto_edits.add("main")
             token = app._action_approvals.issue(_request(root), ttl_seconds=60)
 
             await app._switch_engine_mode("flow")
             await pilot.pause()
             assert WorkspaceAuthority(root).mode() == "flow"
             assert not app._action_approvals.consume(_request(root), token)
-            assert TurnJournal.active(root) is not None       # Flow opens a turn
+            assert not app._session_auto_edits
+            assert TurnJournal.active(root) is None           # only chat opens a turn
             assert any("a human line" in str(line) for line in app._active_lane().lines)
             assert len(app._active_lane().lines) >= len(lines_before)
 

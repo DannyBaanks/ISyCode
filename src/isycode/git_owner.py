@@ -438,6 +438,10 @@ class GitOwner:
         if journal is None or not paths or self._repository_problem():
             return False
         try:
+            staged, truncated = self._git("diff", "--cached", "--no-ext-diff", "--no-textconv",
+                                          "--name-only", "--", *paths)
+            if truncated or staged.strip():
+                return False  # A human's staged version must keep its review.
             changes = {row["path"]: row for row in journal.changes()}
             for path in paths:
                 row = changes.get(path)

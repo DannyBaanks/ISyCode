@@ -123,15 +123,16 @@ class AuthorityMixin:
         if not await self._await_screen(TailscaleConfirmScreen(
                 tr("Switch this workspace to {mode}?", mode=name),
                 tr(self._MODE_WARNINGS[mode]), tr("Use {mode}", mode=name))):
-            self._open_authority_menu()
+            self._open_workflow_menu()
             return
-        await self._switch_engine_mode(mode)
+        if not await self._switch_engine_mode(mode):
+            return
         if mode == "classic":
             await self._offer_quiet_trust(WorkspaceAuthority(self._workspace_root), again=True)
         self._update_workspace_identity_ui()
-        self._open_authority_menu()
+        self._open_workflow_menu()
 
-    async def _switch_engine_mode(self, mode: str) -> None:
+    async def _switch_engine_mode(self, mode: str) -> bool:
         """Reconfigure the engine for a new mode without losing the conversation (ADR 0010).
 
         Stops an active turn, invalidates pending approvals and session
@@ -141,9 +142,10 @@ class AuthorityMixin:
         name = self._MODE_NAMES[mode]
         if await self._stop_active_turn_for_switch(name) is False:
             self._append(f"  Staying in {self._MODE_NAMES.get(self._workspace_mode(), '')} mode.", MUTED)
-            return
+            return False
         # Approvals issued under the old mode must never be consumable under the new one.
         cleared = self._action_approvals.clear()
+        self._session_auto_edits.clear()
         # Flow turn records belong to the mode that produced them; close the open one.
         try:
             from isycode.turn_journal import TurnJournal
@@ -157,17 +159,12 @@ class AuthorityMixin:
             authority.set_mode(mode)
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append(f"  Mode could not be changed ({type(exc).__name__}); nothing was switched.", RED)
-            return
-        if mode == "flow":
-            try:
-                from isycode.turn_journal import TurnJournal
-                TurnJournal.begin(self._workspace_root)
-            except Exception:
-                pass
-        note = f"  Engine restarted in {name} mode."
+            return False
+        note = "  " + tr("Workspace now uses {mode} mode.", mode=name)
         if cleared:
             note += f" {cleared} pending approval{'s' if cleared != 1 else ''} invalidated."
         self._append(note, GREEN)
+        return True
 
     async def _stop_active_turn_for_switch(self, name: str) -> bool:
         """Cancel a running turn before a mode switch. False means the user kept the mode."""
@@ -192,6 +189,16 @@ class AuthorityMixin:
                     pass
         return True
 
+    def _open_workflow_menu(self) -> None:
+        current = self._workspace_mode()
+        entries = [self._entry(
+            tr("{mode} · current", mode=self._MODE_NAMES[mode]) if mode == current else self._MODE_NAMES[mode],
+            "workspace_mode", mode, tr(self._MODE_WARNINGS[mode]))
+            for mode in ("classic", "flow", "security")]
+        if self._menu_mode != "workflow":
+            self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
+        self._render_menu("workflow", tr("Workflow"), entries)
+
     def _open_authority_menu(self) -> None:
         entries: list[dict] = [self._entry(
             "Choose what ISyCode can do in this workspace. Everything else stays off.", "info"),
@@ -202,14 +209,9 @@ class AuthorityMixin:
             authority = WorkspaceAuthority(self._workspace_root)
             policy = authority.effective_policy()
             grants = policy.get("grants", {})
-            classic = authority.mode() == "classic"
-            entries.append(self._entry(
-                ("Mode · Classic · Ready To Use; switch to Security…" if classic
-                 else "Mode · Security · nothing runs until you allow it; switch to Classic…"),
-                "workspace_mode", "security" if classic else "classic",
-                "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, "
-                "and sandboxed commands where supported. Each edit, delete/move, command and commit "
-                "still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."))
+            mode = self._MODE_NAMES.get(authority.mode(), "Security")
+            entries.append(self._entry(tr("Workflow · {mode}", mode=mode), "workflow_open", "",
+                                       tr("Choose Classic, Flow or Security for this workspace.")))
             entries.append(self._entry(
                 "Turn on all coding tools…", "coding_toolkit", "",
                 "One step for read, search, edit, move, delete, undo, sandboxed commands, git and "
@@ -423,9 +425,8 @@ class AuthorityMixin:
             "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, "
             "and sensitive actions still ask you first."))
         entries.append(self._entry(
-            "File edits follow folder approval settings; other changes always ask.",
-            "info", "", "Turning a permission on lets the assistant propose that kind of action. "
-            "Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."))
+            tr("Local work follows the selected workflow; sensitive actions still ask or stay off."),
+            "info", "", tr("Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply.")))
         entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
         if self._menu_mode != "authority_settings":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))

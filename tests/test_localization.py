@@ -207,7 +207,8 @@ def test_spanish_chrome_and_first_run_options_render(tmp_path, monkeypatch, caps
             await app.push_screen(WorkspaceModeScreen(project))
             await pilot.pause()
             mode_options = [str(option.prompt) for option in app.screen.query_one("#workspace-mode-options")._options]
-            assert "Classic · listo para usar" in mode_options
+            assert "Classic · recomendado" in mode_options
+            assert "Flow · trabajo local recuperable sin preguntas" in mode_options
             assert "Security · todo apagado hasta que yo lo permita" in mode_options
 
     with capsys.disabled():
@@ -312,7 +313,7 @@ def test_spanish_authority_and_palette_options_render(tmp_path, monkeypatch, cap
             labels = [entry["label"] for entry in app._menu_entries]
             assert "Leer y buscar archivos del espacio de trabajo" in labels
             assert "Activar todas las herramientas de código…" in labels
-            assert "Modo · Classic · listo para usar; cambiar a Security…" in labels
+            assert "Flujo de trabajo · Classic" in labels
             app._open_palette()
             await pilot.pause()
             palette = [entry["label"] for entry in app._menu_entries]

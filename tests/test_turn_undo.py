@@ -133,3 +133,15 @@ def test_outside_a_turn_nothing_is_recorded(flow):
     assert TurnJournal.active(root) is None
     assert owner.apply(owner.preview("keep.txt", "no turn\n"), None).decision == "ALLOW"
     assert (root / "keep.txt").read_text() == "no turn\n"
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX permission bits')
+def test_undo_preserves_a_later_human_permission_change(flow):
+    owner, root = flow
+    turn_id = _run_turn(owner, root)
+    (root / 'keep.txt').chmod(0o600)
+    preview = owner.preview_turn_undo(turn_id)
+    assert 'keep.txt' in preview.conflicts
+    assert owner.apply_turn_undo(preview, None).decision == 'ALLOW'
+    assert (root / 'keep.txt').read_text() == 'edited\n'
+    assert stat.S_IMODE((root / 'keep.txt').stat().st_mode) == 0o600

@@ -103,5 +103,5 @@ def test_tui_reads_mentions_and_workspace_commands_through_the_read_owner():
     for name in ("_expand_mentions", "_run_custom_command"):
         assert 'owner.execute, "workspace.files.read"' in methods[name], name
         assert "read_text(" not in methods[name] and "open(" not in methods[name], name
-    assert "text = await self._expand_mentions(text)" in methods["_run_chat"]
+    assert "text = await self._expand_mentions(text)" in methods["_run_chat"] + methods["_run_chat_turn"]
     assert "self._run_custom_command(text)" in methods["_accept_prompt"]
