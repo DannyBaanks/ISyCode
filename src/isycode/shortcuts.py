@@ -26,6 +26,8 @@ APP_SHORTCUTS: tuple[Shortcut, ...] = (
              "Open the copy menu for the focused message or preview", True),
     Shortcut("ctrl+b", "toggle_sidebar", "Toggle sidebar", "Show or hide the workspace rail"),
     Shortcut("ctrl+l", "focus_input", "Focus composer", "Move focus to the chat composer"),
+    Shortcut("shift+tab", "cycle_role", "Next role",
+             "Cycle the agent role from anywhere in the main chat", True),
     Shortcut("ctrl+t", "toggle_tasks", "Tasks", "Fold or expand the agent's task list", True),
     Shortcut("escape", "escape_to_chat", "Back", "Close the current popup and return to chat"),
     Shortcut("f6", "focus_files", "Files", "Open and focus the Files rail", True),

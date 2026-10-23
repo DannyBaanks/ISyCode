@@ -778,7 +778,7 @@ class ToolMixin:
                 proposed.append(name)
             guidance(proposed)
             self._active_skills = proposed
-            self._append("  Selected skills · " + (", ".join(proposed) or "none"), CYAN)
+            self._append("  " + tr("Selected skills · {names}", names=", ".join(proposed) or tr("none")), CYAN)
         except (OSError, ValueError):
             self._append("  " + tr("Skill unavailable or selection too large; existing guidance preserved."), YELLOW)
 

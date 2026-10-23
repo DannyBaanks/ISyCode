@@ -180,14 +180,24 @@ def test_reasoning_growth_and_collapse_keep_tail_visible(tmp_path, monkeypatch, 
             await growing.wait()
             await pilot.pause()
             chat = app.query_one(ChatArea)
+
+            async def tail_visible():
+                # Slow runners (Windows CI) can sample mid-relayout, when the
+                # scroll offset is briefly out of range; wait for it to settle.
+                for _ in range(100):
+                    if abs(chat.scroll_y - chat.max_scroll_y) <= 1:
+                        return True
+                    await pilot.pause(0.02)
+                return False
+
             try:
                 assert app.query_one(ThoughtBlock)._body.region.height == 2
-                assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
+                assert await tail_visible(), (chat.scroll_y, chat.max_scroll_y)
             finally:
                 continue_stream.set()
                 await task
             await pilot.pause()
-            assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
+            assert await tail_visible(), (chat.scroll_y, chat.max_scroll_y)
             assert app.query_one(ThoughtBlock).collapsed
     with capsys.disabled():
         asyncio.run(scenario())
