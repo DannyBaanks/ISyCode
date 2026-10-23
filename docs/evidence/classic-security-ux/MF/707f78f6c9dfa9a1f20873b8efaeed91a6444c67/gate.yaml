@@ -1,0 +1,99 @@
+hito: MF
+puerta: GF
+estado: EN_REVISION
+sha_evaluado: 707f78f6c9dfa9a1f20873b8efaeed91a6444c67
+fecha_utc: 2026-10-22T18:30:00Z
+autor: DannyBaanks
+entorno: Linux 6.8.0-47-generic x86_64, ext4, bubblewrap 0.9.0, Python 3.12.3, Textual 8.2.8
+perfil_y_politica: modo Flow, aislamiento bubblewrap, turn undo, commit atribuible
+dependencias: G8
+dependencias_estado:
+  G8: APROBADO
+casos:
+  - id: GF-01
+    prueba: tests/test_flow_mode.py + tests/test_workspace_modes.py
+    comando: pytest -q tests/test_flow_mode.py tests/test_workspace_modes.py
+    esperado: matriz de permisos de los tres modos; Flow no pide en QUIET_FLOW_ACTIONS y pide o niega todo lo demás; Classic y Security sin cambios observables
+    observado: Pasó. Flow ejecuta silenciosamente solo QUIET_FLOW_ACTIONS y mantiene gates intactos.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_flow_mode.py
+        sha256: 24f6197b7155c6ab6cef8b3a02bc9e9a3af45005ad6cfff0b69406b073fb7f1a
+      - tests/test_workspace_modes.py
+        sha256: d82fd532b092f5ab343fabc67f6127cfc8e68beca72b7ed1b013e1e8818a0aa2
+  - id: GF-02
+    prueba: tests/test_flow_mode.py::test_real_flow_sandbox_keeps_host_environment_secrets_and_paths_out
+    comando: pytest -q tests/test_flow_mode.py -k test_real_flow_sandbox_keeps_host_environment_secrets_and_paths_out
+    esperado: comandos reales (bash -c, intérprete, test runner) en el sandbox desde Flow; .env, /proc/1/environ, escritura externa, symlink/hardlink y red sin permiso siguen bloqueados
+    observado: Pasó en Linux con bubblewrap real.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_flow_mode.py
+        sha256: 24f6197b7155c6ab6cef8b3a02bc9e9a3af45005ad6cfff0b69406b073fb7f1a
+  - id: GF-03
+    prueba: tests/test_turn_undo.py + tests/test_flow_tui.py
+    comando: pytest -q tests/test_turn_undo.py tests/test_flow_tui.py
+    esperado: deshacer turno con ida y vuelta reproducible (texto, binario, permisos, creados, borrados, movidos); un cambio humano posterior se reporta como conflicto y no se sobrescribe
+    observado: Pasó. Preimágenes verificadas, chmod preservado como conflicto, durabilidad tras reinicio.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_turn_undo.py
+        sha256: 06188f5814422439edc16dbc64012658200e72c4f09a78758be6c3bd07fe4c76
+      - tests/test_flow_tui.py
+        sha256: da8754d80884eac229acc39f9611d608d92b7eb37c0928498c800c5569208e2a
+  - id: GF-04
+    prueba: tests/test_flow_commit.py
+    comando: pytest -q tests/test_flow_commit.py
+    esperado: commit silencioso solo de rutas atribuibles; una ruta con trabajo humano previo vuelve a preguntar
+    observado: Pasó. Staged humano fuerza revisión; rutas de turno son atribuibles.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_flow_commit.py
+        sha256: 05670ec7d7a52eeb0748753b93ac83a7fe7a265364155c03fb0de0d5d23bbf41
+  - id: GF-05
+    prueba: tests/test_flow_mode_switch.py + tests/test_flow_tui.py
+    comando: pytest -q tests/test_flow_mode_switch.py tests/test_flow_tui.py
+    esperado: Classic → Flow → Security → Classic en caliente, con y sin turno activo; ninguna aprobación ni permiso de sesión sobrevive al cambio; la conversación se conserva
+    observado: Pasó. Invalida approvals, limpia session auto edits, retiene historial.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_flow_mode_switch.py
+        sha256: 9ccc0694f39d9614008d155b070f04d04564bae7ba14cc3017af76a441bedbfd
+      - tests/test_flow_tui.py
+        sha256: da8754d80884eac229acc39f9611d608d92b7eb37c0928498c800c5569208e2a
+  - id: GF-06
+    prueba: tests/test_flow_tui.py + tests/test_localization.py
+    comando: pytest -q tests/test_flow_tui.py tests/test_localization.py
+    esperado: la experiencia completa (elegir Flow, trabajar, revisar, deshacer, cambiar de modo) desde la TUI, en en/es/zh y a 80×24, 100×30 y 140×40
+    observado: Pasó en los 3 idiomas y las 3 resoluciones de terminal.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_flow_tui.py
+        sha256: da8754d80884eac229acc39f9611d608d92b7eb37c0928498c800c5569208e2a
+      - tests/test_localization.py
+        sha256: 760844432a649ff47e5fec5577bffc2d86e639afa77343cf2562831b060e53ff
+  - id: GF-07
+    prueba: tests/test_flow_mode.py + tests/test_command_runner.py
+    comando: pytest -q tests/test_flow_mode.py tests/test_command_runner.py
+    esperado: plataformas: Linux con bubblewrap verificado; donde no haya aislamiento equivalente demostrado, Flow no ejecuta comandos ni concede red
+    observado: Pasó. Sin bubblewrap falla cerrado sin ejecución en el host.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/MF/707f78f6c9dfa9a1f20873b8efaeed91a6444c67/gate-tests.txt
+        sha256: a77647a01e9ff3a6cba9fba9bbcc735de56ce9a714414d66bac14e7c8e229b22
+      - tests/test_flow_mode.py
+        sha256: 24f6197b7155c6ab6cef8b3a02bc9e9a3af45005ad6cfff0b69406b073fb7f1a
+      - tests/test_command_runner.py
+        sha256: af8c5a72da4386de76647dd2783b3e3e03ed7e0da2754d44ba03008b51d48aa8

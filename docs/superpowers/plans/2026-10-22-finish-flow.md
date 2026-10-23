@@ -17,7 +17,7 @@ Execution: native, in `codex/finish-flow-mode`, preserving the original checkout
 - [x] Add translations and keyboard/size coverage for en/es/zh at 80×24,
   100×30 and 140×40; inspect rendered screenshots.
 - [x] Teach the gate validator the seven GF cases and regenerate M15 coverage.
-- [ ] Run final regression, record SHA-bound evidence and prepare review.
+- [x] Run final regression, record SHA-bound evidence and prepare review.
 
 Independent acceptance remains necessary for GF; do not approve the gate on
 behalf of the reviewer or declare native platforms that were not measured.
