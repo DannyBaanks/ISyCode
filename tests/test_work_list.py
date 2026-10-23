@@ -223,8 +223,13 @@ def test_deferred_resize_uses_latest_selected_row(tmp_path,monkeypatch):
             board._selected_row={'title':'old','detail':'old detail'}
             board.on_resize()
             board._selected_row={'title':'latest','detail':'latest detail'}
-            await pilot.pause()
-            assert 'latest detail' in str(board.query_one('#work-details').render())
+            details=board.query_one('#work-details')
+            # The detail repaints after the next refresh; a loaded runner needs more than one pause.
+            for _ in range(100):
+                await pilot.pause(0.05)
+                if 'latest detail' in str(details.render()):
+                    break
+            assert 'latest detail' in str(details.render())
     asyncio.run(scenario())
 
 
