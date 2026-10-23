@@ -10,21 +10,20 @@ import pytest
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible as TextualCollapsible, Static
 
-from isycode.tui import Banner, ChatArea, SidePanel, TUIApp, TailscaleConfirmScreen
+from isycode.tui import ChatArea, RailHeader, SidePanel, TUIApp, TailscaleConfirmScreen
 from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
 
 
-async def _wait_for_banner_to_fit(pilot, banner, panel):
+async def _wait_for_header_to_fit(pilot, header):
     deadline = asyncio.get_running_loop().time() + 10.0
     while True:
-        if (panel.display and panel.region.width
-                and cell_len(plain_text(banner)) <= panel.region.x - 1):
+        if header.content_size.width and cell_len(plain_text(header)) <= header.content_size.width:
             return
         remaining = deadline - asyncio.get_running_loop().time()
         if remaining <= 0:
-            raise AssertionError("workspace banner did not fit after sidebar layout")
-        banner.set_compact(True)
+            raise AssertionError("rail header did not fit after sidebar layout")
+        header.paint()
         await pilot.pause(min(0.05, remaining))
 
 
@@ -80,14 +79,17 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
             if isinstance(app.screen, TailscaleConfirmScreen):
                 await pilot.press("escape")
                 await pilot.pause()
-            banner = app.query_one(Banner)
-            header = plain_text(banner)
-            assert cell_len(header) <= banner.content_size.width
-            assert ('Classic' in header or 'Security' in header) and '日本語-project' in header
+            # No header row on top: the mode is a chip by Settings and the
+            # wordmark and folder head the rail, keeping the path's end.
+            assert not app.query('#banner')
+            mode = str(app.query_one('#mode-button').label)
+            assert 'Classic' in mode or 'Security' in mode
             app.action_toggle_sidebar()
-            panel = app.query_one(SidePanel)
-            await _wait_for_banner_to_fit(pilot, banner, panel)
-            assert 'Classic' in plain_text(banner) or 'Security' in plain_text(banner)
+            await pilot.pause()
+            header = app.query_one(RailHeader)
+            await _wait_for_header_to_fit(pilot, header)
+            text = plain_text(header)
+            assert text.startswith(':3_ ISYCODE') and text.endswith('-project')
 
     with capsys.disabled():
         asyncio.run(scenario())

@@ -75,51 +75,50 @@ class PreviewOptionList(OptionList):
             self.action_select()
 
 
-class Banner(Static):
-    """Compact terminal header with the active workspace."""
+def workspace_mode_name(app) -> str:
+    """Classic, Flow or Security for the open workspace; Security when unknown."""
+    workspace_mode = getattr(app, "_workspace_mode", None)
+    if callable(workspace_mode):
+        try:
+            return {"classic": "Classic", "flow": "Flow"}.get(workspace_mode(), "Security")
+        except Exception:
+            pass
+    return "Security"
 
-    def set_compact(self, compact: bool) -> None:
-        del compact
-        self.styles.height = 1
-        wordmark = ":3_ ISYCODE"
-        header = Text(wordmark, style="bold #e94560")
+
+def workspace_mode_chip(app) -> str:
+    mode = workspace_mode_name(app)
+    if getattr(app, "_ascii_only", False):
+        return f"{'[C]' if mode == 'Classic' else '[F]' if mode == 'Flow' else '[S]'} {mode}"
+    return f"◇ {mode}"
+
+
+class RailHeader(Static):
+    """Wordmark and launch folder at the top of the workspace rail."""
+
+    WORDMARK = ":3_ ISYCODE"
+
+    def paint(self) -> None:
         identity = getattr(self.app, "_workspace_identity", None)
-        launch = identity.launch_dir if identity else Path.cwd().resolve()
-        path = str(launch)
-        rail = self.screen.query_one(SidePanel)
-        width = self.app.size.width
-        if rail.display and rail.region.width:
-            # Use the sidebar's measured left edge after layout. Subtracting its
-            # width from the terminal width can overestimate the main column
-            # when borders or platform-specific layout insets are present.
-            measured_width = rail.region.x - self.region.x
-            if measured_width > 0:
-                width = measured_width
-            else:
-                width -= rail.region.width
-        mode = "Security"
-        workspace_mode = getattr(self.app, "_workspace_mode", None)
-        if callable(workspace_mode):
-            try:
-                mode = {"classic": "Classic", "flow": "Flow"}.get(workspace_mode(), "Security")
-            except Exception:
-                mode = "Security"
-        mark = f"  {'[C]' if mode == 'Classic' else '[F]' if mode == 'Flow' else '[S]'} {mode}" if getattr(self.app, "_ascii_only", False) else f"  ◇ {mode}"
-        # Two spaces are prepended to the path, and two more stay clear of the frame.
-        available = max(1, width - 4 - cell_len(wordmark + mark))
-        if cell_len(path) > available:
-            tail = path[-max(0, available - 1):] if available > 1 else ""
-            while cell_len(tail) > available - 1:
-                tail = tail[1:]
-            path = "…" + tail
-        header.append(f"  {path}", style=MUTED)
-        header.append(" " * max(0, width - 2 - cell_len(header.plain + mark)))
-        header.append(mark, style=CYAN if mode == "Classic" else MUTED)
+        path = str(identity.launch_dir if identity else Path.cwd().resolve())
+        self.tooltip = path
+        header = Text(self.WORDMARK, style="bold #e94560")
+        width = self.content_size.width
+        if width:
+            # Two spaces separate the wordmark from the path; keep the folder's tail.
+            available = width - cell_len(self.WORDMARK) - 2
+            if cell_len(path) > available:
+                tail = path
+                while tail and cell_len(tail) > available - 1:
+                    tail = tail[1:]
+                path = "…" + tail if available > 1 else ""
+        if path:
+            header.append(f"  {path}", style=MUTED)
         self.update(header)
 
     def on_resize(self, event) -> None:
         if self.is_mounted and getattr(self, "app", None) and self.app.is_mounted:
-            self.set_compact(True)
+            self.paint()
 
 
 class ActivityStatus(Static):
@@ -382,7 +381,7 @@ class SidePanel(Vertical):
     """Right rail for live integration status and the authorized file browser."""
 
     def compose(self) -> ComposeResult:
-        yield Static(tr("ISYCODE  ·  WORKSPACE"), classes="panel-title")
+        yield RailHeader("", id="rail-header", classes="panel-title")
         with Horizontal(id="rail-tabs"):
             yield Button(tr("Overview"), id="show-overview")
             yield Button(tr("Files"), id="show-files")
@@ -439,13 +438,6 @@ class SidePanel(Vertical):
         for button in self.query(Button):
             button.compact = True
         self.query_one("#show-overview", Button).add_class("rail-lit")
-
-    def on_resize(self, event) -> None:
-        if self.is_mounted and getattr(self, "app", None) and self.app.is_mounted:
-            try:
-                self.app.query_one(Banner).set_compact(True)
-            except Exception:
-                pass
 
 
 class ToolActivityGroup(ExpandableBox):

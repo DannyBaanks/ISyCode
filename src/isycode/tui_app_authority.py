@@ -33,6 +33,7 @@ from isycode.tui_screens_grants import (
     GrantMCPInvocationScreen,
     GrantProviderNetworkScreen,
     GrantWorkspaceReadScreen,
+    WorkspaceModeSwitchScreen,
 )
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
 from isycode.localization import tr
@@ -114,21 +115,31 @@ class AuthorityMixin:
                  "control; Security is for sensitive files and explicit permissions."),
     }
 
-    async def _change_workspace_mode(self, mode: str) -> None:
+    async def _change_workspace_mode(self, mode: str, reopen_menu: bool = True) -> None:
         if mode not in self._MODE_NAMES:
             return
         name = self._MODE_NAMES[mode]
         if not await self._await_screen(TailscaleConfirmScreen(
                 tr("Switch this workspace to {mode}?", mode=name),
                 tr(self._MODE_WARNINGS[mode]), tr("Use {mode}", mode=name))):
-            self._open_workflow_menu()
+            if reopen_menu:
+                self._open_workflow_menu()
             return
         if not await self._switch_engine_mode(mode):
             return
         if mode == "classic":
             await self._offer_quiet_trust(WorkspaceAuthority(self._workspace_root), again=True)
         self._update_workspace_identity_ui()
-        self._open_workflow_menu()
+        if reopen_menu:
+            self._open_workflow_menu()
+
+    async def _switch_mode_from_chip(self) -> None:
+        """The bottom-bar mode chip: pick a mode, then the same confirmed switch."""
+        current = self._workspace_mode()
+        chosen = await self._await_screen(WorkspaceModeSwitchScreen(self._workspace_root, current))
+        if chosen and chosen != current:
+            await self._change_workspace_mode(chosen, reopen_menu=False)
+        self.query_one("#prompt-input").focus()
 
     async def _switch_engine_mode(self, mode: str) -> bool:
         """Reconfigure the engine for a new mode without losing the conversation (ADR 0010).

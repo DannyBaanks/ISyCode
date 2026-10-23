@@ -36,7 +36,6 @@ from isycode.session_owner import ChatSessionOwner
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import TailscaleConfirmScreen
 from isycode.tui_screens_grants import GlobalRecurringDefaultScreen, QuickStartScreen, WorkspaceModeScreen, WorkspaceSetupScreen
-from isycode.tui_widgets import Banner
 from isycode.user_defaults import UserDefaultsStore
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from isycode.workspace_folders import WorkspaceFolders

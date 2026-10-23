@@ -58,7 +58,7 @@ OptionList > .option-list--option-highlighted { background: $isy-selected-surfac
 OptionList > .option-list--option { background: $isy-surface; color: $isy-text; text-style: none; }
 OptionList > .option-list--option-disabled { color: $isy-muted; }
 Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-surface; color: $isy-focus; }
-#banner, #chat, #command-bar { background: $isy-surface !important; }
+#chat, #command-bar { background: $isy-surface !important; }
 #side-panel { background: $isy-surface !important; border: none !important; border-left: solid $isy-separator !important; padding: 1; }
 #rail-card { background: $isy-surface !important; border: none !important; padding: 0; }
 .panel-title, .section-title { color: $isy-text; }

@@ -6071,3 +6071,6 @@ msgstr "自有"
 
 msgid "Selected skills · {names}"
 msgstr "已选技能 · {names}"
+
+msgid "Workspace mode · click to switch between Classic, Flow and Security"
+msgstr "工作区模式 · 点击在 Classic、Flow 和 Security 之间切换"

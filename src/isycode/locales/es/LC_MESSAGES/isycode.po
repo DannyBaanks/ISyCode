@@ -6071,3 +6071,6 @@ msgstr "propio"
 
 msgid "Selected skills · {names}"
 msgstr "Skills seleccionadas · {names}"
+
+msgid "Workspace mode · click to switch between Classic, Flow and Security"
+msgstr "Modo del workspace · clic para cambiar entre Classic, Flow y Security"
