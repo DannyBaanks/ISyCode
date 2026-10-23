@@ -7,15 +7,17 @@ from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
-def english_after_each_test():
+def english_before_each_test():
     """A TUI started without a saved locale loads Spanish, the product default.
 
-    That catalog is process-wide, so restore English after every test instead of
-    letting the next test's expectations depend on the order the suite runs in.
+    That catalog is process-wide, so every test starts in English instead of
+    inheriting whatever the previous test left. It runs before the test patches
+    anything, since some tests forbid file access while they run.
     """
+    from isycode.localization import configure_locale, current_locale
+    if current_locale() != "en":
+        configure_locale("en")
     yield
-    from isycode.localization import configure_locale
-    configure_locale("en")
 
 
 @pytest.fixture
