@@ -105,8 +105,10 @@ Se envía en cada turno como el contrato de rol y se descuenta del presupuesto d
 La compactación y la cápsula solo tocan la conversación. Si un archivo del paquete cambia, se relee por su digest.
 Dependencias: MK2.
 
+Implementación: `gus_context_pack.py`. `ContextPackReader` lee cada archivo con `workspace.files.read` (recibo en el journal) y lo relee solo si cambian su tamaño o su fecha. Lista `docs/decisions` por nombre y lee cada ADR para sacar su título. `plan_gus_request` arma el rol y el paquete enteros y pasa solo el historial por `plan_context`. Medido en `claude/gus-mk3-context`: 16 172 caracteres (≈4.0k–5.4k tokens) en 14 archivos; con una ventana de 32k quedan 31 828 caracteres de historial.
+
 - `GK3-01`: tras forzar compactación automática y `/compact`, el paquete sigue completo en la petición.
-- `GK3-02`: con el paquete puesto, ninguna petición excede la ventana del modelo en la matriz de modelos de MK0.
+- `GK3-02`: con el paquete puesto, ninguna petición excede la ventana del modelo en la matriz de modelos de MK0. `plan_context` mantiene cada pregunta con su respuesta y puede pasarse de su presupuesto por un mensaje (ADR 0009); ese margen queda dentro de la ventana. Un solo mensaje más grande que la ventana es un caso del ADR 0009, no de este hito.
 - `GK3-03`: texto inyectado dentro de esos archivos se trata como datos y no cambia permisos.
 
 ### MK4 — Superficie en la TUI
