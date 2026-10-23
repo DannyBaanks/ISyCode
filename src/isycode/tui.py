@@ -841,9 +841,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             )
         except (WorkspaceAuthorityError, OSError, ValueError):
             enabled = False
-        authority_text = ("Filesystem Authority · list/read/name-search granted for this workspace"
+        authority_text = (tr("Filesystem Authority · list/read/name-search granted for this workspace")
                           if enabled else
-                          "Filesystem Authority · no read grant; tree enumeration is unavailable")
+                          tr("Filesystem Authority · no read grant; tree enumeration is unavailable"))
         self.query_one("#workspace-authority-label", Static).update(authority_text)
         self._paint_rail_identity()
         await self._load_directory(self._file_path)
@@ -1013,7 +1013,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         from isycode.reasoning_options import reasoning_label
         preset = PRESETS.get(name, {})
         effort = reasoning_label(name, model, preset.get("reasoning_effort"))
-        return f"{model_display_name(model)} / {effort.capitalize()} · {preset.get('label', name)}"
+        return f"{model_display_name(model)} / {tr(effort.capitalize())} · {preset.get('label', name)}"
 
     def _role_button_label(self) -> str:
         if not self._active_role:
@@ -1442,12 +1442,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     entries.append(self._entry(
                         tr("{alias} · automatic edits {state}", alias=alias, state=state),
                         'info' if not automatic_available else 'folder_auto_off' if enabled else 'folder_auto_on', alias,
-                        'Only file creation/edits. Authority and ISySentinel stay active.',
+                        tr("Only file creation/edits. Authority and ISySentinel stay active."),
                         translate=False))
                 if alias != 'main':
                     entries.append(self._entry(
                         tr("Remove attachment · {alias}", alias=alias), "folder_remove", alias,
-                        'Files and standalone workspace settings are kept. This chat loses access.',
+                        tr("Files and standalone workspace settings are kept. This chat loses access."),
                         translate=False))
         except (OSError, ValueError) as exc:
             entries.append(self._entry(
@@ -1682,7 +1682,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             entries.extend(self._entry(
                 tr("{name} · active", name=name) if name in self._active_skills else name,
                 "skill_use", name,
-                "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat",
+                tr("Superpowers · pinned MIT Markdown; select to toggle guidance for this chat"),
                 translate=False)
                 for name in skills())
             snapshot = self._skill_snapshot
@@ -1697,14 +1697,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             models = [self._entry(
                 tr("Load account models · {provider}", provider=active_provider),
                 "model_list", active_provider,
-                "Makes a read-only catalog request only after you select this item.",
+                tr("Makes a read-only catalog request only after you select this item."),
                 translate=False)]
             from isycode.providers import recent_models
             models.extend(self._entry(
                 tr("Recent · {provider} · {model}  · recent",
                    provider=item['provider'], model=item['model']),
                 "model", f"{item['provider']}|{item['model']}",
-                "Previously selected model; not verified against this account.",
+                tr("Previously selected model; not verified against this account."),
                 translate=False)
                 for item in recent_models())
             denied = getattr(self, "_account_model_denied", None)
@@ -1713,8 +1713,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     tr("Grant network access to {label} and load its real catalog",
                        label=PRESETS.get(denied, {}).get('label', denied)),
                     "provider_catalog_grant", denied,
-                    "The live catalog request was denied; this asks once, saves the host grant "
-                    "for this workspace, and reloads the provider's real models.",
+                    tr("The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."),
                     translate=False))
             for name, preset in PRESETS.items():
                 model = resolved_chat_model(name)
@@ -1729,8 +1728,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     tr("{label}  ·  {model}  · preset",
                        label=preset['label'], model=model),
                     "model", f"{name}|{model}",
-                    "Hardcoded preset model, not verified against this account; "
-                    "load the account catalog for the provider's real list.",
+                    tr("Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."),
                     translate=False))
             live_catalogs = getattr(self, "_account_model_catalogs", {})
             for name, catalog in live_catalogs.items():
@@ -1774,7 +1772,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("{label}  ·  {model}  · added by you",
                            label=PRESETS[name]['label'], model=model_id),
                         "model", f"{name}|{model_id}",
-                        "Model ID you added; not verified against this account.",
+                        tr("Model ID you added; not verified against this account."),
                         translate=False)
                     row["custom"] = True
                     models.append(row)
@@ -1831,7 +1829,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 entries.extend(self._entry(
                     tr("{name}  ·  {status}", name=item['name'], status=item['status']),
                     "info", "",
-                    "Listed by the connected service; discovery does not authorize calls.",
+                    tr("Listed by the connected service; discovery does not authorize calls."),
                     translate=False)
                     for item in snap.items)
             elif snap.state not in {"not_checked", "not_configured"}:
@@ -1866,7 +1864,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("{label} · {status}",
                            label=server['label'], status=tr("workspace symbol search")),
                         "lsp_server", server["id"],
-                        "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval.",
+                        tr("Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."),
                         translate=False))
                 else:
                     entries.append(self._entry(
@@ -1874,7 +1872,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                            label=server['label'],
                            status=tr(server['state'].replace('_', ' '))),
                         "info", "",
-                        "Detected executable only; no safe LSP execution adapter is connected for this server.",
+                        tr("Detected executable only; no safe LSP execution adapter is connected for this server."),
                         translate=False))
             return entries or [self._entry("No LSP servers detected", "info", "", "Install or configure a supported language server.")]
         if key == "files":
@@ -1913,7 +1911,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("Gateway Binding · {id}",
                            id=gateway_workspace_id(self._workspace_root)),
                         "info", "",
-                        "Opaque workspace match label; it does not grant access.",
+                        tr("Opaque workspace match label; it does not grant access."),
                         translate=False),
                     self._entry(
                         tr("Current Folder · {path}",
@@ -2756,13 +2754,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry(
                 tr("Default model · {provider} · {model}",
                    provider=provider.get('label', provider_name), model=model_name),
-                "info", "", "Change it from Providers; model selection is already saved globally.",
+                "info", "", tr("Change it from Providers; model selection is already saved globally."),
                 translate=False),
         ]
         role = defaults.get("default_role")
         entries.append(self._entry(
             tr("Default role · {name}", name=role['name']) if role else tr("Default role · none"),
-            "info", "", "Role guidance is global preference only; it never grants permissions.",
+            "info", "", tr("Role guidance is global preference only; it never grants permissions."),
             translate=False))
         if self._active_role:
             entries.append(self._entry(
@@ -2779,10 +2777,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         entries.extend(self._entry(
             ("● " if new_workspace == value else "○ ") + tr(label),
             "user_default_workspace", value,
-            ("A recurring workspace gets an empty .isyroot marker when first opened. "
-             "This identifies the workspace; it does not grant file access. Home, its parents, "
-             "temp and mount points still ask first.")
-            if value == "recurring" else "Applies only when this folder has no saved choice yet.",
+            (tr("A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."))
+            if value == "recurring" else tr("Applies only when this folder has no saved choice yet."),
             translate=False)
             for value, label in choices)
         new_mode = defaults.get("new_workspace_mode", "ask")
@@ -2793,8 +2789,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         )
         entries.extend(self._entry(
             ("● " if new_mode == value else "○ ") + tr(label), "user_default_mode", value,
-            "Applies only to folders opened for the first time; each workspace keeps its own "
-            "mode and you can switch it in Settings → Authority.",
+            tr("Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."),
             translate=False)
             for value, label in mode_choices)
         entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))

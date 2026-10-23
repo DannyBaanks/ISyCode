@@ -447,8 +447,8 @@ class WorkspaceMixin:
             return json.dumps({"error": "command did not run", "decision": outcome.decision,
                                "reason": outcome.reason[:300]})
         result = json.loads(outcome.text)
-        status = ("stopped after the time limit" if result["timed_out"]
-                  else f"exit code {result['exit_code']}")
+        status = (tr("stopped after the time limit") if result["timed_out"]
+                  else tr("exit code {code}", code=result['exit_code']))
         card.finish(status, output=result["output"], receipt=outcome.receipt.receipt_id,
                     truncated=result.get("output_truncated", False))
         chat.follow_tail()
@@ -797,7 +797,7 @@ class WorkspaceMixin:
         entries.extend(self._entry(
             tr("Copy /{name} into .isycode/commands/", name=name),
             "workspace_config_migrate_item", name,
-            "The exact file is reviewed; the legacy original stays in place.",
+            tr("The exact file is reviewed; the legacy original stays in place."),
             translate=False)
                        for name in names)
         if not names and not issue:

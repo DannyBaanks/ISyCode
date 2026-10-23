@@ -5447,3 +5447,624 @@ msgstr "read workspace AGENTS.md with permission, or clear"
 
 msgid "ask GPT-6 Luna for one explicit external review"
 msgstr "ask GPT-6 Luna for one explicit external review"
+
+msgid "workspace setup preference"
+msgstr "workspace setup preference"
+
+msgid "future folders without a saved choice"
+msgstr "future folders without a saved choice"
+
+msgid "persistent user preference"
+msgstr "persistent user preference"
+
+msgid "no file access, no permissions copied between workspaces"
+msgstr "no file access, no permissions copied between workspaces"
+
+msgid "workspace file read"
+msgstr "workspace file read"
+
+msgid "no edits, no commands, no folders outside workspace"
+msgstr "no edits, no commands, no folders outside workspace"
+
+msgid "List files"
+msgstr "List files"
+
+msgid "Read file contents"
+msgstr "Read file contents"
+
+msgid "Search file names"
+msgstr "Search file names"
+
+msgid "Inject selected context document"
+msgstr "Inject selected context document"
+
+msgid "Read ISyCode workspace preferences"
+msgstr "Read ISyCode workspace preferences"
+
+msgid "List ISyCode workspace prompt commands"
+msgstr "List ISyCode workspace prompt commands"
+
+msgid "Initialize or update ISyCode workspace config"
+msgstr "Initialize or update ISyCode workspace config"
+
+msgid "Create or edit files"
+msgstr "Create or edit files"
+
+msgid "Undo an ISyCode file change"
+msgstr "Undo an ISyCode file change"
+
+msgid "Undo every file change of one ISyCode turn"
+msgstr "Undo every file change of one ISyCode turn"
+
+msgid "Run a command in the workspace sandbox"
+msgstr "Run a command in the workspace sandbox"
+
+msgid "Git"
+msgstr "Git"
+
+msgid "See git status of the workspace"
+msgstr "See git status of the workspace"
+
+msgid "See git diffs of the workspace"
+msgstr "See git diffs of the workspace"
+
+msgid "Create a git commit"
+msgstr "Create a git commit"
+
+msgid "Publish one reviewed ref to one remote"
+msgstr "Publish one reviewed ref to one remote"
+
+msgid "Move or rename files"
+msgstr "Move or rename files"
+
+msgid "Delete files"
+msgstr "Delete files"
+
+msgid "Read sensitive files"
+msgstr "Read sensitive files"
+
+msgid "Accounts"
+msgstr "Accounts"
+
+msgid "Connect/disconnect ChatGPT subscription"
+msgstr "Connect/disconnect ChatGPT subscription"
+
+msgid "Network"
+msgstr "Network"
+
+msgid "Send prompts to the selected model provider"
+msgstr "Send prompts to the selected model provider"
+
+msgid "Sign in with the official grok CLI"
+msgstr "Sign in with the official grok CLI"
+
+msgid "Read a public HTTPS page"
+msgstr "Read a public HTTPS page"
+
+msgid "Read an external integration catalog"
+msgstr "Read an external integration catalog"
+
+msgid "Use ISyCo semantic analysis"
+msgstr "Use ISyCo semantic analysis"
+
+msgid "Read files through ISyCo Gateway"
+msgstr "Read files through ISyCo Gateway"
+
+msgid "Write files through ISyCo Gateway"
+msgstr "Write files through ISyCo Gateway"
+
+msgid "Credentials"
+msgstr "Credentials"
+
+msgid "Start a provider OAuth flow"
+msgstr "Start a provider OAuth flow"
+
+msgid "Save a named API key"
+msgstr "Save a named API key"
+
+msgid "Use a saved API key"
+msgstr "Use a saved API key"
+
+msgid "Revoke a saved API key"
+msgstr "Revoke a saved API key"
+
+msgid "Discover MCP servers and tools"
+msgstr "Discover MCP servers and tools"
+
+msgid "Invoke an MCP tool"
+msgstr "Invoke an MCP tool"
+
+msgid "Start a local MCP server from your config"
+msgstr "Start a local MCP server from your config"
+
+msgid "Call a tool of a local MCP server"
+msgstr "Call a tool of a local MCP server"
+
+msgid "Discover installed language servers"
+msgstr "Discover installed language servers"
+
+msgid "Start a language server"
+msgstr "Start a language server"
+
+msgid "Stop a language server"
+msgstr "Stop a language server"
+
+msgid "Check a file with a language server after an edit"
+msgstr "Check a file with a language server after an edit"
+
+msgid "Peers"
+msgstr "Peers"
+
+msgid "Detect the grit peer-claim registry"
+msgstr "Detect the grit peer-claim registry"
+
+msgid "Read grit peer claims touching one file (advisory)"
+msgstr "Read grit peer claims touching one file (advisory)"
+
+msgid "Semantic broker"
+msgstr "Semantic broker"
+
+msgid "Preview a broker recipe"
+msgstr "Preview a broker recipe"
+
+msgid "Build a semantic broker image"
+msgstr "Build a semantic broker image"
+
+msgid "Start a semantic broker"
+msgstr "Start a semantic broker"
+
+msgid "Read broker health and status"
+msgstr "Read broker health and status"
+
+msgid "Read broker logs"
+msgstr "Read broker logs"
+
+msgid "Stop a semantic broker"
+msgstr "Stop a semantic broker"
+
+msgid "Remove a broker container/image"
+msgstr "Remove a broker container/image"
+
+msgid "Start the local Mobile Host"
+msgstr "Start the local Mobile Host"
+
+msgid "Stop the local Mobile Host"
+msgstr "Stop the local Mobile Host"
+
+msgid "Pair a mobile device"
+msgstr "Pair a mobile device"
+
+msgid "Issue a new one-use pairing PIN"
+msgstr "Issue a new one-use pairing PIN"
+
+msgid "Read a remote session"
+msgstr "Read a remote session"
+
+msgid "Create a remote session"
+msgstr "Create a remote session"
+
+msgid "Cancel a remote turn"
+msgstr "Cancel a remote turn"
+
+msgid "Respond to a remote approval"
+msgstr "Respond to a remote approval"
+
+msgid "Connect to the optional Bridge"
+msgstr "Connect to the optional Bridge"
+
+msgid "Read Bridge messages"
+msgstr "Read Bridge messages"
+
+msgid "Send a Bridge message"
+msgstr "Send a Bridge message"
+
+msgid "Claim a coordination lease"
+msgstr "Claim a coordination lease"
+
+msgid "Release a coordination lease"
+msgstr "Release a coordination lease"
+
+msgid "Wake another registered agent"
+msgstr "Wake another registered agent"
+
+msgid "Read recent Bridge agent names"
+msgstr "Read recent Bridge agent names"
+
+msgid "L1 tools"
+msgstr "L1 tools"
+
+msgid "Create a staged L1 tool"
+msgstr "Create a staged L1 tool"
+
+msgid "Validate a staged L1 tool"
+msgstr "Validate a staged L1 tool"
+
+msgid "Run L1 tool tests and probe"
+msgstr "Run L1 tool tests and probe"
+
+msgid "Activate an L1 tool"
+msgstr "Activate an L1 tool"
+
+msgid "Disable an L1 tool"
+msgstr "Disable an L1 tool"
+
+msgid "Roll back an L1 tool generation"
+msgstr "Roll back an L1 tool generation"
+
+msgid "Create a persistent conversation"
+msgstr "Create a persistent conversation"
+
+msgid "Resume a persistent conversation"
+msgstr "Resume a persistent conversation"
+
+msgid "Delete a persistent conversation"
+msgstr "Delete a persistent conversation"
+
+msgid "Memory"
+msgstr "Memory"
+
+msgid "Read this workspace's private memory"
+msgstr "Read this workspace's private memory"
+
+msgid "Write or consolidate this workspace's private memory"
+msgstr "Write or consolidate this workspace's private memory"
+
+msgid "Permanently forget one memory"
+msgstr "Permanently forget one memory"
+
+msgid "Desktop"
+msgstr "Desktop"
+
+msgid "Paste an image or text from the clipboard"
+msgstr "Paste an image or text from the clipboard"
+
+msgid "Copy selected text or a path to the clipboard"
+msgstr "Copy selected text or a path to the clipboard"
+
+msgid "Open the native file picker"
+msgstr "Open the native file picker"
+
+msgid "Private access"
+msgstr "Private access"
+
+msgid "Inspect local Tailscale status"
+msgstr "Inspect local Tailscale status"
+
+msgid "Prepare an isolated signed Tailscale package"
+msgstr "Prepare an isolated signed Tailscale package"
+
+msgid "Stage verified Tailscale package as root"
+msgstr "Stage verified Tailscale package as root"
+
+msgid "Install the official Tailscale package"
+msgstr "Install the official Tailscale package"
+
+msgid "Start Tailscale browser login"
+msgstr "Start Tailscale browser login"
+
+msgid "Enable private Gateway Serve route"
+msgstr "Enable private Gateway Serve route"
+
+msgid "Disable owned private Gateway Serve route"
+msgstr "Disable owned private Gateway Serve route"
+
+msgid "Select conversational guidance"
+msgstr "Select conversational guidance"
+
+msgid "Edit workspace files"
+msgstr "Edit workspace files"
+
+msgid "Create git commits"
+msgstr "Create git commits"
+
+msgid "Local MCP servers"
+msgstr "Local MCP servers"
+
+msgid "Write this workspace's private memory"
+msgstr "Write this workspace's private memory"
+
+msgid "Forget memories in this workspace"
+msgstr "Forget memories in this workspace"
+
+msgid "Paste images or text from the clipboard"
+msgstr "Paste images or text from the clipboard"
+
+msgid "Coordinate with other agents"
+msgstr "Coordinate with other agents"
+
+msgid "Model ID"
+msgstr "Model ID"
+
+msgid "Family"
+msgstr "Family"
+
+msgid "Reasoning"
+msgstr "Reasoning"
+
+msgid "Tools (model)"
+msgstr "Tools (model)"
+
+msgid "Tools (route)"
+msgstr "Tools (route)"
+
+msgid "Input"
+msgstr "Input"
+
+msgid "Output"
+msgstr "Output"
+
+msgid "Cached input"
+msgstr "Cached input"
+
+msgid "Pricing"
+msgstr "Pricing"
+
+msgid "Chat on this machine"
+msgstr "Chat on this machine"
+
+msgid "Disable thinking for this model."
+msgstr "Disable thinking for this model."
+
+msgid "Enable thinking for this model."
+msgstr "Enable thinking for this model."
+
+msgid "No reasoning effort. Supported by this chat/tool transport."
+msgstr "No reasoning effort. Supported by this chat/tool transport."
+
+msgid "Lower reasoning effort."
+msgstr "Lower reasoning effort."
+
+msgid "Medium reasoning effort."
+msgstr "Medium reasoning effort."
+
+msgid "Higher reasoning effort."
+msgstr "Higher reasoning effort."
+
+msgid "Extra high reasoning effort."
+msgstr "Extra high reasoning effort."
+
+msgid "Maximum reasoning effort."
+msgstr "Maximum reasoning effort."
+
+msgid "Minimal reasoning effort."
+msgstr "Minimal reasoning effort."
+
+msgid "Use the provider's default reasoning behavior."
+msgstr "Use the provider's default reasoning behavior."
+
+msgid "This provider/model does not publish supported levels in the loaded catalog. Keep its default."
+msgstr "This provider/model does not publish supported levels in the loaded catalog. Keep its default."
+
+msgid "Popular"
+msgstr "Popular"
+
+msgid "Off"
+msgstr "Off"
+
+msgid "On"
+msgstr "On"
+
+msgid "Low"
+msgstr "Low"
+
+msgid "Medium"
+msgstr "Medium"
+
+msgid "High"
+msgstr "High"
+
+msgid "Xhigh"
+msgstr "Xhigh"
+
+msgid "Max"
+msgstr "Max"
+
+msgid "Minimal"
+msgstr "Minimal"
+
+msgid "Integrations"
+msgstr "Integrations"
+
+msgid "MCP / LSP / Gateway"
+msgstr "MCP / LSP / Gateway"
+
+msgid "Missing CLI"
+msgstr "Missing CLI"
+
+msgid "Signed in"
+msgstr "Signed in"
+
+msgid "Signed out"
+msgstr "Signed out"
+
+msgid "Not authorized"
+msgstr "Not authorized"
+
+msgid "Status only; this item does not run an action."
+msgstr "Status only; this item does not run an action."
+
+msgid "No extra summary is available. Press Enter or double-click to open."
+msgstr "No extra summary is available. Press Enter or double-click to open."
+
+msgid "Allow conversation deletion?"
+msgstr "Allow conversation deletion?"
+
+msgid "Disable conversation deletion?"
+msgstr "Disable conversation deletion?"
+
+msgid "Allow file edits in this workspace?"
+msgstr "Allow file edits in this workspace?"
+
+msgid "Turn off file edits?"
+msgstr "Turn off file edits?"
+
+msgid "Allow deletion"
+msgstr "Allow deletion"
+
+msgid "Disable deletion"
+msgstr "Disable deletion"
+
+msgid "Allow edits"
+msgstr "Allow edits"
+
+msgid "Turn off edits"
+msgstr "Turn off edits"
+
+msgid "Call once"
+msgstr "Call once"
+
+msgid "read and search files"
+msgstr "read and search files"
+
+msgid "edit, move, delete and undo files"
+msgstr "edit, move, delete and undo files"
+
+msgid "copy selected text to the clipboard"
+msgstr "copy selected text to the clipboard"
+
+msgid "run approved commands in the sandbox"
+msgstr "run approved commands in the sandbox"
+
+msgid "git status, diffs and approved commits"
+msgstr "git status, diffs and approved commits"
+
+msgid "check Python files after edits"
+msgstr "check Python files after edits"
+
+msgid "connect to the selected AI model ({host})"
+msgstr "connect to the selected AI model ({host})"
+
+msgid "commands (needs bubblewrap on Linux)"
+msgstr "commands (needs bubblewrap on Linux)"
+
+msgid "git (no repository here)"
+msgstr "git (no repository here)"
+
+msgid "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
+msgstr "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
+
+msgid "Not available here: {missing}."
+msgstr "Not available here: {missing}."
+
+msgid "stopped after the time limit"
+msgstr "stopped after the time limit"
+
+msgid "exit code {code}"
+msgstr "exit code {code}"
+
+msgid "File context from this folder can be sent to that provider."
+msgstr "File context from this folder can be sent to that provider."
+
+msgid "This confirmation does not send the folder contents by itself."
+msgstr "This confirmation does not send the folder contents by itself."
+
+msgid "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{context}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
+msgstr "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{context}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
+
+msgid "output limit reached"
+msgstr "output limit reached"
+
+msgid "No output."
+msgstr "No output."
+
+msgid "Output reached the execution owner's limit; more bytes were not retained."
+msgstr "Output reached the execution owner's limit; more bytes were not retained."
+
+msgid "Waiting for output…"
+msgstr "Waiting for output…"
+
+msgid "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
+msgstr "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
+
+msgid "Applies only when this folder has no saved choice yet."
+msgstr "Applies only when this folder has no saved choice yet."
+
+msgid "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."
+msgstr "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."
+
+msgid "Switch between API key and ChatGPT subscription, or disconnect."
+msgstr "Switch between API key and ChatGPT subscription, or disconnect."
+
+msgid "No additional provider auth metadata is available."
+msgstr "No additional provider auth metadata is available."
+
+msgid "Grant this provider host in Settings → Authority & Security."
+msgstr "Grant this provider host in Settings → Authority & Security."
+
+msgid "Checking"
+msgstr "Checking"
+
+msgid "External catalog denied"
+msgstr "External catalog denied"
+
+msgid "Configuration error"
+msgstr "Configuration error"
+
+msgid "Refresh failed"
+msgstr "Refresh failed"
+
+msgid "No MCP Servers"
+msgstr "No MCP Servers"
+
+msgid "No Skills"
+msgstr "No Skills"
+
+msgid "{count} available"
+msgstr "{count} available"
+
+msgid "select one below for details"
+msgstr "select one below for details"
+
+msgid "No Language Servers"
+msgstr "No Language Servers"
+
+msgid "none detected"
+msgstr "none detected"
+
+msgid "not on PATH"
+msgstr "not on PATH"
+
+msgid "Skills · {value}"
+msgstr "Skills · {value}"
+
+msgid "No skills available"
+msgstr "No skills available"
+
+msgid "Available skills ({value})"
+msgstr "Available skills ({value})"
+
+msgid "Blocked in Secure · no Bridge owner"
+msgstr "Blocked in Secure · no Bridge owner"
+
+msgid "Filesystem Authority · list/read/name-search granted for this workspace"
+msgstr "Filesystem Authority · list/read/name-search granted for this workspace"
+
+msgid "Filesystem Authority · no read grant; tree enumeration is unavailable"
+msgstr "Filesystem Authority · no read grant; tree enumeration is unavailable"
+
+msgid "auth metadata unavailable"
+msgstr "auth metadata unavailable"
+
+msgid "connected account"
+msgstr "connected account"
+
+msgid "available account"
+msgstr "available account"
+
+msgid "auth required"
+msgstr "auth required"
+
+msgid "disconnected"
+msgstr "disconnected"
+
+msgid "unsupported"
+msgstr "unsupported"
+
+msgid "conflict"
+msgstr "conflict"
+
+msgid "ok"
+msgstr "ok"
+
+msgid "owned"
+msgstr "owned"

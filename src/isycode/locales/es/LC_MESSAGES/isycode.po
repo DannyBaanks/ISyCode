@@ -5447,3 +5447,624 @@ msgstr "leer el AGENTS.md del espacio con permiso, o borrarlo"
 
 msgid "ask GPT-6 Luna for one explicit external review"
 msgstr "pedir a GPT-6 Luna una revisión externa explícita"
+
+msgid "workspace setup preference"
+msgstr "preferencia de configuración del espacio"
+
+msgid "future folders without a saved choice"
+msgstr "carpetas futuras sin una elección guardada"
+
+msgid "persistent user preference"
+msgstr "preferencia persistente del usuario"
+
+msgid "no file access, no permissions copied between workspaces"
+msgstr "sin acceso a archivos, sin copiar permisos entre espacios"
+
+msgid "workspace file read"
+msgstr "lectura de archivos del espacio"
+
+msgid "no edits, no commands, no folders outside workspace"
+msgstr "ni ediciones, ni comandos, ni carpetas fuera del espacio"
+
+msgid "List files"
+msgstr "Listar archivos"
+
+msgid "Read file contents"
+msgstr "Leer el contenido de archivos"
+
+msgid "Search file names"
+msgstr "Buscar nombres de archivos"
+
+msgid "Inject selected context document"
+msgstr "Inyectar el documento de contexto elegido"
+
+msgid "Read ISyCode workspace preferences"
+msgstr "Leer las preferencias del espacio de ISyCode"
+
+msgid "List ISyCode workspace prompt commands"
+msgstr "Listar los comandos de prompt del espacio de ISyCode"
+
+msgid "Initialize or update ISyCode workspace config"
+msgstr "Inicializar o actualizar la configuración del espacio de ISyCode"
+
+msgid "Create or edit files"
+msgstr "Crear o editar archivos"
+
+msgid "Undo an ISyCode file change"
+msgstr "Deshacer un cambio de archivo de ISyCode"
+
+msgid "Undo every file change of one ISyCode turn"
+msgstr "Deshacer todos los cambios de archivos de un turno de ISyCode"
+
+msgid "Run a command in the workspace sandbox"
+msgstr "Ejecutar un comando en el sandbox del espacio"
+
+msgid "Git"
+msgstr "Git"
+
+msgid "See git status of the workspace"
+msgstr "Ver el estado de git del espacio"
+
+msgid "See git diffs of the workspace"
+msgstr "Ver los diffs de git del espacio"
+
+msgid "Create a git commit"
+msgstr "Crear un commit de git"
+
+msgid "Publish one reviewed ref to one remote"
+msgstr "Publicar una ref revisada en un remoto"
+
+msgid "Move or rename files"
+msgstr "Mover o renombrar archivos"
+
+msgid "Delete files"
+msgstr "Borrar archivos"
+
+msgid "Read sensitive files"
+msgstr "Leer archivos sensibles"
+
+msgid "Accounts"
+msgstr "Cuentas"
+
+msgid "Connect/disconnect ChatGPT subscription"
+msgstr "Conectar/desconectar la suscripción de ChatGPT"
+
+msgid "Network"
+msgstr "Red"
+
+msgid "Send prompts to the selected model provider"
+msgstr "Enviar prompts al proveedor del modelo elegido"
+
+msgid "Sign in with the official grok CLI"
+msgstr "Iniciar sesión con la CLI oficial de grok"
+
+msgid "Read a public HTTPS page"
+msgstr "Leer una página HTTPS pública"
+
+msgid "Read an external integration catalog"
+msgstr "Leer un catálogo de integraciones externo"
+
+msgid "Use ISyCo semantic analysis"
+msgstr "Usar el análisis semántico de ISyCo"
+
+msgid "Read files through ISyCo Gateway"
+msgstr "Leer archivos a través de ISyCo Gateway"
+
+msgid "Write files through ISyCo Gateway"
+msgstr "Escribir archivos a través de ISyCo Gateway"
+
+msgid "Credentials"
+msgstr "Credenciales"
+
+msgid "Start a provider OAuth flow"
+msgstr "Iniciar un flujo OAuth del proveedor"
+
+msgid "Save a named API key"
+msgstr "Guardar una API key con nombre"
+
+msgid "Use a saved API key"
+msgstr "Usar una API key guardada"
+
+msgid "Revoke a saved API key"
+msgstr "Revocar una API key guardada"
+
+msgid "Discover MCP servers and tools"
+msgstr "Descubrir servidores y herramientas MCP"
+
+msgid "Invoke an MCP tool"
+msgstr "Invocar una herramienta MCP"
+
+msgid "Start a local MCP server from your config"
+msgstr "Iniciar un servidor MCP local desde tu configuración"
+
+msgid "Call a tool of a local MCP server"
+msgstr "Llamar a una herramienta de un servidor MCP local"
+
+msgid "Discover installed language servers"
+msgstr "Descubrir servidores de lenguaje instalados"
+
+msgid "Start a language server"
+msgstr "Iniciar un servidor de lenguaje"
+
+msgid "Stop a language server"
+msgstr "Detener un servidor de lenguaje"
+
+msgid "Check a file with a language server after an edit"
+msgstr "Comprobar un archivo con un servidor de lenguaje tras editarlo"
+
+msgid "Peers"
+msgstr "Pares"
+
+msgid "Detect the grit peer-claim registry"
+msgstr "Detectar el registro de reclamaciones de pares de grit"
+
+msgid "Read grit peer claims touching one file (advisory)"
+msgstr "Leer las reclamaciones de pares de grit sobre un archivo (orientativo)"
+
+msgid "Semantic broker"
+msgstr "Broker semántico"
+
+msgid "Preview a broker recipe"
+msgstr "Previsualizar una receta de broker"
+
+msgid "Build a semantic broker image"
+msgstr "Construir una imagen de broker semántico"
+
+msgid "Start a semantic broker"
+msgstr "Iniciar un broker semántico"
+
+msgid "Read broker health and status"
+msgstr "Leer la salud y el estado del broker"
+
+msgid "Read broker logs"
+msgstr "Leer los registros del broker"
+
+msgid "Stop a semantic broker"
+msgstr "Detener un broker semántico"
+
+msgid "Remove a broker container/image"
+msgstr "Eliminar un contenedor/imagen de broker"
+
+msgid "Start the local Mobile Host"
+msgstr "Iniciar el Mobile Host local"
+
+msgid "Stop the local Mobile Host"
+msgstr "Detener el Mobile Host local"
+
+msgid "Pair a mobile device"
+msgstr "Emparejar un dispositivo móvil"
+
+msgid "Issue a new one-use pairing PIN"
+msgstr "Emitir un nuevo PIN de emparejamiento de un solo uso"
+
+msgid "Read a remote session"
+msgstr "Leer una sesión remota"
+
+msgid "Create a remote session"
+msgstr "Crear una sesión remota"
+
+msgid "Cancel a remote turn"
+msgstr "Cancelar un turno remoto"
+
+msgid "Respond to a remote approval"
+msgstr "Responder a una aprobación remota"
+
+msgid "Connect to the optional Bridge"
+msgstr "Conectar con el Bridge opcional"
+
+msgid "Read Bridge messages"
+msgstr "Leer mensajes de Bridge"
+
+msgid "Send a Bridge message"
+msgstr "Enviar un mensaje de Bridge"
+
+msgid "Claim a coordination lease"
+msgstr "Reclamar un lease de coordinación"
+
+msgid "Release a coordination lease"
+msgstr "Liberar un lease de coordinación"
+
+msgid "Wake another registered agent"
+msgstr "Despertar a otro agente registrado"
+
+msgid "Read recent Bridge agent names"
+msgstr "Leer los nombres recientes de agentes de Bridge"
+
+msgid "L1 tools"
+msgstr "Herramientas L1"
+
+msgid "Create a staged L1 tool"
+msgstr "Crear una herramienta L1 preparada"
+
+msgid "Validate a staged L1 tool"
+msgstr "Validar una herramienta L1 preparada"
+
+msgid "Run L1 tool tests and probe"
+msgstr "Ejecutar las pruebas y el sondeo de una herramienta L1"
+
+msgid "Activate an L1 tool"
+msgstr "Activar una herramienta L1"
+
+msgid "Disable an L1 tool"
+msgstr "Desactivar una herramienta L1"
+
+msgid "Roll back an L1 tool generation"
+msgstr "Revertir una generación de herramienta L1"
+
+msgid "Create a persistent conversation"
+msgstr "Crear una conversación persistente"
+
+msgid "Resume a persistent conversation"
+msgstr "Reanudar una conversación persistente"
+
+msgid "Delete a persistent conversation"
+msgstr "Borrar una conversación persistente"
+
+msgid "Memory"
+msgstr "Memoria"
+
+msgid "Read this workspace's private memory"
+msgstr "Leer la memoria privada de este espacio"
+
+msgid "Write or consolidate this workspace's private memory"
+msgstr "Escribir o consolidar la memoria privada de este espacio"
+
+msgid "Permanently forget one memory"
+msgstr "Olvidar un recuerdo de forma permanente"
+
+msgid "Desktop"
+msgstr "Escritorio"
+
+msgid "Paste an image or text from the clipboard"
+msgstr "Pegar una imagen o texto desde el portapapeles"
+
+msgid "Copy selected text or a path to the clipboard"
+msgstr "Copiar el texto seleccionado o una ruta al portapapeles"
+
+msgid "Open the native file picker"
+msgstr "Abrir el selector de archivos nativo"
+
+msgid "Private access"
+msgstr "Acceso privado"
+
+msgid "Inspect local Tailscale status"
+msgstr "Inspeccionar el estado local de Tailscale"
+
+msgid "Prepare an isolated signed Tailscale package"
+msgstr "Preparar un paquete firmado y aislado de Tailscale"
+
+msgid "Stage verified Tailscale package as root"
+msgstr "Preparar como root el paquete verificado de Tailscale"
+
+msgid "Install the official Tailscale package"
+msgstr "Instalar el paquete oficial de Tailscale"
+
+msgid "Start Tailscale browser login"
+msgstr "Iniciar sesión de Tailscale en el navegador"
+
+msgid "Enable private Gateway Serve route"
+msgstr "Activar la ruta privada de Serve del Gateway"
+
+msgid "Disable owned private Gateway Serve route"
+msgstr "Desactivar la ruta privada propia de Serve del Gateway"
+
+msgid "Select conversational guidance"
+msgstr "Elegir guía conversacional"
+
+msgid "Edit workspace files"
+msgstr "Editar archivos del espacio"
+
+msgid "Create git commits"
+msgstr "Crear commits de git"
+
+msgid "Local MCP servers"
+msgstr "Servidores MCP locales"
+
+msgid "Write this workspace's private memory"
+msgstr "Escribir la memoria privada de este espacio"
+
+msgid "Forget memories in this workspace"
+msgstr "Olvidar recuerdos en este espacio"
+
+msgid "Paste images or text from the clipboard"
+msgstr "Pegar imágenes o texto desde el portapapeles"
+
+msgid "Coordinate with other agents"
+msgstr "Coordinar con otros agentes"
+
+msgid "Model ID"
+msgstr "ID del modelo"
+
+msgid "Family"
+msgstr "Familia"
+
+msgid "Reasoning"
+msgstr "Razonamiento"
+
+msgid "Tools (model)"
+msgstr "Herramientas (modelo)"
+
+msgid "Tools (route)"
+msgstr "Herramientas (ruta)"
+
+msgid "Input"
+msgstr "Entrada"
+
+msgid "Output"
+msgstr "Salida"
+
+msgid "Cached input"
+msgstr "Entrada en caché"
+
+msgid "Pricing"
+msgstr "Precio"
+
+msgid "Chat on this machine"
+msgstr "Chat en este equipo"
+
+msgid "Disable thinking for this model."
+msgstr "Desactiva el razonamiento de este modelo."
+
+msgid "Enable thinking for this model."
+msgstr "Activa el razonamiento de este modelo."
+
+msgid "No reasoning effort. Supported by this chat/tool transport."
+msgstr "Sin esfuerzo de razonamiento. Compatible con este transporte de chat/herramientas."
+
+msgid "Lower reasoning effort."
+msgstr "Menor esfuerzo de razonamiento."
+
+msgid "Medium reasoning effort."
+msgstr "Esfuerzo de razonamiento medio."
+
+msgid "Higher reasoning effort."
+msgstr "Mayor esfuerzo de razonamiento."
+
+msgid "Extra high reasoning effort."
+msgstr "Esfuerzo de razonamiento muy alto."
+
+msgid "Maximum reasoning effort."
+msgstr "Esfuerzo de razonamiento máximo."
+
+msgid "Minimal reasoning effort."
+msgstr "Esfuerzo de razonamiento mínimo."
+
+msgid "Use the provider's default reasoning behavior."
+msgstr "Usa el comportamiento de razonamiento predeterminado del proveedor."
+
+msgid "This provider/model does not publish supported levels in the loaded catalog. Keep its default."
+msgstr "Este proveedor/modelo no publica niveles admitidos en el catálogo cargado. Se mantiene su valor predeterminado."
+
+msgid "Popular"
+msgstr "Populares"
+
+msgid "Off"
+msgstr "Apagado"
+
+msgid "On"
+msgstr "Encendido"
+
+msgid "Low"
+msgstr "Bajo"
+
+msgid "Medium"
+msgstr "Medio"
+
+msgid "High"
+msgstr "Alto"
+
+msgid "Xhigh"
+msgstr "Muy alto"
+
+msgid "Max"
+msgstr "Máximo"
+
+msgid "Minimal"
+msgstr "Mínimo"
+
+msgid "Integrations"
+msgstr "Integraciones"
+
+msgid "MCP / LSP / Gateway"
+msgstr "MCP / LSP / Gateway"
+
+msgid "Missing CLI"
+msgstr "Falta la CLI"
+
+msgid "Signed in"
+msgstr "Sesión iniciada"
+
+msgid "Signed out"
+msgstr "Sesión cerrada"
+
+msgid "Not authorized"
+msgstr "Sin autorización"
+
+msgid "Status only; this item does not run an action."
+msgstr "Solo estado; este elemento no ejecuta ninguna acción."
+
+msgid "No extra summary is available. Press Enter or double-click to open."
+msgstr "No hay un resumen adicional. Pulsa Enter o haz doble clic para abrir."
+
+msgid "Allow conversation deletion?"
+msgstr "¿Permitir borrar conversaciones?"
+
+msgid "Disable conversation deletion?"
+msgstr "¿Desactivar el borrado de conversaciones?"
+
+msgid "Allow file edits in this workspace?"
+msgstr "¿Permitir editar archivos en este espacio?"
+
+msgid "Turn off file edits?"
+msgstr "¿Apagar la edición de archivos?"
+
+msgid "Allow deletion"
+msgstr "Permitir borrar"
+
+msgid "Disable deletion"
+msgstr "Desactivar el borrado"
+
+msgid "Allow edits"
+msgstr "Permitir ediciones"
+
+msgid "Turn off edits"
+msgstr "Apagar ediciones"
+
+msgid "Call once"
+msgstr "Llamar una vez"
+
+msgid "read and search files"
+msgstr "leer y buscar archivos"
+
+msgid "edit, move, delete and undo files"
+msgstr "editar, mover, borrar y deshacer archivos"
+
+msgid "copy selected text to the clipboard"
+msgstr "copiar el texto seleccionado al portapapeles"
+
+msgid "run approved commands in the sandbox"
+msgstr "ejecutar comandos aprobados en el sandbox"
+
+msgid "git status, diffs and approved commits"
+msgstr "estado de git, diffs y commits aprobados"
+
+msgid "check Python files after edits"
+msgstr "comprobar archivos de Python tras editarlos"
+
+msgid "connect to the selected AI model ({host})"
+msgstr "conectar con el modelo de IA elegido ({host})"
+
+msgid "commands (needs bubblewrap on Linux)"
+msgstr "comandos (necesita bubblewrap en Linux)"
+
+msgid "git (no repository here)"
+msgstr "git (aquí no hay repositorio)"
+
+msgid "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
+msgstr "Guarda permisos en {root} para: {labels}. Las ediciones de archivos siguen tus ajustes de aprobación de carpetas; comandos, borrados, movimientos y commits preguntan antes. IsySentinel comprueba cada acción y el diario la registra. Puedes apagar cada uno en este menú."
+
+msgid "Not available here: {missing}."
+msgstr "No disponible aquí: {missing}."
+
+msgid "stopped after the time limit"
+msgstr "detenido al alcanzar el límite de tiempo"
+
+msgid "exit code {code}"
+msgstr "código de salida {code}"
+
+msgid "File context from this folder can be sent to that provider."
+msgstr "El contexto de archivos de esta carpeta puede enviarse a ese proveedor."
+
+msgid "This confirmation does not send the folder contents by itself."
+msgstr "Esta confirmación no envía por sí sola el contenido de la carpeta."
+
+msgid "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{context}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
+msgstr "Raíz del espacio: {root}\nModo: {mode}\nProveedor: {provider}\n{context}\nConfiar en esta carpeta permite que Classic la lea y busque en ella, y haga ediciones, creaciones, movimientos y borrados recuperables dentro del presupuesto de efectos, y ejecute pruebas aisladas en sandbox, sin preguntar por cada una. Commits, secretos, cambios de autoridad, nuevos destinos de red y todo lo que no tenga sandbox siguen preguntando o quedan apagados. Un permiso revocado sigue mandando. No es una aprobación permanente para todas las herramientas y no activa ni desactiva Security."
+
+msgid "output limit reached"
+msgstr "límite de salida alcanzado"
+
+msgid "No output."
+msgstr "Sin salida."
+
+msgid "Output reached the execution owner's limit; more bytes were not retained."
+msgstr "La salida alcanzó el límite del owner de ejecución; no se conservaron más bytes."
+
+msgid "Waiting for output…"
+msgstr "Esperando salida…"
+
+msgid "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
+msgstr "Un espacio recurrente recibe un marcador .isyroot vacío la primera vez que se abre. Esto identifica el espacio; no da acceso a archivos. Home, sus carpetas superiores, temp y los puntos de montaje siguen preguntando antes."
+
+msgid "Applies only when this folder has no saved choice yet."
+msgstr "Solo aplica cuando esta carpeta aún no tiene una elección guardada."
+
+msgid "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."
+msgstr "Verificación de solo lectura. No se intenta ninguna reparación. Los digests de las solicitudes no se pueden recalcular porque los cuerpos de las solicitudes no se guardan."
+
+msgid "Switch between API key and ChatGPT subscription, or disconnect."
+msgstr "Cambia entre API key y suscripción de ChatGPT, o desconecta."
+
+msgid "No additional provider auth metadata is available."
+msgstr "No hay más metadatos de autenticación del proveedor."
+
+msgid "Grant this provider host in Settings → Authority & Security."
+msgstr "Concede este host del proveedor en Configuración → Authority & Security."
+
+msgid "Checking"
+msgstr "Comprobando"
+
+msgid "External catalog denied"
+msgstr "Catálogo externo denegado"
+
+msgid "Configuration error"
+msgstr "Error de configuración"
+
+msgid "Refresh failed"
+msgstr "Falló la actualización"
+
+msgid "No MCP Servers"
+msgstr "Sin servidores MCP"
+
+msgid "No Skills"
+msgstr "Sin skills"
+
+msgid "{count} available"
+msgstr "{count} disponibles"
+
+msgid "select one below for details"
+msgstr "elige uno abajo para ver detalles"
+
+msgid "No Language Servers"
+msgstr "Sin servidores de lenguaje"
+
+msgid "none detected"
+msgstr "no se detectó ninguno"
+
+msgid "not on PATH"
+msgstr "no está en el PATH"
+
+msgid "Skills · {value}"
+msgstr "Skills · {value}"
+
+msgid "No skills available"
+msgstr "No hay skills disponibles"
+
+msgid "Available skills ({value})"
+msgstr "Skills disponibles ({value})"
+
+msgid "Blocked in Secure · no Bridge owner"
+msgstr "Bloqueado en Secure · sin owner de Bridge"
+
+msgid "Filesystem Authority · list/read/name-search granted for this workspace"
+msgstr "Autoridad de archivos · listar/leer/buscar nombres permitido en este espacio"
+
+msgid "Filesystem Authority · no read grant; tree enumeration is unavailable"
+msgstr "Autoridad de archivos · sin permiso de lectura; no se puede listar el árbol"
+
+msgid "auth metadata unavailable"
+msgstr "metadatos de autenticación no disponibles"
+
+msgid "connected account"
+msgstr "cuenta conectada"
+
+msgid "available account"
+msgstr "cuenta disponible"
+
+msgid "auth required"
+msgstr "requiere autenticación"
+
+msgid "disconnected"
+msgstr "desconectado"
+
+msgid "unsupported"
+msgstr "no compatible"
+
+msgid "conflict"
+msgstr "conflicto"
+
+msgid "ok"
+msgstr "ok"
+
+msgid "owned"
+msgstr "propio"

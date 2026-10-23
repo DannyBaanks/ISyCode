@@ -334,7 +334,7 @@ class SessionMixin:
             from isycode.reasoning_options import reasoning_label
             preset = PRESETS.get(name, {})
             preset_label = preset.get("label") or name
-            suffix = f" / {reasoning_label(name, model, preset.get('reasoning_effort')).capitalize()} · {preset_label}"
+            suffix = f" / {tr(reasoning_label(name, model, preset.get('reasoning_effort')).capitalize())} · {preset_label}"
             available = box.content_size.width - cell_len(label) - 3
             model_name = model_display_name(model)
             if box.content_size.width and available > cell_len(suffix):

@@ -412,7 +412,8 @@ class AuthorityMixin:
                 else:
                     state = tr("blocked · no Secure owner · saved grant ignored")
                 entries.append(self._entry(
-                    tr("{label} · {state}", label=tr(row.label), state=state),
+                    tr("{label} · {state}", label=" · ".join(tr(part) for part in row.label.split(" · ")),
+                       state=state),
                     "authority_saved_grant", row.action_id,
                     tr("Scope: {scope}. Select to remove this saved permission.", scope=row.scope),
                     translate=False))
@@ -815,7 +816,7 @@ class AuthorityMixin:
             except (WorkspaceAuthorityError, OSError, ValueError):
                 hosts = set()
             grants.append(("provider.request", {"network_hosts": sorted(hosts | {host})},
-                           f"connect to the selected AI model ({host})"))
+                           tr("connect to the selected AI model ({host})", host=host)))
         sandbox = sandbox_executable()
         if sandbox:
             grants.append(("workspace.command.run", {"executables": [sandbox]},
@@ -838,11 +839,13 @@ class AuthorityMixin:
             missing.append("commands (needs bubblewrap on Linux)")
         if not (git_executable() and git_repository_available(self._workspace_root)):
             missing.append("git (no repository here)")
-        body = (f"Saves grants in {self._workspace_root} for: " + "; ".join(labels) + ". "
-                "File edits follow your folder approval settings; commands, deletes, moves and commits ask "
-                "first. IsySentinel checks every action and the journal records it. You can turn "
-                "each one off in this menu." + (" Not available here: " + "; ".join(missing) + "."
-                                                 if missing else ""))
+        body = tr("Saves grants in {root} for: {labels}. File edits follow your folder approval "
+                  "settings; commands, deletes, moves and commits ask first. IsySentinel checks every "
+                  "action and the journal records it. You can turn each one off in this menu.",
+                  root=self._workspace_root, labels="; ".join(tr(label) for label in labels))
+        if missing:
+            body += " " + tr("Not available here: {missing}.",
+                             missing="; ".join(tr(item) for item in missing))
         if not await self._await_screen(TailscaleConfirmScreen(
                 "Turn on all coding tools?", body, "Turn on coding tools")):
             if open_menu:
@@ -892,7 +895,7 @@ class AuthorityMixin:
                    status=report.status, records=report.records,
                    decisions=report.decisions, receipts=report.receipts),
                 "info", "", report.reason or
-                "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored.",
+                tr("Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."),
                 translate=False)]
             if report.unverifiable:
                 entries.append(self._entry(

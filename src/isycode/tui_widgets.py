@@ -931,22 +931,22 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         self._paint_output()
 
     def _paint_output(self) -> None:
-        note = " · output limit reached" if self.output_truncated else ""
+        note = " · " + tr("output limit reached") if self.output_truncated else ""
         from isycode.tui_theme import ascii_only
         frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
         frame = frames[self._spinner_idx]
         spinner_prefix = f"{frame} " if self.status == "Running" else ""
         self.border_subtitle = Text(f"{spinner_prefix}{tr(self.status)}{note} · {tr('Space expand / collapse · double-click copy')}", style=MUTED)
         if self.expanded:
-            shown = self.output or "No output."
+            shown = self.output or tr("No output.")
             if self.receipt:
-                shown += f"\n\nReceipt · {self.receipt}"
+                shown += "\n\n" + tr("Receipt · {receipt_id}", receipt_id=self.receipt)
             if self.output_truncated:
-                shown += "\nOutput reached the execution owner's limit; more bytes were not retained."
+                shown += "\n" + tr("Output reached the execution owner's limit; more bytes were not retained.")
         else:
             shown = "\n".join(self.output.splitlines()[-2:])
             if not shown:
-                shown = f"{frame} Waiting for output…" if self.status == "Running" else "No output."
+                shown = f"{frame} " + tr("Waiting for output…") if self.status == "Running" else tr("No output.")
         self._body.set_selectable_content(
             Text(shown, style=MUTED), shown)
 

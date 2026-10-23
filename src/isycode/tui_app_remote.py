@@ -36,7 +36,7 @@ from isycode.tailscale_install import TailscalePackageInstallOwner
 from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner, route_url
 from isycode.private_access import PrivateAccessStateStore
 from isycode.localization import tr
-from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, status_phrase
+from isycode.tui_theme import status_chip, TEXT, MUTED, GREEN, YELLOW, RED, CYAN, status_phrase
 from isycode.tui_widgets import ChatArea
 from isycode.tui_screens_approval import TailscaleConfirmScreen
 from isycode.tui_screens_grants import GrantLSPProcessScreen
@@ -141,7 +141,9 @@ class RemoteMixin:
             snapshot = TailscaleSnapshot("unavailable")
             outcome = None
         self._tailscale_snapshot = snapshot
-        status = snapshot.state.replace("_", " ").title()
+        status = {"missing_cli": "Missing CLI", "unavailable": "Unavailable", "signed_in": "Signed in",
+                  "signed_out": "Signed out", "not_authorized": "Not authorized",
+                  }.get(snapshot.state, snapshot.state.replace("_", " ").title())
         if outcome is not None and outcome.decision == "DENY":
             status = "Detected · read-only status grant required"
         if snapshot.serve_state == "conflict":
@@ -162,7 +164,7 @@ class RemoteMixin:
         else:
             live_route = None
         entries = [self._entry(tr("Tailscale · {status}", status=tr(status)), "info", "",
-                               tr("Installed CLI: {value}\nTailnet identity: {value2}\nServe inventory: {serve_state}\nGateway: {value3} · {value4}\nTailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.", value=snapshot.executable or tr("not detected"), value2=snapshot.dns_name or tr("not verified"), serve_state=snapshot.serve_state, value3=snapshot.gateway_url or tr("not configured"), value4=tr("healthy") if snapshot.gateway_healthy else tr("not verified")),
+                               tr("Installed CLI: {value}\nTailnet identity: {value2}\nServe inventory: {serve_state}\nGateway: {value3} · {value4}\nTailnet login, Serve reachability, Gateway API keys, and workspace grants are separate.", value=snapshot.executable or tr("not detected"), value2=snapshot.dns_name or tr("not verified"), serve_state=tr(snapshot.serve_state), value3=snapshot.gateway_url or tr("not configured"), value4=tr("healthy") if snapshot.gateway_healthy else tr("not verified")),
                                translate=False)]
         if live_route is not None:
             entries.append(self._entry(
@@ -255,8 +257,7 @@ class RemoteMixin:
                        verb=tr("Revoke") if enabled else tr("Grant"),
                        action=action, executable=executable),
                     "tailscale_grant", payload,
-                    "This permission is scoped to this workspace and exact executable. "
-                    "Mutations still need a fresh approval.",
+                    tr("This permission is scoped to this workspace and exact executable. Mutations still need a fresh approval."),
                     translate=False))
         except (OSError, ValueError, WorkspaceAuthorityError):
             entries.append(self._entry("Authority policy unavailable · all actions deny", "info"))
@@ -496,7 +497,7 @@ class RemoteMixin:
     def _refresh_bridge_status_text(self) -> None:
         if not self.is_mounted:
             return
-        text = status_phrase("Blocked in Secure · no Bridge owner")
+        text = status_chip("Blocked in Secure · no Bridge owner")
         self.query_one("#bridge-status", Static).update(text)
 
     async def _issue_pairing_pin(self) -> None:
@@ -563,7 +564,7 @@ class RemoteMixin:
             if pin:
                 entries.append(self._entry(
                     tr("Pairing PIN · {pin} · expires in 5 minutes", pin=pin),
-                    "info", "", "One device exchange; token expires in one hour.",
+                    "info", "", tr("One device exchange; token expires in one hour."),
                     translate=False))
             entries.append(self._entry(
                 "New pairing PIN · asks first", "mobile_host_new_pin", "",

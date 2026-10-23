@@ -116,12 +116,12 @@ class ProviderMixin:
             else:
                 entries.append(self._entry(
                     tr("·  {label}  ·  {blurb}", label=label, blurb=tr(blurb)),
-                    "provider_unwired", label, blurb, translate=False))
+                    "provider_unwired", label, tr(blurb), translate=False))
         if active in {"chatgpt", "openai"}:
             entries.append(self._entry(
                 tr("OpenAI & ChatGPT · choose connection method…"),
                 "provider_auth_methods", "openai",
-                "Switch between API key and ChatGPT subscription, or disconnect.",
+                tr("Switch between API key and ChatGPT subscription, or disconnect."),
                 translate=False))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
@@ -131,16 +131,16 @@ class ProviderMixin:
             entries.append(self._entry("— Additional provider accounts —", "info"))
             for provider in openisy_catalog.items:
                 methods = auth_methods.get(provider["id"], [])
-                method_text = "/".join(methods) if methods else "auth metadata unavailable"
-                state_text = "connected account" if provider["connected"] else "available account"
+                method_text = "/".join(methods) if methods else tr("auth metadata unavailable")
+                state_text = tr("connected account") if provider["connected"] else tr("available account")
                 entries.append(self._entry(
                     f"{provider['name']}  ·  {state_text} · {method_text}",
                     "openisy_provider", provider["id"],
-                    "This account is not connected to ISyCode inference yet."))
+                    tr("This account is not connected to ISyCode inference yet."), translate=False))
         else:
             entries.append(self._entry(
                 tr("Additional provider catalog · {state}",
-                   state=openisy_catalog.state.replace('_', ' ')),
+                   state=tr(openisy_catalog.state.replace('_', ' '))),
                 "info", "", openisy_catalog.detail, translate=False))
         if snapshot.state == "ready":
             catalog_ids = {provider["id"] for provider in openisy_catalog.items}
@@ -150,13 +150,13 @@ class ProviderMixin:
                         tr("{name}  ·  OAuth available, not connected",
                            name=provider['name']),
                         "oauth_info", provider["name"],
-                        "ISyCode does not yet have an authorization flow for this provider.",
+                        tr("ISyCode does not yet have an authorization flow for this provider."),
                         translate=False))
         elif snapshot.state != "ready":
             entries.append(self._entry(
                 tr("OAuth discovery · {state}",
-                   state=snapshot.state.replace('_', ' ')),
-                "info", "", snapshot.detail or "No additional provider auth metadata is available.",
+                   state=tr(snapshot.state.replace('_', ' '))),
+                "info", "", snapshot.detail or tr("No additional provider auth metadata is available."),
                 translate=False))
         self._menu_stack = []
         self._render_menu("providers", "Select provider", entries)
@@ -170,7 +170,7 @@ class ProviderMixin:
             self._entry("API key · console.x.ai", "xai_api_key", "",
                         "Saved in the OS keyring. Chat goes to api.x.ai."),
             self._entry(tr("Use Grok sign-in · {note}", note=tr(note)), "xai_session", "",
-                        "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com.",
+                        tr("Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."),
                         translate=False),
             self._entry("Sign in with device code", "xai_device"),
             self._entry("Sign in with browser", "xai_browser"),
@@ -354,7 +354,7 @@ class ProviderMixin:
                     tr("Allow using the saved {name} key here · asks first",
                        name=self._credential_label(service)),
                     "credential_use_grant", service,
-                    "Each use is decided and recorded in this workspace's action journal.",
+                    tr("Each use is decided and recorded in this workspace's action journal."),
                     translate=False))
         for item in credentials:
             if item["revoked"]:
@@ -444,7 +444,7 @@ class ProviderMixin:
                         tr("Provider model request {decision}.",
                            decision=result.decision.lower()),
                         "info", "",
-                        result.reason or "Grant this provider host in Settings → Authority & Security.",
+                        result.reason or tr("Grant this provider host in Settings → Authority & Security."),
                         translate=False)]
                 elif not models:
                     rows = [self._entry("The provider returned an empty model catalog.", "info")]
@@ -485,7 +485,7 @@ class ProviderMixin:
                             tr("▸ {family} · {count} models",
                                family=family, count=len(ids)),
                             "model_family", f"{name}|{family}",
-                            "Open this family's variants.",
+                            tr("Open this family's variants."),
                             translate=False))
                     self._account_family_variants = family_variants
         except ProviderError as error:

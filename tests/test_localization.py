@@ -325,3 +325,37 @@ def test_spanish_authority_and_palette_options_render(tmp_path, monkeypatch, cap
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_every_literal_ui_message_has_a_catalog_entry():
+    """A literal passed to tr() (or to a helper that calls it) must be in the catalogs.
+
+    Without an entry the message silently stays English in Spanish and Chinese.
+    """
+    import ast
+    from isycode.localization import _parse_po
+
+    catalog = _parse_po((PACKAGE_LOCALES / "en" / "LC_MESSAGES" / "isycode.po").read_text(encoding="utf-8"))
+    # Helpers that translate these positional arguments themselves.
+    helpers = {"tr": (0,), "status_chip": (0,), "_entry": (0, 3), "_capability_entry": (0, 3),
+               "_render_menu": (1,), "TailscaleConfirmScreen": (0, 1, 2)}
+    missing = []
+    for path in sorted((PACKAGE_LOCALES.parent).glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", "") or getattr(node.func, "attr", "")
+            if name not in helpers or any(
+                    k.arg == "translate" and isinstance(k.value, ast.Constant) and k.value.value is False
+                    for k in node.keywords):
+                continue
+            context = next((k.value.value for k in node.keywords
+                            if k.arg == "context" and isinstance(k.value, ast.Constant)), "")
+            arguments = [node.args[i] for i in helpers[name] if i < len(node.args)]
+            arguments += [k.value for k in node.keywords if k.arg == "detail"]
+            for argument in arguments:
+                if (isinstance(argument, ast.Constant) and isinstance(argument.value, str)
+                        and any(character.isalpha() for character in argument.value)
+                        and (context, argument.value) not in catalog):
+                    missing.append(f"{path.name}:{node.lineno}: {argument.value[:80]!r}")
+    assert missing == []
