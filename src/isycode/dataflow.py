@@ -146,7 +146,9 @@ def map_ordered(
                 index = min(pending.values())
                 raise DataflowExecutionError(index, "timeout", True)
             done, _not_done = wait(pending, timeout=remaining, return_when=FIRST_COMPLETED)
-            if not done:
+            # A busy machine can wake us after the deadline with work finished
+            # late; like the serial path, a late result is a timeout, not output.
+            if not done or (deadline is not None and time.monotonic() > deadline):
                 failed = True
                 index = min(pending.values())
                 raise DataflowExecutionError(index, "timeout", True)
