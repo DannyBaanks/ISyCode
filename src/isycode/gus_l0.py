@@ -39,6 +39,7 @@ L0_FILES = (
     "src/isycode/gus_slot.py",
     "src/isycode/gus_context_pack.py",
     "src/isycode/gus_session.py",
+    "src/isycode/gus_generation.py",
     "tests/test_gus_l0.py",
     "tests/test_gus_role.py",
     # IsySentinel, the action registry and the destructive-action firewall.
@@ -258,15 +259,21 @@ def gus_turn_active(root) -> bool:
         return False
 
 
-def on_gus_branch(root: Path) -> bool:
-    """Whether the checkout's HEAD is a ``gus/<topic>`` branch (a plain .git folder only)."""
+def current_gus_branch(root: Path) -> str | None:
+    """The checkout's ``gus/<topic>`` branch from HEAD, or None (a plain .git folder only)."""
     try:
         head = (Path(root) / ".git" / "HEAD")
         if (Path(root) / ".git").is_symlink() or not head.is_file() or head.is_symlink():
-            return False
-        return _GUS_BRANCH.fullmatch(head.read_text(encoding="utf-8").strip()) is not None
+            return None
+        text = head.read_text(encoding="utf-8").strip()
     except (OSError, UnicodeDecodeError):
-        return False
+        return None
+    return text.removeprefix("ref: refs/heads/") if _GUS_BRANCH.fullmatch(text) else None
+
+
+def on_gus_branch(root: Path) -> bool:
+    """Whether the checkout's HEAD is a ``gus/<topic>`` branch."""
+    return current_gus_branch(root) is not None
 
 
 def _named_paths(parameters) -> list[str]:
@@ -304,5 +311,5 @@ def l0_change_refusal(root: Path, changes) -> str | None:
 
 
 __all__ = ["L0Fingerprint", "L0_DIRECTORIES", "L0_FILES", "L0_RULE", "fingerprint",
-           "gus_turn", "gus_turn_active", "l0_change_refusal", "l0_refusal", "manifest_text",
+           "current_gus_branch", "gus_turn", "gus_turn_active", "l0_change_refusal", "l0_refusal", "manifest_text",
            "on_gus_branch", "repository_path", "touches_l0"]

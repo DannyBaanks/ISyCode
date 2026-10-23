@@ -588,6 +588,44 @@ class GitOwner:
 
     # ── GUS branches ─────────────────────────────────────────────
 
+    def generation_changes(self, base: str) -> ActionOutcome:
+        """The committed range ``base..HEAD`` of a GUS branch, read as ``git.diff``.
+
+        Returns the head, whether the working tree is clean, each changed path
+        (with its rename source) and the diff. Sensitive files stay excluded.
+        """
+        try:
+            request = self._request("git.diff", staged=False, path=".", since=base)
+        except (TypeError, ValueError):
+            return ActionOutcome("Git diff denied.", "DENY", None, "invalid git request")
+        reason = self._authorize(request)
+        if reason:
+            return ActionOutcome("Git diff denied.", "DENY", None, reason)
+        try:
+            head, _ = self._head()
+            _, dirty = self._status_entries()
+            names, _ = self._git("diff", "--no-ext-diff", "--no-textconv", "--no-color",
+                                 "--name-status", "-z", "-M", base, "HEAD", "--", ".",
+                                 *_sensitive_excludes())
+            text, truncated = self._git("diff", "--no-ext-diff", "--no-textconv", "--no-color",
+                                        "-M", base, "HEAD", "--", ".", *_sensitive_excludes())
+        except ValueError as exc:
+            return ActionOutcome("Git diff failed.", "ERROR", None, str(exc)[:300])
+        fields = [field for field in names.split("\0") if field]
+        changes, index = [], 0
+        while index < len(fields):
+            status = fields[index][:1]
+            width = 3 if status in {"R", "C"} else 2
+            if index + width > len(fields):
+                break                                  # a truncated listing ends here
+            entry = {"status": status, "path": fields[index + width - 1]}
+            if width == 3:
+                entry["from"] = fields[index + 1]
+            changes.append(entry)
+            index += width
+        return self._finish(request, {"base": base, "head": head, "clean": not dirty,
+                                      "changes": changes, "diff": text, "truncated": truncated})
+
     def _branch_exists(self, branch: str) -> bool:
         _, _ = self._git("check-ref-format", "--branch", branch)
         text, _ = self._git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", ok_codes=(0, 1))
