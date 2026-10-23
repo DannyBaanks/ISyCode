@@ -228,9 +228,15 @@ def test_fast_reasoning_round_preserves_history_position(tmp_path, monkeypatch, 
             chat.focus()
             await pilot.press('home')
             # Let Textual finish its default one-second Home animation before
-            # asserting that a fast response leaves history at the same offset.
-            await pilot.pause(1.1)
+            # asserting that a fast response leaves history at the same offset;
+            # a loaded runner needs longer than the animation itself.
+            for _ in range(100):
+                await pilot.pause(0.05)
+                if chat.scroll_y == 0:
+                    break
+            await pilot.pause(0.1)
             before = chat.scroll_y
+            assert before == 0
             await app._run_chat('Answer quickly.')
             await pilot.pause()
             assert chat.scroll_y == before
