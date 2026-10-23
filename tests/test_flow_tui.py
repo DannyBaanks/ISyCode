@@ -186,3 +186,44 @@ def test_cancel_waits_for_inflight_file_write_before_closing_turn(tmp_path, monk
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_a_typed_run_command_is_its_own_undoable_turn(tmp_path, monkeypatch, capsys):
+    """/run in Flow records what the command changes, so /undo can put it back."""
+    from isycode.tui_app_menu import _run_cmd
+    from isycode.workspace_write import WorkspaceWriteOwner
+    root = configure(tmp_path, monkeypatch)
+    WorkspaceAuthority(root).set_mode('flow')
+    (root / 'notes.txt').write_text('before\n')
+    seen = []
+
+    async def scenario():
+        app = TUIApp()
+
+        async def fake_command(arguments):
+            # Stands in for the sandboxed promotion: same owner path, same turn lookup.
+            seen.append((arguments['argv'], TurnJournal.active(root) is not None))
+            owner = WorkspaceWriteOwner(root, WorkspaceAuthority(root), app._action_approvals)
+            assert owner.apply(owner.preview('notes.txt', 'after\n'), None).decision == 'ALLOW'
+            return '{}'
+
+        async with app.run_test(size=(80, 24)) as pilot:
+            await app.wait_for_ready()
+            app._run_workspace_command = fake_command
+            await _run_cmd(app, 'touch notes.txt')
+            await pilot.pause()
+            assert seen == [(['touch', 'notes.txt'], True)]
+            assert TurnJournal.running(root) is None
+            assert (root / 'notes.txt').read_text() == 'after\n'
+            await app._undo_last_change()
+            await pilot.pause()
+            assert (root / 'notes.txt').read_text() == 'before\n'
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_flow_command_tool_says_the_network_is_off():
+    from isycode.command_runner import command_tool
+    text = command_tool('flow')['function']['description']
+    assert 'always blocked' in text and 'granted' not in text

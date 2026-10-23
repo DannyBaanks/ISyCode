@@ -145,3 +145,47 @@ def test_undo_preserves_a_later_human_permission_change(flow):
     assert owner.apply_turn_undo(preview, None).decision == 'ALLOW'
     assert (root / 'keep.txt').read_text() == 'edited\n'
     assert stat.S_IMODE((root / 'keep.txt').stat().st_mode) == 0o600
+
+
+def test_work_started_in_a_turn_records_into_it_after_the_turn_ends(flow):
+    """A background command that finishes after its turn is undone with that turn."""
+    import asyncio
+    owner, root = flow
+
+    async def scenario():
+        journal = TurnJournal.begin(root)
+        token = journal.pin()
+        release = asyncio.Event()
+
+        async def late_write():
+            await release.wait()
+            return owner.apply(owner.preview("keep.txt", "late\n"), None)
+
+        task = asyncio.create_task(late_write())   # inherits the pin
+        journal.unpin(token)
+        journal.finish()
+        assert TurnJournal.running(root) is None
+        release.set()
+        assert (await task).decision == "ALLOW"
+        return journal.turn_id
+
+    turn_id = asyncio.run(scenario())
+    assert (root / "keep.txt").read_text() == "late\n"
+    outcome = owner.apply_turn_undo(owner.preview_turn_undo(turn_id), None)
+    assert outcome.decision == "ALLOW", outcome.reason
+    assert (root / "keep.txt").read_text() == "original\n"
+
+
+def test_late_work_into_an_undone_turn_is_refused(flow):
+    owner, root = flow
+    journal = TurnJournal.begin(root)
+    token = journal.pin()
+    try:
+        assert owner.apply(owner.preview("keep.txt", "edited\n"), None).decision == "ALLOW"
+        journal.finish()
+        assert owner.apply_turn_undo(owner.preview_turn_undo(journal.turn_id), None).decision == "ALLOW"
+        denied = owner.apply(owner.preview("keep.txt", "too late\n"), None)
+    finally:
+        journal.unpin(token)
+    assert denied.decision == "DENY"
+    assert (root / "keep.txt").read_text() == "original\n"

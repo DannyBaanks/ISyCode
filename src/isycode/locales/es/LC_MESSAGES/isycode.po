@@ -3174,3 +3174,15 @@ msgstr "El trabajo local sigue el flujo elegido; las acciones sensibles siguen p
 
 msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
 msgstr "Flow registra los cambios recuperables del espacio de trabajo para /undo. Se mantienen las denegaciones explícitas, los presupuestos y los límites del aislamiento."
+
+# Role switch and Flow /run
+msgid "Shift+Tab role"
+msgstr "Shift+Tab rol"
+
+# Role switch and Flow /run
+msgid "Role · none"
+msgstr "Rol · ninguno"
+
+# Role switch and Flow /run
+msgid "Flow could not prepare recovery. Nothing ran."
+msgstr "Flow no pudo preparar la recuperación. No se ejecutó nada."

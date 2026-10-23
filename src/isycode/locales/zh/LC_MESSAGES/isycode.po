@@ -3174,3 +3174,15 @@ msgstr "本地工作遵循所选工作模式；敏感操作仍需确认或保持
 
 msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
 msgstr "Flow 记录可通过 /undo 恢复的工作区修改。显式拒绝、预算和隔离边界仍然适用。"
+
+# Role switch and Flow /run
+msgid "Shift+Tab role"
+msgstr "Shift+Tab 角色"
+
+# Role switch and Flow /run
+msgid "Role · none"
+msgstr "角色 · 无"
+
+# Role switch and Flow /run
+msgid "Flow could not prepare recovery. Nothing ran."
+msgstr "Flow 无法准备恢复记录。未执行任何操作。"

@@ -151,7 +151,16 @@ async def _run_cmd(app: "TUIApp", arg: str) -> None:
     if not argv:
         app._append("  Usage: /run <program> [arguments] · no shell, pipes or redirects", MUTED)
         return
-    await app._run_workspace_command({"argv": argv})
+    # In Flow a typed command is its own turn, so /undo can put its changes back.
+    try:
+        turn = app._open_flow_turn()
+    except (OSError, ValueError):
+        app._append("  " + tr("Flow could not prepare recovery. Nothing ran."), RED)
+        return
+    try:
+        await app._run_workspace_command({"argv": argv})
+    finally:
+        app._close_flow_turn(turn)
 
 _TOUR_LINES = (
     "  Tour · the lay of the land",

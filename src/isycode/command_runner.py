@@ -75,7 +75,7 @@ FLOW_COMMAND_DESCRIPTION = (
     "user. A shell is available inside the sandbox: for pipes, &&, redirects, globs or "
     "variables pass [\"bash\", \"-c\", \"...\"]; plain programs can still be passed as a list. "
     "Only this workspace is visible and writable; sensitive files are hidden and the network "
-    "is blocked unless the user granted it for this session. Changes are measured before they "
+    "is always blocked: do not try downloads or installs that need it. Changes are measured before they "
     "reach the workspace and the user can undo the whole turn. Push, credentials and anything "
     "outside the workspace still need the user.")
 

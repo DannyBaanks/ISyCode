@@ -3174,3 +3174,15 @@ msgstr "Local work follows the selected workflow; sensitive actions still ask or
 
 msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
 msgstr "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
+
+# Role switch and Flow /run
+msgid "Shift+Tab role"
+msgstr "Shift+Tab role"
+
+# Role switch and Flow /run
+msgid "Role · none"
+msgstr "Role · none"
+
+# Role switch and Flow /run
+msgid "Flow could not prepare recovery. Nothing ran."
+msgstr "Flow could not prepare recovery. Nothing ran."

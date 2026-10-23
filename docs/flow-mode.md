@@ -22,6 +22,10 @@ recoverable segment and preserves the existing no-replay rule for tools.
 Cancellation waits for an already executing file mutation to settle before
 closing its record. Completed file effects remain recoverable even when the
 provider fails or the turn is stopped.
+A command typed with `/run` is its own turn, so `/undo` restores what it
+changed. Work a turn starts stays tied to that turn: a background command that
+finishes after the turn ended records into it, and is refused (its changes stay
+staged) once that turn has been undone.
 
 After a turn, the conversation lists its changed paths. `/undo` restores the
 newest recorded turn that still has changes, including after restarting the

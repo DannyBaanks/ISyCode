@@ -149,7 +149,7 @@ class AuthorityMixin:
         # Flow turn records belong to the mode that produced them; close the open one.
         try:
             from isycode.turn_journal import TurnJournal
-            active = TurnJournal.active(self._workspace_root)
+            active = TurnJournal.running(self._workspace_root)
             if active is not None:
                 active.finish()
         except Exception:

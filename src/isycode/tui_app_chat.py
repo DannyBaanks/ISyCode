@@ -335,32 +335,47 @@ class ChatMixin:
 
     async def _run_chat(self, text: str, *, resume: Any | None = None) -> None:
         """One recoverable Flow unit per provider turn, including cancellation/failure."""
-        from isycode.turn_journal import TurnJournal
-        turn = None
-        if self._workspace_mode() == "flow":
-            try:
-                if TurnJournal.active(self._workspace_root) is not None:
-                    raise ValueError("another Flow turn is already recording this workspace")
-                turn = TurnJournal.begin(self._workspace_root)
-            except (OSError, ValueError):
-                self._append("  " + tr("Flow could not prepare recovery. Nothing started; prompt kept."), RED)
-                self._retry_prompt = text
-                self.query_one("#prompt-input", PromptArea).load_text(text)
-                return
+        try:
+            turn = self._open_flow_turn()
+        except (OSError, ValueError):
+            self._append("  " + tr("Flow could not prepare recovery. Nothing started; prompt kept."), RED)
+            self._retry_prompt = text
+            self.query_one("#prompt-input", PromptArea).load_text(text)
+            return
         try:
             await self._run_chat_turn(text, resume=resume)
         finally:
-            if turn is not None:
-                try:
-                    turn.finish()
-                    changes = turn.changes()
-                    if changes:
-                        self._append("  " + tr("Flow turn · {count} files · /undo restores this turn; later human edits are kept.",
-                                              count=len(changes)), CYAN)
-                        for change in changes:
-                            self._append(f"    {change['path']}", MUTED)
-                except (OSError, ValueError):
-                    self._append("  " + tr("Flow recovery record could not be closed. Inspect files and the action journal before continuing."), RED)
+            self._close_flow_turn(turn)
+
+    def _open_flow_turn(self):
+        """Start and pin a Flow turn; None outside Flow. Raises when it cannot be recorded.
+
+        Pinning makes work started inside the turn, including a background
+        command that finishes after it, record into this turn.
+        """
+        from isycode.turn_journal import TurnJournal
+        if self._workspace_mode() != "flow":
+            return None
+        if TurnJournal.running(self._workspace_root) is not None:
+            raise ValueError("another Flow turn is already recording this workspace")
+        turn = TurnJournal.begin(self._workspace_root)
+        return turn, turn.pin()
+
+    def _close_flow_turn(self, opened) -> None:
+        if opened is None:
+            return
+        turn, token = opened
+        turn.unpin(token)
+        try:
+            turn.finish()
+            changes = turn.changes()
+            if changes:
+                self._append("  " + tr("Flow turn · {count} files · /undo restores this turn; later human edits are kept.",
+                                      count=len(changes)), CYAN)
+                for change in changes:
+                    self._append(f"    {change['path']}", MUTED)
+        except (OSError, ValueError):
+            self._append("  " + tr("Flow recovery record could not be closed. Inspect files and the action journal before continuing."), RED)
 
     async def _run_chat_turn(self, text: str, *, resume: Any | None = None) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""

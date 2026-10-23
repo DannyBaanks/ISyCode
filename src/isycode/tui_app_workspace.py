@@ -218,7 +218,7 @@ class WorkspaceMixin:
         if self._workspace_mode() == "flow":
             from isycode.turn_journal import TurnJournal
             try:
-                if TurnJournal.active(self._workspace_root) is not None:
+                if TurnJournal.running(self._workspace_root) is not None:
                     raise ValueError(tr("A turn is still running. Stop it before undoing."))
                 turn = await asyncio.to_thread(TurnJournal.latest, self._workspace_root)
                 if turn is None:
