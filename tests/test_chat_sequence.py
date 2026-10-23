@@ -146,22 +146,25 @@ def test_search_history_stays_visible_during_new_output(tmp_path, monkeypatch, c
                 if chat.max_scroll_y and abs(chat.scroll_y - chat.max_scroll_y) <= 1:
                     break
             assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
+            bottom = chat.scroll_y
             from unittest.mock import Mock
             app._search_console('Old searchable marker', Mock())
-            # _show_console_search_match schedules the scroll after refresh;
-            # one pause is not enough when the rest of the suite is under load.
+            # _show_console_search_match scrolls up to the match after a refresh;
+            # wait for that jump itself, not for the bottom to move.
             for _ in range(100):
                 await pilot.pause(0.05)
-                if chat.scroll_y < chat.max_scroll_y:
+                if chat.scroll_y < bottom - 1:
                     break
             before = chat.scroll_y
-            assert before < chat.max_scroll_y
+            assert before < bottom - 1
+            longest = chat.max_scroll_y
             app._append('Another new message.')
-            for _ in range(20):
+            for _ in range(100):
                 await pilot.pause(0.05)
-                if chat.max_scroll_y > before:
+                if chat.max_scroll_y > longest:
                     break
-            assert chat.scroll_y == before
+            assert chat.max_scroll_y > longest            # the new line is laid out
+            assert chat.scroll_y == before                # and the search result stayed put
     with capsys.disabled():
         asyncio.run(scenario())
 
