@@ -6105,8 +6105,8 @@ msgstr "窗口未知"
 msgid "not set"
 msgstr "未设置"
 
-msgid "Window unknown: GUS assumes 128k and warns when it starts."
-msgstr "窗口未知：GUS 假定为 128k，并在启动时提示。"
+msgid "Window unknown: GUS plans for 32k until the real window is known."
+msgstr "窗口未知：在得知实际窗口前，GUS 按 32k 规划。"
 
 msgid "No models listed for this provider"
 msgstr "此提供商没有列出模型"
@@ -6117,8 +6117,8 @@ msgstr "请先在“提供商与模型”中为它输入模型 ID。"
 msgid "GUS model not saved · {reason}"
 msgstr "GUS 模型未保存 · {reason}"
 
-msgid "GUS model · {model} · window unknown, 128k assumed"
-msgstr "GUS 模型 · {model} · 窗口未知，假定为 128k"
+msgid "GUS model · {model} · window unknown, planned as 32k"
+msgstr "GUS 模型 · {model} · 窗口未知，按 32k 规划"
 
 msgid "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."
 msgstr "GUS 用于维护 ISyCode 的模型：其他提供商或本地模型，窗口至少 32k token。"

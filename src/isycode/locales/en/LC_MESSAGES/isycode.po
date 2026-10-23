@@ -6105,8 +6105,8 @@ msgstr "window unknown"
 msgid "not set"
 msgstr "not set"
 
-msgid "Window unknown: GUS assumes 128k and warns when it starts."
-msgstr "Window unknown: GUS assumes 128k and warns when it starts."
+msgid "Window unknown: GUS plans for 32k until the real window is known."
+msgstr "Window unknown: GUS plans for 32k until the real window is known."
 
 msgid "No models listed for this provider"
 msgstr "No models listed for this provider"
@@ -6117,8 +6117,8 @@ msgstr "Type a model id for it in Providers & models first."
 msgid "GUS model not saved · {reason}"
 msgstr "GUS model not saved · {reason}"
 
-msgid "GUS model · {model} · window unknown, 128k assumed"
-msgstr "GUS model · {model} · window unknown, 128k assumed"
+msgid "GUS model · {model} · window unknown, planned as 32k"
+msgstr "GUS model · {model} · window unknown, planned as 32k"
 
 msgid "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."
 msgstr "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."

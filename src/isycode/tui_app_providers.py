@@ -605,7 +605,7 @@ class ProviderMixin:
             entries.append(self._entry(
                 label, "gus_slot_model" if check.allowed else "info", f"{provider}\n{model}",
                 tr(check.reason) if check.reason else (
-                    tr("Window unknown: GUS assumes 128k and warns when it starts.")
+                    tr("Window unknown: GUS plans for 32k until the real window is known.")
                     if check.window is None else ""),
                 translate=False))
         if not entries:
@@ -623,7 +623,7 @@ class ProviderMixin:
             reason = str(exc) if isinstance(exc, gus_slot.GusSlotError) else type(exc).__name__
             self._set_activity(tr("GUS model not saved · {reason}", reason=tr(reason)), RED)
             return
-        note = (tr("GUS model · {model} · window unknown, 128k assumed", model=model)
+        note = (tr("GUS model · {model} · window unknown, planned as 32k", model=model)
                 if check.window is None else tr("GUS model · {model}", model=model))
         self._set_activity(note, GREEN if check.window is not None else YELLOW)
         self._menu_stack = []

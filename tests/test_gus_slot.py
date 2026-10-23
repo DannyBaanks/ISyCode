@@ -132,3 +132,10 @@ def test_settings_offer_the_gus_model_only_in_the_isycode_repo(tmp_path, monkeyp
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_an_unknown_window_is_planned_as_the_floor_not_as_128k(state):
+    check = check_gus_model("ollama", "qwen3:32b")
+    assert check.window is None and gus_slot.planning_window(check) == 32_000
+    _window("openai", "fixture-model", 200_000)
+    assert gus_slot.planning_window(check_gus_model("openai", "fixture-model")) == 200_000

@@ -4,7 +4,8 @@ GUS uses another provider or a local model through the per-provider keys that
 already exist (D2): the slot stores only a provider and a model id. A model
 whose window is known to be below 32k tokens cannot hold GUS's fixed context,
 and one the catalog marks without tool calls cannot edit, so neither can be
-assigned. An empty slot never falls back to the chat model.
+assigned. A model with an unknown window is allowed but planned as 32k until
+its real window is known. An empty slot never falls back to the chat model.
 """
 from __future__ import annotations
 
@@ -17,6 +18,9 @@ from isycode.providers import (
 
 SLOT = "gus"
 MIN_CONTEXT_TOKENS = 32_000
+# An unknown window is planned as the floor, never as a large default: a local
+# server configured for less would truncate or reject GUS's requests.
+UNKNOWN_WINDOW_PLAN_TOKENS = MIN_CONTEXT_TOKENS
 MAX_MODEL_CHOICES = 40
 # Usable without asking for anything new: a key the user already gave, or none needed.
 READY_CREDENTIALS = frozenset({"saved", "environment", "session", "signed-in", "optional"})
@@ -70,6 +74,11 @@ def check_gus_model(provider: str, model: str) -> GusModelCheck:
     return GusModelCheck(True, window, source)
 
 
+def planning_window(check: GusModelCheck) -> int:
+    """The window GUS budgets its requests against."""
+    return check.window if check.window is not None else UNKNOWN_WINDOW_PLAN_TOKENS
+
+
 def gus_providers() -> list[str]:
     """Providers GUS can use now with the credentials the user already set up."""
     return [name for name in PRESETS
@@ -110,6 +119,6 @@ def gus_provider() -> Provider:
                     api_key=load_provider_key(slot["provider"]) or None)
 
 
-__all__ = ["GusModelCheck", "GusSlotError", "MIN_CONTEXT_TOKENS", "check_gus_model",
-           "gus_model", "gus_model_choices", "gus_provider", "gus_providers", "model_window",
-           "save_gus_model"]
+__all__ = ["GusModelCheck", "GusSlotError", "MIN_CONTEXT_TOKENS", "UNKNOWN_WINDOW_PLAN_TOKENS",
+           "check_gus_model", "gus_model", "gus_model_choices", "gus_provider", "gus_providers",
+           "model_window", "planning_window", "save_gus_model"]

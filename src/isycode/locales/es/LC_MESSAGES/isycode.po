@@ -6105,8 +6105,8 @@ msgstr "ventana desconocida"
 msgid "not set"
 msgstr "sin asignar"
 
-msgid "Window unknown: GUS assumes 128k and warns when it starts."
-msgstr "Ventana desconocida: GUS supone 128k y avisa al empezar."
+msgid "Window unknown: GUS plans for 32k until the real window is known."
+msgstr "Ventana desconocida: GUS planea con 32k hasta conocer la ventana real."
 
 msgid "No models listed for this provider"
 msgstr "No hay modelos para este proveedor"
@@ -6117,8 +6117,8 @@ msgstr "Primero escribe un id de modelo para él en Proveedores y modelos."
 msgid "GUS model not saved · {reason}"
 msgstr "Modelo de GUS sin guardar · {reason}"
 
-msgid "GUS model · {model} · window unknown, 128k assumed"
-msgstr "Modelo de GUS · {model} · ventana desconocida, se supone 128k"
+msgid "GUS model · {model} · window unknown, planned as 32k"
+msgstr "Modelo de GUS · {model} · ventana desconocida, se planea con 32k"
 
 msgid "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."
 msgstr "El modelo que GUS usa para mantener ISyCode: otro proveedor o un modelo local, de 32k tokens o más."
