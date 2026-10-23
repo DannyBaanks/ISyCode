@@ -25,6 +25,9 @@ class GusScreen(Dialog):
     dialog_width = "wide"
     dialog_height = "fill"
     dialog_cancel_result = None
+    # Textual focuses this when the screen activates; without it, a focus asked
+    # for during mount can lose to the first focusable widget (the body scroll).
+    AUTO_FOCUS = "#gus-input"
 
     def __init__(self, root: Path, authority_factory: Callable[[], Any], model_label: str,
                  *, initial: str = "", complete=None) -> None:
