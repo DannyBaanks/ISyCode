@@ -56,9 +56,14 @@ def test_model_accordions_filter_and_open_provider_reasoning(tmp_path, monkeypat
 
             assert 'Nemotron 3 Ultra' in str(button.label)
             button.focus()
-            await pilot.pause()
             from isycode.tui_effort_slider import EffortSlider
-            slider = current.query_one('#models-effort', EffortSlider)
+            # The slider follows the focused choice; on a slow runner it can still
+            # show the previous model's levels for a few frames after focus().
+            for _ in range(100):
+                await pilot.pause(0.05)
+                slider = current.query_one('#models-effort', EffortSlider)
+                if slider.stops == ('default', 'off', 'on'):
+                    break
             assert slider.stops == ('default', 'off', 'on')
             await pilot.press('right', 'right')
             assert slider.level == 'on'

@@ -572,7 +572,9 @@ class ProviderKeyScreen(Dialog):
     def on_mount(self, event) -> None:
         # The frame would focus the first action; a key dialog starts in its field.
         event.prevent_default()
-        self.query_one("#provider-key-input", Input).focus()
+        # The field is absent only if the app closes while this dialog mounts.
+        for field in self.query("#provider-key-input"):
+            field.focus()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         event.stop()
