@@ -242,16 +242,36 @@ def test_map_ordered_submission_failure_is_typed_without_worker_details():
         pool.shutdown()
 
 
+def test_map_ordered_result_finished_after_the_deadline_is_a_timeout(monkeypatch) -> None:
+    """A busy machine wakes the waiter late with the work done; that result is discarded."""
+    import isycode.dataflow as dataflow
+    real_wait = dataflow.wait
+
+    def late_wait(futures, timeout=None, return_when=None):
+        time.sleep(0.2)
+        return real_wait(futures, timeout=0, return_when=return_when)
+
+    monkeypatch.setattr(dataflow, "wait", late_wait)
+    with pytest.raises(DataflowExecutionError) as caught:
+        map_ordered([7, 8], lambda value: value, workers=1, executor="thread", timeout_s=0.05)
+    assert caught.value.index == 0
+    assert caught.value.reason == "timeout"
+
+
 def test_map_ordered_timeout_discards_late_thread_result() -> None:
+    release = threading.Event()
+
     def delayed(value: int) -> int:
-        time.sleep(0.15)
+        release.wait(10)
         return value
 
-    started = time.perf_counter()
-    with pytest.raises(DataflowExecutionError) as caught:
-        map_ordered([7, 8], delayed, workers=1, executor="thread", timeout_s=0.02)
-
-    assert time.perf_counter() - started < 0.12
+    try:
+        with pytest.raises(DataflowExecutionError) as caught:
+            map_ordered([7, 8], delayed, workers=1, executor="thread", timeout_s=0.02)
+        # The timeout returned while the worker was still blocked: it never waited for it.
+        assert not release.is_set()
+    finally:
+        release.set()
     assert caught.value.index == 0
     assert caught.value.reason == "timeout"
     assert caught.value.timed_out is True
