@@ -230,9 +230,6 @@ from isycode.tui_theme import (
 from isycode.tui_widgets import (
     fit_rail_button,
     PreviewOptionList,
-    RailHeader,
-    workspace_mode_chip,
-    workspace_mode_name,
     ActivityStatus,
     IdleBoard,
     BoxTitle,
@@ -2521,19 +2518,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         finally:
             # F-01: release waiters even when startup failed partway through.
             self._ready_event.set()
-
-    def _paint_workspace_chrome(self) -> None:
-        """Wordmark and launch folder in the rail; the workspace mode by Settings."""
-        try:
-            header = self.query_one(RailHeader)
-            button = self.query_one("#mode-button", Button)
-        except (NoMatches, NoScreen):
-            return
-        header.paint()
-        mode = workspace_mode_name(self)
-        button.label = Text(workspace_mode_chip(self), style=CYAN if mode == "Classic" else MUTED)
-        button.tooltip = tr("Workspace mode · click to switch between Classic, Flow and Security")
-        self._update_model_button_visibility()
 
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:

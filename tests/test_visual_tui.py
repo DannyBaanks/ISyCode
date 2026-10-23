@@ -10,7 +10,8 @@ import pytest
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible as TextualCollapsible, Static
 
-from isycode.tui import ChatArea, RailHeader, SidePanel, TUIApp, TailscaleConfirmScreen
+from isycode.tui import ChatArea, SidePanel, TUIApp, TailscaleConfirmScreen
+from isycode.tui_widgets import RailHeader
 from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
 

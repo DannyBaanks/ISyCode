@@ -35,12 +35,16 @@ from isycode.tui_theme import (
     status_chip,
     TEXT,
     MUTED,
+    CYAN,
     YELLOW,
     status_phrase,
     switch_row,
     switch_rows,
 )
 from isycode.tui_widgets import (
+    RailHeader,
+    workspace_mode_chip,
+    workspace_mode_name,
     Collapsible,
     SidePanel,
 )
@@ -897,6 +901,19 @@ class RailMixin:
         mode = {"classic": "Classic", "flow": "Flow"}.get(self._workspace_mode(), "Security")
         bridge = getattr(self, "_bridge_identity", "") or tr("no bridge")
         return f"{name} · {mode} · {bridge}"
+
+    def _paint_workspace_chrome(self) -> None:
+        """Wordmark and launch folder in the rail; the workspace mode by Settings."""
+        try:
+            header = self.query_one(RailHeader)
+            button = self.query_one("#mode-button", Button)
+        except (NoMatches, NoScreen):
+            return
+        header.paint()
+        mode = workspace_mode_name(self)
+        button.label = Text(workspace_mode_chip(self), style=CYAN if mode == "Classic" else MUTED)
+        button.tooltip = tr("Workspace mode · click to switch between Classic, Flow and Security")
+        self._update_model_button_visibility()
 
     def _paint_rail_identity(self) -> None:
         try:
