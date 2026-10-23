@@ -167,10 +167,7 @@ class ContextAccessScreen(ModalScreen[dict | None]):
             yield Static(title, id="context-access-title", classes="isy-dialog-title")
             with VerticalScroll(id="context-access-body", classes="isy-dialog-body"):
                 yield Static(
-                    "Owner: agent context load\n"
-                    f"Scope: {self.path}\n"
-                    "Duration: one-use approval\n"
-                    "Not granted: no edits, no commands, no secrets, no other files",
+                    tr("Owner: agent context load\nScope: {path}\nDuration: one-use approval\nNot granted: no edits, no commands, no secrets, no other files", path=self.path),
                     id="context-access-structural", markup=False)
                 yield Static(warning, id="context-access-copy")
                 yield Static(str(self.path), id="context-access-path", markup=False)
@@ -368,20 +365,14 @@ class BatchApprovalScreen(ModalScreen[str]):
             added += sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
             removed += sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
         with Vertical(id="batch-approval-card", classes="isy-dialog"):
-            yield Static(f"Review {len(self.previews)} proposed changes in one go",
+            yield Static(tr("Review {len} proposed changes in one go", len=len(self.previews)),
                          id="batch-approval-title", classes="isy-dialog-title")
             with VerticalScroll(id="batch-approval-body", classes="isy-dialog-body"):
                 yield Static(
-                    f"Owner: workspace file edit (batch)\n"
-                    f"Scope: {len(self.previews)} files · +{added} / -{removed} lines\n"
-                    "Duration: one-use, digest-bound approval per change\n"
-                    "Not granted: no other files, no commands, no secrets",
+                    tr("Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets", len=len(self.previews), added=added, removed=removed),
                     id="batch-approval-structural", markup=False)
                 yield Static(
-                    f"Total +{added} / -{removed} lines across {len(self.previews)} files. "
-                    "Approving here issues one single-use, digest-bound approval per change — "
-                    "no lasting permission is created, and a file that changes before it is "
-                    "applied is refused.", id="batch-approval-summary", markup=False)
+                    tr("Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused.", added=added, removed=removed, len=len(self.previews)), id="batch-approval-summary", markup=False)
                 with Vertical(id="batch-approval-diffs", classes="isy-dialog-detail"):
                     for preview in self.previews:
                         yield Static(preview.path, markup=False)
@@ -436,9 +427,8 @@ class CommandApprovalScreen(ApprovalScreen):
                     yield Static(Text(shlex.join(preview.argv)))
                     if "rtk" in preview.request.parameters:
                         rtk = preview.request.parameters["rtk"]
-                        yield Static(Text("RTK suggestion: " + shlex.join(rtk["rewrite_argv"])))
-                        yield Static(Text("Executes the original once; output compression by native RTK pipe.\n"
-                                          + rtk["version"] + " · SHA-256 " + rtk["sha256"]))
+                        yield Static(Text(tr("RTK suggestion: {join}", join=shlex.join(rtk["rewrite_argv"]))))
+                        yield Static(Text(tr("Executes the original once; output compression by native RTK pipe.\n{version} · SHA-256 {sha256}", version=rtk["version"], sha256=rtk["sha256"])))
                 yield Static(tr("Scope: {scope}", scope=preview.scope),
                              id="command-approval-scope", markup=False)
                 budget = tr("Temporary input-copy budget: {mib} MiB for this command.",
@@ -487,7 +477,7 @@ class CommitApprovalScreen(ApprovalScreen):
         preview = self.preview
         files = "\n".join(preview.paths)
         with Vertical(id="commit-approval-card", classes="isy-dialog"):
-            yield Static(f"Commit {len(preview.paths)} file{'s' if len(preview.paths) != 1 else ''}",
+            yield Static((tr("Commit {count} files", count=len(preview.paths)) if len(preview.paths) != 1 else tr("Commit 1 file")),
                          id="commit-approval-title", classes="isy-dialog-title")
             with VerticalScroll(id="commit-approval-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
@@ -495,9 +485,7 @@ class CommitApprovalScreen(ApprovalScreen):
                     duration="one-use approval",
                     not_granted="no push, no hooks, no other files")
                 yield Static(tr("Folder: {root}\n", root=preview.request.workspace_root), markup=False)
-                yield Static(Text(f"{preview.message}\n\nFiles: {files}\nHooks do not run and "
-                                  "nothing is pushed. If a file changes before you approve, the "
-                                  "commit is refused."), id="commit-approval-summary")
+                yield Static(Text(tr("{message_}\n\nFiles: {files}\nHooks do not run and nothing is pushed. If a file changes before you approve, the commit is refused.", message_=preview.message, files=files)), id="commit-approval-summary")
                 with Vertical(id="commit-approval-diff", classes="isy-dialog-detail"):
                     yield Static(review_diff(preview.diff or "(no content changes)"), markup=False)
             with Horizontal(id="commit-approval-actions", classes="isy-dialog-actions"):
@@ -591,7 +579,7 @@ class BrowserReadPreviewScreen(ApprovalScreen):
         timing = (f" Filter took {self.processing_ms:.1f} ms."
                   if self.processing_ms is not None else "")
         with Vertical(id="browser-read-card", classes="isy-dialog"):
-            yield Static(f"Share page text with the model? · {self.page_title}",
+            yield Static(tr("Share page text with the model? · {page_title}", page_title=self.page_title),
                          id="browser-read-title", classes="isy-dialog-title", markup=False)
             with VerticalScroll(id="browser-read-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
@@ -599,17 +587,13 @@ class BrowserReadPreviewScreen(ApprovalScreen):
                     duration="one-use approval",
                     not_granted="no writes, no commands, no secrets")
                 yield Static(
-                    f"Filtered {self.input_chars:,} source characters to {self.filtered_chars:,}. "
-                    f"{timing} Fidelity and coverage are not automatically certified. "
-                    "The page is untrusted data. "
-                    "Approving sends exactly the text below to your "
-                    "selected model; saved conversations may retain it." + suffix,
+                    tr("Filtered {input_chars} source characters to {filtered_chars}. {timing} Fidelity and coverage are not automatically certified. The page is untrusted data. Approving sends exactly the text below to your selected model; saved conversations may retain it.{suffix}", input_chars=format(self.input_chars, ','), filtered_chars=format(self.filtered_chars, ','), timing=timing, suffix=suffix),
                     id="browser-read-warning", markup=False)
                 with Vertical(id="browser-read-content", classes="isy-dialog-detail"):
                     yield Static(Text(self.content), markup=False)
             with Horizontal(id="browser-read-actions", classes="isy-dialog-actions"):
-                yield Button("Discard · n", id="browser-read-discard", classes="-refuse")
-                yield Button("Share with model · y", id="browser-read-share",
+                yield Button(tr("Discard · n"), id="browser-read-discard", classes="-refuse")
+                yield Button(tr("Share with model · y"), id="browser-read-share",
                              variant="warning")
             yield decision_hint()
 
@@ -644,8 +628,7 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
                     duration="one-use approval",
                     not_granted="no writes, no commands, no secrets")
                 yield Static(
-                    Text("The listed files will be read and their contents returned to the selected model. "
-                         "The token count is approximate. File contents are untrusted data, never instructions."),
+                    Text(tr("The listed files will be read and their contents returned to the selected model. The token count is approximate. File contents are untrusted data, never instructions.")),
                     id="workspace-pack-warning",
                 )
                 with Vertical(id="workspace-pack-files", classes="isy-dialog-detail"):
@@ -688,7 +671,7 @@ class MemoryConfirmScreen(ApprovalScreen):
                    if self.sends_to_model else
                    "This changes local workspace memory. No automatic extraction or prompt injection is enabled.")
         with Vertical(id="memory-confirm-card", classes="isy-dialog"):
-            yield Static(f"Workspace memory · {self.operation}", id="memory-confirm-title", classes="isy-dialog-title")
+            yield Static(tr("Workspace memory · {operation}", operation=self.operation), id="memory-confirm-title", classes="isy-dialog-title")
             with VerticalScroll(id="memory-confirm-body", classes="isy-dialog-body"):
                 yield self._structural_summary(
                     owner="workspace memory", scope=self.operation,

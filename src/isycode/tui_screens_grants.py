@@ -318,7 +318,7 @@ class GrantProviderNetworkScreen(ApprovalScreen):
                     owner="provider network access", scope=self.host,
                     duration="persistent grant (until revoked)",
                     not_granted="no tool execution, no file access, no secrets")
-                yield Static(copy + "\n\nHost: " + self.host, id="provider-network-copy", markup=False)
+                yield Static(tr("{copy}\n\nHost: {host}", copy=copy, host=self.host), id="provider-network-copy", markup=False)
             with Horizontal(id="provider-network-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="provider-network-cancel", classes="-refuse")
                 yield Button(tr("Turn off · y") if self.revoke else tr("Turn on · y"), id="provider-network-confirm",
@@ -360,7 +360,7 @@ class GrantMCPInvocationScreen(ApprovalScreen):
                     owner="Gateway MCP target", scope=self.host,
                     duration="persistent grant (every call still approved)",
                     not_granted="no automatic tool runs, no local filesystem access")
-                yield Static("Host: " + self.host, markup=False)
+                yield Static(tr("Host: {host}", host=self.host), markup=False)
                 yield Static(copy, id="mcp-grant-copy")
             with Horizontal(id="mcp-grant-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="mcp-grant-cancel", classes="-refuse")
@@ -444,9 +444,7 @@ class BrokerPreviewGrantScreen(ApprovalScreen):
                     duration="persistent grant (until revoked)",
                     not_granted="no Docker, no containers, no workspace.files.read")
                 yield Static(
-                    f"Workspace: {self.root}\n\nThis stores only the broker.preview grant for this .isyroot. "
-                    "The selected project still needs its own workspace.files.read grant. "
-                    "Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.",
+                    tr("Workspace: {root}\n\nThis stores only the broker.preview grant for this .isyroot. The selected project still needs its own workspace.files.read grant. Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container.", root=self.root),
                     id="broker-grant-copy")
             with Horizontal(id="broker-grant-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Cancel · n"), id="broker-grant-cancel", classes="-refuse")
@@ -574,7 +572,9 @@ class ProviderKeyScreen(Dialog):
     def on_mount(self, event) -> None:
         # The frame would focus the first action; a key dialog starts in its field.
         event.prevent_default()
-        self.query_one("#provider-key-input", Input).focus()
+        # The field is absent only if the app closes while this dialog mounts.
+        for field in self.query("#provider-key-input"):
+            field.focus()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         event.stop()

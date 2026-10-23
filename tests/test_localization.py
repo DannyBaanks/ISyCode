@@ -151,7 +151,7 @@ def test_spanish_and_chinese_option_catalogs_cover_chrome_first_run_and_approval
     assert tr("Allow once · y") == "Permitir una vez · y"
     assert tr("Apply change · y") == "Aplicar cambio · y"
     assert tr("Cancel · n") == "Cancelar · n"
-    assert tr("Read and search workspace files") == "Leer y buscar archivos del espacio de trabajo"
+    assert tr("Read and search workspace files") == "Leer y buscar archivos del workspace"
     configure_locale("zh")
     assert tr("Sidebar") == "侧栏"
     assert tr("Sessions") == "会话"
@@ -262,7 +262,7 @@ def test_chinese_chrome_and_approval_buttons_render(tmp_path, monkeypatch, capsy
 
 def test_spanish_and_chinese_authority_palette_and_defaults_options():
     configure_locale("es")
-    assert tr("Read and search workspace files") == "Leer y buscar archivos del espacio de trabajo"
+    assert tr("Read and search workspace files") == "Leer y buscar archivos del workspace"
     assert tr("Turn on all coding tools…") == "Activar todas las herramientas de código…"
     assert tr("Ask me when I open a new folder") == "Preguntarme al abrir una carpeta nueva"
     assert tr("Guidance available to ISyCode") == "Guía disponible para ISyCode"
@@ -311,7 +311,7 @@ def test_spanish_authority_and_palette_options_render(tmp_path, monkeypatch, cap
             app._open_authority_menu()
             await pilot.pause()
             labels = [entry["label"] for entry in app._menu_entries]
-            assert "Leer y buscar archivos del espacio de trabajo" in labels
+            assert "Leer y buscar archivos del workspace" in labels
             assert "Activar todas las herramientas de código…" in labels
             assert "Flujo de trabajo · Classic" in labels
             app._open_palette()
@@ -325,3 +325,37 @@ def test_spanish_authority_and_palette_options_render(tmp_path, monkeypatch, cap
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_every_literal_ui_message_has_a_catalog_entry():
+    """A literal passed to tr() (or to a helper that calls it) must be in the catalogs.
+
+    Without an entry the message silently stays English in Spanish and Chinese.
+    """
+    import ast
+    from isycode.localization import _parse_po
+
+    catalog = _parse_po((PACKAGE_LOCALES / "en" / "LC_MESSAGES" / "isycode.po").read_text(encoding="utf-8"))
+    # Helpers that translate these positional arguments themselves.
+    helpers = {"tr": (0,), "status_chip": (0,), "_entry": (0, 3), "_capability_entry": (0, 3),
+               "_render_menu": (1,), "TailscaleConfirmScreen": (0, 1, 2)}
+    missing = []
+    for path in sorted((PACKAGE_LOCALES.parent).glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", "") or getattr(node.func, "attr", "")
+            if name not in helpers or any(
+                    k.arg == "translate" and isinstance(k.value, ast.Constant) and k.value.value is False
+                    for k in node.keywords):
+                continue
+            context = next((k.value.value for k in node.keywords
+                            if k.arg == "context" and isinstance(k.value, ast.Constant)), "")
+            arguments = [node.args[i] for i in helpers[name] if i < len(node.args)]
+            arguments += [k.value for k in node.keywords if k.arg == "detail"]
+            for argument in arguments:
+                if (isinstance(argument, ast.Constant) and isinstance(argument.value, str)
+                        and any(character.isalpha() for character in argument.value)
+                        and (context, argument.value) not in catalog):
+                    missing.append(f"{path.name}:{node.lineno}: {argument.value[:80]!r}")
+    assert missing == []

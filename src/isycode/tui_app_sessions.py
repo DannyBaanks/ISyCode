@@ -195,7 +195,7 @@ class SessionMixin:
         box = base.query_one("#queued-box", QueuedBox)
         selected = self._selected_queued_message
         preview = selected or (self._queued_messages[0] if self._queued_messages else "")
-        box.title = f"Queued · {len(self._queued_messages)}" + (" · selected" if selected else "") + "     " + _fit_cells(" ".join(preview.split()), max(8, box.content_size.width - 25))
+        box.title = tr("Queued · {len}{value}     {fit_cells}", len=len(self._queued_messages), value=" · selected" if selected else "", fit_cells=_fit_cells(" ".join(preview.split()), max(8, box.content_size.width - 25)))
         listing = base.query_one("#queued-options", OptionList)
         listing.clear_options()
         listing.add_options([Option(_fit_cells(" ".join(text.split()), 80), id=str(index)) for index, text in enumerate(self._queued_messages)])
@@ -227,7 +227,7 @@ class SessionMixin:
             return
         prompt = self.screen_stack[0].query_one("#prompt-input", PromptArea)
         if prompt.text.strip():
-            self.notify("Keep the draft; Send must be empty to steer a selected queued message", severity="warning")
+            self.notify(tr("Keep the draft; Send must be empty to steer a selected queued message"), severity="warning")
             return
         if self._chat_turn_task is None or self._chat_turn_task.done():
             self._undo_queued_message()
@@ -237,7 +237,7 @@ class SessionMixin:
             self._queue_steer_warning()
             return
         if self._steering_try_active:
-            self.notify("A steer attempt is still pending; this message stays queued")
+            self.notify(tr("A steer attempt is still pending; this message stays queued"))
             return
         previous = len(self._pending_steering)
         position = self._queued_messages.index(selected)
@@ -262,7 +262,7 @@ class SessionMixin:
         if self._lane_on_screen():
             self._queue_steer_warning()
             if not unsupported:
-                self.screen_stack[0].query_one("#queue-warning", Static).update(Text("Steer sin respuesta confirmada · mensaje devuelto a queued", style=YELLOW))
+                self.screen_stack[0].query_one("#queue-warning", Static).update(Text(tr("Steer got no confirmed response · message returned to the queue"), style=YELLOW))
         self._append("Steer no soportado por provider · mensaje devuelto a queued; continuando el turno original." if unsupported else "Steer no confirmado · devuelto a queued.", YELLOW)
 
     def _undo_queued_message(self):
@@ -271,7 +271,7 @@ class SessionMixin:
             return
         prompt = self.screen_stack[0].query_one("#prompt-input", PromptArea)
         if prompt.text:
-            self.notify("Draft kept; queued message stays pending", severity="warning")
+            self.notify(tr("Draft kept; queued message stays pending"), severity="warning")
             return
         self._queued_messages.remove(selected)
         self._selected_queued_message = None
@@ -334,7 +334,7 @@ class SessionMixin:
             from isycode.reasoning_options import reasoning_label
             preset = PRESETS.get(name, {})
             preset_label = preset.get("label") or name
-            suffix = f" / {reasoning_label(name, model, preset.get('reasoning_effort')).capitalize()} · {preset_label}"
+            suffix = f" / {tr(reasoning_label(name, model, preset.get('reasoning_effort')).capitalize())} · {preset_label}"
             available = box.content_size.width - cell_len(label) - 3
             model_name = model_display_name(model)
             if box.content_size.width and available > cell_len(suffix):
@@ -379,7 +379,7 @@ class SessionMixin:
         try:
             self._image_attachments.prepare([{"role": "user", "content": text}], selected_provider_name(), resolved_chat_model(selected_provider_name()))
         except ValueError as exc:
-            self.notify("Queue paused · " + str(exc), severity="warning")
+            self.notify(tr("Queue paused · {text}", text=str(exc)), severity="warning")
             return
         self._queued_messages.pop(0)
         self._paint_queued_messages()
@@ -423,12 +423,12 @@ class SessionMixin:
         """Cross-session search (Ctrl+Shift+F); resumes the chosen conversation."""
         owner = self._chat_session_owner
         if owner is None or not self._sessions_enabled():
-            self.notify("Saving conversations is off · turn it on in Settings → Authority.",
+            self.notify(tr("Saving conversations is off · turn it on in Settings → Authority."),
                         severity="warning")
             return
         outcome, sessions = owner.list_conversations()
         if outcome.decision != "ALLOW":
-            self.notify("Conversations unavailable · " + outcome.reason[:120],
+            self.notify(tr("Conversations unavailable · {value}", value=outcome.reason[:120]),
                         severity="warning")
             return
         self.push_screen(SessionSearchScreen(sessions), self._session_search_result)
@@ -458,16 +458,16 @@ class SessionMixin:
                 return False
             safe_root = validate_picked_root(candidate)
         except (FilePickerUnavailable, OSError, ValueError) as exc:
-            self._set_activity(f"Folder selection for {label} failed · {str(exc)[:120]}", YELLOW)
+            self._set_activity(tr("Folder selection for {label} failed · {value}", label=label, value=str(exc)[:120]), YELLOW)
             return False
         if not await self._await_screen(HarnessFolderConfirmScreen(harness_id, safe_root)):
             return False
         try:
             await asyncio.to_thread(self._harness_store().set_root, harness_id, safe_root)
         except (OSError, ValueError) as exc:
-            self._set_activity(f"Multi Harness folder not saved · {str(exc)[:120]}", YELLOW)
+            self._set_activity(tr("Multi Harness folder not saved · {value}", value=str(exc)[:120]), YELLOW)
             return False
-        self._set_activity(f"Multi Harness · {label} folder saved", GREEN)
+        self._set_activity(tr("Multi Harness · {label} folder saved", label=label), GREEN)
         return True
 
     async def _copy_harness_default_model(self, provider_id: str, model_id: str) -> bool:
@@ -479,19 +479,19 @@ class SessionMixin:
             provider, model = await asyncio.to_thread(
                 copy_default_model_selection, provider_id, model_id)
         except (OSError, ValueError):
-            self._set_activity("Multi Harness model selection was not saved", YELLOW)
+            self._set_activity(tr("Multi Harness model selection was not saved"), YELLOW)
             return False
         self._provider_env_override = True
         self._model_env_override = True
         if self.screen_stack:
             self._paint_idea_box()
-        self._set_activity("Model selection saved · " + self._model_display_label(provider, model), GREEN)
+        self._set_activity(tr("Model selection saved · {model_display_label}", model_display_label=self._model_display_label(provider, model)), GREEN)
         return True
 
     async def _import_harness_transcript(
             self, harness_id: str, root: Path, relative_path: str) -> bool:
         if self._loop_task is not None and not self._loop_task.done():
-            self._set_activity("Still working · finish or cancel the current reply first.", YELLOW)
+            self._set_activity(tr("Still working · finish or cancel the current reply first."), YELLOW)
             return False
         if harness_id not in CATALOG_IDS:
             return False
@@ -500,7 +500,7 @@ class SessionMixin:
         try:
             transcript = await asyncio.to_thread(read_transcript, root, relative_path)
         except (OSError, ValueError) as exc:
-            self._set_activity(f"Transcript copy failed · {str(exc)[:160]}", YELLOW)
+            self._set_activity(tr("Transcript copy failed · {value}", value=str(exc)[:160]), YELLOW)
             return False
         return await self._apply_harness_transcript(harness_id, transcript)
 
@@ -515,7 +515,7 @@ class SessionMixin:
         saving = self._sessions_enabled()
         owner = self._chat_session_owner if saving else None
         if saving and owner is None:
-            self._set_activity("Transcript copy could not access the conversation owner.", YELLOW)
+            self._set_activity(tr("Transcript copy could not access the conversation owner."), YELLOW)
             return False
 
         for item in messages:
@@ -540,15 +540,15 @@ class SessionMixin:
             outcome, session_id = owner.record(
                 self._active_chat_session_id, role, content, state=None)
             if outcome.decision != "ALLOW":
-                self._set_activity(f"Transcript copy stopped · {outcome.reason[:160]}", YELLOW)
+                self._set_activity(tr("Transcript copy stopped · {value}", value=outcome.reason[:160]), YELLOW)
                 return False
             if session_id is None:
-                self._set_activity("Transcript copy stopped · session id was not returned.", YELLOW)
+                self._set_activity(tr("Transcript copy stopped · session id was not returned."), YELLOW)
                 return False
             self._active_chat_session_id = session_id
 
         self._set_activity(
-            f"Copied transcript from {label} · {len(transcript.messages)} messages", GREEN)
+            tr("Copied transcript from {label} · {len} messages", label=label, len=len(transcript.messages)), GREEN)
         return True
 
     async def _multi_harness_snapshot(self) -> tuple[list[dict[str, Any]], int]:
@@ -716,25 +716,25 @@ class SessionMixin:
         approval.
         """
         if not brief.strip():
-            self._append("  Repair compose is empty.", YELLOW)
+            self._append("  " + tr("Repair compose is empty."), YELLOW)
             return
         self._capture_running_session()
         lane = open_lane(self, None)
         self._show_lane(lane)
-        self._append("  Repair conversation opened · running the compose in the background.", CYAN)
+        self._append("  " + tr("Repair conversation opened · running the compose in the background."), CYAN)
         status = self._post_user_text(lane, brief)
         if status == "full":
-            self._append("  Repair lane is busy; the compose is queued.", YELLOW)
+            self._append("  " + tr("Repair lane is busy; the compose is queued."), YELLOW)
         elif status == "queued":
-            self._append("  Repair compose queued behind the current turn.", YELLOW)
+            self._append("  " + tr("Repair compose queued behind the current turn."), YELLOW)
         self.run_worker(self._refresh_work_list(), group="work-list")
 
     async def _launch_hive_agent(self, brief: str) -> None:
         """Compatibility route: repairs run through the existing authorized lane."""
         if not brief.strip():
-            self._append("  Repair compose is empty.", YELLOW)
+            self._append("  " + tr("Repair compose is empty."), YELLOW)
             return
-        self._append("  External Hive launch is unavailable; opening an ISyCode repair conversation with the current model.", YELLOW)
+        self._append("  " + tr("External Hive launch is unavailable; opening an ISyCode repair conversation with the current model."), YELLOW)
         await self._launch_repair_conversation(brief)
 
     def _conversation_status(self) -> str:
@@ -783,7 +783,7 @@ class SessionMixin:
                 if owner is not None and self._sessions_enabled():
                     outcome, sessions = await asyncio.to_thread(owner.list_conversations)
                     if outcome.decision != "ALLOW":
-                        self._set_activity("Conversations unavailable · " + outcome.reason[:100], YELLOW)
+                        self._set_activity(tr("Conversations unavailable · {value}", value=outcome.reason[:100]), YELLOW)
                 self._work_rows = [self._conversation_row(session) for session in sessions]
                 if self._sessions_enabled():
                     from isycode.iteration import IterationOwner
@@ -799,7 +799,7 @@ class SessionMixin:
                                 "age": age_label(item["created_at"]),
                                 "detail": " → ".join(self._model_display_label(p["provider"], p["model"]) for p in item["participants"]) + "\n" + item["status"] + "\n\n" + (item["turns"][-1]["content"] if item["turns"] else "")})
                     except (OSError, RuntimeError, ValueError):
-                        self._set_activity("Iteration sessions unavailable; ordinary sessions preserved.", YELLOW)
+                        self._set_activity(tr("Iteration sessions unavailable; ordinary sessions preserved."), YELLOW)
                 if not self._active_chat_session_id:
                     self._work_rows.insert(0, {"id": "memory", "workspace": self._workspace_root.name,
                                               "title": "Current conversation", "preview": "",
@@ -809,15 +809,15 @@ class SessionMixin:
     async def _legacy_chat_sessions_menu(self) -> None:
         owner = self._chat_session_owner
         if owner is None:
-            self._append("  Only recurring workspaces keep conversations; this run stays in memory.",
+            self._append("  " + tr("Only recurring workspaces keep conversations; this run stays in memory."),
                          MUTED)
             return
         if not self._sessions_enabled():
-            self._append("  Saving conversations is off · turn it on in Settings → Authority.", MUTED)
+            self._append("  " + tr("Saving conversations is off · turn it on in Settings → Authority."), MUTED)
             return
         outcome, sessions = await asyncio.to_thread(owner.list_conversations)
         if outcome.decision != "ALLOW":
-            self._append(f"  Conversations unavailable · {outcome.reason[:180]}", YELLOW)
+            self._append("  " + tr("Conversations unavailable · {value}", value=outcome.reason[:180]), YELLOW)
             return
         entries = [self._entry("Start a new conversation", "chat_session_new", "")]
         for session in sessions[:50]:
@@ -894,11 +894,11 @@ class SessionMixin:
                 self._show_chat_again()
                 self._show_iteration_state(state)
             except (OSError, RuntimeError, ValueError):
-                self._append("Iteration unavailable or denied.", YELLOW)
+                self._append(tr("Iteration unavailable or denied."), YELLOW)
             return
         owner = self._chat_session_owner
         if owner is None or not self._sessions_enabled():
-            self._append("  Saving conversations is off; nothing was resumed.", MUTED)
+            self._append("  " + tr("Saving conversations is off; nothing was resumed."), MUTED)
             return
         current_id = self._active_chat_session_id or self._foreground_key
         if session_id == current_id:
@@ -916,7 +916,7 @@ class SessionMixin:
         self._capture_running_session()
         outcome, session = await asyncio.to_thread(owner.resume, session_id)
         if outcome.decision != "ALLOW" or session is None:
-            self._append(f"  Conversation not resumed · {outcome.reason[:180]}", YELLOW)
+            self._append("  " + tr("Conversation not resumed · {value}", value=outcome.reason[:180]), YELLOW)
             return
         await self._load_session_into_lane(open_lane(self, session.session_id), session)
 
@@ -963,10 +963,10 @@ class SessionMixin:
                 self._active_role = {**selected, "kind": role["kind"]}
         self.query_one("#role-button", Button).label = self._role_button_label()
         self._agent_context = None
-        self.query_one("#context-button", Button).label = "Context"
+        self.query_one("#context-button", Button).label = tr("Context")
         if state.get("context_path"):
             await self._load_project_context()
-        self._append(f"  Conversation reopened · {session.title} · {len(session.messages)} messages", GREEN)
+        self._append("  " + tr("Conversation reopened · {title} · {len} messages", title=session.title, len=len(session.messages)), GREEN)
         await self._refresh_work_list()
 
     async def _delete_chat_session(self, session_id: str, *, allow_once: bool = False) -> None:
@@ -976,15 +976,15 @@ class SessionMixin:
         # Review without re-basing: an open, diverged continuity must stay diverged.
         outcome, session, reviewed = owner.review(session_id)
         if session is None:
-            self._append(f"  Conversation unavailable · {outcome.reason[:160]}", YELLOW)
+            self._append("  " + tr("Conversation unavailable · {value}", value=outcome.reason[:160]), YELLOW)
             return
         authority = WorkspaceAuthority(self._workspace_root)
         grant = authority.effective_policy().get("grants", {}).get("session.delete", {})
         if not allow_once and (not grant.get("enabled") or session_id not in grant.get("targets", [])):
-            self._append("  Enable Delete current conversation in Settings → Authority first.", YELLOW)
+            self._append("  " + tr("Enable Delete current conversation in Settings → Authority first."), YELLOW)
             return
         if not await self._await_screen(DeleteSessionScreen(session.title)):
-            self._append("  Conversation kept.", MUTED)
+            self._append("  " + tr("Conversation kept."), MUTED)
             return
         request = ActionRequest("session.delete", self._workspace_root, session_id,
                                 {"session_id": session_id, "title": session.title[:80]},
@@ -999,7 +999,7 @@ class SessionMixin:
         if not owner.is_diverged(session_id) and owner.base_revision(session_id):
             expected = owner.base_revision(session_id)
         result = delete_owner.delete(session_id, session.title, approval, expected_revision=expected)
-        self._append(f"  Conversation deletion · {result.decision} · {result.reason[:160]}", MUTED)
+        self._append("  " + tr("Conversation deletion · {decision} · {value}", decision=result.decision, value=result.reason[:160]), MUTED)
         if result.decision == "ALLOW":
             if self._active_chat_session_id == session_id:
                 lane = self._foreground_lane()
@@ -1021,7 +1021,7 @@ class SessionMixin:
                     if item.get("id") == "iteration:" + session_id), None)
         title = str((row or {}).get("title") or "Iteration")
         if not await self._await_screen(DeleteSessionScreen(title, kind="iteration")):
-            self._append("  Iteration kept.", MUTED)
+            self._append("  " + tr("Iteration kept."), MUTED)
             return
         authority = WorkspaceAuthority(self._workspace_root)
         grant = authority.effective_policy().get("grants", {}).get("session.delete", {})
@@ -1037,7 +1037,7 @@ class SessionMixin:
             self._workspace_root, authority, ledger, self._action_approvals)
         result = delete_owner.delete(session_id, shown, approval)
         reason = ledger.error or result.reason
-        self._append(f"  Iteration deletion · {result.decision} · {reason[:160]}",
+        self._append("  " + tr("Iteration deletion · {decision} · {value}", decision=result.decision, value=reason[:160]),
                      GREEN if result.decision == "ALLOW" else YELLOW)
         if result.decision == "ALLOW":
             self.run_worker(self._refresh_work_list(), group="work-list")
@@ -1059,7 +1059,7 @@ class SessionMixin:
             self._active_chat_session_id = session_id
         if outcome.decision != "ALLOW" and not self._session_save_warned:
             self._session_save_warned = True
-            self._append(f"  Conversation not saved · {outcome.reason[:160]}", YELLOW)
+            self._append("  " + tr("Conversation not saved · {value}", value=outcome.reason[:160]), YELLOW)
 
     async def _manage_sessions(self, argument: str) -> None:
         """Lifecycle UI through typed slash commands; no unowned filesystem export."""
@@ -1072,7 +1072,7 @@ class SessionMixin:
             return
         owner = self._chat_session_owner
         if owner is None or not self._sessions_enabled():
-            self._append("  Session management needs a recurring workspace and session permissions.", YELLOW)
+            self._append("  " + tr("Session management needs a recurring workspace and session permissions."), YELLOW)
             return
         sid = self._active_chat_session_id
         if operation == "resume":
@@ -1082,7 +1082,7 @@ class SessionMixin:
             if sid and owner.is_diverged(sid):
                 await self._resolve_session_divergence(sid)
             else:
-                self._append("  This conversation has not diverged; it saves normally.", MUTED)
+                self._append("  " + tr("This conversation has not diverged; it saves normally."), MUTED)
             return
         if operation == "search":
             outcome, sessions = owner.list_conversations()
@@ -1093,15 +1093,15 @@ class SessionMixin:
                     if all(term in haystack for term in terms):
                         self._append(f"  {session.session_id} · {session.title}", MUTED)
             else:
-                self._append(f"  Search unavailable · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Search unavailable · {value}", value=outcome.reason[:160]), YELLOW)
             return
         if operation == "export" and sid:
             outcome, serialized = owner.export(sid)
             if serialized is not None:
-                self._append("  Portable session JSON · common secret patterns redacted; review before sharing:", YELLOW)
+                self._append("  " + tr("Portable session JSON · common secret patterns redacted; review before sharing:"), YELLOW)
                 self._append(serialized, MUTED)
             else:
-                self._append(f"  Export denied · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Export denied · {value}", value=outcome.reason[:160]), YELLOW)
             return
         if operation == "delete" and sid:
             await self._delete_chat_session(sid)
@@ -1109,13 +1109,13 @@ class SessionMixin:
         if operation in {"rename", "fork", "import"} and (sid or operation == "import"):
             outcome, changed = owner.manage(operation, sid if operation != "import" else None, data)
             if changed and outcome.decision == "ALLOW":
-                self._append(f"  Session {operation} completed · {changed}", GREEN)
+                self._append("  " + tr("Session {operation} completed · {changed}", operation=operation, changed=changed), GREEN)
                 if operation in {"fork", "import"}:
                     await self._resume_chat_session(changed)
             else:
-                self._append(f"  Session unchanged · {outcome.reason[:180]}", YELLOW)
+                self._append("  " + tr("Session unchanged · {value}", value=outcome.reason[:180]), YELLOW)
             return
-        self._append("  /sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete|diverged", MUTED)
+        self._append("  " + tr("/sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete|diverged"), MUTED)
 
     def _session_is_diverged(self, session_id) -> bool:
         check = getattr(self._chat_session_owner, "is_diverged", None)
@@ -1127,8 +1127,7 @@ class SessionMixin:
         if lane is None or lane.divergence_prompted:
             return
         lane.divergence_prompted = True
-        self._append("  Session changed elsewhere · this window stopped saving to it; nothing was "
-                     "merged or overwritten.", YELLOW)
+        self._append("  " + tr("Session changed elsewhere · this window stopped saving to it; nothing was merged or overwritten."), YELLOW)
         self.run_worker(self._resolve_session_divergence(session_id), group="session-divergence")
 
     async def _resolve_session_divergence(self, session_id: str) -> None:
@@ -1152,19 +1151,17 @@ class SessionMixin:
                 if self._foreground_lane() is lane else None
             outcome, new_id = owner.save_continuity_as_new(session_id, messages, state, title)
             if outcome.decision != "ALLOW" or not new_id:
-                self._append(f"  Not saved as a new conversation · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Not saved as a new conversation · {value}", value=outcome.reason[:160]), YELLOW)
                 lane.divergence_prompted = False
                 return
             rekey_lane(self, lane, new_id)
             lane.divergence_prompted = False
-            self._append(f"  Saved this window's continuity as a new conversation · {new_id[:8]} · "
-                         "the other one stays as it was.", GREEN)
+            self._append("  " + tr("Saved this window's continuity as a new conversation · {value} · the other one stays as it was.", value=new_id[:8]), GREEN)
             await self._refresh_work_list()
             return
         if choice == "reload":
             if busy:
-                self._append("  A turn is still running here; stop it (Esc) before opening the saved "
-                             "version.", YELLOW)
+                self._append("  " + tr("A turn is still running here; stop it (Esc) before opening the saved version."), YELLOW)
                 lane.divergence_prompted = False
                 return
             if not await self._await_screen(TailscaleConfirmScreen(
@@ -1173,20 +1170,17 @@ class SessionMixin:
                     "conversation will be lost. The saved version opens exactly as it is.",
                     "Discard and open saved")):
                 lane.divergence_prompted = False
-                self._append("  Kept this window as it is · still not saving · /sessions diverged to "
-                             "choose again.", YELLOW)
+                self._append("  " + tr("Kept this window as it is · still not saving · /sessions diverged to choose again."), YELLOW)
                 owner.keep_unsaved(session_id)
                 return
             outcome, saved = owner.reload_saved(session_id)
             if outcome.decision != "ALLOW" or saved is None:
-                self._append(f"  Saved version not opened · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Saved version not opened · {value}", value=outcome.reason[:160]), YELLOW)
                 return
             await self._load_session_into_lane(lane, saved)
             return
         owner.keep_unsaved(session_id)
-        self._append("  Continuing without saving · this conversation is not written by this window "
-                     "until you choose · closing ISyCode discards what exists only here · "
-                     "/sessions diverged to choose again.", YELLOW)
+        self._append("  " + tr("Continuing without saving · this conversation is not written by this window until you choose · closing ISyCode discards what exists only here · /sessions diverged to choose again."), YELLOW)
 
     def _install_conversation_lanes(self) -> None:
         if getattr(self, "_lanes", None):
@@ -1320,17 +1314,20 @@ class SessionMixin:
         if not lane.lines and not lane.partial and not partial_reason and not lane.tool_history:
             self._mount_idle_board()
             return
-        for kind, text, extra in list(lane.lines):
+        for kind, text, extra, *role in list(lane.lines):
             if kind == "user":
                 if clock_label(extra):
                     chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
                 chat.mount(SelectableText(Text(text, style=TEXT), selection_text=text, classes="user-turn"))
             elif kind == "assistant":
+                role_name = role[0] if role else None
                 if clock_label(extra):
-                    chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
-                chat.mount(SelectableText(
+                    chat.mount(self._assistant_clock(clock_label(extra), role_name))
+                answer = SelectableText(
                     RichMarkdown(text or "", code_theme="monokai"), selection_text=text or "",
-                    classes="assistant-turn"))
+                    classes="assistant-turn")
+                self._paint_role_turn(answer, role_name)
+                chat.mount(answer)
             elif kind == "reasoning":
                 block = ThoughtBlock()
                 block.set_text(text)
@@ -1348,7 +1345,7 @@ class SessionMixin:
             )
             chat.mount(Collapsible(
                 Static(Text(history_text, style=MUTED)),
-                title=f"Earlier tools · {len(lane.tool_history)} · not run again",
+                title=tr("Earlier tools · {len} · not run again", len=len(lane.tool_history)),
                 collapsed=True,
                 classes="tool-history",
             ))
@@ -1364,6 +1361,7 @@ class SessionMixin:
             widget = SelectableText(
                 RichMarkdown(lane.partial, code_theme="monokai"), selection_text=lane.partial,
                 classes="assistant-turn")
+            self._paint_role_turn(widget, lane.stream_role)
             chat.mount(widget)
             lane.stream_widget = widget
         else:
@@ -1439,12 +1437,12 @@ class SessionMixin:
         self._append(heading, YELLOW)
         current = self._active_chat_session_id or self._foreground_key
         if not rows:
-            self._append("  No other conversation is open.", MUTED)
+            self._append("  " + tr("No other conversation is open."), MUTED)
             return
         for row in rows:
             mark = " · on screen" if row["id"] == current else ""
             self._append(f"  {row['title']} · {row['id']}{mark}", MUTED)
-        self._append("  /msg <name or id> <message>", MUTED)
+        self._append("  " + tr("/msg <name or id> <message>"), MUTED)
 
     def _adopt_saved_conversation(self, session):
         lane = open_lane(self, session.session_id)
@@ -1501,7 +1499,7 @@ class SessionMixin:
             if outcome is not None and outcome.decision != "ALLOW":
                 sessions = []
                 if not argument:
-                    self._append(f"  Conversations unavailable · {outcome.reason[:160]}", YELLOW)
+                    self._append("  " + tr("Conversations unavailable · {value}", value=outcome.reason[:160]), YELLOW)
         rows = self._session_message_rows(sessions)
         if not argument:
             self._list_message_targets(rows, "  Name the conversation, then the message.")
@@ -1518,15 +1516,15 @@ class SessionMixin:
         current = self._active_chat_session_id or self._foreground_key
         if row["id"] == current or row["id"] == self._foreground_key:
             self._restore_message_draft(raw)
-            self._append("  That conversation is on screen. Type the message here.", YELLOW)
+            self._append("  " + tr("That conversation is on screen. Type the message here."), YELLOW)
             return
         if not body:
             self._restore_message_draft(raw)
-            self._append("  Write the message after the name. /msg <name or id> <message>", YELLOW)
+            self._append("  " + tr("Write the message after the name. /msg <name or id> <message>"), YELLOW)
             return
         if len(body.encode("utf-8")) > MAX_MESSAGE_BYTES:
             self._restore_message_draft(raw)
-            self._append("  That message is too large.", YELLOW)
+            self._append("  " + tr("That message is too large."), YELLOW)
             return
         session = row.get("session")
         lane = self._lanes.get(row["id"])
@@ -1534,18 +1532,18 @@ class SessionMixin:
             lane = self._adopt_saved_conversation(session)
         if lane is None:
             self._restore_message_draft(raw)
-            self._append("  That conversation is not open.", YELLOW)
+            self._append("  " + tr("That conversation is not open."), YELLOW)
             return
         status = self._post_user_text(lane, body)
         title = row["title"]
         if status == "full":
             self._restore_message_draft(raw)
-            self._append(f"  {title} already has 8 messages waiting. Draft kept.", YELLOW)
+            self._append("  " + tr("{title} already has 8 messages waiting. Draft kept.", title=title), YELLOW)
             return
         if status == "queued":
-            self._append(f"  Queued for {title}. It answers after the current reply.", CYAN)
+            self._append("  " + tr("Queued for {title}. It answers after the current reply.", title=title), CYAN)
         else:
-            self._append(f"  Sent to {title}. It answers there as your message.", GREEN)
+            self._append("  " + tr("Sent to {title}. It answers there as your message.", title=title), GREEN)
         if getattr(self, "is_running", False):
             self.run_worker(self._refresh_work_list(), group="work-list")
 
@@ -1572,11 +1570,11 @@ class SessionMixin:
         if getattr(self, "is_running", False):
             self.run_worker(self._refresh_work_list(), group="work-list")
         if status == "started":
-            self._append(f"  [Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}.", CYAN)
+            self._append("  " + tr("[Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}.", agent_id=agent_id, lane_key=lane_key), CYAN)
         elif status == "queued":
-            self._append(f"  [Hive] Queued message for agent @{agent_id} behind its current turn.", YELLOW)
+            self._append("  " + tr("[Hive] Queued message for agent @{agent_id} behind its current turn.", agent_id=agent_id), YELLOW)
         elif status == "full":
-            self._append(f"  [Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox.", YELLOW)
+            self._append("  " + tr("[Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox.", agent_id=agent_id), YELLOW)
 
 
 for _attr, _field in LANE_FIELDS:

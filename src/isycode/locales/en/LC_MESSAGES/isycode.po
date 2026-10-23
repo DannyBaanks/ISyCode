@@ -3174,3 +3174,2897 @@ msgstr "Local work follows the selected workflow; sensitive actions still ask or
 
 msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
 msgstr "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
+
+# Role switch and Flow /run
+msgid "Shift+Tab role"
+msgstr "Shift+Tab role"
+
+# Role switch and Flow /run
+msgid "Role · none"
+msgstr "Role · none"
+
+# Role switch and Flow /run
+msgid "Flow could not prepare recovery. Nothing ran."
+msgstr "Flow could not prepare recovery. Nothing ran."
+
+# Sidebar sections
+msgid "Click or Space expand / collapse"
+msgstr "Click or Space expand / collapse"
+
+# UI text wrapped in tr() (i18n sweep)
+msgid "Tasks · {done}/{total} done ✓"
+msgstr "Tasks · {done}/{total} done ✓"
+
+msgid "now: {task}"
+msgstr "now: {task}"
+
+msgid "click or Ctrl+T to expand"
+msgstr "click or Ctrl+T to expand"
+
+msgid "Tasks · {done}/{total} done"
+msgstr "Tasks · {done}/{total} done"
+
+msgid "click or Ctrl+T to fold"
+msgstr "click or Ctrl+T to fold"
+
+msgid "Selected sibling folder: {selected_folder}"
+msgstr "Selected sibling folder: {selected_folder}"
+
+msgid "Folder: {root}"
+msgstr "Folder: {root}"
+
+msgid "Captured original output · SHA-256 {digest}"
+msgstr "Captured original output · SHA-256 {digest}"
+
+msgid "Use /rtk recall <64-character SHA-256>"
+msgstr "Use /rtk recall <64-character SHA-256>"
+
+msgid "Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\nOff by default. The approved command runs once, unchanged. RTK filters its captured output inside an empty, network-denied sandbox. Authority, Sentinel, approvals and file revocations still apply.\n\nOriginal output stays private and is linked by SHA-256 to the command receipt. Savings are byte/4 estimates, not provider billing or tokenizer measurements. A changed binary needs a new explicit opt-in."
+msgstr "Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\nOff by default. The approved command runs once, unchanged. RTK filters its captured output inside an empty, network-denied sandbox. Authority, Sentinel, approvals and file revocations still apply.\n\nOriginal output stays private and is linked by SHA-256 to the command receipt. Savings are byte/4 estimates, not provider billing or tokenizer measurements. A changed binary needs a new explicit opt-in."
+
+msgid "Unavailable · {value}"
+msgstr "Unavailable · {value}"
+
+msgid "{version}\n{path}\nSHA-256 {sha256}"
+msgstr "{version}\n{path}\nSHA-256 {sha256}"
+
+msgid "Not changed · {value}"
+msgstr "Not changed · {value}"
+
+msgid "Mode unknown · nothing is assumed granted"
+msgstr "Mode unknown · nothing is assumed granted"
+
+msgid "Mode · {mode}"
+msgstr "Mode · {mode}"
+
+msgid "Active permissions · {count}"
+msgstr "Active permissions · {count}"
+
+msgid "partial · some actions denied"
+msgstr "partial · some actions denied"
+
+msgid "Latest decisions"
+msgstr "Latest decisions"
+
+msgid "allow"
+msgstr "allow"
+
+msgid "deny"
+msgstr "deny"
+
+msgid "you approved"
+msgstr "you approved"
+
+msgid "by your setting"
+msgstr "by your setting"
+
+msgid "No decisions yet in this session"
+msgstr "No decisions yet in this session"
+
+msgid "Journal · {journal}"
+msgstr "Journal · {journal}"
+
+msgid "Classic · trusted folder"
+msgstr "Classic · trusted folder"
+
+msgid "Classic · asks before each change"
+msgstr "Classic · asks before each change"
+
+msgid "Security · everything off until granted"
+msgstr "Security · everything off until granted"
+
+msgid "{provider_hint}\nChoose another model or Cancel. Completed effects remain; retry may repeat work."
+msgstr "{provider_hint}\nChoose another model or Cancel. Completed effects remain; retry may repeat work."
+
+msgid "{get} · {len} models"
+msgstr "{get} · {len} models"
+
+msgid "Stopping external review…"
+msgstr "Stopping external review…"
+
+msgid "Stopping subagent…"
+msgstr "Stopping subagent…"
+
+msgid "Stopping response…"
+msgstr "Stopping response…"
+
+msgid "models.dev snapshot (offline; not verified against this account). reasoning={value} · context={value2} · tool_call={value3}"
+msgstr "models.dev snapshot (offline; not verified against this account). reasoning={value} · context={value2} · tool_call={value3}"
+
+msgid "yes"
+msgstr "yes"
+
+msgid "no"
+msgstr "no"
+
+msgid "NO — chat needs tools"
+msgstr "NO — chat needs tools"
+
+msgid "{container} · 127.0.0.1:{host_port} · recipe {value}"
+msgstr "{container} · 127.0.0.1:{host_port} · recipe {value}"
+
+msgid "{value} · Enter to review arguments and request a one-use approval"
+msgstr "{value} · Enter to review arguments and request a one-use approval"
+
+msgid "Interrupted"
+msgstr "Interrupted"
+
+msgid "Failed · {name}"
+msgstr "Failed · {name}"
+
+msgid "Plan ready · review it in Overview"
+msgstr "Plan ready · review it in Overview"
+
+msgid "{len} captured ideas · /ideas reviews and promotes"
+msgstr "{len} captured ideas · /ideas reviews and promotes"
+
+msgid "Folder unavailable · {value}"
+msgstr "Folder unavailable · {value}"
+
+msgid ".isycode/ is available only in a workspace with its own .isyroot marker."
+msgstr ".isycode/ is available only in a workspace with its own .isyroot marker."
+
+msgid "Workspace config unavailable · {value}"
+msgstr "Workspace config unavailable · {value}"
+
+msgid "Initialization stopped · {path} unchanged"
+msgstr "Initialization stopped · {path} unchanged"
+
+msgid "Workspace setup {decision} · {value}"
+msgstr "Workspace setup {decision} · {value}"
+
+msgid "{text} · receipt {receipt_id}"
+msgstr "{text} · receipt {receipt_id}"
+
+msgid "Start new folders in Classic?"
+msgstr "Start new folders in Classic?"
+
+msgid "Every folder you open for the first time will read files, propose edits you approve, chat with your provider and save conversations and keys without asking for each permission. IsySentinel and the action journal still check and record everything. Folders you already use keep their mode."
+msgstr "Every folder you open for the first time will read files, propose edits you approve, chat with your provider and save conversations and keys without asking for each permission. IsySentinel and the action journal still check and record everything. Folders you already use keep their mode."
+
+msgid "Use Classic for new folders"
+msgstr "Use Classic for new folders"
+
+msgid "Default mode saved for new workspaces"
+msgstr "Default mode saved for new workspaces"
+
+msgid "Could not save the default mode; existing settings remain"
+msgstr "Could not save the default mode; existing settings remain"
+
+msgid "Default saved for new workspaces"
+msgstr "Default saved for new workspaces"
+
+msgid "Could not save your global default; existing settings remain"
+msgstr "Could not save your global default; existing settings remain"
+
+msgid "Allow pasting from the clipboard?"
+msgstr "Allow pasting from the clipboard?"
+
+msgid "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes."
+msgstr "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes."
+
+msgid "Allow paste"
+msgstr "Allow paste"
+
+msgid "Image attached · Ctrl+P reviews attachments"
+msgstr "Image attached · Ctrl+P reviews attachments"
+
+msgid "Clipboard content could not be attached"
+msgstr "Clipboard content could not be attached"
+
+msgid "Focus a message or a preview, then press Copy."
+msgstr "Focus a message or a preview, then press Copy."
+
+msgid "Allow copying in this workspace?"
+msgstr "Allow copying in this workspace?"
+
+msgid "Copies text or paths you select to the OS clipboard. Other applications may read it. The model receives no clipboard tool; copied contents are not written to the journal."
+msgstr "Copies text or paths you select to the OS clipboard. Other applications may read it. The model receives no clipboard tool; copied contents are not written to the journal."
+
+msgid "Allow copy"
+msgstr "Allow copy"
+
+msgid "API keys are never copied."
+msgstr "API keys are never copied."
+
+msgid "Copy failed · Workspace Authority is unavailable."
+msgstr "Copy failed · Workspace Authority is unavailable."
+
+msgid "Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52."
+msgstr "Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52."
+
+msgid "Copied {len} characters to the {where}."
+msgstr "Copied {len} characters to the {where}."
+
+msgid "Copying is off for this workspace · turn on “Copy selected text” in Settings → Authority."
+msgstr "Copying is off for this workspace · turn on “Copy selected text” in Settings → Authority."
+
+msgid "Nothing copied · {value}"
+msgstr "Nothing copied · {value}"
+
+msgid "Draft saved up to 16,000 characters; full text remains in the composer"
+msgstr "Draft saved up to 16,000 characters; full text remains in the composer"
+
+msgid "Draft not saved · {value}"
+msgstr "Draft not saved · {value}"
+
+msgid "Draft not saved · private state unavailable"
+msgstr "Draft not saved · private state unavailable"
+
+msgid "Pending messages cleared"
+msgstr "Pending messages cleared"
+
+msgid "Steer attempt pending; draft kept"
+msgstr "Steer attempt pending; draft kept"
+
+msgid "Steering queue is full; this draft is kept."
+msgstr "Steering queue is full; this draft is kept."
+
+msgid "Steering queued · current tool effects remain; pending calls will be skipped."
+msgstr "Steering queued · current tool effects remain; pending calls will be skipped."
+
+msgid "Message queue is full; draft kept"
+msgstr "Message queue is full; draft kept"
+
+msgid "Queued · {len} pending · {fit_cells} · /queue reviews"
+msgstr "Queued · {len} pending · {fit_cells} · /queue reviews"
+
+msgid "Still working. Your message remains in the composer; send it again when ready."
+msgstr "Still working. Your message remains in the composer; send it again when ready."
+
+msgid "Context loaded · {relative_path} · owned read; no permissions changed."
+msgstr "Context loaded · {relative_path} · owned read; no permissions changed."
+
+msgid "Context not loaded · {value}"
+msgstr "Context not loaded · {value}"
+
+msgid "Review cancelled · no automatic retry; inspect before requesting again"
+msgstr "Review cancelled · no automatic retry; inspect before requesting again"
+
+msgid "Review copied to composer · edit it, then press Enter to send"
+msgstr "Review copied to composer · edit it, then press Enter to send"
+
+msgid "Staying in {get} mode."
+msgstr "Staying in {get} mode."
+
+msgid "Mode could not be changed ({name}); nothing was switched."
+msgstr "Mode could not be changed ({name}); nothing was switched."
+
+msgid "{count} pending approvals invalidated."
+msgstr "{count} pending approvals invalidated."
+
+msgid "1 pending approval invalidated."
+msgstr "1 pending approval invalidated."
+
+msgid "Coordinate with other agents · Bridge"
+msgstr "Coordinate with other agents · Bridge"
+
+msgid "Registers this window as a peer so it can read its own messages, send a message to another registered agent and wake an idle one. Every message shows the exact recipient and text and asks you first. A Bridge lease marks who is working on what; it never grants access to files, commands or the network."
+msgstr "Registers this window as a peer so it can read its own messages, send a message to another registered agent and wake an idle one. Every message shows the exact recipient and text and asks you first. A Bridge lease marks who is working on what; it never grants access to files, commands or the network."
+
+msgid "Selected provider is unknown; no network grant was changed."
+msgstr "Selected provider is unknown; no network grant was changed."
+
+msgid "Provider endpoint is invalid; no network grant was changed."
+msgstr "Provider endpoint is invalid; no network grant was changed."
+
+msgid "Provider network {value} for {host}. Credential and tool permissions remain separate."
+msgstr "Provider network {value} for {host}. Credential and tool permissions remain separate."
+
+msgid "granted"
+msgstr "granted"
+
+msgid "revoked"
+msgstr "revoked"
+
+msgid "Provider network policy could not be saved; requests remain denied."
+msgstr "Provider network policy could not be saved; requests remain denied."
+
+msgid "Invalid network grant request; no permission changed."
+msgstr "Invalid network grant request; no permission changed."
+
+msgid "{value} {label} access for {host}."
+msgstr "{value} {label} access for {host}."
+
+msgid "Granted"
+msgstr "Granted"
+
+msgid "Revoked"
+msgstr "Revoked"
+
+msgid "Network grant could not be saved; access remains denied."
+msgstr "Network grant could not be saved; access remains denied."
+
+msgid "Session permission could not be saved ({name})."
+msgstr "Session permission could not be saved ({name})."
+
+msgid "Open a saved conversation before granting its deletion."
+msgstr "Open a saved conversation before granting its deletion."
+
+msgid "This permission applies only to conversation {value} in this workspace. Every deletion still requires reviewing the exact conversation and confirming it."
+msgstr "This permission applies only to conversation {value} in this workspace. Every deletion still requires reviewing the exact conversation and confirming it."
+
+msgid "previously selected"
+msgstr "previously selected"
+
+msgid "Turn on reading workspace files first; editing builds on it."
+msgstr "Turn on reading workspace files first; editing builds on it."
+
+msgid "Edit permission could not be saved ({name})."
+msgstr "Edit permission could not be saved ({name})."
+
+msgid "Local code help is not ready yet; nothing changed."
+msgstr "Local code help is not ready yet; nothing changed."
+
+msgid "Python checks after edits {value}."
+msgstr "Python checks after edits {value}."
+
+msgid "allowed"
+msgstr "allowed"
+
+msgid "turned off"
+msgstr "turned off"
+
+msgid "Check permission could not be saved ({name})."
+msgstr "Check permission could not be saved ({name})."
+
+msgid "Git {value} {value2} for this workspace."
+msgstr "Git {value} {value2} for this workspace."
+
+msgid "commits"
+msgstr "commits"
+
+msgid "status and diffs"
+msgstr "status and diffs"
+
+msgid "Git permission could not be saved ({name})."
+msgstr "Git permission could not be saved ({name})."
+
+msgid "Clipboard permission could not be saved ({name})."
+msgstr "Clipboard permission could not be saved ({name})."
+
+msgid "The command sandbox is not available here; commands stay off."
+msgstr "The command sandbox is not available here; commands stay off."
+
+msgid "Command permission could not be saved ({name})."
+msgstr "Command permission could not be saved ({name})."
+
+msgid "Bridge permission could not be saved ({name})."
+msgstr "Bridge permission could not be saved ({name})."
+
+msgid "Unknown permission; nothing changed."
+msgstr "Unknown permission; nothing changed."
+
+msgid "Remove saved permission"
+msgstr "Remove saved permission"
+
+msgid "Remove permission"
+msgstr "Remove permission"
+
+msgid "Remove the saved permission for {group} · {label} (`{action_id}`) in this workspace, including its saved scope?"
+msgstr "Remove the saved permission for {group} · {label} (`{action_id}`) in this workspace, including its saved scope?"
+
+msgid "Saved permission removed · {action_id}."
+msgstr "Saved permission removed · {action_id}."
+
+msgid "Saved permission could not be removed."
+msgstr "Saved permission could not be removed."
+
+msgid "Gateway URL is invalid; no MCP grant was changed."
+msgstr "Gateway URL is invalid; no MCP grant was changed."
+
+msgid "Gateway MCP invocation {value} for this workspace. Each tool call still needs an explicit one-use approval."
+msgstr "Gateway MCP invocation {value} for this workspace. Each tool call still needs an explicit one-use approval."
+
+msgid "MCP invocation grant could not be saved; calls remain denied."
+msgstr "MCP invocation grant could not be saved; calls remain denied."
+
+msgid "This folder is too broad for the quiet Classic profile. Each edit and command still asks."
+msgstr "This folder is too broad for the quiet Classic profile. Each edit and command still asks."
+
+msgid "LSP sandbox changed or is unavailable; no process grant was changed."
+msgstr "LSP sandbox changed or is unavailable; no process grant was changed."
+
+msgid "Sandboxed LSP process {value} for this workspace."
+msgstr "Sandboxed LSP process {value} for this workspace."
+
+msgid "LSP process grant could not be saved; the server remains denied."
+msgstr "LSP process grant could not be saved; the server remains denied."
+
+msgid "Turn on all coding tools?"
+msgstr "Turn on all coding tools?"
+
+msgid "Turn on coding tools"
+msgstr "Turn on coding tools"
+
+msgid "Coding tools on · {len} permissions saved; changes, commands and commits follow their approval settings."
+msgstr "Coding tools on · {len} permissions saved; changes, commands and commits follow their approval settings."
+
+msgid "Coding tools could not be saved ({name})."
+msgstr "Coding tools could not be saved ({name})."
+
+msgid "Trust this folder?"
+msgstr "Trust this folder?"
+
+msgid "Trust this folder"
+msgstr "Trust this folder"
+
+msgid "Workspace grant could not be saved ({name})."
+msgstr "Workspace grant could not be saved ({name})."
+
+msgid "Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."
+msgstr "Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."
+
+msgid "Time: {strftime}\nRequest: {value}… · Authority: {authority}\nSystembilities: {checks}\nFailed checks: {value2}\nReceipt binds a request digest and result digest, but the request/result payload is not retained. Target and successful Systembility details are not persisted; no secret or prompt is shown."
+msgstr "Time: {strftime}\nRequest: {value}… · Authority: {authority}\nSystembilities: {checks}\nFailed checks: {value2}\nReceipt binds a request digest and result digest, but the request/result payload is not retained. Target and successful Systembility details are not persisted; no secret or prompt is shown."
+
+msgid "Quiet Classic stays off. Each edit and command still asks."
+msgstr "Quiet Classic stays off. Each edit and command still asks."
+
+msgid "Trust was not saved. Each edit and command still asks."
+msgstr "Trust was not saved. Each edit and command still asks."
+
+msgid "Response stopped. This partial answer was not added to chat history."
+msgstr "Response stopped. This partial answer was not added to chat history."
+
+msgid "Response stopped; no partial answer was received."
+msgstr "Response stopped; no partial answer was received."
+
+msgid "Stream interrupted ({transport_reason}). Use /resume to continue without repeating completed tools."
+msgstr "Stream interrupted ({transport_reason}). Use /resume to continue without repeating completed tools."
+
+msgid "The stream failed before an answer ({transport_reason}). Use /resume to retry."
+msgstr "The stream failed before an answer ({transport_reason}). Use /resume to retry."
+
+msgid "Stream interrupted · use /resume"
+msgstr "Stream interrupted · use /resume"
+
+msgid "Compacting · summarizing {len} earlier messages to free up context"
+msgstr "Compacting · summarizing {len} earlier messages to free up context"
+
+msgid "(the provider ended the response during reasoning; its endpoint may have reached its own output or context limit)"
+msgstr "(the provider ended the response during reasoning; its endpoint may have reached its own output or context limit)"
+
+msgid "Unapplied steering kept in the composer for review."
+msgstr "Unapplied steering kept in the composer for review."
+
+msgid "The model provider rejected turn continuation ({text}). Use /retry to submit the prompt again."
+msgstr "The model provider rejected turn continuation ({text}). Use /retry to submit the prompt again."
+
+msgid "Turn continuation rejected by provider"
+msgstr "Turn continuation rejected by provider"
+
+msgid "A response is already running"
+msgstr "A response is already running"
+
+msgid "No interrupted turn to resume."
+msgstr "No interrupted turn to resume."
+
+msgid "No interrupted turn to resume"
+msgstr "No interrupted turn to resume"
+
+msgid "No interrupted prompt to retry."
+msgstr "No interrupted prompt to retry."
+
+msgid "Your current draft is kept. Clear it before using /retry."
+msgstr "Your current draft is kept. Clear it before using /retry."
+
+msgid "Retry draft ready · review previous effects, then press Enter to send."
+msgstr "Retry draft ready · review previous effects, then press Enter to send."
+
+msgid "Compaction skipped · {value}; earlier messages are left out of this request"
+msgstr "Compaction skipped · {value}; earlier messages are left out of this request"
+
+msgid "no summary returned"
+msgstr "no summary returned"
+
+msgid "Compacted · earlier messages summarized; the saved conversation keeps the full transcript"
+msgstr "Compacted · earlier messages summarized; the saved conversation keeps the full transcript"
+
+msgid "Still working · finish or cancel the current reply first."
+msgstr "Still working · finish or cancel the current reply first."
+
+msgid "Nothing to compact yet."
+msgstr "Nothing to compact yet."
+
+msgid "Context capsule · {len} earlier messages and old tool results condensed to fit {resolved_chat_model}; the saved conversation keeps everything"
+msgstr "Context capsule · {len} earlier messages and old tool results condensed to fit {resolved_chat_model}; the saved conversation keeps everything"
+
+msgid "/{name} found in {workspace_commands_dir} but it could not be read · {value}"
+msgstr "/{name} found in {workspace_commands_dir} but it could not be read · {value}"
+
+msgid "/{name} · {source} prompt · {description}"
+msgstr "/{name} · {source} prompt · {description}"
+
+msgid "Attached @{path} · receipt {receipt_id}"
+msgstr "Attached @{path} · receipt {receipt_id}"
+
+msgid "@{path} not attached · {value}"
+msgstr "@{path} not attached · {value}"
+
+msgid "Tool batch · {len} proposed writes · one review for all"
+msgstr "Tool batch · {len} proposed writes · one review for all"
+
+msgid "✓ Batch approved · {len} one-use approvals, one per file"
+msgstr "✓ Batch approved · {len} one-use approvals, one per file"
+
+msgid "✗ Batch rejected · {len} files unchanged"
+msgstr "✗ Batch rejected · {len} files unchanged"
+
+msgid "Resuming interrupted turn…"
+msgstr "Resuming interrupted turn…"
+
+msgid "Picture not sent · this model does not take images. The question goes as text."
+msgstr "Picture not sent · this model does not take images. The question goes as text."
+
+msgid "Trying steering · original turn retained until response."
+msgstr "Trying steering · original turn retained until response."
+
+msgid "Picture not accepted · sending the question as text."
+msgstr "Picture not accepted · sending the question as text."
+
+msgid "Context capsule · the request was larger than the model window; {removed} earlier messages or tool results condensed and sent again · no tool effects repeated"
+msgstr "Context capsule · the request was larger than the model window; {removed} earlier messages or tool results condensed and sent again · no tool effects repeated"
+
+msgid "↻ {recovery_label} · retrying in {delay_s}s ({attempt}/{max_attempts})"
+msgstr "↻ {recovery_label} · retrying in {delay_s}s ({attempt}/{max_attempts})"
+
+msgid "⚠ Recovery stopped after {count} automatic attempts · {reason} · no tool effects were repeated."
+msgstr "⚠ Recovery stopped after {count} automatic attempts · {reason} · no tool effects were repeated."
+
+msgid "⚠ Recovery stopped after 1 automatic attempt · {reason} · no tool effects were repeated."
+msgstr "⚠ Recovery stopped after 1 automatic attempt · {reason} · no tool effects were repeated."
+
+msgid "Provider stream interrupted for steering; partial output is retained on screen."
+msgstr "Provider stream interrupted for steering; partial output is retained on screen."
+
+msgid "✓ Response recovered after {count} automatic retries · no tool effects repeated"
+msgstr "✓ Response recovered after {count} automatic retries · no tool effects repeated"
+
+msgid "✓ Response recovered after 1 automatic retry · no tool effects repeated"
+msgstr "✓ Response recovered after 1 automatic retry · no tool effects repeated"
+
+msgid "Response recovered"
+msgstr "Response recovered"
+
+msgid "Steering accepted · continuing the turn."
+msgstr "Steering accepted · continuing the turn."
+
+msgid "Tool result reused · {name_str} · already executed"
+msgstr "Tool result reused · {name_str} · already executed"
+
+msgid "Tool denied · decision preserved from interrupted turn"
+msgstr "Tool denied · decision preserved from interrupted turn"
+
+msgid "Tool denied · no explicit workspace read grant"
+msgstr "Tool denied · no explicit workspace read grant"
+
+msgid "Tool note not retained: malformed tool metadata."
+msgstr "Tool note not retained: malformed tool metadata."
+
+msgid "/models · unknown provider · opening the current one"
+msgstr "/models · unknown provider · opening the current one"
+
+msgid "Selected skills cleared."
+msgstr "Selected skills cleared."
+
+msgid "Bundled skills: {join}"
+msgstr "Bundled skills: {join}"
+
+msgid "/skills use <name> toggles guidance; /skills clear disables it."
+msgstr "/skills use <name> toggles guidance; /skills clear disables it."
+
+msgid "MCP {value} {value2}."
+msgstr "MCP {value} {value2}."
+
+msgid "stopped"
+msgstr "stopped"
+
+msgid "was not running"
+msgstr "was not running"
+
+msgid "/run · {exc}"
+msgstr "/run · {exc}"
+
+msgid "Usage: /run <program> [arguments] · no shell, pipes or redirects"
+msgstr "Usage: /run <program> [arguments] · no shell, pipes or redirects"
+
+msgid "Your commands (~/.config/isycode/commands):"
+msgstr "Your commands (~/.config/isycode/commands):"
+
+msgid "Workspace commands live in {workspace_commands_dir}/<name>.md; @path attaches a workspace file to your message."
+msgstr "Workspace commands live in {workspace_commands_dir}/<name>.md; @path attaches a workspace file to your message."
+
+msgid "New here? /help tour shows the lay of the land."
+msgstr "New here? /help tour shows the lay of the land."
+
+msgid "README picker blocked · desktop.file_picker has no registered action owner"
+msgstr "README picker blocked · desktop.file_picker has no registered action owner"
+
+msgid "Workspace · {workspace_root}"
+msgstr "Workspace · {workspace_root}"
+
+msgid "Model · {model_display_label}"
+msgstr "Model · {model_display_label}"
+
+msgid "Anything else is plain chat with the configured model."
+msgstr "Anything else is plain chat with the configured model."
+
+msgid "Usage: /review <text to send to GPT-6 Luna>"
+msgstr "Usage: /review <text to send to GPT-6 Luna>"
+
+msgid "Review text is limited to 8,000 characters. Narrow it and try again."
+msgstr "Review text is limited to 8,000 characters. Narrow it and try again."
+
+msgid "This TUI session already used its one external review request."
+msgstr "This TUI session already used its one external review request."
+
+msgid "OpenAI API review is not configured. Add OPENAI_API_KEY through Providers first."
+msgstr "OpenAI API review is not configured. Add OPENAI_API_KEY through Providers first."
+
+msgid "OpenAI API review needs OPENAI_API_KEY. No text was sent."
+msgstr "OpenAI API review needs OPENAI_API_KEY. No text was sent."
+
+msgid "Roundtrip is not available with the configured HTTP(S) proxy. No review text was sent; the proxy will not be bypassed."
+msgstr "Roundtrip is not available with the configured HTTP(S) proxy. No review text was sent; the proxy will not be bypassed."
+
+msgid "External review cancelled; no text was sent."
+msgstr "External review cancelled; no text was sent."
+
+msgid "Sending one explicit review request to OpenAI API"
+msgstr "Sending one explicit review request to OpenAI API"
+
+msgid "OpenAI review {decision} · {value}; no review was added."
+msgstr "OpenAI review {decision} · {value}; no review was added."
+
+msgid "no verifiable response"
+msgstr "no verifiable response"
+
+msgid "External review cancelled in flight. No retry was made, and partial output was discarded."
+msgstr "External review cancelled in flight. No retry was made, and partial output was discarded."
+
+msgid "External review failed or timed out. No retry was made."
+msgstr "External review failed or timed out. No retry was made."
+
+msgid "External review failed ({name}); no retry was made."
+msgstr "External review failed ({name}); no retry was made."
+
+msgid "External reviewer returned no text; nothing was added to the conversation."
+msgstr "External reviewer returned no text; nothing was added to the conversation."
+
+msgid "The reviewer has no tools. Its feedback is not authority."
+msgstr "The reviewer has no tools. Its feedback is not authority."
+
+msgid "Keys · credential status"
+msgstr "Keys · credential status"
+
+msgid "Use /providers to choose a provider. Secret values are never displayed."
+msgstr "Use /providers to choose a provider. Secret values are never displayed."
+
+msgid "Provider-reported usage only; ISyCode does not cap tokens or estimate billing."
+msgstr "Provider-reported usage only; ISyCode does not cap tokens or estimate billing."
+
+msgid "Project context removed."
+msgstr "Project context removed."
+
+msgid "Usage: /plan <intent>"
+msgstr "Usage: /plan <intent>"
+
+msgid "Folder removed · {value} · {value2}"
+msgstr "Folder removed · {value} · {value2}"
+
+msgid "revoked {count} permission(s) ISyCode had given it"
+msgstr "revoked {count} permission(s) ISyCode had given it"
+
+msgid "its own permissions were left as they were"
+msgstr "its own permissions were left as they were"
+
+msgid "Folder not removed · {value}"
+msgstr "Folder not removed · {value}"
+
+msgid "Usage: /commit <message> · commits every changed file after review"
+msgstr "Usage: /commit <message> · commits every changed file after review"
+
+msgid "Choose a role first; no default was changed."
+msgstr "Choose a role first; no default was changed."
+
+msgid "Subagent · {model_display_label} · {status}"
+msgstr "Subagent · {model_display_label} · {status}"
+
+msgid "Default role saved for all workspaces"
+msgstr "Default role saved for all workspaces"
+
+msgid "Could not save the default role"
+msgstr "Could not save the default role"
+
+msgid "Global default role cleared"
+msgstr "Global default role cleared"
+
+msgid "Could not clear the default role"
+msgstr "Could not clear the default role"
+
+msgid "Bridge is blocked in Secure · no execution owner is connected"
+msgstr "Bridge is blocked in Secure · no execution owner is connected"
+
+msgid "Role selected · {value} · {engine}"
+msgstr "Role selected · {value} · {engine}"
+
+msgid "ISyCode role loaded · {value}; role guidance does not grant permissions"
+msgstr "ISyCode role loaded · {value}; role guidance does not grant permissions"
+
+msgid "{value} role motor loaded into the ISyCode role context."
+msgstr "{value} role motor loaded into the ISyCode role context."
+
+msgid "Workflow: {get}"
+msgstr "Workflow: {get}"
+
+msgid "Scope: {join}"
+msgstr "Scope: {join}"
+
+msgid "Guardrail: {rule}"
+msgstr "Guardrail: {rule}"
+
+msgid "Verdicts: {join}"
+msgstr "Verdicts: {join}"
+
+msgid "CLI operations:"
+msgstr "CLI operations:"
+
+msgid "The workflow is loaded; no CLI operation has run from this chat."
+msgstr "The workflow is loaded; no CLI operation has run from this chat."
+
+msgid "{name} · {service} · {state}. API key value remains hidden."
+msgstr "{name} · {service} · {state}. API key value remains hidden."
+
+msgid "Role guidance cleared"
+msgstr "Role guidance cleared"
+
+msgid "Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security."
+msgstr "Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security."
+
+msgid "Checking Gateway MCP authorization…"
+msgstr "Checking Gateway MCP authorization…"
+
+msgid "Loading · starting the native Gateway MCP tool catalog…"
+msgstr "Loading · starting the native Gateway MCP tool catalog…"
+
+msgid "Provider response received · receipt {receipt_id} · this checks chat connectivity, not tool compatibility."
+msgstr "Provider response received · receipt {receipt_id} · this checks chat connectivity, not tool compatibility."
+
+msgid "Provider not verified · {decision} · {value}"
+msgstr "Provider not verified · {decision} · {value}"
+
+msgid "Connection check unavailable ({name})."
+msgstr "Connection check unavailable ({name})."
+
+msgid "Allow Grok sign-in chat?"
+msgstr "Allow Grok sign-in chat?"
+
+msgid "ISyCode may send this workspace's chat to cli-chat-proxy.grok.com using the grok sign-in on this machine. The token stays in the grok CLI. File permissions stay separate."
+msgstr "ISyCode may send this workspace's chat to cli-chat-proxy.grok.com using the grok sign-in on this machine. The token stays in the grok CLI. File permissions stay separate."
+
+msgid "Allow"
+msgstr "Allow"
+
+msgid "No live Grok sign-in. Use device code or browser first."
+msgstr "No live Grok sign-in. Use device code or browser first."
+
+msgid "Grok sign-in not selected."
+msgstr "Grok sign-in not selected."
+
+msgid "Grok CLI not found. Install the official grok CLI first."
+msgstr "Grok CLI not found. Install the official grok CLI first."
+
+msgid "Sign in to Grok for ISyCode?"
+msgstr "Sign in to Grok for ISyCode?"
+
+msgid "Runs the official grok login. The sign-in stays in the grok CLI. After it finishes, ISyCode can send chat with that sign-in. The token is not copied into this project or the chat."
+msgstr "Runs the official grok login. The sign-in stays in the grok CLI. After it finishes, ISyCode can send chat with that sign-in. The token is not copied into this project or the chat."
+
+msgid "Sign in"
+msgstr "Sign in"
+
+msgid "Starting grok login."
+msgstr "Starting grok login."
+
+msgid "Grok login did not start ({name})."
+msgstr "Grok login did not start ({name})."
+
+msgid "Grok login did not start. The API key path is unchanged."
+msgstr "Grok login did not start. The API key path is unchanged."
+
+msgid "Grok sign-in did not finish. The API key path is unchanged."
+msgstr "Grok sign-in did not finish. The API key path is unchanged."
+
+msgid "Grok sign-in not verifiable · {value}"
+msgstr "Grok sign-in not verifiable · {value}"
+
+msgid "Grok sign-in blocked · {value}"
+msgstr "Grok sign-in blocked · {value}"
+
+msgid "Signed in with grok, but ISyCode was not allowed to use it."
+msgstr "Signed in with grok, but ISyCode was not allowed to use it."
+
+msgid "Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes."
+msgstr "Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes."
+
+msgid "ChatGPT sign-in blocked · {value}"
+msgstr "ChatGPT sign-in blocked · {value}"
+
+msgid "ChatGPT account disconnected. API keys are unchanged."
+msgstr "ChatGPT account disconnected. API keys are unchanged."
+
+msgid "ChatGPT sign-in cancelled."
+msgstr "ChatGPT sign-in cancelled."
+
+msgid "ChatGPT sign-in verified · plan {plan} · subscription limits apply"
+msgstr "ChatGPT sign-in verified · plan {plan} · subscription limits apply"
+
+msgid "ChatGPT sign-in not completed · {value}"
+msgstr "ChatGPT sign-in not completed · {value}"
+
+msgid "ChatGPT connection unavailable ({name}). Install official Codex CLI, unlock the OS keyring and check Authority grants."
+msgstr "ChatGPT connection unavailable ({name}). Install official Codex CLI, unlock the OS keyring and check Authority grants."
+
+msgid "This model does not expose adjustable reasoning levels"
+msgstr "This model does not expose adjustable reasoning levels"
+
+msgid "Reasoning · {capitalize}{value}"
+msgstr "Reasoning · {capitalize}{value}"
+
+msgid "· next request"
+msgstr "· next request"
+
+msgid "Featured model, found in this account's {label} catalog."
+msgstr "Featured model, found in this account's {label} catalog."
+
+msgid "★ {label} · not in this account's catalog"
+msgstr "★ {label} · not in this account's catalog"
+
+msgid "{label} did not list a model matching {label2}; it may not be offered here yet."
+msgstr "{label} did not list a model matching {label2}; it may not be offered here yet."
+
+msgid "{name} configuration unavailable"
+msgstr "{name} configuration unavailable"
+
+msgid "Provider is selected for this run; private preference could not be saved."
+msgstr "Provider is selected for this run; private preference could not be saved."
+
+msgid "This provider is configured for ISyCode chat; the optional IsyMotron planner keeps its own provider until its adapter supports it."
+msgstr "This provider is configured for ISyCode chat; the optional IsyMotron planner keeps its own provider until its adapter supports it."
+
+msgid "Selected for this session · {model_display_label}"
+msgstr "Selected for this session · {model_display_label}"
+
+msgid "Allow managing {label} API keys?"
+msgstr "Allow managing {label} API keys?"
+
+msgid "ISyCode may save, use and remove {label} API keys in your operating-system keyring. Keys are stored for your user (every workspace), never in the project, the action journal or chat history. Each use is recorded in this workspace's journal; each save and each removal still asks you first."
+msgstr "ISyCode may save, use and remove {label} API keys in your operating-system keyring. Keys are stored for your user (every workspace), never in the project, the action journal or chat history. Each use is recorded in this workspace's journal; each save and each removal still asks you first."
+
+msgid "No secure OS keyring is available here; nothing was saved. Set {env} in your environment instead."
+msgstr "No secure OS keyring is available here; nothing was saved. Set {env} in your environment instead."
+
+msgid "API key not saved; permission was not granted."
+msgstr "API key not saved; permission was not granted."
+
+msgid "API key not saved ({name})."
+msgstr "API key not saved ({name})."
+
+msgid "Save the {label} API key?"
+msgstr "Save the {label} API key?"
+
+msgid "The key you pasted will be saved in your OS keyring for {label}. The newest saved key for a service is the one ISyCode uses."
+msgstr "The key you pasted will be saved in your OS keyring for {label}. The newest saved key for a service is the one ISyCode uses."
+
+msgid "API key not saved; the pasted value was discarded."
+msgstr "API key not saved; the pasted value was discarded."
+
+msgid "API key not saved · {value}"
+msgstr "API key not saved · {value}"
+
+msgid "{label} API key saved · receipt {receipt_id}"
+msgstr "{label} API key saved · receipt {receipt_id}"
+
+msgid "Permission not changed ({name})."
+msgstr "Permission not changed ({name})."
+
+msgid "API key not removed; permission was not granted."
+msgstr "API key not removed; permission was not granted."
+
+msgid "API key cannot be removed ({name})."
+msgstr "API key cannot be removed ({name})."
+
+msgid "The key is deleted from your OS keyring. ISyCode then uses an older saved key or an environment variable for this service, if any."
+msgstr "The key is deleted from your OS keyring. ISyCode then uses an older saved key or an environment variable for this service, if any."
+
+msgid "Remove key"
+msgstr "Remove key"
+
+msgid "Remove this {label} API key?"
+msgstr "Remove this {label} API key?"
+
+msgid "API key kept."
+msgstr "API key kept."
+
+msgid "Model: {model_line}"
+msgstr "Model: {model_line}"
+
+msgid "Model: {e}"
+msgstr "Model: {e}"
+
+msgid "Model: configuration error ({name})."
+msgstr "Model: configuration error ({name})."
+
+msgid "Sound preference could not be saved"
+msgstr "Sound preference could not be saved"
+
+msgid "High contrast preference could not be saved"
+msgstr "High contrast preference could not be saved"
+
+msgid "ASCII-only preference could not be saved"
+msgstr "ASCII-only preference could not be saved"
+
+msgid "Compact text scroll preference could not be saved"
+msgstr "Compact text scroll preference could not be saved"
+
+msgid "Sidebar file preview preference could not be saved"
+msgstr "Sidebar file preview preference could not be saved"
+
+msgid "Sidebar width · {width} columns"
+msgstr "Sidebar width · {width} columns"
+
+msgid "Language servers were not installed · commands are under LSPs"
+msgstr "Language servers were not installed · commands are under LSPs"
+
+msgid "{name} · {state}\nWorkflow guidance only. /skills clear removes selected guidance."
+msgstr "{name} · {state}\nWorkflow guidance only. /skills clear removes selected guidance."
+
+msgid "{name} · {origin}\n{description}\nDiscovery only. This does not activate the skill."
+msgstr "{name} · {origin}\n{description}\nDiscovery only. This does not activate the skill."
+
+msgid "Alive · {scheme}://{address}:{port} · {transport}"
+msgstr "Alive · {scheme}://{address}:{port} · {transport}"
+
+msgid "startup failed"
+msgstr "startup failed"
+
+msgid "Stopped"
+msgstr "Stopped"
+
+msgid "Installed CLI: {value}\nTailnet identity: {value2}\nServe inventory: {serve_state}\nGateway: {value3} · {value4}\nTailnet login, Serve reachability, Gateway API keys, and workspace grants are separate."
+msgstr "Installed CLI: {value}\nTailnet identity: {value2}\nServe inventory: {serve_state}\nGateway: {value3} · {value4}\nTailnet login, Serve reachability, Gateway API keys, and workspace grants are separate."
+
+msgid "not detected"
+msgstr "not detected"
+
+msgid "not verified"
+msgstr "not verified"
+
+msgid "healthy"
+msgstr "healthy"
+
+msgid "Tailscale Serve keeps this private route until you disable it here; ISyCode does not remove it on exit because removal is itself an approved change. While Mobile Host is stopped, whatever listens on {target} is reachable from your tailnet at this path. Disable the route when you are not using it."
+msgstr "Tailscale Serve keeps this private route until you disable it here; ISyCode does not remove it on exit because removal is itself an approved change. While Mobile Host is stopped, whatever listens on {target} is reachable from your tailnet at this path. Disable the route when you are not using it."
+
+msgid "Workspace Authority · Tailscale"
+msgstr "Workspace Authority · Tailscale"
+
+msgid "{value} `{action}` for this workspace?\n\nExact executable: {executable}\n\nA grant permits only this owner and executable to request the action. It does not log in, install packages, expose the Gateway, or bypass IsySentinel. Every mutation still needs its own one-use approval."
+msgstr "{value} `{action}` for this workspace?\n\nExact executable: {executable}\n\nA grant permits only this owner and executable to request the action. It does not log in, install packages, expose the Gateway, or bypass IsySentinel. Every mutation still needs its own one-use approval."
+
+msgid "Tailscale authority change cancelled; no grant changed."
+msgstr "Tailscale authority change cancelled; no grant changed."
+
+msgid "Workspace grant {value} · {action}."
+msgstr "Workspace grant {value} · {action}."
+
+msgid "saved"
+msgstr "saved"
+
+msgid "Tailscale grant was not changed ({name})."
+msgstr "Tailscale grant was not changed ({name})."
+
+msgid "Installation blocked · explicitly grant this exact action in Settings → Private access → Permissions."
+msgstr "Installation blocked · explicitly grant this exact action in Settings → Private access → Permissions."
+
+msgid "Prepare official Tailscale package"
+msgstr "Prepare official Tailscale package"
+
+msgid "Download and verify"
+msgstr "Download and verify"
+
+msgid "Package preparation cancelled; no package transaction ran."
+msgstr "Package preparation cancelled; no package transaction ran."
+
+msgid "Package preparation {decision} · {value}"
+msgstr "Package preparation {decision} · {value}"
+
+msgid "Approve this step"
+msgstr "Approve this step"
+
+msgid "Installation cancelled before this step; no later step ran."
+msgstr "Installation cancelled before this step; no later step ran."
+
+msgid "Tailscale install {decision} · {value}"
+msgstr "Tailscale install {decision} · {value}"
+
+msgid "Tailscale step complete · {action_id} · receipt verified."
+msgstr "Tailscale step complete · {action_id} · receipt verified."
+
+msgid "Automated Tailscale install unavailable ({name}). Use the official manual instructions."
+msgstr "Automated Tailscale install unavailable ({name}). Use the official manual instructions."
+
+msgid "Login status check blocked · grant read-only inventory first."
+msgstr "Login status check blocked · grant read-only inventory first."
+
+msgid "Login blocked · grant this exact Tailscale executable in Settings → Private access → Permissions."
+msgstr "Login blocked · grant this exact Tailscale executable in Settings → Private access → Permissions."
+
+msgid "Sign in to Tailscale"
+msgstr "Sign in to Tailscale"
+
+msgid "Start browser login"
+msgstr "Start browser login"
+
+msgid "Tailscale login cancelled; no process started."
+msgstr "Tailscale login cancelled; no process started."
+
+msgid "Tailscale login {decision} · {value}"
+msgstr "Tailscale login {decision} · {value}"
+
+msgid "Open this official login link in your browser: {login_url}"
+msgstr "Open this official login link in your browser: {login_url}"
+
+msgid "Tailscale login could not start ({name})."
+msgstr "Tailscale login could not start ({name})."
+
+msgid "No active Tailscale login attempt in this process."
+msgstr "No active Tailscale login attempt in this process."
+
+msgid "Official Tailscale login link: {login_url}"
+msgstr "Official Tailscale login link: {login_url}"
+
+msgid "Tailscale login · {state} · {reason}"
+msgstr "Tailscale login · {state} · {reason}"
+
+msgid "Serve inventory blocked · grant read-only Tailscale status first."
+msgstr "Serve inventory blocked · grant read-only Tailscale status first."
+
+msgid "Serve change blocked · grant this exact Tailscale executable in Settings → Private access → Permissions."
+msgstr "Serve change blocked · grant this exact Tailscale executable in Settings → Private access → Permissions."
+
+msgid "Private Tailscale Serve"
+msgstr "Private Tailscale Serve"
+
+msgid "Tailscale Serve change cancelled; no command ran."
+msgstr "Tailscale Serve change cancelled; no command ran."
+
+msgid "Tailscale Serve · {decision} · {text}"
+msgstr "Tailscale Serve · {decision} · {text}"
+
+msgid "Receipt · {receipt_id}"
+msgstr "Receipt · {receipt_id}"
+
+msgid "Private Serve blocked · {reason}. No route change was approved."
+msgstr "Private Serve blocked · {reason}. No route change was approved."
+
+msgid "Manual private-access setup"
+msgstr "Manual private-access setup"
+
+msgid "Done"
+msgstr "Done"
+
+msgid "Bridge is blocked in Secure · execution owner not connected"
+msgstr "Bridge is blocked in Secure · execution owner not connected"
+
+msgid "Bridge startup blocked in Secure · no execution owner is connected"
+msgstr "Bridge startup blocked in Secure · no execution owner is connected"
+
+msgid "Start Mobile Host first; no PIN was issued."
+msgstr "Start Mobile Host first; no PIN was issued."
+
+msgid "Mobile Host grant cancelled; no PIN was issued."
+msgstr "Mobile Host grant cancelled; no PIN was issued."
+
+msgid "New PIN unavailable ({name}); nothing changed."
+msgstr "New PIN unavailable ({name}); nothing changed."
+
+msgid "Issue a new pairing PIN"
+msgstr "Issue a new pairing PIN"
+
+msgid "Replace the current Mobile Host PIN, if any, and clear failed pairing attempts. The new PIN works once, for 5 minutes, from any device that can reach this host, including your tailnet through a saved private route."
+msgstr "Replace the current Mobile Host PIN, if any, and clear failed pairing attempts. The new PIN works once, for 5 minutes, from any device that can reach this host, including your tailnet through a saved private route."
+
+msgid "Issue PIN"
+msgstr "Issue PIN"
+
+msgid "New PIN cancelled; the current PIN is unchanged."
+msgstr "New PIN cancelled; the current PIN is unchanged."
+
+msgid "New pairing PIN {pin} (expires in 5 minutes, one device)."
+msgstr "New pairing PIN {pin} (expires in 5 minutes, one device)."
+
+msgid "New PIN denied · {value}"
+msgstr "New PIN denied · {value}"
+
+msgid "Grant Mobile Host for this workspace"
+msgstr "Grant Mobile Host for this workspace"
+
+msgid "Grant these actions"
+msgstr "Grant these actions"
+
+msgid "Allow `mobile.host.start` only at {mobile_host_address}, `mobile.pair` only for the one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN (each new PIN still asks first). The listener binds loopback only; if a private Tailscale route to it is enabled, tailnet devices can reach it through that route. Pair-issued tokens can read the runtime inventory, request runtime selection, and send heartbeats; they cannot read files, execute runtimes, or access sessions."
+msgstr "Allow `mobile.host.start` only at {mobile_host_address}, `mobile.pair` only for the one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN (each new PIN still asks first). The listener binds loopback only; if a private Tailscale route to it is enabled, tailnet devices can reach it through that route. Pair-issued tokens can read the runtime inventory, request runtime selection, and send heartbeats; they cannot read files, execute runtimes, or access sessions."
+
+msgid "Bound to loopback. {value}"
+msgstr "Bound to loopback. {value}"
+
+msgid "Your saved private route {route} makes it reachable from your tailnet while it runs."
+msgstr "Your saved private route {route} makes it reachable from your tailnet while it runs."
+
+msgid "No saved private Tailscale route points here."
+msgstr "No saved private Tailscale route points here."
+
+msgid "MCP catalog changed or is unavailable; refresh it before calling a tool."
+msgstr "MCP catalog changed or is unavailable; refresh it before calling a tool."
+
+msgid "Gateway URL is invalid; no MCP request was sent."
+msgstr "Gateway URL is invalid; no MCP request was sent."
+
+msgid "MCP call cancelled; no tool was invoked."
+msgstr "MCP call cancelled; no tool was invoked."
+
+msgid "MCP · awaiting local grant for {name}"
+msgstr "MCP · awaiting local grant for {name}"
+
+msgid "MCP call denied before dispatch ({name})."
+msgstr "MCP call denied before dispatch ({name})."
+
+msgid "MCP call {decision} · {value}"
+msgstr "MCP call {decision} · {value}"
+
+msgid "MCP call blocked · {name}"
+msgstr "MCP call blocked · {name}"
+
+msgid "MCP {name} · Gateway returned a result"
+msgstr "MCP {name} · Gateway returned a result"
+
+msgid "MCP tool completed · {name}"
+msgstr "MCP tool completed · {name}"
+
+msgid "Workspace root could not be resolved; no Gateway request was sent."
+msgstr "Workspace root could not be resolved; no Gateway request was sent."
+
+msgid "Gateway URL is invalid; no semantic request was sent."
+msgstr "Gateway URL is invalid; no semantic request was sent."
+
+msgid "Mobile Host grant cancelled; no listener started."
+msgstr "Mobile Host grant cancelled; no listener started."
+
+msgid "Semantic search cancelled; no Gateway request was sent."
+msgstr "Semantic search cancelled; no Gateway request was sent."
+
+msgid "Gateway {operation} · awaiting local grant and remote scope"
+msgstr "Gateway {operation} · awaiting local grant and remote scope"
+
+msgid "Semantic request denied before dispatch ({name})."
+msgstr "Semantic request denied before dispatch ({name})."
+
+msgid "Gateway {operation} {decision} · {value}"
+msgstr "Gateway {operation} {decision} · {value}"
+
+msgid "Gateway {operation} blocked · check workspace binding, host grant, and isyco.semantic key scope"
+msgstr "Gateway {operation} blocked · check workspace binding, host grant, and isyco.semantic key scope"
+
+msgid "Gateway semantic {operation} · response from configured workspace"
+msgstr "Gateway semantic {operation} · response from configured workspace"
+
+msgid "{verified_receipt_line} · configured workspace IDs matched"
+msgstr "{verified_receipt_line} · configured workspace IDs matched"
+
+msgid "Native Gateway {operation} completed"
+msgstr "Native Gateway {operation} completed"
+
+msgid "Broker preview blocked · desktop.file_picker has no registered action owner"
+msgstr "Broker preview blocked · desktop.file_picker has no registered action owner"
+
+msgid "Broker provisioning blocked · desktop.file_picker has no registered action owner"
+msgstr "Broker provisioning blocked · desktop.file_picker has no registered action owner"
+
+msgid "Managed broker unavailable ({name}); no Docker action ran."
+msgstr "Managed broker unavailable ({name}); no Docker action ran."
+
+msgid "Broker {operation} cancelled; no Docker action ran."
+msgstr "Broker {operation} cancelled; no Docker action ran."
+
+msgid "Semantic broker · {operation} · checking exact registry identity"
+msgstr "Semantic broker · {operation} · checking exact registry identity"
+
+msgid "Broker {operation} failed ({name}); review registry and Docker state."
+msgstr "Broker {operation} failed ({name}); review registry and Docker state."
+
+msgid "Broker {operation} {decision} · {value}"
+msgstr "Broker {operation} {decision} · {value}"
+
+msgid "Broker {operation} not verified"
+msgstr "Broker {operation} not verified"
+
+msgid "Semantic broker · {operation}\n{text}"
+msgstr "Semantic broker · {operation}\n{text}"
+
+msgid "Semantic broker {operation} completed · local receipt verified"
+msgstr "Semantic broker {operation} completed · local receipt verified"
+
+msgid "This LSP adapter is not available in a supported sandbox."
+msgstr "This LSP adapter is not available in a supported sandbox."
+
+msgid "Workspace Authority is unavailable; LSP process is denied."
+msgstr "Workspace Authority is unavailable; LSP process is denied."
+
+msgid "LSP process grant declined; no language server was started."
+msgstr "LSP process grant declined; no language server was started."
+
+msgid "Start Mobile Host"
+msgstr "Start Mobile Host"
+
+msgid "Start host"
+msgstr "Start host"
+
+msgid "Start the ISyCode Mobile Host on loopback only: http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. {exposure}"
+msgstr "Start the ISyCode Mobile Host on loopback only: http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. {exposure}"
+
+msgid "LSP request cancelled; no language server was started."
+msgstr "LSP request cancelled; no language server was started."
+
+msgid "Mobile Host start cancelled; no listener started."
+msgstr "Mobile Host start cancelled; no listener started."
+
+msgid "LSP · awaiting local grant and starting sandbox"
+msgstr "LSP · awaiting local grant and starting sandbox"
+
+msgid "LSP request denied before start ({name})."
+msgstr "LSP request denied before start ({name})."
+
+msgid "LSP request {decision} · {value}"
+msgstr "LSP request {decision} · {value}"
+
+msgid "LSP request blocked · grant sandbox in Authority settings"
+msgstr "LSP request blocked · grant sandbox in Authority settings"
+
+msgid "{label} LSP · {query} · verified workspace/symbol response"
+msgstr "{label} LSP · {query} · verified workspace/symbol response"
+
+msgid "LSP request completed · sandbox closed"
+msgstr "LSP request completed · sandbox closed"
+
+msgid "Mobile Host granted for this workspace. Starting it still asks first."
+msgstr "Mobile Host granted for this workspace. Starting it still asks first."
+
+msgid "Mobile Host grant cancelled; nothing changed."
+msgstr "Mobile Host grant cancelled; nothing changed."
+
+msgid "Revoke Mobile Host for this workspace"
+msgstr "Revoke Mobile Host for this workspace"
+
+msgid "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` grants. New starts, new PINs and new pairing are denied. A host already running keeps serving devices paired earlier until ISyCode exits; their tokens still expire within an hour."
+msgstr "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` grants. New starts, new PINs and new pairing are denied. A host already running keeps serving devices paired earlier until ISyCode exits; their tokens still expire within an hour."
+
+msgid "Revoke Mobile Host grants"
+msgstr "Revoke Mobile Host grants"
+
+msgid "Mobile Host grants revoked for this workspace."
+msgstr "Mobile Host grants revoked for this workspace."
+
+msgid "Mobile Host grants unchanged."
+msgstr "Mobile Host grants unchanged."
+
+msgid "Mobile Host grants could not be changed; starts and pairing stay denied unless a valid saved grant remains."
+msgstr "Mobile Host grants could not be changed; starts and pairing stay denied unless a valid saved grant remains."
+
+msgid "Mobile Host start denied · {value}"
+msgstr "Mobile Host start denied · {value}"
+
+msgid "Mobile Host started at http://127.0.0.1:8765 · pairing PIN {code} (expires in 5 minutes)."
+msgstr "Mobile Host started at http://127.0.0.1:8765 · pairing PIN {code} (expires in 5 minutes)."
+
+msgid "Mobile Host could not start ({name})."
+msgstr "Mobile Host could not start ({name})."
+
+msgid "Conversation deletion · {decision} · {value}"
+msgstr "Conversation deletion · {decision} · {value}"
+
+msgid "Iteration kept."
+msgstr "Iteration kept."
+
+msgid "Iteration deletion · {decision} · {value}"
+msgstr "Iteration deletion · {decision} · {value}"
+
+msgid "Conversation not saved · {value}"
+msgstr "Conversation not saved · {value}"
+
+msgid "Session management needs a recurring workspace and session permissions."
+msgstr "Session management needs a recurring workspace and session permissions."
+
+msgid "This conversation has not diverged; it saves normally."
+msgstr "This conversation has not diverged; it saves normally."
+
+msgid "Search unavailable · {value}"
+msgstr "Search unavailable · {value}"
+
+msgid "Portable session JSON · common secret patterns redacted; review before sharing:"
+msgstr "Portable session JSON · common secret patterns redacted; review before sharing:"
+
+msgid "Export denied · {value}"
+msgstr "Export denied · {value}"
+
+msgid "Session {operation} completed · {changed}"
+msgstr "Session {operation} completed · {changed}"
+
+msgid "Session unchanged · {value}"
+msgstr "Session unchanged · {value}"
+
+msgid "/sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete|diverged"
+msgstr "/sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete|diverged"
+
+msgid "Session changed elsewhere · this window stopped saving to it; nothing was merged or overwritten."
+msgstr "Session changed elsewhere · this window stopped saving to it; nothing was merged or overwritten."
+
+msgid "Not saved as a new conversation · {value}"
+msgstr "Not saved as a new conversation · {value}"
+
+msgid "Saved this window's continuity as a new conversation · {value} · the other one stays as it was."
+msgstr "Saved this window's continuity as a new conversation · {value} · the other one stays as it was."
+
+msgid "A turn is still running here; stop it (Esc) before opening the saved version."
+msgstr "A turn is still running here; stop it (Esc) before opening the saved version."
+
+msgid "Discard what exists only in this window?"
+msgstr "Discard what exists only in this window?"
+
+msgid "Messages, draft and notes from this window that are not in the saved conversation will be lost. The saved version opens exactly as it is."
+msgstr "Messages, draft and notes from this window that are not in the saved conversation will be lost. The saved version opens exactly as it is."
+
+msgid "Discard and open saved"
+msgstr "Discard and open saved"
+
+msgid "Kept this window as it is · still not saving · /sessions diverged to choose again."
+msgstr "Kept this window as it is · still not saving · /sessions diverged to choose again."
+
+msgid "Saved version not opened · {value}"
+msgstr "Saved version not opened · {value}"
+
+msgid "Continuing without saving · this conversation is not written by this window until you choose · closing ISyCode discards what exists only here · /sessions diverged to choose again."
+msgstr "Continuing without saving · this conversation is not written by this window until you choose · closing ISyCode discards what exists only here · /sessions diverged to choose again."
+
+msgid "Earlier tools · {len} · not run again"
+msgstr "Earlier tools · {len} · not run again"
+
+msgid "No other conversation is open."
+msgstr "No other conversation is open."
+
+msgid "/msg <name or id> <message>"
+msgstr "/msg <name or id> <message>"
+
+msgid "That conversation is on screen. Type the message here."
+msgstr "That conversation is on screen. Type the message here."
+
+msgid "Write the message after the name. /msg <name or id> <message>"
+msgstr "Write the message after the name. /msg <name or id> <message>"
+
+msgid "That message is too large."
+msgstr "That message is too large."
+
+msgid "That conversation is not open."
+msgstr "That conversation is not open."
+
+msgid "{title} already has 8 messages waiting. Draft kept."
+msgstr "{title} already has 8 messages waiting. Draft kept."
+
+msgid "Queued for {title}. It answers after the current reply."
+msgstr "Queued for {title}. It answers after the current reply."
+
+msgid "Sent to {title}. It answers there as your message."
+msgstr "Sent to {title}. It answers there as your message."
+
+msgid "[Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}."
+msgstr "[Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}."
+
+msgid "[Hive] Queued message for agent @{agent_id} behind its current turn."
+msgstr "[Hive] Queued message for agent @{agent_id} behind its current turn."
+
+msgid "[Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox."
+msgstr "[Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox."
+
+msgid "Keep the draft; Send must be empty to steer a selected queued message"
+msgstr "Keep the draft; Send must be empty to steer a selected queued message"
+
+msgid "A steer attempt is still pending; this message stays queued"
+msgstr "A steer attempt is still pending; this message stays queued"
+
+msgid "Steer got no confirmed response · message returned to the queue"
+msgstr "Steer got no confirmed response · message returned to the queue"
+
+msgid "Draft kept; queued message stays pending"
+msgstr "Draft kept; queued message stays pending"
+
+msgid "Queue paused · {text}"
+msgstr "Queue paused · {text}"
+
+msgid "Saving conversations is off · turn it on in Settings → Authority."
+msgstr "Saving conversations is off · turn it on in Settings → Authority."
+
+msgid "Conversations unavailable · {value}"
+msgstr "Conversations unavailable · {value}"
+
+msgid "Folder selection for {label} failed · {value}"
+msgstr "Folder selection for {label} failed · {value}"
+
+msgid "Multi Harness folder not saved · {value}"
+msgstr "Multi Harness folder not saved · {value}"
+
+msgid "Multi Harness · {label} folder saved"
+msgstr "Multi Harness · {label} folder saved"
+
+msgid "Multi Harness model selection was not saved"
+msgstr "Multi Harness model selection was not saved"
+
+msgid "Model selection saved · {model_display_label}"
+msgstr "Model selection saved · {model_display_label}"
+
+msgid "Transcript copy failed · {value}"
+msgstr "Transcript copy failed · {value}"
+
+msgid "Transcript copy could not access the conversation owner."
+msgstr "Transcript copy could not access the conversation owner."
+
+msgid "Transcript copy stopped · {value}"
+msgstr "Transcript copy stopped · {value}"
+
+msgid "Transcript copy stopped · session id was not returned."
+msgstr "Transcript copy stopped · session id was not returned."
+
+msgid "Copied transcript from {label} · {len} messages"
+msgstr "Copied transcript from {label} · {len} messages"
+
+msgid "Repair compose is empty."
+msgstr "Repair compose is empty."
+
+msgid "Repair conversation opened · running the compose in the background."
+msgstr "Repair conversation opened · running the compose in the background."
+
+msgid "Repair lane is busy; the compose is queued."
+msgstr "Repair lane is busy; the compose is queued."
+
+msgid "Repair compose queued behind the current turn."
+msgstr "Repair compose queued behind the current turn."
+
+msgid "External Hive launch is unavailable; opening an ISyCode repair conversation with the current model."
+msgstr "External Hive launch is unavailable; opening an ISyCode repair conversation with the current model."
+
+msgid "Iteration sessions unavailable; ordinary sessions preserved."
+msgstr "Iteration sessions unavailable; ordinary sessions preserved."
+
+msgid "Only recurring workspaces keep conversations; this run stays in memory."
+msgstr "Only recurring workspaces keep conversations; this run stays in memory."
+
+msgid "Iteration unavailable or denied."
+msgstr "Iteration unavailable or denied."
+
+msgid "Saving conversations is off; nothing was resumed."
+msgstr "Saving conversations is off; nothing was resumed."
+
+msgid "Conversation not resumed · {value}"
+msgstr "Conversation not resumed · {value}"
+
+msgid "Conversation reopened · {title} · {len} messages"
+msgstr "Conversation reopened · {title} · {len} messages"
+
+msgid "Conversation unavailable · {value}"
+msgstr "Conversation unavailable · {value}"
+
+msgid "Enable Delete current conversation in Settings → Authority first."
+msgstr "Enable Delete current conversation in Settings → Authority first."
+
+msgid "Conversation kept."
+msgstr "Conversation kept."
+
+msgid "Memory {decision} · {value}"
+msgstr "Memory {decision} · {value}"
+
+msgid "Memory {operation} · receipt {receipt_id}"
+msgstr "Memory {operation} · receipt {receipt_id}"
+
+msgid "Model: {model_display_name} · {provider_label}"
+msgstr "Model: {model_display_name} · {provider_label}"
+
+msgid "Host: {host_name}"
+msgstr "Host: {host_name}"
+
+msgid "\n  Understood: {understood}"
+msgstr "\n  Understood: {understood}"
+
+msgid "Plan ({len} steps):"
+msgstr "Plan ({len} steps):"
+
+msgid "\n  Proposal only · it carries no authority."
+msgstr "\n  Proposal only · it carries no authority."
+
+msgid "Execution is disabled in Secure until each step has an ISyCode owner, grant, Sentinel decision and required approval."
+msgstr "Execution is disabled in Secure until each step has an ISyCode owner, grant, Sentinel decision and required approval."
+
+msgid "Tokens: {value}"
+msgstr "Tokens: {value}"
+
+msgid "\n  {origin} proposal is ready for inspection; it cannot be run through IsyMotron."
+msgstr "\n  {origin} proposal is ready for inspection; it cannot be run through IsyMotron."
+
+msgid "\n  Refused: {value}"
+msgstr "\n  Refused: {value}"
+
+msgid "no plan possible"
+msgstr "no plan possible"
+
+msgid "This is correct behavior, not a failure."
+msgstr "This is correct behavior, not a failure."
+
+msgid "\n  Plan rejected: {reason}. No executable plan was retained."
+msgstr "\n  Plan rejected: {reason}. No executable plan was retained."
+
+msgid "\n  Planning failed ({name}). No executable plan was retained."
+msgstr "\n  Planning failed ({name}). No executable plan was retained."
+
+msgid "No plan to run. Use /plan <intent> first."
+msgstr "No plan to run. Use /plan <intent> first."
+
+msgid "Wait for the current task to finish before running a plan."
+msgstr "Wait for the current task to finish before running a plan."
+
+msgid "Plan cleared · authority could not be revalidated"
+msgstr "Plan cleared · authority could not be revalidated"
+
+msgid "Authority could not be revalidated ({name}); plan cleared."
+msgstr "Authority could not be revalidated ({name}); plan cleared."
+
+msgid "Plan cleared · authority changed"
+msgstr "Plan cleared · authority changed"
+
+msgid "Host identity, grants, capabilities, or scopes changed after planning. Create a new plan before execution."
+msgstr "Host identity, grants, capabilities, or scopes changed after planning. Create a new plan before execution."
+
+msgid "Plan cleared · authority details unavailable"
+msgstr "Plan cleared · authority details unavailable"
+
+msgid "Authority details could not be loaded ({name}); plan cleared."
+msgstr "Authority details could not be loaded ({name}); plan cleared."
+
+msgid "\n  Review {last_plan_origin} plan ({n} steps; {effect}):"
+msgstr "\n  Review {last_plan_origin} plan ({n} steps; {effect}):"
+
+msgid "Host: {last_plan_host}"
+msgstr "Host: {last_plan_host}"
+
+msgid "Host identity: {get} · {get2} · {get3}"
+msgstr "Host identity: {get} · {get2} · {get3}"
+
+msgid "Scope {capability}: {scope_text}"
+msgstr "Scope {capability}: {scope_text}"
+
+msgid "Select {label} in Overview within 10s to execute it."
+msgstr "Select {label} in Overview within 10s to execute it."
+
+msgid "Awaiting confirmation · expires in 10s"
+msgstr "Awaiting confirmation · expires in 10s"
+
+msgid "\n  Executing on {host_name}..."
+msgstr "\n  Executing on {host_name}..."
+
+msgid "DENY before execution: {e} No step was submitted to the host; plan cleared."
+msgstr "DENY before execution: {e} No step was submitted to the host; plan cleared."
+
+msgid "Execution returned no status ({name}); the host outcome is unknown. Do not retry until host state or receipts are checked."
+msgstr "Execution returned no status ({name}); the host outcome is unknown. Do not retry until host state or receipts are checked."
+
+msgid "Receipt verification unavailable ({name}); allowed steps remain untrusted."
+msgstr "Receipt verification unavailable ({name}); allowed steps remain untrusted."
+
+msgid "{index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {value} · verify {verify_status}"
+msgstr "{index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {value} · verify {verify_status}"
+
+msgid "{index}. ALLOW decision · execution evidence not trusted · receipt {value} · verify {verify_status}"
+msgstr "{index}. ALLOW decision · execution evidence not trusted · receipt {value} · verify {verify_status}"
+
+msgid "{index}. ALLOW — receipt {value} · verify PASS"
+msgstr "{index}. ALLOW — receipt {value} · verify PASS"
+
+msgid "Read result:\n{preview}"
+msgstr "Read result:\n{preview}"
+
+msgid "Directory listed. Use Files for the filtered browser view."
+msgstr "Directory listed. Use Files for the filtered browser view."
+
+msgid "{index}. DENY — {reason} · receipt {value} · verify {verify_status}"
+msgstr "{index}. DENY — {reason} · receipt {value} · verify {verify_status}"
+
+msgid "Stopped at step {stopped_at}: {stop_reason}"
+msgstr "Stopped at step {stopped_at}: {stop_reason}"
+
+msgid "\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown."
+msgstr "\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown."
+
+msgid "Local read-only execution; write capabilities were removed from this runtime."
+msgstr "Local read-only execution; write capabilities were removed from this runtime."
+
+msgid "Demo execution only; real workspace writes are not enabled here."
+msgstr "Demo execution only; real workspace writes are not enabled here."
+
+msgid "Tool duration · {label} · {elapsed}"
+msgstr "Tool duration · {label} · {elapsed}"
+
+msgid "MCP · awaiting local grant for {gateway_tool_target}"
+msgstr "MCP · awaiting local grant for {gateway_tool_target}"
+
+msgid "MCP {gateway_tool_target} · Gateway returned a result"
+msgstr "MCP {gateway_tool_target} · Gateway returned a result"
+
+msgid "Bridge is not available here ({name})."
+msgstr "Bridge is not available here ({name})."
+
+msgid "Bridge registration was denied."
+msgstr "Bridge registration was denied."
+
+msgid "Registered on the Bridge as {identity}."
+msgstr "Registered on the Bridge as {identity}."
+
+msgid "Tool denied · unregistered tool name"
+msgstr "Tool denied · unregistered tool name"
+
+msgid "Tool denied · {name} · invalid arguments"
+msgstr "Tool denied · {name} · invalid arguments"
+
+msgid "✗ Batch rejected · nothing was written"
+msgstr "✗ Batch rejected · nothing was written"
+
+msgid "Applying batch-approved write · {get}"
+msgstr "Applying batch-approved write · {get}"
+
+msgid "Tool denied · {action_id} · authority/owner unavailable"
+msgstr "Tool denied · {action_id} · authority/owner unavailable"
+
+msgid "✓ {alias} · {value} · completed"
+msgstr "✓ {alias} · {value} · completed"
+
+msgid "Iteration · {title} · {status}"
+msgstr "Iteration · {title} · {status}"
+
+msgid "Iteration paused · {text} · /iteration retry {iteration_session_id}"
+msgstr "Iteration paused · {text} · /iteration retry {iteration_session_id}"
+
+msgid "Finish the active task before starting an iteration."
+msgstr "Finish the active task before starting an iteration."
+
+msgid "Usage: /iteration <objective> · choose three participants. Esc cancels."
+msgstr "Usage: /iteration <objective> · choose three participants. Esc cancels."
+
+msgid "Iteration order · {join}"
+msgstr "Iteration order · {join}"
+
+msgid "Iteration · {status}"
+msgstr "Iteration · {status}"
+
+msgid "Iteration aborted; durable contributions preserved."
+msgstr "Iteration aborted; durable contributions preserved."
+
+msgid "Iteration unavailable · {name}"
+msgstr "Iteration unavailable · {name}"
+
+msgid "Subagent · {model_display_label} · starting"
+msgstr "Subagent · {model_display_label} · starting"
+
+msgid "Subagent · {model_display_label} · {value}"
+msgstr "Subagent · {model_display_label} · {value}"
+
+msgid "Subagent tool · {name}"
+msgstr "Subagent tool · {name}"
+
+msgid "Subagent · {model_display_label}\n{shown}"
+msgstr "Subagent · {model_display_label}\n{shown}"
+
+msgid "Subagent · cancelled; completed effects remain in the action journal"
+msgstr "Subagent · cancelled; completed effects remain in the action journal"
+
+msgid "Subagent · {provider_hint}"
+msgstr "Subagent · {provider_hint}"
+
+msgid "Skill unavailable or selection too large; existing guidance preserved."
+msgstr "Skill unavailable or selection too large; existing guidance preserved."
+
+msgid "MCP {name} configured. /mcp start {name} reviews the npm download/process before starting."
+msgstr "MCP {name} configured. /mcp start {name} reviews the npm download/process before starting."
+
+msgid "MCP preset could not be added; inspect the private config, existing name and available presets."
+msgstr "MCP preset could not be added; inspect the private config, existing name and available presets."
+
+msgid "MCP config problem · {value}"
+msgstr "MCP config problem · {value}"
+
+msgid "No local MCP servers configured. Add them to {mcp_config_path} as {{\"servers\": {{\"name\": {{\"command\": [\"program\", \"arg\"]}}}}}}."
+msgstr "No local MCP servers configured. Add them to {mcp_config_path} as {{\"servers\": {{\"name\": {{\"command\": [\"program\", \"arg\"]}}}}}}."
+
+msgid "/mcp start <name> asks before starting; each tool call asks again."
+msgstr "/mcp start <name> asks before starting; each tool call asks again."
+
+msgid "MCP {name} cannot start · {value}"
+msgstr "MCP {name} cannot start · {value}"
+
+msgid "Allow this server"
+msgstr "Allow this server"
+
+msgid "Allow MCP server {name} in this workspace?"
+msgstr "Allow MCP server {name} in this workspace?"
+
+msgid "Saves a grant for {executable} and for calls to {name}. Starting it and every tool call still ask first. The server runs with your user's permissions."
+msgstr "Saves a grant for {executable} and for calls to {name}. Starting it and every tool call still ask first. The server runs with your user's permissions."
+
+msgid "MCP {name} not allowed; nothing started."
+msgstr "MCP {name} not allowed; nothing started."
+
+msgid "MCP grant could not be saved ({name})."
+msgstr "MCP grant could not be saved ({name})."
+
+msgid "MCP {name} not started."
+msgstr "MCP {name} not started."
+
+msgid "MCP {name} started · {len} tools · receipt {receipt_id}"
+msgstr "MCP {name} started · {len} tools · receipt {receipt_id}"
+
+msgid "MCP {name} {decision} · {value}"
+msgstr "MCP {name} {decision} · {value}"
+
+msgid "MCP call requested · {server}.{tool} · review it"
+msgstr "MCP call requested · {server}.{tool} · review it"
+
+msgid "MCP call rejected · nothing was sent"
+msgstr "MCP call rejected · nothing was sent"
+
+msgid "MCP {decision} · {value}"
+msgstr "MCP {decision} · {value}"
+
+msgid "Browser snapshot contained no readable page text; raw output withheld."
+msgstr "Browser snapshot contained no readable page text; raw output withheld."
+
+msgid "Browser text discarded · it was not shared with the model."
+msgstr "Browser text discarded · it was not shared with the model."
+
+msgid "MCP ALLOW · {server}.{tool} · receipt {receipt_id}"
+msgstr "MCP ALLOW · {server}.{tool} · receipt {receipt_id}"
+
+msgid "Workspace pack cancelled · no file contents were read"
+msgstr "Workspace pack cancelled · no file contents were read"
+
+msgid "Workspace pack failed · {value}"
+msgstr "Workspace pack failed · {value}"
+
+msgid "Workspace pack · {len} files · ~{estimated_tokens} tokens"
+msgstr "Workspace pack · {len} files · ~{estimated_tokens} tokens"
+
+msgid "Memory action denied · explicitly revoked in workspace authority"
+msgstr "Memory action denied · explicitly revoked in workspace authority"
+
+msgid "Memory {operation} rejected · nothing was read or changed"
+msgstr "Memory {operation} rejected · nothing was read or changed"
+
+msgid "Context access declined · no file was read"
+msgstr "Context access declined · no file was read"
+
+msgid "Context access failed · {name}"
+msgstr "Context access failed · {name}"
+
+msgid "Context loaded · {source} · {requester} · {persistence} · receipt {receipt_id}"
+msgstr "Context loaded · {source} · {requester} · {persistence} · receipt {receipt_id}"
+
+msgid "Pyright check skipped · {value}"
+msgstr "Pyright check skipped · {value}"
+
+msgid "Pyright · {path} · no errors or warnings"
+msgstr "Pyright · {path} · no errors or warnings"
+
+msgid "Pyright {severity} · {path}:{line}:{column} · {value}"
+msgstr "Pyright {severity} · {path}:{line}:{column} · {value}"
+
+msgid "Nothing undone · {value}"
+msgstr "Nothing undone · {value}"
+
+msgid "Undo cancelled · {path} unchanged"
+msgstr "Undo cancelled · {path} unchanged"
+
+msgid "Undo {decision} · {value}"
+msgstr "Undo {decision} · {value}"
+
+msgid "Commit not proposed · {reason}"
+msgstr "Commit not proposed · {reason}"
+
+msgid "Commit · {len} files from this turn · /undo to revert"
+msgstr "Commit · {len} files from this turn · /undo to revert"
+
+msgid "Commit requested · {len} files · review it"
+msgstr "Commit requested · {len} files · review it"
+
+msgid "Commit rejected · nothing was committed"
+msgstr "Commit rejected · nothing was committed"
+
+msgid "Git {decision} · {action} · {value}"
+msgstr "Git {decision} · {action} · {value}"
+
+msgid "Git · {branch} · {value}"
+msgstr "Git · {branch} · {value}"
+
+msgid "clean"
+msgstr "clean"
+
+msgid "{count} changed files"
+msgstr "{count} changed files"
+
+msgid "1 changed file"
+msgstr "1 changed file"
+
+msgid "Committed {commit_id} · receipt {receipt_id}"
+msgstr "Committed {commit_id} · receipt {receipt_id}"
+
+msgid "Git ALLOW · {action} · receipt {receipt_id}"
+msgstr "Git ALLOW · {action} · receipt {receipt_id}"
+
+msgid "Command denied · workspace.command.run · {reason}"
+msgstr "Command denied · workspace.command.run · {reason}"
+
+msgid "Command denied · {reason}"
+msgstr "Command denied · {reason}"
+
+msgid "Command · quiet {title} · {value}"
+msgstr "Command · quiet {title} · {value}"
+
+msgid "Command requested · {value} · review it"
+msgstr "Command requested · {value} · review it"
+
+msgid "Command rejected · nothing ran"
+msgstr "Command rejected · nothing ran"
+
+msgid "Command denied by user"
+msgstr "Command denied by user"
+
+msgid "Command authorized"
+msgstr "Command authorized"
+
+msgid "Command outcome · {decision}"
+msgstr "Command outcome · {decision}"
+
+msgid "Tool denied · {action} · not enabled for this workspace"
+msgstr "Tool denied · {action} · not enabled for this workspace"
+
+msgid "Tool denied · {action} · {reason}"
+msgstr "Tool denied · {action} · {reason}"
+
+msgid "Tool · quiet {title} · {action} · {path}"
+msgstr "Tool · quiet {title} · {action} · {path}"
+
+msgid "Tool requested · {action} · {path} · review it"
+msgstr "Tool requested · {action} · {path} · review it"
+
+msgid "✗ You rejected · {path} · nothing changed"
+msgstr "✗ You rejected · {path} · nothing changed"
+
+msgid "✓ You approved · {value} {path}"
+msgstr "✓ You approved · {value} {path}"
+
+msgid "Tool ALLOW · {text} · receipt {receipt_id}"
+msgstr "Tool ALLOW · {text} · receipt {receipt_id}"
+
+msgid "Tool {decision} · {action} · {value}"
+msgstr "Tool {decision} · {action} · {value}"
+
+msgid "Diff · {path} · +{added} −{removed} · applied without a review screen"
+msgstr "Diff · {path} · +{added} −{removed} · applied without a review screen"
+
+msgid "Tool denied · workspace.files.write · file editing is off"
+msgstr "Tool denied · workspace.files.write · file editing is off"
+
+msgid "Tool denied · workspace_edit · invalid arguments"
+msgstr "Tool denied · workspace_edit · invalid arguments"
+
+msgid "Tool denied · workspace.files.write · invalid arguments"
+msgstr "Tool denied · workspace.files.write · invalid arguments"
+
+msgid "Tool denied · workspace.files.write · {reason}"
+msgstr "Tool denied · workspace.files.write · {reason}"
+
+msgid "Injected · {path}"
+msgstr "Injected · {path}"
+
+msgid "Tool · quiet {title} · {verb} · {path}"
+msgstr "Tool · quiet {title} · {verb} · {path}"
+
+msgid "Tool · batch-approved · {verb} · {path}"
+msgstr "Tool · batch-approved · {verb} · {path}"
+
+msgid "ISyCode local receipt {value} verified PASS. Content stays in this process memory."
+msgstr "ISyCode local receipt {value} verified PASS. Content stays in this process memory."
+
+msgid "Tool · session trust · {verb} · {path}"
+msgstr "Tool · session trust · {verb} · {path}"
+
+msgid "Tool requested · {verb} · {path} · review the diff{value}"
+msgstr "Tool requested · {verb} · {path} · review the diff{value}"
+
+msgid "matched ignoring {match}"
+msgstr "matched ignoring {match}"
+
+msgid "Trust granted for this session only · folder {folder_alias} · writes apply without asking until ISyCode closes; nothing is saved"
+msgstr "Trust granted for this session only · folder {folder_alias} · writes apply without asking until ISyCode closes; nothing is saved"
+
+msgid "✗ You rejected · {path} · nothing was written"
+msgstr "✗ You rejected · {path} · nothing was written"
+
+msgid "✓ Quiet {title} · {folder_alias} · {path}"
+msgstr "✓ Quiet {title} · {folder_alias} · {path}"
+
+msgid "Tool ALLOW · workspace.files.write · {path} · receipt {receipt_id}"
+msgstr "Tool ALLOW · workspace.files.write · {path} · receipt {receipt_id}"
+
+msgid "Tool {decision} · workspace.files.write · {value}"
+msgstr "Tool {decision} · workspace.files.write · {value}"
+
+msgid "Injected AGENTS.md context removed"
+msgstr "Injected AGENTS.md context removed"
+
+msgid "Context picker unavailable · {error}"
+msgstr "Context picker unavailable · {error}"
+
+msgid "Workspace preference not prepared · {value}"
+msgstr "Workspace preference not prepared · {value}"
+
+msgid "Preference unchanged · {path}"
+msgstr "Preference unchanged · {path}"
+
+msgid "Preference not saved · {value}"
+msgstr "Preference not saved · {value}"
+
+msgid "Context selection cancelled"
+msgstr "Context selection cancelled"
+
+msgid "Command unchanged · /{name}"
+msgstr "Command unchanged · /{name}"
+
+msgid "Copied /{name} · legacy original kept · receipt {receipt_id}"
+msgstr "Copied /{name} · legacy original kept · receipt {receipt_id}"
+
+msgid "Command not copied · {value}"
+msgstr "Command not copied · {value}"
+
+msgid "Folder picker unavailable · {value}"
+msgstr "Folder picker unavailable · {value}"
+
+msgid "Folder added · {alias} · {path}"
+msgstr "Folder added · {alias} · {path}"
+
+msgid "Folder not added · {value}"
+msgstr "Folder not added · {value}"
+
+msgid "Automatic edit setting unchanged · {value}"
+msgstr "Automatic edit setting unchanged · {value}"
+
+msgid "Automatic file edits · {alias} · {value}"
+msgstr "Automatic file edits · {alias} · {value}"
+
+msgid "ON — dangerous"
+msgstr "ON — dangerous"
+
+msgid "OFF — each edit asks"
+msgstr "OFF — each edit asks"
+
+msgid "Context request denied · {value}"
+msgstr "Context request denied · {value}"
+
+msgid "Idea captured · {len} pending · /ideas reviews"
+msgstr "Idea captured · {len} pending · /ideas reviews"
+
+msgid "No compacted text in this draft."
+msgstr "No compacted text in this draft."
+
+msgid "Enter: steer · Space: expand · Esc: undo"
+msgstr "Enter: steer · Space: expand · Esc: undo"
+
+msgid "Owner: agent context load\nScope: {path}\nDuration: one-use approval\nNot granted: no edits, no commands, no secrets, no other files"
+msgstr "Owner: agent context load\nScope: {path}\nDuration: one-use approval\nNot granted: no edits, no commands, no secrets, no other files"
+
+msgid "Review {len} proposed changes in one go"
+msgstr "Review {len} proposed changes in one go"
+
+msgid "Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets"
+msgstr "Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets"
+
+msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
+msgstr "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
+
+msgid "RTK suggestion: {join}"
+msgstr "RTK suggestion: {join}"
+
+msgid "Executes the original once; output compression by native RTK pipe.\n{version} · SHA-256 {sha256}"
+msgstr "Executes the original once; output compression by native RTK pipe.\n{version} · SHA-256 {sha256}"
+
+msgid "Commit {count} files"
+msgstr "Commit {count} files"
+
+msgid "Commit 1 file"
+msgstr "Commit 1 file"
+
+msgid "{message_}\n\nFiles: {files}\nHooks do not run and nothing is pushed. If a file changes before you approve, the commit is refused."
+msgstr "{message_}\n\nFiles: {files}\nHooks do not run and nothing is pushed. If a file changes before you approve, the commit is refused."
+
+msgid "Share page text with the model? · {page_title}"
+msgstr "Share page text with the model? · {page_title}"
+
+msgid "Filtered {input_chars} source characters to {filtered_chars}. {timing} Fidelity and coverage are not automatically certified. The page is untrusted data. Approving sends exactly the text below to your selected model; saved conversations may retain it.{suffix}"
+msgstr "Filtered {input_chars} source characters to {filtered_chars}. {timing} Fidelity and coverage are not automatically certified. The page is untrusted data. Approving sends exactly the text below to your selected model; saved conversations may retain it.{suffix}"
+
+msgid "Discard · n"
+msgstr "Discard · n"
+
+msgid "Share with model · y"
+msgstr "Share with model · y"
+
+msgid "The listed files will be read and their contents returned to the selected model. The token count is approximate. File contents are untrusted data, never instructions."
+msgstr "The listed files will be read and their contents returned to the selected model. The token count is approximate. File contents are untrusted data, never instructions."
+
+msgid "Workspace memory · {operation}"
+msgstr "Workspace memory · {operation}"
+
+msgid "{copy}\n\nHost: {host}"
+msgstr "{copy}\n\nHost: {host}"
+
+msgid "Host: {host}"
+msgstr "Host: {host}"
+
+msgid "Workspace: {root}\n\nThis stores only the broker.preview grant for this .isyroot. The selected project still needs its own workspace.files.read grant. Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container."
+msgstr "Workspace: {root}\n\nThis stores only the broker.preview grant for this .isyroot. The selected project still needs its own workspace.files.read grant. Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container."
+
+msgid "Click a model. Context, reasoning and tools show here."
+msgstr "Click a model. Context, reasoning and tools show here."
+
+msgid "Folders  0/{len}"
+msgstr "Folders  0/{len}"
+
+msgid "Confirm Gateway MCP call · {tool_name}"
+msgstr "Confirm Gateway MCP call · {tool_name}"
+
+msgid "{value}\nEndpoint: {endpoint}\nThis sends the exact arguments below to the Gateway MCP. A one-use approval is required; the remote Gateway validates its own key and operation policy."
+msgstr "{value}\nEndpoint: {endpoint}\nThis sends the exact arguments below to the Gateway MCP. A one-use approval is required; the remote Gateway validates its own key and operation policy."
+
+msgid "Endpoint: {endpoint}\nConfigured workspace ID: {workspace_id}\nThe ID is an operator-managed binding, not a filesystem grant. Each request is denied if the Gateway reports a different ID."
+msgstr "Endpoint: {endpoint}\nConfigured workspace ID: {workspace_id}\nThe ID is an operator-managed binding, not a filesystem grant. Each request is denied if the Gateway reports a different ID."
+
+msgid "Confirm native Gateway · {operation}"
+msgstr "Confirm native Gateway · {operation}"
+
+msgid "POST {endpoint}/v1/{operation}\nExpected workspace ID: {workspace_id}\n\nExact payload:\n{payload}\n\nThis is native HTTP, not MCP. The Gateway independently checks its isyco.semantic scope and workspace ID. The result stays in this TUI and is not added to model context. A one-use local approval is required."
+msgstr "POST {endpoint}/v1/{operation}\nExpected workspace ID: {workspace_id}\n\nExact payload:\n{payload}\n\nThis is native HTTP, not MCP. The Gateway independently checks its isyco.semantic scope and workspace ID. The result stays in this TUI and is not added to model context. A one-use local approval is required."
+
+msgid "{label} · workspace symbol search"
+msgstr "{label} · workspace symbol search"
+
+msgid "Local workspace: {root}\nQuery goes only to the sandboxed local language server."
+msgstr "Local workspace: {root}\nQuery goes only to the sandboxed local language server."
+
+msgid "Server: {label} · operation: workspace/symbol\nQuery: {query_text}\nWorkspace root: {root}\n\nISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), and output/time limits apply. No Gateway or provider receives this query."
+msgstr "Server: {label} · operation: workspace/symbol\nQuery: {query_text}\nWorkspace root: {root}\n\nISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), and output/time limits apply. No Gateway or provider receives this query."
+
+msgid "Project root: {project}\nRecipe root: {source_root}\nRecipe SHA-256: {digest}\nImage: {image}\nFiles:\n{file_rows}\n\nBuild effect: Docker daemon builds this recipe and may download base images and Python packages. Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, 1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to this root and recipe digest, then revoke those grants after the attempt. Failed health checks remove only the container/network created by this request."
+msgstr "Project root: {project}\nRecipe root: {source_root}\nRecipe SHA-256: {digest}\nImage: {image}\nFiles:\n{file_rows}\n\nBuild effect: Docker daemon builds this recipe and may download base images and Python packages. Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, 1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to this root and recipe digest, then revoke those grants after the attempt. Failed health checks remove only the container/network created by this request."
+
+msgid "Project: {project}\nStatus: {get} · 127.0.0.1:{get2}\nContainer: {get3}\nRecipe: {get4}\n\nLogs are capped and common credential patterns are redacted. Stop and Remove require a second one-use confirmation. Start reuses this registered container. Remove deletes this container and its dedicated network; the shared image stays."
+msgstr "Project: {project}\nStatus: {get} · 127.0.0.1:{get2}\nContainer: {get3}\nRecipe: {get4}\n\nLogs are capped and common credential patterns are redacted. Stop and Remove require a second one-use confirmation. Start reuses this registered container. Remove deletes this container and its dedicated network; the shared image stays."
+
+msgid "Confirm broker {operation}"
+msgstr "Confirm broker {operation}"
+
+msgid "Project: {project}\nContainer: {container}\n\n{effect}\nThis grants only the exact Docker executable and broker target for this single operation; the temporary grant is revoked afterward."
+msgstr "Project: {project}\nContainer: {container}\n\n{effect}\nThis grants only the exact Docker executable and broker target for this single operation; the temporary grant is revoked afterward."
+
+msgid "Gateway MCP · {name}"
+msgstr "Gateway MCP · {name}"
+
+msgid "Message queue is full"
+msgstr "Message queue is full"
+
+msgid "Idea promoted · queued for the next turn"
+msgstr "Idea promoted · queued for the next turn"
+
+msgid "Running"
+msgstr "Running"
+
+msgid "{count} calls"
+msgstr "{count} calls"
+
+msgid "{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}"
+msgstr "{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}"
+
+msgid "Workspace Root · {workspace_root}"
+msgstr "Workspace Root · {workspace_root}"
+
+msgid "Launch Directory · {launch_dir}"
+msgstr "Launch Directory · {launch_dir}"
+
+msgid "Filesystem Authority · loading ISyCode grants…"
+msgstr "Filesystem Authority · loading ISyCode grants…"
+
+msgid "Cancelling…"
+msgstr "Cancelling…"
+
+msgid "API key for {credential_label} · saved in your OS keyring for your user, never in this project or its logs. Saving asks you to confirm."
+msgstr "API key for {credential_label} · saved in your OS keyring for your user, never in this project or its logs. Saving asks you to confirm."
+
+msgid "Folder unavailable: {exc}"
+msgstr "Folder unavailable: {exc}"
+
+msgid "{len} results · {get} directories scanned{skipped_note}{limit_note}"
+msgstr "{len} results · {get} directories scanned{skipped_note}{limit_note}"
+
+msgid "{relative} · {size} bytes · UTF-8\n{verified_receipt_line}"
+msgstr "{relative} · {size} bytes · UTF-8\n{verified_receipt_line}"
+
+msgid "Presence unavailable"
+msgstr "Presence unavailable"
+
+msgid "Queued · {len}{value}     {fit_cells}"
+msgstr "Queued · {len}{value}     {fit_cells}"
+
+msgid "Execution unavailable in Secure"
+msgstr "Execution unavailable in Secure"
+
+msgid "ShellBox · {active} active · {len} total\nEnter / Space: processes · Ctrl+S: IdeaBox"
+msgstr "ShellBox · {active} active · {len} total\nEnter / Space: processes · Ctrl+S: IdeaBox"
+
+msgid "Folders  {ready}/{len}"
+msgstr "Folders  {ready}/{len}"
+
+msgid "Conversations  {transcript_count}"
+msgstr "Conversations  {transcript_count}"
+
+msgid "Invalid request: {exc}"
+msgstr "Invalid request: {exc}"
+
+msgid "Processed"
+msgstr "Processed"
+
+msgid "{value} / {total} matches  ·  Enter next  ·  Shift+Enter previous"
+msgstr "{value} / {total} matches  ·  Enter next  ·  Shift+Enter previous"
+
+msgid "No matches"
+msgstr "No matches"
+
+msgid "plan an intent via IsyMotron"
+msgstr "plan an intent via IsyMotron"
+
+msgid "choose and preview a workspace README.md"
+msgstr "choose and preview a workspace README.md"
+
+msgid "open the provider selector"
+msgstr "open the provider selector"
+
+msgid "show credential status grouped by setup state"
+msgstr "show credential status grouped by setup state"
+
+msgid "undo ISyCode's last file change (shows the diff first)"
+msgstr "undo ISyCode's last file change (shows the diff first)"
+
+msgid "native RTK settings; recall <sha256> shows captured original output"
+msgstr "native RTK settings; recall <sha256> shows captured original output"
+
+msgid "run one command in the workspace sandbox (asks first)"
+msgstr "run one command in the workspace sandbox (asks first)"
+
+msgid "expand the current idea note"
+msgstr "expand the current idea note"
+
+msgid "summarize earlier messages to free up context"
+msgstr "summarize earlier messages to free up context"
+
+msgid "local MCP: add <preset>, list, start <name>, stop <name>"
+msgstr "local MCP: add <preset>, list, start <name>, stop <name>"
+
+msgid "sequential iteration with three chosen models; /iteration retry <id>"
+msgstr "sequential iteration with three chosen models; /iteration retry <id>"
+
+msgid "delegate a task; choose a recent model before launch"
+msgstr "delegate a task; choose a recent model before launch"
+
+msgid "models for the current provider"
+msgstr "models for the current provider"
+
+msgid "bundled workflow guidance: list, use <name>, clear"
+msgstr "bundled workflow guidance: list, use <name>, clear"
+
+msgid "show git branch and changed files"
+msgstr "show git branch and changed files"
+
+msgid "show the git diff (optional path, --staged)"
+msgstr "show the git diff (optional path, --staged)"
+
+msgid "commit changed files after reviewing the diff"
+msgstr "commit changed files after reviewing the diff"
+
+msgid "list commands"
+msgstr "list commands"
+
+msgid "show current workspace, provider, and chat role"
+msgstr "show current workspace, provider, and chat role"
+
+msgid "list/new/resume/search/rename/fork/export/import conversations"
+msgstr "list/new/resume/search/rename/fork/export/import conversations"
+
+msgid "send your words to another conversation; it answers them as your message"
+msgstr "send your words to another conversation; it answers them as your message"
+
+msgid "open the read-only Multi Harness settings map"
+msgstr "open the read-only Multi Harness settings map"
+
+msgid "prepare interrupted prompt for review; never auto-replays tools"
+msgstr "prepare interrupted prompt for review; never auto-replays tools"
+
+msgid "resume an interrupted turn without repeating completed tools"
+msgstr "resume an interrupted turn without repeating completed tools"
+
+msgid "local configuration and dependencies; no network requests"
+msgstr "local configuration and dependencies; no network requests"
+
+msgid "test selected provider with one owned request (uses API quota)"
+msgstr "test selected provider with one owned request (uses API quota)"
+
+msgid "show provider-reported chat token usage"
+msgstr "show provider-reported chat token usage"
+
+msgid "read workspace AGENTS.md with permission, or clear"
+msgstr "read workspace AGENTS.md with permission, or clear"
+
+msgid "ask GPT-6 Luna for one explicit external review"
+msgstr "ask GPT-6 Luna for one explicit external review"
+
+msgid "workspace setup preference"
+msgstr "workspace setup preference"
+
+msgid "future folders without a saved choice"
+msgstr "future folders without a saved choice"
+
+msgid "persistent user preference"
+msgstr "persistent user preference"
+
+msgid "no file access, no permissions copied between workspaces"
+msgstr "no file access, no permissions copied between workspaces"
+
+msgid "workspace file read"
+msgstr "workspace file read"
+
+msgid "no edits, no commands, no folders outside workspace"
+msgstr "no edits, no commands, no folders outside workspace"
+
+msgid "List files"
+msgstr "List files"
+
+msgid "Read file contents"
+msgstr "Read file contents"
+
+msgid "Search file names"
+msgstr "Search file names"
+
+msgid "Inject selected context document"
+msgstr "Inject selected context document"
+
+msgid "Read ISyCode workspace preferences"
+msgstr "Read ISyCode workspace preferences"
+
+msgid "List ISyCode workspace prompt commands"
+msgstr "List ISyCode workspace prompt commands"
+
+msgid "Initialize or update ISyCode workspace config"
+msgstr "Initialize or update ISyCode workspace config"
+
+msgid "Create or edit files"
+msgstr "Create or edit files"
+
+msgid "Undo an ISyCode file change"
+msgstr "Undo an ISyCode file change"
+
+msgid "Undo every file change of one ISyCode turn"
+msgstr "Undo every file change of one ISyCode turn"
+
+msgid "Run a command in the workspace sandbox"
+msgstr "Run a command in the workspace sandbox"
+
+msgid "Git"
+msgstr "Git"
+
+msgid "See git status of the workspace"
+msgstr "See git status of the workspace"
+
+msgid "See git diffs of the workspace"
+msgstr "See git diffs of the workspace"
+
+msgid "Create a git commit"
+msgstr "Create a git commit"
+
+msgid "Publish one reviewed ref to one remote"
+msgstr "Publish one reviewed ref to one remote"
+
+msgid "Move or rename files"
+msgstr "Move or rename files"
+
+msgid "Delete files"
+msgstr "Delete files"
+
+msgid "Read sensitive files"
+msgstr "Read sensitive files"
+
+msgid "Accounts"
+msgstr "Accounts"
+
+msgid "Connect/disconnect ChatGPT subscription"
+msgstr "Connect/disconnect ChatGPT subscription"
+
+msgid "Network"
+msgstr "Network"
+
+msgid "Send prompts to the selected model provider"
+msgstr "Send prompts to the selected model provider"
+
+msgid "Sign in with the official grok CLI"
+msgstr "Sign in with the official grok CLI"
+
+msgid "Read a public HTTPS page"
+msgstr "Read a public HTTPS page"
+
+msgid "Read an external integration catalog"
+msgstr "Read an external integration catalog"
+
+msgid "Use ISyCo semantic analysis"
+msgstr "Use ISyCo semantic analysis"
+
+msgid "Read files through ISyCo Gateway"
+msgstr "Read files through ISyCo Gateway"
+
+msgid "Write files through ISyCo Gateway"
+msgstr "Write files through ISyCo Gateway"
+
+msgid "Credentials"
+msgstr "Credentials"
+
+msgid "Start a provider OAuth flow"
+msgstr "Start a provider OAuth flow"
+
+msgid "Save a named API key"
+msgstr "Save a named API key"
+
+msgid "Use a saved API key"
+msgstr "Use a saved API key"
+
+msgid "Revoke a saved API key"
+msgstr "Revoke a saved API key"
+
+msgid "Discover MCP servers and tools"
+msgstr "Discover MCP servers and tools"
+
+msgid "Invoke an MCP tool"
+msgstr "Invoke an MCP tool"
+
+msgid "Start a local MCP server from your config"
+msgstr "Start a local MCP server from your config"
+
+msgid "Call a tool of a local MCP server"
+msgstr "Call a tool of a local MCP server"
+
+msgid "Discover installed language servers"
+msgstr "Discover installed language servers"
+
+msgid "Start a language server"
+msgstr "Start a language server"
+
+msgid "Stop a language server"
+msgstr "Stop a language server"
+
+msgid "Check a file with a language server after an edit"
+msgstr "Check a file with a language server after an edit"
+
+msgid "Peers"
+msgstr "Peers"
+
+msgid "Detect the grit peer-claim registry"
+msgstr "Detect the grit peer-claim registry"
+
+msgid "Read grit peer claims touching one file (advisory)"
+msgstr "Read grit peer claims touching one file (advisory)"
+
+msgid "Semantic broker"
+msgstr "Semantic broker"
+
+msgid "Preview a broker recipe"
+msgstr "Preview a broker recipe"
+
+msgid "Build a semantic broker image"
+msgstr "Build a semantic broker image"
+
+msgid "Start a semantic broker"
+msgstr "Start a semantic broker"
+
+msgid "Read broker health and status"
+msgstr "Read broker health and status"
+
+msgid "Read broker logs"
+msgstr "Read broker logs"
+
+msgid "Stop a semantic broker"
+msgstr "Stop a semantic broker"
+
+msgid "Remove a broker container/image"
+msgstr "Remove a broker container/image"
+
+msgid "Start the local Mobile Host"
+msgstr "Start the local Mobile Host"
+
+msgid "Stop the local Mobile Host"
+msgstr "Stop the local Mobile Host"
+
+msgid "Pair a mobile device"
+msgstr "Pair a mobile device"
+
+msgid "Issue a new one-use pairing PIN"
+msgstr "Issue a new one-use pairing PIN"
+
+msgid "Read a remote session"
+msgstr "Read a remote session"
+
+msgid "Create a remote session"
+msgstr "Create a remote session"
+
+msgid "Cancel a remote turn"
+msgstr "Cancel a remote turn"
+
+msgid "Respond to a remote approval"
+msgstr "Respond to a remote approval"
+
+msgid "Connect to the optional Bridge"
+msgstr "Connect to the optional Bridge"
+
+msgid "Read Bridge messages"
+msgstr "Read Bridge messages"
+
+msgid "Send a Bridge message"
+msgstr "Send a Bridge message"
+
+msgid "Claim a coordination lease"
+msgstr "Claim a coordination lease"
+
+msgid "Release a coordination lease"
+msgstr "Release a coordination lease"
+
+msgid "Wake another registered agent"
+msgstr "Wake another registered agent"
+
+msgid "Read recent Bridge agent names"
+msgstr "Read recent Bridge agent names"
+
+msgid "L1 tools"
+msgstr "L1 tools"
+
+msgid "Create a staged L1 tool"
+msgstr "Create a staged L1 tool"
+
+msgid "Validate a staged L1 tool"
+msgstr "Validate a staged L1 tool"
+
+msgid "Run L1 tool tests and probe"
+msgstr "Run L1 tool tests and probe"
+
+msgid "Activate an L1 tool"
+msgstr "Activate an L1 tool"
+
+msgid "Disable an L1 tool"
+msgstr "Disable an L1 tool"
+
+msgid "Roll back an L1 tool generation"
+msgstr "Roll back an L1 tool generation"
+
+msgid "Create a persistent conversation"
+msgstr "Create a persistent conversation"
+
+msgid "Resume a persistent conversation"
+msgstr "Resume a persistent conversation"
+
+msgid "Delete a persistent conversation"
+msgstr "Delete a persistent conversation"
+
+msgid "Memory"
+msgstr "Memory"
+
+msgid "Read this workspace's private memory"
+msgstr "Read this workspace's private memory"
+
+msgid "Write or consolidate this workspace's private memory"
+msgstr "Write or consolidate this workspace's private memory"
+
+msgid "Permanently forget one memory"
+msgstr "Permanently forget one memory"
+
+msgid "Desktop"
+msgstr "Desktop"
+
+msgid "Paste an image or text from the clipboard"
+msgstr "Paste an image or text from the clipboard"
+
+msgid "Copy selected text or a path to the clipboard"
+msgstr "Copy selected text or a path to the clipboard"
+
+msgid "Open the native file picker"
+msgstr "Open the native file picker"
+
+msgid "Private access"
+msgstr "Private access"
+
+msgid "Inspect local Tailscale status"
+msgstr "Inspect local Tailscale status"
+
+msgid "Prepare an isolated signed Tailscale package"
+msgstr "Prepare an isolated signed Tailscale package"
+
+msgid "Stage verified Tailscale package as root"
+msgstr "Stage verified Tailscale package as root"
+
+msgid "Install the official Tailscale package"
+msgstr "Install the official Tailscale package"
+
+msgid "Start Tailscale browser login"
+msgstr "Start Tailscale browser login"
+
+msgid "Enable private Gateway Serve route"
+msgstr "Enable private Gateway Serve route"
+
+msgid "Disable owned private Gateway Serve route"
+msgstr "Disable owned private Gateway Serve route"
+
+msgid "Select conversational guidance"
+msgstr "Select conversational guidance"
+
+msgid "Edit workspace files"
+msgstr "Edit workspace files"
+
+msgid "Create git commits"
+msgstr "Create git commits"
+
+msgid "Local MCP servers"
+msgstr "Local MCP servers"
+
+msgid "Write this workspace's private memory"
+msgstr "Write this workspace's private memory"
+
+msgid "Forget memories in this workspace"
+msgstr "Forget memories in this workspace"
+
+msgid "Paste images or text from the clipboard"
+msgstr "Paste images or text from the clipboard"
+
+msgid "Coordinate with other agents"
+msgstr "Coordinate with other agents"
+
+msgid "Model ID"
+msgstr "Model ID"
+
+msgid "Family"
+msgstr "Family"
+
+msgid "Reasoning"
+msgstr "Reasoning"
+
+msgid "Tools (model)"
+msgstr "Tools (model)"
+
+msgid "Tools (route)"
+msgstr "Tools (route)"
+
+msgid "Input"
+msgstr "Input"
+
+msgid "Output"
+msgstr "Output"
+
+msgid "Cached input"
+msgstr "Cached input"
+
+msgid "Pricing"
+msgstr "Pricing"
+
+msgid "Chat on this machine"
+msgstr "Chat on this machine"
+
+msgid "Disable thinking for this model."
+msgstr "Disable thinking for this model."
+
+msgid "Enable thinking for this model."
+msgstr "Enable thinking for this model."
+
+msgid "No reasoning effort. Supported by this chat/tool transport."
+msgstr "No reasoning effort. Supported by this chat/tool transport."
+
+msgid "Lower reasoning effort."
+msgstr "Lower reasoning effort."
+
+msgid "Medium reasoning effort."
+msgstr "Medium reasoning effort."
+
+msgid "Higher reasoning effort."
+msgstr "Higher reasoning effort."
+
+msgid "Extra high reasoning effort."
+msgstr "Extra high reasoning effort."
+
+msgid "Maximum reasoning effort."
+msgstr "Maximum reasoning effort."
+
+msgid "Minimal reasoning effort."
+msgstr "Minimal reasoning effort."
+
+msgid "Use the provider's default reasoning behavior."
+msgstr "Use the provider's default reasoning behavior."
+
+msgid "This provider/model does not publish supported levels in the loaded catalog. Keep its default."
+msgstr "This provider/model does not publish supported levels in the loaded catalog. Keep its default."
+
+msgid "Popular"
+msgstr "Popular"
+
+msgid "Off"
+msgstr "Off"
+
+msgid "On"
+msgstr "On"
+
+msgid "Low"
+msgstr "Low"
+
+msgid "Medium"
+msgstr "Medium"
+
+msgid "High"
+msgstr "High"
+
+msgid "Xhigh"
+msgstr "Xhigh"
+
+msgid "Max"
+msgstr "Max"
+
+msgid "Minimal"
+msgstr "Minimal"
+
+msgid "Integrations"
+msgstr "Integrations"
+
+msgid "MCP / LSP / Gateway"
+msgstr "MCP / LSP / Gateway"
+
+msgid "Missing CLI"
+msgstr "Missing CLI"
+
+msgid "Signed in"
+msgstr "Signed in"
+
+msgid "Signed out"
+msgstr "Signed out"
+
+msgid "Not authorized"
+msgstr "Not authorized"
+
+msgid "Status only; this item does not run an action."
+msgstr "Status only; this item does not run an action."
+
+msgid "No extra summary is available. Press Enter or double-click to open."
+msgstr "No extra summary is available. Press Enter or double-click to open."
+
+msgid "Allow conversation deletion?"
+msgstr "Allow conversation deletion?"
+
+msgid "Disable conversation deletion?"
+msgstr "Disable conversation deletion?"
+
+msgid "Allow file edits in this workspace?"
+msgstr "Allow file edits in this workspace?"
+
+msgid "Turn off file edits?"
+msgstr "Turn off file edits?"
+
+msgid "Allow deletion"
+msgstr "Allow deletion"
+
+msgid "Disable deletion"
+msgstr "Disable deletion"
+
+msgid "Allow edits"
+msgstr "Allow edits"
+
+msgid "Turn off edits"
+msgstr "Turn off edits"
+
+msgid "Call once"
+msgstr "Call once"
+
+msgid "read and search files"
+msgstr "read and search files"
+
+msgid "edit, move, delete and undo files"
+msgstr "edit, move, delete and undo files"
+
+msgid "copy selected text to the clipboard"
+msgstr "copy selected text to the clipboard"
+
+msgid "run approved commands in the sandbox"
+msgstr "run approved commands in the sandbox"
+
+msgid "git status, diffs and approved commits"
+msgstr "git status, diffs and approved commits"
+
+msgid "check Python files after edits"
+msgstr "check Python files after edits"
+
+msgid "connect to the selected AI model ({host})"
+msgstr "connect to the selected AI model ({host})"
+
+msgid "commands (needs bubblewrap on Linux)"
+msgstr "commands (needs bubblewrap on Linux)"
+
+msgid "git (no repository here)"
+msgstr "git (no repository here)"
+
+msgid "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
+msgstr "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
+
+msgid "Not available here: {missing}."
+msgstr "Not available here: {missing}."
+
+msgid "stopped after the time limit"
+msgstr "stopped after the time limit"
+
+msgid "exit code {code}"
+msgstr "exit code {code}"
+
+msgid "File context from this folder can be sent to that provider."
+msgstr "File context from this folder can be sent to that provider."
+
+msgid "This confirmation does not send the folder contents by itself."
+msgstr "This confirmation does not send the folder contents by itself."
+
+msgid "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{note}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
+msgstr "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{note}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
+
+msgid "output limit reached"
+msgstr "output limit reached"
+
+msgid "No output."
+msgstr "No output."
+
+msgid "Output reached the execution owner's limit; more bytes were not retained."
+msgstr "Output reached the execution owner's limit; more bytes were not retained."
+
+msgid "Waiting for output…"
+msgstr "Waiting for output…"
+
+msgid "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
+msgstr "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
+
+msgid "Applies only when this folder has no saved choice yet."
+msgstr "Applies only when this folder has no saved choice yet."
+
+msgid "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."
+msgstr "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."
+
+msgid "Switch between API key and ChatGPT subscription, or disconnect."
+msgstr "Switch between API key and ChatGPT subscription, or disconnect."
+
+msgid "No additional provider auth metadata is available."
+msgstr "No additional provider auth metadata is available."
+
+msgid "Grant this provider host in Settings → Authority & Security."
+msgstr "Grant this provider host in Settings → Authority & Security."
+
+msgid "Checking"
+msgstr "Checking"
+
+msgid "External catalog denied"
+msgstr "External catalog denied"
+
+msgid "Configuration error"
+msgstr "Configuration error"
+
+msgid "Refresh failed"
+msgstr "Refresh failed"
+
+msgid "No MCP Servers"
+msgstr "No MCP Servers"
+
+msgid "No Skills"
+msgstr "No Skills"
+
+msgid "{count} available"
+msgstr "{count} available"
+
+msgid "select one below for details"
+msgstr "select one below for details"
+
+msgid "No Language Servers"
+msgstr "No Language Servers"
+
+msgid "none detected"
+msgstr "none detected"
+
+msgid "not on PATH"
+msgstr "not on PATH"
+
+msgid "Skills · {value}"
+msgstr "Skills · {value}"
+
+msgid "No skills available"
+msgstr "No skills available"
+
+msgid "Available skills ({value})"
+msgstr "Available skills ({value})"
+
+msgid "Blocked in Secure · no Bridge owner"
+msgstr "Blocked in Secure · no Bridge owner"
+
+msgid "Filesystem Authority · list/read/name-search granted for this workspace"
+msgstr "Filesystem Authority · list/read/name-search granted for this workspace"
+
+msgid "Filesystem Authority · no read grant; tree enumeration is unavailable"
+msgstr "Filesystem Authority · no read grant; tree enumeration is unavailable"
+
+msgid "auth metadata unavailable"
+msgstr "auth metadata unavailable"
+
+msgid "connected account"
+msgstr "connected account"
+
+msgid "available account"
+msgstr "available account"
+
+msgid "auth required"
+msgstr "auth required"
+
+msgid "disconnected"
+msgstr "disconnected"
+
+msgid "unsupported"
+msgstr "unsupported"
+
+msgid "conflict"
+msgstr "conflict"
+
+msgid "ok"
+msgstr "ok"
+
+msgid "owned"
+msgstr "owned"

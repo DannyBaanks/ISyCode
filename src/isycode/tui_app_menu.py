@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 async def _plan_cmd(app: "TUIApp", arg: str) -> None:
     if not arg.strip():
-        app._append("  Usage: /plan <intent>", MUTED)
+        app._append("  " + tr("Usage: /plan <intent>"), MUTED)
         return
     await app._run_plan(arg.strip())
 
@@ -69,13 +69,13 @@ async def _diff_cmd(app: "TUIApp", arg: str) -> None:
 
 async def _commit_cmd(app: "TUIApp", arg: str) -> None:
     if not arg.strip():
-        app._append("  Usage: /commit <message> · commits every changed file after review", MUTED)
+        app._append("  " + tr("Usage: /commit <message> · commits every changed file after review"), MUTED)
         return
     await app._git_tool("git_commit", {"message": arg.strip()})
 
 async def _subagent_cmd(app: "TUIApp", arg: str) -> None:
     result = await app._run_subagent(arg.strip())
-    app._append(f"  Subagent · {app._model_display_label(result.get('provider', ''), result.get('model', ''))} · {result['status']}", CYAN)
+    app._append("  " + tr("Subagent · {model_display_label} · {status}", model_display_label=app._model_display_label(result.get('provider', ''), result.get('model', '')), status=result['status']), CYAN)
     if result.get("text"):
         app.query_one(ChatArea).mount(SelectableText(
             RichMarkdown(result["text"], code_theme="monokai"),
@@ -107,7 +107,7 @@ async def _models_cmd(app: "TUIApp", arg: str) -> None:
     # An unknown name stays on that provider instead of opening a second catalog.
     named = _provider_from_arg(arg)
     if arg.strip() and named is None:
-        app._append("  /models · unknown provider · opening the current one", MUTED)
+        app._append("  " + tr("/models · unknown provider · opening the current one"), MUTED)
     app._open_scoped_models(named or selected_provider_name())
 
 async def _skills_cmd(app: "TUIApp", arg: str) -> None:
@@ -116,11 +116,11 @@ async def _skills_cmd(app: "TUIApp", arg: str) -> None:
         app._select_skill(parts[1])
     elif parts == ["clear"]:
         app._active_skills.clear()
-        app._append("  Selected skills cleared.", MUTED)
+        app._append("  " + tr("Selected skills cleared."), MUTED)
     else:
         from isycode.skill_catalog import skills
-        app._append("  Bundled skills: " + ", ".join(skills()), CYAN)
-        app._append("  /skills use <name> toggles guidance; /skills clear disables it.", MUTED)
+        app._append("  " + tr("Bundled skills: {join}", join=", ".join(skills())), CYAN)
+        app._append("  " + tr("/skills use <name> toggles guidance; /skills clear disables it."), MUTED)
 
 async def _mcp_cmd(app: "TUIApp", arg: str) -> None:
     parts = arg.split()
@@ -132,7 +132,7 @@ async def _mcp_cmd(app: "TUIApp", arg: str) -> None:
             await app._start_local_mcp(parts[1])
         else:
             stopped = await app._local_mcp_owner().stop(parts[1])
-            app._append(f"  MCP {parts[1]} {'stopped' if stopped else 'was not running'}.", MUTED)
+            app._append("  " + tr("MCP {value} {value2}.", value=parts[1], value2=tr("stopped") if stopped else tr("was not running")), MUTED)
         return
     await app._list_local_mcp()
 
@@ -146,12 +146,21 @@ async def _run_cmd(app: "TUIApp", arg: str) -> None:
     try:
         argv = shlex.split(arg)
     except ValueError as exc:
-        app._append(f"  /run · {exc}", YELLOW)
+        app._append("  " + tr("/run · {exc}", exc=exc), YELLOW)
         return
     if not argv:
-        app._append("  Usage: /run <program> [arguments] · no shell, pipes or redirects", MUTED)
+        app._append("  " + tr("Usage: /run <program> [arguments] · no shell, pipes or redirects"), MUTED)
         return
-    await app._run_workspace_command({"argv": argv})
+    # In Flow a typed command is its own turn, so /undo can put its changes back.
+    try:
+        turn = app._open_flow_turn()
+    except (OSError, ValueError):
+        app._append("  " + tr("Flow could not prepare recovery. Nothing ran."), RED)
+        return
+    try:
+        await app._run_workspace_command({"argv": argv})
+    finally:
+        app._close_flow_turn(turn)
 
 _TOUR_LINES = (
     "  Tour · the lay of the land",
@@ -178,65 +187,63 @@ async def _help_cmd(app: "TUIApp", arg: str) -> None:
         app._append(line, MUTED)
     custom = load_user_commands()
     if custom:
-        app._append("  Your commands (~/.config/isycode/commands):", MUTED)
+        app._append("  " + tr("Your commands (~/.config/isycode/commands):"), MUTED)
         for command in custom.values():
-            app._append(f"    /{command.name} — {command.description}", MUTED)
-    app._append(f"  Workspace commands live in {WORKSPACE_COMMANDS_DIR}/<name>.md; "
-                "@path attaches a workspace file to your message.", MUTED)
-    app._append("  New here? /help tour shows the lay of the land.", MUTED)
+            app._append(f"    /{command.name} — {tr(command.description)}", MUTED)
+    app._append("  " + tr("Workspace commands live in {workspace_commands_dir}/<name>.md; @path attaches a workspace file to your message.", workspace_commands_dir=WORKSPACE_COMMANDS_DIR), MUTED)
+    app._append("  " + tr("New here? /help tour shows the lay of the land."), MUTED)
 
 async def _readme_cmd(app: "TUIApp", arg: str) -> None:
     del arg
     app._set_activity(
-        "README picker blocked · desktop.file_picker has no registered action owner", YELLOW)
+        tr("README picker blocked · desktop.file_picker has no registered action owner"), YELLOW)
 
 async def _session_cmd(app: "TUIApp", arg: str) -> None:
     import os
     provider = selected_provider_name()
     model = resolved_chat_model(provider)
     role = app._active_role
-    app._append(f"  Workspace · {app._workspace_root}", MUTED)
-    app._append("  Model · " + app._model_display_label(provider, model), MUTED)
+    app._append("  " + tr("Workspace · {workspace_root}", workspace_root=app._workspace_root), MUTED)
+    app._append("  " + tr("Model · {model_display_label}", model_display_label=app._model_display_label(provider, model)), MUTED)
     app._append(
         f"  Chat role · {role['name']} ({role['kind']})" if role
         else "  Chat role · default", MUTED)
     app._append("  Conversations are saved for this workspace." if app._sessions_enabled()
                 else "  Chat history stays in memory for this launch.", MUTED)
-    app._append("  Anything else is plain chat with the configured model.", MUTED)
+    app._append("  " + tr("Anything else is plain chat with the configured model."), MUTED)
 
 async def _review_cmd(app: "TUIApp", artifact: str) -> None:
     artifact = artifact.strip()
     if not artifact:
-        app._append("  Usage: /review <text to send to GPT-6 Luna>", MUTED)
+        app._append("  " + tr("Usage: /review <text to send to GPT-6 Luna>"), MUTED)
         return
     if len(artifact) > 8000:
-        app._append("  Review text is limited to 8,000 characters. Narrow it and try again.", YELLOW)
+        app._append("  " + tr("Review text is limited to 8,000 characters. Narrow it and try again."), YELLOW)
         return
     if app._review_used:
-        app._append("  This TUI session already used its one external review request.", YELLOW)
+        app._append("  " + tr("This TUI session already used its one external review request."), YELLOW)
         return
     try:
         reviewer = Provider(
             name="openai", model="gpt-6-luna",
             api_key=load_provider_key("openai") or None)
     except (ProviderError, ConfigurationError):
-        app._append("  OpenAI API review is not configured. Add OPENAI_API_KEY through Providers first.", YELLOW)
+        app._append("  " + tr("OpenAI API review is not configured. Add OPENAI_API_KEY through Providers first."), YELLOW)
         return
     if not reviewer.configured():
-        app._append("  OpenAI API review needs OPENAI_API_KEY. No text was sent.", YELLOW)
+        app._append("  " + tr("OpenAI API review needs OPENAI_API_KEY. No text was sent."), YELLOW)
         return
     if urllib.request.getproxies().get(urlparse(reviewer.base_url).scheme):
         app._append(
-            "  Roundtrip is not available with the configured HTTP(S) proxy. "
-            "No review text was sent; the proxy will not be bypassed.", YELLOW)
+            "  " + tr("Roundtrip is not available with the configured HTTP(S) proxy. No review text was sent; the proxy will not be bypassed."), YELLOW)
         return
     approved = await app._await_screen(ReviewConsentScreen(artifact))
     if not approved:
-        app._append("  External review cancelled; no text was sent.", MUTED)
+        app._append("  " + tr("External review cancelled; no text was sent."), MUTED)
         return
     app._review_used = True
     app._pending_review = None
-    app._set_activity("Sending one explicit review request to OpenAI API", CYAN)
+    app._set_activity(tr("Sending one explicit review request to OpenAI API"), CYAN)
     request_task = None
     chat = app.query_one(ChatArea)
     cancel_button = Button(tr("Cancel review"), id="review-cancel")
@@ -273,21 +280,19 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
         result, request_outcome = await request_task
         if request_outcome.decision != "ALLOW" or not isinstance(result, dict):
             app._append(
-                f"  OpenAI review {request_outcome.decision} · "
-                f"{request_outcome.reason[:240] or 'no verifiable response'}; "
-                "no review was added.", YELLOW)
+                "  " + tr("OpenAI review {decision} · {value}; no review was added.", decision=request_outcome.decision, value=request_outcome.reason[:240] or tr("no verifiable response")), YELLOW)
             return
     except asyncio.CancelledError:
         app._append(
-            "  External review cancelled in flight. No retry was made, and partial output was discarded.",
+            "  " + tr("External review cancelled in flight. No retry was made, and partial output was discarded."),
             YELLOW)
         return
     except StreamError:
-        app._append("  External review failed or timed out. No retry was made.", RED)
+        app._append("  " + tr("External review failed or timed out. No retry was made."), RED)
         return
     except Exception as error:
         app._append(
-            f"  External review failed ({type(error).__name__}); no retry was made.", RED)
+            "  " + tr("External review failed ({name}); no retry was made.", name=type(error).__name__), RED)
         return
     finally:
         app._review_request_task = None
@@ -311,7 +316,7 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
             classes="external-review"))
         return
     if not critique.strip():
-        app._append("  External reviewer returned no text; nothing was added to the conversation.", YELLOW)
+        app._append("  " + tr("External reviewer returned no text; nothing was added to the conversation."), YELLOW)
         return
     chat = app.query_one(ChatArea)
     review_text = f"**{header}**\n\n{critique}"
@@ -321,7 +326,7 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
     app._pending_review = (artifact, critique)
     chat.mount(Button(tr("Iterate with this review"), id="review-iterate"))
     chat.follow_tail()
-    app._append("  The reviewer has no tools. Its feedback is not authority.", MUTED)
+    app._append("  " + tr("The reviewer has no tools. Its feedback is not authority."), MUTED)
 
 async def _providers_cmd(app: "TUIApp", arg: str) -> None:
     del arg
@@ -346,13 +351,13 @@ async def _keys_cmd(app: "TUIApp", arg: str) -> None:
         if name == current:
             line.append("  ← active", style="bold " + CYAN)
         groups[group].append(line)
-    app._append("Keys · credential status", CYAN)
+    app._append(tr("Keys · credential status"), CYAN)
     chat = app.query_one(ChatArea)
     for group, lines in groups.items():
         content = Text("\n").join(lines)
         chat.mount(ExpandableBox(SelectableText(content, selection_text=content.plain),
             title=f"{group} · {len(lines)}", collapsed=group != "Configured"))
-    app._append("Use /providers to choose a provider. Secret values are never displayed.", MUTED)
+    app._append(tr("Use /providers to choose a provider. Secret values are never displayed."), MUTED)
     chat.follow_tail()
 
 async def _retry_cmd(app: "TUIApp", arg: str) -> None:
@@ -372,7 +377,7 @@ async def _check_cmd(app: "TUIApp", arg: str) -> None:
 
 async def _usage_cmd(app: "TUIApp", arg: str) -> None:
     app._append(app._usage_status_text(), MUTED)
-    app._append("  Provider-reported usage only; ISyCode does not cap tokens or estimate billing.", MUTED)
+    app._append("  " + tr("Provider-reported usage only; ISyCode does not cap tokens or estimate billing."), MUTED)
 
 async def _sessions_cmd(app: "TUIApp", arg: str) -> None:
     await app._manage_sessions(arg)
@@ -387,8 +392,8 @@ async def _harness_cmd(app: "TUIApp", arg: str) -> None:
 async def _context_cmd(app: "TUIApp", arg: str) -> None:
     if arg.strip() == "clear":
         app._agent_context = None
-        app.query_one("#context-button", Button).label = "Context"
-        app._append("  Project context removed.", MUTED)
+        app.query_one("#context-button", Button).label = tr("Context")
+        app._append("  " + tr("Project context removed."), MUTED)
     else:
         await app._load_project_context()
 
@@ -683,14 +688,12 @@ class MenuMixin:
         kind, value = entry["kind"], entry["value"]
         try:
             revoked = self._folder_store().remove(value)
-            self._append(f"  Folder removed · {value} · "
-                         + (f"revoked {len(revoked)} permission(s) ISyCode had given it"
-                            if revoked else "its own permissions were left as they were"), GREEN)
+            self._append("  " + tr("Folder removed · {value} · {value2}", value=value, value2=(tr("revoked {count} permission(s) ISyCode had given it", count=len(revoked)) if revoked else tr("its own permissions were left as they were"))), GREEN)
             if self._file_browser_alias == value:
                 self._file_browser_alias = 'main'
                 self.run_worker(self._load_directory(str(self._workspace_root)), group='files')
         except (OSError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Folder not removed · {str(exc)[:160]}", YELLOW)
+            self._append("  " + tr("Folder not removed · {value}", value=str(exc)[:160]), YELLOW)
         self._open_workspace_folders_menu()
         return
 
@@ -772,25 +775,25 @@ class MenuMixin:
 
     def _menu_user_default_role_save(self, entry: dict[str, str | bool]) -> None:
         if not self._active_role:
-            self._append("  Choose a role first; no default was changed.", MUTED)
+            self._append("  " + tr("Choose a role first; no default was changed."), MUTED)
             return
         role_kind = ("motors" if self._active_role["kind"] == "ISyCo motor"
                      else self._active_role["kind"])
         try:
             UserDefaultsStore().update(default_role={
                 "name": self._active_role["name"], "kind": role_kind})
-            self._set_activity("Default role saved for all workspaces", GREEN)
+            self._set_activity(tr("Default role saved for all workspaces"), GREEN)
         except (OSError, ValueError, json.JSONDecodeError):
-            self._set_activity("Could not save the default role", RED)
+            self._set_activity(tr("Could not save the default role"), RED)
         self._open_user_defaults_menu()
         return
 
     def _menu_user_default_role_clear(self, entry: dict[str, str | bool]) -> None:
         try:
             UserDefaultsStore().update(default_role=None)
-            self._set_activity("Global default role cleared", MUTED)
+            self._set_activity(tr("Global default role cleared"), MUTED)
         except (OSError, ValueError, json.JSONDecodeError):
-            self._set_activity("Could not clear the default role", RED)
+            self._set_activity(tr("Could not clear the default role"), RED)
         self._open_user_defaults_menu()
         return
 
@@ -931,7 +934,7 @@ class MenuMixin:
         return
 
     def _menu_bridge_toggle(self, entry: dict[str, str | bool]) -> None:
-        self._set_activity("Bridge is blocked in Secure · no execution owner is connected", YELLOW)
+        self._set_activity(tr("Bridge is blocked in Secure · no execution owner is connected"), YELLOW)
         self._open_bridge_settings()
         return
 

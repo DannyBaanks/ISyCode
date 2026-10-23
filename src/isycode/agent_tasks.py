@@ -10,6 +10,8 @@ from typing import Any
 
 from rich.text import Text
 
+from isycode.localization import tr
+
 TASK_TOOL_NAME = "update_tasks"
 TASK_STATUSES = ("pending", "in_progress", "completed")
 MAX_TASKS = 30
@@ -54,16 +56,16 @@ def render_tasks(tasks: list[dict[str, str]], *, collapsed: bool = False) -> Tex
     done = sum(1 for task in tasks if task["status"] == "completed")
     if tasks and done == len(tasks):
         # Finished plans collapse to one line so they stop taking chat space.
-        return Text(f"Tasks · {done}/{len(tasks)} done ✓", style="bold #4ade80")
+        return Text(tr("Tasks · {done}/{total} done ✓", done=done, total=len(tasks)), style="bold #4ade80")
     if collapsed:
         current = next((task["title"] for task in tasks if task["status"] == "in_progress"), "")
-        text = Text(f"▸ Tasks · {done}/{len(tasks)} done", style="bold #bb8cff")
+        text = Text("▸ " + tr("Tasks · {done}/{total} done", done=done, total=len(tasks)), style="bold #bb8cff")
         if current:
-            text.append(f" · now: {current[:80]}", style="#c0c0c4")
-        text.append("   click or Ctrl+T to expand", style="#6c757d")
+            text.append(" · " + tr("now: {task}", task=current[:80]), style="#c0c0c4")
+        text.append("   " + tr("click or Ctrl+T to expand"), style="#6c757d")
         return text
-    text = Text(f"▾ Tasks · {done}/{len(tasks)} done", style="bold #bb8cff")
-    text.append("   click or Ctrl+T to fold\n", style="#6c757d")
+    text = Text("▾ " + tr("Tasks · {done}/{total} done", done=done, total=len(tasks)), style="bold #bb8cff")
+    text.append("   " + tr("click or Ctrl+T to fold") + "\n", style="#6c757d")
     from isycode.operation_style import operation_color
     for task in tasks:
         color = operation_color(task["title"]) or "#c0c0c4"

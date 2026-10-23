@@ -103,7 +103,7 @@ class ChatMixin:
     async def _summarize_older(self, provider, owner, older: list[dict],
                                recent: list[dict], instructions: str = "") -> bool:
         """Replace ``older`` history with model-written notes sent through the provider owner."""
-        self._append(f"  Compacting · summarizing {len(older)} earlier messages to free up context",
+        self._append("  " + tr("Compacting · summarizing {len} earlier messages to free up context", len=len(older)),
                      MUTED)
         summary_request = summary_messages(
             older, self._conversation_summary, instructions=instructions)
@@ -129,25 +129,23 @@ class ChatMixin:
         summary = (response.get("text") or "").strip() if isinstance(response, dict) else ""
         if outcome is None or outcome.decision != "ALLOW" or not summary:
             # Keep working: the older messages are simply not sent this turn.
-            self._append(f"  Compaction skipped · {reason[:160] or 'no summary returned'}; "
-                         "earlier messages are left out of this request", YELLOW)
+            self._append("  " + tr("Compaction skipped · {value}; earlier messages are left out of this request", value=reason[:160] or tr("no summary returned")), YELLOW)
             return False
         self._conversation_summary = sanitize_historical_text(summary)
         self._save_draft()
         self._history[:len(older)] = []
-        self._append("  Compacted · earlier messages summarized; the saved conversation keeps "
-                     "the full transcript", MUTED)
+        self._append("  " + tr("Compacted · earlier messages summarized; the saved conversation keeps the full transcript"), MUTED)
         return True
 
     async def _compact_conversation(self, instructions: str = "") -> None:
         """/compact: summarize everything except the latest exchange now."""
         if self._loop_task and self._loop_task is not asyncio.current_task() \
                 and not self._loop_task.done():
-            self._append("  Still working · finish or cancel the current reply first.", YELLOW)
+            self._append("  " + tr("Still working · finish or cancel the current reply first."), YELLOW)
             return
         older, recent = split_history(self._history, budget=0)
         if not older:
-            self._append("  Nothing to compact yet.", MUTED)
+            self._append("  " + tr("Nothing to compact yet."), MUTED)
             return
         try:
             provider = self._compaction_provider()
@@ -203,9 +201,7 @@ class ChatMixin:
         if plan["older"] and len(plan["older"]) != getattr(self, "_capsule_dropped", 0):
             provider_name = selected_provider_name()
             self._append(
-                f"  Context capsule · {len(plan['older'])} earlier messages and old tool results "
-                f"condensed to fit {resolved_chat_model(provider_name)}; the saved conversation "
-                "keeps everything", MUTED)
+                "  " + tr("Context capsule · {len} earlier messages and old tool results condensed to fit {resolved_chat_model}; the saved conversation keeps everything", len=len(plan['older']), resolved_chat_model=resolved_chat_model(provider_name)), MUTED)
         self._capsule_dropped = len(plan["older"])
         return plan
 
@@ -239,12 +235,11 @@ class ChatMixin:
                 if outcome.decision == "ALLOW":
                     command = parse_command(name, read_result_text(outcome.text), "workspace")
                 else:
-                    self._append(f"  /{name} found in {WORKSPACE_COMMANDS_DIR} but it could not be "
-                                 f"read · {outcome.reason[:160]}", YELLOW)
+                    self._append("  " + tr("/{name} found in {workspace_commands_dir} but it could not be read · {value}", name=name, workspace_commands_dir=WORKSPACE_COMMANDS_DIR, value=outcome.reason[:160]), YELLOW)
         if command is None:
             await self._run_chat(text)
             return
-        self._append(f"  /{name} · {command.source} prompt · {command.description}", MUTED)
+        self._append("  " + tr("/{name} · {source} prompt · {description}", name=name, source=command.source, description=command.description), MUTED)
         await self._run_chat(render_command(command, arguments))
 
     async def _expand_mentions(self, text: str) -> str:
@@ -259,9 +254,9 @@ class ChatMixin:
             outcome = await asyncio.to_thread(owner.execute, "workspace.files.read", {"path": path})
             if outcome.decision == "ALLOW" and outcome.receipt is not None:
                 files.append((path, read_result_text(outcome.text)))
-                self._append(f"  Attached @{path} · receipt {outcome.receipt.receipt_id}", MUTED)
+                self._append("  " + tr("Attached @{path} · receipt {receipt_id}", path=path, receipt_id=outcome.receipt.receipt_id), MUTED)
             else:
-                self._append(f"  @{path} not attached · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("@{path} not attached · {value}", path=path, value=outcome.reason[:160]), YELLOW)
         return attach_files(text, files)
 
     async def _review_write_batch(self, calls: list[dict]) -> dict[str, str]:
@@ -322,53 +317,67 @@ class ChatMixin:
             return {}
         from isycode.tui_screens_approval import BatchApprovalScreen
         previews = [preview for _, preview in candidates]
-        self._append(f"  Tool batch · {len(previews)} proposed writes · one review for all", CYAN)
+        self._append("  " + tr("Tool batch · {len} proposed writes · one review for all", len=len(previews)), CYAN)
         choice = await self._await_screen(BatchApprovalScreen(previews))
         if choice == "all":
-            self._append(f"  ✓ Batch approved · {len(previews)} one-use approvals, "
-                         "one per file", MUTED)
+            self._append("  " + tr("✓ Batch approved · {len} one-use approvals, one per file", len=len(previews)), MUTED)
             return {call_id: preview.request.digest for call_id, preview in candidates}
         if choice == "reject":
-            self._append(f"  ✗ Batch rejected · {len(previews)} files unchanged", MUTED)
+            self._append("  " + tr("✗ Batch rejected · {len} files unchanged", len=len(previews)), MUTED)
             return {call_id: "reject" for call_id, _ in candidates}
         return {}
 
     async def _run_chat(self, text: str, *, resume: Any | None = None) -> None:
         """One recoverable Flow unit per provider turn, including cancellation/failure."""
-        from isycode.turn_journal import TurnJournal
-        turn = None
-        if self._workspace_mode() == "flow":
-            try:
-                if TurnJournal.active(self._workspace_root) is not None:
-                    raise ValueError("another Flow turn is already recording this workspace")
-                turn = TurnJournal.begin(self._workspace_root)
-            except (OSError, ValueError):
-                self._append("  " + tr("Flow could not prepare recovery. Nothing started; prompt kept."), RED)
-                self._retry_prompt = text
-                self.query_one("#prompt-input", PromptArea).load_text(text)
-                return
+        try:
+            turn = self._open_flow_turn()
+        except (OSError, ValueError):
+            self._append("  " + tr("Flow could not prepare recovery. Nothing started; prompt kept."), RED)
+            self._retry_prompt = text
+            self.query_one("#prompt-input", PromptArea).load_text(text)
+            return
         try:
             await self._run_chat_turn(text, resume=resume)
         finally:
-            if turn is not None:
-                try:
-                    turn.finish()
-                    changes = turn.changes()
-                    if changes:
-                        self._append("  " + tr("Flow turn · {count} files · /undo restores this turn; later human edits are kept.",
-                                              count=len(changes)), CYAN)
-                        for change in changes:
-                            self._append(f"    {change['path']}", MUTED)
-                except (OSError, ValueError):
-                    self._append("  " + tr("Flow recovery record could not be closed. Inspect files and the action journal before continuing."), RED)
+            self._close_flow_turn(turn)
+
+    def _open_flow_turn(self):
+        """Start and pin a Flow turn; None outside Flow. Raises when it cannot be recorded.
+
+        Pinning makes work started inside the turn, including a background
+        command that finishes after it, record into this turn.
+        """
+        from isycode.turn_journal import TurnJournal
+        if self._workspace_mode() != "flow":
+            return None
+        if TurnJournal.running(self._workspace_root) is not None:
+            raise ValueError("another Flow turn is already recording this workspace")
+        turn = TurnJournal.begin(self._workspace_root)
+        return turn, turn.pin()
+
+    def _close_flow_turn(self, opened) -> None:
+        if opened is None:
+            return
+        turn, token = opened
+        turn.unpin(token)
+        try:
+            turn.finish()
+            changes = turn.changes()
+            if changes:
+                self._append("  " + tr("Flow turn · {count} files · /undo restores this turn; later human edits are kept.",
+                                      count=len(changes)), CYAN)
+                for change in changes:
+                    self._append(f"    {change['path']}", MUTED)
+        except (OSError, ValueError):
+            self._append("  " + tr("Flow recovery record could not be closed. Inspect files and the action journal before continuing."), RED)
 
     async def _run_chat_turn(self, text: str, *, resume: Any | None = None) -> None:
         """Instant streaming chat. Reasoning streams into a ThoughtBlock."""
         self._ensure_lane_session()
         original_prompt = text
         if resume is not None:
-            self._append("  Resuming interrupted turn…", CYAN)
-            self.notify_semantic("Resuming interrupted turn…", kind="info")
+            self._append("  " + tr("Resuming interrupted turn…"), CYAN)
+            self.notify_semantic(tr("Resuming interrupted turn…"), kind="info")
         elif self._lane_on_screen():
             self._dismiss_idle()
         else:
@@ -377,6 +386,10 @@ class ChatMixin:
             self._mount_user_turn(original_prompt, sent_at)
         completed = False
         self._chat_turn_task = asyncio.current_task()
+        # The answer keeps the color of the role it was asked under, even if
+        # the user switches roles while it streams.
+        turn_role = self._active_role["name"] if self._active_role else None
+        self._active_lane().stream_role = turn_role
         block = None
         t0 = _time.monotonic()
         # None until the stream stores a trial. Absence used to skip the restore; None does too.
@@ -605,7 +618,7 @@ class ChatMixin:
             image_fallback_used = False
             if known_blind:
                 self._append(
-                    "  Picture not sent · this model does not take images. The question goes as text.",
+                    "  " + tr("Picture not sent · this model does not take images. The question goes as text."),
                     YELLOW)
                 messages = self._image_attachments.without_images(base_messages)
             else:
@@ -648,9 +661,10 @@ class ChatMixin:
                     assistant_sent_at = assistant_sent_at or datetime.now().astimezone().isoformat(timespec="seconds")
                     clock = clock_label(assistant_sent_at)
                     if clock:
-                        chat_now.mount(Static(Text(clock, style=MUTED), classes="message-clock"))
+                        chat_now.mount(self._assistant_clock(clock, turn_role))
                     w = SelectableText(RichMarkdown("", code_theme="monokai"),
                                        selection_text="", classes="assistant-turn")
+                    self._paint_role_turn(w, turn_role)
                     holder["widget"] = w
                     lane.stream_widget = w
                     chat_now.mount(w)
@@ -780,7 +794,7 @@ class ChatMixin:
                             messages.append({"role": "user", "content": self._image_attachments.content(instruction)})
                             self._history.append({"role": "user", "content": instruction})
                         self._pending_steering.clear()
-                        self._append("Trying steering · original turn retained until response.", CYAN)
+                        self._append(tr("Trying steering · original turn retained until response."), CYAN)
                     self._apply_idea_nudge(messages, chat_tools)
                     request_material["messages"] = messages
                     self._chat_request_task = asyncio.create_task(owner.execute(
@@ -817,7 +831,7 @@ class ChatMixin:
                             record_image_result(provider.name, provider.model, False)
                             messages = self._image_attachments.without_images(messages)
                             self._append(
-                                "  Picture not accepted · sending the question as text.", YELLOW)
+                                "  " + tr("Picture not accepted · sending the question as text."), YELLOW)
                             continue
                         from isycode.provider_errors import classify_provider_error
                         if (not steered and not context_shrunk
@@ -839,9 +853,7 @@ class ChatMixin:
                             messages, turn_start, removed = shrink_request(
                                 messages, turn_start, capsule, budget)
                             self._append(
-                                f"  Context capsule · the request was larger than the model "
-                                f"window; {removed} earlier messages or tool results condensed "
-                                "and sent again · no tool effects repeated", MUTED)
+                                "  " + tr("Context capsule · the request was larger than the model window; {removed} earlier messages or tool results condensed and sent again · no tool effects repeated", removed=removed), MUTED)
                             continue
                         # ADR 0008: this step failed before dispatching any tool, so
                         # re-sending its messages cannot repeat an effect. Fixed delay
@@ -852,8 +864,7 @@ class ChatMixin:
                             recovery_failures += 1
                             discard_failed_step(content_mark, reason_mark)
                             self._set_activity(
-                                f"↻ {_recovery_label(decision.kind)} · retrying in "
-                                f"{decision.delay_s:.1f}s ({decision.attempt}/{decision.max_attempts})",
+                                tr("↻ {recovery_label} · retrying in {delay_s}s ({attempt}/{max_attempts})", recovery_label=_recovery_label(decision.kind), delay_s=format(decision.delay_s, '.1f'), attempt=decision.attempt, max_attempts=decision.max_attempts),
                                 YELLOW)
                             await wait_fixed(decision.delay_s)
                             continue
@@ -863,16 +874,14 @@ class ChatMixin:
                             # is surfaced as partial text for /resume; earlier retry
                             # attempts were already removed before their replacement.
                             self._append(
-                                f"  ⚠ Recovery stopped after {recovery_failures} automatic "
-                                f"attempt{'s' if recovery_failures != 1 else ''} · "
-                                f"{decision.reason} · no tool effects were repeated.", YELLOW)
+                                "  " + (tr("⚠ Recovery stopped after {count} automatic attempts · {reason} · no tool effects were repeated.", count=recovery_failures, reason=decision.reason) if recovery_failures != 1 else tr("⚠ Recovery stopped after 1 automatic attempt · {reason} · no tool effects were repeated.", reason=decision.reason)), YELLOW)
                         raise
                     except asyncio.CancelledError:
                         if self._pending_steering and not cancel_requested(asyncio.current_task()):
                             finish_step()
                             if step_content:
                                 messages.append({"role": "assistant", "content": "".join(step_content)})
-                            self._append("Provider stream interrupted for steering; partial output is retained on screen.", YELLOW)
+                            self._append(tr("Provider stream interrupted for steering; partial output is retained on screen."), YELLOW)
                             continue
                         raise
                     if provider_result.decision != "ALLOW" or not isinstance(response, dict):
@@ -892,9 +901,8 @@ class ChatMixin:
                         return
                     if recovery_failures:
                         self._append(
-                            f"  ✓ Response recovered after {recovery_failures} automatic "
-                            f"retr{'ies' if recovery_failures != 1 else 'y'} · no tool effects repeated", MUTED)
-                        self._set_activity("Response recovered", GREEN)
+                            "  " + (tr("✓ Response recovered after {count} automatic retries · no tool effects repeated", count=recovery_failures) if recovery_failures != 1 else tr("✓ Response recovered after 1 automatic retry · no tool effects repeated")), MUTED)
+                        self._set_activity(tr("Response recovered"), GREEN)
                         recovery_failures = 0
                     if steer_trial is not None and not step_content and not response.get("text") and not response.get("tool_calls"):
                         messages[:] = steer_trial["messages"]
@@ -915,7 +923,7 @@ class ChatMixin:
                                 positions.pop(0)
                         steer_trial = None
                         self._steering_try_active = False
-                        self._append("Steering accepted · continuing the turn.", CYAN)
+                        self._append(tr("Steering accepted · continuing the turn."), CYAN)
                     if not step_content and isinstance(response.get("text"), str) and response["text"].strip():
                         on_chunk("content", response["text"])
                     _content_line(force=True)
@@ -931,7 +939,8 @@ class ChatMixin:
                         lane.lines.append(("reasoning", "".join(step_reason),
                                            _time.monotonic() - thought_started))
                     if "".join(step_content).strip():
-                        lane.lines.append(("assistant", "".join(step_content), assistant_sent_at))
+                        lane.lines.append(("assistant", "".join(step_content), assistant_sent_at,
+                                           turn_role))
                     lane.partial = ""
                     lane.stream_widget = None
                     messages.append(assistant_turn(response))
@@ -948,10 +957,10 @@ class ChatMixin:
                         if resume is not None and call_id and call_id in resume.executed_tools:
                             tool_result = resume.executed_tools[call_id]
                             name_str = call_function.get("name", "tool") if isinstance(call_function, dict) else "tool"
-                            self._append(f"  Tool result reused · {name_str} · already executed", MUTED)
+                            self._append("  " + tr("Tool result reused · {name_str} · already executed", name_str=name_str), MUTED)
                         elif resume is not None and call_id and call_id in resume.denied_tools:
                             tool_result = json.dumps({"error": "tool was previously denied by security authority"})
-                            self._append("  Tool denied · decision preserved from interrupted turn", YELLOW)
+                            self._append("  " + tr("Tool denied · decision preserved from interrupted turn"), YELLOW)
                         else:
                             noted = False
                             if not is_idea_box:
@@ -971,7 +980,7 @@ class ChatMixin:
                             if not tools_active and not is_context_request and not is_question and not is_idea_box:
                                 call_id = call.get("id") or "call_" + uuid.uuid4().hex[:16]
                                 tool_result = json.dumps({"error": "workspace chat tools are not enabled"})
-                                self._append("  Tool denied · no explicit workspace read grant", YELLOW)
+                                self._append("  " + tr("Tool denied · no explicit workspace read grant"), YELLOW)
                             else:
                                 _tool_name = (call_function.get("name", "tool")
                                               if isinstance(call_function, dict) else "tool")
@@ -987,7 +996,7 @@ class ChatMixin:
                                     previous = self._tool_history[:-1] if noted else self._tool_history
                                     self._tool_history = record_tool_result(previous, call, tool_result)
                                 except ValueError:
-                                    self._append("  Tool note not retained: malformed tool metadata.", YELLOW)
+                                    self._append("  " + tr("Tool note not retained: malformed tool metadata."), YELLOW)
                                 self._save_draft()
                         messages.append({
                             "role": "tool", "tool_call_id": call_id, "content": tool_result,
@@ -996,10 +1005,10 @@ class ChatMixin:
                 if content_buf:
                     _content_line(force=True)
                     self._append(
-                        "  Response stopped. This partial answer was not added to chat history.",
+                        "  " + tr("Response stopped. This partial answer was not added to chat history."),
                         YELLOW)
                 else:
-                    self._append("  Response stopped; no partial answer was received.", YELLOW)
+                    self._append("  " + tr("Response stopped; no partial answer was received."), YELLOW)
                 if self._history and self._history[-1] == {"role": "user", "content": text}:
                     self._history.pop()
                 raise
@@ -1026,17 +1035,16 @@ class ChatMixin:
                     if content_buf:
                         _content_line(force=True)
                     self._append(
-                        f"  Stream interrupted ({_transport_reason(exc)}). Use /resume to continue without repeating completed tools.",
+                        "  " + tr("Stream interrupted ({transport_reason}). Use /resume to continue without repeating completed tools.", transport_reason=_transport_reason(exc)),
                         YELLOW)
-                    self.notify_semantic("Stream interrupted · use /resume", kind="warning")
+                    self.notify_semantic(tr("Stream interrupted · use /resume"), kind="warning")
                     return
                 if exc.status is not None:
                     self._append(f"  {self._provider_failure(exc, 'Chat')} · {tr('Use /resume to retry.')}", RED)
                 else:
                     self._append(
-                        f"  The stream failed before an answer ({_transport_reason(exc)}). "
-                        "Use /resume to retry.", RED)
-                self.notify_semantic("Stream interrupted · use /resume", kind="warning")
+                        "  " + tr("The stream failed before an answer ({transport_reason}). Use /resume to retry.", transport_reason=_transport_reason(exc)), RED)
+                self.notify_semantic(tr("Stream interrupted · use /resume"), kind="warning")
                 return
 
             full = "".join(content_buf).strip()
@@ -1074,14 +1082,13 @@ class ChatMixin:
                     done_lane.lines.append(("reasoning", "".join(step_reason),
                                             _time.monotonic() - thought_started))
                 done_lane.lines.append(("assistant", "".join(step_content).strip() or full,
-                                        assistant_sent_at))
+                                        assistant_sent_at, turn_role))
                 completed = True
                 self._retry_prompt = None
             elif reason_buf:
                 # The provider ended its response without a final answer.
                 self._append(
-                    "  (the provider ended the response during reasoning; its endpoint may have "
-                    "reached its own output or context limit)", YELLOW)
+                    "  " + tr("(the provider ended the response during reasoning; its endpoint may have reached its own output or context limit)"), YELLOW)
 
         def _close_chat_turn() -> None:
             # The trial lives on the turn. locals() in this function would not see it.
@@ -1114,7 +1121,7 @@ class ChatMixin:
                     parked = self._active_lane()
                     extra = parked.draft_text
                     parked.draft_text = pending + ("\n" + extra if extra else "")
-                self._append("Unapplied steering kept in the composer for review.", YELLOW)
+                self._append(tr("Unapplied steering kept in the composer for review."), YELLOW)
             self._chat_request_task = None
             self._chat_turn_task = None
             if on_screen and self._idea_nudge_timer is not None:
@@ -1137,8 +1144,8 @@ class ChatMixin:
             await _consume_chat_stream()
         except ProviderError as e:
             if resume is not None:
-                self._append(f"  The model provider rejected turn continuation ({str(e)}). Use /retry to submit the prompt again.", RED)
-                self.notify_semantic("Turn continuation rejected by provider", kind="error")
+                self._append("  " + tr("The model provider rejected turn continuation ({text}). Use /retry to submit the prompt again.", text=str(e)), RED)
+                self.notify_semantic(tr("Turn continuation rejected by provider"), kind="error")
                 return
             if "[IMAGE#" in text:
                 from isycode.provider_errors import classify_provider_error
@@ -1162,11 +1169,11 @@ class ChatMixin:
     def action_resume_interrupted_turn(self) -> None:
         """Resume an interrupted turn without repeating completed tools."""
         if self._chat_turn_task and not self._chat_turn_task.done():
-            self.notify_semantic("A response is already running", kind="warning")
+            self.notify_semantic(tr("A response is already running"), kind="warning")
             return
         if getattr(self, "_interrupted_turn", None) is None:
-            self._append("  No interrupted turn to resume.", MUTED)
-            self.notify_semantic("No interrupted turn to resume", kind="warning")
+            self._append("  " + tr("No interrupted turn to resume."), MUTED)
+            self.notify_semantic(tr("No interrupted turn to resume"), kind="warning")
             return
         interrupted = self._interrupted_turn
         self._interrupted_turn = None
@@ -1176,13 +1183,13 @@ class ChatMixin:
         """Prepare a draft; never replay provider requests or tool effects automatically."""
         prompt = self.query_one("#prompt-input", PromptArea)
         if self._retry_prompt is None:
-            self._append("  No interrupted prompt to retry.", MUTED)
+            self._append("  " + tr("No interrupted prompt to retry."), MUTED)
         elif prompt.text:
-            self._append("  Your current draft is kept. Clear it before using /retry.", YELLOW)
+            self._append("  " + tr("Your current draft is kept. Clear it before using /retry."), YELLOW)
         else:
             prompt.load_text(self._retry_prompt)
             prompt.focus()
-            self._append("  Retry draft ready · review previous effects, then press Enter to send.", MUTED)
+            self._append("  " + tr("Retry draft ready · review previous effects, then press Enter to send."), MUTED)
 
     def _track_composer_draft(self, event: TextArea.Changed) -> None:
         if event.text_area.id != "prompt-input":

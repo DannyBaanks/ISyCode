@@ -8,6 +8,11 @@ IsySentinel, the effect ledger and the journal (``workspace.turn.undo``).
 
 A full journal refuses the capture. Callers then keep the change from landing
 quietly: a command's changes stay staged and nothing is promoted.
+
+Work a turn starts keeps recording into that turn after it ends: the turn is
+pinned in a ContextVar, which tasks and threads started inside it inherit, so a
+background command that finishes later is still undone with the turn that
+launched it. Once that turn is undone, late changes are refused and stay staged.
 """
 from __future__ import annotations
 
@@ -19,6 +24,7 @@ import secrets
 import stat
 import threading
 import time
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +38,7 @@ MAX_KEPT_TURNS = 20
 
 _LOCK = threading.Lock()
 _ACTIVE: dict[str, "TurnJournal"] = {}
+_PINNED: ContextVar["TurnJournal | None"] = ContextVar("isycode_flow_turn", default=None)
 
 
 class TurnJournalFull(ValueError):
@@ -107,8 +114,26 @@ class TurnJournal:
 
     @classmethod
     def active(cls, root: Path) -> "TurnJournal | None":
+        """The turn that records changes made from here: the pinned one, else the open one."""
+        pinned = _PINNED.get()
+        if pinned is not None and pinned.root == Path(root).resolve():
+            return pinned
         with _LOCK:
             return _ACTIVE.get(_root_key(root))
+
+    @classmethod
+    def running(cls, root: Path) -> "TurnJournal | None":
+        """The open turn of ``root`` in this process, ignoring any pin."""
+        with _LOCK:
+            return _ACTIVE.get(_root_key(root))
+
+    def pin(self):
+        """Record work started from this context into this turn; returns the reset token."""
+        return _PINNED.set(self)
+
+    @staticmethod
+    def unpin(token) -> None:
+        _PINNED.reset(token)
 
     @classmethod
     def load(cls, root: Path, turn_id: str, *, base: Path | None = None) -> "TurnJournal":
@@ -166,8 +191,8 @@ class TurnJournal:
     # -- recording -----------------------------------------------------
     def capture(self, relative: str, payload: bytes | None, mode: int | None = None) -> None:
         """Remember the state of ``relative`` before this turn first changed it."""
-        if self.finished:
-            raise TurnJournalFull("the turn is already finished")
+        if self._undone():
+            raise TurnJournalFull("the turn was already undone")
         if relative in self.entries:
             return
         if len(self.entries) >= MAX_TURN_PATHS:
@@ -193,12 +218,22 @@ class TurnJournal:
     def note_after(self, relative: str, after_sha256: str | None) -> None:
         """The hash ``relative`` has after this turn's latest change (None: absent)."""
         entry = self.entries.get(relative)
-        if entry is None:
-            return
+        if entry is None or self._undone():
+            return    # never rewrite an undone record as undoable again
         entry["after_sha256"] = after_sha256
         entry["after_mode"] = (stat.S_IMODE((self.root / relative).lstat().st_mode)
                                if after_sha256 is not None else None)
         self._save()
+
+    def _undone(self) -> bool:
+        """Undone here or by another instance of this turn (undo loads its own copy)."""
+        if not self.undone:
+            try:
+                data = json.loads((self.directory / "manifest.json").read_text(encoding="utf-8"))
+                self.undone = isinstance(data, dict) and bool(data.get("undone"))
+            except (OSError, ValueError):
+                return True   # an unreadable record cannot safely take more changes
+        return self.undone
 
     def mark_undone(self) -> None:
         self.undone = True

@@ -49,13 +49,15 @@ class ConversationLane:
         self.idea_nudge_due = False
         self.activity_message = tr("Chat ready")
         self.activity_color = None
-        # ("user"|"note"|"assistant", text, sent_at or color)
+        # ("user"|"note"|"assistant", text, sent_at or color); answers add their role name
         self.lines: list = []
         self.partial = ""
         self.partial_reason = ""
         self.partial_reason_chunks: list[str] = []
         self.stream_widget = None
         self.stream_block = None
+        # Role of the answer streaming in this lane, kept to repaint its color.
+        self.stream_role = None
 
 
 LANE_FIELDS = (

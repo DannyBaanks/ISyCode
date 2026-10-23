@@ -116,12 +116,12 @@ class ProviderMixin:
             else:
                 entries.append(self._entry(
                     tr("·  {label}  ·  {blurb}", label=label, blurb=tr(blurb)),
-                    "provider_unwired", label, blurb, translate=False))
+                    "provider_unwired", label, tr(blurb), translate=False))
         if active in {"chatgpt", "openai"}:
             entries.append(self._entry(
                 tr("OpenAI & ChatGPT · choose connection method…"),
                 "provider_auth_methods", "openai",
-                "Switch between API key and ChatGPT subscription, or disconnect.",
+                tr("Switch between API key and ChatGPT subscription, or disconnect."),
                 translate=False))
         snapshot = self._provider_auth_snapshot
         auth_methods = {item["name"]: item.get("methods", [])
@@ -131,16 +131,16 @@ class ProviderMixin:
             entries.append(self._entry("— Additional provider accounts —", "info"))
             for provider in openisy_catalog.items:
                 methods = auth_methods.get(provider["id"], [])
-                method_text = "/".join(methods) if methods else "auth metadata unavailable"
-                state_text = "connected account" if provider["connected"] else "available account"
+                method_text = "/".join(methods) if methods else tr("auth metadata unavailable")
+                state_text = tr("connected account") if provider["connected"] else tr("available account")
                 entries.append(self._entry(
                     f"{provider['name']}  ·  {state_text} · {method_text}",
                     "openisy_provider", provider["id"],
-                    "This account is not connected to ISyCode inference yet."))
+                    tr("This account is not connected to ISyCode inference yet."), translate=False))
         else:
             entries.append(self._entry(
                 tr("Additional provider catalog · {state}",
-                   state=openisy_catalog.state.replace('_', ' ')),
+                   state=tr(openisy_catalog.state.replace('_', ' '))),
                 "info", "", openisy_catalog.detail, translate=False))
         if snapshot.state == "ready":
             catalog_ids = {provider["id"] for provider in openisy_catalog.items}
@@ -150,13 +150,13 @@ class ProviderMixin:
                         tr("{name}  ·  OAuth available, not connected",
                            name=provider['name']),
                         "oauth_info", provider["name"],
-                        "ISyCode does not yet have an authorization flow for this provider.",
+                        tr("ISyCode does not yet have an authorization flow for this provider."),
                         translate=False))
         elif snapshot.state != "ready":
             entries.append(self._entry(
                 tr("OAuth discovery · {state}",
-                   state=snapshot.state.replace('_', ' ')),
-                "info", "", snapshot.detail or "No additional provider auth metadata is available.",
+                   state=tr(snapshot.state.replace('_', ' '))),
+                "info", "", snapshot.detail or tr("No additional provider auth metadata is available."),
                 translate=False))
         self._menu_stack = []
         self._render_menu("providers", "Select provider", entries)
@@ -170,7 +170,7 @@ class ProviderMixin:
             self._entry("API key · console.x.ai", "xai_api_key", "",
                         "Saved in the OS keyring. Chat goes to api.x.ai."),
             self._entry(tr("Use Grok sign-in · {note}", note=tr(note)), "xai_session", "",
-                        "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com.",
+                        tr("Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."),
                         translate=False),
             self._entry("Sign in with device code", "xai_device"),
             self._entry("Sign in with browser", "xai_browser"),
@@ -196,10 +196,10 @@ class ProviderMixin:
     async def _use_grok_sign_in(self) -> None:
         from isycode.grok_session import SESSION_MODEL, set_xai_auth_mode, status
         if status() != "signed-in":
-            self._append("  No live Grok sign-in. Use device code or browser first.", YELLOW)
+            self._append("  " + tr("No live Grok sign-in. Use device code or browser first."), YELLOW)
             return
         if not await self._allow_grok_session_host():
-            self._append("  Grok sign-in not selected.", MUTED)
+            self._append("  " + tr("Grok sign-in not selected."), MUTED)
             return
         set_xai_auth_mode("session")
         self._select_provider("xai", SESSION_MODEL)
@@ -211,7 +211,7 @@ class ProviderMixin:
         try:
             grok_executable()
         except ValueError:
-            self._append("  Grok CLI not found. Install the official grok CLI first.", YELLOW)
+            self._append("  " + tr("Grok CLI not found. Install the official grok CLI first."), YELLOW)
             return
         try:
             authority = WorkspaceAuthority(self._workspace_root)
@@ -226,24 +226,24 @@ class ProviderMixin:
                 return
             authority.set_grant("grok.login", enabled=True, targets=["grok"],
                                 executables=[request.parameters["executable"]])
-            self._append("  Starting grok login.", MUTED)
+            self._append("  " + tr("Starting grok login."), MUTED)
             outcome = await owner.begin(request, self._action_approvals.issue(request),
                                         on_line=lambda line: self._append(f"  {line}", CYAN))
         except (OSError, ValueError, WorkspaceAuthorityError) as exc:
-            self._append(f"  Grok login did not start ({type(exc).__name__}).", YELLOW)
+            self._append("  " + tr("Grok login did not start ({name}).", name=type(exc).__name__), YELLOW)
             return
         if outcome.decision != "ALLOW":
             if outcome.reason == "official grok login failed to launch":
-                self._append("  Grok login did not start. The API key path is unchanged.", YELLOW)
+                self._append("  " + tr("Grok login did not start. The API key path is unchanged."), YELLOW)
             elif outcome.decision == "ERROR":
-                self._append("  Grok sign-in did not finish. The API key path is unchanged.", YELLOW)
+                self._append("  " + tr("Grok sign-in did not finish. The API key path is unchanged."), YELLOW)
             elif outcome.decision == "NOT_VERIFIABLE":
-                self._append(f"  Grok sign-in not verifiable · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Grok sign-in not verifiable · {value}", value=outcome.reason[:160]), YELLOW)
             else:
-                self._append(f"  Grok sign-in blocked · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Grok sign-in blocked · {value}", value=outcome.reason[:160]), YELLOW)
             return
         if not await self._allow_grok_session_host():
-            self._append("  Signed in with grok, but ISyCode was not allowed to use it.", YELLOW)
+            self._append("  " + tr("Signed in with grok, but ISyCode was not allowed to use it."), YELLOW)
             return
         set_xai_auth_mode("session")
         self._select_provider("xai", SESSION_MODEL)
@@ -271,11 +271,7 @@ class ProviderMixin:
             identity = request.parameters['connector']
             if not await self._await_screen(TailscaleConfirmScreen(
                     'Disconnect ChatGPT?' if logout else 'Connect ChatGPT subscription?',
-                    f"Runs official Codex app-server at {identity['executable']}. "
-                    f"Account storage: {identity['home']} in the OS keyring. "
-                    "Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector "
-                    "and subscription requests in this workspace; file permissions stay separate. "
-                    "ChatGPT plan limits apply; API-key billing remains separate. Never share login codes.",
+                    tr("Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes.", executable=identity['executable'], home=identity['home']),
                     'Disconnect' if logout else 'Connect ChatGPT')):
                 return
             authority.set_grant('provider.authenticate', enabled=True, targets=['chatgpt'],
@@ -286,10 +282,10 @@ class ProviderMixin:
                 authority.set_grant('provider.request', enabled=True, network_hosts=hosts)
             outcome, challenge = await owner.begin(request, self._action_approvals.issue(request))
             if outcome.decision != 'ALLOW':
-                self._append(f"  ChatGPT sign-in blocked · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("ChatGPT sign-in blocked · {value}", value=outcome.reason[:160]), YELLOW)
                 return
             if logout:
-                self._append('  ChatGPT account disconnected. API keys are unchanged.', GREEN)
+                self._append("  " + tr("ChatGPT account disconnected. API keys are unchanged."), GREEN)
                 return
             screen = SubscriptionLoginScreen(challenge)
             visible = asyncio.create_task(self._await_screen(screen)); tasks.append(visible)
@@ -297,20 +293,20 @@ class ProviderMixin:
             finished = asyncio.create_task(owner.finish()); tasks.append(finished)
             done, _ = await asyncio.wait({visible, finished}, return_when=asyncio.FIRST_COMPLETED)
             if finished not in done:
-                self._append('  ChatGPT sign-in cancelled.', MUTED)
+                self._append("  " + tr("ChatGPT sign-in cancelled."), MUTED)
                 return
             outcome, account = await finished
             if screen.is_mounted:
                 screen.dismiss(None)
             await visible
             if outcome.decision == 'ALLOW' and account:
-                self._append(f"  ChatGPT sign-in verified · plan {account['plan']} · subscription limits apply", GREEN)
+                self._append("  " + tr("ChatGPT sign-in verified · plan {plan} · subscription limits apply", plan=account['plan']), GREEN)
                 self._select_provider('chatgpt', 'auto')
                 self._open_scoped_models('chatgpt')
             else:
-                self._append(f"  ChatGPT sign-in not completed · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("ChatGPT sign-in not completed · {value}", value=outcome.reason[:160]), YELLOW)
         except (OSError, ValueError, ProviderError, WorkspaceAuthorityError) as exc:
-            self._append(f"  ChatGPT connection unavailable ({type(exc).__name__}). Install official Codex CLI, unlock the OS keyring and check Authority grants.", YELLOW)
+            self._append("  " + tr("ChatGPT connection unavailable ({name}). Install official Codex CLI, unlock the OS keyring and check Authority grants.", name=type(exc).__name__), YELLOW)
         finally:
             for task in tasks:
                 if not task.done(): task.cancel()
@@ -358,7 +354,7 @@ class ProviderMixin:
                     tr("Allow using the saved {name} key here · asks first",
                        name=self._credential_label(service)),
                     "credential_use_grant", service,
-                    "Each use is decided and recorded in this workspace's action journal.",
+                    tr("Each use is decided and recorded in this workspace's action journal."),
                     translate=False))
         for item in credentials:
             if item["revoked"]:
@@ -389,14 +385,14 @@ class ProviderMixin:
         order = {"none": 0, "off": 0, "minimal": 1, "on": 1, "low": 2, "medium": 3, "high": 4, "xhigh": 5, "max": 6}
         levels = tuple(sorted(reasoning_levels(name, model), key=order.__getitem__))
         if not levels:
-            self.notify("This model does not expose adjustable reasoning levels", severity="warning")
+            self.notify(tr("This model does not expose adjustable reasoning levels"), severity="warning")
             return
         current = effective_reasoning(name, model, PRESETS.get(name, {}).get("reasoning_effort"))
         index = levels.index(current) if current in levels else (-1 if direction > 0 else len(levels))
         selected = levels[max(0, min(len(levels) - 1, index + direction))]
         select_reasoning(name, model, selected)
         self._paint_idea_box()
-        self.notify("Reasoning · " + selected.capitalize() + (" · next request" if self._loop_task and not self._loop_task.done() else ""))
+        self.notify(tr("Reasoning · {capitalize}{value}", capitalize=selected.capitalize(), value=" " + tr("· next request") if self._loop_task and not self._loop_task.done() else ""))
 
     def action_increase_reasoning(self) -> None:
         self._step_reasoning(1)
@@ -448,7 +444,7 @@ class ProviderMixin:
                         tr("Provider model request {decision}.",
                            decision=result.decision.lower()),
                         "info", "",
-                        result.reason or "Grant this provider host in Settings → Authority & Security.",
+                        result.reason or tr("Grant this provider host in Settings → Authority & Security."),
                         translate=False)]
                 elif not models:
                     rows = [self._entry("The provider returned an empty model catalog.", "info")]
@@ -460,12 +456,11 @@ class ProviderMixin:
                                 f"★ {label} · {model_id}"
                                 f"{'  ◂ current' if model_id == provider.model else ''}",
                                 "model", f"{name}|{model_id}",
-                                f"Featured model, found in this account's {provider.label} catalog."))
+                                tr("Featured model, found in this account's {label} catalog.", label=provider.label)))
                         else:
                             rows.append(self._entry(
-                                f"★ {label} · not in this account's catalog", "info", "",
-                                f"{provider.label} did not list a model matching {label}; it may "
-                                "not be offered here yet."))
+                                tr("★ {label} · not in this account's catalog", label=label), "info", "",
+                                tr("{label} did not list a model matching {label2}; it may not be offered here yet.", label=provider.label, label2=label)))
                     from isycode.model_presentation import model_family, OTHER_FAMILY
                     families: dict[str, list[str]] = {}
                     for model_id in models:
@@ -490,7 +485,7 @@ class ProviderMixin:
                             tr("▸ {family} · {count} models",
                                family=family, count=len(ids)),
                             "model_family", f"{name}|{family}",
-                            "Open this family's variants.",
+                            tr("Open this family's variants."),
                             translate=False))
                     self._account_family_variants = family_variants
         except ProviderError as error:
@@ -559,7 +554,7 @@ class ProviderMixin:
                 name=name, model=target_model,
                 api_key=load_provider_key(name) or None)
         except (ProviderError, ConfigurationError):
-            self._set_activity(f"{name} configuration unavailable", RED)
+            self._set_activity(tr("{name} configuration unavailable", name=name), RED)
             self._close_menu()
             return False
         os.environ["ISYCODE_PROVIDER"] = name
@@ -567,7 +562,7 @@ class ProviderMixin:
         try:
             save_provider_selection(name, provider.model)
         except (OSError, ValueError):
-            self._append("  Provider is selected for this run; private preference could not be saved.", YELLOW)
+            self._append("  " + tr("Provider is selected for this run; private preference could not be saved."), YELLOW)
         # Keep the optional legacy planner provider separate when the native
         # ISyCode-only preset is not supported by that adapter.
         if isymotron_provider_available(name):
@@ -575,15 +570,14 @@ class ProviderMixin:
             os.environ["ISYMOTRON_MODEL"] = provider.model
         elif name in {"groq", "openrouter"}:
             self._append(
-                "  This provider is configured for ISyCode chat; the optional "
-                "IsyMotron planner keeps its own provider until its adapter supports it.",
+                "  " + tr("This provider is configured for ISyCode chat; the optional IsyMotron planner keeps its own provider until its adapter supports it."),
                 MUTED)
         if current != name:
             self._clear_pending_plan()
         self._paint_idea_box()
         self._refresh_model_button()
         if provider.configured():
-            self._append("  Selected for this session · " + self._model_display_label(name, provider.model), GREEN)
+            self._append("  " + tr("Selected for this session · {model_display_label}", model_display_label=self._model_display_label(name, provider.model)), GREEN)
             self._close_menu()
             return True
         self._close_menu()
@@ -614,8 +608,7 @@ class ProviderMixin:
         self.query_one("#action-detail", Static).display = False
         self.query_one("#action-search", Input).display = False
         self.query_one("#key-entry-label", Static).update(
-            f"API key for {self._credential_label(service)} · saved in your OS keyring for your "
-            "user, never in this project or its logs. Saving asks you to confirm.")
+            tr("API key for {credential_label} · saved in your OS keyring for your user, never in this project or its logs. Saving asks you to confirm.", credential_label=self._credential_label(service)))
         self.query_one("#key-entry", Vertical).display = True
         key_input = self.query_one("#provider-key-input", Input)
         key_input.value = ""
@@ -627,7 +620,7 @@ class ProviderMixin:
         service, self._provider_key_target = self._provider_key_target, ""
         self._close_menu()
         if not service or not secret.strip():
-            self._append("  No API key was entered; nothing was saved.", MUTED)
+            self._append("  " + tr("No API key was entered; nothing was saved."), MUTED)
             return
         self.run_worker(self._save_key_flow(service, secret), exclusive=True, group="credentials")
 
@@ -641,11 +634,8 @@ class ProviderMixin:
             return True
         label = self._credential_label(service)
         if not await self._await_screen(TailscaleConfirmScreen(
-                f"Allow managing {label} API keys?",
-                f"ISyCode may save, use and remove {label} API keys in your operating-system "
-                "keyring. Keys are stored for your user (every workspace), never in the project, "
-                "the action journal or chat history. Each use is recorded in this workspace's "
-                "journal; each save and each removal still asks you first.",
+                tr("Allow managing {label} API keys?", label=label),
+                tr("ISyCode may save, use and remove {label} API keys in your operating-system keyring. Keys are stored for your user (every workspace), never in the project, the action journal or chat history. Each use is recorded in this workspace's journal; each save and each removal still asks you first.", label=label),
                 "Allow")):
             return False
         for action in actions:
@@ -660,31 +650,29 @@ class ProviderMixin:
                                     self._action_approvals)
         except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError):
             env = PRESETS.get(service, {}).get("key_env", "the provider's API key variable")
-            self._append(f"  No secure OS keyring is available here; nothing was saved. "
-                         f"Set {env} in your environment instead.", YELLOW)
+            self._append("  " + tr("No secure OS keyring is available here; nothing was saved. Set {env} in your environment instead.", env=env), YELLOW)
             return False
         try:
             if not await self._ensure_credential_grant(owner, service):
-                self._append("  API key not saved; permission was not granted.", MUTED)
+                self._append("  " + tr("API key not saved; permission was not granted."), MUTED)
                 return False
             request = owner.add_request(
                 service, f"{label} key",
                 "ISyCo Gateway access" if service == GATEWAY_SERVICE else "ISyCode chat")
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  API key not saved ({type(exc).__name__}).", RED)
+            self._append("  " + tr("API key not saved ({name}).", name=type(exc).__name__), RED)
             return False
         if not await self._await_screen(TailscaleConfirmScreen(
-                f"Save the {label} API key?",
-                f"The key you pasted will be saved in your OS keyring for {label}. The newest saved "
-                "key for a service is the one ISyCode uses.", "Save key")):
-            self._append("  API key not saved; the pasted value was discarded.", MUTED)
+                tr("Save the {label} API key?", label=label),
+                tr("The key you pasted will be saved in your OS keyring for {label}. The newest saved key for a service is the one ISyCode uses.", label=label), "Save key")):
+            self._append("  " + tr("API key not saved; the pasted value was discarded."), MUTED)
             return False
         approval = self._action_approvals.issue(request, ttl_seconds=60)
         outcome = await asyncio.to_thread(owner.add, request, secret, approval)
         if outcome.decision != "ALLOW":
-            self._append(f"  API key not saved · {outcome.reason[:180]}", YELLOW)
+            self._append("  " + tr("API key not saved · {value}", value=outcome.reason[:180]), YELLOW)
             return False
-        self._append(f"  {label} API key saved · receipt {outcome.receipt.receipt_id}", GREEN)
+        self._append("  " + tr("{label} API key saved · receipt {receipt_id}", label=label, receipt_id=outcome.receipt.receipt_id), GREEN)
         if service in PRESETS:
             self._select_provider(service)
         return True
@@ -695,7 +683,7 @@ class ProviderMixin:
                                     self._action_approvals)
             granted = await self._ensure_credential_grant(owner, service)
         except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  Permission not changed ({type(exc).__name__}).", YELLOW)
+            self._append("  " + tr("Permission not changed ({name}).", name=type(exc).__name__), YELLOW)
             return False
         label = self._credential_label(service)
         self._append(f"  The saved {label} key can be used in this workspace." if granted
@@ -710,17 +698,17 @@ class ProviderMixin:
             request = owner.revoke_request(key_id)
             service = request.parameters["service"]
             if not await self._ensure_credential_grant(owner, service):
-                self._append("  API key not removed; permission was not granted.", MUTED)
+                self._append("  " + tr("API key not removed; permission was not granted."), MUTED)
                 return
         except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
-            self._append(f"  API key cannot be removed ({type(exc).__name__}).", YELLOW)
+            self._append("  " + tr("API key cannot be removed ({name}).", name=type(exc).__name__), YELLOW)
             return
         label = self._credential_label(service)
         if not await self._await_screen(TailscaleConfirmScreen(
-                f"Remove this {label} API key?",
+                tr("Remove this {label} API key?", label=label),
                 "The key is deleted from your OS keyring. ISyCode then uses an older saved key "
                 "or an environment variable for this service, if any.", "Remove key")):
-            self._append("  API key kept.", MUTED)
+            self._append("  " + tr("API key kept."), MUTED)
             return
         approval = self._action_approvals.issue(request, ttl_seconds=60)
         outcome = await asyncio.to_thread(owner.revoke, request, approval)
@@ -746,11 +734,11 @@ class ProviderMixin:
             self._paint_idle()
             self._paint_idea_box()
             if not self._idle_mounted():
-                self._append("  Model: " + self._model_line, self._model_line_style)
+                self._append("  " + tr("Model: {model_line}", model_line=self._model_line), self._model_line_style)
         except ConfigurationError as e:
-            self._append(f"  Model: {e}", YELLOW)
+            self._append("  " + tr("Model: {e}", e=e), YELLOW)
         except Exception as e:
-            self._append(f"  Model: configuration error ({type(e).__name__}).", RED)
+            self._append("  " + tr("Model: configuration error ({name}).", name=type(e).__name__), RED)
 
     def _menu_provider_unwired(self, entry: dict[str, str | bool]) -> None:
         kind, value = entry["kind"], entry["value"]
@@ -881,7 +869,7 @@ class ProviderMixin:
         try:
             UserDefaultsStore().update(notification_sounds=enabled)
         except (OSError, ValueError):
-            self.notify("Sound preference could not be saved", severity="warning")
+            self.notify(tr("Sound preference could not be saved"), severity="warning")
             return
         self._notification_sounds = enabled
         if enabled:
@@ -894,7 +882,7 @@ class ProviderMixin:
         try:
             UserDefaultsStore().update(high_contrast=enabled)
         except (OSError, ValueError):
-            self.notify("High contrast preference could not be saved", severity="warning")
+            self.notify(tr("High contrast preference could not be saved"), severity="warning")
             return
         self._high_contrast = enabled
         self._apply_high_contrast(enabled)
@@ -919,7 +907,7 @@ class ProviderMixin:
         try:
             UserDefaultsStore().update(ascii_only=enabled)
         except (OSError, ValueError):
-            self.notify("ASCII-only preference could not be saved", severity="warning")
+            self.notify(tr("ASCII-only preference could not be saved"), severity="warning")
             return
         self._ascii_only = enabled
         from isycode.tui_theme import set_ascii_only
@@ -932,7 +920,7 @@ class ProviderMixin:
         try:
             UserDefaultsStore().update(compact_marquee=enabled)
         except (OSError, ValueError):
-            self._set_activity("Compact text scroll preference could not be saved", YELLOW)
+            self._set_activity(tr("Compact text scroll preference could not be saved"), YELLOW)
             return
         self._compact_marquee_default = enabled
         for box in self.query(ExpandableBox):
@@ -946,7 +934,7 @@ class ProviderMixin:
         try:
             UserDefaultsStore().update(sidebar_file_preview=enabled)
         except (OSError, ValueError):
-            self.notify("Sidebar file preview preference could not be saved", severity="warning")
+            self.notify(tr("Sidebar file preview preference could not be saved"), severity="warning")
             return
         self._sidebar_file_preview = enabled
         self._apply_sidebar_file_preview(enabled)
@@ -1047,7 +1035,7 @@ class ProviderMixin:
         }
         self.query_one("#role-button", Button).label = self._role_button_label()
         self._set_activity(
-            f"Role selected · {value} · {self._active_role['engine']}", GREEN)
+            tr("Role selected · {value} · {engine}", value=value, engine=self._active_role['engine']), GREEN)
         self._close_menu()
         return
 
@@ -1062,22 +1050,22 @@ class ProviderMixin:
         }
         self.query_one("#role-button", Button).label = self._role_button_label()
         self._set_activity(
-            f"ISyCode role loaded · {value}; role guidance does not grant permissions", GREEN)
-        self._append(f"  {value} role motor loaded into the ISyCode role context.", GREEN)
-        self._append(f"  Workflow: {role.get('engine', '')}", CYAN)
+            tr("ISyCode role loaded · {value}; role guidance does not grant permissions", value=value), GREEN)
+        self._append("  " + tr("{value} role motor loaded into the ISyCode role context.", value=value), GREEN)
+        self._append("  " + tr("Workflow: {get}", get=role.get('engine', '')), CYAN)
         if role.get("owns"):
             scopes = [scope.removeprefix("isycode.").replace(".", " ").replace("_", " ")
                       for scope in role["owns"]]
-            self._append("  Scope: " + ", ".join(scopes), MUTED)
+            self._append("  " + tr("Scope: {join}", join=", ".join(scopes)), MUTED)
         if role.get("rule"):
-            self._append("  Guardrail: " + role["rule"], YELLOW)
+            self._append("  " + tr("Guardrail: {rule}", rule=role["rule"]), YELLOW)
         if role.get("verdicts"):
-            self._append("  Verdicts: " + ", ".join(role["verdicts"]), MUTED)
-        self._append("  CLI operations:", CYAN)
+            self._append("  " + tr("Verdicts: {join}", join=", ".join(role["verdicts"])), MUTED)
+        self._append("  " + tr("CLI operations:"), CYAN)
         for command in role.get("commands", []):
             self._append(f"    {command}", MUTED)
         self._append(
-            "  The workflow is loaded; no CLI operation has run from this chat.", YELLOW)
+            "  " + tr("The workflow is loaded; no CLI operation has run from this chat."), YELLOW)
         self._close_menu()
         return
 
@@ -1088,6 +1076,7 @@ class ProviderMixin:
         shortcuts.extend([
             ("ENTER          Send message / activate highlighted item", "info"),
             ("SHIFT+ENTER    Insert a newline in the composer", "info"),
+            ("SHIFT+TAB      Next role in the composer (Build, Plan, motors, none)", "info"),
             ("ESCAPE         Close popup / cancel current operation", "info"),
             ("Session list   Type to search; arrows select; Enter resumes", "info"),
         ])
@@ -1125,15 +1114,15 @@ class ProviderMixin:
         if item:
             state = "revoked" if item["revoked"] else "active"
             self._append(
-                f"  {item['name']} · {item['service']} · {state}. API key value remains hidden.",
+                "  " + tr("{name} · {service} · {state}. API key value remains hidden.", name=item['name'], service=item['service'], state=state),
                 MUTED)
-            self._append(f"  Purpose: {item['purpose']}", MUTED)
+            self._append("  " + tr("Purpose: {purpose}", purpose=item['purpose']), MUTED)
         return
 
     def _menu_clear_role(self, entry: dict[str, str | bool]) -> None:
         self._active_role = None
-        self.query_one("#role-button", Button).label = "Role"
-        self._set_activity("Role guidance cleared", MUTED)
+        self.query_one("#role-button", Button).label = tr("Role")
+        self._set_activity(tr("Role guidance cleared"), MUTED)
         self._close_menu()
         return
 
@@ -1163,7 +1152,7 @@ class ProviderMixin:
             allowed, reason = self._authorize_remote_read("gateway.files.read", client.base_url + "/health")
             if not allowed:
                 self.query_one("#gateway-status", Static).update(Text(
-                    "Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security.",
+                    tr("Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security."),
                     style=YELLOW))
                 return
             available = await asyncio.to_thread(client.is_available)
@@ -1183,7 +1172,7 @@ class ProviderMixin:
 
     async def _check_gateway_mcp_async(self) -> None:
         status = self.query_one("#gateway-mcp-status", Static)
-        status.update(Text("Checking Gateway MCP authorization…"))
+        status.update(Text(tr("Checking Gateway MCP authorization…")))
         try:
             gateway_url = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8787").rstrip("/")
             allowed, reason = self._authorize_remote_read("mcp.discover", gateway_url + "/mcp")
@@ -1193,7 +1182,7 @@ class ProviderMixin:
                 if self.is_mounted:
                     status.update(Text(message, style=color))
                 return
-            status.update(Text("Loading · starting the native Gateway MCP tool catalog…"))
+            status.update(Text(tr("Loading · starting the native Gateway MCP tool catalog…")))
             tools = await discover_gateway_tools()
         except GatewayMCPUnavailable as exc:
             snapshot = CatalogSnapshot(True, [], "unavailable", str(exc))
@@ -1231,11 +1220,10 @@ class ProviderMixin:
             owner = ProviderNetworkOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
             response, outcome = await owner.execute(provider, material, send)
             if outcome.decision == "ALLOW" and isinstance(response, dict) and response.get("text"):
-                self._append(f"  Provider response received · receipt {outcome.receipt.receipt_id} · "
-                             "this checks chat connectivity, not tool compatibility.", GREEN)
+                self._append("  " + tr("Provider response received · receipt {receipt_id} · this checks chat connectivity, not tool compatibility.", receipt_id=outcome.receipt.receipt_id), GREEN)
             else:
-                self._append(f"  Provider not verified · {outcome.decision} · {outcome.reason[:160]}", YELLOW)
+                self._append("  " + tr("Provider not verified · {decision} · {value}", decision=outcome.decision, value=outcome.reason[:160]), YELLOW)
         except (ProviderError, StreamError) as exc:
             self._append(self._provider_failure(exc, "Connection check"), YELLOW)
         except (OSError, ValueError) as exc:
-            self._append(f"  Connection check unavailable ({type(exc).__name__}).", YELLOW)
+            self._append("  " + tr("Connection check unavailable ({name}).", name=type(exc).__name__), YELLOW)

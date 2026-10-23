@@ -18,6 +18,7 @@ from typing import Any
 from isycode.actions import ACTION_BY_ID
 from isycode.effect_ledger import LIMITS_VERSION
 from isycode.effect_policy import POLICY_VERSION
+from isycode.localization import tr
 from isycode.state_index import get_state_index
 from isycode.workspace_setup import broad_workspace_reason, state_root
 
@@ -49,21 +50,18 @@ QUIET_FLOW_ACTIONS = QUIET_CLASSIC_ACTIONS | {"workspace.turn.undo"}
 def onboarding_brief(*, root: Path, mode: str, provider: str,
                      sends_workspace_context: bool) -> str:
     """Short explanation shown before a person trusts one root."""
-    context = ("File context from this folder can be sent to that provider."
+    context = (tr("File context from this folder can be sent to that provider.")
                if sends_workspace_context else
-               "This confirmation does not send the folder contents by itself.")
-    return (
-        f"Workspace root: {root}\n"
-        f"Mode: {mode}\n"
-        f"Provider: {provider}\n"
-        f"{context}\n"
+               tr("This confirmation does not send the folder contents by itself."))
+    return tr(
+        "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{note}\n"
         "Trusting this folder lets Classic read and search it, and make recoverable "
         "edits, creates, moves and deletes inside the effect budget, and run isolated "
         "sandboxed tests, without a question for each one. Commits, secrets, authority "
         "changes, new network destinations and anything without a sandbox still ask or "
         "stay off. A revoked permission still wins. This is not a permanent approval "
-        "for every tool, and it does not turn Security on or off."
-    )
+        "for every tool, and it does not turn Security on or off.",
+        root=root, mode=mode, provider=provider, note=context)
 
 
 def modal_required(authority, request) -> bool:

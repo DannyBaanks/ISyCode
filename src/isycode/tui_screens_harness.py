@@ -254,12 +254,12 @@ class ModelsScreen(ModalScreen):
                                 yield self._choice_button(entry)
                     else:
                         for provider, entries in groups.items():
-                            with Collapsible(title=f"{PRESETS.get(provider, {}).get('label', provider)} · {len(entries)} models",
+                            with Collapsible(title=tr("{get} · {len} models", get=PRESETS.get(provider, {}).get('label', provider), len=len(entries)),
                                              collapsed=provider not in self.expanded_providers, classes="model-group", id="model-provider-" + provider):
                                 for entry in entries:
                                     yield self._choice_button(entry)
                 with VerticalScroll(id="model-detail-scroll"):
-                    yield Static(Text("Click a model. Context, reasoning and tools show here.", style=MUTED),
+                    yield Static(Text(tr("Click a model. Context, reasoning and tools show here."), style=MUTED),
                                  id="model-detail")
             slider = EffortSlider(id="models-effort")
             slider.display = False
@@ -652,7 +652,7 @@ class MultiHarnessScreen(ModalScreen[str | None]):
         with Vertical(id="harness-card", classes="isy-dialog"):
             yield Static(tr("Multi Harness · inspection"), id="harness-title", classes="isy-dialog-title")
             with Horizontal(id="harness-counts"):
-                yield Static(f"Folders  0/{len(CATALOG_IDS)}", id="harness-folders-count", classes="harness-count")
+                yield Static(tr("Folders  0/{len}", len=len(CATALOG_IDS)), id="harness-folders-count", classes="harness-count")
                 yield Static(tr("Conversations  0"), id="harness-sessions-count", classes="harness-count")
             yield Static(self._render_summary(), id="harness-summary")
             with VerticalScroll(id="harness-scroll", classes="isy-dialog-body"):
@@ -841,8 +841,8 @@ class MultiHarnessScreen(ModalScreen[str | None]):
                     break
         if self.is_mounted:
             ready = sum(bool(section.get("unlocked")) for section in self.sections)
-            self.query_one("#harness-folders-count", Static).update(f"Folders  {ready}/{len(CATALOG_IDS)}")
-            self.query_one("#harness-sessions-count", Static).update(f"Conversations  {self.transcript_count}")
+            self.query_one("#harness-folders-count", Static).update(tr("Folders  {ready}/{len}", ready=ready, len=len(CATALOG_IDS)))
+            self.query_one("#harness-sessions-count", Static).update(tr("Conversations  {transcript_count}", transcript_count=self.transcript_count))
             self.query_one("#harness-summary", Static).update(self._render_summary())
             self.query_one("#harness-gap-content", Static).update(self._render_gaps())
             self.query_one("#harness-gap-panel", Collapsible).title = self._gap_title()

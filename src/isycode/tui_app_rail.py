@@ -108,7 +108,7 @@ class RailMixin:
             self._rail_compact_width = min(34, self._rail_compact_width + 2)
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
-        self._set_activity(f"Sidebar width · {width} columns", MUTED)
+        self._set_activity(tr("Sidebar width · {width} columns", width=width), MUTED)
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     def action_narrow_sidebar(self) -> None:
@@ -119,14 +119,14 @@ class RailMixin:
             self._rail_compact_width = max(22, self._rail_compact_width - 2)
             width = self._rail_compact_width
         self._apply_rail_width(self.size.width)
-        self._set_activity(f"Sidebar width · {width} columns", MUTED)
+        self._set_activity(tr("Sidebar width · {width} columns", width=width), MUTED)
         self.call_after_refresh(self.query_one(Banner).set_compact, True)
 
     async def _refresh_openisy(self) -> None:
         self._openisy_refresh_generation += 1
         generation = self._openisy_refresh_generation
         self.query_one("#mcp-status", Static).update(
-            switch_row(None, "Checking", status_phrase("connected tool services")))
+            switch_row(None, tr("Checking"), status_chip("connected tool services")))
         self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("checking")), chip=True)
         self._populate_skill_tree(
             CatalogSnapshot(True, [], "loading", "Fetching the ISyCode skill catalog."))
@@ -139,7 +139,7 @@ class RailMixin:
                 if not allowed:
                     denied = CatalogSnapshot(True, [], "denied", reason)
                     self.query_one("#mcp-status", Static).update(switch_row(
-                        False, "External catalog denied",
+                        False, tr("External catalog denied"),
                         "grant its host in Settings · Authority & Security"))
                     self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("denied")), chip=True)
                     self._populate_skill_tree(denied)
@@ -158,7 +158,7 @@ class RailMixin:
             if generation != self._openisy_refresh_generation:
                 return
             message = f"Integration configuration error: {exc}"
-            self.query_one("#mcp-status", Static).update(switch_row(False, "Configuration error", message))
+            self.query_one("#mcp-status", Static).update(switch_row(False, tr("Configuration error"), message))
             self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("error")), chip=True)
             self._populate_skill_tree(CatalogSnapshot(True, [], "error", message))
             self._provider_auth_snapshot = CatalogSnapshot(True, [], "error", message)
@@ -167,7 +167,7 @@ class RailMixin:
             if generation != self._openisy_refresh_generation:
                 return
             message = f"Integration refresh failed ({type(exc).__name__})."
-            self.query_one("#mcp-status", Static).update(switch_row(False, "Refresh failed", message))
+            self.query_one("#mcp-status", Static).update(switch_row(False, tr("Refresh failed"), message))
             self._set_rail_title("rail-mcp", status_chip("MCPs · {state}", state=tr("error")), chip=True)
             self._populate_skill_tree(CatalogSnapshot(True, [], "error", message))
             self._provider_auth_snapshot = CatalogSnapshot(True, [], "error", message)
@@ -200,7 +200,7 @@ class RailMixin:
     def _format_mcp_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
         """Switch rows for the MCP section, plus its folded title."""
         if snapshot.state == "loading":
-            return (switch_row(None, "Checking", snapshot.detail),
+            return (switch_row(None, tr("Checking"), snapshot.detail),
                     status_chip("MCPs · {state}", state=tr("checking")))
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
@@ -212,7 +212,7 @@ class RailMixin:
             )
         if not snapshot.items:
             return (
-                switch_row(False, "No MCP Servers", status_phrase("none configured"), inactive=True),
+                switch_row(False, tr("No MCP Servers"), status_chip("none configured"), inactive=True),
                 status_chip("MCPs · none"),
             )
         rows, on = [], 0
@@ -228,7 +228,7 @@ class RailMixin:
     @staticmethod
     def _format_skill_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
         if snapshot.state == "loading":
-            return (switch_row(None, "Checking", snapshot.detail),
+            return (switch_row(None, tr("Checking"), snapshot.detail),
                     status_chip("Skills · {state}", state=tr("checking")))
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
@@ -240,12 +240,12 @@ class RailMixin:
             )
         if not snapshot.items:
             return (
-                switch_row(False, "No Skills", status_phrase("none available for this project"), inactive=True),
+                switch_row(False, tr("No Skills"), status_chip("none available for this project"), inactive=True),
                 status_chip("Skills · none"),
             )
         count = len(snapshot.items)
         return (
-            switch_row(False, status_phrase(f"{count} available"), status_phrase("select one below for details"), inactive=True),
+            switch_row(False, status_chip("{count} available", count=count), status_chip("select one below for details"), inactive=True),
             status_chip("Skills · {count} available", count=count),
         )
 
@@ -279,7 +279,7 @@ class RailMixin:
         except (OSError, RuntimeError, ValueError):
             catalog = []
         if not catalog:
-            body = switch_row(False, "No Language Servers", status_phrase("none detected"), inactive=True)
+            body = switch_row(False, tr("No Language Servers"), status_chip("none detected"), inactive=True)
             title = status_chip("LSPs · none")
         else:
             rows = []
@@ -289,14 +289,14 @@ class RailMixin:
                 label = str(server.get("label") or server.get("id") or "language server")
                 if state == "sandbox_ready":
                     ready += 1
-                    rows.append(switch_row(True, label, status_phrase("workspace symbols")))
+                    rows.append(switch_row(True, label, status_chip("workspace symbols")))
                 elif state == "not_installed":
                     missing += 1
-                    rows.append(switch_row(False, label, status_phrase("not on PATH"), inactive=True))
+                    rows.append(switch_row(False, label, status_chip("not on PATH"), inactive=True))
                 elif state == "installed_unsupported":
-                    rows.append(switch_row(False, label, status_phrase("installed · sandbox does not run it")))
+                    rows.append(switch_row(False, label, status_chip("installed · sandbox does not run it")))
                 else:
-                    rows.append(switch_row(False, label, status_phrase("installed · sandbox unavailable")))
+                    rows.append(switch_row(False, label, status_chip("installed · sandbox unavailable")))
             title = status_chip("LSPs · {ready} ready", ready=ready)
             if missing:
                 title = status_chip("LSPs · {ready} ready · {missing} missing", ready=ready, missing=missing)
@@ -390,7 +390,7 @@ class RailMixin:
                 note.append(f"  {row['label']}: {reason}\n", style=MUTED)
         target.display = True
         target.update(note)
-        self._set_activity("Language servers were not installed · commands are under LSPs", YELLOW)
+        self._set_activity(tr("Language servers were not installed · commands are under LSPs"), YELLOW)
 
     def _populate_skill_tree(self, snapshot: CatalogSnapshot) -> None:
         from isycode.skill_catalog import skills
@@ -415,12 +415,12 @@ class RailMixin:
         if snapshot.state != "ready":
             tree.root.set_label(
                 "Loading skills…" if snapshot.state == "loading"
-                else status_phrase(f"Skills · {snapshot.state.replace('_', ' ')}"))
+                else status_chip("Skills · {value}", value=snapshot.state.replace('_', ' ')))
             return
         if not snapshot.items:
-            tree.root.set_label(status_phrase("No skills available"))
+            tree.root.set_label(status_chip("No skills available"))
             return
-        tree.root.set_label(status_phrase(f"Available skills ({len(snapshot.items)})"))
+        tree.root.set_label(status_chip("Available skills ({value})", value=len(snapshot.items)))
         for item in snapshot.items:
             tree.root.add_leaf(
                 Text(f"{item['name']} · {self._origin_tag(item.get('origin', ''))}"), data=dict(item))
@@ -449,7 +449,7 @@ class RailMixin:
             browser_root = self._workspace_read_owner().root
             relative_dir = Path(logical_path).relative_to(browser_root).as_posix()
         except (OSError, ValueError) as exc:
-            self.query_one("#file-preview", Static).update(f"Folder unavailable: {exc}")
+            self.query_one("#file-preview", Static).update(tr("Folder unavailable: {exc}", exc=exc))
             return
         if relative_dir == ".":
             relative_dir = ""
@@ -457,7 +457,7 @@ class RailMixin:
         tree.root.set_label(f"📁 {current_label}/")
         tree.root.data = {"path": logical_path, "kind": "directory"}
         self._file_path = logical_path
-        self.query_one("#file-preview", Static).update("Checking Workspace Authority and IsySentinel…")
+        self.query_one("#file-preview", Static).update(tr("Checking Workspace Authority and IsySentinel…"))
         try:
             outcome = await asyncio.to_thread(
                 self._workspace_read_owner().execute, "workspace.files.list", {"path": logical_path})
@@ -517,7 +517,7 @@ class RailMixin:
         tree = self.query_one("#workspace-tree", Tree)
         tree.root.remove_children()
         tree.root.set_label(f"Searching: {query}")
-        self.query_one("#file-preview", Static).update("Checking Workspace Authority and IsySentinel…")
+        self.query_one("#file-preview", Static).update(tr("Checking Workspace Authority and IsySentinel…"))
         try:
             browser_root = self._workspace_read_owner().root
             outcome = await asyncio.to_thread(self._workspace_read_owner().execute,
@@ -551,8 +551,7 @@ class RailMixin:
         skipped_note = ""
         self._file_path = str(browser_root)
         self.query_one("#file-preview", Static).update(
-            f"{len(payload.get('matches', []))} results · {payload.get('directories_scanned', 0)} directories scanned"
-            f"{skipped_note}{limit_note}")
+            tr("{len} results · {get} directories scanned{skipped_note}{limit_note}", len=len(payload.get('matches', [])), get=payload.get('directories_scanned', 0), skipped_note=skipped_note, limit_note=limit_note))
         tree.root.expand()
 
     async def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
@@ -567,14 +566,12 @@ class RailMixin:
                 self._select_skill(name)
                 state = "Active" if name in self._active_skills else "Inactive"
                 detail.update(Text(
-                    f"{name} · {state}\n"
-                    "Workflow guidance only. /skills clear removes selected guidance."))
+                    tr("{name} · {state}\nWorkflow guidance only. /skills clear removes selected guidance.", name=name, state=state)))
                 return
             origin = self._origin_tag(skill.get("origin", "workspace"))
             description = skill.get("description") or "No description provided by the skill manifest."
             detail.update(Text(
-                f"{name} · {origin}\n{description}\n"
-                "Discovery only. This does not activate the skill."))
+                tr("{name} · {origin}\n{description}\nDiscovery only. This does not activate the skill.", name=name, origin=origin, description=description)))
             return
         data = event.node.data
         if not isinstance(data, dict) or self._workspace is None:
@@ -657,7 +654,7 @@ class RailMixin:
             relative = Path(uri).relative_to(browser_root).as_posix() or browser_root.name
             size = len(result.get("text", "").encode("utf-8"))
             self.query_one("#file-preview-meta", Static).update(
-                f"{relative} · {size} bytes · UTF-8\n{verified_receipt_line(read.receipt.receipt_id)}")
+                tr("{relative} · {size} bytes · UTF-8\n{verified_receipt_line}", relative=relative, size=size, verified_receipt_line=verified_receipt_line(read.receipt.receipt_id)))
             from rich.syntax import Syntax
             lexer = Syntax.guess_lexer(uri, code=preview)
             highlighted = Syntax(preview, lexer, background_color="default").highlight(preview)
@@ -772,7 +769,7 @@ class RailMixin:
         The idle board used to repeat every LSP, MCP and Skill name that the
         rail already lists. Counts plus a pointer keep one detail surface.
         """
-        lsp = getattr(self, "_lsp_status_title", "") or status_phrase("LSPs · none")
+        lsp = getattr(self, "_lsp_status_title", "") or status_chip("LSPs · none")
         mcp = self._format_mcp_snapshot(self._mcp_snapshot)[1]
         skills = self._format_skill_snapshot(self._skill_snapshot)[1]
         line = Text()
@@ -947,7 +944,7 @@ class RailMixin:
         panel = self.query_one("#work-presence", Static)
         if not confirmed:
             self._presence_rows = None
-            panel.update("Bridge presence off")
+            panel.update(tr("Bridge presence off"))
             return
         root = self._workspace_root
         approvals = self._action_approvals
@@ -960,11 +957,11 @@ class RailMixin:
                 owner.read, request, approvals.issue(request))
         except (OSError, RuntimeError, ValueError):
             self._presence_rows = None
-            panel.update("Presence unavailable")
+            panel.update(tr("Presence unavailable"))
             return
         if outcome.decision != "ALLOW":
             self._presence_rows = None
-            panel.update("Presence unavailable")
+            panel.update(tr("Presence unavailable"))
             return
         self._presence_rows = rows
         self._paint_bridge_presence()

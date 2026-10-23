@@ -657,7 +657,7 @@ class WorkspaceWriteOwner:
         journal = TurnJournal.load(self.root, turn_id)
         if journal.undone:
             raise ValueError("this turn was already undone")
-        if TurnJournal.active(self.root) is not None:
+        if TurnJournal.running(self.root) is not None:
             raise ValueError("a turn is still running; undo after it finishes")
         steps: list[dict[str, Any]] = []
         conflicts: list[str] = []

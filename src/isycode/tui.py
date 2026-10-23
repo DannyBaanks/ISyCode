@@ -71,8 +71,8 @@ from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.catalog import (
-    ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_KERNEL,
-    SEMANTIC_BRANCHES,
+    ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_CYCLE, ROLE_KERNEL,
+    SEMANTIC_BRANCHES, role_color,
 )
 from isycode.credentials import (
     CredentialVault, CredentialVaultError, saved_secret_exists, set_saved_secret_reader,
@@ -690,7 +690,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         self.run_worker(self._load_sentinel_journal(), group="sentinel-journal",
                         exit_on_error=False)
         prompt = self.query_one("#prompt-input", PromptArea)
-        self.query_one("#role-button", Button).label = self._role_button_label()
+        self._paint_role_chrome()
         self._refresh_model_button()
         if self._initial_prompt:
             prompt.load_text(self._initial_prompt)
@@ -711,19 +711,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._rail_visible = False
             self.query_one(SidePanel).display = False
         self._mount_idle_board()
-        self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
-                          f"launch {self._launch_dir}")
-        self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
-        self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
+        self.sub_title = (tr("{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}", name=self._workspace_root.name, workspace_root=self._workspace_root, launch_dir=self._launch_dir))
+        self.query_one("#workspace-label", Static).update(tr("Workspace Root · {workspace_root}", workspace_root=self._workspace_root))
+        self.query_one("#workspace-launch-label", Static).update(tr("Launch Directory · {launch_dir}", launch_dir=self._launch_dir))
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self.query_one(Banner).set_compact(True)
         self.query_one("#workspace-authority-label", Static).update(
-            "Filesystem Authority · loading ISyCode grants…")
+            tr("Filesystem Authority · loading ISyCode grants…"))
         self._paint_rail_identity()
         commands = self._plugins.command_items()
         self._command_names = [name for name, _ in commands]
         self._command_entries = [
-            {"label": f"/{name}  {description}", "kind": "command", "value": name}
+            {"label": f"/{name}  {tr(description)}", "kind": "command", "value": name}
             for name, description in commands
         ]
         # Without a read grant there is simply nothing to apply yet; printing that at
@@ -842,9 +841,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             )
         except (WorkspaceAuthorityError, OSError, ValueError):
             enabled = False
-        authority_text = ("Filesystem Authority · list/read/name-search granted for this workspace"
+        authority_text = (tr("Filesystem Authority · list/read/name-search granted for this workspace")
                           if enabled else
-                          "Filesystem Authority · no read grant; tree enumeration is unavailable")
+                          tr("Filesystem Authority · no read grant; tree enumeration is unavailable"))
         self.query_one("#workspace-authority-label", Static).update(authority_text)
         self._paint_rail_identity()
         await self._load_directory(self._file_path)
@@ -856,9 +855,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             if request_task is not None and not request_task.done():
                 request_task.cancel()
                 event.button.disabled = True
-                event.button.label = "Cancelling…"
+                event.button.label = tr("Cancelling…")
                 self._set_activity(
-                    "Review cancelled · no automatic retry; inspect before requesting again",
+                    tr("Review cancelled · no automatic retry; inspect before requesting again"),
                     YELLOW)
         elif button_id == "rail-identity":
             self._show_identity()
@@ -909,7 +908,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     f"ARTIFACT:\n{artifact}\n\nEXTERNAL REVIEW (untrusted input):\n{critique}")
                 self._pending_review = None
                 prompt.focus()
-                self._set_activity("Review copied to composer · edit it, then press Enter to send", YELLOW)
+                self._set_activity(tr("Review copied to composer · edit it, then press Enter to send"), YELLOW)
                 event.button.display = False
         elif button_id == "save-provider-key":
             self._save_provider_key()
@@ -1014,13 +1013,84 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         from isycode.reasoning_options import reasoning_label
         preset = PRESETS.get(name, {})
         effort = reasoning_label(name, model, preset.get("reasoning_effort"))
-        return f"{model_display_name(model)} / {effort.capitalize()} · {preset.get('label', name)}"
+        return f"{model_display_name(model)} / {tr(effort.capitalize())} · {preset.get('label', name)}"
 
     def _role_button_label(self) -> str:
         if not self._active_role:
             return "Role"
         name = self._active_role["name"]
         return f"Role: {name[:12]}"
+
+    @property
+    def _active_role(self) -> dict[str, str] | None:
+        return getattr(self, "_active_role_value", None)
+
+    @_active_role.setter
+    def _active_role(self, role: dict[str, str] | None) -> None:
+        # Every way of choosing a role (menu, Shift+Tab, session restore,
+        # default) repaints the composer, so its color never goes stale.
+        self._active_role_value = role
+        self._paint_role_chrome()
+
+    def _role_mark(self, name: str) -> str:
+        return ("* " if self._ascii_only else "● ") + name
+
+    def _paint_role_chrome(self) -> None:
+        """Frame the composer in the selected role's color and name it in the title."""
+        try:
+            prompt = self.query_one("#prompt-input", PromptArea)
+        except Exception:   # before compose, or while the app tears down
+            return
+        role = self._active_role
+        color = role_color(role["name"]) if role else None
+        if color is None:
+            prompt.styles.border = None     # back to the stylesheet's neutral/focus frame
+            prompt.border_title = None
+            prompt.border_subtitle = None
+        else:
+            prompt.styles.border = ("solid", color)
+            prompt.border_title = Text(self._role_mark(role["name"]), style=f"bold {color}")
+            prompt.border_subtitle = Text(tr("Shift+Tab role"), style=MUTED)
+        try:
+            self.query_one("#role-button", Button).label = self._role_button_label()
+        except Exception:
+            pass
+
+    def _paint_role_turn(self, widget, role_name: str | None) -> None:
+        """Mark an assistant answer with the color of the role that wrote it."""
+        color = role_color(role_name)
+        if color is not None:
+            widget.styles.border_left = ("solid", color)
+            widget.styles.padding = (0, 0, 0, 1)
+
+    def _assistant_clock(self, clock: str, role_name: str | None) -> Static:
+        """The time above an answer, followed by its role so it reads without color."""
+        line = Text(clock, style=MUTED)
+        color = role_color(role_name)
+        if color is not None:
+            line.append("  " + self._role_mark(role_name), style=color)
+        return Static(line, classes="message-clock")
+
+    def action_cycle_role(self) -> None:
+        """Shift+Tab in the composer: next primary role, then back to no role.
+
+        Uses the same role contract as the Role menu: the role's workflow is
+        sent as guidance with the next message and grants nothing.
+        """
+        current = self._active_role["name"] if self._active_role else None
+        names = [role["name"] for role in ROLE_CYCLE]
+        index = names.index(current) + 1 if current in names else 0
+        if index >= len(names):
+            self._active_role = None
+            self._set_activity(tr("Role · none"), MUTED)
+            return
+        role = ROLE_CYCLE[index]
+        self._active_role = {
+            "name": role["name"], "kind": role["kind"],
+            "description": role.get("description", ""),
+            "engine": role.get("engine", "ISyCode selected provider and model"),
+        }
+        self._set_activity(tr("Role · {name}", name=role["name"]), role_color(role["name"]) or GREEN)
 
     def action_escape_to_chat(self) -> None:
         """Cancel active model output; otherwise back out and keep the draft."""
@@ -1040,21 +1110,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         if self._review_request_task and not self._review_request_task.done():
             self._review_request_task.cancel()
-            self._set_activity("Stopping external review…", YELLOW)
+            self._set_activity(tr("Stopping external review…"), YELLOW)
             return
         if self._subagent_task and not self._subagent_task.done():
             self._subagent_task.cancel()
-            self._set_activity("Stopping subagent…", YELLOW)
+            self._set_activity(tr("Stopping subagent…"), YELLOW)
             return
         if self._chat_turn_task and not self._chat_turn_task.done():
             # Stops the whole agent turn: a pending model request, a tool, or a running command.
             note_cancel_requested(self._chat_turn_task)
             self._chat_turn_task.cancel()
-            self._set_activity("Stopping response…", YELLOW)
+            self._set_activity(tr("Stopping response…"), YELLOW)
             return
         if self._chat_request_task and not self._chat_request_task.done():
             self._chat_request_task.cancel()
-            self._set_activity("Stopping response…", YELLOW)
+            self._set_activity(tr("Stopping response…"), YELLOW)
             return
         prompt = self.query_one("#prompt-input", PromptArea)
         try:
@@ -1372,12 +1442,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     entries.append(self._entry(
                         tr("{alias} · automatic edits {state}", alias=alias, state=state),
                         'info' if not automatic_available else 'folder_auto_off' if enabled else 'folder_auto_on', alias,
-                        'Only file creation/edits. Authority and ISySentinel stay active.',
+                        tr("Only file creation/edits. Authority and ISySentinel stay active."),
                         translate=False))
                 if alias != 'main':
                     entries.append(self._entry(
                         tr("Remove attachment · {alias}", alias=alias), "folder_remove", alias,
-                        'Files and standalone workspace settings are kept. This chat loses access.',
+                        tr("Files and standalone workspace settings are kept. This chat loses access."),
                         translate=False))
         except (OSError, ValueError) as exc:
             entries.append(self._entry(
@@ -1612,7 +1682,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             entries.extend(self._entry(
                 tr("{name} · active", name=name) if name in self._active_skills else name,
                 "skill_use", name,
-                "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat",
+                tr("Superpowers · pinned MIT Markdown; select to toggle guidance for this chat"),
                 translate=False)
                 for name in skills())
             snapshot = self._skill_snapshot
@@ -1627,14 +1697,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             models = [self._entry(
                 tr("Load account models · {provider}", provider=active_provider),
                 "model_list", active_provider,
-                "Makes a read-only catalog request only after you select this item.",
+                tr("Makes a read-only catalog request only after you select this item."),
                 translate=False)]
             from isycode.providers import recent_models
             models.extend(self._entry(
                 tr("Recent · {provider} · {model}  · recent",
                    provider=item['provider'], model=item['model']),
                 "model", f"{item['provider']}|{item['model']}",
-                "Previously selected model; not verified against this account.",
+                tr("Previously selected model; not verified against this account."),
                 translate=False)
                 for item in recent_models())
             denied = getattr(self, "_account_model_denied", None)
@@ -1643,8 +1713,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     tr("Grant network access to {label} and load its real catalog",
                        label=PRESETS.get(denied, {}).get('label', denied)),
                     "provider_catalog_grant", denied,
-                    "The live catalog request was denied; this asks once, saves the host grant "
-                    "for this workspace, and reloads the provider's real models.",
+                    tr("The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."),
                     translate=False))
             for name, preset in PRESETS.items():
                 model = resolved_chat_model(name)
@@ -1659,8 +1728,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     tr("{label}  ·  {model}  · preset",
                        label=preset['label'], model=model),
                     "model", f"{name}|{model}",
-                    "Hardcoded preset model, not verified against this account; "
-                    "load the account catalog for the provider's real list.",
+                    tr("Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."),
                     translate=False))
             live_catalogs = getattr(self, "_account_model_catalogs", {})
             for name, catalog in live_catalogs.items():
@@ -1692,9 +1760,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("{label}  ·  {model}{marker}  · catalog",
                            label=PRESETS[name]['label'], model=entry['id'], marker=marker),
                         "model", f"{name}|{entry['id']}",
-                        f"models.dev snapshot (offline; not verified against this account). "
-                        f"reasoning={'yes' if entry['reasoning'] else 'no'} · "
-                        f"context={entry['context'] or '?'} · tool_call={'yes' if entry['tool_call'] else 'NO — chat needs tools'}",
+                        tr("models.dev snapshot (offline; not verified against this account). reasoning={value} · context={value2} · tool_call={value3}", value=tr("yes") if entry['reasoning'] else tr("no"), value2=entry['context'] or '?', value3=tr("yes") if entry['tool_call'] else tr("NO — chat needs tools")),
                         translate=False))
             from isycode.providers import custom_models
             listed_values = {row["value"] for row in models if row["kind"] == "model"}
@@ -1706,7 +1772,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("{label}  ·  {model}  · added by you",
                            label=PRESETS[name]['label'], model=model_id),
                         "model", f"{name}|{model_id}",
-                        "Model ID you added; not verified against this account.",
+                        tr("Model ID you added; not verified against this account."),
                         translate=False)
                     row["custom"] = True
                     models.append(row)
@@ -1753,8 +1819,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("Manage broker · {name} · {status}",
                            name=Path(broker['project_root']).name, status=broker['status']),
                         "broker_manage", broker["project_root"],
-                        f"{broker['container']} · 127.0.0.1:{broker['host_port']} · "
-                        f"recipe {broker['recipe_digest'][:12]}",
+                        tr("{container} · 127.0.0.1:{host_port} · recipe {value}", container=broker['container'], host_port=broker['host_port'], value=broker['recipe_digest'][:12]),
                         translate=False))
             except (OSError, RuntimeError, TypeError, ValueError):
                 entries.append(self._entry(
@@ -1764,7 +1829,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 entries.extend(self._entry(
                     tr("{name}  ·  {status}", name=item['name'], status=item['status']),
                     "info", "",
-                    "Listed by the connected service; discovery does not authorize calls.",
+                    tr("Listed by the connected service; discovery does not authorize calls."),
                     translate=False)
                     for item in snap.items)
             elif snap.state not in {"not_checked", "not_configured"}:
@@ -1777,8 +1842,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 entries.extend(self._entry(
                     tr("ISyCo Gateway · {name}", name=item["name"]),
                     "gateway_mcp_tool", item["name"],
-                    (str(item.get("description", "No description supplied."))[:1200]
-                     + " · Enter to review arguments and request a one-use approval"),
+                    (tr("{value} · Enter to review arguments and request a one-use approval", value=str(item.get("description", "No description supplied."))[:1200])),
                     translate=False)
                     for item in gateway.items)
             elif gateway.state not in {"not_checked", "not_configured"}:
@@ -1800,7 +1864,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("{label} · {status}",
                            label=server['label'], status=tr("workspace symbol search")),
                         "lsp_server", server["id"],
-                        "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval.",
+                        tr("Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."),
                         translate=False))
                 else:
                     entries.append(self._entry(
@@ -1808,7 +1872,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                            label=server['label'],
                            status=tr(server['state'].replace('_', ' '))),
                         "info", "",
-                        "Detected executable only; no safe LSP execution adapter is connected for this server.",
+                        tr("Detected executable only; no safe LSP execution adapter is connected for this server."),
                         translate=False))
             return entries or [self._entry("No LSP servers detected", "info", "", "Install or configure a supported language server.")]
         if key == "files":
@@ -1847,7 +1911,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                         tr("Gateway Binding · {id}",
                            id=gateway_workspace_id(self._workspace_root)),
                         "info", "",
-                        "Opaque workspace match label; it does not grant access.",
+                        tr("Opaque workspace match label; it does not grant access."),
                         translate=False),
                     self._entry(
                         tr("Current Folder · {path}",
@@ -2054,16 +2118,16 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 timer.stop()
                 self._activity_timer = None
             if cancelled:
-                self._set_activity("Interrupted", YELLOW)
+                self._set_activity(tr("Interrupted"), YELLOW)
             elif failed is not None:
-                self._set_activity(f"Failed · {type(failed).__name__}", RED)
+                self._set_activity(tr("Failed · {name}", name=type(failed).__name__), RED)
             elif self._last_plan is not None:
-                self._set_activity("Plan ready · review it in Overview", YELLOW)
+                self._set_activity(tr("Plan ready · review it in Overview"), YELLOW)
             else:
                 self._set_activity(tr("Chat ready"), MUTED)
             self._paint_idea_box()
             if self._idea_backlog:
-                self.notify(f"{len(self._idea_backlog)} captured ideas · /ideas reviews and promotes")
+                self.notify(tr("{len} captured ideas · /ideas reviews and promotes", len=len(self._idea_backlog)))
             return
         if not followed:
             if cancelled:
@@ -2242,7 +2306,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         try:
             root = self._folder_store().resolve(alias)
         except (OSError, ValueError) as exc:
-            self._append(f"  Folder unavailable · {str(exc)[:160]}", YELLOW)
+            self._append("  " + tr("Folder unavailable · {value}", value=str(exc)[:160]), YELLOW)
             return
         self._file_browser_alias = alias
         self._search_mode = False
@@ -2270,7 +2334,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
 
     async def _initialize_workspace_config(self) -> None:
         if self._workspace_identity.workspace_root_source != "isyroot":
-            self._append("  .isycode/ is available only in a workspace with its own .isyroot marker.",
+            self._append("  " + tr(".isycode/ is available only in a workspace with its own .isyroot marker."),
                          YELLOW)
             return
         try:
@@ -2279,7 +2343,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                                          self._action_approvals)
             plan = await asyncio.to_thread(owner.prepare_initialization)
         except (OSError, ValueError) as exc:
-            self._append(f"  Workspace config unavailable · {str(exc)[:180]}", YELLOW)
+            self._append("  " + tr("Workspace config unavailable · {value}", value=str(exc)[:180]), YELLOW)
             return
         if not plan.previews:
             self._append(f"  {plan.message}", YELLOW if plan.message else MUTED)
@@ -2288,14 +2352,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._append(f"  {plan.message}", MUTED)
         for preview in plan.previews:
             if not await self._await_screen(WriteApprovalScreen(preview)):
-                self._append(f"  Initialization stopped · {preview.path} unchanged", MUTED)
+                self._append("  " + tr("Initialization stopped · {path} unchanged", path=preview.path), MUTED)
                 return
             approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
             outcome = await asyncio.to_thread(owner.apply, preview, approval)
             if outcome.decision != "ALLOW":
-                self._append(f"  Workspace setup {outcome.decision} · {outcome.reason[:180]}", YELLOW)
+                self._append("  " + tr("Workspace setup {decision} · {value}", decision=outcome.decision, value=outcome.reason[:180]), YELLOW)
                 return
-            self._append(f"  {outcome.text} · receipt {outcome.receipt.receipt_id}", GREEN)
+            self._append("  " + tr("{text} · receipt {receipt_id}", text=outcome.text, receipt_id=outcome.receipt.receipt_id), GREEN)
         self._workspace_config_values = None
         self._workspace_config_warning = ""
         self._active_role = self._load_global_default_role()
@@ -2311,9 +2375,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             return
         try:
             UserDefaultsStore().update(new_workspace_mode=value)
-            self._set_activity("Default mode saved for new workspaces", GREEN)
+            self._set_activity(tr("Default mode saved for new workspaces"), GREEN)
         except (OSError, ValueError, json.JSONDecodeError):
-            self._set_activity("Could not save the default mode; existing settings remain", RED)
+            self._set_activity(tr("Could not save the default mode; existing settings remain"), RED)
         self._open_user_defaults_menu()
 
     async def _set_global_workspace_default(self, value: str) -> None:
@@ -2324,9 +2388,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 return
         try:
             UserDefaultsStore().update(new_workspace=value)
-            self._set_activity("Default saved for new workspaces", GREEN)
+            self._set_activity(tr("Default saved for new workspaces"), GREEN)
         except (OSError, ValueError, json.JSONDecodeError):
-            self._set_activity("Could not save your global default; existing settings remain", RED)
+            self._set_activity(tr("Could not save your global default; existing settings remain"), RED)
         self._open_user_defaults_menu()
 
     async def _startup_workspace(self) -> None:
@@ -2452,10 +2516,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
             return
-        self.sub_title = (f"{self._workspace_root.name}  ·  workspace {self._workspace_root}  ·  "
-                          f"launch {self._launch_dir}")
-        self.query_one("#workspace-label", Static).update(f"Workspace Root · {self._workspace_root}")
-        self.query_one("#workspace-launch-label", Static).update(f"Launch Directory · {self._launch_dir}")
+        self.sub_title = (tr("{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}", name=self._workspace_root.name, workspace_root=self._workspace_root, launch_dir=self._launch_dir))
+        self.query_one("#workspace-label", Static).update(tr("Workspace Root · {workspace_root}", workspace_root=self._workspace_root))
+        self.query_one("#workspace-launch-label", Static).update(tr("Launch Directory · {launch_dir}", launch_dir=self._launch_dir))
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
         self.query_one(Banner).set_compact(True)
 
@@ -2483,12 +2546,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         try:
             if mime.startswith("image/"):
                 prompt.insert(self._image_attachments.capture(mime, data))
-                self.notify("Image attached · Ctrl+P reviews attachments")
+                self.notify(tr("Image attached · Ctrl+P reviews attachments"))
             else:
                 from textual.events import Paste
                 await prompt._on_paste(Paste(data.decode("utf-8")))
         except (ValueError, UnicodeError):
-            self.notify("Clipboard content could not be attached", severity="warning")
+            self.notify(tr("Clipboard content could not be attached"), severity="warning")
         prompt.focus()
 
     def action_open_copy_menu(self) -> None:
@@ -2509,7 +2572,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             whole = container.copy_text() if container is not None else widget._selection_plain
             open_copy_menu(widget, whole)
             return
-        self._append("  Focus a message or a preview, then press Copy.", MUTED)
+        self._append("  " + tr("Focus a message or a preview, then press Copy."), MUTED)
 
     async def _request_clipboard_copy(self, text: str, source: str) -> None:
         authority = WorkspaceAuthority(self._workspace_root)
@@ -2530,27 +2593,26 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         except Exception:  # noqa: BLE001 - the field only exists in the main screen
             key_field = None
         if key_field is not None and self.focused is key_field:
-            self.notify_semantic("API keys are never copied.", kind="warning")
+            self.notify_semantic(tr("API keys are never copied."), kind="warning")
             return
         try:
             owner = ClipboardOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root))
             outcome = owner.copy(text, source=source,
                                  terminal_write=super().copy_to_clipboard)
         except (WorkspaceAuthorityError, OSError, ValueError):
-            self.notify_semantic("Copy failed · Workspace Authority is unavailable.", kind="denied")
+            self.notify_semantic(tr("Copy failed · Workspace Authority is unavailable."), kind="denied")
             return
         if outcome.decision == "ALLOW":
             where = ("terminal clipboard" if outcome.text == "terminal"
                      else f"clipboard via {outcome.text}")
             if outcome.text == 'terminal':
-                self.notify_semantic('Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52.', kind="info", timeout=8)
+                self.notify_semantic(tr("Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52."), kind="info", timeout=8)
             else:
-                self.notify_semantic(f"Copied {len(text)} characters to the {where}.", kind="success", timeout=2.5)
+                self.notify_semantic(tr("Copied {len} characters to the {where}.", len=len(text), where=where), kind="success", timeout=2.5)
         elif "grant" in outcome.reason:
-            self.notify_semantic("Copying is off for this workspace · turn on “Copy selected text” in "
-                                 "Settings → Authority.", kind="denied", timeout=5)
+            self.notify_semantic(tr("Copying is off for this workspace · turn on “Copy selected text” in Settings → Authority."), kind="denied", timeout=5)
         else:
-            self.notify_semantic(f"Nothing copied · {outcome.reason[:120]}", kind="denied")
+            self.notify_semantic(tr("Nothing copied · {value}", value=outcome.reason[:120]), kind="denied")
 
     def _save_draft(self) -> None:
         if not self._sessions_enabled() or (not self._active_chat_session_id and not self._draft_text
@@ -2568,11 +2630,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             if outcome.decision == "ALLOW":
                 self._active_chat_session_id = sid
                 if len(self._draft_text) > 16_000:
-                    self._set_activity("Draft saved up to 16,000 characters; full text remains in the composer", YELLOW)
+                    self._set_activity(tr("Draft saved up to 16,000 characters; full text remains in the composer"), YELLOW)
             else:
-                self._set_activity(f"Draft not saved · {outcome.reason[:100]}", YELLOW)
+                self._set_activity(tr("Draft not saved · {value}", value=outcome.reason[:100]), YELLOW)
         except (OSError, ValueError):
-            self._set_activity("Draft not saved · private state unavailable", YELLOW)
+            self._set_activity(tr("Draft not saved · private state unavailable"), YELLOW)
 
     def _accept_prompt(self, prompt, raw_text: str) -> None:
         if isinstance(prompt, PromptArea) and hasattr(prompt, "pasted_text"):
@@ -2595,7 +2657,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             if text == "/queue clear":
                 self._queued_messages.clear()
                 self._paint_queued_messages()
-                self.notify("Pending messages cleared")
+                self.notify(tr("Pending messages cleared"))
             else:
                 self.push_screen(QueuedMessagesScreen(self))
             return
@@ -2612,30 +2674,30 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                     return
                 instruction = text.removeprefix("/steer ").strip()
                 if self._steering_try_active:
-                    self.notify("Steer attempt pending; draft kept")
+                    self.notify(tr("Steer attempt pending; draft kept"))
                     return
                 if len(self._pending_steering) >= 8:
-                    self._append("Steering queue is full; this draft is kept.", YELLOW)
+                    self._append(tr("Steering queue is full; this draft is kept."), YELLOW)
                     return
                 self._pending_steering.append(instruction)
                 self._steering_try_active = True
                 prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
                 self._mount_user_turn("Steer attempt · " + instruction)
-                self._append("Steering queued · current tool effects remain; pending calls will be skipped.", CYAN)
+                self._append(tr("Steering queued · current tool effects remain; pending calls will be skipped."), CYAN)
                 request = self._chat_request_task
                 if request is not None and not request.done():
                     request.cancel()
                 return
             if not text.startswith("/"):
                 if len(self._queued_messages) >= 8:
-                    self.notify("Message queue is full; draft kept", severity="warning")
+                    self.notify(tr("Message queue is full; draft kept"), severity="warning")
                     return
                 self._queued_messages.append(text)
                 self._paint_queued_messages()
                 prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
-                self._append(f"Queued · {len(self._queued_messages)} pending · " + _fit_cells(" ".join(text.split()), 70) + " · /queue reviews", CYAN)
+                self._append(tr("Queued · {len} pending · {fit_cells} · /queue reviews", len=len(self._queued_messages), fit_cells=_fit_cells(" ".join(text.split()), 70)), CYAN)
                 return
-            self._append("  Still working. Your message remains in the composer; send it again when ready.", YELLOW)
+            self._append("  " + tr("Still working. Your message remains in the composer; send it again when ready."), YELLOW)
             return
         if text.startswith("/steer "):
             text = text.removeprefix("/steer ").strip()
@@ -2692,13 +2754,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             self._entry(
                 tr("Default model · {provider} · {model}",
                    provider=provider.get('label', provider_name), model=model_name),
-                "info", "", "Change it from Providers; model selection is already saved globally.",
+                "info", "", tr("Change it from Providers; model selection is already saved globally."),
                 translate=False),
         ]
         role = defaults.get("default_role")
         entries.append(self._entry(
             tr("Default role · {name}", name=role['name']) if role else tr("Default role · none"),
-            "info", "", "Role guidance is global preference only; it never grants permissions.",
+            "info", "", tr("Role guidance is global preference only; it never grants permissions."),
             translate=False))
         if self._active_role:
             entries.append(self._entry(
@@ -2715,10 +2777,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         entries.extend(self._entry(
             ("● " if new_workspace == value else "○ ") + tr(label),
             "user_default_workspace", value,
-            ("A recurring workspace gets an empty .isyroot marker when first opened. "
-             "This identifies the workspace; it does not grant file access. Home, its parents, "
-             "temp and mount points still ask first.")
-            if value == "recurring" else "Applies only when this folder has no saved choice yet.",
+            (tr("A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."))
+            if value == "recurring" else tr("Applies only when this folder has no saved choice yet."),
             translate=False)
             for value, label in choices)
         new_mode = defaults.get("new_workspace_mode", "ask")
@@ -2729,8 +2789,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         )
         entries.extend(self._entry(
             ("● " if new_mode == value else "○ ") + tr(label), "user_default_mode", value,
-            "Applies only to folders opened for the first time; each workspace keeps its own "
-            "mode and you can switch it in Settings → Authority.",
+            tr("Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."),
             translate=False)
             for value, label in mode_choices)
         entries.append(self._entry(tr("Back to Settings"), "settings_back", ""))
@@ -2753,9 +2812,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if text and outcome.receipt is not None:
             self._agent_context = {"path": relative_path, "text": text,
                                    "receipt_id": outcome.receipt.receipt_id, "verification": "PASS"}
-            self._append(f"  Context loaded · {relative_path} · owned read; no permissions changed.", MUTED)
+            self._append("  " + tr("Context loaded · {relative_path} · owned read; no permissions changed.", relative_path=relative_path), MUTED)
         else:
-            self._append(f"  Context not loaded · {outcome.reason[:160]}", YELLOW)
+            self._append("  " + tr("Context not loaded · {value}", value=outcome.reason[:160]), YELLOW)
         if self._lane_on_screen():
             self.query_one("#context-button", Button).label = self._context_button_label()
         return self._agent_context is not None
