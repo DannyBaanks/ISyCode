@@ -92,7 +92,7 @@ Dependencias: MK0.
 ### MK2 — Slot de modelo `gus`
 
 Trabajo: extender `model_slot`/`save_model_slot` con `gus` y agregar su selector en Configuración.
-Admite proveedor y modelo local, con las keys por proveedor existentes (D2). Rechaza un modelo con ventana conocida menor de 32k (ADR 0011).
+Admite proveedor y modelo local, con las keys por proveedor existentes (D2). Rechaza un modelo con ventana conocida menor de 32 000 tokens (ADR 0011) y uno que el catálogo marca sin tool calls, porque GUS no podría editar. Solo se ofrece en el repo de ISyCode (D3).
 Dependencias: MK1.
 
 - `GK2-01`: con el slot vacío, GUS no arranca y explica por qué; no cae al modelo del chat sin avisar.
@@ -116,6 +116,8 @@ No se crea un sistema de lanes nuevo.
 Diseño según `.agents/skills/isycode-design`.
 Dependencias: MK3.
 
+- `GK4-00`: GUS se habilita por workspace solo con una confirmación explícita de la persona, guardada por la identidad de ese workspace en `StateIndex`. `is_isycode_checkout` (dos marcadores) solo decide si se ofrece la entrada en Configuración; nunca habilita GUS. Otro proyecto que copie esos archivos ve la entrada, pero GUS no actúa hasta que la persona lo habilite ahí.
+- `GK4-03`: las peticiones de GUS se presupuestan con `gus_slot.planning_window`: la ventana conocida o, si es desconocida, 32 000 tokens. Ninguna petición supera esa ventana.
 - `GK4-01`: abrir, conversar, cerrar y retomar GUS sin mezclar su transcripción con la del chat.
 - `GK4-02`: en/es/zh a 80×24, 100×30 y 140×40.
 
@@ -126,7 +128,7 @@ Hay una lista de rutas protegidas (`security.py`, `workspace_authority.py`, owne
 Nunca push sin aprobación, nunca recarga en caliente.
 Dependencias: MK4 y D1.
 
-- `GK5-01`: un cambio en una ruta protegida nunca se aplica en silencio, en ningún modo.
+- `GK5-01`: un cambio en una ruta protegida nunca se aplica en silencio, en ningún modo. La verificación también corre en la promoción del staging de comandos (`command_runner`, junto a `_revoked_effect`), no solo en `workspace.files.write`: un script que modifica una ruta protegida dentro del staging no la promueve sin revisión. Lo comprueba una prueba adversarial con un comando real.
 - `GK5-04`: fuera de una rama `gus/*`, cada edición de GUS pide aprobación.
 - `GK5-02`: un cambio que rompe la suite no se ofrece como listo; se reporta con la salida real.
 - `GK5-03`: deshacer el trabajo de GUS con `/undo` o descartar su rama deja el repo como estaba.

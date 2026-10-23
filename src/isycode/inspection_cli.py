@@ -155,7 +155,7 @@ def _models(out: TextIO, json_output: bool) -> int:
     _write(out, {
         "active": {"provider": selected_provider_name(), "model": selected_model_name()},
         "recent": recent_models(),
-        "slots": {"small": model_slot("small")},
+        "slots": {"small": model_slot("small"), "gus": model_slot("gus")},
         "network_tested": False,
     }, json_output=json_output)
     return EXIT_OK
