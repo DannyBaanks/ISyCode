@@ -166,6 +166,10 @@ Dialog .isy-dialog-structural { height: auto; margin-bottom: 1; color: $isy-mute
 Dialog .isy-dialog-detail { height: auto; }
 Dialog .isy-dialog-copy { height: auto; color: $isy-text; }
 Dialog .isy-dialog-preview { height: auto; max-height: 6; margin: 1 0; }
+/* Provider key: the steps scroll so the field and the actions stay on 80x24. */
+ProviderKeyScreen .isy-dialog-note { max-height: 7; }
+ProviderKeyScreen #provider-key-input { height: 3; }
+ProviderKeyScreen #provider-key-error { height: auto; color: $isy-warning; display: none; }
 Dialog .isy-dialog-actions Button {
     margin-left: 1; min-width: 8; width: 1fr; overflow: hidden;
 }

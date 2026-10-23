@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
 
 from isycode.chat_sessions import ChatSessionStore
 

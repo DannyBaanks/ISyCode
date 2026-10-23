@@ -143,7 +143,7 @@ msgid "Paste API key…"
 msgstr "Pegar clave de API…"
 
 msgid "Search workspace paths…"
-msgstr "Buscar rutas del espacio…"
+msgstr "Buscar rutas…"
 
 msgid "Chat ready"
 msgstr "Chat listo"
@@ -2865,3 +2865,221 @@ msgstr "sin bridge"
 
 msgid "Workspace identity"
 msgstr "Identidad del workspace"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "Solicitud al proveedor {decision} · {reason}; no se envió ninguna otra solicitud."
+
+msgid "request was not completed"
+msgstr "la solicitud no se completó"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "Para chatear aquí: Configuración → Authority → «Conectar con el modelo de IA seleccionado» (o «Activar todas las herramientas de código…»)."
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "Prompt conservado · /retry lo prepara para revisarlo. Los efectos de herramientas ya completados se mantienen; revísalos antes de volver a enviar."
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "El chat falló ({kind}). La solicitud no se completó."
+
+msgid "Use /resume to retry."
+msgstr "Usa /resume para reintentar."
+
+msgid "retry after {seconds}s"
+msgstr "reintentar en {seconds} s"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation} falló · {kind}: {hint}{suffix}."
+
+msgid "Chat"
+msgstr "Chat"
+
+msgid "Compaction"
+msgstr "Compactación"
+
+msgid "Model catalog"
+msgstr "Catálogo de modelos"
+
+msgid "Connection check"
+msgstr "Comprobación de conexión"
+
+msgid "Planning"
+msgstr "Planificación"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "un solo uso, se detiene a los {seconds} s"
+
+msgid "New conversation."
+msgstr "Nueva conversación."
+
+msgid "Completed"
+msgstr "Completado"
+
+msgid "Failed"
+msgstr "Falló"
+
+msgid "Rejected"
+msgstr "Rechazado"
+
+msgid "Timed out"
+msgstr "Tiempo agotado"
+
+msgid "Cancelled"
+msgstr "Cancelado"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Exit {code}"
+msgstr "Salida {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "El proveedor indica que no admite imágenes"
+
+msgid "Provider reports that steering is not supported"
+msgstr "El proveedor indica que no admite steer"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "Las credenciales del proveedor faltan, no son válidas o fueron rechazadas"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "El proveedor indica cuota agotada o una restricción de facturación"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "Se alcanzó el límite de solicitudes del proveedor; espera antes de reintentar"
+
+msgid "Selected model is unavailable to this account"
+msgstr "El modelo seleccionado no está disponible para esta cuenta"
+
+msgid "Provider model or endpoint was not found"
+msgstr "No se encontró el modelo o el endpoint del proveedor"
+
+msgid "Provider account lacks permission for this request"
+msgstr "La cuenta del proveedor no tiene permiso para esta solicitud"
+
+msgid "Provider service failed or is overloaded"
+msgstr "El servicio del proveedor falló o está saturado"
+
+msgid "Could not connect to the provider"
+msgstr "No se pudo conectar con el proveedor"
+
+msgid "Provider did not respond in time"
+msgstr "El proveedor no respondió a tiempo"
+
+msgid "Provider response was interrupted"
+msgstr "La respuesta del proveedor se interrumpió"
+
+msgid "Provider rejected the request parameters"
+msgstr "El proveedor rechazó los parámetros de la solicitud"
+
+msgid "Request is larger than the model context window"
+msgstr "La solicitud supera la ventana de contexto del modelo"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority denegó la solicitud o no pudo verificarla"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "Fallo del proveedor sin un diagnóstico reconocido"
+
+msgid "Failed · {kind}"
+msgstr "Falló · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "Recargar"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "Vista previa"
+
+msgid "1. Open {url} and sign in."
+msgstr "1. Abre {url} e inicia sesión."
+
+msgid "2. Create an API key and copy it. Most consoles show it only once."
+msgstr "2. Crea una API key y cópiala. La mayoría de consolas solo la muestran una vez."
+
+msgid "3. Paste it below and choose Save key."
+msgstr "3. Pégala abajo y elige Guardar clave."
+
+msgid "Connect {name}"
+msgstr "Conectar {name}"
+
+msgid "Create an access token with permission to call Inference Providers."
+msgstr "Crea un token de acceso con permiso para llamar a Inference Providers."
+
+msgid "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+msgstr "Crea la clave en AI Gateway → API Keys de tu panel de Vercel."
+
+msgid "No API key was entered; nothing was saved."
+msgstr "No se introdujo ninguna API key; no se guardó nada."
+
+msgid "Open API Keys in the Cerebras Cloud console and create a key."
+msgstr "Abre API Keys en la consola de Cerebras Cloud y crea una clave."
+
+msgid "Open API keys in the Token Factory console and create a key."
+msgstr "Abre API keys en la consola de Token Factory y crea una clave."
+
+msgid "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+msgstr "Abre la gestión de API-KEY en Model Studio y crea una clave de pago por uso."
+
+msgid "Open page"
+msgstr "Abrir página"
+
+msgid "OpenCode Go needs an active Go subscription on the same account."
+msgstr "OpenCode Go necesita una suscripción Go activa en la misma cuenta."
+
+msgid "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+msgstr "Abre la ventana de clave con la página donde se crean las claves de {name}. Se guarda en el llavero del sistema para tu usuario; nunca en el proyecto ni en los registros."
+
+msgid "Paste a key first."
+msgstr "Primero pega una clave."
+
+msgid "Paste the key below and choose Save key."
+msgstr "Pega la clave abajo y elige Guardar clave."
+
+msgid "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+msgstr "Se guarda en el llavero del sistema para tu usuario; nunca en este proyecto, sus registros ni el chat."
+
+msgid "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+msgstr "Inicia sesión y ve a Settings → API Keys (o Get API Key en cualquier modelo). Las claves empiezan por nvapi-."
+
+msgid "This preset uses the GLM coding endpoint: use a Coding Plan key."
+msgstr "Este preset usa el endpoint de código de GLM: usa una clave del Coding Plan."
+
+msgid "You can also set {env} in your environment and restart ISyCode."
+msgstr "También puedes definir {env} en tu entorno y reiniciar ISyCode."
+
+msgid "key available"
+msgstr "clave disponible"
+
+msgid "key needed"
+msgstr "falta clave"
+
+msgid "{name} needs an API key before ISyCode can list its models or chat."
+msgstr "{name} necesita una API key antes de que ISyCode pueda listar sus modelos o chatear."
+
+msgid "{name} · {status} · add or replace"
+msgstr "{name} · {status} · añadir o reemplazar"
+
+msgid "3. Paste it below and choose Use for this session."
+msgstr "3. Pégala abajo y elige Usar solo en esta sesión."
+
+msgid "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+msgstr "Se mantiene en memoria solo durante esta ejecución; nunca se escribe en disco, en este proyecto, sus registros ni el chat."
+
+msgid "No secure OS keyring is available here; nothing was saved."
+msgstr "No hay un llavero seguro del sistema aquí; no se guardó nada."
+
+msgid "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+msgstr "Este equipo no tiene un llavero seguro del sistema, así que la clave no se puede guardar. Puedes usarla en esta sesión; la próxima vez tendrás que pegarla de nuevo."
+
+msgid "Paste the key below and choose Use for this session."
+msgstr "Pega la clave abajo y elige Usar solo en esta sesión."
+
+msgid "Use for this session"
+msgstr "Usar solo en esta sesión"
+
+msgid "key for this session"
+msgstr "clave para esta sesión"
+
+msgid "{name} key kept in memory for this session only; nothing was saved."
+msgstr "Clave de {name} en memoria solo para esta sesión; no se guardó nada."

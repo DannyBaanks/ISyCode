@@ -2865,3 +2865,221 @@ msgstr "no bridge"
 
 msgid "Workspace identity"
 msgstr "Workspace identity"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "Provider request {decision} · {reason}; no further request was sent."
+
+msgid "request was not completed"
+msgstr "request was not completed"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "Chat failed ({kind}). The request was not completed."
+
+msgid "Use /resume to retry."
+msgstr "Use /resume to retry."
+
+msgid "retry after {seconds}s"
+msgstr "retry after {seconds}s"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation} failed · {kind}: {hint}{suffix}."
+
+msgid "Chat"
+msgstr "Chat"
+
+msgid "Compaction"
+msgstr "Compaction"
+
+msgid "Model catalog"
+msgstr "Model catalog"
+
+msgid "Connection check"
+msgstr "Connection check"
+
+msgid "Planning"
+msgstr "Planning"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "one-use, stops after {seconds} s"
+
+msgid "New conversation."
+msgstr "New conversation."
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Failed"
+msgstr "Failed"
+
+msgid "Rejected"
+msgstr "Rejected"
+
+msgid "Timed out"
+msgstr "Timed out"
+
+msgid "Cancelled"
+msgstr "Cancelled"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Exit {code}"
+msgstr "Exit {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "Provider reports that image input is not supported"
+
+msgid "Provider reports that steering is not supported"
+msgstr "Provider reports that steering is not supported"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "Provider credentials are missing, invalid or rejected"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "Provider reports exhausted quota or a billing restriction"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "Provider request limit reached; wait before retrying"
+
+msgid "Selected model is unavailable to this account"
+msgstr "Selected model is unavailable to this account"
+
+msgid "Provider model or endpoint was not found"
+msgstr "Provider model or endpoint was not found"
+
+msgid "Provider account lacks permission for this request"
+msgstr "Provider account lacks permission for this request"
+
+msgid "Provider service failed or is overloaded"
+msgstr "Provider service failed or is overloaded"
+
+msgid "Could not connect to the provider"
+msgstr "Could not connect to the provider"
+
+msgid "Provider did not respond in time"
+msgstr "Provider did not respond in time"
+
+msgid "Provider response was interrupted"
+msgstr "Provider response was interrupted"
+
+msgid "Provider rejected the request parameters"
+msgstr "Provider rejected the request parameters"
+
+msgid "Request is larger than the model context window"
+msgstr "Request is larger than the model context window"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority denied or could not verify the request"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "Provider failure without a recognized diagnostic"
+
+msgid "Failed · {kind}"
+msgstr "Failed · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "Refresh"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "Open preview"
+
+msgid "1. Open {url} and sign in."
+msgstr "1. Open {url} and sign in."
+
+msgid "2. Create an API key and copy it. Most consoles show it only once."
+msgstr "2. Create an API key and copy it. Most consoles show it only once."
+
+msgid "3. Paste it below and choose Save key."
+msgstr "3. Paste it below and choose Save key."
+
+msgid "Connect {name}"
+msgstr "Connect {name}"
+
+msgid "Create an access token with permission to call Inference Providers."
+msgstr "Create an access token with permission to call Inference Providers."
+
+msgid "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+msgstr "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+
+msgid "No API key was entered; nothing was saved."
+msgstr "No API key was entered; nothing was saved."
+
+msgid "Open API Keys in the Cerebras Cloud console and create a key."
+msgstr "Open API Keys in the Cerebras Cloud console and create a key."
+
+msgid "Open API keys in the Token Factory console and create a key."
+msgstr "Open API keys in the Token Factory console and create a key."
+
+msgid "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+msgstr "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+
+msgid "Open page"
+msgstr "Open page"
+
+msgid "OpenCode Go needs an active Go subscription on the same account."
+msgstr "OpenCode Go needs an active Go subscription on the same account."
+
+msgid "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+msgstr "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+
+msgid "Paste a key first."
+msgstr "Paste a key first."
+
+msgid "Paste the key below and choose Save key."
+msgstr "Paste the key below and choose Save key."
+
+msgid "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+msgstr "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+
+msgid "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+msgstr "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+
+msgid "This preset uses the GLM coding endpoint: use a Coding Plan key."
+msgstr "This preset uses the GLM coding endpoint: use a Coding Plan key."
+
+msgid "You can also set {env} in your environment and restart ISyCode."
+msgstr "You can also set {env} in your environment and restart ISyCode."
+
+msgid "key available"
+msgstr "key available"
+
+msgid "key needed"
+msgstr "key needed"
+
+msgid "{name} needs an API key before ISyCode can list its models or chat."
+msgstr "{name} needs an API key before ISyCode can list its models or chat."
+
+msgid "{name} · {status} · add or replace"
+msgstr "{name} · {status} · add or replace"
+
+msgid "3. Paste it below and choose Use for this session."
+msgstr "3. Paste it below and choose Use for this session."
+
+msgid "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+msgstr "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+
+msgid "No secure OS keyring is available here; nothing was saved."
+msgstr "No secure OS keyring is available here; nothing was saved."
+
+msgid "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+msgstr "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+
+msgid "Paste the key below and choose Use for this session."
+msgstr "Paste the key below and choose Use for this session."
+
+msgid "Use for this session"
+msgstr "Use for this session"
+
+msgid "key for this session"
+msgstr "key for this session"
+
+msgid "{name} key kept in memory for this session only; nothing was saved."
+msgstr "{name} key kept in memory for this session only; nothing was saved."

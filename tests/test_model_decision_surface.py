@@ -171,10 +171,13 @@ def test_model_with_levels_is_applied_only_with_its_reasoning(tui, monkeypatch, 
         before = selected_provider_name()
         screen = await open_nvidia(app, pilot)
         choice(screen, "z-ai/glm-5.3").focus()
-        await pilot.pause()
-        slider = screen.query_one("#models-effort", EffortSlider)
-        assert slider.display and slider.stops == ("default", "low", "high")
+        assert await until(pilot, lambda: any(
+            current.display and current.stops == ("default", "low", "high")
+            for current in screen.query("#models-effort")))
         await pilot.press("right", "right")                   # auto → low → high (draft)
+        assert await until(pilot, lambda: any(
+            current.level == "high" for current in screen.query("#models-effort")))
+        slider = screen.query_one("#models-effort", EffortSlider)
         assert slider.level == "high"
         assert "◉" in str(slider.render())
         assert selected_provider_name() == before            # still a draft
@@ -185,7 +188,8 @@ def test_model_with_levels_is_applied_only_with_its_reasoning(tui, monkeypatch, 
         assert await until(pilot, lambda: isinstance(app.screen, ModelsScreen))
         screen = await open_nvidia_screen(app, pilot)
         choice(screen, "z-ai/glm-5.3").focus()
-        await pilot.pause()
+        assert await until(pilot, lambda: any(
+            current.display for current in screen.query("#models-effort")))
         await pilot.press("right", "right")
         await pilot.press("enter")
         assert await until(pilot, lambda: selected_provider_name() == "nvidia")

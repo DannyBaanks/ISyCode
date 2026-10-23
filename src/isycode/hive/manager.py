@@ -16,7 +16,7 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .guard import hive_write_decision, HiveWriteInput
 from .router import Router

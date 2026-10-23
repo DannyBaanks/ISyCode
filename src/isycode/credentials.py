@@ -209,6 +209,15 @@ def read_saved_secret(service: str, consumer: str) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def keyring_available() -> bool:
+    """Whether a secure OS keyring can hold keys here; never reads a secret."""
+    try:
+        CredentialVault()
+    except (CredentialVaultError, OSError, ValueError, sqlite3.Error):
+        return False
+    return True
+
+
 def saved_secret_exists(service: str) -> bool:
     """Whether an active saved key exists, from metadata only; never reads the secret."""
     try:

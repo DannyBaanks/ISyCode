@@ -26,7 +26,7 @@ from isycode.harness_graph import (
     copyable_default_model,
     present_by_semantic,
 )
-from isycode.hive import HiveManager, HiveConfig, AgentMeta
+from isycode.hive import HiveManager, HiveConfig, AgentMeta, HiveMessage
 from isycode.hive.hook_server import HookServer
 from isycode.harness_probe import (
     probe_catalog,
@@ -870,7 +870,7 @@ class SessionMixin:
         busy = current.loop_task is not None and current.loop_task is not asyncio.current_task() and not current.loop_task.done()
         if not busy and not current.history and not current.lines and not current.session_id:
             self._show_chat_again()
-            self._append("  New conversation.", MUTED)
+            self._append("  " + tr("New conversation."), MUTED)
             if self._sessions_enabled() and self._chat_session_owner is not None:
                 outcome, sid = self._chat_session_owner.manage(
                     "state", None, json.dumps(self._session_state()))
@@ -880,7 +880,7 @@ class SessionMixin:
             return
         self._capture_running_session()
         self._show_lane(open_lane(self, None))
-        self._append("  New conversation.", MUTED)
+        self._append("  " + tr("New conversation."), MUTED)
         if self._sessions_enabled() and self._chat_session_owner is not None:
             outcome, sid = self._chat_session_owner.manage("state", None, json.dumps(self._session_state()))
             if outcome.decision == "ALLOW":

@@ -164,8 +164,16 @@ def _semantic_box_title(title: str) -> Text:
             color = operation_color(part) or TEXT
         else:
             color = MUTED
+        # Color follows the English state; the visible word follows the locale.
+        if part in _TOOL_STATES:
+            part = tr(part)
+        elif part.startswith("Exit ") and part[5:].lstrip("-").isdigit():
+            part = tr("Exit {code}", code=part[5:])
         result.append(part, style=color)
     return result
+
+
+_TOOL_STATES = frozenset({"Completed", "Failed", "Rejected", "Timed out", "Cancelled", "Error"})
 
 
 def _fit_cells(text: str, width: int) -> str:

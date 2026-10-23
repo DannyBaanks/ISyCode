@@ -50,7 +50,7 @@ from isycode.search import find_text_matches
 from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_sessions import BridgePresenceScreen, ConsoleSearchScreen
-from isycode.tui_theme import ACCENT, GREEN, RED, _fit_cells, static_content
+from isycode.tui_theme import ACCENT, GREEN, RED, static_content
 from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.workspace_authority import OneShotActionAuthority
 from rich.cells import cell_len
@@ -891,7 +891,7 @@ class RailMixin:
         if self._loop_task is not None and not self._loop_task.done():
             self._animate_activity()
         else:
-            self._set_activity(getattr(self, "_activity_message", "Chat ready"),
+            self._set_activity(getattr(self, "_activity_message", tr("Chat ready")),
                                getattr(self, "_activity_color", MUTED))
 
     def _rail_identity_line(self) -> str:

@@ -17,6 +17,7 @@ from isycode.credential_owner import (
     CredentialOwner,
 )
 from isycode.credentials import (
+    keyring_available,
     CredentialVault,
     CredentialVaultError,
     saved_secret_exists,
@@ -35,6 +36,8 @@ from textual.widgets import (
 )
 from isycode.providers import (
     DEFAULT_MODEL,
+    KEY_NOTES,
+    KEY_PAGES,
     PRESETS,
     PROVIDER_SCREEN,
     Provider,
@@ -45,6 +48,7 @@ from isycode.providers import (
     resolved_chat_model,
     save_provider_selection,
     selected_provider_name,
+    use_session_key,
 )
 from isycode.tui_theme import (
     MUTED,
@@ -54,6 +58,7 @@ from isycode.tui_theme import (
     CYAN,
 )
 from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_grants import ProviderKeyScreen
 from isycode.shortcuts import APP_SHORTCUTS
 from textual.widgets import Button
 from isycode.tui_widgets import ExpandableBox, SidePanel
@@ -91,7 +96,7 @@ class ProviderMixin:
                         "environment": "key in environment", "saved": "key saved",
                         "stored": "legacy key saved", "legacy": "legacy key",
                         "optional": "no key required", "subscription": "subscription",
-                        "signed-in": "Grok sign-in",
+                        "signed-in": "Grok sign-in", "session": "key for this session",
                         "unavailable": "credential store unavailable",
                     }.get(state, state))
                 current = key == active or (key == "openai" and active == "chatgpt")
@@ -315,12 +320,22 @@ class ProviderMixin:
     def _open_credentials_menu(self) -> None:
         selected = selected_provider_name()
         entries = []
-        if selected in PRESETS:
+        # Every provider that takes a key, the selected one first: a key can be
+        # added before the provider is chosen, which is how a new machine starts.
+        keyed = [key for _, key, _, _ in PROVIDER_SCREEN
+                 if key in PRESETS and PRESETS[key].get("key_required", True)
+                 and PRESETS[key].get("api") != "codex"]
+        keyed.sort(key=lambda key: key != selected)
+        for service in keyed:
+            state = provider_credential_state(service)
+            status = tr("key needed") if state in {"missing", "unavailable"} else tr("key available")
             entries.append(self._entry(
-                tr("Add a key for {name} · asks first",
-                   name=self._credential_label(selected)),
-                "credential_add", selected,
-                "Saved in your OS keyring for your user; never in the project or logs.",
+                tr("{name} · {status} · add or replace",
+                   name=self._credential_label(service), status=status),
+                "credential_add", service,
+                tr("Opens the key dialog with the page where {name} keys are created. "
+                   "Saved in your OS keyring for your user; never in the project or logs.",
+                   name=self._credential_label(service)),
                 translate=False))
         entries.append(self._entry("Add an ISyCo Gateway key · asks first", "credential_add",
                                    GATEWAY_SERVICE))
@@ -534,7 +549,8 @@ class ProviderMixin:
             return
         button.display = not (bool(rail.display) and self.size.width < 100)
 
-    def _select_provider(self, name: str, model: str | None = None) -> None:
+    def _select_provider(self, name: str, model: str | None = None) -> bool:
+        """Select a provider; True when it can be used now, False when it needs a key."""
         current = selected_provider_name()
         try:
             explicit = model.strip() if isinstance(model, str) else ""
@@ -545,7 +561,7 @@ class ProviderMixin:
         except (ProviderError, ConfigurationError):
             self._set_activity(f"{name} configuration unavailable", RED)
             self._close_menu()
-            return
+            return False
         os.environ["ISYCODE_PROVIDER"] = name
         os.environ["ISYCODE_MODEL"] = provider.model
         try:
@@ -569,15 +585,14 @@ class ProviderMixin:
         if provider.configured():
             self._append("  Selected for this session · " + self._model_display_label(name, provider.model), GREEN)
             self._close_menu()
-            return
+            return True
+        self._close_menu()
         if saved_secret_exists(name):
-            self._append(
-                f"  A saved {provider.label} key exists, but this workspace does not allow using it · "
-                "Settings → API keys.", YELLOW)
-            self._close_menu()
-            return
-        self._append(f"  {provider.label} needs an API key · paste it below to save it.", YELLOW)
-        self._open_key_entry(name)
+            self.run_worker(self._grant_key_use(name), exclusive=True, group="credentials")
+            return False
+        self.run_worker(self._connect_provider_key(name, then_models=False), exclusive=True,
+                        group="credentials")
+        return False
 
     @staticmethod
     def _credential_label(service: str) -> str:
@@ -586,6 +601,12 @@ class ProviderMixin:
         return str(PRESETS.get(service, {}).get("label", service))
 
     def _open_key_entry(self, service: str) -> None:
+        """Ask for the key in the provider key dialog; nothing is stored until Save."""
+        self._close_menu()
+        self.run_worker(self._connect_provider_key(service, then_models=False), exclusive=True,
+                        group="credentials")
+
+    def _open_inline_key_entry(self, service: str) -> None:
         """Show the masked key field; nothing is read or stored until Save."""
         self._provider_key_target = service
         self.query_one("#action-menu", Vertical).display = True
@@ -632,7 +653,7 @@ class ProviderMixin:
             owner.authority.set_grant(action, enabled=True, targets=sorted(targets))
         return True
 
-    async def _save_key_flow(self, service: str, secret: str) -> None:
+    async def _save_key_flow(self, service: str, secret: str) -> bool:
         label = self._credential_label(service)
         try:
             owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
@@ -641,44 +662,46 @@ class ProviderMixin:
             env = PRESETS.get(service, {}).get("key_env", "the provider's API key variable")
             self._append(f"  No secure OS keyring is available here; nothing was saved. "
                          f"Set {env} in your environment instead.", YELLOW)
-            return
+            return False
         try:
             if not await self._ensure_credential_grant(owner, service):
                 self._append("  API key not saved; permission was not granted.", MUTED)
-                return
+                return False
             request = owner.add_request(
                 service, f"{label} key",
                 "ISyCo Gateway access" if service == GATEWAY_SERVICE else "ISyCode chat")
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append(f"  API key not saved ({type(exc).__name__}).", RED)
-            return
+            return False
         if not await self._await_screen(TailscaleConfirmScreen(
                 f"Save the {label} API key?",
                 f"The key you pasted will be saved in your OS keyring for {label}. The newest saved "
                 "key for a service is the one ISyCode uses.", "Save key")):
             self._append("  API key not saved; the pasted value was discarded.", MUTED)
-            return
+            return False
         approval = self._action_approvals.issue(request, ttl_seconds=60)
         outcome = await asyncio.to_thread(owner.add, request, secret, approval)
         if outcome.decision != "ALLOW":
             self._append(f"  API key not saved · {outcome.reason[:180]}", YELLOW)
-            return
+            return False
         self._append(f"  {label} API key saved · receipt {outcome.receipt.receipt_id}", GREEN)
         if service in PRESETS:
             self._select_provider(service)
+        return True
 
-    async def _grant_key_use(self, service: str) -> None:
+    async def _grant_key_use(self, service: str) -> bool:
         try:
             owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
                                     self._action_approvals)
             granted = await self._ensure_credential_grant(owner, service)
         except (CredentialVaultError, WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append(f"  Permission not changed ({type(exc).__name__}).", YELLOW)
-            return
+            return False
         label = self._credential_label(service)
         self._append(f"  The saved {label} key can be used in this workspace." if granted
                      else "  Permission not granted; the saved key stays unused here.",
                      GREEN if granted else MUTED)
+        return granted
 
     async def _revoke_key_flow(self, key_id: str) -> None:
         try:
@@ -748,12 +771,61 @@ class ProviderMixin:
             return
         if value == "xai":
             if active == "xai":
-                self._open_scoped_models("xai")
+                self._open_models_with_key("xai")
                 return
             self._open_xai_auth_methods()
             return
-        self._open_scoped_models(value)
+        self._open_models_with_key(value)
         return
+
+    def _open_models_with_key(self, name: str) -> None:
+        """Provider → key → models: the model list needs a usable key first."""
+        state = provider_credential_state(name)
+        if state in {"missing", "unavailable"}:
+            self._close_menu()
+            self.run_worker(self._connect_provider_key(name), exclusive=True, group="credentials")
+            return
+        if state == "saved" and not self._saved_key_usable(name):
+            self._close_menu()
+            self.run_worker(self._use_saved_key_then_models(name), exclusive=True,
+                            group="credentials")
+            return
+        self._open_scoped_models(name)
+
+    def _saved_key_usable(self, service: str) -> bool:
+        try:
+            grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+        except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        use = grants.get("credentials.use", {})
+        return displayed_on("credentials.use", use, service in use.get("targets", []))
+
+    async def _connect_provider_key(self, service: str, *, then_models: bool = True) -> None:
+        """Explain where the key comes from, take it, save it through the owner."""
+        preset = PRESETS.get(service, {})
+        keyring = keyring_available()
+        secret = await self._await_screen(ProviderKeyScreen(
+            self._credential_label(service), url=KEY_PAGES.get(service, ""),
+            note=KEY_NOTES.get(service, ""), env=preset.get("key_env", ""), keyring=keyring))
+        if not secret:
+            self._append("  " + tr("No API key was entered; nothing was saved."), MUTED)
+            return
+        if keyring:
+            usable = await self._save_key_flow(service, secret)
+        elif service in PRESETS:
+            use_session_key(service, secret)
+            self._append("  " + tr("{name} key kept in memory for this session only; nothing was saved.",
+                                   name=self._credential_label(service)), GREEN)
+            usable = self._select_provider(service)
+        else:
+            self._append("  " + tr("No secure OS keyring is available here; nothing was saved."), YELLOW)
+            usable = False
+        if usable and then_models and service in PRESETS:
+            self._open_scoped_models(service)
+
+    async def _use_saved_key_then_models(self, service: str) -> None:
+        if await self._grant_key_use(service):
+            self._open_scoped_models(service)
 
     def _menu_provider_auth_methods(self, entry: dict[str, str | bool]) -> None:
         self._open_auth_methods()
@@ -762,9 +834,7 @@ class ProviderMixin:
     def _menu_xai_api_key(self, entry: dict[str, str | bool]) -> None:
         from isycode.grok_session import set_xai_auth_mode
         set_xai_auth_mode("api_key")
-        self._select_provider("xai")
-        if provider_credential_state("xai") != "missing":
-            self._open_scoped_models("xai")
+        self._open_models_with_key("xai")
         return
 
     def _menu_xai_session(self, entry: dict[str, str | bool]) -> None:
@@ -780,9 +850,7 @@ class ProviderMixin:
         return
 
     def _menu_auth_api_key(self, entry: dict[str, str | bool]) -> None:
-        self._select_provider("openai")
-        if provider_credential_state("openai") != "missing":
-            self._open_scoped_models("openai")
+        self._open_models_with_key("openai")
         return
 
     def _menu_auth_browser(self, entry: dict[str, str | bool]) -> None:
@@ -897,8 +965,7 @@ class ProviderMixin:
         select_reasoning(name, model, level)
         # The model chosen in the picker is applied only now, together with its level.
         if (name, model) != (selected_provider_name(), resolved_chat_model(selected_provider_name())):
-            self._select_provider(name, model)
-            if self.query_one("#key-entry", Vertical).display:
+            if not self._select_provider(name, model):
                 return
         self._paint_idea_box()
         self._close_menu()

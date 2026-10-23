@@ -1,13 +1,17 @@
 from isycode.tui import plain_text
 import asyncio
+import html
 import json
 import os
+import re
 from pathlib import Path
 
+import pytest
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible as TextualCollapsible, Static
 
 from isycode.tui import Banner, ChatArea, SidePanel, TUIApp, TailscaleConfirmScreen
+from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
 
 
@@ -432,3 +436,39 @@ def test_external_stylesheet_is_packaged_and_applied(tmp_path, monkeypatch):
             assert prompt.styles.background.hex == "#000000"
 
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("locale", ["en", "es", "zh"])
+def test_files_rail_actions_show_whole_labels_at_80x24(tmp_path, monkeypatch, capsys, locale):
+    configure(tmp_path, monkeypatch)
+    UserDefaultsStore().update(locale=locale)
+
+    async def scenario():
+        app = TUIApp()
+        startup = app._startup_workspace
+
+        async def no_startup():
+            return None
+
+        app._startup_workspace = no_startup
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            app._startup_workspace = startup
+            app.action_toggle_sidebar()
+            await pilot.press("f6")
+            await pilot.pause()
+            panel = app.query_one(SidePanel).region
+            # What the terminal shows, after layout, padding and clipping.
+            screen = html.unescape("".join(re.findall(r">([^<]*)<", app.export_screenshot())))
+            screen = screen.replace("\xa0", " ")
+            for row in ("#file-controls", "#file-actions"):
+                buttons = list(app.query_one(row).query(Button))
+                for button in buttons:
+                    label = str(button.label)
+                    assert label in screen, (locale, label)
+                    assert panel.contains_region(button.region), (locale, label)
+                for left, right in zip(buttons, buttons[1:]):
+                    assert left.region.right < right.region.x, (locale, str(left.label))
+
+    with capsys.disabled():
+        asyncio.run(scenario())

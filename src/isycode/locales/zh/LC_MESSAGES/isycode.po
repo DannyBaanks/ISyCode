@@ -2865,3 +2865,221 @@ msgstr "无 bridge"
 
 msgid "Workspace identity"
 msgstr "工作区身份"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "提供商请求 {decision} · {reason}；未再发送任何请求。"
+
+msgid "request was not completed"
+msgstr "请求未完成"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "要在此处聊天：设置 → Authority →“连接到所选 AI 模型”（或“开启所有编码工具…”）。"
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "已保留提示 · /retry 会准备好供你审阅。已完成的工具效果仍然保留；再次发送前请先检查。"
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "聊天失败（{kind}）。请求未完成。"
+
+msgid "Use /resume to retry."
+msgstr "使用 /resume 重试。"
+
+msgid "retry after {seconds}s"
+msgstr "{seconds} 秒后重试"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation}失败 · {kind}：{hint}{suffix}。"
+
+msgid "Chat"
+msgstr "聊天"
+
+msgid "Compaction"
+msgstr "压缩"
+
+msgid "Model catalog"
+msgstr "模型目录"
+
+msgid "Connection check"
+msgstr "连接检查"
+
+msgid "Planning"
+msgstr "规划"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "一次性，{seconds} 秒后停止"
+
+msgid "New conversation."
+msgstr "新对话。"
+
+msgid "Completed"
+msgstr "已完成"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Rejected"
+msgstr "已拒绝"
+
+msgid "Timed out"
+msgstr "已超时"
+
+msgid "Cancelled"
+msgstr "已取消"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Exit {code}"
+msgstr "退出码 {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "提供商表示不支持图像输入"
+
+msgid "Provider reports that steering is not supported"
+msgstr "提供商表示不支持 steer"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "提供商凭据缺失、无效或被拒绝"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "提供商表示配额已用尽或存在计费限制"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "已达到提供商请求上限；请稍后再试"
+
+msgid "Selected model is unavailable to this account"
+msgstr "所选模型对此账户不可用"
+
+msgid "Provider model or endpoint was not found"
+msgstr "未找到提供商模型或端点"
+
+msgid "Provider account lacks permission for this request"
+msgstr "提供商账户无权执行此请求"
+
+msgid "Provider service failed or is overloaded"
+msgstr "提供商服务失败或过载"
+
+msgid "Could not connect to the provider"
+msgstr "无法连接到提供商"
+
+msgid "Provider did not respond in time"
+msgstr "提供商未及时响应"
+
+msgid "Provider response was interrupted"
+msgstr "提供商响应被中断"
+
+msgid "Provider rejected the request parameters"
+msgstr "提供商拒绝了请求参数"
+
+msgid "Request is larger than the model context window"
+msgstr "请求超出模型上下文窗口"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority 拒绝了请求或无法验证"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "提供商故障，无可识别的诊断"
+
+msgid "Failed · {kind}"
+msgstr "失败 · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "刷新"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "预览"
+
+msgid "1. Open {url} and sign in."
+msgstr "1. 打开 {url} 并登录。"
+
+msgid "2. Create an API key and copy it. Most consoles show it only once."
+msgstr "2. 创建一个 API 密钥并复制。大多数控制台只显示一次。"
+
+msgid "3. Paste it below and choose Save key."
+msgstr "3. 粘贴到下方并选择“保存密钥”。"
+
+msgid "Connect {name}"
+msgstr "连接 {name}"
+
+msgid "Create an access token with permission to call Inference Providers."
+msgstr "创建一个有权调用 Inference Providers 的访问令牌。"
+
+msgid "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+msgstr "在 Vercel 控制台的 AI Gateway → API Keys 中创建密钥。"
+
+msgid "No API key was entered; nothing was saved."
+msgstr "未输入 API 密钥；未保存任何内容。"
+
+msgid "Open API Keys in the Cerebras Cloud console and create a key."
+msgstr "在 Cerebras Cloud 控制台打开 API Keys 并创建密钥。"
+
+msgid "Open API keys in the Token Factory console and create a key."
+msgstr "在 Token Factory 控制台打开 API keys 并创建密钥。"
+
+msgid "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+msgstr "在 Model Studio 打开 API-KEY 管理并创建按量付费密钥。"
+
+msgid "Open page"
+msgstr "打开页面"
+
+msgid "OpenCode Go needs an active Go subscription on the same account."
+msgstr "OpenCode Go 需要同一账户上有效的 Go 订阅。"
+
+msgid "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+msgstr "打开密钥对话框，并显示创建 {name} 密钥的页面。保存在你用户的系统钥匙串中，绝不写入项目或日志。"
+
+msgid "Paste a key first."
+msgstr "请先粘贴密钥。"
+
+msgid "Paste the key below and choose Save key."
+msgstr "将密钥粘贴到下方并选择“保存密钥”。"
+
+msgid "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+msgstr "保存在你用户的系统钥匙串中；绝不写入此项目、其日志或聊天。"
+
+msgid "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+msgstr "登录后进入 Settings → API Keys（或在任意模型上点 Get API Key）。密钥以 nvapi- 开头。"
+
+msgid "This preset uses the GLM coding endpoint: use a Coding Plan key."
+msgstr "此预设使用 GLM 编码端点：请使用 Coding Plan 密钥。"
+
+msgid "You can also set {env} in your environment and restart ISyCode."
+msgstr "你也可以在环境中设置 {env} 并重启 ISyCode。"
+
+msgid "key available"
+msgstr "密钥可用"
+
+msgid "key needed"
+msgstr "需要密钥"
+
+msgid "{name} needs an API key before ISyCode can list its models or chat."
+msgstr "{name} 需要 API 密钥，ISyCode 才能列出其模型或聊天。"
+
+msgid "{name} · {status} · add or replace"
+msgstr "{name} · {status} · 添加或替换"
+
+msgid "3. Paste it below and choose Use for this session."
+msgstr "3. 粘贴到下方并选择“仅本次会话使用”。"
+
+msgid "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+msgstr "仅在本次运行期间保存在内存中；绝不写入磁盘、此项目、其日志或聊天。"
+
+msgid "No secure OS keyring is available here; nothing was saved."
+msgstr "此处没有可用的安全系统钥匙串；未保存任何内容。"
+
+msgid "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+msgstr "此设备没有可用的安全系统钥匙串，因此无法保存密钥。仍可在本次会话中使用；下次需要重新粘贴。"
+
+msgid "Paste the key below and choose Use for this session."
+msgstr "将密钥粘贴到下方并选择“仅本次会话使用”。"
+
+msgid "Use for this session"
+msgstr "仅本次会话使用"
+
+msgid "key for this session"
+msgstr "本次会话的密钥"
+
+msgid "{name} key kept in memory for this session only; nothing was saved."
+msgstr "{name} 密钥仅在本次会话中保存在内存中；未保存任何内容。"

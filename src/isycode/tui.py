@@ -158,7 +158,7 @@ from textual.dom import NoScreen
 from textual.events import Click, Key, Resize
 from textual.widget import Widget
 from textual.widgets import (
-    Static, Input, Footer, Collapsible, Button, Tree, TextArea, OptionList, Select, Checkbox,
+    Static, Input, Footer, Button, Tree, TextArea, OptionList, Select, Checkbox,
 )
 from textual.widgets import Collapsible as TextualCollapsible
 from textual.widgets.option_list import Option
@@ -227,6 +227,7 @@ from isycode.tui_theme import (
     plain_text,
 )
 from isycode.tui_widgets import (
+    fit_rail_button,
     PreviewOptionList,
     Banner,
     ActivityStatus,
@@ -592,17 +593,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
             "#show-files": "Files",
             "#refresh-openisy": "Refresh integrations",
             "#file-up": "↑ Up",
-            "#file-refresh": "Refresh",
+            "#file-refresh": ("Refresh", "file rail"),
             "#workspace-folders": "Folders",
             "#file-copy-path": "Copy path",
-            "#file-open-preview": "Open preview",
+            "#file-open-preview": ("Open preview", "file rail"),
             "#lsp-install-hint": "Install commands",
             "#save-provider-key": "Save key",
             "#cancel-provider-key": "Cancel",
         }
         for widget_id, msgid in buttons.items():
+            msgid, context = msgid if isinstance(msgid, tuple) else (msgid, None)
             try:
-                self.query_one(widget_id, Button).label = tr(msgid)
+                button = self.query_one(widget_id, Button)
+                button.label = tr(msgid, context=context)
+                if widget_id == "#file-up":
+                    fit_rail_button(button, str(button.label))
             except (NoMatches, NoScreen, ScreenStackError):
                 continue
         try:
@@ -999,8 +1004,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         if detail["provider_code"]:
             suffix += " · " + detail["provider_code"]
         if detail["retry_after_s"] is not None:
-            suffix += f" · retry after {detail['retry_after_s']:g}s"
-        return f"{operation} failed · {detail['error_kind']}: {detail['provider_hint']}{suffix}."
+            suffix += " · " + tr("retry after {seconds}s", seconds=f"{detail['retry_after_s']:g}")
+        return tr("{operation} failed · {kind}: {hint}{suffix}.", operation=tr(operation),
+                  kind=detail["error_kind"], hint=tr(detail["provider_hint"]), suffix=suffix)
 
     @staticmethod
     def _model_display_label(name: str, model: str) -> str:
@@ -2061,10 +2067,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 lane.activity_message = "Interrupted"
                 lane.activity_color = YELLOW
             elif failed is not None:
-                lane.activity_message = f"Failed · {type(failed).__name__}"
+                lane.activity_message = tr("Failed · {kind}", kind=type(failed).__name__)
                 lane.activity_color = RED
             else:
-                lane.activity_message = "Chat ready"
+                lane.activity_message = tr("Chat ready")
                 lane.activity_color = MUTED
         if not cancelled and not followed:
             self.notify("A conversation failed" if failed is not None else "A conversation finished")
@@ -2486,7 +2492,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
         """Keyboard door to the copy menu: the same choices as a double click."""
         from textual.screen import ModalScreen
         from isycode.tui_copy import CopyTextArea, open_copy_menu
-        from isycode.tui_widgets import ExpandableBox, SelectableText
+        from isycode.tui_widgets import SelectableText
         if isinstance(self.screen, ModalScreen):
             return
         widget = self.focused

@@ -160,6 +160,11 @@ def _is_skipped_scan_directory(name: str) -> bool:
             or folded.startswith((".venv-", ".venv_", "venv-", "venv_"))
             or folded.endswith(".egg-info"))
 MAX_FILE_BYTES = 128 * 1024
+# A hard link is one inode under several names, and only one name has to be in
+# the workspace: the other may be any file the user can read. The path checks
+# cannot see the other names, so chat reads refuse a file that has more than one.
+HARDLINK_READ_REASON = ("files with more than one hard link are not returned to chat: "
+                        "another link may point outside the workspace")
 MAX_WRITE_BYTES = 128 * 1024
 WRITE_PARAMETER_KEYS = frozenset({"path", "before_sha256", "after_sha256", "size", "diff_sha256",
                                   "new_folders"})
@@ -2738,6 +2743,8 @@ class LocalWorkspaceReadOwner:
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode):
                 raise ValueError("selected path is not a regular file")
+            if info.st_nlink > 1:
+                raise ValueError(HARDLINK_READ_REASON)
             if info.st_size > max_bytes:
                 raise ValueError(f"file exceeds the {max_bytes // 1024} KiB read limit")
             data = stream.read(max_bytes + 1)
@@ -2824,7 +2831,8 @@ class LocalWorkspaceReadOwner:
                     continue
                 with os.fdopen(descriptor, "rb") as stream:
                     info = os.fstat(stream.fileno())
-                    if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_FILE_BYTES:
+                    if (not stat.S_ISREG(info.st_mode) or info.st_nlink > 1
+                            or info.st_size > MAX_FILE_BYTES):
                         continue
                     data = stream.read(MAX_FILE_BYTES + 1)
                 files += 1

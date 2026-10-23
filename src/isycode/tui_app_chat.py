@@ -5,6 +5,9 @@ The phases keep the same statements. TUIApp inherits this mixin.
 from __future__ import annotations
 
 import asyncio
+from typing import Any
+
+from isycode.localization import tr
 from isycode.asyncio_compat import cancel_requested
 from isycode.hive_bridge import emit as hive_emit
 import json
@@ -849,13 +852,14 @@ class ChatMixin:
                             self._history[:] = steer_trial["history"]
                             self._return_steering_to_queue(steer_trial["instructions"])
                             steer_trial = None
-                        self._append(
-                            f"  Provider request {provider_result.decision} · "
-                            f"{provider_result.reason[:240] or 'request was not completed'}; "
-                            "no further request was sent.", YELLOW)
+                        self._append("  " + tr(
+                            "Provider request {decision} · {reason}; no further request was sent.",
+                            decision=provider_result.decision,
+                            reason=provider_result.reason[:240] or tr("request was not completed")),
+                            YELLOW)
                         if provider_result.decision == "DENY" and "grant" in provider_result.reason:
-                            self._append("  To chat here: Settings → Authority → “Connect to the selected "
-                                         "AI model” (or “Turn on all coding tools…”).", MUTED)
+                            self._append("  " + tr("To chat here: Settings → Authority → “Connect to the selected "
+                                                   "AI model” (or “Turn on all coding tools…”)."), MUTED)
                         return
                     if recovery_failures:
                         self._append(
@@ -998,7 +1002,7 @@ class ChatMixin:
                     self.notify_semantic("Stream interrupted · use /resume", kind="warning")
                     return
                 if exc.status is not None:
-                    self._append(f"  {self._provider_failure(exc, 'Chat')} · Use /resume to retry.", RED)
+                    self._append(f"  {self._provider_failure(exc, 'Chat')} · {tr('Use /resume to retry.')}", RED)
                 else:
                     self._append(
                         f"  The stream failed before an answer ({_transport_reason(exc)}). "
@@ -1068,8 +1072,8 @@ class ChatMixin:
                     parked = self._active_lane()
                     if not parked.draft_text:
                         parked.draft_text = original_prompt
-                self._append("  Prompt kept · /retry prepares it for review. Any completed tool effects "
-                             "remain; inspect them before sending again.", YELLOW)
+                self._append("  " + tr("Prompt kept · /retry prepares it for review. Any completed tool effects "
+                                       "remain; inspect them before sending again."), YELLOW)
             self._steering_try_active = False
             if self._pending_steering:
                 pending = "\n".join(self._pending_steering)
@@ -1121,7 +1125,8 @@ class ChatMixin:
             if self._history and self._history[-1] == {"role": "user", "content": text}:
                 self._history.pop()
             self._append(
-                f"  Chat failed ({type(e).__name__}). The request was not completed.", RED)
+                "  " + tr("Chat failed ({kind}). The request was not completed.",
+                          kind=type(e).__name__), RED)
         finally:
             _close_chat_turn()
 
