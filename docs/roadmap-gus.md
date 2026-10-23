@@ -86,7 +86,7 @@ Un loader que rechaza el rol si declara más que la política aprobada en D1 (co
 Los permisos son un subconjunto de Systembilities existentes, nunca acciones nuevas.
 Dependencias: MK0.
 
-- `GK1-01`: un rol que pida push, credenciales, autoridad o modo no carga y la TUI lo dice.
+- `GK1-01`: un rol que pida push, credenciales, autoridad o modo no carga y la TUI lo dice (el loader está en `gus_role.py`; mostrar el error en la TUI llega con MK4).
 - `GK1-02`: el contrato de rol no concede grants: con el rol activo, Sentinel decide exactamente igual que sin él.
 
 ### MK2 — Slot de modelo `gus`
