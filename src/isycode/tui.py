@@ -2581,7 +2581,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, AuthorityMixin, RemoteMixin
                 (parent for parent in widget.ancestors
                  if isinstance(parent, (ExpandableBox, CommandOutputCard))), None)
             whole = container.copy_text() if container is not None else widget._selection_plain
-            open_copy_menu(widget, whole)
+            open_copy_menu(widget, whole, remembered=False)
             return
         self._append("  " + tr("Focus a message or a preview, then press Copy."), MUTED)
 

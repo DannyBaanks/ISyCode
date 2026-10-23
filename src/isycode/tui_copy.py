@@ -4,7 +4,6 @@ UI choices still execute through the application's ClipboardOwner path.
 """
 from __future__ import annotations
 
-from time import monotonic
 from rich.cells import cell_len
 from rich.text import Text
 from rich.syntax import Syntax
@@ -163,24 +162,30 @@ def remember_copy_selection(widget):
     """Capture before Textual clears a marked range on a stationary mouse-up.
 
     Keep it only for the same widget's double-click sequence, never as a
-    fallback for a later zero-selection copy.
+    fallback for a later zero-selection copy. The sequence is counted in
+    presses, not seconds: a loaded machine can take longer than any grace
+    period between the two clicks, and Textual already decides from the
+    input times what counts as a double-click. The press that captured the
+    range and the next one keep it; any press after that drops it.
     """
-    now = monotonic()
     screen = widget.screen
     if screen.selections:
-        widget._copy_selection_snapshot = (now, dict(screen.selections))
-    elif now - getattr(widget, "_copy_selection_snapshot", (0, {}))[0] > 0.6:
-        widget._copy_selection_snapshot = (0, {})
+        widget._copy_selection_snapshot = (0, dict(screen.selections))
+        return
+    presses, kept = getattr(widget, "_copy_selection_snapshot", (2, {}))
+    widget._copy_selection_snapshot = (1, kept) if presses == 0 and kept else (2, {})
 
 
-def open_copy_menu(widget, whole: str, selected: str | None = None, *, restore=None):
+def open_copy_menu(widget, whole: str, selected: str | None = None, *, restore=None,
+                   remembered: bool = True):
+    """``remembered=False`` (the keyboard) never uses a range kept from a double-click."""
     app = widget.app
     screen = widget.screen
     selections = dict(screen.selections)
-    timestamp, remembered = getattr(widget, "_copy_selection_snapshot", (0, {}))
-    if not selections and monotonic() - timestamp <= 0.6:
-        selections = remembered
-    widget._copy_selection_snapshot = (0, {})
+    presses, kept = getattr(widget, "_copy_selection_snapshot", (2, {}))
+    if not selections and remembered and presses <= 1:
+        selections = kept
+    widget._copy_selection_snapshot = (2, {})
     focused = screen.focused
     if selected is None:
         selected = "\n".join(result[0] for item, selection in selections.items()
