@@ -1892,14 +1892,14 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 937,
+      "line": 948,
       "owner": "remote_catalog"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 188,
+      "line": 187,
       "owner": "workspace_read"
     },
     {
@@ -2283,7 +2283,7 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 937,
+      "line": 948,
       "owner": "remote_catalog"
     },
     {
@@ -2332,14 +2332,14 @@
       "action": "workspace.context.inject",
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "file": "isycode/tui_app_workspace.py",
-      "line": 106,
+      "line": 105,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 188,
+      "line": 187,
       "owner": "workspace_read"
     },
     {
