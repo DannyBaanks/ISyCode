@@ -59,6 +59,17 @@ def test_the_pack_is_read_with_receipts_and_reread_only_when_a_file_changes(work
     assert ActionAuditJournal(root).verify().receipts == receipts + 1  # only that file
 
 
+def test_the_pack_is_the_same_with_crlf_line_endings(workspace):
+    """A Windows checkout (CRLF) builds the same pack text as a POSIX one."""
+    _, root, reader = workspace
+    pack = reader.build()
+    for relative in PACK_FILES:
+        path = root / relative
+        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    crlf = ContextPackReader(root, reader.owner).build()
+    assert "\r" not in crlf.text and crlf.digest == pack.digest
+
+
 def test_without_a_read_grant_there_is_no_pack(workspace):
     authority, _, reader = workspace
     authority.set_mode("security")

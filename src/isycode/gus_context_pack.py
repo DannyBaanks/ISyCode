@@ -69,7 +69,9 @@ def _read(owner, path: str) -> tuple[str, str]:
     if not isinstance(payload, dict) or not isinstance(payload.get("text"), str) \
             or payload.get("truncated"):
         raise ContextPackError(f"{path} was not read completely")
-    return payload["text"], outcome.receipt.receipt_id
+    # A Windows checkout carries CRLF; the pack and its digests stay the same on every platform.
+    text = payload["text"].replace("\r\n", "\n")
+    return text, outcome.receipt.receipt_id
 
 
 def _stamp(root: Path, path: str) -> tuple[int, int] | None:
