@@ -107,16 +107,24 @@ def test_auto_edit_warning_cancel_enable_disable_and_authority_remain(tmp_path, 
         app = TUIApp()
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
+            async def warning():
+                for _ in range(200):
+                    if isinstance(app.screen, AutomaticEditsWarningScreen) \
+                            and app.screen.focused is not None:
+                        return app.screen
+                    await pilot.pause(.05)
+                raise AssertionError('the warning never took focus')
+
             task = asyncio.create_task(app._set_folder_auto_edit('sibling', True))
-            await pilot.pause()
-            assert isinstance(app.screen, AutomaticEditsWarningScreen)
+            screen = await warning()
+            assert screen.focused.id == 'auto-edit-cancel'
             await pilot.press('enter')  # Cancel is initially focused.
-            await task
+            await asyncio.wait_for(task, 10)
             assert not store.auto_edit_allowed('sibling')
             task = asyncio.create_task(app._set_folder_auto_edit('sibling', True))
-            await pilot.pause()
+            await warning()
             await pilot.click('#auto-edit-enable')
-            await task
+            await asyncio.wait_for(task, 10)
             assert store.auto_edit_allowed('sibling')
             _, result = await app._dispatch_chat_tool(call('workspace_edit', folder='sibling',
                 path='file.py', old_text='value = 1', new_text='value = 2'))
