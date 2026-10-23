@@ -122,8 +122,17 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
             target = labels.index("Read and search workspace files")
             options = app.query_one("#action-list")
             options.highlighted = target
-            await pilot.pause()
-            assert "list, read, and find files" in str(getattr(detail, "renderable", None) or detail.content)
+
+            def detail_text():
+                return str(getattr(detail, "renderable", None) or detail.content)
+
+            # The detail follows the highlight through a message; slow runners
+            # (Windows CI) can need more than one pause to deliver it.
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if "list, read, and find files" in detail_text():
+                    break
+            assert "list, read, and find files" in detail_text()
             return labels
 
     with capsys.disabled():
