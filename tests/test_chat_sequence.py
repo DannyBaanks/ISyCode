@@ -77,9 +77,14 @@ def test_stream_follows_bottom_but_respects_history_reading(tmp_path, monkeypatc
             chat.focus()
             await pilot.press('home')
             # Textual animates Home by default; wait for that animation before
-            # comparing the scroll position after another streamed chunk.
-            await pilot.pause(1.1)
-            assert chat.scroll_y < chat.max_scroll_y
+            # comparing the scroll position after another streamed chunk. A
+            # loaded runner needs longer than the animation itself.
+            for _ in range(100):
+                await pilot.pause(0.05)
+                if chat.scroll_y == 0:
+                    break
+            await pilot.pause(0.1)
+            assert chat.scroll_y == 0
             before = chat.scroll_y
             continue_stream.set()
             await task
