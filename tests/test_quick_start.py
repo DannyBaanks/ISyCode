@@ -9,7 +9,7 @@ import json
 import pytest
 
 from isycode.tui import QuickStartScreen, TUIApp, WorkspaceModeScreen, WorkspaceSetupScreen
-from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_approval import ConfirmScreen
 from isycode.workspace_authority import WorkspaceAuthority
 from test_daily_tui import configure
 
@@ -52,7 +52,7 @@ async def test_quick_start_chains_recurring_classic_and_toolkit_offer(tmp_path, 
         seen.append(type(screen).__name__)
         if isinstance(screen, QuickStartScreen):
             return "quick"
-        if isinstance(screen, TailscaleConfirmScreen):
+        if isinstance(screen, ConfirmScreen):
             return True
         return True
 

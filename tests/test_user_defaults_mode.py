@@ -84,4 +84,4 @@ def test_invalid_locale_is_rejected(tmp_path):
 
 def test_choosing_classic_as_the_default_asks_first():
     setter = _method("_set_global_mode_default")
-    assert setter.index("TailscaleConfirmScreen(") < setter.index("update(new_workspace_mode=value)")
+    assert setter.index("ConfirmScreen(") < setter.index("update(new_workspace_mode=value)")

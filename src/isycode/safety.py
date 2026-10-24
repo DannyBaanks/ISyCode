@@ -117,9 +117,8 @@ def resolve_canonical(path: str, root: str) -> CanonicalTarget:
         real = p.absolute()
     try:
         real.relative_to(r)
-        escapes = False
     except ValueError:
-        escapes = True
+        pass
     is_symlink = p.is_symlink() or any(
         part.is_symlink() for part in p.parents if part != p)
     is_junction = False

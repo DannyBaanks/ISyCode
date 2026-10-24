@@ -26,7 +26,7 @@ from isycode.gateway_client import GatewayClient
 from isycode.git_owner import git_executable, git_repository_available
 from isycode.providers import PRESETS, selected_provider_name
 from isycode.security import ActionRequest
-from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_approval import ConfirmScreen
 from isycode.tui_screens_grants import (
     GrantLSPProcessScreen,
     GrantMCPInvocationScreen,
@@ -83,7 +83,7 @@ class AuthorityMixin:
             brief = onboarding_brief(
                 root=authority.root, mode="Classic", provider=selected_provider_name(),
                 sends_workspace_context=True)
-            confirmed = await self._await_screen(TailscaleConfirmScreen(
+            confirmed = await self._await_screen(ConfirmScreen(
                 "Trust this folder?", brief, "Trust this folder"))
             if confirmed:
                 trust.accept(authority, ACCEPT_PHRASE)
@@ -118,7 +118,7 @@ class AuthorityMixin:
         if mode not in self._MODE_NAMES:
             return
         name = self._MODE_NAMES[mode]
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("Switch this workspace to {mode}?", mode=name),
                 tr(self._MODE_WARNINGS[mode]), tr("Use {mode}", mode=name))):
             if reopen_menu:
@@ -182,7 +182,7 @@ class AuthorityMixin:
         running = (task is not None and not task.done()) or (loop is not None and not loop.done())
         if not running:
             return True
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("A turn is running. Switch to {mode} anyway?", mode=name),
                 tr("The current turn is cancelled before the engine restarts. Completed effects "
                    "stay in the action journal and can be undone; nothing new is started."),
@@ -554,7 +554,7 @@ class AuthorityMixin:
         self._open_authority_menu()
 
     async def _change_session_grant(self, enabled: bool) -> None:
-        accepted = await self._await_screen(TailscaleConfirmScreen(
+        accepted = await self._await_screen(ConfirmScreen(
             "Save conversations in this workspace?" if enabled else "Stop saving conversations?",
             ("New messages in this workspace are saved to your private ISyCode state folder, "
              "outside the project, and can be resumed from Sessions. API keys, bearer tokens and "
@@ -579,7 +579,7 @@ class AuthorityMixin:
             self._append("  " + tr("Open a saved conversation before granting its deletion."), YELLOW)
             self._open_authority_menu()
             return
-        accepted = await self._await_screen(TailscaleConfirmScreen(
+        accepted = await self._await_screen(ConfirmScreen(
             "Allow conversation deletion?" if enabled else "Disable conversation deletion?",
             tr("This permission applies only to conversation {value} in this workspace. Every deletion still requires reviewing the exact conversation and confirming it.", value=session_id or tr("previously selected")),
             "Allow deletion" if enabled else "Disable deletion", owner="session delete",
@@ -597,7 +597,7 @@ class AuthorityMixin:
             self._append("  " + tr("Turn on reading workspace files first; editing builds on it."), YELLOW)
             self._open_authority_menu()
             return
-        accepted = await self._await_screen(TailscaleConfirmScreen(
+        accepted = await self._await_screen(ConfirmScreen(
             "Allow file edits in this workspace?" if enabled else "Turn off file edits?",
             (f"The assistant may propose creating, changing, moving and deleting files inside {self._workspace_root}. "
              "File edits follow your per-folder approval setting; other changes ask first. A file that changed after "
@@ -623,7 +623,7 @@ class AuthorityMixin:
             self._append("  " + tr("Local code help is not ready yet; nothing changed."), YELLOW)
             self._open_authority_menu()
             return
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 "Check Python files after edits?" if enabled else "Stop checking Python files?",
                 ("After each change you apply to a .py file, Pyright runs in its read-only, "
                  "network-blocked sandbox and reports problems. It needs read access to the "
@@ -652,7 +652,7 @@ class AuthorityMixin:
             title=tr("Let ISyCode see git status and diffs?") if enabled else tr("Hide git status and diffs?")
             body = ("The assistant may read the branch, changed files and diffs. Sensitive files "
                     "stay hidden." if enabled else "The assistant can no longer read git state here.")
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 title, body, ("Allow" if enabled else "Turn off"))):
             self._open_authority_menu()
             return
@@ -681,7 +681,7 @@ class AuthorityMixin:
             self._append("  " + tr("The command sandbox is not available here; commands stay off."), YELLOW)
             self._open_authority_menu()
             return
-        accepted = await self._await_screen(TailscaleConfirmScreen(
+        accepted = await self._await_screen(ConfirmScreen(
             "Allow sandboxed commands in this workspace?" if enabled else "Turn off commands?",
             (f"The assistant may propose programs to run inside {self._workspace_root}. Each exact "
              "command is shown and runs only if you approve it, through bubblewrap with the network "
@@ -706,7 +706,7 @@ class AuthorityMixin:
         A Bridge lease is a traffic light between peers, never a grant. Every
         message still shows its exact recipient and text and asks again.
         """
-        accepted = await self._await_screen(TailscaleConfirmScreen(
+        accepted = await self._await_screen(ConfirmScreen(
             "Allow Bridge coordination?" if enabled else "Stop Bridge coordination?",
             ("ISyCode may register this window as a peer, read its own messages, send a message to "
              "another registered agent and wake an idle one. Each message shows the exact recipient "
@@ -737,7 +737,7 @@ class AuthorityMixin:
             self._append("  " + tr("Unknown permission; nothing changed."), YELLOW)
             return
         action = ACTION_BY_ID[action_id]
-        if await self._await_screen(TailscaleConfirmScreen(
+        if await self._await_screen(ConfirmScreen(
                 "Remove saved permission",
                 tr("Remove the saved permission for {group} · {label} (`{action_id}`) in this workspace, including its saved scope?", group=action.group, label=action.label, action_id=action_id),
                 "Remove permission")):
@@ -856,7 +856,7 @@ class AuthorityMixin:
         if missing:
             body += " " + tr("Not available here: {missing}.",
                              missing="; ".join(tr(item) for item in missing))
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 "Turn on all coding tools?", body, "Turn on coding tools")):
             if open_menu:
                 self._open_authority_menu()

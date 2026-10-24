@@ -7,7 +7,7 @@ import pytest
 
 from isycode.localization import configure_locale, tr
 from isycode.tui_app_authority import AuthorityMixin
-from isycode.tui_screens_approval import ApprovalScreen, LocalMCPConfirmScreen, TailscaleConfirmScreen
+from isycode.tui_screens_approval import ApprovalScreen, LocalMCPConfirmScreen, ConfirmScreen
 from isycode.workspace_authority import WorkspaceAuthority
 
 
@@ -33,7 +33,7 @@ def test_spanish_structural_summary_labels_and_values():
 
 
 def test_tailscale_confirm_screen_supports_custom_structural_summary():
-    screen = TailscaleConfirmScreen(
+    screen = ConfirmScreen(
         "Allow file edits in this workspace?",
         "Details...",
         "Allow edits",

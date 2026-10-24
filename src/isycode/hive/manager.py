@@ -505,7 +505,7 @@ class HiveManager:
         extra_writable: list[str] | None = None,
     ) -> dict[str, Any]:
         """Generate settings.json for Claude Code hooks."""
-        sock = self.sock_path()
+        self.sock_path()
         shim = self._hook_shim_path()
         writable = self._sandbox_writable_dirs(meta, agent_dir, str(self.hive_root), extra_writable)
         return {

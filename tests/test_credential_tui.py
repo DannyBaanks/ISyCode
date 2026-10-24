@@ -68,10 +68,10 @@ def test_the_secret_never_reaches_messages_activity_or_state():
 
 def test_keys_are_saved_and_removed_only_through_the_owner_after_confirmation():
     save = _segment("_save_key_flow")
-    assert save.index("_ensure_credential_grant") < save.index("TailscaleConfirmScreen")
-    assert save.index("TailscaleConfirmScreen") < save.index("owner.add, request")
+    assert save.index("_ensure_credential_grant") < save.index("ConfirmScreen")
+    assert save.index("ConfirmScreen") < save.index("owner.add, request")
     revoke = _segment("_revoke_key_flow")
-    assert revoke.index("TailscaleConfirmScreen") < revoke.index("owner.revoke, request")
+    assert revoke.index("ConfirmScreen") < revoke.index("owner.revoke, request")
     for name in ("_save_key_flow", "_revoke_key_flow", "_save_provider_key", "_open_credentials_menu"):
         segment = _segment(name)
         assert "vault.add" not in segment and "CredentialVault().add" not in segment, name

@@ -10,7 +10,7 @@ from isycode.gus_l0 import fingerprint as l0_fingerprint
 from isycode.gus_session import GusState, GusUnavailable, gus_work
 from isycode.localization import tr
 from isycode.providers import PRESETS
-from isycode.tui_screens_approval import GusBranchApprovalScreen, TailscaleConfirmScreen
+from isycode.tui_screens_approval import GusBranchApprovalScreen, ConfirmScreen
 from isycode.tui_screens_gus import GusScreen
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
 from isycode.workspace_authority import WorkspaceAuthority
@@ -28,7 +28,7 @@ class GusMixin:
         slot = gus_slot.gus_model()
         destination = (tr("{provider} / {model}", provider=PRESETS[slot["provider"]]["label"],
                           model=slot["model"]) if slot else tr("no model chosen yet"))
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("Enable GUS in this workspace?"),
                 tr("GUS maintains ISyCode with its own model ({destination}). Enabling it here lets GUS "
                    "read its fixed project context (AGENTS.md, the design skill and standard, ADR "
@@ -143,7 +143,7 @@ class GusMixin:
             self._set_activity(tr("Generations are sealed on a gus/* branch · /gus branch <topic>"), YELLOW)
             return None
         state = GusState(root)
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("Seal GUS's work on {branch}?", branch=branch),
                 tr("ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. "
                    "T: the tests of the touched code. A: the coverage auditor and L0 tests. "

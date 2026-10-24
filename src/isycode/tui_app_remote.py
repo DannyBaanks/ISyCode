@@ -38,7 +38,7 @@ from isycode.private_access import PrivateAccessStateStore
 from isycode.localization import tr
 from isycode.tui_theme import status_chip, TEXT, MUTED, GREEN, YELLOW, RED, CYAN
 from isycode.tui_widgets import ChatArea
-from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_approval import ConfirmScreen
 from isycode.tui_screens_grants import GrantLSPProcessScreen
 from isycode.tui_screens_mcp import (
     MCPArgumentsScreen,
@@ -74,7 +74,7 @@ class RemoteMixin:
                         f"{route_url(routed)} already points here, so devices in your tailnet can "
                         "reach this host through it while it runs." if routed is not None else
                         "It does not change Tailscale Serve or expose a remote route.")
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     "Start Mobile Host", tr("Start the ISyCode Mobile Host on loopback only: http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. {exposure}", exposure=exposure), "Start host")):
                 self._append("  " + tr("Mobile Host start cancelled; no listener started."), MUTED)
                 return
@@ -272,7 +272,7 @@ class RemoteMixin:
             action = data["action"]
             executable = data["executable"]
             enabled = not data["enabled"]
-            accepted = await self._await_screen(TailscaleConfirmScreen(
+            accepted = await self._await_screen(ConfirmScreen(
                 "Workspace Authority · Tailscale",
                 tr("{value} `{action}` for this workspace?\n\nExact executable: {executable}\n\nA grant permits only this owner and executable to request the action. It does not log in, install packages, expose the Gateway, or bypass IsySentinel. Every mutation still needs its own one-use approval.", value=tr("Grant") if enabled else tr("Revoke"), action=action, executable=executable),
                 "Save grant" if enabled else "Revoke grant"))
@@ -301,7 +301,7 @@ class RemoteMixin:
                     self._append("  " + tr("Installation blocked · explicitly grant this exact action in Settings → Private access → Permissions."), YELLOW)
                     self._open_tailscale_permissions()
                     return
-                accepted = await self._await_screen(TailscaleConfirmScreen(
+                accepted = await self._await_screen(ConfirmScreen(
                     "Prepare official Tailscale package", details,
                     "Download and verify"))
                 if not accepted:
@@ -323,7 +323,7 @@ class RemoteMixin:
                     self._append("  " + tr("Installation blocked · explicitly grant this exact action in Settings → Private access → Permissions."), YELLOW)
                     self._open_tailscale_permissions()
                     return
-                accepted = await self._await_screen(TailscaleConfirmScreen(
+                accepted = await self._await_screen(ConfirmScreen(
                     "Stage verified package as root" if action_id.endswith("stage")
                     else "Install exact Tailscale package", details,
                     "Approve this step"))
@@ -365,7 +365,7 @@ class RemoteMixin:
                 self._open_tailscale_permissions()
                 return
             details = owner.preview(request)
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     "Sign in to Tailscale", details, "Start browser login")):
                 self._append("  " + tr("Tailscale login cancelled; no process started."), MUTED)
                 return
@@ -426,7 +426,7 @@ class RemoteMixin:
                 self._open_tailscale_permissions()
                 return
             label = "Enable private route" if enabling else "Disable owned private route"
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     "Private Tailscale Serve", preview.description, label)):
                 self._append("  " + tr("Tailscale Serve change cancelled; no command ran."), MUTED)
                 return
@@ -459,7 +459,7 @@ class RemoteMixin:
             "Manual installation does not grant permissions, sign in, change Serve, or install a daemon "
             "through this TUI. Tailscale Serve is private to the tailnet; Gateway keys/scopes and "
             "workspace filesystem grants remain separate.")
-        await self._await_screen(TailscaleConfirmScreen(
+        await self._await_screen(ConfirmScreen(
             "Manual private-access setup", details, "Done"))
         self._open_private_access_menu()
 
@@ -516,7 +516,7 @@ class RemoteMixin:
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append("  " + tr("New PIN unavailable ({name}); nothing changed.", name=type(exc).__name__), RED)
             return
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 "Issue a new pairing PIN",
                 "Replace the current Mobile Host PIN, if any, and clear failed pairing attempts. "
                 "The new PIN works once, for 5 minutes, from any device that can reach this host, "
@@ -534,7 +534,7 @@ class RemoteMixin:
 
     async def _grant_mobile_host(self, authority: WorkspaceAuthority) -> bool:
         """Ask once, then save exactly the scoped Mobile Host grants."""
-        accepted = await self._await_screen(TailscaleConfirmScreen(
+        accepted = await self._await_screen(ConfirmScreen(
             "Grant Mobile Host for this workspace",
             tr("Allow `mobile.host.start` only at {mobile_host_address}, `mobile.pair` only for the one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN (each new PIN still asks first). The listener binds loopback only; if a private Tailscale route to it is enabled, tailnet devices can reach it through that route. Pair-issued tokens can read the runtime inventory, request runtime selection, and send heartbeats; they cannot read files, execute runtimes, or access sessions.", mobile_host_address=MOBILE_HOST_ADDRESS),
             "Grant these actions"))
@@ -822,7 +822,7 @@ class RemoteMixin:
                     self._append("  " + tr("Mobile Host granted for this workspace. Starting it still asks first."), GREEN)
                 else:
                     self._append("  " + tr("Mobile Host grant cancelled; nothing changed."), MUTED)
-            elif await self._await_screen(TailscaleConfirmScreen(
+            elif await self._await_screen(ConfirmScreen(
                     "Revoke Mobile Host for this workspace",
                     "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` "
                     "grants. New starts, new PINs and new pairing are denied. A host already "

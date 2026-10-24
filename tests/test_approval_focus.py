@@ -6,7 +6,7 @@ from textual.app import App
 from textual.widgets import Button
 
 from isycode import tui_screens_approval
-from isycode.tui_screens_approval import ApprovalScreen, TailscaleConfirmScreen
+from isycode.tui_screens_approval import ApprovalScreen, ConfirmScreen
 
 
 def test_the_whole_approval_family_auto_focuses_its_first_button():
@@ -25,7 +25,7 @@ def test_a_long_approval_opens_on_reject_and_enter_refuses():
     class Host(App):
         def on_mount(self):
             body = "\n".join(f"line {index} of a long review" for index in range(200))
-            self.push_screen(TailscaleConfirmScreen("Allow this?", body, "Allow"), results.append)
+            self.push_screen(ConfirmScreen("Allow this?", body, "Allow"), results.append)
 
     async def scenario():
         async with Host().run_test(size=(80, 24)) as pilot:

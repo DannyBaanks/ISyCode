@@ -109,7 +109,7 @@ class IsyMotronRuntime:
                 granted=tuple(description.get("granted", [])),
                 bounds=description.get("bounds", {})))
 
-        planner = Planner(self.provider)
+        Planner(self.provider)
         catalog = Planner.catalogue(descriptions)
         messages = [
             {"role": "system", "content": PLANNER_SYSTEM},
