@@ -357,6 +357,46 @@ def test_draft_resume_context_and_delete_confirmation(tmp_path, monkeypatch, cap
         asyncio.run(scenario())
 
 
+def test_long_draft_saves_in_full_and_claims_no_cap(tmp_path, monkeypatch, capsys):
+    """A draft longer than 16,000 characters persists whole and restores whole.
+
+    The 16,000-character truncation was removed from the saved state, but the
+    activity notice that announced it stayed behind and claimed the tail was
+    dropped when nothing was.
+    """
+    root = configure(tmp_path, monkeypatch)
+    (root / 'AGENTS.md').write_text('Run unittest.')
+    UserDefaultsStore().update(new_workspace='recurring')
+    draft = ('paragraph line\n' * 2000) + 'END-OF-DRAFT-MARKER'
+    assert len(draft) > 16_000
+    session_id = None
+    notices = []
+
+    def recording_notice(self, message, *args, **kwargs):
+        notices.append(str(message))
+
+    monkeypatch.setattr(TUIApp, '_set_activity', recording_notice)
+
+    async def scenario():
+        nonlocal session_id
+        app = TUIApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.query_one(PromptArea).load_text(draft)
+            await pilot.pause()
+            app._save_draft()
+            session_id = app._active_chat_session_id
+            assert session_id
+            assert not any('16,000' in notice for notice in notices), notices
+        resumed = TUIApp()
+        async with resumed.run_test() as pilot:
+            await pilot.pause()
+            await resumed._resume_chat_session(session_id)
+            assert resumed.query_one(PromptArea).text == draft
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
 @pytest.mark.parametrize('name', ['openai', 'anthropic', 'ollama'])
 def test_saved_default_model_matches_provider(tmp_path, monkeypatch, name):
     from isycode.providers import Provider

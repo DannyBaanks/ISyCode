@@ -2572,8 +2572,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 return
             if outcome.decision == "ALLOW":
                 self._active_chat_session_id = sid
-                if len(self._draft_text) > 16_000:
-                    self._set_activity(tr("Draft saved up to 16,000 characters; full text remains in the composer"), YELLOW)
             else:
                 self._set_activity(tr("Draft not saved · {value}", value=outcome.reason[:100]), YELLOW)
         except (OSError, ValueError):
