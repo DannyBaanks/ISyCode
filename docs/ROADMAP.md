@@ -2,7 +2,7 @@
 
 **Una TUI de ISyCo con la experiencia visual de Crush, capacidades propias de ISyCo/OpenISy y seguridad deny-by-default de ISySentinel.**
 
-Estado de este documento: **plan de trabajo**, no declaración de que las integraciones ya estén completas. Los estados y la evidencia tienen fecha. Última auditoría estática de `main`: 2026-10-09, commit `49cb0a146a779186f11142c3f8551790f9c4eda2`. El [README](../README.md) y la [guía de readiness](daily-use-readiness.md) describen evidencia más reciente; la [matriz de features](product/tui-feature-matrix.md) conserva un inventario inicial de 2026-09-28 y no debe leerse como estado actual.
+Estado de este documento: **plan de trabajo**, no declaración de que las integraciones ya estén completas. Los estados y la evidencia tienen fecha. **Última actualización: 2026-10-24** (ver «Estado actual» abajo). La auditoría estática anterior de `main` es del 2026-10-09, commit `49cb0a146a779186f11142c3f8551790f9c4eda2`. El [README](../README.md) y la [guía de readiness](daily-use-readiness.md) describen evidencia más reciente. La [matriz de features](product/tui-feature-matrix.md) conserva un inventario inicial del 2026-09-28 y no debe leerse como estado actual.
 
 **Actualización de arquitectura (2026-09-27):** ISySentinel + Workspace Authority son el modelo de seguridad de producto. Los hitos escritos antes de M15 que dicen “autoridad IsyMotron” describen el adapter legado existente, no el destino de arquitectura; M15 debe retirar esa dependencia de seguridad antes de habilitar acciones con efectos. Para Gateway HTTP se exige además su Sentinel remoto. Ver [contrato de fronteras](design/isysentinel-security-boundaries.md).
 
@@ -20,6 +20,46 @@ Estado de este documento: **plan de trabajo**, no declaración de que las integr
 
 
 **Incremento de uso diario (2026-09-30):** implementados recuperación sin replay automático, sesiones con borradores/metadatos portables y gestión mediante owners, contexto AGENTS.md con recibo, diagnóstico local, `/check` explícito y pruebas headless del flujo leer/editar/test/diff. [Evidencia y pendientes](daily-use-readiness.md): esto no cierra todo M16 ni acredita un proveedor real, Gateway, accesibilidad o estabilidad durante horas. El [soak local del 2026-10-01](long-session-soak-2026-10-01.md) pasó 75 ciclos con herramientas reales y dos reinicios en unos 11 minutos, con proveedor simulado; encontró y corrigió una carrera al arrancar comandos cortos.
+
+## Estado actual (2026-10-24)
+
+**Foco:** terminar GUS (MK6 y MC0) y después entrar en **freeze**. Esa es la decisión de Danny del 2026-10-23: no se agregan features hasta pulir de punta a punta lo que ya existe. El detalle y los pasos están en el [handoff](handoff/gus-mk6-freeze-2026-10-23.md).
+
+**Integrado en `main` desde la auditoría del 2026-10-09:**
+
+| Área | Qué entró | Referencia |
+|---|---|---|
+| Continuidad | Cápsula de continuidad determinista y recuperación automática tras compactar | [ADR 0008](decisions/0008-automatic-continuity-recovery.md), [ADR 0009](decisions/0009-continuity-capsule.md) |
+| Modo Flow | Tercer modo: no pregunta en las acciones recuperables. Cada turno queda en un `TurnJournal` y se deshace con `/undo`. Mismo núcleo, mismo sandbox (hito MF, gate GF) | [ADR 0010](decisions/0010-flow-mode.md), #71, #72 |
+| Sandbox | bubblewrap sin el entorno ni las capacidades del host | #70 |
+| TUI | Marco de diálogo único y acceso por teclado al menú de copiar; vista previa con colores y doble clic; chip de modo en la barra de abajo; logo y carpeta en la cabecera del rail; Shift+Tab cambia de rol desde cualquier parte del chat; traducción completa a es/zh | #59, #66, #68, #72, #73, #74 |
+| Bridge | Owner de coordinación (M8) y herramientas de integración en el chat | #66 |
+| Robustez | Tamaño de terminal en Windows, orden de sesiones, presupuesto de staging, búsqueda en workspaces grandes, auditoría de permisos | #53, #54, #62–#65, #67, #69 |
+| GUS MK0–MK3 | Rol declarado, slot de modelo (≥32k, sin fallback), contexto fijo leído con recibos y fuera de la compactación | [ADR 0011](decisions/0011-gus-maintainer.md), #75–#77, #79 |
+| GUS Context | Propuesta de memoria de continuidad entre compactaciones; primero el experimento MC0 | [ADR 0012](decisions/0012-gus-context.md), #78 |
+
+**Pendiente de merge (2026-10-24):**
+- **#81**: GUS MK4 y MK5 completos.
+- **#80**: ADR 0013, GUS trabaja en L1 y conoce L0.
+
+Con #81, GUS:
+- se abre con `/gus` o con su botón;
+- edita solo en ramas `gus/*`;
+- nunca toca L0 (IsySentinel lo rechaza, también en la promoción de comandos);
+- registra cada turno para `/undo` y compara la huella de L0;
+- sella su trabajo con las puertas V/T/A/L/S, que corre ISyCode.
+
+Activar ese trabajo es el merge de Danny.
+
+**Siguiente:**
+1. **GUS MK6:** el SEAM de GUS, 10 casos de ataque con evidencia encadenada, y dogfood con 5 cambios reales revisados por Danny.
+2. **GUS MC0:** el experimento de GUS Context.
+3. **Freeze**, que tiene su propia sección al final de §4.
+
+**Pruebas:** la suite hermética pasa de 2,400 pruebas. CI corre Linux, Linux con Textual 8, Windows y lint. Durante la integración de GUS se corrigieron ocho pruebas que dependían del tiempo. Tres de esas fallas eran bugs reales:
+- un diálogo perdía el foco de Cancel y colgaba Windows;
+- el doble clic perdía el texto marcado en una máquina lenta;
+- `map_ordered` aceptaba resultados que llegaban después del plazo.
 
 ### Auditoría del código de `main` (2026-10-09)
 
@@ -920,6 +960,40 @@ RTK es binario externo y opt-in, ligado a ruta y SHA-256 aprobado explícitament
 
 **Criterio de frontera:** una salida compactada no cambia qué comando fue autorizado ni su exit code; si la captura es incompleta o no puede persistirse, no se promueve como salida completa ni se marca PASS.
 
+### M23 — GUS, el mantenedor de ISyCode
+
+Un modelo propio, con su propio proveedor o un modelo local, que mantiene, repara y actualiza ISyCode sin romper lo que funciona. Roadmap detallado: [roadmap-gus.md](roadmap-gus.md). Decisiones: ADR [0011](decisions/0011-gus-maintainer.md), [0012](decisions/0012-gus-context.md) y [0013](decisions/0013-gus-l1-l0.md).
+
+- **MK0–MK3 (en `main`):** decisiones D1–D4, rol declarado, slot de modelo y contexto fijo.
+- **MK4–MK5 (#81):** ventana y `/gus`; L0 declarado y con huella; ramas `gus/*`; la frontera del turno en IsySentinel; turnos con herramientas, journal y `/undo`; generaciones selladas V/T/A/L/S.
+- **MK6 (pendiente):** SEAM de GUS y dogfood.
+- **MC0 (pendiente):** experimento de GUS Context.
+
+GUS es un rol, no una autoridad. Workspace Authority, IsySentinel, los owners, el ledger y el journal deciden igual que sin él. L0 queda fuera de su alcance por construcción. Activar su trabajo es el merge de Danny.
+
+### FS — Freeze: pulir lo que existe
+
+Después de M23 (MK6 y MC0). Solo entran arreglos, pruebas y documentación, y cada bug arreglado trae su prueba. Pasos:
+
+1. ADR del freeze.
+2. CI más rápido:
+   - una corrida por commit;
+   - `timeout-minutes` en Linux;
+   - medir con `--durations`;
+   - evaluar `pytest-xdist`.
+3. Inventario de lo que existe: estable, frágil o sin pruebas.
+4. Matriz E2E:
+   - Classic, Flow y Security;
+   - proveedores, incluido uno local;
+   - Windows, Linux y macOS;
+   - en, es y zh;
+   - 80×24, 100×30 y 140×40;
+   - fallas de red;
+   - carpetas adicionales.
+5. Cacería de bugs: primero seguridad, después datos, después UI.
+
+M16 (release) y G9-05 (usabilidad con 5 personas) se cierran sobre el producto ya pulido.
+
 ## 5. Orden y puertas de dependencia
 
 ```text
@@ -944,6 +1018,8 @@ M0 contrato/ADR/startup
   → M20 superficies Crush medidas (paralelo a M16–M19; no los bloquea; hooks tipados exigen M15/M6)
   → M21 superficies Qwen Code medidas (paralelo a M16–M20; no los bloquea; presupuesto/salida estructurada/verify solo con owners ya existentes)
   → M22 compresión RTK opt-in (paralela a M16–M21; no es requisito de seguridad ni bloquea release; conserva el comando aprobado y sus owners)
+  → M23 GUS (MK0–MK5 hechos; MK6 SEAM + dogfood, MC0) — requiere M15, Flow (ADR 0010) y la frontera L0 (ADR 0013)
+  → FS freeze: pulir de punta a punta (solo arreglos, pruebas y docs) → cierre de M16 y G9-05
 ```
 
 M15 es prerequisite de toda acción con efectos: M6 no habilita escrituras hasta conectar Authority, Sentinel y execution owners. M14 puede avanzar en la interfaz read-only, pero sus llamadas remotas necesitan ambos gates (ISySentinel local y Gateway HTTP Sentinel remoto). No se implementa delete/shell como atajo para completar una demo. M8/M9 son extras; no retrasan el valor single-agent de M1–M7. M17–M21 son inspiración evaluada; M22 es una integración opcional ya presente. Ninguno retrasa M16 ni el release.
