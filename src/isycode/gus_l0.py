@@ -159,6 +159,24 @@ def repository_path(path: str) -> str | None:
     return normal
 
 
+def _windows_alias_path(path: str) -> str | None:
+    """The canonical Windows spelling of a repository path, or None if it has none.
+
+    NTFS drops trailing dots and spaces in every component, and ``name:stream``
+    names a stream of ``name`` (``::$DATA`` is its default one). The repository
+    is cross-platform even when the guard runs on Linux, so this is lexical.
+    A component that normalizes to nothing is not a real Windows name; refusing
+    it is safer than guessing.
+    """
+    canonical = []
+    for part in path.split("/"):
+        base = part.split(":", 1)[0].rstrip(" .")
+        if not base:
+            return None
+        canonical.append(base)
+    return "/".join(canonical)
+
+
 def touches_l0(path: str) -> bool:
     """True for an L0 file, anything inside an L0 directory, or a folder holding L0.
 
@@ -169,10 +187,17 @@ def touches_l0(path: str) -> bool:
     normal = repository_path(path)
     if normal is None:
         return False
-    key = _key(normal)
-    if key in _L0_FILE_KEYS or key in _L0_ANCESTOR_KEYS:
+    alias = _windows_alias_path(normal)
+    if alias is None:
         return True
-    return any(key == directory or key.startswith(directory + "/") for directory in _L0_DIRECTORY_KEYS)
+    for candidate in {normal, alias}:
+        key = _key(candidate)
+        if key in _L0_FILE_KEYS or key in _L0_ANCESTOR_KEYS:
+            return True
+        if any(key == directory or key.startswith(directory + "/")
+               for directory in _L0_DIRECTORY_KEYS):
+            return True
+    return False
 
 
 def _digest(path: Path) -> str | None:
