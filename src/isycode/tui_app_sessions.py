@@ -110,7 +110,7 @@ from isycode.tui_screens_approval import (
     ApprovalScreen,
     ContextAccessScreen,
     DeleteSessionScreen,
-    TailscaleConfirmScreen,
+    ConfirmScreen,
 )
 from isycode.tui_screens_harness import (
     HarnessFolderConfirmScreen,
@@ -1160,7 +1160,7 @@ class SessionMixin:
                 self._append("  " + tr("A turn is still running here; stop it (Esc) before opening the saved version."), YELLOW)
                 lane.divergence_prompted = False
                 return
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     "Discard what exists only in this window?",
                     "Messages, draft and notes from this window that are not in the saved "
                     "conversation will be lost. The saved version opens exactly as it is.",

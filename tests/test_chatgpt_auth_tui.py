@@ -56,7 +56,7 @@ def test_native_subscription_login_and_cancel_never_save_challenge(tmp_path,monk
         async def close(self): self.closed=True
     monkeypatch.setattr('isycode.codex_connector.CodexConnector',Peer)
     async def run():
-        from isycode.tui import TailscaleConfirmScreen
+        from isycode.tui import ConfirmScreen
         from isycode.provider_auth_screens import SubscriptionLoginScreen
         app=TUIApp()
         async with app.run_test(size=(80,24)) as p:
@@ -64,8 +64,8 @@ def test_native_subscription_login_and_cancel_never_save_challenge(tmp_path,monk
             task=asyncio.create_task(app._connect_chatgpt('device'))
             for _ in range(100):
                 await p.pause(.01)
-                if isinstance(app.screen,TailscaleConfirmScreen): break
-            assert isinstance(app.screen,TailscaleConfirmScreen)
+                if isinstance(app.screen,ConfirmScreen): break
+            assert isinstance(app.screen,ConfirmScreen)
             await p.press('tab','enter')
             if cancel:
                 for _ in range(100):

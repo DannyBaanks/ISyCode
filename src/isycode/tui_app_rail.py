@@ -738,7 +738,7 @@ class RailMixin:
         files.set_class(show_files, "rail-lit")
 
     def _menu_branch(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("branch:" + value.casefold(), value, self._branch_entries(value))
         return

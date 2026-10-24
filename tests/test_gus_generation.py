@@ -179,7 +179,7 @@ def test_gus_seal_in_the_tui_records_the_branch_start_and_seals_after_confirmati
     from isycode.gus_session import GusState
     from isycode.action_runtime import ActionOutcome
     from isycode.tui import TUIApp
-    from isycode.tui_screens_approval import GusBranchApprovalScreen, TailscaleConfirmScreen
+    from isycode.tui_screens_approval import GusBranchApprovalScreen, ConfirmScreen
     root = configure(tmp_path, monkeypatch)
     monkeypatch.setenv("HOME", str(tmp_path))
     (tmp_path / ".gitconfig").write_text("[user]\n\tname = Test\n\temail = test@example.com\n")
@@ -227,7 +227,7 @@ def test_gus_seal_in_the_tui_records_the_branch_start_and_seals_after_confirmati
             _git(root, "commit", "-qam", "GUS change")
 
             task = asyncio.ensure_future(app._seal_gus_generation())
-            await until(pilot, lambda: isinstance(app.screen, TailscaleConfirmScreen), "the seal confirmation")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the seal confirmation")
             app.screen.dismiss(True)
             record = await asyncio.wait_for(task, 20)
             assert record["state"] == "SEALED", record["gates"]

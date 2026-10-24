@@ -338,7 +338,7 @@ def test_every_literal_ui_message_has_a_catalog_entry():
     catalog = _parse_po((PACKAGE_LOCALES / "en" / "LC_MESSAGES" / "isycode.po").read_text(encoding="utf-8"))
     # Helpers that translate these positional arguments themselves.
     helpers = {"tr": (0,), "status_chip": (0,), "_entry": (0, 3), "_capability_entry": (0, 3),
-               "_render_menu": (1,), "TailscaleConfirmScreen": (0, 1, 2)}
+               "_render_menu": (1,), "ConfirmScreen": (0, 1, 2)}
     missing = []
     for path in sorted((PACKAGE_LOCALES.parent).glob("*.py")):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):

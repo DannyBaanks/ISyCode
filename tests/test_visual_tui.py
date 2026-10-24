@@ -10,7 +10,7 @@ import pytest
 from rich.cells import cell_len
 from textual.widgets import Button, Collapsible as TextualCollapsible, Static
 
-from isycode.tui import ChatArea, SidePanel, TUIApp, TailscaleConfirmScreen
+from isycode.tui import ChatArea, SidePanel, TUIApp, ConfirmScreen
 from isycode.tui_widgets import RailHeader
 from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
@@ -77,7 +77,7 @@ def test_long_workspace_header_keeps_status_and_path_end(tmp_path, monkeypatch, 
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             app._startup_workspace = startup
-            if isinstance(app.screen, TailscaleConfirmScreen):
+            if isinstance(app.screen, ConfirmScreen):
                 await pilot.press("escape")
                 await pilot.pause()
             # No header row on top: the mode is a chip by Settings and the

@@ -147,7 +147,7 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
     """GK4-00/GK4-01: /gus outside the repo refuses, inside asks to enable, then talks."""
     from test_daily_tui import configure
     from isycode.tui import TUIApp
-    from isycode.tui_screens_approval import TailscaleConfirmScreen
+    from isycode.tui_screens_approval import ConfirmScreen
     from isycode.tui_screens_gus import GusScreen
     configure(tmp_path, monkeypatch)
     record_model_metadata("openai", "gus-fixture", {"context_length": 200_000})
@@ -185,13 +185,13 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert gus_button.region.right <= mode_button.region.x  # just left of the mode chip
 
             task = asyncio.ensure_future(app._open_gus())
-            await until(pilot, lambda: isinstance(app.screen, TailscaleConfirmScreen), "the enable prompt")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the enable prompt")
             app.screen.dismiss(False)                      # declined: nothing enabled
             await task
             assert not GusState(app._workspace_root).enabled()
 
             task = asyncio.ensure_future(app._open_gus("hola GUS"))
-            await until(pilot, lambda: isinstance(app.screen, TailscaleConfirmScreen), "the enable prompt")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the enable prompt")
             app.screen.dismiss(True)
             await until(pilot, lambda: isinstance(app.screen, GusScreen)
                         and len(app.screen.query(".gus-line")) >= 2, "GUS's answer")

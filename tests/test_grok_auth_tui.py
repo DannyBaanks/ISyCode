@@ -3,7 +3,7 @@ import asyncio
 
 import pytest
 
-from isycode.tui import TUIApp, TailscaleConfirmScreen
+from isycode.tui import TUIApp, ConfirmScreen
 from test_daily_tui import configure
 
 
@@ -42,9 +42,9 @@ def test_xai_signin_confirms_then_runs_only_through_the_owner(
             task = asyncio.create_task(app._connect_xai_login("device"))
             for _ in range(100):
                 await p.pause(0.01)
-                if isinstance(app.screen, TailscaleConfirmScreen):
+                if isinstance(app.screen, ConfirmScreen):
                     break
-            assert isinstance(app.screen, TailscaleConfirmScreen)
+            assert isinstance(app.screen, ConfirmScreen)
             # Capture the baseline only after the confirm modal is up. On slow
             # CI runners a single pause() does not drain startup work; a late
             # background receipt would otherwise appear after a baseline taken
@@ -103,7 +103,7 @@ def test_xai_signin_without_the_grok_cli_reports_and_never_opens_the_modal(
             app._append = lambda value, *args, **kwargs: lines.append(str(value))
             await app._connect_xai_login("browser")
             app._append = original
-            assert not isinstance(app.screen, TailscaleConfirmScreen)
+            assert not isinstance(app.screen, ConfirmScreen)
             assert spawned == []
             assert any("Grok CLI not found" in line for line in lines)
 

@@ -60,7 +60,7 @@ from isycode.tui_theme import (
     RED,
     CYAN,
 )
-from isycode.tui_screens_approval import TailscaleConfirmScreen
+from isycode.tui_screens_approval import ConfirmScreen
 from isycode.tui_screens_grants import ProviderKeyScreen
 from isycode.shortcuts import APP_SHORTCUTS
 from textual.widgets import Button
@@ -187,7 +187,7 @@ class ProviderMixin:
         grant = authority.effective_policy().get("grants", {}).get("provider.request", {})
         if displayed_on("provider.request", grant, SESSION_HOST in grant.get("network_hosts", [])):
             return True
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 "Allow Grok sign-in chat?",
                 "ISyCode may send this workspace's chat to cli-chat-proxy.grok.com using the grok "
                 "sign-in on this machine. The token stays in the grok CLI. File permissions stay separate.",
@@ -221,7 +221,7 @@ class ProviderMixin:
             authority = WorkspaceAuthority(self._workspace_root)
             owner = GrokAuthOwner(self._workspace_root, authority, self._action_approvals)
             request = owner.request(method)
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     "Sign in to Grok for ISyCode?",
                     "Runs the official grok login. The sign-in stays in the grok CLI. "
                     "After it finishes, ISyCode can send chat with that sign-in. "
@@ -273,7 +273,7 @@ class ProviderMixin:
             owner = ProviderAuthOwner(self._workspace_root, authority, self._action_approvals)
             request = owner.request('logout' if logout else 'login', method)
             identity = request.parameters['connector']
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     'Disconnect ChatGPT?' if logout else 'Connect ChatGPT subscription?',
                     tr("Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes.", executable=identity['executable'], home=identity['home']),
                     'Disconnect' if logout else 'Connect ChatGPT')):
@@ -724,7 +724,7 @@ class ProviderMixin:
                for action in actions):
             return True
         label = self._credential_label(service)
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("Allow managing {label} API keys?", label=label),
                 tr("ISyCode may save, use and remove {label} API keys in your operating-system keyring. Keys are stored for your user (every workspace), never in the project, the action journal or chat history. Each use is recorded in this workspace's journal; each save and each removal still asks you first.", label=label),
                 "Allow")):
@@ -753,7 +753,7 @@ class ProviderMixin:
         except (WorkspaceAuthorityError, OSError, ValueError) as exc:
             self._append("  " + tr("API key not saved ({name}).", name=type(exc).__name__), RED)
             return False
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("Save the {label} API key?", label=label),
                 tr("The key you pasted will be saved in your OS keyring for {label}. The newest saved key for a service is the one ISyCode uses.", label=label), "Save key")):
             self._append("  " + tr("API key not saved; the pasted value was discarded."), MUTED)
@@ -795,7 +795,7 @@ class ProviderMixin:
             self._append("  " + tr("API key cannot be removed ({name}).", name=type(exc).__name__), YELLOW)
             return
         label = self._credential_label(service)
-        if not await self._await_screen(TailscaleConfirmScreen(
+        if not await self._await_screen(ConfirmScreen(
                 tr("Remove this {label} API key?", label=label),
                 "The key is deleted from your OS keyring. ISyCode then uses an older saved key "
                 "or an environment variable for this service, if any.", "Remove key")):
@@ -832,14 +832,14 @@ class ProviderMixin:
             self._append("  " + tr("Model: configuration error ({name}).", name=type(e).__name__), RED)
 
     def _menu_provider_unwired(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._blocked_notice(
             "No transport",
             f"{value} is on the list. ISyCode has no transport for it yet, so nothing was contacted.")
         return
 
     def _menu_provider(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         active = selected_provider_name()
         if value == "chatgpt" or (value == "openai" and active == "chatgpt"):
             self._select_provider("chatgpt")
@@ -922,7 +922,7 @@ class ProviderMixin:
         return
 
     def _menu_xai_device(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        kind = entry["kind"]
         self._close_menu()
         self.run_worker(self._connect_xai_login("device" if kind == "xai_device" else "browser"),
                         group="provider-login", exclusive=True)
@@ -933,7 +933,7 @@ class ProviderMixin:
         return
 
     def _menu_auth_browser(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        kind = entry["kind"]
         self._close_menu()
         self.run_worker(self._connect_chatgpt("browser" if kind == "auth_browser" else "device", logout=kind == "auth_logout"), group="provider-login", exclusive=True)
         return
@@ -1037,7 +1037,7 @@ class ProviderMixin:
         return
 
     def _menu_reasoning_select(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         from isycode.reasoning_options import select_reasoning
         name, model, level = value.split("|", 2)
         self._models_scope = None
@@ -1052,7 +1052,7 @@ class ProviderMixin:
         return
 
     def _menu_model(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         provider_name, model_name = value.split("|", 1)
         from isycode.reasoning_options import reasoning_levels
         level = entry.get("reasoning")
@@ -1086,7 +1086,7 @@ class ProviderMixin:
         return
 
     def _menu_model_family(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         provider_name, family = value.split("|", 1)
         variants = list(getattr(self, "_account_family_variants", {}).get(
             (provider_name, family), []))
@@ -1107,7 +1107,7 @@ class ProviderMixin:
         return
 
     def _menu_model_list(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("model_account", "Models · account catalog", [
             self._entry("Loading models from the selected provider…", "info")])
@@ -1115,7 +1115,7 @@ class ProviderMixin:
         return
 
     def _menu_role_agent(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         role = next((item for item in ISYCODE_AGENTS + ISYCODE_SUBAGENTS
                      if item["name"] == value), {})
         self._active_role = {
@@ -1131,7 +1131,7 @@ class ProviderMixin:
         return
 
     def _menu_role_motor(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         role = next((item for item in ISYCO_MOTORS if item["name"] == value), {})
         self._active_role = {
             "name": value,
@@ -1161,7 +1161,6 @@ class ProviderMixin:
         return
 
     def _menu_shortcuts(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
         shortcuts = [(f"{item.key.upper():<14} {item.description}", "info")
                      for item in APP_SHORTCUTS]
         shortcuts.extend([
@@ -1182,24 +1181,24 @@ class ProviderMixin:
         return
 
     def _menu_credential_add(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._open_key_entry(value)
         return
 
     def _menu_credential_use_grant(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._close_menu()
         self.run_worker(self._grant_key_use(value), exclusive=True, group="credentials")
         return
 
     def _menu_credential_revoke(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._close_menu()
         self.run_worker(self._revoke_key_flow(value), exclusive=True, group="credentials")
         return
 
     def _menu_credential_info(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         item = next((record for record in CredentialVault().list_metadata()
                      if record["id"] == value), None)
         if item:
@@ -1218,7 +1217,7 @@ class ProviderMixin:
         return
 
     def _menu_oauth_info(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._blocked_notice(
             "No authorization flow",
             f"{value}: {entry.get('detail', '')}\n"

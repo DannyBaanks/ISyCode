@@ -174,7 +174,7 @@ from isycode.tui_composer import (
 )
 from isycode.tui_screens_approval import (
     ApprovalScreen,
-    TailscaleConfirmScreen,
+    ConfirmScreen,
     WriteApprovalScreen,
 )
 from isycode.tui_screens_grants import (
@@ -2308,7 +2308,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._active_role = self._load_global_default_role()
 
     async def _set_global_mode_default(self, value: str) -> None:
-        if value == "classic" and not await self._await_screen(TailscaleConfirmScreen(
+        if value == "classic" and not await self._await_screen(ConfirmScreen(
                 "Start new folders in Classic?",
                 "Every folder you open for the first time will read files, propose edits you approve, "
                 "chat with your provider and save conversations and keys without asking for each "
@@ -2477,7 +2477,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         authority = WorkspaceAuthority(self._workspace_root)
         grant = authority.effective_policy().get("grants", {}).get("clipboard.paste", {})
         if not displayed_on("clipboard.paste", grant, CLIPBOARD_TARGET in grant.get("targets", ())):
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     "Allow pasting from the clipboard?", "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes.", "Allow paste")):
                 return
             authority.set_grant("clipboard.paste", enabled=True, targets=[CLIPBOARD_TARGET])
@@ -2521,7 +2521,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         authority = WorkspaceAuthority(self._workspace_root)
         grant = authority.effective_policy().get('grants', {}).get('clipboard.copy', {})
         if not displayed_on('clipboard.copy', grant, CLIPBOARD_TARGET in grant.get('targets', ())):
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     'Allow copying in this workspace?',
                     'Copies text or paths you select to the OS clipboard. Other applications may read it. '
                     'The model receives no clipboard tool; copied contents are not written to the journal.',
@@ -2561,7 +2561,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if not self._sessions_enabled() or (not self._active_chat_session_id and not self._draft_text
                                             and not self._tool_history and not self._usage.requests):
             return
-        owner = self._chat_session_owner
         if self._session_is_diverged(self._active_chat_session_id):
             return  # read-only towards the saved conversation until the user chooses
         try:

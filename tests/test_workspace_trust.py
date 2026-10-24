@@ -341,7 +341,7 @@ def test_escape_remembers_the_decline_and_a_later_yes_trusts(tmp_path, monkeypat
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.delenv("XDG_STATE_HOME", raising=False)
-    from isycode.tui import TUIApp, TailscaleConfirmScreen
+    from isycode.tui import TUIApp, ConfirmScreen
     from isycode.user_defaults import UserDefaultsStore
 
     UserDefaultsStore().update(new_workspace="recurring", new_workspace_mode="classic")
@@ -351,7 +351,7 @@ def test_escape_remembers_the_decline_and_a_later_yes_trusts(tmp_path, monkeypat
         async with app.run_test(size=(120, 40)) as pilot:
             for _ in range(8):
                 await pilot.pause()
-                if isinstance(app.screen, TailscaleConfirmScreen):
+                if isinstance(app.screen, ConfirmScreen):
                     break
             else:
                 raise AssertionError(type(app.screen).__name__)
@@ -371,7 +371,7 @@ def test_escape_remembers_the_decline_and_a_later_yes_trusts(tmp_path, monkeypat
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             await pilot.pause()
-            assert not isinstance(app.screen, TailscaleConfirmScreen)
+            assert not isinstance(app.screen, ConfirmScreen)
 
     with capsys.disabled():
         asyncio.run(second())
@@ -384,7 +384,7 @@ def test_yes_on_the_trust_screen_records_trust(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.delenv("XDG_STATE_HOME", raising=False)
-    from isycode.tui import TUIApp, TailscaleConfirmScreen
+    from isycode.tui import TUIApp, ConfirmScreen
     from isycode.user_defaults import UserDefaultsStore
 
     UserDefaultsStore().update(new_workspace="recurring", new_workspace_mode="classic")
@@ -394,7 +394,7 @@ def test_yes_on_the_trust_screen_records_trust(tmp_path, monkeypatch, capsys):
         async with app.run_test(size=(120, 40)) as pilot:
             for _ in range(8):
                 await pilot.pause()
-                if isinstance(app.screen, TailscaleConfirmScreen):
+                if isinstance(app.screen, ConfirmScreen):
                     break
             else:
                 raise AssertionError(type(app.screen).__name__)

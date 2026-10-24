@@ -704,7 +704,7 @@ class MenuMixin:
         getattr(self, MENU_DISPATCH[action])(entry)
 
     def _menu_folder_remove(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         try:
             revoked = self._folder_store().remove(value)
             self._append("  " + tr("Folder removed · {value} · {value2}", value=value, value2=(tr("revoked {count} permission(s) ISyCode had given it", count=len(revoked)) if revoked else tr("its own permissions were left as they were"))), GREEN)
@@ -782,13 +782,13 @@ class MenuMixin:
         return
 
     def _menu_user_default_mode(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._set_global_mode_default(value), exclusive=True,
                         group="user-defaults")
         return
 
     def _menu_user_default_workspace(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._set_global_workspace_default(value), exclusive=True,
                         group="user-defaults")
         return
@@ -837,7 +837,7 @@ class MenuMixin:
         self._choose_gus_model(str(entry["value"]))
 
     def _menu_workspace_mode(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._change_workspace_mode(value), exclusive=True, group="authority-grant")
         return
 
@@ -846,7 +846,7 @@ class MenuMixin:
         return
 
     def _menu_authority_toggle(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         enabled = bool(entry.get("enabled"))
         turn_on = not enabled
         if (value in {"workspace_read", "provider", "workspace_write", "sessions"}
@@ -898,7 +898,7 @@ class MenuMixin:
         return
 
     def _menu_authority_saved_grant(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._remove_saved_grant(value), exclusive=True,
                         group="authority-grant")
         return
@@ -916,7 +916,7 @@ class MenuMixin:
         return
 
     def _menu_tailscale_grant(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._change_tailscale_grant(value), exclusive=True,
                         group="tailscale-authority")
         return
@@ -983,7 +983,7 @@ class MenuMixin:
         return
 
     def _menu_role_category(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         if value == "agents":
             roles = ISYCODE_AGENTS
         elif value == "subagents":
@@ -1014,7 +1014,7 @@ class MenuMixin:
         return
 
     def _menu_command(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         prompt = self.query_one("#prompt-input", PromptArea)
         name = value
         prompt.load_text(f"/{name}" + (" " if name == "plan" else ""))
@@ -1054,13 +1054,13 @@ class MenuMixin:
         return
 
     def _menu_network_action_grant(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._change_network_action_grant(value, True), exclusive=True,
                         group="authority-grant")
         return
 
     def _menu_network_action_revoke(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._change_network_action_grant(value, False), exclusive=True,
                         group="authority-grant")
         return
@@ -1076,7 +1076,7 @@ class MenuMixin:
         return
 
     def _menu_gateway_mcp_tool(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._open_gateway_mcp_tool(value), exclusive=True,
                         group="gateway-mcp-call")
         return
@@ -1097,24 +1097,24 @@ class MenuMixin:
         return
 
     def _menu_broker_manage(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._manage_broker(Path(value)), exclusive=True,
                         group="broker-manage")
         return
 
     def _menu_lsp_server(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._open_lsp_server(value), exclusive=True, group="lsp")
         return
 
     def _menu_lsp_start_grant(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._change_lsp_process_grant(value, True), exclusive=True,
                         group="authority-grant")
         return
 
     def _menu_lsp_start_revoke(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._change_lsp_process_grant(value, False), exclusive=True,
                         group="authority-grant")
         return
@@ -1133,7 +1133,7 @@ class MenuMixin:
         return
 
     def _menu_chat_session_resume(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._close_menu()
         self.run_worker(self._resume_chat_session(value), exclusive=True, group="chat-session")
         return

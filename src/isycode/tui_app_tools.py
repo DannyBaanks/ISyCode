@@ -53,7 +53,7 @@ from isycode.tui_theme import TEXT, MUTED, GREEN, YELLOW, RED, CYAN, SECURITY, _
 from isycode.tui_widgets import ToolActivityGroup, ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_approval import (
-    TailscaleConfirmScreen, LocalMCPConfirmScreen, WorkspacePackConfirmScreen,
+    ConfirmScreen, LocalMCPConfirmScreen, WorkspacePackConfirmScreen,
     MemoryConfirmScreen, BrowserReadPreviewScreen,
 )
 from isycode.workspace_memory import MEMORY_TOOL_OPERATIONS, WorkspaceMemoryOwner
@@ -839,7 +839,7 @@ class ToolMixin:
         invoke_grant = grants.get("mcp.local.invoke", {})
         if (executable not in start_grant.get("executables", [])
                 or name not in invoke_grant.get("targets", [])):
-            if not await self._await_screen(TailscaleConfirmScreen(
+            if not await self._await_screen(ConfirmScreen(
                     tr("Allow MCP server {name} in this workspace?", name=name),
                     tr("Saves a grant for {executable} and for calls to {name}. Starting it and every tool call still ask first. The server runs with your user's permissions.", executable=executable, name=name),
                     "Allow this server")):
@@ -1003,7 +1003,7 @@ class ToolMixin:
         return outcome.text
 
     def _menu_skill_use(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._select_skill(value)
         self._render_menu("branch", "Skills", self._branch_entries("skills"))
         return
@@ -1014,7 +1014,7 @@ class ToolMixin:
         return
 
     def _menu_mcp_preset(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._add_mcp_preset(value)
         self._render_menu("branch", "MCP", self._branch_entries("mcp"))
         return

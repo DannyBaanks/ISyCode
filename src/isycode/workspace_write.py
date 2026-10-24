@@ -809,7 +809,7 @@ class WorkspaceWriteOwner:
             payload = staged.read_bytes()
             if payload != preview.content.encode("utf-8"):
                 raise ValueError("staged bytes do not match the approved content")
-            before = self._replace(target, payload,
+            self._replace(target, payload,
                                    params["before_sha256"], tuple(params["new_folders"]))
             written = self._read_back(target)
             if written is None or _sha(written) != params["after_sha256"]:

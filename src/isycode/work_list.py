@@ -275,7 +275,6 @@ class WorkList(Vertical):
                 line.append(f"  ·  {row.get('workspace') or ''}", style="#9aa3ad")
                 if age:
                     line.append(f"    {age}", style="#6d7580")
-                preview = row.get("preview") or ""
 
                 if row["id"] not in {"memory", "child"}:
                     width = max(8, listing.content_size.width - 2)

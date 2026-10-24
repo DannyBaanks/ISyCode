@@ -674,13 +674,14 @@ class WorkspaceMixin:
         return
 
     def _menu_folder_browse(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self._close_menu()
         self.run_worker(self._browse_workspace_folder(value), group='files')
         return
 
     def _menu_folder_auto_on(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        kind = entry["kind"]
+        value = entry["value"]
         self._close_menu()
         self.run_worker(self._set_folder_auto_edit(value, kind == 'folder_auto_on'), group='folders')
         return
@@ -701,13 +702,13 @@ class WorkspaceMixin:
         return
 
     def _menu_workspace_config_migrate_item(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        value = entry["value"]
         self.run_worker(self._copy_workspace_command(value), exclusive=True,
                         group="workspace-config")
         return
 
     def _menu_workspace_pref_role(self, entry: dict[str, str | bool]) -> None:
-        kind, value = entry["kind"], entry["value"]
+        kind = entry["kind"]
         self.run_worker(self._change_workspace_preference(kind), exclusive=True,
                         group="workspace-config")
         return

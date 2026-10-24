@@ -15,14 +15,14 @@ SURFACE = Path(__file__).resolve().parents[1] / "src" / "isycode"
 def _screens(tmp_path):
     from isycode.tui import (
         BrowserReadPreviewScreen, CommandApprovalScreen, LocalMCPConfirmScreen,
-        TailscaleConfirmScreen,
+        ConfirmScreen,
     )
 
     request = ActionRequest("workspace.command.run", tmp_path, "/usr/bin/echo", {"argv": ["echo"]},
                             execution_owner="workspace_command")
     preview = CommandPreview(request, ("echo", "hi"), "/usr/bin/echo", ".", 120, ())
     return [lambda: CommandApprovalScreen(preview),
-            lambda: TailscaleConfirmScreen("Allow?", "body", "Allow"),
+            lambda: ConfirmScreen("Allow?", "body", "Allow"),
             lambda: LocalMCPConfirmScreen("t", "b", "{}", "Call once"),
             lambda: BrowserReadPreviewScreen("Page title", "Visible page text", 100, 22)]
 
@@ -56,6 +56,6 @@ def test_every_boolean_approval_screen_uses_the_shared_keys():
                 bases[node.name] = [ast.unparse(base) for base in node.bases]
     approvals = [name for name in ("WriteApprovalScreen", "CommandApprovalScreen",
                                    "CommitApprovalScreen", "LocalMCPConfirmScreen",
-                                   "MCPInvocationConfirmScreen", "TailscaleConfirmScreen",
+                                   "MCPInvocationConfirmScreen", "ConfirmScreen",
                                    "DeleteSessionScreen")]
     assert all(bases[name] == ["ApprovalScreen"] for name in approvals)

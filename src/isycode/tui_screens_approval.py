@@ -202,11 +202,11 @@ class ContextAccessScreen(ModalScreen[dict | None]):
         self.dismiss({"allowed": False, "remember": False})
 
 
-class TailscaleConfirmScreen(ApprovalScreen):
+class ConfirmScreen(ApprovalScreen):
     """Show one exact private-access operation before approval is issued."""
 
     CSS = DECISION_CSS + """
-    TailscaleConfirmScreen { align: center middle; background: #000000 58%; }
+    ConfirmScreen { align: center middle; background: #000000 58%; }
     #tailscale-confirm-card { width: 92; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),

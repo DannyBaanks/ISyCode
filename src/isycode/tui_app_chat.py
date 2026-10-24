@@ -385,7 +385,6 @@ class ChatMixin:
         turn_role = self._active_role["name"] if self._active_role else None
         self._active_lane().stream_role = turn_role
         block = None
-        t0 = _time.monotonic()
         # None until the stream stores a trial. Absence used to skip the restore; None does too.
         steer_trial = None
         # Bind the names shared across the prepare/stream/close phases so each

@@ -27,7 +27,7 @@ def test_quiet_classic_edit_and_delete_show_their_diff_in_the_chat(tmp_path, mon
     monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "state"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.delenv("XDG_STATE_HOME", raising=False)
-    from isycode.tui import TUIApp, TailscaleConfirmScreen
+    from isycode.tui import TUIApp, ConfirmScreen
     from isycode.user_defaults import UserDefaultsStore
 
     UserDefaultsStore().update(new_workspace="recurring", new_workspace_mode="classic")
@@ -38,11 +38,11 @@ def test_quiet_classic_edit_and_delete_show_their_diff_in_the_chat(tmp_path, mon
             authority = WorkspaceAuthority(project_dir.resolve())
             await _wait_for(
                 pilot,
-                lambda: isinstance(app.screen, TailscaleConfirmScreen)
+                lambda: isinstance(app.screen, ConfirmScreen)
                 or WorkspaceTrust().trusted(authority),
                 "quiet Classic trust prompt",
             )
-            if isinstance(app.screen, TailscaleConfirmScreen):
+            if isinstance(app.screen, ConfirmScreen):
                 await pilot.press("y")  # trust this workspace (quiet Classic)
             await _wait_for(
                 pilot, lambda: WorkspaceTrust().trusted(authority),
