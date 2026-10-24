@@ -117,12 +117,34 @@ explícitamente en una carpeta, las ediciones ordinarias y los comandos aislados
 pueden continuar sin preguntar en cada paso. Los commits y otras operaciones
 que requieren revisión conservan sus confirmaciones.
 
-**Security** empieza con las capacidades apagadas y permite habilitarlas una
-por una. Puedes cambiar de modo y revisar permisos en
-**Configuración → Permisos → Authority & Security**.
+**Flow** trabaja sin preguntar en lo que se puede deshacer: leer, editar,
+mover y correr comandos en el sandbox. Cada turno queda registrado, y `/undo`
+lo deshace completo. Los commits, los secretos y la red siguen preguntando.
 
-Ambos modos conservan IsySentinel y el registro de acciones.
+**Security** empieza con las capacidades apagadas y permite habilitarlas una
+por una.
+
+Cambia de modo con el chip `◇ Classic` de la barra de abajo, junto a ⚙, o en
+**Configuración → Permisos → Authority & Security**. Los tres modos conservan
+IsySentinel y el registro de acciones.
 [Permisos, aprobaciones e integraciones](docs/reference/authority-and-integrations.md).
+
+## GUS, el mantenedor de ISyCode
+
+En el repositorio de ISyCode puedes hablar con **GUS**, un modelo con su propio
+proveedor o un modelo local que mantiene y repara ISyCode. Se abre con `/gus` o
+con el botón **GUS** de la barra de abajo, y se habilita por workspace.
+
+- `/gus branch <tema>` crea la rama `gus/<tema>` con tu aprobación. Solo ahí
+  GUS edita, corre pruebas en el sandbox y commitea sin preguntar.
+- **Nunca toca L0**, el núcleo de seguridad de ISyCode: IsySentinel rechaza
+  cualquier intento. Si L0 cambia de todos modos, el turno se deshace solo.
+- `/undo` deshace un turno de GUS completo.
+- `/gus seal` corre las puertas V/T/A/L/S y sella su trabajo: nada de L0,
+  pruebas, auditor de cobertura, lint y sello. Tú lo activas al mergear la rama.
+
+[Roadmap de GUS](docs/roadmap-gus.md) ·
+[ADR 0013: L1 y L0](docs/decisions/0013-gus-l1-l0.md).
 
 ## Atajos para el día a día
 
@@ -131,6 +153,7 @@ Ambos modos conservan IsySentinel y el registro de acciones.
 | Enviar / nueva línea | `Enter` / `Ctrl+J` |
 | Detener un turno o volver | `Esc` |
 | Abrir comandos | `/` o `Ctrl+P` |
+| Cambiar de rol del agente | `Shift+Tab` |
 | Mostrar el panel lateral | `Ctrl+B` |
 | Expandir o contraer una caja enfocada | `Space` |
 | Abrir las opciones de copia de una caja | Doble clic |
@@ -149,13 +172,14 @@ Ambos modos conservan IsySentinel y el registro de acciones.
 - [Seguridad e investigación](SECURITY.md): pruebas en entornos propios y
   cómo reportar vulnerabilidades de forma privada.
 - [Issues](https://github.com/DannyBaanks/ISyCode/issues): errores y propuestas.
-- [Roadmap](docs/ROADMAP.md): evolución del producto.
+- [Roadmap](docs/ROADMAP.md): evolución del producto. Lo actual es terminar
+  GUS y después un *freeze* para pulir todo de punta a punta.
 
 ## Estado de versión y Release Readiness (v1.0.0-rc.1)
 
 ISyCode se encuentra en **v1.0.0-rc.1** (Release Candidate 1).
 
-El núcleo de seguridad, los contratos de ISySentinel, los Execution Owners y la interfaz TUI están completamente demostrados y verificados mediante más de 1,900 pruebas automáticas.
+El núcleo de seguridad, los contratos de ISySentinel, los Execution Owners y la interfaz TUI están completamente demostrados y verificados mediante más de 2,400 pruebas automáticas, en Linux y Windows.
 
 El cierre formal hacia la versión **v1.0.0 final** permanece explícitamente supeditado a la ejecución de la prueba de usabilidad con 5 usuarios reales (Gate **G9-05** del roadmap, según el protocolo en [docs/usability-g9/GUIA.md](docs/usability-g9/GUIA.md)), manteniendo el principio *fail-closed* del proyecto hasta contar con los participantes.
 
