@@ -72,8 +72,13 @@ class GusScreen(Dialog):
     def on_mount(self, event) -> None:
         # Dialog would focus its first action; the conversation starts in the input.
         event.prevent_default()
-        self.query_one(".isy-dialog-title", Static).styles.color = GUS_COLOR
-        self.query_one("#gus-input", Input).focus()
+        inputs = self.query("#gus-input").results(Input)
+        field = next(inputs, None)
+        if field is None:
+            return    # closed before it mounted (a quick Esc under load): nothing to focus
+        for title in self.query(".isy-dialog-title").results(Static):
+            title.styles.color = GUS_COLOR
+        field.focus()
         self._scroll_end()
         if self.initial.strip():
             self._submit(self.initial.strip())
