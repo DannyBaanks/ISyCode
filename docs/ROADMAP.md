@@ -990,6 +990,11 @@ Después de M23 (MK6 y MC0). Solo entran arreglos, pruebas y documentación, y c
    - 80×24, 100×30 y 140×40;
    - fallas de red;
    - carpetas adicionales.
+
+   Hecho en el PR de matriz E2E (2026-10-24): [matriz con evidencia por
+   celda](testing/e2e-matrix.md). La misma edición corre en Classic, Flow y
+   Security, y el proveedor local usa transporte real en la TUI. macOS queda
+   PARTIAL: el subconjunto nativo corre en CI, la suite completa no.
 5. Cacería de bugs: primero seguridad, después datos, después UI.
 
 Del kickoff también salió convertido a espera por condición el flake de
