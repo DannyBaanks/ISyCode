@@ -29,6 +29,8 @@ EXPECTED = {
     "gus_slot_open",
     "gus_slot_provider",
     "gus_slot_model",
+    "gus_toggle",
+    "gus_open",
     "workspace_mode",
     "coding_toolkit",
     "authority_toggle",

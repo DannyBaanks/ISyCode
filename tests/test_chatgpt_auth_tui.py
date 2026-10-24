@@ -78,7 +78,8 @@ def test_native_subscription_login_and_cancel_never_save_challenge(tmp_path,monk
             assert selected_provider_name() == ('openai' if cancel else 'chatgpt')
             assert all('PRIVATE-CODE' not in m['content'] for m in app._history)
             for path in (tmp_path/'state').rglob('*'):
-                if path.is_file(): assert b'PRIVATE-CODE' not in path.read_bytes()
+                # Lock files hold no content and Windows keeps them locked while in use.
+                if path.is_file() and path.suffix != '.lock': assert b'PRIVATE-CODE' not in path.read_bytes()
     with capsys.disabled(): asyncio.run(run())
 
 
