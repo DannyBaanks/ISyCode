@@ -6134,3 +6134,177 @@ msgstr "窗口小于 32k token：GUS 的固定上下文放不下。"
 
 msgid "GUS has no model yet. Choose one in Settings → GUS model."
 msgstr "GUS 还没有模型。请在“设置 → GUS 模型”中选择。"
+
+msgid "Clear conversation"
+msgstr "清空对话"
+
+msgid "Conversation cleared."
+msgstr "对话已清空。"
+
+msgid "Enable GUS"
+msgstr "启用 GUS"
+
+msgid "Enable GUS in this workspace?"
+msgstr "在此工作区启用 GUS？"
+
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter 发送 · Esc 关闭 · 在 gus/* 分支上 GUS 用其工具编辑；其他情况下只阅读并回答"
+
+msgid "GUS could not answer · {reason}"
+msgstr "GUS 无法回答 · {reason}"
+
+msgid "GUS could not be enabled · {reason}"
+msgstr "无法启用 GUS · {reason}"
+
+msgid "GUS enabled in this workspace"
+msgstr "已在此工作区启用 GUS"
+
+msgid "GUS in this workspace · {state}"
+msgstr "此工作区中的 GUS · {state}"
+
+msgid "GUS is still answering."
+msgstr "GUS 仍在回答。"
+
+msgid "GUS is thinking…"
+msgstr "GUS 正在思考…"
+
+msgid "GUS maintains ISyCode with its own model ({destination}). Enabling it here lets GUS read its fixed project context (AGENTS.md, the design skill and standard, ADR titles) with receipts and send it, with your messages to GUS, to that model. In this version GUS has no tools: it reads and answers. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS 使用自己的模型（{destination}）维护 ISyCode。在此启用后，GUS 会带收据读取其固定项目上下文（AGENTS.md、设计 skill 和标准、ADR 标题），并将其连同你发给 GUS 的消息发送到该模型。此版本中 GUS 没有工具：只读取和回答。它不会给自己授予任何权限；可随时在“设置”中关闭。"
+
+msgid "GUS role not loaded · {reason}"
+msgstr "GUS 角色未加载 · {reason}"
+
+msgid "GUS turned off in this workspace"
+msgstr "已在此工作区关闭 GUS"
+
+msgid "GUS works only in the ISyCode repository."
+msgstr "GUS 只在 ISyCode 仓库中工作。"
+
+msgid "GUS · {model}"
+msgstr "GUS · {model}"
+
+msgid "Talk to GUS"
+msgstr "与 GUS 对话"
+
+msgid "Write to GUS…"
+msgstr "给 GUS 写消息…"
+
+msgid "You"
+msgstr "你"
+
+msgid "no model chosen yet"
+msgstr "尚未选择模型"
+
+msgid "{provider} / {model}"
+msgstr "{provider} / {model}"
+
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)"
+msgstr "与 ISyCode 维护者 GUS 对话；/gus branch <主题> 会创建 gus/<主题>，/gus seal 运行检查门（仅限 ISyCode 仓库）"
+
+msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
+msgstr "只有在你为此工作区启用后，GUS 才会在这里回答；关闭它会保留其对话记录。"
+
+msgid "Open GUS's own conversation. It reads its project context and answers; it has no tools yet."
+msgstr "打开 GUS 自己的对话。它读取项目上下文并回答；还没有工具。"
+
+msgid "GUS is not enabled for this workspace."
+msgstr "此工作区未启用 GUS。"
+
+msgid "This message is too large for GUS's model window."
+msgstr "此消息对 GUS 模型的窗口来说太大。"
+
+msgid "GUS's model returned no answer."
+msgstr "GUS 的模型没有返回回答。"
+
+msgid "GUS, the ISyCode maintainer · click to talk to it"
+msgstr "GUS，ISyCode 维护者 · 点击与它对话"
+
+msgid "Create {branch} for GUS?"
+msgstr "要为 GUS 创建 {branch} 吗？"
+
+msgid "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+msgstr "ISyCode 会在 {base}（来自 {current}）创建 {branch} 并切换到该分支。你的文件不会改变。GUS 只在这个分支上编辑；合并它即启用其工作，回退该合并即可撤销。"
+
+msgid "Create branch · y"
+msgstr "创建分支 · y"
+
+msgid "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+msgstr "不推送、不运行 hooks、不创建其他分支；L0 不在 GUS 的范围内"
+
+msgid "git branch"
+msgstr "git branch"
+
+msgid "GUS branch not proposed · {reason}"
+msgstr "未提出 GUS 分支 · {reason}"
+
+msgid "GUS branch rejected · nothing changed"
+msgstr "已拒绝 GUS 分支 · 没有任何更改"
+
+msgid "GUS branch {decision} · {reason}"
+msgstr "GUS 分支 {decision} · {reason}"
+
+msgid "On {branch} · receipt {receipt_id}"
+msgstr "位于 {branch} · 回执 {receipt_id}"
+
+msgid "Create GUS branches"
+msgstr "创建 GUS 分支"
+
+msgid "Create and switch to a new gus/* branch"
+msgstr "创建并切换到新的 gus/* 分支"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS 只在 gus/* 分支上编辑 · /gus branch <主题>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 已更改且仍未恢复：{paths}。请用 git 检查。"
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 已更改（{paths}）；整个回合已撤销。"
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "已更改 {count} 个文件 · /undo 可撤销此回合。"
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS 只在 gus/* 分支上编辑。用 /gus branch <主题> 创建一个。"
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "另一个回合正在记录此工作区；请在其结束后重试。"
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "GUS 的模型返回了无效的工具批次。"
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "GUS 的模型返回了没有标识的工具调用。"
+
+msgid "A tool result did not match its request."
+msgstr "工具结果与其请求不匹配。"
+
+msgid "Generations are sealed on a gus/* branch · /gus branch <topic>"
+msgstr "生成只在 gus/* 分支上封存 · /gus branch <主题>"
+
+msgid "Seal GUS's work on {branch}?"
+msgstr "要封存 GUS 在 {branch} 上的工作吗？"
+
+msgid "ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. T: the tests of the touched code. A: the coverage auditor and L0 tests. L: lint. T, A and L run in the command sandbox. Only if all pass is the work sealed; you activate it by merging the branch."
+msgstr "ISyCode 检查 GUS 在此分支上提交的内容。V：L0 没有任何更改。T：所改代码的测试。A：覆盖率审计和 L0 测试。L：lint。T、A 和 L 在命令沙箱中运行。只有全部通过才会封存；合并该分支即可启用。"
+
+msgid "Run the gates"
+msgstr "运行检查门"
+
+msgid "GUS generation not prepared · {reason}"
+msgstr "未准备 GUS 生成 · {reason}"
+
+msgid "GUS gates running on {branch}…"
+msgstr "GUS 检查门正在 {branch} 上运行…"
+
+msgid "Sealed {branch} · {gates} · seal {seal}"
+msgstr "已封存 {branch} · {gates} · 封印 {seal}"
+
+msgid "Rejected {branch} · {gates} · {reason}"
+msgstr "已拒绝 {branch} · {gates} · {reason}"
+
+msgid "GUS gates running…"
+msgstr "GUS 检查门正在运行…"

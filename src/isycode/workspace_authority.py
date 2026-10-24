@@ -59,8 +59,10 @@ MODES = frozenset({"security", "classic", "flow"})
 # Modes that receive the Classic preset of implicit grants. Flow (ADR 0010) uses
 # the same preset; only its approval rule differs (workspace_trust.quiet_request).
 PRESET_MODES = frozenset({"classic", "flow"})
-# Grants only Flow adds to the preset: putting a whole turn back (ADR 0010).
-FLOW_PATH_ACTIONS = frozenset({"workspace.turn.undo"})
+# Grants only Flow adds to the preset. Undoing a whole turn (ADR 0010) moved into
+# Classic's preset with ADR 0013: a GUS turn is recorded in any mode, and Classic
+# still asks before each undo.
+FLOW_PATH_ACTIONS = frozenset()
 
 # Classic mode is a per-workspace preset of implicit grants, not a bypass.
 # Without a trust record, edits and commands still need a per-action approval.
@@ -71,11 +73,13 @@ CLASSIC_PATH_ACTIONS = frozenset({
     "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
     # Delete and move stay inside the workspace and still need a per-action approval.
     "workspace.files.delete", "workspace.files.move",
+    # Undo of a recorded turn (Flow or GUS); Classic asks before each one.
+    "workspace.turn.undo",
 })
 # These are grants only; execution owners still require exact approvals for commits.
 CLASSIC_GRANTED_ACTIONS = frozenset({
     "session.create", "session.resume", "workspace.memory.read", "workspace.memory.write",
-    "workspace.memory.forget", "git.status", "git.diff", "git.commit"})
+    "workspace.memory.forget", "git.status", "git.diff", "git.commit", "git.branch.create"})
 CLASSIC_SERVICE_ACTIONS = frozenset({"credentials.add", "credentials.use", "credentials.revoke"})
 CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_GRANTED_ACTIONS | CLASSIC_SERVICE_ACTIONS
                    | {"provider.request", "workspace.command.run"})

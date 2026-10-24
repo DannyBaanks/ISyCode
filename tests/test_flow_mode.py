@@ -66,11 +66,12 @@ def _fake_sandbox(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
 
 
-def test_flow_is_a_mode_with_the_classic_preset_plus_turn_undo():
+def test_flow_is_a_mode_with_the_classic_preset_including_turn_undo():
     assert MODES == {"security", "classic", "flow"}
-    # Flow is Classic's preset plus one recoverable action: undo a whole turn.
-    assert implicit_actions("flow") == implicit_actions("classic") | {"workspace.turn.undo"}
-    assert "workspace.turn.undo" not in implicit_actions("classic")
+    # Flow shares Classic's preset. Undoing a whole turn is in both since ADR 0013
+    # (a GUS turn is recorded in any mode); only Flow undoes without asking.
+    assert implicit_actions("flow") == implicit_actions("classic")
+    assert "workspace.turn.undo" in implicit_actions("classic")
     assert implicit_actions("security") == frozenset()
 
 
