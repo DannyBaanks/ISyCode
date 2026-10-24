@@ -417,7 +417,8 @@ def test_expanded_budget_review_scrolls_without_hiding_actions_at_80x24(tmp_path
             screen = pilot.app.screen
             body = screen.query_one("#command-approval-body", VerticalScroll)
             assert body.max_scroll_y > 0
-            body.scroll_end(animate=False)
+            # The default scroll is deferred until a refresh; make the assertion deterministic.
+            body.scroll_end(animate=False, immediate=True)
             await pilot.pause()
             assert body.scroll_y > 0
             for selector in ("#command-approval-reject", "#command-approval-run"):
