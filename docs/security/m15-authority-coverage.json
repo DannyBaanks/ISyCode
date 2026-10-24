@@ -2134,6 +2134,20 @@
       "owner": "grok_auth"
     },
     {
+      "action": "workspace.files.write",
+      "callable": "isycode.gus_seam._case_mode_switch",
+      "file": "isycode/gus_seam.py",
+      "line": 405,
+      "owner": "workspace_write"
+    },
+    {
+      "action": "workspace.files.delete",
+      "callable": "isycode.gus_seam._case_move_delete",
+      "file": "isycode/gus_seam.py",
+      "line": 312,
+      "owner": "workspace_write"
+    },
+    {
       "action": "session.delete",
       "callable": "isycode.inspection_cli._sessions",
       "file": "isycode/inspection_cli.py",
