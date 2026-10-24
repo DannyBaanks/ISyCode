@@ -1,61 +1,41 @@
+<div align="center">
+
 # ISyCode
 
-**Tu proyecto, tu terminal, tus decisiones.**
+**Un agente de programación que vive en tu terminal.**
 
-Un agente de programación para leer código, proponer cambios, ejecutar pruebas
-y revisar Git desde una sola terminal. Conversa con el modelo que elijas,
-conserva tus sesiones localmente y controla qué puede hacer en cada proyecto.
+Una TUI para leer código, proponer cambios, correr pruebas y revisar Git
+con el modelo que elijas: en la nube o local. Tú decides qué puede hacer
+en cada proyecto.
 
-[Empezar](#empieza-en-tu-proyecto) · [Guía de uso](docs/GUIA.md) ·
-[Documentación](docs/reference/README.md) ·
+[Instalar](#instalar) · [Guía de uso](docs/GUIA.md) ·
+[Documentación](docs/reference/README.md) · [Roadmap](docs/ROADMAP.md) ·
 [Reportar un problema](https://github.com/DannyBaanks/ISyCode/issues)
 
-![ISyCode: inicio con paisaje y panel lateral del proyecto](docs/design/2026-10-12-mockup-e2e/screens-reviewed-140x40/01-overview.png)
+![ISyCode en la terminal: una pregunta, la lectura de un archivo con su recibo y la respuesta, con el panel lateral del proyecto](docs/screenshots/2026-10-24-readme/01-chat.png)
 
-*TUI real en un proyecto de ejemplo. [Menús, gestos y capturas](docs/design/2026-10-12-mockup-e2e/GUIA.md).*
+</div>
 
-## Trabaja sin salir de la terminal
+## Instalar
 
-- **Del código al cambio.** Busca archivos y símbolos, lee contexto, revisa
-  propuestas de edición y ejecuta comandos cuando los permisos lo permiten.
-- **Un modelo a tu elección.** Providers como OpenAI, Anthropic, NVIDIA NIM y
-  OpenRouter, además de endpoints locales con Ollama o llama.cpp.
-- **Conversaciones que continúan.** Sesiones guardadas, cola de mensajes,
-  búsqueda y recuperación de turnos interrumpidos.
-- **Control por proyecto.** Modos Classic y Security, revisión de cambios,
-  permisos por capacidad y registro de las acciones.
-- **Una interfaz coherente.** Panel lateral plano, Settings por categorías,
-  selección de texto precisa y opciones de alto contraste, ASCII y movimiento reducido.
-- **Extensiones opcionales.** MCP local, ayuda LSP, Skills y Multi Harness
-  para consultar otros entornos de agentes.
+Necesitas **Python 3.10 o posterior** y Git.
 
-La interfaz está disponible en español, inglés y chino simplificado. Las
-sesiones y preferencias se guardan en tu equipo; al usar un provider remoto,
-el contexto enviado se procesa en ese servicio.
-
-## Empieza en tu proyecto
-
-Necesitas **Python 3.10 o posterior** y Git. Instala ISyCode con un solo comando:
-
-### Linux / macOS
+**Linux / macOS**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DannyBaanks/ISyCode/main/install.sh | bash
 ```
 
-### Windows (PowerShell)
+**Windows (PowerShell)**
 ```powershell
 irm https://raw.githubusercontent.com/DannyBaanks/ISyCode/main/install.ps1 | iex
 ```
 
-Una vez instalado, abre cualquier terminal y ejecuta:
+Abre una terminal en tu proyecto y ejecuta:
 ```bash
 isycode
 ```
 
-Para mantenerlo siempre al día con los últimos cambios y mejoras:
-```bash
-isycode actualizar
-```
+Para actualizar: `isycode actualizar`.
 
 <details>
 <summary><b>Instalación manual desde el código (desarrolladores)</b></summary>
@@ -73,113 +53,103 @@ python3 -m venv .venv
 python -m pip install -e .
 isycode
 ```
+
+En Windows, desde el checkout: `& .\scripts\install-windows.ps1` y luego
+`.venv\Scripts\isycode.exe` ([paridad de plataformas](docs/platform-parity/GUIA.md)).
+Para Claude nativo: `python -m pip install -e '.[anthropic]'`.
 </details>
 
-En Windows, desde el checkout puedes usar `& .\scripts\install-windows.ps1`
-y arrancar `.venv\Scripts\isycode.exe`. La primera etapa de paridad incluye
-almacenamiento nativo y Git; el sandbox de comandos Windows sigue pendiente.
-Consulta [la guía de paridad](docs/platform-parity/GUIA.md) para pruebas y alcance.
+**Primeros pasos**
 
-Para Claude nativo, instala también el extra con
-`python -m pip install -e '.[anthropic]'`.
+1. Elige un workspace **recurrente**, para guardar conversaciones, o **temporal**.
+2. Configura tu proveedor en **Configuración → Conversación → Proveedor**.
+3. Pide algo concreto: «Explícame este módulo» o «Añade esta prueba».
 
-1. Elige un workspace **recurrente** para guardar conversaciones o **temporal**
-   para una sesión puntual, y selecciona Classic o Security.
-2. Abre **Configuración → Conversación → Proveedor** y configura
-   el provider que usarás.
-3. Pide una tarea concreta: «Explícame este módulo» o «Añade esta prueba».
-   Revisa las propuestas y habilita las capacidades que necesites.
+En Linux, la ejecución aislada de comandos usa **bubblewrap y libseccomp**. Más
+detalle en [instalación y actualización](docs/reference/installation.md).
 
-La ejecución aislada de comandos requiere **bubblewrap y libseccomp en Linux**.
-Consulta [instalación y actualización](docs/reference/installation.md) para
-configuración, diagnóstico y plataformas.
+## Qué puedes hacer
 
-**v1.0.0-rc.1 · candidato a release (pre-release).** La instalación desde el código es la vía disponible;
-consulta [compatibilidad y verificación](docs/reference/verification.md) antes
-de depender de una integración o plataforma específica.
+- **Del código al cambio.** Busca archivos, lee contexto, revisa cada edición
+  como diff, corre comandos en un sandbox y prepara commits.
+- **El modelo que quieras.** OpenAI, Anthropic, NVIDIA NIM, OpenRouter y otros
+  proveedores en la nube, o un modelo local con Ollama o llama.cpp.
+- **Conversaciones que continúan.** Sesiones guardadas en tu equipo, cola de
+  mensajes, búsqueda, compactación sin perder el hilo y reanudación de turnos
+  interrumpidos.
+- **Todo queda registrado.** Cada acción pasa por IsySentinel y queda en un
+  journal con recibo.
+- **Hecho para la terminal.** Panel lateral, Configuración por categorías,
+  selección de texto precisa, alto contraste, ASCII y movimiento reducido.
+  Disponible en español, inglés y chino.
+- **Extensible.** MCP local, LSP, Skills y Multi Harness.
 
-## Todo en su lugar
+## Tú decides cuánto hace solo
 
-**Configuración** reúne Conversación, Preferencias, Permisos y Conexiones.
-Busca una opción y consulta su explicación sin recorrer una lista interminable.
+Cambia de modo con el chip `◇ Classic` de la barra de abajo:
 
-![Configuración de ISyCode con categorías y valores actuales](docs/design/2026-10-12-mockup-e2e/screens-reviewed-140x40/03-settings-conversation.png)
+| Modo | Para qué |
+| --- | --- |
+| **Classic** | Recomendado. Revisa ediciones y comandos, o confía en la carpeta para trabajar sin preguntas repetidas |
+| **Flow** | Trabaja sin preguntar en lo que se puede deshacer. Cada turno queda registrado y `/undo` lo deshace completo |
+| **Security** | Todo apagado hasta que lo permitas, capacidad por capacidad |
 
-**Archivos** combina navegación, búsqueda y vista previa del proyecto con el
-estado de la lectura.
+En los tres, push, secretos, integraciones y cambios de autoridad siguen
+pidiendo aprobación. [Permisos, aprobaciones e integraciones](docs/reference/authority-and-integrations.md).
 
-![Panel de Archivos con un archivo en vista previa y recibo de lectura](docs/design/2026-10-12-mockup-e2e/screens-reviewed-140x40/02-files.png)
-
-## Elige cómo trabaja el agente
-
-**Classic** prepara las capacidades habituales de programación. Al confiar
-explícitamente en una carpeta, las ediciones ordinarias y los comandos aislados
-pueden continuar sin preguntar en cada paso. Los commits y otras operaciones
-que requieren revisión conservan sus confirmaciones.
-
-**Flow** trabaja sin preguntar en lo que se puede deshacer: leer, editar,
-mover y correr comandos en el sandbox. Cada turno queda registrado, y `/undo`
-lo deshace completo. Los commits, los secretos y la red siguen preguntando.
-
-**Security** empieza con las capacidades apagadas y permite habilitarlas una
-por una.
-
-Cambia de modo con el chip `◇ Classic` de la barra de abajo, junto a ⚙, o en
-**Configuración → Permisos → Authority & Security**. Los tres modos conservan
-IsySentinel y el registro de acciones.
-[Permisos, aprobaciones e integraciones](docs/reference/authority-and-integrations.md).
+![Selector de modo de ISyCode con Classic, Flow y Security](docs/screenshots/2026-10-24-readme/02-modes.png)
 
 ## GUS, el mantenedor de ISyCode
 
-En el repositorio de ISyCode puedes hablar con **GUS**, un modelo con su propio
-proveedor o un modelo local que mantiene y repara ISyCode. Se abre con `/gus` o
-con el botón **GUS** de la barra de abajo, y se habilita por workspace.
+En el repositorio de ISyCode puedes trabajar con **GUS**, un modelo con su
+propio proveedor o un modelo local que mantiene y repara ISyCode. Ábrelo con
+`/gus` o con el botón **GUS** de la barra de abajo.
 
-- `/gus branch <tema>` crea la rama `gus/<tema>` con tu aprobación. Solo ahí
-  GUS edita, corre pruebas en el sandbox y commitea sin preguntar.
-- **Nunca toca L0**, el núcleo de seguridad de ISyCode: IsySentinel rechaza
-  cualquier intento. Si L0 cambia de todos modos, el turno se deshace solo.
-- `/undo` deshace un turno de GUS completo.
-- `/gus seal` corre las puertas V/T/A/L/S y sella su trabajo: nada de L0,
-  pruebas, auditor de cobertura, lint y sello. Tú lo activas al mergear la rama.
+- `/gus branch <tema>` crea su rama, con tu aprobación. Solo ahí edita, corre
+  pruebas y commitea sin preguntar.
+- **Nunca toca el núcleo de seguridad (L0):** IsySentinel lo impide, y si algo
+  cambia de todos modos, el turno se deshace solo.
+- `/undo` deshace su turno. `/gus seal` comprueba su trabajo y lo sella.
+- Tú activas su trabajo al mergear su rama.
 
-[Roadmap de GUS](docs/roadmap-gus.md) ·
-[ADR 0013: L1 y L0](docs/decisions/0013-gus-l1-l0.md).
+![Ventana de GUS con un cambio terminado en su rama](docs/screenshots/2026-10-24-readme/03-gus.png)
 
-## Atajos para el día a día
+[Roadmap de GUS](docs/roadmap-gus.md) · [ADR 0013](docs/decisions/0013-gus-l1-l0.md)
+
+## Atajos
 
 | Acción | Atajo |
 | --- | --- |
 | Enviar / nueva línea | `Enter` / `Ctrl+J` |
 | Detener un turno o volver | `Esc` |
-| Abrir comandos | `/` o `Ctrl+P` |
+| Comandos | `/` o `Ctrl+P` |
 | Cambiar de rol del agente | `Shift+Tab` |
-| Mostrar el panel lateral | `Ctrl+B` |
-| Expandir o contraer una caja enfocada | `Space` |
-| Abrir las opciones de copia de una caja | Doble clic |
-| Copiar exactamente el texto marcado | Selección con el ratón + `Ctrl+C` |
+| Panel lateral | `Ctrl+B` |
+| Expandir o contraer una caja | `Space` |
+| Opciones de copia de una caja | Doble clic |
+| Copiar el texto marcado | Selección con el ratón + `Ctrl+C` |
 
-[Flujos, providers y todos los atajos](docs/reference/workflows.md).
+![Configuración de ISyCode por categorías](docs/screenshots/2026-10-24-readme/04-settings.png)
 
-## Aprende, participa y mejora ISyCode
+[Flujos, proveedores y todos los atajos](docs/reference/workflows.md).
 
-- [Guía de uso en español](docs/GUIA.md): primeros pasos y trabajo diario.
-- [Referencia del producto](docs/reference/README.md): instalación, comandos,
-  permisos e integraciones.
-- [Estándar visual y Design Skills](.agents/skills/isycode-design/SKILL.md):
-  criterios compartidos para ampliar la TUI.
-- [Contribuir](CONTRIBUTING.md): preparar el entorno y presentar cambios.
-- [Seguridad e investigación](SECURITY.md): pruebas en entornos propios y
-  cómo reportar vulnerabilidades de forma privada.
-- [Issues](https://github.com/DannyBaanks/ISyCode/issues): errores y propuestas.
-- [Roadmap](docs/ROADMAP.md): evolución del producto. Lo actual es terminar
-  GUS y después un *freeze* para pulir todo de punta a punta.
+## Documentación y comunidad
 
-## Estado de versión y Release Readiness (v1.0.0-rc.1)
+- [Guía de uso](docs/GUIA.md): primeros pasos y trabajo diario.
+- [Referencia](docs/reference/README.md): instalación, comandos, permisos e integraciones.
+- [Estándar visual](.agents/skills/isycode-design/SKILL.md): criterios para ampliar la TUI.
+- [Contribuir](CONTRIBUTING.md) · [Seguridad](SECURITY.md) ·
+  [Issues](https://github.com/DannyBaanks/ISyCode/issues).
+- [Roadmap](docs/ROADMAP.md): ahora terminamos GUS y después viene un *freeze*
+  para pulir todo de punta a punta.
 
-ISyCode se encuentra en **v1.0.0-rc.1** (Release Candidate 1).
+## Estado
 
-El núcleo de seguridad, los contratos de ISySentinel, los Execution Owners y la interfaz TUI están completamente demostrados y verificados mediante más de 2,400 pruebas automáticas, en Linux y Windows.
+**v1.0.0-rc.1** (candidato a release). Más de 2,400 pruebas automáticas en
+Linux y Windows. La versión final espera la prueba de usabilidad con 5
+personas (gate **G9-05**, [protocolo](docs/usability-g9/GUIA.md)). Antes de
+depender de una integración o plataforma, revisa
+[compatibilidad y verificación](docs/reference/verification.md).
 
-El cierre formal hacia la versión **v1.0.0 final** permanece explícitamente supeditado a la ejecución de la prueba de usabilidad con 5 usuarios reales (Gate **G9-05** del roadmap, según el protocolo en [docs/usability-g9/GUIA.md](docs/usability-g9/GUIA.md)), manteniendo el principio *fail-closed* del proyecto hasta contar con los participantes.
-
+Las sesiones y preferencias se guardan en tu equipo. Si usas un proveedor
+remoto, el contexto que envías se procesa en ese servicio.
