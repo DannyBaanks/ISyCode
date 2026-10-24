@@ -539,12 +539,14 @@ class ProviderMixin:
 
     def _update_model_button_visibility(self) -> None:
         """Keep the bar inside the composer by measuring it. The model yields
-        first (the idea box title names it), then the mode chip (the rail
-        identity line and Settings → Authority name the mode)."""
+        first (the idea box title names it), then GUS (/gus still opens it),
+        then the mode chip (the rail identity line and Settings → Authority
+        name the mode)."""
         try:
             bar = self.query_one("#command-bar")
             model = self.query_one("#model-button", Button)
             mode = self.query_one("#mode-button", Button)
+            gus = self.query_one("#gus-button", Button)
             rail = self.query_one(SidePanel)
         except NoMatches:
             return
@@ -558,10 +560,14 @@ class ProviderMixin:
             return cell_len(str(button.label)) + 4      # padding and frame cells of a bar button
 
         fixed = 5 + sum(cells(button) for button in bar.query(Button)
-                        if button.display and button.id not in {"model-button", "mode-button", "settings-button"})
+                        if button.display and button.id not in
+                        {"model-button", "mode-button", "gus-button", "settings-button"})
         mode_cells = cells(mode)
         mode.display = fixed + mode_cells <= width
-        model.display = mode.display and fixed + mode_cells + min(cells(model), 28) <= width
+        gus.display = (getattr(self, "_gus_offered", False) and mode.display
+                       and fixed + mode_cells + cells(gus) <= width)
+        used = fixed + mode_cells + (cells(gus) if gus.display else 0)
+        model.display = mode.display and used + min(cells(model), 28) <= width
 
     @staticmethod
     def _window_label(window: int | None) -> str:

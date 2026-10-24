@@ -150,10 +150,8 @@ def test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection():
                 await pilot.pause(0.05)
             assert copied == [("one", "selection")]
             body.screen.selections = {}
-            # The copy menu keeps a just-finished drag for 600 ms so a
-            # double-click cannot lose its marked range. Let that explicit
-            # grace period expire before asserting a zero-selection choice.
-            await pilot.pause(0.65)
+            # Opening the menu dropped the kept range, so a later double-click
+            # with nothing marked offers only the whole text.
             await pilot.click(title, times=2)
             await _wait_for_copy_button(pilot, "#copy-whole")
             assert await pilot.click("#copy-whole")
@@ -426,4 +424,54 @@ def test_mode_chip_opens_the_mode_dialog_and_escape_keeps_the_mode(tmp_path, mon
             await pilot.press("enter")
             await pilot.pause()
             assert switched == [(target, False)]
+    asyncio.run(scenario())
+
+
+def test_box_double_click_keeps_the_range_on_a_slow_machine_and_never_a_stale_one():
+    """The kept range follows the presses of one double-click, not a 600 ms clock."""
+    from textual import events
+    from isycode.tui_widgets import BoxTitle, ExpandableBox, SelectableText
+    copied = []
+    class Host(App):
+        def compose(self):
+            yield ExpandableBox(SelectableText(Text("one\ntwo\n")), title="Result", collapsed=False)
+        async def _request_clipboard_copy(self, text, source):
+            copied.append((text, source))
+    async def press(pilot, widget, chain, delay):
+        offset = widget.region.offset + (1, 0)
+        for cls in (events.MouseDown, events.MouseUp, events.Click):
+            kwargs = dict(widget=widget, x=offset.x, y=offset.y, delta_x=0, delta_y=0, button=1,
+                          shift=False, meta=False, ctrl=False, screen_x=offset.x, screen_y=offset.y)
+            if cls is events.Click:
+                kwargs["chain"] = chain
+            pilot.app.screen._forward_event(cls(**kwargs))
+            await pilot.pause()
+            await asyncio.sleep(delay)
+    async def mark(pilot, body):
+        from textual.geometry import Offset
+        from textual.selection import Selection
+        body.screen.selections = {body: Selection.from_offsets(Offset(0, 0), Offset(3, 0))}
+        await pilot.pause()
+    async def scenario():
+        async with Host().run_test(size=(80, 24)) as pilot:
+            title = pilot.app.query_one(BoxTitle)
+            body = pilot.app.query_one(SelectableText)
+            await mark(pilot, body)
+            remember = body.screen.selections
+            await press(pilot, title, 1, 0.4)
+            pilot.app.screen.selections = {}                 # the press cleared the mark
+            await press(pilot, title, 2, 0.4)                # > 0.6 s after the first press
+            await _wait_for_copy_button(pilot, "#copy-selection")
+            assert pilot.app.screen.selected == "one"
+            await pilot.press("escape")
+            assert body.screen.selections == remember
+
+            # Mark, click once, then much later double-click with nothing marked: no stale range.
+            await mark(pilot, body)
+            await press(pilot, title, 1, 0)
+            pilot.app.screen.selections = {}
+            await press(pilot, title, 1, 0)                  # a later, separate click
+            await press(pilot, title, 2, 0)
+            await _wait_for_copy_button(pilot, "#copy-whole")
+            assert pilot.app.screen.selected == ""
     asyncio.run(scenario())

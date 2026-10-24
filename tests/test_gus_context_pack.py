@@ -44,6 +44,8 @@ def test_the_pack_is_read_with_receipts_and_reread_only_when_a_file_changes(work
     assert pack.text.startswith(PACK_HEADER)
     assert (root / "AGENTS.md").read_text(encoding="utf-8").strip() in pack.text
     assert "ADR 0011: GUS, el modelo mantenedor de ISyCode" in pack.text
+    assert "--- ISyCode L0 (fingerprint " in pack.text      # ADR 0013: GUS knows L0
+    assert "- src/isycode/security.py\n" in pack.text and "never change them" in pack.text
     assert {entry.path for entry in pack.entries} >= set(PACK_FILES)
     assert all(entry.receipt_id for entry in pack.entries)
     receipts = ActionAuditJournal(root).verify().receipts

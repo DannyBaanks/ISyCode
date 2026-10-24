@@ -196,12 +196,13 @@ COMMAND_MAX_OUTPUT_BYTES = 64 * 1024
 COMMAND_DEFAULT_STAGE_BYTES = 512 * 1024 * 1024
 COMMAND_MAX_STAGE_BYTES = 8 * 1024 * 1024 * 1024
 COMMAND_SYSTEM_BIN_DIRS = ("/usr/local/bin", "/usr/bin", "/bin")
-GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit"})
+GIT_ACTIONS = frozenset({"git.status", "git.diff", "git.commit", "git.branch.create"})
 PUBLISH_PARAMETER_KEYS = frozenset({"remote", "ref", "content_sha256"})
 GIT_PARAMETER_KEYS = {
     "git.status": frozenset({"git", "workspace_root", "repo_path", "inspect_path"}),
     "git.diff": frozenset({"git", "workspace_root", "repo_path", "staged", "path"}),
     "git.commit": frozenset({"git", "workspace_root", "repo_path", "message", "paths", "diff_sha256"}),
+    "git.branch.create": frozenset({"git", "workspace_root", "repo_path", "branch", "base"}),
 }
 MCP_SERVER_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 MCP_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
@@ -723,7 +724,9 @@ class GitSystembility:
         expected = GIT_PARAMETER_KEYS[request.action_id]
         valid_shape = (set(params) == expected
                        or (request.action_id == "git.status"
-                           and set(params) == expected - {"inspect_path"}))
+                           and set(params) == expected - {"inspect_path"})
+                       # A GUS generation reads its committed range since a reviewed base.
+                       or (request.action_id == "git.diff" and set(params) == expected | {"since"}))
         if not valid_shape:
             return SystembilityResult(self.name, False, "git request shape is not the reviewed one")
         repo_path = params.get("repo_path", ".")
@@ -743,6 +746,11 @@ class GitSystembility:
             if (type(params.get("staged")) is not bool
                     or not command_relative_path_valid(params.get("path"), allow_root=True)):
                 return SystembilityResult(self.name, False, "git diff scope is invalid")
+            since = params.get("since")
+            if "since" in params and (params.get("staged") is not False or params.get("path") != "."
+                                      or not isinstance(since, str)
+                                      or re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", since) is None):
+                return SystembilityResult(self.name, False, "a range diff needs one reviewed commit")
         elif request.action_id == "git.commit":
             message = params.get("message")
             paths = params.get("paths")
@@ -756,6 +764,12 @@ class GitSystembility:
             digest = params.get("diff_sha256")
             if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
                 return SystembilityResult(self.name, False, "commit must be bound to its reviewed diff")
+        elif request.action_id == "git.branch.create":
+            branch, base = params.get("branch"), params.get("base")
+            if not isinstance(branch, str) or re.fullmatch(r"gus/[a-z0-9][a-z0-9-]{0,47}", branch) is None:
+                return SystembilityResult(self.name, False, "only a gus/<topic> branch can be created")
+            if not isinstance(base, str) or re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", base) is None:
+                return SystembilityResult(self.name, False, "the branch must be bound to its reviewed commit")
         elif params.get("inspect_path") is not None:
             if params.get("inspect_path") != ".isycode":
                 return SystembilityResult(self.name, False,
@@ -1969,6 +1983,26 @@ class BridgeCoordinationSystembility:
         return True
 
 
+class GusL0Systembility:
+    """Inside a GUS turn: only GUS's role, and never a change to ISyCode's L0 (ADR 0013).
+
+    Outside a GUS turn this check always passes; it never widens anything.
+    """
+
+    name = "GusL0Boundary"
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        from isycode.gus_l0 import l0_refusal
+        try:
+            reason = l0_refusal(request)
+        except Exception:
+            reason = "the GUS boundary could not be evaluated"
+        if reason:
+            return SystembilityResult(self.name, False, reason)
+        return SystembilityResult(self.name, True, "not a GUS change to L0")
+
+
 class ProductActionGate:
     """Run explicit Workspace Authority followed by the pure ISySentinel."""
 
@@ -2036,7 +2070,7 @@ class ProductActionGate:
             MobileHostSystembility(), CommandProcessSystembility(), GitSystembility(),
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
             BridgePresenceSystembility(), BridgeCoordinationSystembility(),
-            WorkspaceMemorySystembility(),
+            WorkspaceMemorySystembility(), GusL0Systembility(),
         ])
 
     def preview(self, request: ActionRequest):
