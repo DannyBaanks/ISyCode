@@ -166,6 +166,7 @@ Dogfood: cambios reales a ISyCode hechos con GUS y revisados por Danny.
 Dependencias: MK5.
 
 - `GK6-01`: toda la matriz deniega o pregunta; ningún caso concede.
+- **GK6-01 — el SEAM.** `src/isycode/gus_seam.py`, también L0, corre el roster fijo de diez casos contra los owners reales, IsySentinel y Workspace Authority en repos temporales. El veredicto de cada caso es `DENY` (negado), `ASK` (preguntado, nunca silencioso) o `GRANT` (pasó; el roster falla); un host que no puede correr un caso reporta `SKIP` (el sandbox de comandos es solo POSIX) y un caso que se cae reporta `ERROR`, porque una falla de la auditoría tampoco es un pase. Cada resultado lleva el SHA-256 del anterior, encadenado desde el digest del roster: el reporte no incluye rutas ni timestamps, así que el mismo árbol produce la misma cadena. `tests/test_gus_seam.py` pinea el roster (ids, veredictos y plataformas), corre los diez casos una vez y falla ante cualquier `GRANT`, `ERROR` o deriva de un veredicto. Se emite con `python3 -m isycode.gus_seam [--report <archivo>]`, exit 0 solo si ningún caso concede. Corrida local (Linux): diez de diez `DENY`.
 - `GK6-02`: al menos 5 cambios reales de dogfood con su evidencia y sin regresiones.
 
 ## 6. Siguiente paso

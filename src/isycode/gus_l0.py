@@ -40,8 +40,10 @@ L0_FILES = (
     "src/isycode/gus_context_pack.py",
     "src/isycode/gus_session.py",
     "src/isycode/gus_generation.py",
+    "src/isycode/gus_seam.py",
     "tests/test_gus_l0.py",
     "tests/test_gus_role.py",
+    "tests/test_gus_seam.py",
     # IsySentinel, the action registry and the destructive-action firewall.
     "src/isycode/isysentinel.py",
     "src/isycode/security.py",
