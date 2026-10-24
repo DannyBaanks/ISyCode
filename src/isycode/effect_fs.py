@@ -8,6 +8,6 @@ def digest(current):
 
 
 if os.name == 'nt':
-    from isycode.platform_windows_effect_fs import apply_file, read_file
+    from isycode.platform_windows_effect_fs import apply_file as apply_file, read_file as read_file
 else:
-    from isycode.platform_posix_effect_fs import apply_file, read_file
+    from isycode.platform_posix_effect_fs import apply_file as apply_file, read_file as read_file

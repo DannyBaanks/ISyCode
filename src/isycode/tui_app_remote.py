@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from isycode.config import gateway_workspace_id
 from isycode.decision_view import verified_receipt_line
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
-from isycode.action_runtime import GatewayMCPInvocationOwner, GatewaySemanticOwner, LPSSymbolOwner, ProductActionGate
+from isycode.action_runtime import GatewayMCPInvocationOwner, GatewaySemanticOwner, LPSSymbolOwner
 from isycode.authority_view import (
     MOBILE_HOST_ADDRESS,
     MOBILE_PAIR_ACTIONS,
@@ -36,7 +36,7 @@ from isycode.tailscale_install import TailscalePackageInstallOwner
 from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner, route_url
 from isycode.private_access import PrivateAccessStateStore
 from isycode.localization import tr
-from isycode.tui_theme import status_chip, TEXT, MUTED, GREEN, YELLOW, RED, CYAN, status_phrase
+from isycode.tui_theme import status_chip, TEXT, MUTED, GREEN, YELLOW, RED, CYAN
 from isycode.tui_widgets import ChatArea
 from isycode.tui_screens_approval import TailscaleConfirmScreen
 from isycode.tui_screens_grants import GrantLSPProcessScreen

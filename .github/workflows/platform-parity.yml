@@ -1,6 +1,10 @@
 name: Native platform contracts
 on:
   push:
+    # One run per commit (ADR 0014): branch pushes outside main only get
+    # the pull_request run. Tag pushes keep their previous coverage.
+    branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:

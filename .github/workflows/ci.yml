@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: [main, master]
   push:
-    branches: ['**']
+    # One run per commit: branch pushes outside main only get the
+    # pull_request run. Tag pushes still reach the release lane.
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -17,6 +19,8 @@ jobs:
     # slip past the suite when no test walks that branch.
     name: Lint (undefined names)
     runs-on: ubuntu-latest
+    # A hung Linux job once stayed 3h; the freeze bounds it (ADR 0014).
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -35,6 +39,8 @@ jobs:
   test:
     name: Tests (Linux)
     runs-on: ubuntu-latest
+    # A hung Linux job once stayed 3h; the freeze bounds it (ADR 0014).
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -82,6 +88,8 @@ jobs:
     # Keep the selection-capable Textual pin verified on a second Python runtime.
     name: Tests (Linux, Textual 8)
     runs-on: ubuntu-latest
+    # A hung Linux job once stayed 3h; the freeze bounds it (ADR 0014).
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -156,6 +164,8 @@ jobs:
   gate-evidence:
     name: Gate evidence
     runs-on: ubuntu-latest
+    # A hung Linux job once stayed 3h; the freeze bounds it (ADR 0014).
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v7

@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.message import Message
 from textual.widgets import OptionList, Static, TextArea
 from rich.text import Text
-from isycode.tui_widgets import BoxTitle, ExpandableBox, activate_on_second_click
+from isycode.tui_widgets import BoxTitle, ExpandableBox
 from isycode.tui_theme import MUTED
 from isycode.tui_screens_sessions import PastedTextScreen
 from isycode.localization import tr

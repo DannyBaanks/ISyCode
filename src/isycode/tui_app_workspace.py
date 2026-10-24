@@ -27,22 +27,12 @@ from isycode.tui_composer import IdeaBox, ShellBox
 from isycode.tui_screens_approval import ContextAccessScreen, WriteApprovalScreen, CommandApprovalScreen, CommitApprovalScreen
 from isycode.tui_screens_sessions import ShellProcessesScreen
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
-from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
-from isycode.config import ConfigurationError, discover_workspace_identity
 from isycode.file_picker import SiblingFolderPickerOwner
 from isycode.folder_screens import AddWorkspaceFolderScreen, AutomaticEditsWarningScreen
-from isycode.providers import Provider, ProviderError, load_provider_key, resolved_chat_model, selected_provider_name
-from isycode.session_owner import ChatSessionOwner
-from isycode.tui_composer import PromptArea
-from isycode.tui_screens_approval import TailscaleConfirmScreen
-from isycode.tui_screens_grants import GlobalRecurringDefaultScreen, QuickStartScreen, WorkspaceModeScreen, WorkspaceSetupScreen
+from isycode.providers import resolved_chat_model, selected_provider_name
 from isycode.user_defaults import UserDefaultsStore
 from isycode.workspace_config_owner import WorkspaceConfigOwner
-from isycode.workspace_folders import WorkspaceFolders
-from isycode.workspace_setup import WorkspaceSetupStore, new_workspace_choice, shared_root_warning
-from textual.css.query import NoMatches
-from textual.dom import NoScreen
-from textual.widgets import Input, Tree
+from isycode.workspace_setup import shared_root_warning
 from typing import Any
 
 

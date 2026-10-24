@@ -43,3 +43,39 @@ def test_a_long_approval_opens_on_reject_and_enter_refuses():
             assert results == [False]
 
     asyncio.run(scenario())
+
+
+def test_escape_refuses_on_a_bare_approval_screen():
+    """The family docstring promises Esc refuses; a bare subclass must inherit it."""
+    from textual.widgets import Static
+
+    results = []
+
+    class BareApprovalScreen(ApprovalScreen):
+        # Deliberately no escape binding of its own: the base contract is under test.
+        def compose(self):
+            yield Static("\n".join(f"line {index} of a long review" for index in range(200)))
+            yield Button("Reject")
+            yield Button("Allow")
+
+        def on_button_pressed(self, event):
+            self.dismiss(event.button.label == "Allow")
+
+    class Host(App):
+        def on_mount(self):
+            self.push_screen(BareApprovalScreen(), results.append)
+
+    async def scenario():
+        async with Host().run_test(size=(80, 24)) as pilot:
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if isinstance(pilot.app.screen.focused, Button):
+                    break
+            await pilot.press("escape")
+            for _ in range(40):
+                if results:
+                    break
+                await pilot.pause(0.05)
+            assert results == [False]
+
+    asyncio.run(scenario())

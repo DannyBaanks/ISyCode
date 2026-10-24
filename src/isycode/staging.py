@@ -158,7 +158,7 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
     the cancel seam: it is called at the same steps and may raise
     ``PromotionCancelled``. The same ``operation_id`` is not applied twice.
     """
-    from isycode.effect_ledger import CrashInjected, EffectCost, EffectLedger, LedgerDenied
+    from isycode.effect_ledger import EffectLedger
 
     if operation_id is not None and operations is not None:
         replayed = _replay_operation(operations, operation_id, ledger, staging)

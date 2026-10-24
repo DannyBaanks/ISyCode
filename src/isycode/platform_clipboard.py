@@ -2,6 +2,10 @@
 import os
 
 if os.name == 'nt':
-    from isycode.platform_windows_clipboard import encode_text, read_system_clipboard, system_clipboard_command
+    from isycode.platform_windows_clipboard import (
+        encode_text as encode_text, read_system_clipboard as read_system_clipboard,
+        system_clipboard_command as system_clipboard_command)
 else:
-    from isycode.platform_posix_clipboard import encode_text, read_system_clipboard, system_clipboard_command
+    from isycode.platform_posix_clipboard import (
+        encode_text as encode_text, read_system_clipboard as read_system_clipboard,
+        system_clipboard_command as system_clipboard_command)

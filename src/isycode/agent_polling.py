@@ -8,7 +8,7 @@ here authorizes effects; it only reads the event log.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from isycode.agent_events import AgentEventStore
 

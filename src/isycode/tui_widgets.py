@@ -11,7 +11,6 @@ from textual.widgets import (
     Input,
     OptionList,
     Static,
-    TextArea,
     Tree,
 )
 from textual.events import Click

@@ -15,7 +15,6 @@ from isycode.action_runtime import GatewayMCPInvocationOwner, ProductActionGate
 from isycode.actions import ACTION_BY_ID
 from isycode.authority_view import (
     MOBILE_HOST_ADDRESS,
-    MOBILE_PAIR_ACTIONS,
     displayed_on,
     mobile_host_enabled,
     mobile_host_saved,

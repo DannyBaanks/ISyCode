@@ -173,7 +173,6 @@ class ToolMixin:
 
     async def _call_bridge_tool(self, name: str, raw_arguments: str) -> str:
         """Run one Bridge proposal: review first, then the owner's gate."""
-        from isycode.bridge_tools import BRIDGE_SEND_TOOL, BRIDGE_WAKE_TOOL
         try:
             arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else None
         except json.JSONDecodeError:
@@ -591,7 +590,6 @@ class ToolMixin:
 
     async def _run_iteration_window(self, objective):
         from isycode.iteration import run_iteration
-        from isycode.providers import child_model_choices
         from isycode.subagent_screen import SubagentModelScreen
         if self._subagent_running or (self._loop_task and self._loop_task is not asyncio.current_task() and not self._loop_task.done()):
             self._append(tr("Finish the active task before starting an iteration."), YELLOW)
@@ -648,7 +646,6 @@ class ToolMixin:
             previous_error = result
 
     async def _run_subagent_attempt(self, task: str, previous_error=None) -> dict:
-        from isycode.providers import child_model_choices
         from isycode.subagents import run_child
         from isycode.subagent_screen import SubagentModelScreen
         if not isinstance(task, str) or not task.strip() or len(task) > 8000:

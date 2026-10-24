@@ -30,7 +30,7 @@ from pathlib import Path
 
 from isycode.action_runtime import ActionOutcome, ActionReceipt, ProductActionGate
 from isycode.chat_sessions import (
-    UNCHECKED, ChatSession, ChatSessionError, ChatSessionStore, SessionDiverged, revision_of,
+    ChatSession, ChatSessionError, ChatSessionStore, SessionDiverged, revision_of,
 )
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority

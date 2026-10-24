@@ -70,8 +70,15 @@ def test_a_hostile_model_reply_cannot_drive_the_terminal(tmp_path, monkeypatch, 
 
     async def scenario(app, pilot):
         await app._run_chat("hi")
-        await pilot.pause()
+        # Wait for the rendered text, not for a clock: a single pause let this
+        # test flake on loaded Windows runners (freeze rule: condition, not time).
+        deadline = asyncio.get_running_loop().time() + 10.0
         out = terminal_bytes(app)
+        while "tail" not in out or "end" not in out:
+            if asyncio.get_running_loop().time() >= deadline:
+                pytest.fail("the hostile reply never reached the terminal render")
+            await pilot.pause(0.05)
+            out = terminal_bytes(app)
         assert "tail" in out and "end" in out                      # the text is still shown
         assert not any(attack in out for attack in ATTACKS)        # its control codes are not
         assert app._history[-1]["content"] == HOSTILE              # data itself is not rewritten

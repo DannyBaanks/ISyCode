@@ -72,11 +72,8 @@ from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
 from isycode.command_runner import command_tool
 from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner
 from isycode.workspace_config_owner import WorkspaceConfigOwner
-from textual.widgets import Static
-from rich.text import Text
 from rich.markdown import Markdown as RichMarkdown
 from isycode.providers import (
-    PRESETS,
     Provider,
     ProviderError,
     load_provider_key,
@@ -86,13 +83,10 @@ from isycode.providers import (
     selected_provider_name,
 )
 from isycode.streaming import StreamError, detect_unexecuted_tool_request
-from isycode.reasoning_options import steering_support
 import time as _time
 from isycode.tui_theme import MUTED, YELLOW, RED, CYAN, GREEN
 from isycode.tui_widgets import ChatArea, SelectableText
 from isycode.tui_composer import PromptArea
-from isycode.tui_screens_sessions import IdeaBacklogScreen, QueuedMessagesScreen
-from isycode.tui_theme import TEXT, _fit_cells
 from isycode.tui_widgets import ThoughtBlock
 from textual.widgets import TextArea
 

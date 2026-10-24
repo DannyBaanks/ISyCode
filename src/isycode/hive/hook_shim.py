@@ -39,8 +39,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from isycode.hive.manager import HiveManager, HiveConfig
-from isycode.hive.guard import hive_write_decision, HiveWriteInput
+from isycode.hive.guard import hive_write_decision
 
 
 def get_hive_root() -> Path | None:

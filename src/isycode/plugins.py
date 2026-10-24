@@ -7,7 +7,7 @@ take over specific inputs. The default path never touches the planner.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Awaitable
+from typing import Callable
 
 
 @dataclass

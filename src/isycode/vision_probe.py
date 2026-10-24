@@ -5,7 +5,7 @@ import json
 import secrets
 from isycode.action_runtime import ProviderNetworkOwner
 from isycode.chat_transport import provider_complete
-from isycode.capability_observations import record, observed
+from isycode.capability_observations import record
 from isycode.provider_errors import classify_provider_error
 
 

@@ -6,14 +6,12 @@ Agents just write files to their outbox/.
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 import shutil
 import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .types import HiveMessage, MessageAct, Registry, validate_identifier
+from .types import HiveMessage, Registry, validate_identifier
 from .safe_io import checked_path, read_message, create_message
 
 
