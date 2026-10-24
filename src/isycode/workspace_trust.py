@@ -119,9 +119,11 @@ def quiet_gus(authority, request) -> bool:
     """Whether a GUS turn on a ``gus/*`` branch covers this one request (ADR 0011 D1).
 
     GUS edits without asking only inside its own turn, only on its own branch,
-    only in Classic or Flow, and only with Flow's action list. IsySentinel still
-    refuses L0 and anything outside GUS's role; the turn journal records every
-    change so the turn can be undone. Any error or mismatch says no.
+    and only with Flow's action list. A target authority is marked ``gus_target``
+    and runs in Security with explicit grants; the visible workspace still needs
+    Classic or Flow. IsySentinel still refuses L0 and anything outside GUS's
+    role; the turn journal records every change so the turn can be undone.
+    Any error or mismatch says no.
     """
     try:
         from isycode.gus_l0 import gus_turn_active, on_gus_branch
@@ -131,7 +133,8 @@ def quiet_gus(authority, request) -> bool:
             return False
         if not gus_turn_active(authority.root):
             return False
-        if authority.mode() not in {"classic", "flow"}:
+        if not getattr(authority, "gus_target", False) \
+                and authority.mode() not in {"classic", "flow"}:
             return False
         if broad_workspace_reason(authority.root):
             return False

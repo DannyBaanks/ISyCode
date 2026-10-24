@@ -102,7 +102,11 @@ def parse_role_document(text: str) -> GusRole:
 
 
 def is_isycode_checkout(root: Path) -> bool:
-    """D3: GUS is offered only in the ISyCode repository (two marker files, never read)."""
+    """Whether ``root`` is an ISyCode checkout (two marker files, never read).
+
+    ADR 0015: the button no longer depends on this; the check identifies a
+    usable GUS edit target.
+    """
     try:
         return ((root / "src" / "isycode" / "gus_role.py").is_file()
                 and (root / "src" / "isycode" / "agents" / "gus.md").is_file())

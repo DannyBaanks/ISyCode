@@ -1,20 +1,17 @@
-"""GUS conversations (ADR 0011, MK4): explicit per-workspace enablement, own transcript.
+"""GUS conversations (ADR 0011, ADR 0015): user enablement, own transcript, three roots.
 
-GUS is offered only in the ISyCode repository (D3), but the two marker files
-that detect it only decide whether the entry is shown. GUS answers only after
-the person enables it for this exact workspace (GK4-00); the record is bound
-to the resolved workspace path in ISyCode's private state, never to files in
-the repository.
-
-A GUS turn sends the role, the fixed context pack and GUS's own transcript to
-the GUS model slot through the provider network owner, which authorizes the
-request with IsySentinel and receipts it. The request is budgeted against the
-model's known window, or 32k tokens when it is unknown.
+GUS answers in any workspace after the person enables it there (GK4-00). The
+record is bound to the resolved visible workspace in ISyCode's private state,
+never to files in a repository. A GUS turn sends the role, the fixed context
+pack of the configured ISyCode target and GUS's own transcript to the GUS model
+slot through the provider network owner, which authorizes the request with
+IsySentinel and receipts it. The request is budgeted against the model's known
+window, or 32k tokens when it is unknown.
 
 ``gus_reply`` talks without tools. ``gus_work`` (MK5c) also gives GUS the tools
-of its role, only on a ``gus/*`` branch: every tool call runs inside
-``gus_turn``, so IsySentinel refuses L0 and anything outside the role, and the
-caller records the turn in a turn journal and checks the L0 fingerprint.
+of its role, only on a ``gus/*`` branch of the target: every tool call runs
+inside ``gus_turn``, so IsySentinel refuses L0 and anything outside the role,
+and the caller records the turn in a turn journal and checks the L0 fingerprint.
 """
 from __future__ import annotations
 
@@ -26,9 +23,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
-from isycode.gus_context_pack import ContextPackError, ContextPackReader, plan_gus_request, window_chars
+from isycode.gus_context_pack import (
+    PACK_HEADER, ContextPack, ContextPackError, ContextPackReader, plan_gus_request,
+    window_chars,
+)
 from isycode.gus_l0 import gus_turn, on_gus_branch
-from isycode.gus_role import GusRoleError, is_isycode_checkout, load_gus_role
+from isycode.gus_role import GusRoleError, load_gus_role
 from isycode.gus_slot import GusSlotError, check_gus_model, gus_provider, planning_window
 from isycode.state_index import get_state_index
 
@@ -192,16 +192,41 @@ def _size(messages: list[dict]) -> int:
     return sum(len(json.dumps(message, ensure_ascii=False, default=str)) for message in messages)
 
 
-def _prepare(root: Path, authority, text: str, state: "GusState"):
+def _minimal_pack(roots) -> ContextPack:
+    """The pack when GUS has no target yet: it still knows which roots it has."""
+    target = getattr(roots, "target", None)
+    lines = [PACK_HEADER, "--- GUS roots ---",
+             f"Visible workspace for this session: {roots.visible}",
+             f"Editable ISyCode checkout: {target if target is not None else 'none configured'}",
+             "The visible workspace is read-only for GUS unless it is also the target.",
+             "GUS edits only the target, only on a gus/* branch."]
+    return ContextPack("\n".join(lines), ())
+
+
+def _pack(roots) -> ContextPack:
+    """The fixed project context: from the target, or the minimal roots pack.
+
+    Reading the target does not need a clean worktree; only editing does.
+    """
     from isycode.action_runtime import LocalWorkspaceReadOwner
-    if not is_isycode_checkout(root):
-        raise GusUnavailable("GUS works only in the ISyCode repository.")
+    from isycode.gus_role import is_isycode_checkout
+    target = getattr(roots, "target", None)
+    if target is None or not is_isycode_checkout(target):
+        return _minimal_pack(roots)
+    try:
+        return ContextPackReader(
+            target, LocalWorkspaceReadOwner(target, roots.authority())).build()
+    except (ContextPackError, OSError, ValueError):
+        return _minimal_pack(roots)
+
+
+def _prepare(roots, text: str, state: "GusState"):
     if not state.enabled():
         raise GusUnavailable("GUS is not enabled for this workspace.")
     try:
         role = load_gus_role()
         provider = gus_provider()
-        pack = ContextPackReader(root, LocalWorkspaceReadOwner(root, authority)).build()
+        pack = _pack(roots)
     except (GusRoleError, GusSlotError, ContextPackError) as exc:
         raise GusUnavailable(str(exc)) from exc
     check = check_gus_model(provider.name, provider.model)
@@ -221,32 +246,34 @@ def _prepare(root: Path, authority, text: str, state: "GusState"):
     return provider, check, messages
 
 
-async def _send(root: Path, authority, provider, messages: list[dict], tools, complete: Complete):
+async def _send(roots, provider, messages: list[dict], tools, complete: Complete):
     from isycode.action_runtime import ProviderNetworkOwner
+
+    authority = roots.provider_authority()
 
     async def send():
         return await complete(provider, messages, max_tokens=None, tools=tools)
 
-    response, outcome = await ProviderNetworkOwner(root, authority).execute(provider, {
-        "operation": "gus.reply", "messages": messages, "max_tokens": None,
-        "token_limit_field": provider.token_limit_field,
-        "reasoning_effort": provider.reasoning_effort,
-        "temperature_supported": provider.temperature_supported, "tools": tools,
-    }, send)
+    response, outcome = await ProviderNetworkOwner(authority.root, authority).execute(
+        provider, {
+            "operation": "gus.reply", "messages": messages, "max_tokens": None,
+            "token_limit_field": provider.token_limit_field,
+            "reasoning_effort": provider.reasoning_effort,
+            "temperature_supported": provider.temperature_supported, "tools": tools,
+        }, send)
     if outcome.decision != "ALLOW" or not isinstance(response, dict) or outcome.receipt is None:
         raise GusUnavailable(f"The request to GUS's model was not allowed: {outcome.reason[:160]}")
     return response, outcome.receipt.receipt_id
 
 
-async def gus_reply(workspace_root: Path, authority, text: str, *,
+async def gus_reply(roots, text: str, *,
                     complete: Complete | None = None, state: GusState | None = None) -> GusReply:
     """Answer one message as GUS without tools, or raise GusUnavailable with the reason."""
-    root = Path(workspace_root).resolve(strict=True)
-    state = state or GusState(root)
-    provider, check, messages = _prepare(root, authority, text, state)
+    state = state or roots.visible_state()
+    provider, check, messages = _prepare(roots, text, state)
     if complete is None:
         from isycode.chat_transport import provider_complete as complete
-    response, receipt_id = await _send(root, authority, provider, messages, None, complete)
+    response, receipt_id = await _send(roots, provider, messages, None, complete)
     answer = str(response.get("text") or "").strip()
     if not answer:
         raise GusUnavailable("GUS's model returned no answer.")
@@ -255,10 +282,10 @@ async def gus_reply(workspace_root: Path, authority, text: str, *,
     return GusReply(answer, provider.model, check.window is not None, receipt_id)
 
 
-async def gus_work(workspace_root: Path, authority, text: str, dispatch: Dispatch, *,
+async def gus_work(roots, text: str, dispatch: Dispatch, *,
                    complete: Complete | None = None, state: GusState | None = None,
                    on_status: Callable[[str], None] | None = None) -> GusReply:
-    """One GUS turn with the tools of its role (MK5c); only on a ``gus/*`` branch.
+    """One GUS turn with the tools of its role (MK5c); only on a ``gus/*`` target branch.
 
     Every tool call runs inside ``gus_turn``. The model requests themselves do
     not: they go through the provider network owner like any GUS reply. The
@@ -266,11 +293,16 @@ async def gus_work(workspace_root: Path, authority, text: str, dispatch: Dispatc
     says so; it never claims work it did not do.
     """
     from isycode.chat_transport import assistant_turn
-    root = Path(workspace_root).resolve(strict=True)
-    state = state or GusState(root)
-    if not on_gus_branch(root):
+    target = getattr(roots, "target", None)
+    if target is None:
+        raise GusUnavailable("GUS has no configured ISyCode checkout to edit.")
+    ready, reason = roots.target_ready()
+    if not ready:
+        raise GusUnavailable(reason)
+    if not on_gus_branch(target):
         raise GusUnavailable("GUS edits only on a gus/* branch. Create one with /gus branch <topic>.")
-    provider, check, messages = _prepare(root, authority, text, state)
+    state = state or roots.visible_state()
+    provider, check, messages = _prepare(roots, text, state)
     if complete is None:
         from isycode.chat_transport import provider_complete as complete
     tools = gus_tools()
@@ -287,7 +319,7 @@ async def gus_work(workspace_root: Path, authority, text: str, dispatch: Dispatc
             break
         if on_status:
             on_status(f"step {step + 1}")
-        response, receipt_id = await _send(root, authority, provider, messages, tools, complete)
+        response, receipt_id = await _send(roots, provider, messages, tools, complete)
         step += 1
         answer = str(response.get("text") or "").strip()
         calls = response.get("tool_calls") or []
@@ -307,7 +339,7 @@ async def gus_work(workspace_root: Path, authority, text: str, dispatch: Dispatc
             else:
                 if on_status:
                     on_status(f"tool · {name}")
-                with gus_turn(root):
+                with gus_turn(target):
                     returned_id, output = await dispatch(call)
                 if returned_id != call_id or not isinstance(output, str):
                     raise GusUnavailable("A tool result did not match its request.")

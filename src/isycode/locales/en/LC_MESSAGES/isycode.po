@@ -6308,3 +6308,111 @@ msgstr "Rejected {branch} · {gates} · {reason}"
 
 msgid "GUS gates running…"
 msgstr "GUS gates running…"
+
+msgid "GUS settings · target, reads and memory"
+msgstr "GUS settings · target, reads and memory"
+
+msgid "GUS turn restored · {count} files"
+msgstr "GUS turn restored · {count} files"
+
+msgid "GUS has no configured ISyCode checkout to edit."
+msgstr "GUS has no configured ISyCode checkout to edit."
+
+msgid "preparing {target}"
+msgstr "preparing {target}"
+
+msgid "GUS settings unavailable · {reason}"
+msgstr "GUS settings unavailable · {reason}"
+
+msgid "GUS target unavailable · {reason}"
+msgstr "GUS target unavailable · {reason}"
+
+msgid "No recorded GUS turn to undo."
+msgstr "No recorded GUS turn to undo."
+
+msgid "GUS is your assistant with its own model ({destination}). It can read this computer except credentials and secrets, and everything it reads can be sent to that model. It edits only {target}, on a gus/* branch, and never the L0 kernel. Your conversation and memories are yours, shared across workspaces and stored outside the checkout. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS is your assistant with its own model ({destination}). It can read this computer except credentials and secrets, and everything it reads can be sent to that model. It edits only {target}, on a gus/* branch, and never the L0 kernel. Your conversation and memories are yours, shared across workspaces and stored outside the checkout. It grants itself nothing; turn it off any time in Settings."
+
+msgid "no checkout configured yet"
+msgstr "no checkout configured yet"
+
+msgid "GUS, your assistant and ISyCode maintainer · click to talk to it"
+msgstr "GUS, your assistant and ISyCode maintainer · click to talk to it"
+
+msgid "Edits in {target} · reads the machine except credentials · L0 stays human."
+msgstr "Edits in {target} · reads the machine except credentials · L0 stays human."
+
+msgid "Enter send · Esc close · on a gus/* branch GUS edits its target; elsewhere it reads and answers"
+msgstr "Enter send · Esc close · on a gus/* branch GUS edits its target; elsewhere it reads and answers"
+
+msgid "Undoing GUS's last turn…"
+msgstr "Undoing GUS's last turn…"
+
+msgid "no target configured"
+msgstr "no target configured"
+
+msgid "Undo this turn"
+msgstr "Undo this turn"
+
+msgid "GUS turn restored."
+msgstr "GUS turn restored."
+
+msgid "Nothing undone."
+msgstr "Nothing undone."
+
+msgid "GUS has no editable target yet · open Settings"
+msgstr "GUS has no editable target yet · open Settings"
+
+msgid "GUS settings"
+msgstr "GUS settings"
+
+msgid "GUS reads the machine except credentials. It edits only the target checkout, on a gus/* branch, and never L0."
+msgstr "GUS reads the machine except credentials. It edits only the target checkout, on a gus/* branch, and never L0."
+
+msgid "GUS here: {state}\nTarget: {target}\nRead scope: {scope}"
+msgstr "GUS here: {state}\nTarget: {target}\nRead scope: {scope}"
+
+msgid "Turn GUS on or off here"
+msgstr "Turn GUS on or off here"
+
+msgid "Use the running checkout"
+msgstr "Use the running checkout"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "A folder scope needs at least one folder"
+msgstr "A folder scope needs at least one folder"
+
+msgid "Editable ISyCode checkout"
+msgstr "Editable ISyCode checkout"
+
+msgid "none · GUS talks and reads only"
+msgstr "none · GUS talks and reads only"
+
+msgid "This ISyCode is not running from a checkout."
+msgstr "This ISyCode is not running from a checkout."
+
+msgid "Not saved · {reason}"
+msgstr "Not saved · {reason}"
+
+msgid "Not a folder · {folder}"
+msgstr "Not a folder · {folder}"
+
+msgid "/path/to/ISyCode checkout"
+msgstr "/path/to/ISyCode checkout"
+
+msgid "Read scope"
+msgstr "Read scope"
+
+msgid "Memory mode · explicit or automatic"
+msgstr "Memory mode · explicit or automatic"
+
+msgid "Memory mode must be explicit or automatic"
+msgstr "Memory mode must be explicit or automatic"
+
+msgid "Folder unavailable · {folder}"
+msgstr "Folder unavailable · {folder}"
+
+msgid "all, home, or folders separated by :"
+msgstr "all, home, or folders separated by :"

@@ -6308,3 +6308,111 @@ msgstr "Rechazada {branch} · {gates} · {reason}"
 
 msgid "GUS gates running…"
 msgstr "Puertas de GUS corriendo…"
+
+msgid "GUS settings · target, reads and memory"
+msgstr "Ajustes de GUS · objetivo, lecturas y memoria"
+
+msgid "GUS turn restored · {count} files"
+msgstr "Turno de GUS restaurado · {count} archivos"
+
+msgid "GUS has no configured ISyCode checkout to edit."
+msgstr "GUS no tiene un checkout de ISyCode configurado para editar."
+
+msgid "preparing {target}"
+msgstr "preparando {target}"
+
+msgid "GUS settings unavailable · {reason}"
+msgstr "Ajustes de GUS no disponibles · {reason}"
+
+msgid "GUS target unavailable · {reason}"
+msgstr "Objetivo de GUS no disponible · {reason}"
+
+msgid "No recorded GUS turn to undo."
+msgstr "No hay ningún turno de GUS registrado para deshacer."
+
+msgid "GUS is your assistant with its own model ({destination}). It can read this computer except credentials and secrets, and everything it reads can be sent to that model. It edits only {target}, on a gus/* branch, and never the L0 kernel. Your conversation and memories are yours, shared across workspaces and stored outside the checkout. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS es tu asistente con su propio modelo ({destination}). Puede leer este equipo excepto credenciales y secretos, y todo lo que lee puede enviarse a ese modelo. Solo edita {target}, en una rama gus/*, y nunca el núcleo L0. Tu conversación y tus memorias son tuyas, se comparten entre workspaces y se guardan fuera del checkout. No se concede nada por sí mismo; puedes desactivarlo en cualquier momento en Ajustes."
+
+msgid "no checkout configured yet"
+msgstr "aún no hay checkout configurado"
+
+msgid "GUS, your assistant and ISyCode maintainer · click to talk to it"
+msgstr "GUS, tu asistente y mantenedor de ISyCode · haz clic para hablar con él"
+
+msgid "Edits in {target} · reads the machine except credentials · L0 stays human."
+msgstr "Edita en {target} · lee la máquina excepto credenciales · L0 sigue siendo humano."
+
+msgid "Enter send · Esc close · on a gus/* branch GUS edits its target; elsewhere it reads and answers"
+msgstr "Enter envía · Esc cierra · en una rama gus/* GUS edita su objetivo; en otros casos lee y responde"
+
+msgid "Undoing GUS's last turn…"
+msgstr "Deshaciendo el último turno de GUS…"
+
+msgid "no target configured"
+msgstr "ningún objetivo configurado"
+
+msgid "Undo this turn"
+msgstr "Deshacer este turno"
+
+msgid "GUS turn restored."
+msgstr "Turno de GUS restaurado."
+
+msgid "Nothing undone."
+msgstr "No se deshizo nada."
+
+msgid "GUS has no editable target yet · open Settings"
+msgstr "GUS aún no tiene un objetivo editable · abre Ajustes"
+
+msgid "GUS settings"
+msgstr "Ajustes de GUS"
+
+msgid "GUS reads the machine except credentials. It edits only the target checkout, on a gus/* branch, and never L0."
+msgstr "GUS lee la máquina excepto las credenciales. Solo edita el checkout objetivo, en una rama gus/*, y nunca L0."
+
+msgid "GUS here: {state}\nTarget: {target}\nRead scope: {scope}"
+msgstr "GUS aquí: {state}\nObjetivo: {target}\nAlcance de lectura: {scope}"
+
+msgid "Turn GUS on or off here"
+msgstr "Activar o desactivar GUS aquí"
+
+msgid "Use the running checkout"
+msgstr "Usar el checkout en ejecución"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "A folder scope needs at least one folder"
+msgstr "Un alcance de carpetas necesita al menos una carpeta"
+
+msgid "Editable ISyCode checkout"
+msgstr "Checkout editable de ISyCode"
+
+msgid "none · GUS talks and reads only"
+msgstr "ninguno · GUS solo conversa y lee"
+
+msgid "This ISyCode is not running from a checkout."
+msgstr "Este ISyCode no se está ejecutando desde un checkout."
+
+msgid "Not saved · {reason}"
+msgstr "No guardado · {reason}"
+
+msgid "Not a folder · {folder}"
+msgstr "No es una carpeta · {folder}"
+
+msgid "/path/to/ISyCode checkout"
+msgstr "/ruta/al/checkout/ISyCode"
+
+msgid "Read scope"
+msgstr "Alcance de lectura"
+
+msgid "Memory mode · explicit or automatic"
+msgstr "Modo de memoria · explícito o automático"
+
+msgid "Memory mode must be explicit or automatic"
+msgstr "El modo de memoria debe ser explícito o automático"
+
+msgid "Folder unavailable · {folder}"
+msgstr "Carpeta no disponible · {folder}"
+
+msgid "all, home, or folders separated by :"
+msgstr "all, home o carpetas separadas por :"

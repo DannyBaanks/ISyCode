@@ -2137,14 +2137,14 @@
       "action": "workspace.files.write",
       "callable": "isycode.gus_seam._case_mode_switch",
       "file": "isycode/gus_seam.py",
-      "line": 405,
+      "line": 407,
       "owner": "workspace_write"
     },
     {
       "action": "workspace.files.delete",
       "callable": "isycode.gus_seam._case_move_delete",
       "file": "isycode/gus_seam.py",
-      "line": 312,
+      "line": 314,
       "owner": "workspace_write"
     },
     {

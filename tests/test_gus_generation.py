@@ -176,6 +176,7 @@ def test_the_git_owner_reads_the_committed_range_and_the_boundary_guards_it(tmp_
 def test_gus_seal_in_the_tui_records_the_branch_start_and_seals_after_confirmation(tmp_path, monkeypatch, capsys):
     from test_daily_tui import configure
     from test_gus_session import _checkout
+    from isycode.gus_roots import GusSettingsStore
     from isycode.gus_session import GusState
     from isycode.action_runtime import ActionOutcome
     from isycode.tui import TUIApp
@@ -184,6 +185,8 @@ def test_gus_seal_in_the_tui_records_the_branch_start_and_seals_after_confirmati
     monkeypatch.setenv("HOME", str(tmp_path))
     (tmp_path / ".gitconfig").write_text("[user]\n\tname = Test\n\temail = test@example.com\n")
     _checkout(root)
+    store = GusSettingsStore()
+    store.write({**store.read(), "target": str(Path(root).resolve())})
     (root / "tests").mkdir(exist_ok=True)
     (root / "tests" / "test_notes.py").write_text("def test_ok():\n    assert True\n")
     _git(root, "init", "-q", "-b", "main")

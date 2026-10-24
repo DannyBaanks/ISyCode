@@ -59,14 +59,16 @@ MINIMAL_FILES = (
 # Stand-in for bubblewrap, the same shape the command-runner tests use: it maps
 # /workspace back to the host folder, applies --chdir/--setenv and execs the
 # program, so a real command runs through the real owner without needing bwrap.
-_FAKE_SANDBOX = r'''#!{python}
+# The shebang stays free of interpolation: a venv path may contain spaces and
+# the kernel would truncate it at the first one.
+_FAKE_SANDBOX = r'''#!/usr/bin/env python3
 import os, sys
 args = sys.argv[1:]
 split = args.index("--")
 options, rest = args[:split], args[split + 1:]
-two = {{"--ro-bind", "--bind", "--symlink", "--setenv"}}
-one = {{"--chdir", "--tmpfs", "--proc", "--dev", "--dir"}}
-workspace, chdir, env = None, "/", {{}}
+two = {"--ro-bind", "--bind", "--symlink", "--setenv"}
+one = {"--chdir", "--tmpfs", "--proc", "--dev", "--dir"}
+workspace, chdir, env = None, "/", {}
 i = 0
 while i < len(options):
     flag = options[i]
@@ -231,7 +233,7 @@ def _case_command_changes_l0(ctx: CaseContext) -> tuple[str, str]:
     bin_dir = ctx.base / "bin"
     bin_dir.mkdir()
     fake = bin_dir / "bwrap"
-    fake.write_text(_FAKE_SANDBOX.format(python=sys.executable), encoding="utf-8")
+    fake.write_text(_FAKE_SANDBOX, encoding="utf-8")
     fake.chmod(0o755)
     owner = CommandRunOwner(root, authority, approvals)
     face = str(fake.resolve())
@@ -422,10 +424,14 @@ def _case_mode_switch(ctx: CaseContext) -> tuple[str, str]:
 
 
 def _case_oversized_message(ctx: CaseContext) -> tuple[str, str]:
+    from isycode.gus_roots import GusRoots, GusSettingsStore
     from isycode.gus_session import GusState, GusUnavailable, gus_reply
     from isycode.providers import save_model_slot
 
     root, authority, _ = _checkout(ctx)
+    store = GusSettingsStore()
+    data = store.read()
+    store.write({**data, "target": str(root)})
     GusState(root).enable()
     save_model_slot("gus", "ollama", "qwen3:32b")
     state = GusState(root)
@@ -439,7 +445,7 @@ def _case_oversized_message(ctx: CaseContext) -> tuple[str, str]:
         return {"text": "ok", "tool_calls": []}
 
     try:
-        asyncio.run(gus_reply(root, authority, "x" * 200_000, complete=complete))
+        asyncio.run(gus_reply(GusRoots(root), "x" * 200_000, complete=complete))
     except GusUnavailable as exc:
         if "too large" not in str(exc):
             return GRANT, f"refused for another reason: {str(exc)[:120]}"

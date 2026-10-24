@@ -404,6 +404,16 @@ class GitOwner:
         return self._finish(request, {"repository": str(self.repo_root), "branch": branch, "changes": entries,
                                       "clean": not entries})
 
+    def worktree_clean(self) -> bool:
+        """True only when this repository resolves and has no status entries."""
+        try:
+            if self._repository_problem():
+                return False
+            _, entries = self._status_entries()
+        except (OSError, ValueError):
+            return False
+        return not entries
+
     def is_path_tracked(self, path: str) -> ActionOutcome:
         """Prove whether the reserved workspace config tree is present in the index."""
         if path != ".isycode":

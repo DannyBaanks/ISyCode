@@ -161,5 +161,5 @@ def window_chars(window_tokens: int) -> int:
     return window_tokens * CHARS_PER_TOKEN
 
 
-__all__ = ["ContextPack", "ContextPackError", "ContextPackReader", "PACK_FILES", "PackEntry",
-           "history_budget_with_pack", "plan_gus_request", "window_chars"]
+__all__ = ["ContextPack", "ContextPackError", "ContextPackReader", "PACK_FILES", "PACK_HEADER",
+           "PackEntry", "history_budget_with_pack", "plan_gus_request", "window_chars"]
