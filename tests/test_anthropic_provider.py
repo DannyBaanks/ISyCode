@@ -71,9 +71,9 @@ def test_preset_is_registered_for_classic_hosts_and_keys(monkeypatch):
     assert uses_anthropic(provider) and provider.base_url == "https://api.anthropic.com"
     assert PRESETS["anthropic"]["default_model"] == "claude-opus-5-5"
     from isycode.credential_owner import credential_services
-    from isycode.workspace_authority import _known_provider_hosts
+    from isycode.workspace_authority import known_provider_hosts
     assert "anthropic" in credential_services()
-    assert "api.anthropic.com" in _known_provider_hosts()
+    assert "api.anthropic.com" in known_provider_hosts()
 
 
 def _sse(*events):

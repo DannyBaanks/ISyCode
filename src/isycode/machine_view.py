@@ -181,7 +181,7 @@ def denied_path(path: Path, roots: Iterable[Path], *,
     users = home.parent
     machine_wide = any(str(root) == os.sep for root in roots)
     if (machine_wide and users in (Path("/home"), Path("/Users"))
-            and users in path.parents and home not in path.parents):
+            and users in path.parents and path != home and home not in path.parents):
         return "another user's home is not readable"
     try:
         relative_home = path.relative_to(home).parts

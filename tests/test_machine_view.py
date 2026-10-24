@@ -285,6 +285,14 @@ def test_another_users_home_is_refused_when_the_scope_is_the_machine():
     home = Path("/home/danny")
     assert "another user's home" in denied_path(
         Path("/home/someone-else/notes.txt"), (Path("/"),), home=home)
+
+
+def test_the_persons_own_home_stays_readable_when_the_scope_is_the_machine():
+    home = Path("/home/danny")
+    assert denied_path(home, (Path("/"),), home=home) is None
+    assert denied_path(home / "notes.txt", (Path("/"),), home=home) is None
+    assert "another user's home" in denied_path(
+        Path("/home/someone-else"), (Path("/"),), home=home)
     assert denied_path(home / "notes.txt", (Path("/"),), home=home) is None
     assert denied_path(Path("/opt/data/notes.txt"), (Path("/"),), home=home) is None
 
