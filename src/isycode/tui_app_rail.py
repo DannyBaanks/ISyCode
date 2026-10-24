@@ -28,7 +28,7 @@ from isycode.lsp import (
     language_server_catalog,
 )
 from isycode.workspace import WorkspaceUnavailable
-from isycode.action_audit import ActionAuditError, ActionAuditJournal
+from isycode.action_audit import ActionAuditJournal
 from isycode.workspace_authority import WorkspaceAuthority, WorkspaceAuthorityError
 from isycode.tui_theme import (
     _fit_cells,
@@ -53,10 +53,9 @@ from isycode.search import find_text_matches
 from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_sessions import BridgePresenceScreen, ConsoleSearchScreen
-from isycode.tui_theme import ACCENT, GREEN, RED, static_content
+from isycode.tui_theme import ACCENT, static_content
 from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.workspace_authority import OneShotActionAuthority
-from rich.cells import cell_len
 from rich.console import Console
 from textual.widgets import Collapsible as TextualCollapsible
 

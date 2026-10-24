@@ -7,7 +7,6 @@ or protection against a hostile process racing filesystem changes.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Any
 
 from .types import HiveWriteInput, HiveWriteDecision

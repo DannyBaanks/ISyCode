@@ -16,7 +16,7 @@ import hashlib
 import time
 import shutil
 from dataclasses import dataclass, field, asdict
-from typing import Any, Sequence
+from typing import Sequence
 from pathlib import Path
 
 

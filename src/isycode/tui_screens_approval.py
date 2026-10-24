@@ -109,7 +109,11 @@ class ApprovalScreen(ModalScreen[bool]):
     Plain (non-priority) bindings: a text field inside the screen still types y and n.
     """
 
-    BINDINGS = [Binding("y", "approve", "Approve"), Binding("n", "decline", "Reject")]
+    BINDINGS = [Binding("y", "approve", "Approve"), Binding("n", "decline", "Reject"),
+                # The docstring contract of the family: Esc refuses too. Subclasses that
+                # bind escape themselves (most do) override this; a bare subclass
+                # inherits the refusing default instead of ignoring the key.
+                Binding("escape", "decline", "Reject", show=False)]
     # Textual focuses this when the screen activates. Without it the app-wide
     # default ("*") could hand focus to the scrolling review body instead of
     # the refusing action, so Enter would do nothing or the wrong thing.

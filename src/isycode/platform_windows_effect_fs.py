@@ -8,7 +8,7 @@ import os
 import secrets
 import stat
 from pathlib import Path
-from isycode.winfs import VerifiedFS, is_link
+from isycode.winfs import VerifiedFS
 
 
 def _target(root, relative):

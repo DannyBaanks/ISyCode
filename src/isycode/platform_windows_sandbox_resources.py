@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 import secrets
 import shutil
-import stat
 import hashlib
 
 import win32security as security

@@ -8,14 +8,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import socket
 import time
-from pathlib import Path
 from typing import Any
 
-from .manager import HiveManager, HiveConfig
+from .manager import HiveManager
 from .guard import hive_write_decision, HiveWriteInput
-from .types import HiveMessage, MessageAct, RegistryAgent
+from .types import RegistryAgent
 
 
 class HookServer:

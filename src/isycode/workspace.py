@@ -81,7 +81,7 @@ class IsyMotronWorkspace:
                 sys.path.insert(0, str(entry))
 
         try:
-            from isymotron.resources import fs_roots, to_uri
+            from isymotron.resources import fs_roots
             from hosts.linux.host import LinuxHost
             from relay.loopback import LoopbackRelay
         except Exception as exc:

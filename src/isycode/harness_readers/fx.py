@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from isycode.harness_graph import HarnessSetting, SkippedFile
-from isycode.harness_readers._shared import load_json, row, safe_file, skipped
+from isycode.harness_readers._shared import load_json, row, skipped
 
 
 HARNESS_ID = "fx"

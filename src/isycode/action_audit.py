@@ -9,7 +9,6 @@ import re
 import stat
 import time
 from dataclasses import dataclass
-from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 

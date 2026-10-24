@@ -24,84 +24,57 @@ tui_app_menu.py.
 """
 from __future__ import annotations
 
-import inspect
 import sys
 import os
 import asyncio
 from isycode.asyncio_compat import note_cancel_requested
-import hashlib
 import json
-import shlex
-import tempfile
-import uuid
-import urllib.request
 from pathlib import Path
-from rich.cells import cell_len
-from typing import Any, cast
-from urllib.parse import urlparse
+from typing import Any
 
 from isycode.config import (
     ConfigurationError, discover_workspace_identity, gateway_workspace_id,
-    find_isymotron_root, isymotron_provider_available, provider_default_model,
+    find_isymotron_root,
 )
-from isycode.decision_view import verified_receipt_line
 from isycode.authority import workspace_parent
 from isycode.chat_sessions import ChatSessionStore
 from isycode.session_owner import ChatSessionOwner
-from isycode.work_list import SessionMessageScreen, WorkList, age_label, clock_label, fit_heading, preview_line
-from isycode.bridge_presence import BridgePresenceOwner
-from isycode.harness_graph import (
-    CATALOG_IDS, SEED_OPTIONS, copyable_default_model, gap_status, present_by_semantic,
-)
-from isycode.harness_probe import probe_catalog, unlock_dotfolder
-from isycode.harness_readers import read_harness_root
-from isycode.harness_readers.transcript import TranscriptCopy, read_transcript, transcript_candidates
-from isycode.harness_copy import copy_default_model_selection
+from isycode.work_list import SessionMessageScreen, WorkList, clock_label
 from datetime import datetime
-from isycode.credential_owner import GATEWAY_SERVICE, CredentialOwner, CredentialUseOwner
-from isycode.search import TextMatch, find_text_matches
+from isycode.credential_owner import CredentialUseOwner
+from isycode.search import TextMatch
 from isycode.workspace_setup import (
-    WorkspaceSetupStore, broad_workspace_reason, new_workspace_choice, shared_root_warning,
+    WorkspaceSetupStore, new_workspace_choice,
 )
 from isycode.localization import configure_locale, language_msgid, tr
 from isycode.user_defaults import UserDefaultsStore
-from isycode.tui_presentation import MenuHeading, SettingRow
-from isycode.tool_history import record_tool_result, sanitize_historical_text, tool_history_context
+from isycode.tui_presentation import MenuHeading
 from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 from isycode.shortcuts import APP_SHORTCUTS
 from isycode.gus_role import is_isycode_checkout
 from isycode.catalog import (
-    ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS, ROLE_CYCLE, ROLE_KERNEL,
-    SEMANTIC_BRANCHES, role_color,
+    ROLE_CYCLE, role_color,
 )
 from isycode.credentials import (
-    CredentialVault, CredentialVaultError, saved_secret_exists, set_saved_secret_reader,
+    CredentialVaultError, set_saved_secret_reader,
 )
 from isycode.approvals import ActionApprovalStore
 from isycode.workspace_authority import (
-    OneShotActionAuthority, WorkspaceAuthority, WorkspaceAuthorityError,
+    WorkspaceAuthority, WorkspaceAuthorityError,
 )
 from isycode.workspace_folders import WorkspaceFolders
-from isycode.folder_screens import AddWorkspaceFolderScreen, AutomaticEditsWarningScreen
-from isycode.file_picker import (
-    ContextFilePickerOwner, FilePickerUnavailable, SiblingFolderPickerOwner, choose_harness_folder,
-)
-from isycode.harness_store import HarnessStore
-from isycode.harness_probe import validate_picked_root
+# Re-exported for the test surfaces that import the screens from the app module.
+from isycode.folder_screens import (
+    AddWorkspaceFolderScreen as AddWorkspaceFolderScreen,
+    AutomaticEditsWarningScreen as AutomaticEditsWarningScreen)
 from isycode.action_runtime import (
-    CHAT_WORKSPACE_TOOLS, CONTEXT_ACCESS_TOOL, CONTEXT_ACCESS_TOOL_NAME,
-    GatewayMCPInvocationOwner, GatewaySemanticOwner,
-    LocalWorkspaceReadOwner, ProviderNetworkOwner, SessionDeleteOwner,
-    GritPeersOwner, LPSSymbolOwner, ProductActionGate, TOOL_ACTIONS,
+    LocalWorkspaceReadOwner, GritPeersOwner,
 )
-from isycode.actions import ACTION_BY_ID
-from isycode.chat_transport import assistant_turn, provider_complete
-from isycode.agent_loop import split_history, summary_messages, summary_system_message
-from isycode.mcp_local import LocalMCPOwner, config_path as mcp_config_path, load_config as load_mcp_config
+from isycode.chat_transport import provider_complete
+from isycode.mcp_local import LocalMCPOwner
 from isycode.prompt_expansion import (
-    MAX_MENTIONS, WORKSPACE_COMMANDS_DIR, attach_files, find_mentions, load_user_commands,
-    parse_command, read_result_text, render_command,
+    read_result_text,
 )
 from isycode.clipboard_owner import CLIPBOARD_TARGET, ClipboardOwner
 from isycode.action_audit import add_decision_listener, remove_decision_listener
@@ -109,28 +82,13 @@ from isycode.sentinel_rail import SentinelFeed
 from isycode.terminal_safety import install as _install_terminal_safety
 
 _install_terminal_safety()  # untrusted text never reaches the terminal as control codes
-from isycode.agent_tasks import TASK_TOOL, TASK_TOOL_NAME, render_tasks, validate_tasks
-from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
-from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME, validate_question
-from isycode.idea_box import (
-    IDEA_BOX_TOOL, IDEA_BOX_TOOL_NAME, IDEA_NUDGE_PREFIX, IDEA_NUDGE_SECONDS,
-    idea_nudge, validate_idea_box,
-)
-from isycode.workspace_write import (
-    DELETE_TOOL, DELETE_TOOL_NAME, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, MOVE_TOOL_NAME,
-    WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, WritePreview,
-)
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from isycode.authority_view import (
-    MOBILE_HOST_ADDRESS, MOBILE_PAIR_ACTIONS, MOBILE_PAIR_TARGET, displayed_on, mobile_host_enabled,
-    mobile_host_saved, other_saved_grants,
+    displayed_on,
 )
-from isycode.action_audit import ActionAuditJournal
 from isycode.broker import (
-    BrokerManagementOwner, BrokerPreviewOwner, BrokerProvisionOwner, BrokerRegistry,
-    load_reviewed_recipe, provision_requests,
+    BrokerRegistry,
 )
-from isycode.security import ActionRequest
 from isycode.contracts import (
     AgentRuntime,
     CatalogSnapshot,
@@ -151,23 +109,17 @@ if ISYMOTRON_ROOT is not None:
 
 from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.message import Message
+from textual.containers import Horizontal, Vertical
 from textual.actions import SkipAction
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
-from textual.events import Click, Key, Resize
+from textual.events import Key, Resize
 from textual.widget import Widget
 from textual.widgets import (
-    Static, Input, Footer, Button, Tree, TextArea, OptionList, Select, Checkbox,
+    Static, Input, Footer, Button, Tree, TextArea, OptionList,
 )
-from textual.widgets import Collapsible as TextualCollapsible
-from textual.widgets.option_list import Option
-from rich.console import Console
 from rich.text import Text
-from rich.markdown import Markdown as RichMarkdown
-from rich.syntax import Syntax
 
 try:
     from agents.planner import PlanRejected  # type: ignore[reportMissingImports]
@@ -176,72 +128,38 @@ except ModuleNotFoundError:
         """A planner rejection raised only when an optional runtime is present."""
 
 from isycode.providers import (
-    DEFAULT_MODEL, PRESETS, PROVIDER_SCREEN, Provider, ProviderError, featured_models,
-    load_provider_key,
-    model_slot, provider_credential_state, resolved_chat_model, save_provider_selection,
-    selected_model_name, selected_provider_name,
+    PRESETS, PROVIDER_SCREEN, Provider, ProviderError, load_provider_key,
+    resolved_chat_model, selected_model_name, selected_provider_name,
 )
-from isycode.streaming import (
-    StreamError, async_stream_complete, detect_unexecuted_tool_request,
-)
-from isycode.plugins import PluginRegistry, Plugin, PluginCommand
-from isycode.gateway_client import GatewayClient
-from isycode.gateway_mcp import (
-    GatewayMCPUnavailable, discover_gateway_tools, tool_schema_digest,
-)
-from isycode.lsp import discover_servers, language_server_catalog
-from isycode.workspace import IsyMotronWorkspace, WorkspaceUnavailable
+from isycode.plugins import PluginRegistry
+from isycode.lsp import discover_servers
+from isycode.workspace import IsyMotronWorkspace
 from isycode.openisy_client import OpenIsyClient
-from isycode.runtime import AuthorityContextChanged, IsyMotronRuntime
+from isycode.runtime import IsyMotronRuntime
 from isycode.mobile_host import MobileHost, MobileHostOwner
 from isycode.tailscale import (
-    DEFAULT_GATEWAY_PORT, LINUX_OPERATOR_HINT, TailscaleAdapter, TailscaleSnapshot,
+    DEFAULT_GATEWAY_PORT, TailscaleAdapter, TailscaleSnapshot,
 )
-from isycode.tailscale_read import TailscaleReadOwner
 from isycode.tailscale_login import TailscaleLoginOwner
-from isycode.tailscale_install import TailscalePackageInstallOwner
-from isycode.tailscale_serve import MOBILE_HOST_ROUTE_ID, TailscaleServeOwner, route_url
-from isycode.private_access import PrivateAccessStateStore
 import time as _time
 
 # Surfaces live in sibling modules. Names stay importable from isycode.tui.
 from isycode.tui_theme import (
-    _authority_capability_label,
-    BG,
-    BG2,
-    ACCENT,
-    ACCENT2,
     TEXT,
     MUTED,
     GREEN,
     YELLOW,
     RED,
     CYAN,
-    BANNER,
-    banner_text,
-    status_phrase,
-    switch_row,
-    switch_rows,
-    _semantic_box_title,
     _fit_cells,
-    _elapsed_label,
-    static_content,
-    plain_text,
 )
 from isycode.tui_widgets import (
     fit_rail_button,
     PreviewOptionList,
     ActivityStatus,
     IdleBoard,
-    BoxTitle,
     ExpandableBox,
-    Collapsible,
     SidePanel,
-    ToolActivityGroup,
-    ThoughtBlock,
-    _CHILD_ANCHOR,
-    QuietScrollBar,
-    QuietVerticalScroll,
     ChatArea,
     SelectableText,
     CommandOutputCard,
@@ -249,79 +167,82 @@ from isycode.tui_widgets import (
 from isycode.tui_composer import (
     IdeaBox,
     ShellBox,
-    QueuedTitle,
     QueuedBox,
     PromptArea,
     TasksPanel,
     BarSpacer,
 )
 from isycode.tui_screens_approval import (
-    ReviewConsentScreen,
     ApprovalScreen,
-    ContextAccessScreen,
     TailscaleConfirmScreen,
     WriteApprovalScreen,
-    CommandApprovalScreen,
-    CommitApprovalScreen,
-    LocalMCPConfirmScreen,
-    BrowserReadPreviewScreen,
-    DeleteSessionScreen,
 )
 from isycode.tui_screens_grants import (
     WorkspaceSetupScreen,
     GlobalRecurringDefaultScreen,
     QuickStartScreen,
     WorkspaceModeScreen,
-    GrantWorkspaceReadScreen,
-    GrantProviderNetworkScreen,
-    GrantMCPInvocationScreen,
-    GrantLSPProcessScreen,
-    BrokerPreviewGrantScreen,
-    AddCredentialScreen,
-)
-from isycode.tui_screens_mcp import (
-    MCPArgumentsScreen,
-    MCPInvocationConfirmScreen,
-    GatewaySemanticQueryScreen,
-    GatewaySemanticConfirmScreen,
-    LSPQueryScreen,
-    LSPConfirmScreen,
-    BrokerProvisionConfirmScreen,
-    BrokerManagementScreen,
-    BrokerOperationConfirmScreen,
 )
 from isycode.tui_screens_harness import (
-    HarnessFolderConfirmScreen,
-    HarnessModelConfirmScreen,
-    HarnessTranscriptConfirmScreen,
     ModelsScreen,
-    HarnessComposeScreen,
-    MultiHarnessScreen,
 )
 from isycode.tui_screens_sessions import (
-    IdeaNoteScreen,
-    ShellProcessesScreen,
-    PastedTextScreen,
     QueuedMessagesScreen,
     IdeaBacklogScreen,
     AgentQuestionScreen,
-    BridgePresenceScreen,
-    ChatSessionsScreen,
-    SessionSearchScreen,
-    SessionTitleScreen,
-    ConsoleSearchScreen,
 )
 
 from isycode.tui_app_sessions import SessionMixin
 from isycode.tui_app_rail import RailMixin
 from isycode.tui_app_providers import ProviderMixin
 from isycode.tui_app_gus import GusMixin
-from isycode.tui_app_authority import FILE_CHANGE_GRANTS, AuthorityMixin
+from isycode.tui_app_authority import AuthorityMixin
 from isycode.tui_app_remote import RemoteMixin
 from isycode.tui_app_workspace import WorkspaceMixin
 from isycode.tui_app_chat import ChatMixin
 from isycode.tui_app_tools import ToolMixin, _tool_display_context
 from isycode.tui_app_menu import MenuMixin
+
+# ── Re-exports: names the rest of the tree imports from this module.
+# The unused-import pass removed them as unused *inside* tui.py; the
+# explicit `as` aliases mark the re-export contract (freeze fix, ADR 0014).
+from isycode.tui_widgets import (
+    BoxTitle as BoxTitle,
+    QuietScrollBar as QuietScrollBar,
+    QuietVerticalScroll as QuietVerticalScroll,
+    ThoughtBlock as ThoughtBlock,
+    ToolActivityGroup as ToolActivityGroup,
+)
+from isycode.tui_screens_approval import (
+    BrowserReadPreviewScreen as BrowserReadPreviewScreen,
+    CommandApprovalScreen as CommandApprovalScreen,
+    CommitApprovalScreen as CommitApprovalScreen,
+    DeleteSessionScreen as DeleteSessionScreen,
+    LocalMCPConfirmScreen as LocalMCPConfirmScreen,
+)
+from isycode.tui_screens_grants import (
+    GrantProviderNetworkScreen as GrantProviderNetworkScreen,
+    GrantWorkspaceReadScreen as GrantWorkspaceReadScreen,
+)
+from isycode.tui_screens_harness import (
+    HarnessFolderConfirmScreen as HarnessFolderConfirmScreen,
+    HarnessModelConfirmScreen as HarnessModelConfirmScreen,
+    HarnessTranscriptConfirmScreen as HarnessTranscriptConfirmScreen,
+    MultiHarnessScreen as MultiHarnessScreen,
+)
+from isycode.tui_screens_sessions import (
+    IdeaNoteScreen as IdeaNoteScreen,
+    PastedTextScreen as PastedTextScreen,
+    SessionSearchScreen as SessionSearchScreen,
+    ShellProcessesScreen as ShellProcessesScreen,
+)
+from isycode.tui_composer import QueuedTitle as QueuedTitle
+from isycode.file_picker import SiblingFolderPickerOwner as SiblingFolderPickerOwner
+from isycode.tui_theme import (
+    _authority_capability_label as _authority_capability_label,
+    plain_text as plain_text,
+    switch_row as switch_row,
+)
 
 
 _IS_WINDOWS = sys.platform == "win32"

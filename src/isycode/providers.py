@@ -494,9 +494,12 @@ def selected_model_name() -> str:
 def provider_supports_tools(name: str) -> bool:
     """Whether tool definitions are sent to this provider.
 
-    Presets whose tool support depends on the model (OpenRouter, Ollama,
-    llama.cpp) stay off unless the user opts in with ISYCODE_TOOL_CALLS=1,
-    because a model without tool calling rejects the whole request.
+    Presets that declare `supports_tools` (the OpenAI-compatible endpoints,
+    including Ollama, llama.cpp and LM Studio) are on: current Ollama does
+    support tool calling. Only presets whose tool support depends on the
+    specific model — OpenRouter, where the routed model decides — stay off
+    unless the user opts in with ISYCODE_TOOL_CALLS=1, because a model
+    without tool calling rejects the whole request.
     """
     preset = PRESETS.get(name, {})
     if preset.get("supports_tools"):

@@ -209,7 +209,6 @@ async def _readme_cmd(app: "TUIApp", arg: str) -> None:
         tr("README picker blocked · desktop.file_picker has no registered action owner"), YELLOW)
 
 async def _session_cmd(app: "TUIApp", arg: str) -> None:
-    import os
     provider = selected_provider_name()
     model = resolved_chat_model(provider)
     role = app._active_role

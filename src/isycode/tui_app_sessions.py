@@ -7,7 +7,6 @@ from __future__ import annotations
 import os
 import asyncio
 import json
-import time
 from pathlib import Path
 from typing import Any
 from rich.cells import cell_len
@@ -26,8 +25,7 @@ from isycode.harness_graph import (
     copyable_default_model,
     present_by_semantic,
 )
-from isycode.hive import HiveManager, HiveConfig, AgentMeta, HiveMessage
-from isycode.hive.hook_server import HookServer
+from isycode.hive import HiveMessage
 from isycode.harness_probe import (
     probe_catalog,
     unlock_dotfolder,
@@ -118,7 +116,6 @@ from isycode.tui_screens_harness import (
     HarnessFolderConfirmScreen,
     HarnessModelConfirmScreen,
     HarnessTranscriptConfirmScreen,
-    HarnessComposeScreen,
     HarnessRepairConfirmScreen,
     MultiHarnessScreen,
 )
@@ -786,7 +783,6 @@ class SessionMixin:
                         self._set_activity(tr("Conversations unavailable · {value}", value=outcome.reason[:100]), YELLOW)
                 self._work_rows = [self._conversation_row(session) for session in sessions]
                 if self._sessions_enabled():
-                    from isycode.iteration import IterationOwner
                     try:
                         iterations = await asyncio.to_thread(self._iteration_owner().list_sessions)
                         for item in iterations:

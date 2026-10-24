@@ -12,11 +12,8 @@ wl-copy on Wayland, xclip or xsel on X11, pbcopy on macOS, clip on Windows.
 from __future__ import annotations
 
 import hashlib
-import os
 import secrets
-import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import Callable
 

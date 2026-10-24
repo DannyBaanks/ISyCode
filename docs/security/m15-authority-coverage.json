@@ -1914,14 +1914,14 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 948,
+      "line": 947,
       "owner": "remote_catalog"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 187,
+      "line": 177,
       "owner": "workspace_read"
     },
     {
@@ -2032,7 +2032,7 @@
       "action": "bridge.agents",
       "callable": "isycode.bridge_presence.BridgePresenceOwner.prepare",
       "file": "isycode/bridge_presence.py",
-      "line": 110,
+      "line": 109,
       "owner": "bridge_presence"
     },
     {
@@ -2081,14 +2081,14 @@
       "action": "clipboard.paste",
       "callable": "isycode.clipboard_owner.ClipboardOwner.paste",
       "file": "isycode/clipboard_owner.py",
-      "line": 48,
+      "line": 45,
       "owner": "clipboard"
     },
     {
       "action": "clipboard.copy",
       "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
       "file": "isycode/clipboard_owner.py",
-      "line": 70,
+      "line": 67,
       "owner": "clipboard"
     },
     {
@@ -2179,28 +2179,28 @@
       "action": "mobile.host.start",
       "callable": "isycode.mobile_host.MobileHostOwner.start_request",
       "file": "isycode/mobile_host.py",
-      "line": 482,
+      "line": 481,
       "owner": "mobile_host"
     },
     {
       "action": "mobile.pair.issue",
       "callable": "isycode.mobile_host.MobileHostOwner.pin_request",
       "file": "isycode/mobile_host.py",
-      "line": 519,
+      "line": 518,
       "owner": "mobile_host"
     },
     {
       "action": "mobile.pair",
       "callable": "isycode.mobile_host.MobileHostOwner.authorize_pair",
       "file": "isycode/mobile_host.py",
-      "line": 554,
+      "line": 553,
       "owner": "mobile_host"
     },
     {
       "action": "mobile.pair",
       "callable": "isycode.mobile_host.MobileHostOwner.record_pair",
       "file": "isycode/mobile_host.py",
-      "line": 562,
+      "line": 561,
       "owner": "mobile_host"
     },
     {
@@ -2305,7 +2305,7 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 948,
+      "line": 947,
       "owner": "remote_catalog"
     },
     {
@@ -2333,35 +2333,35 @@
       "action": "session.delete",
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "file": "isycode/tui_app_sessions.py",
-      "line": 989,
+      "line": 985,
       "owner": "session_delete"
     },
     {
       "action": "session.delete",
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "file": "isycode/tui_app_sessions.py",
-      "line": 1029,
+      "line": 1025,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui_app_tools.ToolMixin._call_gateway_chat_tool",
       "file": "isycode/tui_app_tools.py",
-      "line": 270,
+      "line": 269,
       "owner": "gateway_mcp"
     },
     {
       "action": "workspace.context.inject",
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "file": "isycode/tui_app_workspace.py",
-      "line": 105,
+      "line": 95,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 187,
+      "line": 177,
       "owner": "workspace_read"
     },
     {

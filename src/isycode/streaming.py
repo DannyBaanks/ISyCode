@@ -15,7 +15,7 @@ import time
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
-from typing import Iterator, Callable
+from typing import Callable
 
 from isycode.egress import EgressDenied, open_reviewed, review_destination
 from isycode.turn_control import TransportRetry, tool_arguments_complete

@@ -6,7 +6,6 @@ are random, stored only as SHA-256 digests, and checked against explicit scopes.
 """
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import hmac
 import ipaddress

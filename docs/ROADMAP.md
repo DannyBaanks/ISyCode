@@ -975,12 +975,12 @@ GUS es un rol, no una autoridad. Workspace Authority, IsySentinel, los owners, e
 
 Después de M23 (MK6 y MC0). Solo entran arreglos, pruebas y documentación, y cada bug arreglado trae su prueba. Pasos:
 
-1. ADR del freeze.
-2. CI más rápido:
-   - una corrida por commit;
-   - `timeout-minutes` en Linux;
-   - medir con `--durations`;
-   - evaluar `pytest-xdist`.
+1. ADR del freeze — hecho: [ADR 0014](decisions/0014-freeze.md).
+2. CI más rápido — hecho en el PR de kickoff del freeze (2026-10-24):
+   - una corrida por commit — hecho: `push` solo en `main` (`ci.yml` y `platform-parity.yml`);
+   - `timeout-minutes` en Linux — hecho: 30 en lint, Tests (Linux), Tests (Linux, Textual 8) y Gate evidence;
+   - medir con `--durations` — hecho: el top va en el PR;
+   - evaluar `pytest-xdist` — pendiente: exige revisar que las pruebas de TUI no compartan estado.
 3. Inventario de lo que existe: estable, frágil o sin pruebas.
 4. Matriz E2E:
    - Classic, Flow y Security;
@@ -991,6 +991,15 @@ Después de M23 (MK6 y MC0). Solo entran arreglos, pruebas y documentación, y c
    - fallas de red;
    - carpetas adicionales.
 5. Cacería de bugs: primero seguridad, después datos, después UI.
+
+Del kickoff también salió convertido a espera por condición el flake de
+`test_m9_adversarial.py::test_a_hostile_model_reply_cannot_drive_the_terminal`
+(falló en el CI de Windows del merge de la cadena del 2026-10-24 con un solo
+`pilot.pause()`), y la auditoría del TUI dejó la lista de deuda para la cacería:
+`escape` en el contrato base de `ApprovalScreen` (hecho en el kickoff), 306
+imports sin usar (hecho), `F841` pendiente, el nombre de
+`TailscaleConfirmScreen` (diálogo genérico) pendiente, y los 24 seals viejos de
+`classic-security-ux`, que solo pican al cortar un tag de release.
 
 M16 (release) y G9-05 (usabilidad con 5 personas) se cierran sobre el producto ya pulido.
 

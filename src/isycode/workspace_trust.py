@@ -8,7 +8,6 @@ it. Security mode never consults it. The model has no action that writes it.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import stat
