@@ -197,3 +197,39 @@ def test_an_l0_change_that_slips_through_undoes_the_turn_and_is_reported(tmp_pat
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_gus_reads_an_outside_file_and_is_refused_credentials(repo, tmp_path):
+    from isycode.approvals import ActionApprovalStore
+    from isycode.gus_dispatch import GusToolDispatcher
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "notes.txt").write_text("outside notes\n", encoding="utf-8")
+    (outside / ".env").write_text("OPENAI_API_KEY=sk-not-real\n", encoding="utf-8")
+    store = GusSettingsStore()
+    data = store.read()
+    data["read_scope"] = {"mode": "folders", "folders": [str(outside)]}
+    store.consent(data, at="2026-10-24T00:00:00+00:00")
+    roots = GusRoots(repo)
+    seen, outputs = [], []
+    dispatcher = GusToolDispatcher(roots, ActionApprovalStore())
+
+    async def dispatch(call):
+        result = await dispatcher(call)
+        outputs.append(result[1])
+        return result
+
+    steps = [
+        {"text": "", "tool_calls": [
+            _call("machine_read", path=str(outside / "notes.txt")),
+            _call("machine_read", "call_2", path=str(outside / ".env")),
+        ]},
+        {"text": "Read the notes; refused the key.", "tool_calls": []},
+    ]
+    asyncio.run(gus_work(roots, "read them", dispatch,
+                         complete=_scripted(steps, seen)))
+    assert "outside notes" in outputs[0]
+    assert "denied" in outputs[1].lower()
+    wire = json.dumps(seen[-1][0], ensure_ascii=False)
+    assert "outside notes" in wire and "sk-not-real" not in wire

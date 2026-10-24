@@ -26,12 +26,14 @@ def test_the_shipped_role_loads_inside_the_adr_ceiling():
     assert "gus/<topic>" in role.instructions
 
 
-def test_the_ceiling_is_pinned_to_adr_0011():
+def test_the_ceiling_is_pinned_to_adr_0011_and_0015():
     assert GUS_ACTION_CEILING == {
         "workspace.files.list", "workspace.files.read", "workspace.files.search",
         "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
         "workspace.files.delete", "workspace.files.move", "workspace.command.run",
-        "workspace.turn.undo", "git.status", "git.diff", "git.commit"}
+        "workspace.turn.undo", "git.status", "git.diff", "git.commit",
+        "machine.files.list", "machine.files.read", "machine.files.search",
+        "machine.files.grep", "gus.memory.write"}
 
 
 @pytest.mark.parametrize("action", [
