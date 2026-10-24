@@ -17,6 +17,7 @@ import urllib.request
 from typing import Any
 
 from isycode.config import credential_state, load_api_key, provider_default_model
+from isycode.egress import cleartext_loopback_host
 
 
 DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
@@ -652,9 +653,9 @@ class Provider:
             self.name == "openai" and self.reasoning_effort not in (None, "none")
         )
         self.timeout_s = max(1.0, min(float(timeout_s), 180.0))
-        if (self.api_key and self.base_url.startswith("http://")
-                and (urllib.parse.urlsplit(self.base_url).hostname or "") not in
-                {"localhost", "127.0.0.1", "::1", "[::1]"}):
+        parsed_base = urllib.parse.urlsplit(self.base_url)
+        if (self.api_key and parsed_base.scheme == "http"
+                and not cleartext_loopback_host(parsed_base.hostname or "")):
             raise ProviderError("refusing to send an API key over plain HTTP to a remote host")
 
     def configured(self) -> bool:

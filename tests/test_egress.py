@@ -490,3 +490,15 @@ def test_name_resolving_to_cgnat_is_denied_and_a_typed_address_is_kept(monkeypat
     assert reviewed.ips == ("100.100.100.200",)
     reviewed = review_destination("http://127.0.0.1:9/v1")
     assert reviewed.ips == ("127.0.0.1",)
+
+
+def test_cleartext_key_guard_uses_the_parsed_scheme():
+    """A scheme is case-insensitive; ``startswith("http://")`` was not."""
+    for url in ("HTTP://example.com/v1", "HtTp://example.com/v1",
+                " http://example.com/v1", "\thttp://example.com/v1",
+                "HTTP://127.0.0.1.evil.com/v1", "HTTP://0.0.0.0:9/v1"):
+        with pytest.raises(ProviderError, match="plain HTTP"):
+            Provider("openai", model="fixture-model", base_url=url, api_key=CANARY)
+    for url in ("HTTP://127.0.0.1:9/v1", "HTTP://[::1]:9/v1",
+                "HTTP://127.0.0.2:9/v1", "HTTPS://example.com/v1"):
+        Provider("ollama", model="fixture-model", base_url=url, api_key=CANARY)
