@@ -110,6 +110,10 @@ class ApprovalScreen(ModalScreen[bool]):
     """
 
     BINDINGS = [Binding("y", "approve", "Approve"), Binding("n", "decline", "Reject")]
+    # Textual focuses this when the screen activates. Without it the app-wide
+    # default ("*") could hand focus to the scrolling review body instead of
+    # the refusing action, so Enter would do nothing or the wrong thing.
+    AUTO_FOCUS = "Button"
 
     def on_mount(self) -> None:
         # Scrollable review content must never become an implicit consent.
