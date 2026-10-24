@@ -6434,3 +6434,72 @@ msgstr "¿Permitir que GUS lea este alcance?"
 
 msgid "Use this scope"
 msgstr "Usar este alcance"
+
+msgid " · showing {shown}"
+msgstr " · mostrando {shown}"
+
+msgid "1"
+msgstr "1"
+
+msgid "Forget"
+msgstr "Olvidar"
+
+msgid "Forget all"
+msgstr "Olvidar todo"
+
+msgid "Forget all GUS memories?"
+msgstr "¿Olvidar todas las memorias de GUS?"
+
+msgid "Forget one"
+msgstr "Olvidar una"
+
+msgid "Forget this GUS memory?"
+msgstr "¿Olvidar esta memoria de GUS?"
+
+msgid "GUS memory"
+msgstr "Memoria de GUS"
+
+msgid "GUS memory mode · {mode}"
+msgstr "Modo de memoria de GUS · {mode}"
+
+msgid "GUS memory unchanged"
+msgstr "Memoria de GUS sin cambios"
+
+msgid "GUS memory unchanged · {reason}"
+msgstr "Memoria de GUS sin cambios · {reason}"
+
+msgid "GUS memory updated"
+msgstr "Memoria de GUS actualizada"
+
+msgid "GUS remembers these across workspaces. Deleting asks you first; GUS cannot delete a memory by itself."
+msgstr "GUS recuerda esto entre workspaces. Borrar te lo pregunta primero; GUS no puede borrar una memoria por sí mismo."
+
+msgid "GUS will delete all {count} memories. This cannot be undone."
+msgstr "GUS borrará las {count} memorias. Esto no se puede deshacer."
+
+msgid "GUS will delete this memory. This cannot be undone."
+msgstr "GUS borrará esta memoria. Esto no se puede deshacer."
+
+msgid "GUS will keep this note for future conversations, across workspaces, and can show or forget it in Settings:\n{text}"
+msgstr "GUS guardará esta nota para futuras conversaciones, entre workspaces, y podrá mostrarla u olvidarla en Configuración:\n{text}"
+
+msgid "Let GUS remember this?"
+msgstr "¿Permitir que GUS recuerde esto?"
+
+msgid "Memories"
+msgstr "Memorias"
+
+msgid "Mode: {mode} · {count} memories{shown}"
+msgstr "Modo: {mode} · {count} memorias{shown}"
+
+msgid "Number to forget"
+msgstr "Número a olvidar"
+
+msgid "Remember"
+msgstr "Recordar"
+
+msgid "There is no memory with that number."
+msgstr "No hay ninguna memoria con ese número."
+
+msgid "Write the number of one memory."
+msgstr "Escribe el número de una memoria."

@@ -22,8 +22,9 @@ from typing import Any, Awaitable, Callable
 
 from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, COMMAND_TOOL_NAME, CommandRunOwner
 from isycode.git_owner import GIT_TOOL_NAMES, GitOwner
+from isycode.gus_memory import GusMemoryOwner
 from isycode.machine_view import MachineView
-from isycode.gus_session import MACHINE_TOOL_ACTIONS
+from isycode.gus_session import MACHINE_TOOL_ACTIONS, MEMORY_TOOL_NAME
 from isycode.workspace_write import (
     DELETE_TOOL_NAME, EDIT_TOOL_NAME, MOVE_TOOL_NAME, WRITE_TOOL_NAME, WorkspaceWriteOwner,
 )
@@ -103,6 +104,8 @@ class GusToolDispatcher:
     async def _dispatch(self, name: str, arguments: dict[str, Any]) -> str:
         if name in MACHINE_TOOL_ACTIONS:
             return await self._machine(MACHINE_TOOL_ACTIONS[name], arguments)
+        if name == MEMORY_TOOL_NAME:
+            return await self._memory(arguments)
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             return await self._write(name, arguments)
         if name in {DELETE_TOOL_NAME, MOVE_TOOL_NAME}:
@@ -126,6 +129,23 @@ class GusToolDispatcher:
         if self.approve is None:
             return False
         return bool(await self.approve(kind, preview))
+
+    async def _memory(self, arguments: dict[str, Any]) -> str:
+        text = arguments.get("text")
+        if not isinstance(text, str) or not text.strip():
+            return json.dumps({"error": "memory text must be a string"})
+        owner = GusMemoryOwner(self.roots, self.approvals)
+        preview = await asyncio.to_thread(
+            owner.prepare, "remember", {"text": text, "workspace": str(self.roots.visible)})
+        approval = None
+        if owner.write_requires_approval():
+            if not await self._review("memory", preview):
+                return json.dumps({"status": "rejected_by_user"})
+            approval = self.approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.execute, preview, approval)
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            return _deny(outcome.reason or outcome.decision)
+        return outcome.text
 
     async def _write(self, name: str, arguments: dict[str, Any]) -> str:
         path = _target_relative(arguments.get("path"))

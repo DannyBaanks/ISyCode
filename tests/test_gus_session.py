@@ -8,7 +8,8 @@ import pytest
 from isycode.action_audit import ActionAuditJournal
 from isycode.gus_context_pack import PACK_FILES, ContextPackError, ContextPackReader
 from isycode.gus_roots import GusRoots, GusSettingsStore
-from isycode.gus_session import MAX_TRANSCRIPT_ENTRIES, GusState, GusUnavailable, gus_reply
+from isycode.gus_memory import MAX_CONVERSATION_ENTRIES
+from isycode.gus_session import GusState, GusUnavailable, gus_reply
 from isycode.providers import record_model_metadata, save_model_slot
 
 REPO = Path(__file__).resolve().parents[1]
@@ -106,10 +107,10 @@ def test_a_turn_sends_role_pack_and_transcript_through_the_receipted_owner(repo)
 
 def test_the_transcript_is_separate_and_bounded(repo):
     state = GusState(repo)
-    for index in range(MAX_TRANSCRIPT_ENTRIES + 10):
+    for index in range(MAX_CONVERSATION_ENTRIES + 10):
         state.append("user", f"m{index}")
     entries = state.transcript()
-    assert len(entries) == MAX_TRANSCRIPT_ENTRIES and entries[-1]["text"] == f"m{MAX_TRANSCRIPT_ENTRIES + 9}"
+    assert len(entries) == MAX_CONVERSATION_ENTRIES and entries[-1]["text"] == f"m{MAX_CONVERSATION_ENTRIES + 9}"
     state.clear()
     assert state.transcript() == []
 
@@ -211,7 +212,8 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert GusState(app._workspace_root).enabled()
             lines = [str(line.render()) for line in screen.query(".gus-line")]
             assert "hola GUS" in lines[0] and lines[1].startswith("GUS · answer 1")
-            assert seen[-1][2]["tools"] is None
+            offered = {tool["function"]["name"] for tool in seen[-1][2]["tools"]}
+            assert offered == {"memory_remember"}             # chat offers memory, no edits
             assert all(message.get("content") != "hola GUS" for message in app._history)
             screen.dismiss_action("gus-clear")
             await pilot.pause()

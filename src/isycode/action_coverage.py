@@ -69,6 +69,10 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("workspace.memory.read", "workspace.memory.write",
                     "workspace.memory.forget"),
     },
+    "isycode.gus_memory.GusMemoryOwner._preview": {
+        "owner": "gus_memory",
+        "actions": ("gus.memory.write", "gus.memory.forget"),
+    },
     "isycode.tailscale_serve.TailscaleServeOwner._prepare": {
         "owner": "tailscale_serve",
         "actions": ("tailscale.serve.enable", "tailscale.serve.disable"),

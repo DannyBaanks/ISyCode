@@ -42,7 +42,10 @@ L0_FILES = (
     "src/isycode/gus_generation.py",
     "src/isycode/gus_roots.py",
     "src/isycode/gus_dispatch.py",
+    "src/isycode/gus_memory.py",
     "src/isycode/gus_seam.py",
+    "src/isycode/tui_app_gus.py",
+    "src/isycode/tui_screens_gus.py",
     "src/isycode/tui_screens_gus_settings.py",
     "tests/test_gus_l0.py",
     "tests/test_gus_role.py",
@@ -50,6 +53,7 @@ L0_FILES = (
     "tests/test_gus_dispatch.py",
     "tests/test_gus_seam.py",
     "tests/test_machine_view.py",
+    "tests/test_gus_memory.py",
     # IsySentinel, the action registry and the destructive-action firewall.
     "src/isycode/isysentinel.py",
     "src/isycode/security.py",

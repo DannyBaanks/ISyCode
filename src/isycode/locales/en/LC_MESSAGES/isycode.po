@@ -6434,3 +6434,72 @@ msgstr "Let GUS read this scope?"
 
 msgid "Use this scope"
 msgstr "Use this scope"
+
+msgid " · showing {shown}"
+msgstr " · showing {shown}"
+
+msgid "1"
+msgstr "1"
+
+msgid "Forget"
+msgstr "Forget"
+
+msgid "Forget all"
+msgstr "Forget all"
+
+msgid "Forget all GUS memories?"
+msgstr "Forget all GUS memories?"
+
+msgid "Forget one"
+msgstr "Forget one"
+
+msgid "Forget this GUS memory?"
+msgstr "Forget this GUS memory?"
+
+msgid "GUS memory"
+msgstr "GUS memory"
+
+msgid "GUS memory mode · {mode}"
+msgstr "GUS memory mode · {mode}"
+
+msgid "GUS memory unchanged"
+msgstr "GUS memory unchanged"
+
+msgid "GUS memory unchanged · {reason}"
+msgstr "GUS memory unchanged · {reason}"
+
+msgid "GUS memory updated"
+msgstr "GUS memory updated"
+
+msgid "GUS remembers these across workspaces. Deleting asks you first; GUS cannot delete a memory by itself."
+msgstr "GUS remembers these across workspaces. Deleting asks you first; GUS cannot delete a memory by itself."
+
+msgid "GUS will delete all {count} memories. This cannot be undone."
+msgstr "GUS will delete all {count} memories. This cannot be undone."
+
+msgid "GUS will delete this memory. This cannot be undone."
+msgstr "GUS will delete this memory. This cannot be undone."
+
+msgid "GUS will keep this note for future conversations, across workspaces, and can show or forget it in Settings:\n{text}"
+msgstr "GUS will keep this note for future conversations, across workspaces, and can show or forget it in Settings:\n{text}"
+
+msgid "Let GUS remember this?"
+msgstr "Let GUS remember this?"
+
+msgid "Memories"
+msgstr "Memories"
+
+msgid "Mode: {mode} · {count} memories{shown}"
+msgstr "Mode: {mode} · {count} memories{shown}"
+
+msgid "Number to forget"
+msgstr "Number to forget"
+
+msgid "Remember"
+msgstr "Remember"
+
+msgid "There is no memory with that number."
+msgstr "There is no memory with that number."
+
+msgid "Write the number of one memory."
+msgstr "Write the number of one memory."

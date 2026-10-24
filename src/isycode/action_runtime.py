@@ -294,6 +294,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_publish": frozenset({"PublishBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
     "workspace_memory": frozenset({"WorkspaceMemoryBoundary"}),
+    "gus_memory": frozenset({"GusMemoryBoundary"}),
     # The machine view supplies its own boundary instance (it carries the
     # consented scope); every other product gate installs the standard set.
     "machine_view": frozenset({"MachineReadBoundary"}),
@@ -320,6 +321,7 @@ OWNER_ACTIONS = {
     "workspace_memory": frozenset({
         "workspace.memory.read", "workspace.memory.write", "workspace.memory.forget",
     }),
+    "gus_memory": frozenset({"gus.memory.write", "gus.memory.forget"}),
     "credentials": frozenset({"credentials.add", "credentials.revoke"}),
     "credential_use": frozenset({"credentials.use"}),
     "gateway_mcp": frozenset({"mcp.invoke"}),

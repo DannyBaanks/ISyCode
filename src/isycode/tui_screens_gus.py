@@ -1,6 +1,7 @@
 """The GUS conversation window (ADR 0011, ADR 0015)."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from rich.text import Text
@@ -32,9 +33,9 @@ class GusScreen(Dialog):
     AUTO_FOCUS = "#gus-input"
 
     def __init__(self, roots, model_label: str,
-                 *, initial: str = "", complete=None, work=None, report_text=None,
-                 seal=None, generation_text=None, settings: Settings | None = None,
-                 undo: Undo | None = None) -> None:
+                 *, initial: str = "", complete=None, work=None, remember=None,
+                 report_text=None, seal=None, generation_text=None,
+                 settings: Settings | None = None, undo: Undo | None = None) -> None:
         super().__init__()
         self.roots = roots
         self.root = roots.visible
@@ -44,6 +45,8 @@ class GusScreen(Dialog):
         self.complete = complete
         # MK5c: on a gus/* branch a turn uses GUS's tools through ``work``.
         self.work = work
+        # ADR 0015: off a gus/* branch GUS may still remember, and only that.
+        self.remember = remember
         self.report_text = report_text or (lambda report: "")
         # MK5d: ISyCode runs the gates on GUS's committed work.
         self.seal = seal
@@ -67,7 +70,7 @@ class GusScreen(Dialog):
     def compose_body(self) -> ComposeResult:
         with Vertical(id="gus-transcript"):
             for entry in self.state.transcript():
-                yield self._line(entry["role"], entry["text"])
+                yield self._line(entry["role"], entry["text"], entry.get("workspace", ""))
         yield Static("", id="gus-status", markup=False)
         yield Input(placeholder=tr("Write to GUS…"), id="gus-input")
 
@@ -98,10 +101,12 @@ class GusScreen(Dialog):
             self._submit(self.initial.strip())
 
     @staticmethod
-    def _line(role: str, text: str) -> Static:
+    def _line(role: str, text: str, workspace: str = "") -> Static:
         speaker = tr("You") if role == "user" else "GUS"
         line = Text(f"{speaker} · ", style=f"bold {GUS_COLOR}" if role != "user" else f"bold {TEXT}")
         line.append(text, style=TEXT)
+        if workspace:
+            line.append(f" · {Path(workspace).name or workspace}", style=MUTED)
         return Static(line, classes="gus-line")
 
     def _scroll_end(self) -> None:
@@ -124,7 +129,7 @@ class GusScreen(Dialog):
             self._status(tr("GUS is still answering."), YELLOW)
             return
         self.busy = True
-        self.query_one("#gus-transcript").mount(self._line("user", text))
+        self.query_one("#gus-transcript").mount(self._line("user", text, str(self.root)))
         self._status(tr("GUS is thinking…"))
         self._scroll_end()
         self.run_worker(self._ask(text), exclusive=True, group="gus-reply")
@@ -141,11 +146,13 @@ class GusScreen(Dialog):
                     text, self.state, complete=self.complete,
                     on_status=lambda value: self._status(tr("GUS · {value}", value=value)))
             else:
-                reply = await gus_reply(self.roots, text, complete=self.complete, state=self.state)
+                reply = await gus_reply(self.roots, text, complete=self.complete,
+                                        state=self.state, remember=self.remember)
         except GusUnavailable as exc:
             self._status(tr("GUS could not answer · {reason}", reason=tr(str(exc))), RED)
         else:
-            self.query_one("#gus-transcript").mount(self._line("assistant", reply.text))
+            self.query_one("#gus-transcript").mount(
+                self._line("assistant", reply.text, str(self.root)))
             note = self.report_text(report) if report else ""
             if report and report.get("l0"):
                 self._status(note, RED)

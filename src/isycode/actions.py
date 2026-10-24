@@ -97,6 +97,9 @@ _ENTRIES = [
     ("workspace.memory.read", "Memory", "Read this workspace's private memory", "read", False),
     ("workspace.memory.write", "Memory", "Write or consolidate this workspace's private memory", "write", True),
     ("workspace.memory.forget", "Memory", "Permanently forget one memory", "destructive", True),
+    # GUS's own memory about the person, shared across workspaces (ADR 0015).
+    ("gus.memory.write", "GUS memory", "Remember one fact about the person", "write", True),
+    ("gus.memory.forget", "GUS memory", "Forget one GUS memory", "destructive", True),
     # Only from a user gesture (selection, Ctrl+C, Copy path); that gesture is the
     # human-presence proof, and the model has no tool that can trigger it.
     ("clipboard.paste", "Desktop", "Paste an image or text from the clipboard", "external", False),

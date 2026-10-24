@@ -34,8 +34,6 @@ from isycode.state_index import get_state_index
 
 RECORD_VERSION = 1
 MAX_RECORD_BYTES = 4 * 1024 * 1024
-MAX_TRANSCRIPT_ENTRIES = 80
-MAX_ENTRY_CHARS = 32_000
 MAX_GENERATIONS = 50
 # Share of the planning window a request may fill; the rest is left for the answer.
 REQUEST_WINDOW_SHARE = 0.75
@@ -57,6 +55,7 @@ class GusState:
 
     def __init__(self, workspace_root: Path, *, root: Path | None = None) -> None:
         self.workspace = Path(workspace_root).resolve(strict=True)
+        self._root = root
         index = get_state_index()
         self.directory = (index.subsystem("gus", root=root)
                           / index.workspace_digest(self.workspace, length=32))
@@ -142,24 +141,21 @@ class GusState:
         except FileNotFoundError:
             pass
 
-    # Transcript ----------------------------------------------------------
+    # Conversation (ADR 0015, phase 3): the person's transcript, shared across
+    # workspaces and stored outside the checkout. Each entry names the
+    # workspace it came from, so the window can show it.
     def transcript(self) -> list[dict[str, str]]:
-        record = self._read("transcript.json") or {}
-        entries = record.get("entries")
-        if not isinstance(entries, list):
-            return []
-        return [entry for entry in entries
-                if isinstance(entry, dict) and entry.get("role") in {"user", "assistant"}
-                and isinstance(entry.get("text"), str) and isinstance(entry.get("at"), str)]
+        from isycode.gus_memory import GusConversation
+        return GusConversation(root=self._root).entries()
 
     def append(self, role: str, text: str) -> list[dict[str, str]]:
-        entries = self.transcript() + [{"role": role, "text": text[:MAX_ENTRY_CHARS], "at": _now()}]
-        entries = entries[-MAX_TRANSCRIPT_ENTRIES:]
-        self._write("transcript.json", {"entries": entries})
-        return entries
+        from isycode.gus_memory import GusConversation
+        return GusConversation(root=self._root).append(role, text,
+                                                       workspace=str(self.workspace))
 
     def clear(self) -> None:
-        self._write("transcript.json", {"entries": []})
+        from isycode.gus_memory import GusConversation
+        GusConversation(root=self._root).clear()
 
 
 @dataclass(frozen=True)
@@ -219,14 +215,25 @@ MACHINE_TOOLS = [
     }},
 ]
 
+MEMORY_TOOL_NAME = "memory_remember"
+MEMORY_TOOL = {"type": "function", "function": {
+    "name": MEMORY_TOOL_NAME,
+    "description": ("Remember one durable fact about the person for future conversations: a "
+                    "preference, a project, context. Never credentials, keys, tokens or secrets; "
+                    "memories are redacted before they are stored."),
+    "parameters": {"type": "object", "properties": {
+        "text": {"type": "string", "description": "The fact to remember."},
+    }, "required": ["text"], "additionalProperties": False},
+}}
+
 
 def gus_tools() -> list[dict]:
-    """The tool schemas of GUS's role: machine reads, edits, sandboxed commands, git."""
+    """The tool schemas of GUS's role: machine reads, edits, sandboxed commands, git, memory."""
     from isycode.command_runner import command_tool
     from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
     from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, MOVE_TOOL, WRITE_TOOL
     tools = [*MACHINE_TOOLS, EDIT_TOOL, WRITE_TOOL, DELETE_TOOL, MOVE_TOOL,
-             command_tool("flow"), *GIT_TOOLS, GIT_COMMIT_TOOL]
+             command_tool("flow"), *GIT_TOOLS, GIT_COMMIT_TOOL, MEMORY_TOOL]
     return json.loads(json.dumps(tools))
 
 
@@ -276,12 +283,14 @@ def _prepare(roots, text: str, state: "GusState"):
     except (GusRoleError, GusSlotError, ContextPackError) as exc:
         raise GusUnavailable(str(exc)) from exc
     check = check_gus_model(provider.name, provider.model)
+    from isycode.gus_memory import memory_texts
     history = [{"role": entry["role"], "content": entry["text"]} for entry in state.transcript()]
     history.append({"role": "user", "content": text})
     try:
         messages = plan_gus_request(pack=pack, role_instructions=role.instructions,
                                     history=history, tool_history=[],
-                                    window_tokens=planning_window(check))
+                                    window_tokens=planning_window(check),
+                                    memories=memory_texts(state._root))
     except ContextPackError as exc:
         raise GusUnavailable(str(exc)) from exc
     # The planner keeps the newest message whole (ADR 0009); one larger than the
@@ -312,20 +321,66 @@ async def _send(roots, provider, messages: list[dict], tools, complete: Complete
     return response, outcome.receipt.receipt_id
 
 
+Remember = Callable[[Any], Awaitable[str]]
+
+
 async def gus_reply(roots, text: str, *,
-                    complete: Complete | None = None, state: GusState | None = None) -> GusReply:
-    """Answer one message as GUS without tools, or raise GusUnavailable with the reason."""
+                    complete: Complete | None = None, state: GusState | None = None,
+                    remember: Remember | None = None) -> GusReply:
+    """Answer one message as GUS, or raise GusUnavailable with the reason.
+
+    Without ``remember`` GUS talks without tools (the original behaviour). With
+    it, the model may call ``memory_remember``: the callback reviews one memory
+    in the person's chosen mode and returns the tool output. Nothing else is
+    offered here; edits stay on a ``gus/*`` branch through ``gus_work``.
+    """
+    from isycode.chat_transport import assistant_turn
     state = state or roots.visible_state()
     provider, check, messages = _prepare(roots, text, state)
     if complete is None:
         from isycode.chat_transport import provider_complete as complete
-    response, receipt_id = await _send(roots, provider, messages, None, complete)
-    answer = str(response.get("text") or "").strip()
+    tools = [MEMORY_TOOL] if remember is not None else None
+    budget = window_chars(planning_window(check)) * REQUEST_WINDOW_SHARE
+    used: list[str] = []
+    answer, stopped, receipt_id, step = "", "", "", 0
+    # The chat itself is the turn: a memory written while GUS answers is GUS's.
+    with gus_turn(state.workspace):
+        while True:
+            if step >= MAX_GUS_STEPS:
+                stopped = "steps"
+                break
+            if _size(messages) > budget:
+                stopped = "window"
+                break
+            response, receipt_id = await _send(roots, provider, messages, tools, complete)
+            step += 1
+            answer = str(response.get("text") or "").strip()
+            calls = response.get("tool_calls") or []
+            if not isinstance(calls, list) or len(calls) > MAX_GUS_CALLS_PER_STEP:
+                raise GusUnavailable("GUS's model returned an invalid tool batch.")
+            if not calls:
+                break
+            messages.append(assistant_turn(response))
+            for call in calls:
+                function = call.get("function") if isinstance(call, dict) else None
+                name = function.get("name") if isinstance(function, dict) else None
+                call_id = call.get("id") if isinstance(call, dict) else None
+                if not isinstance(call_id, str) or not call_id or not isinstance(name, str):
+                    raise GusUnavailable("GUS's model returned a tool call without identity.")
+                if name != MEMORY_TOOL_NAME or remember is None:
+                    output = json.dumps({"error": f"{name} is not one of GUS's tools"})
+                else:
+                    output = await remember(function.get("arguments"))
+                    used.append(name)
+                messages.append({"role": "tool", "tool_call_id": call_id, "content": output})
     if not answer:
-        raise GusUnavailable("GUS's model returned no answer.")
+        answer = {"steps": "GUS stopped after its step limit before answering.",
+                  "window": "GUS stopped: this turn filled its model window."}.get(
+                      stopped, "GUS finished without a written answer.")
     state.append("user", text)
     state.append("assistant", answer)
-    return GusReply(answer, provider.model, check.window is not None, receipt_id)
+    return GusReply(answer, provider.model, check.window is not None, receipt_id,
+                    steps=step, tools_used=tuple(used), stopped=stopped)
 
 
 async def gus_work(roots, text: str, dispatch: Dispatch, *,
@@ -403,5 +458,5 @@ async def gus_work(roots, text: str, dispatch: Dispatch, *,
                     steps=step, tools_used=tuple(used), stopped=stopped)
 
 
-__all__ = ["GusReply", "GusState", "GusUnavailable", "MACHINE_TOOLS",
-           "MACHINE_TOOL_ACTIONS", "gus_reply", "gus_tools", "gus_work"]
+__all__ = ["GusReply", "GusState", "GusUnavailable", "MACHINE_TOOLS", "MACHINE_TOOL_ACTIONS",
+           "MEMORY_TOOL", "MEMORY_TOOL_NAME", "Remember", "gus_reply", "gus_tools", "gus_work"]

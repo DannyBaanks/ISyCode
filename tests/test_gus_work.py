@@ -64,7 +64,7 @@ def test_gus_tools_are_exactly_its_role():
     names = {tool["function"]["name"] for tool in gus_tools()}
     assert names == {"machine_list", "machine_read", "machine_grep", "machine_search",
                      "workspace_edit", "workspace_write", "workspace_delete", "workspace_move",
-                     "workspace_run", "git_status", "git_diff", "git_commit"}
+                     "workspace_run", "git_status", "git_diff", "git_commit", "memory_remember"}
 
 
 def test_off_a_gus_branch_gus_has_no_tools(repo):

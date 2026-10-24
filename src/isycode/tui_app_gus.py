@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from isycode import gus_slot
 from isycode.git_owner import GitOwner
 from isycode.gus_dispatch import GusToolDispatcher
 from isycode.gus_l0 import fingerprint as l0_fingerprint
+from isycode.gus_memory import GusMemoryOwner, GusMemoryStore
 from isycode.gus_role import GusRoleError, load_gus_role
 from isycode.gus_roots import GusRoots, GusRootsError, GusSettingsStore, scope_text
 from isycode.gus_session import GusState, GusUnavailable, gus_work
@@ -19,7 +21,7 @@ from isycode.tui_screens_approval import (
     WriteApprovalScreen,
 )
 from isycode.tui_screens_gus import GusScreen
-from isycode.tui_screens_gus_settings import GusSettingsScreen
+from isycode.tui_screens_gus_settings import GusMemoryScreen, GusSettingsScreen
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
 
 
@@ -89,7 +91,8 @@ class GusMixin:
             return
         await self._await_screen(GusScreen(
             roots, self._gus_slot_label(), initial=initial,
-            work=self._run_gus_turn, report_text=self._gus_report_text,
+            work=self._run_gus_turn, remember=self._remember_gus_memory,
+            report_text=self._gus_report_text,
             seal=self._seal_gus_generation, generation_text=self._generation_text,
             settings=self._open_gus_settings, undo=self._undo_latest_gus_turn))
 
@@ -101,7 +104,99 @@ class GusMixin:
             return
         await self._await_screen(GusSettingsScreen(
             roots, on_target=lambda target: self._paint_workspace_chrome(),
-            on_toggle=self._toggle_gus_setting, on_scope=self._save_gus_scope))
+            on_toggle=self._toggle_gus_setting, on_scope=self._save_gus_scope,
+            on_memory_mode=self._gus_memory_mode_changed,
+            on_memories=self._open_gus_memory))
+
+    def _gus_memory_mode_changed(self, mode: str) -> None:
+        self._set_activity(tr("GUS memory mode · {mode}", mode=mode), MUTED)
+
+    async def _open_gus_memory(self) -> None:
+        try:
+            roots = self._gus_roots()
+        except (GusRootsError, OSError) as exc:
+            self._set_activity(tr("GUS settings unavailable · {reason}", reason=str(exc)[:160]), RED)
+            return
+        await self._await_screen(GusMemoryScreen(
+            roots, on_forget=self._forget_gus_memory,
+            on_forget_all=self._clear_gus_memories))
+
+    async def _remember_gus_memory(self, arguments) -> str:
+        """One ``memory_remember`` call: review it in explicit mode, then store it."""
+        if isinstance(arguments, str):
+            try:
+                payload = json.loads(arguments)
+            except json.JSONDecodeError:
+                payload = None
+        else:
+            payload = arguments
+        text = payload.get("text") if isinstance(payload, dict) else None
+        if not isinstance(text, str) or not text.strip():
+            return self._memory_error("memory text must be a string")
+        try:
+            roots = self._gus_roots()
+            owner = GusMemoryOwner(roots, self._action_approvals)
+            preview = await asyncio.to_thread(
+                owner.prepare, "remember",
+                {"text": text, "workspace": str(roots.visible)})
+        except (GusRootsError, OSError, ValueError) as exc:
+            return self._memory_error(str(exc))
+        approval = None
+        if owner.write_requires_approval():
+            if not await self._approve_memory(preview):
+                return json.dumps({"status": "rejected_by_user"})
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.execute, preview, approval)
+        if outcome.decision != "ALLOW" or outcome.receipt is None:
+            return self._memory_error(outcome.reason or outcome.decision)
+        return outcome.text
+
+    @staticmethod
+    def _memory_error(reason: str) -> str:
+        return json.dumps({"error": "ISyCode denied the call", "reason": str(reason)[:300]},
+                          ensure_ascii=False)
+
+    async def _approve_memory(self, preview) -> bool:
+        return bool(await self._await_screen(ConfirmScreen(
+            tr("Let GUS remember this?"),
+            tr("GUS will keep this note for future conversations, across workspaces, and can "
+               "show or forget it in Settings:\n{text}", text=(preview.text or "")[:2000]),
+            tr("Remember"))))
+
+    async def _forget_gus_memory(self, memory_id: str) -> bool:
+        return await self._gus_memory_delete(
+            "forget", {"id": memory_id}, tr("Forget this GUS memory?"),
+            tr("GUS will delete this memory. This cannot be undone."))
+
+    async def _clear_gus_memories(self) -> bool:
+        try:
+            roots = self._gus_roots()
+            count = len(GusMemoryStore(root=roots.settings.directory.parent).entries())
+        except (GusRootsError, OSError, ValueError):
+            count = 0
+        return await self._gus_memory_delete(
+            "clear", {}, tr("Forget all GUS memories?"),
+            tr("GUS will delete all {count} memories. This cannot be undone.", count=count))
+
+    async def _gus_memory_delete(self, operation: str, arguments: dict,
+                                 title: str, detail: str) -> bool:
+        try:
+            roots = self._gus_roots()
+            owner = GusMemoryOwner(roots, self._action_approvals)
+            preview = await asyncio.to_thread(owner.prepare, operation, arguments)
+        except (GusRootsError, OSError, ValueError) as exc:
+            self._set_activity(tr("GUS memory unchanged · {reason}", reason=str(exc)[:160]), YELLOW)
+            return False
+        if not await self._await_screen(ConfirmScreen(title, detail, tr("Forget"))):
+            self._set_activity(tr("GUS memory unchanged"), MUTED)
+            return False
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await asyncio.to_thread(owner.execute, preview, approval)
+        if outcome.decision != "ALLOW":
+            self._set_activity(tr("GUS memory unchanged · {reason}", reason=outcome.reason[:160]), RED)
+            return False
+        self._set_activity(tr("GUS memory updated"), GREEN)
+        return True
 
     async def _save_gus_scope(self, mode: str, folders: list[str]) -> bool:
         """A read scope is machine access: changing it asks again (ADR 0015)."""
@@ -185,6 +280,8 @@ class GusMixin:
 
     async def _approve_gus_change(self, kind: str, preview) -> bool:
         """The person reviews the exact change GUS proposed, in the GUS window."""
+        if kind == "memory":
+            return await self._approve_memory(preview)
         if kind == "command":
             return bool(await self._await_screen(CommandApprovalScreen(preview)))
         if kind == "commit":

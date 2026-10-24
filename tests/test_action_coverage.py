@@ -303,6 +303,7 @@ def test_broker_start_owner_variants_are_disjoint_and_cross_owner_denies(tmp_pat
 
 
 def test_every_declared_owner_boundary_is_installed_in_product_sentinel(tmp_path):
+    from isycode.gus_memory import GusMemoryAuthority, GusMemoryBoundary
     from isycode.machine_view import MachineReadOwner
 
     root = tmp_path / "workspace"
@@ -310,8 +311,14 @@ def test_every_declared_owner_boundary_is_installed_in_product_sentinel(tmp_path
     authority = WorkspaceAuthority(root, state_directory=tmp_path / "authority")
     gate = ProductActionGate(root, authority, owner_id="workspace_read")
     machine = MachineReadOwner(root, (root,), consented=lambda: False)
+    memory_root = tmp_path / "memory"
+    memory_root.mkdir()
+    memory = ProductActionGate(
+        memory_root, GusMemoryAuthority(memory_root, consented=False, mode="explicit"),
+        owner_id="gus_memory", extra_systembilities=(GusMemoryBoundary(),))
     installed = {item.name for item in gate.sentinel._systembilities}
     installed |= {item.name for item in machine.gate.sentinel._systembilities}
+    installed |= {item.name for item in memory.sentinel._systembilities}
 
     assert set(OWNER_REQUIRED_SYSTEMBILITIES) == set(OWNER_ACTIONS)
     assert set().union(*OWNER_REQUIRED_SYSTEMBILITIES.values()) <= installed

@@ -6434,3 +6434,72 @@ msgstr "允许 GUS 读取此范围吗？"
 
 msgid "Use this scope"
 msgstr "使用此范围"
+
+msgid " · showing {shown}"
+msgstr " · 显示 {shown}"
+
+msgid "1"
+msgstr "1"
+
+msgid "Forget"
+msgstr "忘记"
+
+msgid "Forget all"
+msgstr "全部忘记"
+
+msgid "Forget all GUS memories?"
+msgstr "忘记 GUS 的所有记忆？"
+
+msgid "Forget one"
+msgstr "忘记一条"
+
+msgid "Forget this GUS memory?"
+msgstr "忘记这条 GUS 记忆？"
+
+msgid "GUS memory"
+msgstr "GUS 记忆"
+
+msgid "GUS memory mode · {mode}"
+msgstr "GUS 记忆模式 · {mode}"
+
+msgid "GUS memory unchanged"
+msgstr "GUS 记忆未更改"
+
+msgid "GUS memory unchanged · {reason}"
+msgstr "GUS 记忆未更改 · {reason}"
+
+msgid "GUS memory updated"
+msgstr "GUS 记忆已更新"
+
+msgid "GUS remembers these across workspaces. Deleting asks you first; GUS cannot delete a memory by itself."
+msgstr "GUS 会跨工作区记住这些内容。删除前会先询问你；GUS 不能自行删除记忆。"
+
+msgid "GUS will delete all {count} memories. This cannot be undone."
+msgstr "GUS 将删除全部 {count} 条记忆。此操作无法撤销。"
+
+msgid "GUS will delete this memory. This cannot be undone."
+msgstr "GUS 将删除这条记忆。此操作无法撤销。"
+
+msgid "GUS will keep this note for future conversations, across workspaces, and can show or forget it in Settings:\n{text}"
+msgstr "GUS 会为今后的对话跨工作区保存这条笔记，并可在设置中查看或忘记：\n{text}"
+
+msgid "Let GUS remember this?"
+msgstr "让 GUS 记住这个？"
+
+msgid "Memories"
+msgstr "记忆"
+
+msgid "Mode: {mode} · {count} memories{shown}"
+msgstr "模式：{mode} · {count} 条记忆{shown}"
+
+msgid "Number to forget"
+msgstr "要忘记的编号"
+
+msgid "Remember"
+msgstr "记住"
+
+msgid "There is no memory with that number."
+msgstr "没有该编号的记忆。"
+
+msgid "Write the number of one memory."
+msgstr "请输入一条记忆的编号。"

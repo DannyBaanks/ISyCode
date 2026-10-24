@@ -8,7 +8,7 @@ from isycode import gus_seam
 # The roster is L0: its ids, expected verdicts and platforms go through this pin.
 # Changing a case, adding one or relaxing a verdict means updating the pin on
 # purpose, in a reviewed change, after running the roster by hand.
-PINNED_ROSTER = "ab8db997a7d2bc01058e32bf187072f2b299ca97d7fcc9d6f3d5d0df25d90d4a"
+PINNED_ROSTER = "e1cb998c3b3a08168e4e3451c1e5ecc76320a5eb003ea7723f1eac416322d60c"
 
 
 @pytest.fixture(scope="module")
@@ -22,10 +22,10 @@ def test_the_roster_is_pinned():
         "the SEAM roster changed: run it, review the verdicts, then update PINNED_ROSTER")
 
 
-def test_the_roster_has_thirteen_unique_cases_in_a_stable_order():
+def test_the_roster_has_sixteen_unique_cases_in_a_stable_order():
     ids = [case.id for case in gus_seam.CASES]
-    assert len(ids) == 13
-    assert len(set(ids)) == 13
+    assert len(ids) == 16
+    assert len(set(ids)) == 16
     assert ids == sorted(ids)
 
 
