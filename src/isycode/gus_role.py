@@ -14,16 +14,18 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
-from isycode.actions import ACTION_BY_ID
+from isycode.actions import ACTION_BY_ID, MACHINE_READ_ACTIONS
 from isycode.workspace_trust import QUIET_FLOW_ACTIONS
 
 ROLE_RESOURCE = "agents/gus.md"
 MAX_ROLE_BYTES = 32 * 1024
 
 # ADR 0011 D1: the recoverable local work Flow already runs quietly, plus Git
-# review and commits. Push, credentials, provider and configuration, authority,
-# mode, integrations, network and L1 tools are outside on purpose.
-GUS_ACTION_CEILING = frozenset(QUIET_FLOW_ACTIONS | {"git.status", "git.diff", "git.commit"})
+# review and commits. ADR 0015 adds the read-only machine view. Push,
+# credentials, provider and configuration, authority, mode, integrations,
+# network and L1 tools are outside on purpose.
+GUS_ACTION_CEILING = frozenset(QUIET_FLOW_ACTIONS | {"git.status", "git.diff", "git.commit"}
+                               | MACHINE_READ_ACTIONS)
 
 _FIELDS = ("id", "name", "mode", "actions")
 _IDENTITY = {"id": "gus", "name": "GUS", "mode": "maintainer"}

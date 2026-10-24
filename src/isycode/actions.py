@@ -34,6 +34,11 @@ _ENTRIES = [
     ("workspace.files.move", "Files", "Move or rename files", "write", True),
     ("workspace.files.delete", "Files", "Delete files", "destructive", True),
     ("workspace.files.read_sensitive", "Files", "Read sensitive files", "sensitive", True),
+    # GUS's machine view (ADR 0015): read-only, never credentials, never state.
+    ("machine.files.list", "Machine", "List a folder on this computer", "read", False),
+    ("machine.files.read", "Machine", "Read a text file on this computer", "read", False),
+    ("machine.files.search", "Machine", "Search file names on this computer", "read", False),
+    ("machine.files.grep", "Machine", "Search text inside files on this computer", "read", False),
     ("provider.authenticate", "Accounts", "Connect/disconnect ChatGPT subscription", "credential", True),
     ("provider.request", "Network", "Send prompts to the selected model provider", "network", False),
     ("grok.login", "Accounts", "Sign in with the official grok CLI", "process", True),
@@ -110,7 +115,13 @@ _ENTRIES = [
 ACTION_CATALOG: tuple[ActionSpec, ...] = tuple(ActionSpec(*entry) for entry in _ENTRIES)
 ACTION_BY_ID = {item.id: item for item in ACTION_CATALOG}
 
+# The machine view is read-only by construction: these are the only actions
+# the machine owner can execute, and none of them writes.
+MACHINE_READ_ACTIONS = frozenset({
+    "machine.files.list", "machine.files.read", "machine.files.search", "machine.files.grep",
+})
+
 if len(ACTION_BY_ID) != len(ACTION_CATALOG):
     raise RuntimeError("ISyCode action registry contains duplicate identifiers.")
 
-__all__ = ["ACTION_BY_ID", "ACTION_CATALOG", "ActionSpec"]
+__all__ = ["ACTION_BY_ID", "ACTION_CATALOG", "ActionSpec", "MACHINE_READ_ACTIONS"]

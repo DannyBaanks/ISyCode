@@ -316,6 +316,70 @@
       "variants": []
     },
     {
+      "action": "machine.files.list",
+      "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
+      "owners": [
+        "machine_view"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "MachineReadBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "machine.files.read",
+      "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
+      "owners": [
+        "machine_view"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "MachineReadBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "machine.files.search",
+      "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
+      "owners": [
+        "machine_view"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "MachineReadBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
+      "action": "machine.files.grep",
+      "approval_required": false,
+      "authority": "Workspace Authority",
+      "classification": "OWNER_VALID",
+      "effect": "read",
+      "owners": [
+        "machine_view"
+      ],
+      "secure_reachability": "NOT_DEMONSTRATED",
+      "sentinel": [
+        "MachineReadBoundary"
+      ],
+      "status": "OWNER_VALID",
+      "variants": []
+    },
+    {
       "action": "provider.authenticate",
       "approval_required": true,
       "authority": "Workspace Authority",
@@ -1879,7 +1943,7 @@
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "file": "isycode/action_runtime.py",
-      "line": 2668,
+      "line": 2674,
       "owner": "workspace_read"
     },
     {
@@ -1902,6 +1966,13 @@
       "file": "isycode/git_owner.py",
       "line": 339,
       "owner": "workspace_git"
+    },
+    {
+      "action": null,
+      "callable": "isycode.machine_view.MachineReadOwner.execute",
+      "file": "isycode/machine_view.py",
+      "line": 400,
+      "owner": "machine_view"
     },
     {
       "action": null,
@@ -1948,77 +2019,77 @@
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 2385,
+      "line": 2391,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "file": "isycode/action_runtime.py",
-      "line": 2511,
+      "line": 2517,
       "owner": "grit_peers"
     },
     {
       "action": "session.delete",
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "file": "isycode/action_runtime.py",
-      "line": 2166,
+      "line": 2172,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 2238,
+      "line": 2244,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "file": "isycode/action_runtime.py",
-      "line": 2308,
+      "line": 2314,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "file": "isycode/action_runtime.py",
-      "line": 2394,
+      "line": 2400,
       "owner": "lsp_symbols"
     },
     {
       "action": "workspace.files.read",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 2445,
+      "line": 2451,
       "owner": "lsp_symbols"
     },
     {
       "action": "lsp.diagnostics",
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "file": "isycode/action_runtime.py",
-      "line": 2453,
+      "line": 2459,
       "owner": "lsp_symbols"
     },
     {
       "action": "grit.claims.read",
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "file": "isycode/action_runtime.py",
-      "line": 2519,
+      "line": 2525,
       "owner": "grit_peers"
     },
     {
       "action": "provider.request",
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "file": "isycode/action_runtime.py",
-      "line": 2581,
+      "line": 2587,
       "owner": "provider_network"
     },
     {
       "action": null,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "file": "isycode/action_runtime.py",
-      "line": 2668,
+      "line": 2674,
       "owner": "workspace_read"
     },
     {
@@ -2174,6 +2245,13 @@
       "file": "isycode/iteration.py",
       "line": 68,
       "owner": "chat_sessions"
+    },
+    {
+      "action": null,
+      "callable": "isycode.machine_view.MachineReadOwner.execute",
+      "file": "isycode/machine_view.py",
+      "line": 400,
+      "owner": "machine_view"
     },
     {
       "action": "mcp.local.start",
@@ -2438,13 +2516,13 @@
   "secure_tui_direct_api_bypasses": [],
   "stale_callsites": [],
   "summary": {
-    "actions": 86,
+    "actions": 90,
     "ambiguous": 0,
     "authority_frontier_pass": true,
     "effectful": 65,
     "explicit_deny": 18,
     "owner_shared_read": 1,
-    "owner_valid": 65,
+    "owner_valid": 69,
     "owner_variants": 1,
     "secure_closed": true,
     "secure_excluded": 1,

@@ -6416,3 +6416,21 @@ msgstr "文件夹不可用 · {folder}"
 
 msgid "all, home, or folders separated by :"
 msgstr "all、home 或以 : 分隔的文件夹"
+
+msgid "GUS read scope not saved · {reason}"
+msgstr "GUS 读取范围未保存 · {reason}"
+
+msgid "GUS read scope unchanged"
+msgstr "GUS 读取范围未改变"
+
+msgid "GUS read scope · {scope}"
+msgstr "GUS 读取范围 · {scope}"
+
+msgid "GUS will be able to read {scope} on this computer, except credentials, keys, private stores, shell histories and the ISyCode state. Everything it reads can be sent to its model. Edits stay limited to {target}, on a gus/* branch."
+msgstr "GUS 将能够读取此计算机上的 {scope}，但不包括凭据、密钥、私有存储、shell 历史记录和 ISyCode 状态。它读取的所有内容都可能发送给其模型。编辑仍仅限于 {target}，且只能位于 gus/* 分支。"
+
+msgid "Let GUS read this scope?"
+msgstr "允许 GUS 读取此范围吗？"
+
+msgid "Use this scope"
+msgstr "使用此范围"

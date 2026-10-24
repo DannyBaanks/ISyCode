@@ -10,7 +10,7 @@ from isycode.git_owner import GitOwner
 from isycode.gus_dispatch import GusToolDispatcher
 from isycode.gus_l0 import fingerprint as l0_fingerprint
 from isycode.gus_role import GusRoleError, load_gus_role
-from isycode.gus_roots import GusRoots, GusRootsError, GusSettingsStore
+from isycode.gus_roots import GusRoots, GusRootsError, GusSettingsStore, scope_text
 from isycode.gus_session import GusState, GusUnavailable, gus_work
 from isycode.localization import tr
 from isycode.providers import PRESETS
@@ -101,7 +101,40 @@ class GusMixin:
             return
         await self._await_screen(GusSettingsScreen(
             roots, on_target=lambda target: self._paint_workspace_chrome(),
-            on_toggle=self._toggle_gus_setting))
+            on_toggle=self._toggle_gus_setting, on_scope=self._save_gus_scope))
+
+    async def _save_gus_scope(self, mode: str, folders: list[str]) -> bool:
+        """A read scope is machine access: changing it asks again (ADR 0015)."""
+        try:
+            roots = self._gus_roots()
+        except (GusRootsError, OSError) as exc:
+            self._set_activity(tr("GUS settings unavailable · {reason}", reason=str(exc)[:160]), RED)
+            return False
+        try:
+            current = roots.settings.read()
+            candidate = {**current, "read_scope": {"mode": mode, "folders": list(folders)}}
+            if (candidate["read_scope"] == current.get("read_scope")
+                    and roots.settings.consented(candidate)):
+                return True
+            scope = scope_text(candidate)
+            allowed = await self._await_screen(ConfirmScreen(
+                tr("Let GUS read this scope?"),
+                tr("GUS will be able to read {scope} on this computer, except credentials, keys, "
+                   "private stores, shell histories and the ISyCode state. Everything it reads can "
+                   "be sent to its model. Edits stay limited to {target}, on a gus/* branch.",
+                   scope=scope, target=roots.target if roots.target is not None
+                   else tr("no checkout configured yet")),
+                tr("Use this scope")))
+            if not allowed:
+                self._set_activity(tr("GUS read scope unchanged"), MUTED)
+                return False
+            roots.settings.consent(
+                candidate, at=datetime.now().astimezone().isoformat(timespec="seconds"))
+        except (GusRootsError, OSError, ValueError) as exc:
+            self._set_activity(tr("GUS read scope not saved · {reason}", reason=str(exc)[:160]), RED)
+            return False
+        self._set_activity(tr("GUS read scope · {scope}", scope=scope), GREEN)
+        return True
 
     async def _toggle_gus_setting(self) -> bool:
         """On/off from the GUS settings form, without leaving the form."""

@@ -6416,3 +6416,21 @@ msgstr "Folder unavailable · {folder}"
 
 msgid "all, home, or folders separated by :"
 msgstr "all, home, or folders separated by :"
+
+msgid "GUS read scope not saved · {reason}"
+msgstr "GUS read scope not saved · {reason}"
+
+msgid "GUS read scope unchanged"
+msgstr "GUS read scope unchanged"
+
+msgid "GUS read scope · {scope}"
+msgstr "GUS read scope · {scope}"
+
+msgid "GUS will be able to read {scope} on this computer, except credentials, keys, private stores, shell histories and the ISyCode state. Everything it reads can be sent to its model. Edits stay limited to {target}, on a gus/* branch."
+msgstr "GUS will be able to read {scope} on this computer, except credentials, keys, private stores, shell histories and the ISyCode state. Everything it reads can be sent to its model. Edits stay limited to {target}, on a gus/* branch."
+
+msgid "Let GUS read this scope?"
+msgstr "Let GUS read this scope?"
+
+msgid "Use this scope"
+msgstr "Use this scope"

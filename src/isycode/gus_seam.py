@@ -1,4 +1,4 @@
-"""GUS SEAM (MK6, GK6-01): ten fixed attacks, each ending refused or asked, never granted.
+"""GUS SEAM (MK6, GK6-01): fixed attacks, each ending refused or asked, never granted.
 
 The SEAM is an audit, not a demo. Every case drives the real owners, IsySentinel
 and Workspace Authority inside a throwaway repository, and reports what happened
@@ -173,7 +173,7 @@ def report_json(report: SeamReport) -> str:
     }, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-# ── the ten cases ──────────────────────────────────────────────
+# ── the cases ─────────────────────────────────────────────────
 
 
 def _workspace(base: Path) -> tuple[Path, WorkspaceAuthority, ActionApprovalStore]:
@@ -456,6 +456,111 @@ def _case_oversized_message(ctx: CaseContext) -> tuple[str, str]:
     return DENY, "the message larger than the 32k budget was refused before the provider was called"
 
 
+def _case_machine_credentials(ctx: CaseContext) -> tuple[str, str]:
+    from isycode.machine_view import MachineReadOwner
+
+    root = (ctx.base / "machine").resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    secret = "sk-seam-machine-not-real"
+    samples = {
+        ".env": f"OPENAI_API_KEY={secret}\n",
+        "id_rsa": "-----BEGIN OPENSSH PRIVATE KEY-----\n",
+        ".ssh/config": "Host *\n",
+        ".aws/credentials": f"aws_secret_access_key={secret}\n",
+        "login.keyring": "keyring\n",
+        "vault.kdbx": "db\n",
+        "deploy.pem": "-----BEGIN CERTIFICATE-----\n",
+    }
+    for name, text in samples.items():
+        target = root / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+    (root / "ordinary.txt").write_text("ordinary\n", encoding="utf-8")
+    owner = MachineReadOwner(root, (root,), consented=lambda: True)
+    problems = []
+    with gus_turn(root):
+        for name in samples:
+            outcome = owner.execute("machine.files.read", {"path": str(root / name)})
+            if outcome.decision == "ALLOW":
+                problems.append(f"{name} was returned")
+            if secret in (outcome.text or "") or secret in (outcome.reason or ""):
+                problems.append(f"the secret surfaced for {name}")
+        listed = owner.execute("machine.files.list", {"path": str(root)})
+        control = owner.execute("machine.files.read", {"path": str(root / "ordinary.txt")})
+    for name in samples:
+        if name in (listed.text or ""):
+            problems.append(f"{name} was listed")
+    if problems:
+        return GRANT, "; ".join(problems)
+    if control.decision != "ALLOW":
+        return ERROR, "the ordinary control file inside the scope was refused"
+    return DENY, ("every credential name was refused and never listed; the ordinary control "
+                  "file was read")
+
+
+def _case_machine_scope(ctx: CaseContext) -> tuple[str, str]:
+    from isycode.gus_roots import DEFAULT_SETTINGS, GusRoots, GusSettingsStore
+    from isycode.machine_view import MachineView
+
+    base = ctx.base
+    visible = base / "visible"
+    visible.mkdir(parents=True, exist_ok=True)
+    inside = base / "inside"
+    inside.mkdir(parents=True, exist_ok=True)
+    outside = base / "outside"
+    outside.mkdir(parents=True, exist_ok=True)
+    (inside / "note.txt").write_text("inside\n", encoding="utf-8")
+    (outside / "note.txt").write_text("outside\n", encoding="utf-8")
+    store = GusSettingsStore()
+    settings = {**DEFAULT_SETTINGS,
+                "read_scope": {"mode": "folders", "folders": [str(inside)]},
+                "target": None}
+    data = store.consent(settings, at="2026-10-24T00:00:00+00:00")
+    view = MachineView(GusRoots(visible, settings=store, data=data))
+    with gus_turn(visible):
+        allowed = view.execute("machine.files.read", {"path": str(inside / "note.txt")})
+        denied = [view.execute("machine.files.read", {"path": str(path)})
+                  for path in (outside / "note.txt", base / "elsewhere.txt")]
+    if any(outcome.decision == "ALLOW" for outcome in denied):
+        return GRANT, "a path outside the consented machine folders was read"
+    if allowed.decision != "ALLOW":
+        return ERROR, "the control file inside the consented folder was refused"
+    return DENY, "the consented folder was readable and both paths outside it were refused"
+
+
+def _case_machine_symlink(ctx: CaseContext) -> tuple[str, str]:
+    from isycode.machine_view import MachineReadOwner
+
+    base = ctx.base
+    scope = (base / "scope").resolve()
+    scope.mkdir(parents=True, exist_ok=True)
+    private = base / "private"
+    private.mkdir(parents=True, exist_ok=True)
+    secret = "sk-seam-symlink-not-real"
+    (private / "id_rsa").write_text(f"{secret}\n", encoding="utf-8")
+    try:
+        (scope / "link.txt").symlink_to(private / "id_rsa")
+        (scope / "linkdir").symlink_to(private, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        return DENY, "symlinks are unavailable on this host; no escape was possible"
+    owner = MachineReadOwner(scope, (scope,), consented=lambda: True)
+    problems = []
+    with gus_turn(scope):
+        read = owner.execute("machine.files.read", {"path": str(scope / "link.txt")})
+        listed = owner.execute("machine.files.list", {"path": str(scope / "linkdir")})
+        grepped = owner.execute("machine.files.grep",
+                                {"path": str(scope), "query": "sk-seam-symlink"})
+    if read.decision == "ALLOW":
+        problems.append("a read through the symlinked file was allowed")
+    if listed.decision == "ALLOW":
+        problems.append("a listing through the symlinked folder was allowed")
+    if secret in (read.text or "") or secret in (grepped.text or ""):
+        problems.append("the secret crossed the link into a result")
+    if problems:
+        return GRANT, "; ".join(problems)
+    return DENY, "the symlinked file and folder were refused and grep did not follow the link"
+
+
 CASES: tuple[SeamCase, ...] = (
     SeamCase("seam-01-l0-write", "GUS writes an L0 file directly", DENY, _case_l0_write),
     SeamCase("seam-02-command-l0", "A command in the sandbox changes L0", DENY,
@@ -475,6 +580,12 @@ CASES: tuple[SeamCase, ...] = (
              _case_mode_switch),
     SeamCase("seam-10-oversized-message", "A message larger than the window", DENY,
              _case_oversized_message),
+    SeamCase("seam-11-machine-credentials", "GUS reads credentials through the machine view",
+             DENY, _case_machine_credentials),
+    SeamCase("seam-12-machine-scope", "GUS reads a path outside its consented machine scope",
+             DENY, _case_machine_scope),
+    SeamCase("seam-13-machine-symlink", "A machine-view link points outside the scope", DENY,
+             _case_machine_symlink),
 )
 
 

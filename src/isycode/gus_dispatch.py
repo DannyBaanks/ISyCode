@@ -1,15 +1,17 @@
-"""GUS's tool dispatch (ADR 0015): every call bound to the target checkout.
+"""GUS's tool dispatch (ADR 0015): every call bound to the target or the machine.
 
 The dispatcher is the only bridge between GUS's model and an execution owner.
 It accepts the tool names of ``gus_session.gus_tools()`` and routes each one to
 the owner that already exists (``WorkspaceWriteOwner``, ``CommandRunOwner``,
-``LocalWorkspaceReadOwner``, ``GitOwner``), with the target authority.
+``MachineView``, ``GitOwner``), with the target authority for edits and the
+machine authority for reads.
 
 Nothing here grants: the owners still run Authority, IsySentinel, the effect
-ledger, the journal and receipts. Writes and commands that the target's
-``gus/*`` turn covers run quietly; anything else asks the person through the
-``approve`` callback. ``git_commit`` always asks. A rejected call returns JSON
-and changes nothing.
+ledger, the journal and receipts. Reads go through the consented machine view,
+whose paths are absolute; edits are relative to the target. Writes and commands
+that the target's ``gus/*`` turn covers run quietly; anything else asks the
+person through the ``approve`` callback. ``git_commit`` always asks. A rejected
+call returns JSON and changes nothing.
 """
 from __future__ import annotations
 
@@ -18,9 +20,10 @@ import json
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
-from isycode.action_runtime import TOOL_ACTIONS
 from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, COMMAND_TOOL_NAME, CommandRunOwner
 from isycode.git_owner import GIT_TOOL_NAMES, GitOwner
+from isycode.machine_view import MachineView
+from isycode.gus_session import MACHINE_TOOL_ACTIONS
 from isycode.workspace_write import (
     DELETE_TOOL_NAME, EDIT_TOOL_NAME, MOVE_TOOL_NAME, WRITE_TOOL_NAME, WorkspaceWriteOwner,
 )
@@ -70,6 +73,7 @@ class GusToolDispatcher:
         self.approvals = approvals
         self.approve = approve
         self.on_output = on_output
+        self._machine_view: MachineView | None = None
 
     async def __call__(self, call: dict) -> tuple[str, str]:
         function = call.get("function") if isinstance(call, dict) else None
@@ -97,8 +101,8 @@ class GusToolDispatcher:
         return call_id, output
 
     async def _dispatch(self, name: str, arguments: dict[str, Any]) -> str:
-        if name in TOOL_ACTIONS:
-            return await self._read(TOOL_ACTIONS[name], arguments)
+        if name in MACHINE_TOOL_ACTIONS:
+            return await self._machine(MACHINE_TOOL_ACTIONS[name], arguments)
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             return await self._write(name, arguments)
         if name in {DELETE_TOOL_NAME, MOVE_TOOL_NAME}:
@@ -109,23 +113,11 @@ class GusToolDispatcher:
             return await self._git(name, arguments)
         return json.dumps({"error": f"{name} is not one of GUS's tools"})
 
-    async def _read(self, action_id: str, arguments: dict[str, Any]) -> str:
-        from isycode.action_runtime import LocalWorkspaceReadOwner
-        path = arguments.get("path", ".")
-        if not isinstance(path, str):
-            return json.dumps({"error": "path must be a string"})
-        try:
-            relative = "." if path in {"", "/", "."} else _target_relative(path)
-        except ValueError as exc:
-            return _deny(str(exc))
-        query = arguments.get("query")
-        if query is not None and not isinstance(query, str):
-            return json.dumps({"error": "query must be a string"})
-        owner = LocalWorkspaceReadOwner(self.target, self.authority)
-        payload = {"path": relative}
-        if query is not None:
-            payload["query"] = query
-        outcome = await asyncio.to_thread(owner.execute, action_id, payload)
+    async def _machine(self, action_id: str, arguments: dict[str, Any]) -> str:
+        if self._machine_view is None:
+            self._machine_view = MachineView(self.roots)
+        view = self._machine_view
+        outcome = await asyncio.to_thread(view.execute, action_id, arguments)
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             return _deny(outcome.reason or outcome.decision)
         return outcome.text

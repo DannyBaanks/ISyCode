@@ -126,7 +126,7 @@ def test_a_target_that_cannot_be_read_still_answers_with_the_roots_pack(repo, mo
     GusState(repo).enable()
     seen = []
 
-    def unreadable(self):
+    def unreadable(self, roots_section=""):
         raise ContextPackError("the target cannot be read")
 
     monkeypatch.setattr(ContextPackReader, "build", unreadable)

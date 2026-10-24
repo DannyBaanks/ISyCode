@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, TypeGuard
 from urllib.parse import urlsplit
 
-from isycode.actions import ACTION_BY_ID
+from isycode.actions import ACTION_BY_ID, MACHINE_READ_ACTIONS
 from isycode.action_audit import ActionAuditError, ActionAuditJournal
 from isycode.approvals import ActionApproval, ActionApprovalStore
 from isycode.config import gateway_workspace_id
@@ -294,6 +294,9 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_publish": frozenset({"PublishBoundary"}),
     "mcp_local": frozenset({"LocalMCPBoundary"}),
     "workspace_memory": frozenset({"WorkspaceMemoryBoundary"}),
+    # The machine view supplies its own boundary instance (it carries the
+    # consented scope); every other product gate installs the standard set.
+    "machine_view": frozenset({"MachineReadBoundary"}),
     "clipboard": frozenset({"ClipboardBoundary"}),
     "bridge_presence": frozenset({"BridgePresenceBoundary"}),
     "bridge_coordination": frozenset({"BridgeCoordinationBoundary"}),
@@ -336,6 +339,7 @@ OWNER_ACTIONS = {
     "workspace_git": GIT_ACTIONS,
     "workspace_publish": frozenset({"git.push"}),
     "mcp_local": frozenset({"mcp.local.start", "mcp.local.invoke"}),
+    "machine_view": MACHINE_READ_ACTIONS,
     "clipboard": frozenset({"clipboard.copy", "clipboard.paste"}),
     "bridge_presence": frozenset({"bridge.agents"}),
     "bridge_coordination": frozenset({
@@ -2008,7 +2012,8 @@ class ProductActionGate:
 
     def __init__(self, root: Path, authority: WorkspaceAuthority, *, owner_id: str,
                  tailscale_facts: TailscaleAuthorityFacts | None = None,
-                 journal: bool = True):
+                 journal: bool = True,
+                 extra_systembilities: tuple = ()):
         canonical = root.resolve(strict=True)
         self.owner_id = owner_id if isinstance(owner_id, str) else ""
         owner_id = self.owner_id
@@ -2071,6 +2076,7 @@ class ProductActionGate:
             PublishSystembility(), LocalMCPSystembility(), ClipboardSystembility(),
             BridgePresenceSystembility(), BridgeCoordinationSystembility(),
             WorkspaceMemorySystembility(), GusL0Systembility(),
+            *extra_systembilities,
         ])
 
     def preview(self, request: ActionRequest):
@@ -2974,6 +2980,7 @@ class LocalWorkspaceReadOwner:
 
 
 __all__ = ["ActionOutcome", "ActionReceipt", "CHAT_WORKSPACE_TOOLS",
-           "LocalWorkspaceReadOwner", "ProductActionGate", "ProviderNetworkSystembility",
+           "LocalWorkspaceReadOwner", "MACHINE_READ_ACTIONS", "ProductActionGate",
+           "ProviderNetworkSystembility",
            "RemoteReadSystembility", "SessionDeleteOwner", "SessionDeleteSystembility",
            "READ_ACTIONS", "TOOL_ACTIONS"]

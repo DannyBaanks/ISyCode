@@ -62,7 +62,7 @@ def repo(tmp_path, monkeypatch):
 
 def test_gus_tools_are_exactly_its_role():
     names = {tool["function"]["name"] for tool in gus_tools()}
-    assert names == {"workspace_list", "workspace_read", "workspace_grep", "workspace_search",
+    assert names == {"machine_list", "machine_read", "machine_grep", "machine_search",
                      "workspace_edit", "workspace_write", "workspace_delete", "workspace_move",
                      "workspace_run", "git_status", "git_diff", "git_commit"}
 
@@ -84,15 +84,15 @@ def test_a_turn_runs_tools_inside_the_boundary_and_answers(repo):
         return call["id"], json.dumps({"text": "contents"})
 
     steps = [
-        {"text": "", "tool_calls": [_call("workspace_read", path="AGENTS.md"),
+        {"text": "", "tool_calls": [_call("machine_read", path="/tmp/AGENTS.md"),
                                     _call("webfetch", "call_2", url="https://example.com")]},
         {"text": "Done: I read AGENTS.md.", "tool_calls": []},
     ]
     reply = asyncio.run(gus_work(GusRoots(repo), "read the rules", dispatch,
                                  complete=_scripted(steps, seen)))
     assert reply.text == "Done: I read AGENTS.md." and reply.steps == 2
-    assert reply.tools_used == ("workspace_read",)
-    assert dispatched == [("workspace_read", True)]             # inside gus_turn, webfetch never ran
+    assert reply.tools_used == ("machine_read",)
+    assert dispatched == [("machine_read", True)]               # inside gus_turn, webfetch never ran
     assert not gus_turn_active(repo)                             # the model requests ran outside it
     tool_messages = [m for m in seen[-1][0] if m.get("role") == "tool"]
     assert json.loads(tool_messages[1]["content"])["error"] == "webfetch is not one of GUS's tools"

@@ -14,7 +14,7 @@ from isycode.tui_dialog import Dialog, DialogAction
 
 SaveTarget = Callable[[Any], None]
 Toggle = Callable[[], Awaitable[bool]]
-SaveScope = Callable[[str, list[str]], None]
+SaveScope = Callable[[str, list[str]], Awaitable[bool]]
 SaveMemoryMode = Callable[[str], None]
 
 
@@ -107,7 +107,12 @@ class GusSettingsScreen(Dialog):
             self._error("")
             return
         if action_id == "gus-settings-save":
-            self._save()
+            if self.on_scope is None:
+                if self._save():
+                    self._error("")
+                    self._refresh()
+            elif not self.busy:
+                self.run_worker(self._save_with_scope(), exclusive=True, group="gus-settings")
             return
         self.dismiss(None)
 
@@ -120,28 +125,50 @@ class GusSettingsScreen(Dialog):
             self.busy = False
             self._refresh()
 
-    def _save(self) -> None:
-        text = self.query_one("#gus-target-input", Input).value.strip()
+    def _save(self) -> bool:
+        """Save target and memory mode. The read scope has its own confirmation."""
         try:
+            text = self.query_one("#gus-target-input", Input).value.strip()
             target = validate_target(text) if text else configured_target(self.roots.data)
-            self.roots.settings.write({**self.roots.data,
-                                       "target": str(target) if target is not None else None})
-            self.roots.target = target
-            if self.on_target is not None:
-                self.on_target(target)
+            settings = {**self.roots.data,
+                        "target": str(target) if target is not None else None}
             if self.on_memory_mode is not None:
                 mode = self.query_one("#gus-memory-input", Input).value.strip().casefold()
                 if mode not in {"explicit", "automatic"}:
                     raise GusRootsError(tr("Memory mode must be explicit or automatic"))
-                self.on_memory_mode(mode)
-            if self.on_scope is not None:
-                mode, folders = self._parse_scope(self.query_one("#gus-scope-input", Input).value)
-                self.on_scope(mode, folders)
+                settings["memory_mode"] = mode
+            self.roots.settings.write(settings)
+            self.roots.data = self.roots.settings.read()
+            self.roots.target = target
+            if self.on_target is not None:
+                self.on_target(target)
+            if self.on_memory_mode is not None:
+                self.on_memory_mode(settings["memory_mode"])
         except (GusRootsError, OSError, ValueError) as exc:
             self._error(tr("Not saved · {reason}", reason=str(exc)[:180]))
-            return
-        self._error("")
-        self._refresh()
+            return False
+        return True
+
+    async def _save_with_scope(self) -> None:
+        """Target and memory first; a changed read scope only after its confirmation."""
+        self.busy = True
+        try:
+            if not self._save():
+                return
+            try:
+                mode, folders = self._parse_scope(
+                    self.query_one("#gus-scope-input", Input).value)
+            except GusRootsError as exc:
+                self._error(tr("Not saved · {reason}", reason=str(exc)[:180]))
+                return
+            assert self.on_scope is not None
+            if not await self.on_scope(mode, folders):
+                return
+            self.roots.data = self.roots.settings.read()
+            self._error("")
+            self._refresh()
+        finally:
+            self.busy = False
 
     @staticmethod
     def _parse_scope(value: str) -> tuple[str, list[str]]:

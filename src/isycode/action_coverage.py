@@ -82,6 +82,11 @@ DYNAMIC_ACTION_RESOLVERS = {
         "actions": ("bridge.connect", "bridge.peek", "bridge.send", "bridge.wake",
                     "bridge.lease.claim", "bridge.lease.release"),
     },
+    "isycode.machine_view.MachineReadOwner.execute": {
+        "owner": "machine_view",
+        "actions": ("machine.files.list", "machine.files.read",
+                    "machine.files.search", "machine.files.grep"),
+    },
 }
 
 _SECURE_DIRECT_API_METHODS = {

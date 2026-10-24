@@ -25,7 +25,7 @@ from typing import Any, Awaitable, Callable
 
 from isycode.gus_context_pack import (
     PACK_HEADER, ContextPack, ContextPackError, ContextPackReader, plan_gus_request,
-    window_chars,
+    roots_block, window_chars,
 )
 from isycode.gus_l0 import gus_turn, on_gus_branch
 from isycode.gus_role import GusRoleError, load_gus_role
@@ -177,13 +177,55 @@ Complete = Callable[..., Awaitable[dict]]
 Dispatch = Callable[[dict], Awaitable[tuple[str, str]]]
 
 
+MACHINE_TOOL_ACTIONS = {
+    "machine_list": "machine.files.list",
+    "machine_read": "machine.files.read",
+    "machine_search": "machine.files.search",
+    "machine_grep": "machine.files.grep",
+}
+MACHINE_TOOLS = [
+    {"type": "function", "function": {
+        "name": "machine_list",
+        "description": ("List a folder on this computer with absolute paths. Sensitive names, "
+                        "credentials and the ISyCode state are never listed."),
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Absolute folder path."},
+        }, "required": ["path"], "additionalProperties": False},
+    }},
+    {"type": "function", "function": {
+        "name": "machine_read",
+        "description": ("Read one UTF-8 text file on this computer with an absolute path, up to "
+                        "256 KiB. Credentials, keys, private stores and links are refused."),
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Absolute file path."},
+        }, "required": ["path"], "additionalProperties": False},
+    }},
+    {"type": "function", "function": {
+        "name": "machine_search",
+        "description": "Search file and folder names on this computer; never contents.",
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "Text to find in names."},
+            "path": {"type": "string", "description": "Absolute folder path."},
+        }, "required": ["query", "path"], "additionalProperties": False},
+    }},
+    {"type": "function", "function": {
+        "name": "machine_grep",
+        "description": ("Find lines containing literal text in UTF-8 files on this computer "
+                        "(not a regex). Skips sensitive, binary, oversized and dependency folders."),
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "Literal text; case-insensitive."},
+            "path": {"type": "string", "description": "Absolute folder or file path."},
+        }, "required": ["query", "path"], "additionalProperties": False},
+    }},
+]
+
+
 def gus_tools() -> list[dict]:
-    """The tool schemas of GUS's role: read, edit, delete, move, sandboxed commands, git."""
-    from isycode.action_runtime import CHAT_WORKSPACE_TOOLS
+    """The tool schemas of GUS's role: machine reads, edits, sandboxed commands, git."""
     from isycode.command_runner import command_tool
     from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
     from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, MOVE_TOOL, WRITE_TOOL
-    tools = [*CHAT_WORKSPACE_TOOLS, EDIT_TOOL, WRITE_TOOL, DELETE_TOOL, MOVE_TOOL,
+    tools = [*MACHINE_TOOLS, EDIT_TOOL, WRITE_TOOL, DELETE_TOOL, MOVE_TOOL,
              command_tool("flow"), *GIT_TOOLS, GIT_COMMIT_TOOL]
     return json.loads(json.dumps(tools))
 
@@ -192,15 +234,18 @@ def _size(messages: list[dict]) -> int:
     return sum(len(json.dumps(message, ensure_ascii=False, default=str)) for message in messages)
 
 
-def _minimal_pack(roots) -> ContextPack:
-    """The pack when GUS has no target yet: it still knows which roots it has."""
+def _roots_section(roots) -> str:
+    """The three roots stated in the pack: chat, machine reads, target edits."""
+    from isycode.gus_roots import scope_text
     target = getattr(roots, "target", None)
-    lines = [PACK_HEADER, "--- GUS roots ---",
-             f"Visible workspace for this session: {roots.visible}",
-             f"Editable ISyCode checkout: {target if target is not None else 'none configured'}",
-             "The visible workspace is read-only for GUS unless it is also the target.",
-             "GUS edits only the target, only on a gus/* branch."]
-    return ContextPack("\n".join(lines), ())
+    return roots_block(visible=str(roots.visible),
+                       target=str(target) if target is not None else "",
+                       scope=scope_text(roots.data))
+
+
+def _minimal_pack(roots) -> ContextPack:
+    """The pack when GUS has no readable target: it still knows which roots it has."""
+    return ContextPack("\n\n".join([PACK_HEADER, _roots_section(roots)]), ())
 
 
 def _pack(roots) -> ContextPack:
@@ -215,7 +260,8 @@ def _pack(roots) -> ContextPack:
         return _minimal_pack(roots)
     try:
         return ContextPackReader(
-            target, LocalWorkspaceReadOwner(target, roots.authority())).build()
+            target, LocalWorkspaceReadOwner(target, roots.authority())).build(
+                roots_section=_roots_section(roots))
     except (ContextPackError, OSError, ValueError):
         return _minimal_pack(roots)
 
@@ -310,41 +356,43 @@ async def gus_work(roots, text: str, dispatch: Dispatch, *,
     budget = window_chars(planning_window(check)) * REQUEST_WINDOW_SHARE
     used: list[str] = []
     answer, stopped, receipt_id, step = "", "", "", 0
-    while True:
-        if step >= MAX_GUS_STEPS:
-            stopped = "steps"
-            break
-        if _size(messages) > budget:
-            stopped = "window"
-            break
-        if on_status:
-            on_status(f"step {step + 1}")
-        response, receipt_id = await _send(roots, provider, messages, tools, complete)
-        step += 1
-        answer = str(response.get("text") or "").strip()
-        calls = response.get("tool_calls") or []
-        if not isinstance(calls, list) or len(calls) > MAX_GUS_CALLS_PER_STEP:
-            raise GusUnavailable("GUS's model returned an invalid tool batch.")
-        if not calls:
-            break
-        messages.append(assistant_turn(response))
-        for call in calls:
-            function = call.get("function") if isinstance(call, dict) else None
-            name = function.get("name") if isinstance(function, dict) else None
-            call_id = call.get("id") if isinstance(call, dict) else None
-            if not isinstance(call_id, str) or not call_id or not isinstance(name, str):
-                raise GusUnavailable("GUS's model returned a tool call without identity.")
-            if name not in allowed:
-                output = json.dumps({"error": f"{name} is not one of GUS's tools"})
-            else:
-                if on_status:
-                    on_status(f"tool · {name}")
-                with gus_turn(target):
-                    returned_id, output = await dispatch(call)
-                if returned_id != call_id or not isinstance(output, str):
-                    raise GusUnavailable("A tool result did not match its request.")
-                used.append(name)
-            messages.append({"role": "tool", "tool_call_id": call_id, "content": output})
+    from isycode.machine_view import machine_budget
+    with machine_budget():
+        while True:
+            if step >= MAX_GUS_STEPS:
+                stopped = "steps"
+                break
+            if _size(messages) > budget:
+                stopped = "window"
+                break
+            if on_status:
+                on_status(f"step {step + 1}")
+            response, receipt_id = await _send(roots, provider, messages, tools, complete)
+            step += 1
+            answer = str(response.get("text") or "").strip()
+            calls = response.get("tool_calls") or []
+            if not isinstance(calls, list) or len(calls) > MAX_GUS_CALLS_PER_STEP:
+                raise GusUnavailable("GUS's model returned an invalid tool batch.")
+            if not calls:
+                break
+            messages.append(assistant_turn(response))
+            for call in calls:
+                function = call.get("function") if isinstance(call, dict) else None
+                name = function.get("name") if isinstance(function, dict) else None
+                call_id = call.get("id") if isinstance(call, dict) else None
+                if not isinstance(call_id, str) or not call_id or not isinstance(name, str):
+                    raise GusUnavailable("GUS's model returned a tool call without identity.")
+                if name not in allowed:
+                    output = json.dumps({"error": f"{name} is not one of GUS's tools"})
+                else:
+                    if on_status:
+                        on_status(f"tool · {name}")
+                    with gus_turn(target):
+                        returned_id, output = await dispatch(call)
+                    if returned_id != call_id or not isinstance(output, str):
+                        raise GusUnavailable("A tool result did not match its request.")
+                    used.append(name)
+                messages.append({"role": "tool", "tool_call_id": call_id, "content": output})
     if not answer:
         answer = {"steps": "GUS stopped after its step limit before answering.",
                   "window": "GUS stopped: this turn filled its model window."}.get(
@@ -355,4 +403,5 @@ async def gus_work(roots, text: str, dispatch: Dispatch, *,
                     steps=step, tools_used=tuple(used), stopped=stopped)
 
 
-__all__ = ["GusReply", "GusState", "GusUnavailable", "gus_reply", "gus_tools", "gus_work"]
+__all__ = ["GusReply", "GusState", "GusUnavailable", "MACHINE_TOOLS",
+           "MACHINE_TOOL_ACTIONS", "gus_reply", "gus_tools", "gus_work"]

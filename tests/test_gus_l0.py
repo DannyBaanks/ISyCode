@@ -14,7 +14,7 @@ REPO = Path(__file__).resolve().parents[1]
 OWNER_CLASS = re.compile(r"^class \w+Owner\b", re.MULTILINE)
 # Changing what L0 is goes through this pin. Both files are L0 themselves, so
 # GUS can neither shrink the list nor update the pin.
-PINNED_MANIFEST = "54f982d27294dacd72e5820b881da53a5d326fd9e1e28156ab37619ad6c5680a"
+PINNED_MANIFEST = "9d4f9397e9db633751fb466a92b83ba4988b7492180fe67f8349984963717ee2"
 
 
 def _manifest_digest() -> str:
