@@ -45,6 +45,8 @@ def test_outside_a_gus_turn_nothing_changes(repo):
 @pytest.mark.parametrize("action, parameters", [
     ("workspace.files.write", {"path": "src/isycode/security.py"}),
     ("workspace.files.write", {"path": "SRC/ISYCODE/SECURITY.PY"}),
+    ("workspace.files.write", {"path": "src/isycode/security.py."}),          # NTFS alias
+    ("workspace.files.write", {"path": "src/isycode/security.py::$DATA"}),    # NTFS stream
     ("workspace.files.delete", {"path": "AGENTS.md"}),
     ("workspace.files.delete", {"path": "src/isycode"}),                 # a folder holding L0
     ("workspace.files.move", {"path": "src/isycode/tui.py", "to": "src/isycode/security.py"}),

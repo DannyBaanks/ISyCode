@@ -46,6 +46,15 @@ def test_every_module_with_an_execution_owner_is_l0():
     "src\\isycode\\workspace_authority.py",     # Windows separators
     "./src/isycode/gus_role.py",
     "src/isycode/../isycode/action_audit.py",
+    "src/isycode/security.py.",                 # NTFS drops trailing dots
+    "src/isycode/security.py..",
+    "src/isycode/security.py .",                # and trailing spaces
+    "src/isycode./security.py",                 # a folder alias, not just the leaf
+    "src/isycode/security.py:stream",           # an NTFS stream of the L0 file
+    "src/isycode/security.py::$DATA",           # the default stream is the file itself
+    "src/isycode/security.py.:stream",          # both aliases on the same component
+    "src/isycode./security.py:stream",          # a folder alias plus a stream
+    "src/isycode/.../security.py",              # not a real Windows name: refuse it
     "src/isycode/agents/gus.md",
     "docs/decisions/0013-gus-l1-l0.md",
     "docs/decisions/9999-new.md",               # a new file inside an L0 folder
@@ -65,6 +74,8 @@ def test_l0_paths_and_their_folders_are_l0(path):
     "docs/roadmap-gus.md",
     "docs/decisions-notes.md",                  # a name that only starts like an L0 folder
     "src/isycode/security.py.bak",
+    "src/isycode/tui.py.",                      # an L1 file with a Windows alias stays L1
+    "src/isycode/notes:2026.md",                # a POSIX name whose stream base is not L0
     "../ISyCode/src/isycode/security.py",       # outside the repository: Authority refuses it
     "/etc/passwd",
     "C:/Windows/system.ini",
