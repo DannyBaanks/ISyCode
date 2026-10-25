@@ -136,14 +136,25 @@ def containing_root(path: Path, roots: Iterable[Path]) -> Path | None:
 
 
 def absolute_path(value: Any) -> Path:
-    """A bounded absolute path with no link traversal resolved yet."""
+    """A bounded absolute path with its folder chain canonical and its last name intact.
+
+    The folder chain is resolved so it compares equal to the resolved consented
+    roots on every platform (Windows short names and junctions included). The
+    last component is deliberately left unresolved: the boundary must still see
+    and refuse a symlink there.
+    """
     if (not isinstance(value, str) or not value.strip() or len(value) > MAX_PATH_CHARS
             or "\0" in value):
         raise MachineScopeError("a machine path must be a bounded absolute string")
     raw = Path(value).expanduser()
     if not raw.is_absolute():
         raise MachineScopeError("machine paths must be absolute")
-    return Path(os.path.abspath(raw))
+    absolute = Path(os.path.abspath(raw))
+    try:
+        folder = absolute.parent.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise MachineScopeError("the folder of the machine path cannot be inspected") from exc
+    return folder / absolute.name
 
 
 def is_machine_sensitive_name(name: str) -> bool:

@@ -70,7 +70,7 @@ def _read(world, *names, **roots_options):
 
 
 def test_a_file_inside_the_scope_is_read_with_a_receipt(world):
-    (world.scope / "notes.txt").write_text("inside\n", encoding="utf-8")
+    (world.scope / "notes.txt").write_text("inside\n", encoding="utf-8", newline="\n")
     view = MachineView(_roots(world.visible, folders=[world.scope]))
     outcome = _run(view, "machine.files.read", world.scope / "notes.txt", turn=world.visible)
     assert outcome.decision == "ALLOW" and outcome.receipt is not None
@@ -128,8 +128,10 @@ def test_the_checkouts_own_isycode_folder_is_ordinary_project_data(world):
 
 
 def test_the_isycode_state_root_is_never_readable(world):
+    from isycode.platform_storage import storage
+
     state_file = Path(state_root()) / "ledger.json"
-    state_file.parent.mkdir(parents=True, exist_ok=True)
+    storage.ensure_directory(state_file.parent)
     state_file.write_text("{}\n", encoding="utf-8")
     view = MachineView(_roots(world.visible, mode="machine"))
     outcome = _run(view, "machine.files.read", state_file, turn=world.visible)
@@ -201,10 +203,10 @@ def test_machine_paths_must_be_absolute_and_bounded(world):
 
 
 def test_the_visible_workspace_and_the_target_stay_readable_outside_the_scope(world):
-    (world.visible / "note.txt").write_text("visible\n", encoding="utf-8")
+    (world.visible / "note.txt").write_text("visible\n", encoding="utf-8", newline="\n")
     target = world.tmp / "target"
     target.mkdir()
-    (target / "code.py").write_text("print('t')\n", encoding="utf-8")
+    (target / "code.py").write_text("print('t')\n", encoding="utf-8", newline="\n")
     roots = SimpleNamespace(visible=world.visible, target=target,
                             data={**DEFAULT_SETTINGS,
                                   "read_scope": {"mode": "folders",
@@ -298,7 +300,7 @@ def test_the_persons_own_home_stays_readable_when_the_scope_is_the_machine():
 
 
 def test_the_dispatcher_routes_machine_tools_to_the_machine_view(world):
-    (world.scope / "notes.txt").write_text("from outside\n", encoding="utf-8")
+    (world.scope / "notes.txt").write_text("from outside\n", encoding="utf-8", newline="\n")
     (world.scope / ".env").write_text("TOKEN=not-real\n", encoding="utf-8")
     target = _checkout(world.tmp / "isycode")
     store = GusSettingsStore()
@@ -358,7 +360,7 @@ def test_the_settings_form_asks_before_widening_the_machine_scope(tmp_path, monk
             assert str(external) in copy
             app.screen.dismiss(True)
             await until(pilot, lambda: GusSettingsStore().read()["read_scope"] == {
-                "mode": "folders", "folders": [str(external)]}, "the saved scope")
+                "mode": "folders", "folders": [str(external.resolve())]}, "the saved scope")
             assert form.query_one("#gus-scope-input").region.width > 0
             form.dismiss(None)
             await task

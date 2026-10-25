@@ -381,6 +381,10 @@ class GitOwner:
                 branch = field[3:]
                 continue
             code, path = field[:2], field[3:]
+            # stderr shares the pipe; a warning line must never be read as a change.
+            if (len(field) < 4 or field[2] != " "
+                    or any(char not in " MADRCU?!" for char in code)):
+                continue
             entry = {"status": code, "path": path}
             if code[0] in "RC" and index < len(fields):
                 entry["from"] = fields[index]
@@ -413,6 +417,16 @@ class GitOwner:
         except (OSError, ValueError):
             return False
         return not entries
+
+    def worktree_changes(self) -> list[dict[str, str]]:
+        """The visible status entries, for telling the person what blocks GUS."""
+        try:
+            if self._repository_problem():
+                return []
+            _, entries = self._status_entries()
+        except (OSError, ValueError):
+            return []
+        return entries
 
     def is_path_tracked(self, path: str) -> ActionOutcome:
         """Prove whether the reserved workspace config tree is present in the index."""

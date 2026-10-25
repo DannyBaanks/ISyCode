@@ -1,6 +1,7 @@
 """GUS settings (ADR 0015): target checkout, scope, memory mode and memories."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
@@ -60,7 +61,9 @@ class GusSettingsScreen(Dialog):
                         placeholder=tr("/path/to/ISyCode checkout"), id="gus-target-input")
             if self.on_scope is not None:
                 yield Static(tr("Read scope"), classes="gus-settings-label")
-                yield Input(value=self._scope_value(), placeholder=tr("all, home, or folders separated by :"),
+                yield Input(value=self._scope_value(),
+                            placeholder=tr("all, home, or folders separated by {separator}",
+                                           separator=os.pathsep),
                             id="gus-scope-input")
             if self.on_memory_mode is not None:
                 yield Static(tr("Memory mode · explicit or automatic"), classes="gus-settings-label")
@@ -72,7 +75,7 @@ class GusSettingsScreen(Dialog):
         if mode in {"machine", "home"}:
             return str(mode)
         folders = scope.get("folders") or []
-        return ":".join(str(folder) for folder in folders)
+        return os.pathsep.join(str(folder) for folder in folders)
 
     def _status(self) -> str:
         target = self.roots.target
@@ -199,7 +202,7 @@ class GusSettingsScreen(Dialog):
             return "machine", []
         if text in {"home", "~"}:
             return "home", []
-        folders = [part.strip() for part in value.split(":") if part.strip()]
+        folders = [part.strip() for part in value.split(os.pathsep) if part.strip()]
         if not folders:
             raise GusRootsError(tr("A folder scope needs at least one folder"))
         resolved = []

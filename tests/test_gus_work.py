@@ -21,6 +21,8 @@ def _git(root, *args):
 
 def _committed_repo(root, branch="gus/fix-it"):
     _git(root, "init", "-q", "-b", branch)
+    _git(root, "config", "core.autocrlf", "false")
+    _git(root, "config", "core.eol", "lf")
     _git(root, "add", "-A")
     _git(root, "-c", "user.name=Test", "-c", "user.email=test@example.com",
          "commit", "-q", "-m", "base")

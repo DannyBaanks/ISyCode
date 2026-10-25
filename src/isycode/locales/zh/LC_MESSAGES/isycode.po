@@ -6414,8 +6414,8 @@ msgstr "记忆模式必须为显式或自动"
 msgid "Folder unavailable · {folder}"
 msgstr "文件夹不可用 · {folder}"
 
-msgid "all, home, or folders separated by :"
-msgstr "all、home 或以 : 分隔的文件夹"
+msgid "all, home, or folders separated by {separator}"
+msgstr "all、home 或以 {separator} 分隔的文件夹"
 
 msgid "GUS read scope not saved · {reason}"
 msgstr "GUS 读取范围未保存 · {reason}"

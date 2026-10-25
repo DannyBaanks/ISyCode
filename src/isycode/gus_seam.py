@@ -524,7 +524,8 @@ def _case_machine_scope(ctx: CaseContext) -> tuple[str, str]:
     if any(outcome.decision == "ALLOW" for outcome in denied):
         return GRANT, "a path outside the consented machine folders was read"
     if allowed.decision != "ALLOW":
-        return ERROR, "the control file inside the consented folder was refused"
+        return ERROR, ("the control file inside the consented folder was refused: "
+                       f"{allowed.reason or allowed.decision}")[:300]
     return DENY, "the consented folder was readable and both paths outside it were refused"
 
 

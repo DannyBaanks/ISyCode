@@ -29,6 +29,8 @@ def _git(root, *args):
 
 def _committed_target(root, branch="gus/fix-it"):
     _git(root, "init", "-q", "-b", branch)
+    _git(root, "config", "core.autocrlf", "false")
+    _git(root, "config", "core.eol", "lf")
     _git(root, "add", "-A")
     _git(root, "-c", "user.name=Test", "-c", "user.email=test@example.com",
          "commit", "-q", "-m", "base")
@@ -58,12 +60,16 @@ def test_settings_are_private_bounded_and_versioned(state):
     assert data["read_scope"] == {"mode": "machine", "folders": []}
     assert data["target"] is None and data["memory_mode"] == "explicit"
     store.write(data)
-    assert stat.S_IMODE(store.path.stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE(store.path.stat().st_mode) == 0o600
 
-    os.chmod(store.path, 0o644)                    # a readable-by-others file is refused
-    with pytest.raises(GusRootsError, match="private"):
-        store.read()
-    os.chmod(store.path, 0o600)
+        os.chmod(store.path, 0o644)                # a readable-by-others file is refused
+        with pytest.raises(GusRootsError, match="private"):
+            store.read()
+        os.chmod(store.path, 0o600)
+    else:
+        from isycode.platform_storage import storage
+        assert storage.private(store.directory)    # Windows privacy is the folder's ACL
 
     store.path.write_text(json.dumps({**data, "read_scope": {
         "mode": "folders", "folders": ["/tmp"] * 65}}), encoding="utf-8")

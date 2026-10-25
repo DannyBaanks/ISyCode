@@ -6414,8 +6414,8 @@ msgstr "Memory mode must be explicit or automatic"
 msgid "Folder unavailable · {folder}"
 msgstr "Folder unavailable · {folder}"
 
-msgid "all, home, or folders separated by :"
-msgstr "all, home, or folders separated by :"
+msgid "all, home, or folders separated by {separator}"
+msgstr "all, home, or folders separated by {separator}"
 
 msgid "GUS read scope not saved · {reason}"
 msgstr "GUS read scope not saved · {reason}"

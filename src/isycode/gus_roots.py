@@ -299,7 +299,11 @@ class GusRoots:
         try:
             owner = GitOwner(target, self.authority())
             if not owner.worktree_clean():
-                return False, "GUS edits only in a clean checkout; commit or discard changes first"
+                names = [entry["path"] for entry in owner.worktree_changes()[:5]
+                         if entry.get("path")]
+                detail = "; " + ", ".join(names) if names else ""
+                return False, ("GUS edits only in a clean checkout; commit or discard changes first"
+                               + detail)
         except (OSError, RuntimeError, ValueError) as exc:
             return False, f"GUS's target cannot be inspected: {type(exc).__name__}"
         return True, ""

@@ -21,6 +21,8 @@ def _git(root, *args):
 
 def _committed_repo(root, branch="gus/fix-it"):
     _git(root, "init", "-q", "-b", branch)
+    _git(root, "config", "core.autocrlf", "false")
+    _git(root, "config", "core.eol", "lf")
     _git(root, "add", "-A")
     _git(root, "-c", "user.name=Test", "-c", "user.email=test@example.com",
          "commit", "-q", "-m", "base")
@@ -100,7 +102,9 @@ def test_a_commit_always_asks_the_person(world):
     _, target, roots = world
     quiet = GusToolDispatcher(roots, ActionApprovalStore(), approve=_ask([], True))
     with gus_turn(target):
-        asyncio.run(quiet(_call("workspace_write", path="notes/x.txt", content="hello\n")))
+        _, written = asyncio.run(
+            quiet(_call("workspace_write", path="notes/x.txt", content="hello\n")))
+    assert json.loads(written)["status"] == "done", written
 
     asked = []
     refusing = GusToolDispatcher(roots, ActionApprovalStore(), approve=_ask(asked, False))
