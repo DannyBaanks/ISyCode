@@ -2024,14 +2024,14 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 947,
+      "line": 950,
       "owner": "remote_catalog"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 177,
+      "line": 181,
       "owner": "workspace_read"
     },
     {
@@ -2443,63 +2443,63 @@
       "action": null,
       "callable": "isycode.tui_app_authority.AuthorityMixin._authorize_remote_read",
       "file": "isycode/tui_app_authority.py",
-      "line": 947,
+      "line": 950,
       "owner": "remote_catalog"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_mcp_tool",
       "file": "isycode/tui_app_remote.py",
-      "line": 605,
+      "line": 610,
       "owner": "gateway_mcp"
     },
     {
       "action": "gateway.semantic.read",
       "callable": "isycode.tui_app_remote.RemoteMixin._open_gateway_semantic_search",
       "file": "isycode/tui_app_remote.py",
-      "line": 657,
+      "line": 662,
       "owner": "gateway_semantic"
     },
     {
       "action": "lsp.start",
       "callable": "isycode.tui_app_remote.RemoteMixin._open_lsp_server",
       "file": "isycode/tui_app_remote.py",
-      "line": 787,
+      "line": 792,
       "owner": "lsp_symbols"
     },
     {
       "action": "session.delete",
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "file": "isycode/tui_app_sessions.py",
-      "line": 985,
+      "line": 988,
       "owner": "session_delete"
     },
     {
       "action": "session.delete",
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "file": "isycode/tui_app_sessions.py",
-      "line": 1025,
+      "line": 1028,
       "owner": "session_delete"
     },
     {
       "action": "mcp.invoke",
       "callable": "isycode.tui_app_tools.ToolMixin._call_gateway_chat_tool",
       "file": "isycode/tui_app_tools.py",
-      "line": 269,
+      "line": 274,
       "owner": "gateway_mcp"
     },
     {
       "action": "workspace.context.inject",
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "file": "isycode/tui_app_workspace.py",
-      "line": 95,
+      "line": 99,
       "owner": "workspace_read"
     },
     {
       "action": null,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "file": "isycode/tui_app_workspace.py",
-      "line": 177,
+      "line": 181,
       "owner": "workspace_read"
     },
     {

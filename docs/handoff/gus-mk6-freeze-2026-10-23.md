@@ -259,3 +259,17 @@ La auditoría de ingeniería inversa con REA y análisis de fuentes contra los C
 | **F-06** | **Accesibilidad y Redundancia de Color** | La auditoría UI/UX señala dependencia en puntos de color (`●`/`○`) para estados de permiso y conectividad, dificultando el uso con daltonismo. | Asegurar que cada indicador visual incluya texto o glifos distinguibles (`[ON]`, `[OFF]`, `[DENY]`, `[ALLOW]`), y soporte estricto para la variable de entorno `NO_COLOR`. |
 
 Evidencia completa y desensamblado en `workspace/audits/cli_rea_audit_202610/AUDITORIA_TUI_CODEX_ISYCODE_20261025.md` (SHA-256: `d0a95f7bf3a25877f1eb7858ec073fad319e35a10e1bdb151db2110ecc8fc001`).
+
+### 7.3 Tareas del Handoff y Deuda del Freeze Completadas (PR #99)
+- **F-05a (Mixins y Contratos TYPE_CHECKING):** 10 de 10 mixins cuentan con guard `if TYPE_CHECKING: from isycode.tui import TUIApp`. Se definieron los 7 protocolos faltantes en `src/isycode/tui_protocols.py` (`MenuController`, `RailController`, `GusController`, `AuthorityController`, `ToolController`, `ProviderController`, `RemoteController`). Verificado con `tests/test_tui_protocols.py` (2/2 PASAN).
+- **Pruebas de módulos L1 sin pruebas (Inventario del Freeze):** Se crearon 7 suites de pruebas directas con 40 pruebas en total:
+  - `tests/test_asyncio_compat.py` (5 pruebas): compatibilidad 3.10 vs 3.11+, fallback a WeakSet, cancelación nativa.
+  - `tests/test_chat_transport.py` (7 pruebas): payloads de assistant turn, bloques de pensamiento Anthropic y llamadas a proveedor.
+  - `tests/test_bridge_contract.py` (4 pruebas): objetivos de operaciones, patrón de identidad, acciones de coordinación.
+  - `tests/test_decision_view.py` (6 pruebas): recibos verificados locales y remotos, formato de líneas de denegación.
+  - `tests/test_effect_fs.py` (2 pruebas): cómputo de digest sha256 y lectura/escritura descriptor-bound.
+  - `tests/test_approvals.py` (8 pruebas): emisión y consumo de tokens de aprobación, TTL clamping, invalidación y límites.
+  - `tests/test_tui_theme.py` (8 pruebas): soporte de `NO_COLOR`, modo ASCII, banners y chips de estado.
+  - Actualizado `docs/testing/inventory-2026-10-24.md`: módulos estables suben de 95 a 102; módulos sin pruebas bajan de 130 a 123; total de pruebas sube a 2.722.
+- **Robustez de pruebas TUI:** Eliminadas pausas de tiempo fijo en `tests/test_workspace_folders_tui.py`, sustituyéndolas por bucles reactivos de condición con timeout.
+- **Accesibilidad y F-06:** Soporte nativo para la variable de entorno estándar `NO_COLOR` en `src/isycode/tui_theme.py`.

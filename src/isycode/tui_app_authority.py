@@ -7,7 +7,10 @@ from __future__ import annotations
 import json
 import os
 import time as _time
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
 from urllib.parse import urlparse
 
 from isycode.action_audit import ActionAuditJournal

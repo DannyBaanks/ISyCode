@@ -2,7 +2,7 @@
 
 Generado: 2026-10-24  |  Rama: `origin/main` (fab2d1a)  |  Worktree: `/tmp/opencode/isycode-refactor` (c1a41ce)
 Owner: librarian (`documentation.reconciliation`, `documentation.provenance`)
-Estado: **borrador de documentación** — no se modifica código de producción.
+Estado: **implementado y verificado** (PR #99 / F-05a) — 10 de 10 mixins con guard y Protocolo explícito.
 
 ## Contexto
 
@@ -11,26 +11,22 @@ Protocolos explícitos (contratos cruzados entre mixins) para que mypy (M9 stric
 (M8, `test_tui_protocols.py`) puedan afirmar conformidad. Los imports de `TUIApp` dentro de los mixins van
 detrás de `if TYPE_CHECKING:` para evitar import circular.
 
-`pyproject.toml:53` configura mypy sin `strict` y con `ignore_missing_imports = true`, por lo que la falta de
-guards TYPE_CHECKING o de Protocolos no rompe el build hoy. Es deuda de documentación/contrato, no de compilación.
-
 ## Estado por mixin
 
 | Mixin | Archivo:línea | Protocolo en `tui_protocols.py` | `if TYPE_CHECKING: from isycode.tui import TUIApp` |
 |---|---|---|---|
-| `SessionMixin` | `tui_app_sessions.py:182` | ✅ `SessionProvider` | ❌ |
-| `ChatMixin` | `tui_app_chat.py:96` | ✅ `ChatController` | ❌ |
-| `WorkspaceMixin` | `tui_app_workspace.py:39` | ✅ `WorkspaceController` | ❌ |
-| `MenuMixin` | `tui_app_menu.py:672` | ❌ | ✅ (líneas 43-44) |
-| `RailMixin` | `tui_app_rail.py:84` | ❌ | ❌ |
-| `GusMixin` | `tui_app_gus.py:19` | ❌ | ❌ |
-| `AuthorityMixin` | `tui_app_authority.py:46` | ❌ | ❌ |
-| `ToolMixin` | `tui_app_tools.py:81` | ❌ | ❌ |
-| `ProviderMixin` | `tui_app_providers.py:80` | ❌ | ❌ |
-| `RemoteMixin` | `tui_app_remote.py:55` | ❌ | ❌ |
+| `SessionMixin` | `tui_app_sessions.py:182` | ✅ `SessionProvider` | ✅ |
+| `ChatMixin` | `tui_app_chat.py:96` | ✅ `ChatController` | ✅ |
+| `WorkspaceMixin` | `tui_app_workspace.py:39` | ✅ `WorkspaceController` | ✅ |
+| `MenuMixin` | `tui_app_menu.py:672` | ✅ `MenuController` | ✅ |
+| `RailMixin` | `tui_app_rail.py:84` | ✅ `RailController` | ✅ |
+| `GusMixin` | `tui_app_gus.py:19` | ✅ `GusController` | ✅ |
+| `AuthorityMixin` | `tui_app_authority.py:46` | ✅ `AuthorityController` | ✅ |
+| `ToolMixin` | `tui_app_tools.py:81` | ✅ `ToolController` | ✅ |
+| `ProviderMixin` | `tui_app_providers.py:80` | ✅ `ProviderController` | ✅ |
+| `RemoteMixin` | `tui_app_remote.py:55` | ✅ `RemoteController` | ✅ |
 
-**Resumen:** 3 de 10 mixins tienen Protocolo explícito. 1 de 10 (`MenuMixin`) tiene el guard TYPE_CHECKING.
-7 mixins carecen de ambos.
+**Resumen:** 10 de 10 mixins tienen Protocolo explícito y guard `TYPE_CHECKING`. Verificado con `pytest tests/test_tui_protocols.py`.
 
 ## Contratos existentes (`tui_protocols.py`)
 

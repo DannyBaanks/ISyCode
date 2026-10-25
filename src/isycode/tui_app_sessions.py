@@ -8,7 +8,10 @@ import os
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
 from rich.cells import cell_len
 from isycode.config import ConfigurationError
 from isycode.chat_sessions import ChatSessionStore

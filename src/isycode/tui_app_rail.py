@@ -4,6 +4,11 @@ Moved verbatim from tui.py. TUIApp inherits RailMixin.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
+
 from isycode.localization import tr
 from isycode.tui_dialog import Dialog, DialogAction
 

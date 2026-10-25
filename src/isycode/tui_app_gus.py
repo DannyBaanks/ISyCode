@@ -1,6 +1,11 @@
 """GUS entry points in the TUI (ADR 0011, ADR 0015): /gus, Settings, gus/* branches and GUS turns."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
+
 import asyncio
 import json
 from datetime import datetime
