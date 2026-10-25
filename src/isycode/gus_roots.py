@@ -298,8 +298,10 @@ class GusRoots:
         from isycode.git_owner import GitOwner
         try:
             owner = GitOwner(target, self.authority())
-            clean, reason = owner.worktree_state()
-            if not clean:
+            state, reason = owner.worktree_state()
+            if state == "unavailable":
+                return False, "GUS's target cannot be inspected: " + reason
+            if state == "changed":
                 detail = f" ({reason})" if reason else ""
                 return False, ("GUS edits only in a clean checkout; commit or discard changes first"
                                + detail)

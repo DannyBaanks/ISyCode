@@ -409,19 +409,19 @@ class GitOwner:
         return self._finish(request, {"repository": str(self.repo_root), "branch": branch, "changes": entries,
                                       "clean": not entries})
 
-    def worktree_state(self) -> tuple[bool, str]:
-        """Whether the tree is clean, plus the reason when it is not."""
+    def worktree_state(self) -> tuple[str, str]:
+        """``clean``, ``changed`` or ``unavailable``, plus the reason when not clean."""
         try:
             problem = self._repository_problem()
             if problem:
-                return False, problem
+                return "unavailable", problem
             _, entries = self._status_entries()
         except (OSError, ValueError) as exc:
-            return False, str(exc)[:300] or type(exc).__name__
+            return "unavailable", str(exc)[:300] or type(exc).__name__
         if entries:
             names = [entry["path"] for entry in entries[:5] if entry.get("path")]
-            return False, ("changed: " + ", ".join(names)) if names else "changed"
-        return True, ""
+            return "changed", ("changed: " + ", ".join(names)) if names else "changed"
+        return "clean", ""
 
     def is_path_tracked(self, path: str) -> ActionOutcome:
         """Prove whether the reserved workspace config tree is present in the index."""
