@@ -9,6 +9,7 @@ import pytest
 
 from isycode.action_audit import ActionAuditJournal
 from isycode.approvals import ActionApprovalStore
+from isycode.git_owner import git_executable
 from isycode.gus_dispatch import GusToolDispatcher
 from isycode.gus_l0 import gus_turn
 from isycode.gus_roots import DEFAULT_SETTINGS, GusRoots, GusSettingsStore
@@ -369,6 +370,7 @@ def test_the_settings_form_asks_before_widening_the_machine_scope(tmp_path, monk
         asyncio.run(scenario())
 
 
+@pytest.mark.skipif(git_executable() is None, reason="git is not installed")
 def test_a_scripted_gus_turn_reads_outside_the_workspace_and_refuses_env(
         tmp_path, monkeypatch, capsys):
     """Pilot 80x24: GUS reads a machine file through its tools and never returns .env."""

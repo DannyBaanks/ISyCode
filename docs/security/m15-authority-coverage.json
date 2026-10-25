@@ -1996,7 +1996,7 @@
       "action": null,
       "callable": "isycode.git_owner.GitOwner._request",
       "file": "isycode/git_owner.py",
-      "line": 339,
+      "line": 340,
       "owner": "workspace_git"
     },
     {
@@ -2233,7 +2233,7 @@
       "action": null,
       "callable": "isycode.git_owner.GitOwner._request",
       "file": "isycode/git_owner.py",
-      "line": 339,
+      "line": 340,
       "owner": "workspace_git"
     },
     {

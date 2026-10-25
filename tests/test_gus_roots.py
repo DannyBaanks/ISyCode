@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from isycode.approvals import ActionApprovalStore
+from isycode.git_owner import git_executable
 from isycode.gus_l0 import gus_turn
 from isycode.gus_roots import (
     DEFAULT_SETTINGS, GusRoots, GusRootsError, GusSettingsStore, TARGET_GIT_ACTIONS,
@@ -156,6 +157,7 @@ def test_the_target_grants_are_explicit_and_narrow(state, tmp_path):
         == known_provider_hosts()
 
 
+@pytest.mark.skipif(git_executable() is None, reason="git is not installed")
 def test_a_dirty_worktree_blocks_tools(state, tmp_path, monkeypatch):
     target = _committed_target(_checkout(tmp_path / "isycode"))
     _set_target(target)

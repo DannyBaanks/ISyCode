@@ -298,10 +298,9 @@ class GusRoots:
         from isycode.git_owner import GitOwner
         try:
             owner = GitOwner(target, self.authority())
-            if not owner.worktree_clean():
-                names = [entry["path"] for entry in owner.worktree_changes()[:5]
-                         if entry.get("path")]
-                detail = "; " + ", ".join(names) if names else ""
+            clean, reason = owner.worktree_state()
+            if not clean:
+                detail = f" ({reason})" if reason else ""
                 return False, ("GUS edits only in a clean checkout; commit or discard changes first"
                                + detail)
         except (OSError, RuntimeError, ValueError) as exc:

@@ -7,6 +7,7 @@ import subprocess
 import pytest
 
 from isycode.approvals import ActionApprovalStore
+from isycode.git_owner import git_executable
 from isycode.gus_dispatch import GusToolDispatcher
 from isycode.gus_l0 import gus_turn
 from isycode.gus_roots import GusRoots, GusSettingsStore
@@ -98,6 +99,7 @@ def test_l0_is_refused_even_inside_a_turn(world):
     assert (target / "AGENTS.md").read_text(encoding="utf-8") == before
 
 
+@pytest.mark.skipif(git_executable() is None, reason="git is not installed")
 def test_a_commit_always_asks_the_person(world):
     _, target, roots = world
     quiet = GusToolDispatcher(roots, ActionApprovalStore(), approve=_ask([], True))
@@ -110,7 +112,7 @@ def test_a_commit_always_asks_the_person(world):
     refusing = GusToolDispatcher(roots, ActionApprovalStore(), approve=_ask(asked, False))
     with gus_turn(target):
         _, output = asyncio.run(refusing(_call("git_commit", message="gus: add notes")))
-    assert json.loads(output)["status"] == "rejected_by_user"
+    assert json.loads(output)["status"] == "rejected_by_user", output
     assert [kind for kind, _ in asked] == ["commit"]
     assert _git(target, "log", "-1", "--format=%s").strip() == "base"
 
@@ -118,7 +120,7 @@ def test_a_commit_always_asks_the_person(world):
     with gus_turn(target):
         _, output = asyncio.run(accepting(_call("git_commit", message="gus: add notes")))
     result = json.loads(output)
-    assert result["message"] == "gus: add notes" and result["paths"] == ["notes/x.txt"]
+    assert result.get("message") == "gus: add notes" and result.get("paths") == ["notes/x.txt"], output
     assert len(result["commit"]) == 40
     assert _git(target, "log", "-1", "--format=%s").strip() == "gus: add notes"
 

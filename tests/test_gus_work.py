@@ -6,11 +6,14 @@ import subprocess
 
 import pytest
 
+from isycode.git_owner import git_executable
 from isycode.gus_l0 import gus_turn_active
 from isycode.gus_roots import GusRoots, GusSettingsStore
 from isycode.gus_session import MAX_GUS_STEPS, GusState, GusUnavailable, gus_tools, gus_work
 from isycode.providers import record_model_metadata, save_model_slot
 from test_gus_session import _checkout
+
+pytestmark = pytest.mark.skipif(git_executable() is None, reason="git is not installed")
 
 
 def _git(root, *args):

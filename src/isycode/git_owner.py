@@ -294,9 +294,10 @@ class GitOwner:
             return "git rejected this repository root"
         try:
             reported = Path(result[1].decode("utf-8", "strict").strip()).resolve(strict=True)
+            selected = candidate.resolve(strict=True)
         except (UnicodeError, OSError, RuntimeError):
             return "git returned an invalid repository root"
-        if reported != candidate:
+        if reported != selected:
             return "git repository root does not match the selected folder"
         return None
 
@@ -408,25 +409,19 @@ class GitOwner:
         return self._finish(request, {"repository": str(self.repo_root), "branch": branch, "changes": entries,
                                       "clean": not entries})
 
-    def worktree_clean(self) -> bool:
-        """True only when this repository resolves and has no status entries."""
+    def worktree_state(self) -> tuple[bool, str]:
+        """Whether the tree is clean, plus the reason when it is not."""
         try:
-            if self._repository_problem():
-                return False
+            problem = self._repository_problem()
+            if problem:
+                return False, problem
             _, entries = self._status_entries()
-        except (OSError, ValueError):
-            return False
-        return not entries
-
-    def worktree_changes(self) -> list[dict[str, str]]:
-        """The visible status entries, for telling the person what blocks GUS."""
-        try:
-            if self._repository_problem():
-                return []
-            _, entries = self._status_entries()
-        except (OSError, ValueError):
-            return []
-        return entries
+        except (OSError, ValueError) as exc:
+            return False, str(exc)[:300] or type(exc).__name__
+        if entries:
+            names = [entry["path"] for entry in entries[:5] if entry.get("path")]
+            return False, ("changed: " + ", ".join(names)) if names else "changed"
+        return True, ""
 
     def is_path_tracked(self, path: str) -> ActionOutcome:
         """Prove whether the reserved workspace config tree is present in the index."""
