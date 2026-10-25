@@ -38,6 +38,18 @@ Content-box expansion uses **Space only** on a focused, non-editable content box
 
 Workspace Authority, IsySentinel, execution owners and the journal retain their contracts. A new icon, animated check or selected row must not imply a grant or successful action. Permissions UX follows the repository's existing Classic/Security roadmap gates.
 
+## Adaptive box and modal sizing (Anti-Void & Anti-Slit)
+
+Added 2026-10-25 at Danny's request. Dialogs, cards, modal windows and expandable content boxes must dynamically adapt to their text length, respecting proportional limits:
+
+- **Anti-Void (No a la ventana gigante para 2 líneas):** No modal screen, approval prompt, confirmation card or simple action menu should set fixed `height: 90%` or `height: 94%`. Small contents (confirmations, rename, single-note views, short question prompts) must use `height: auto` with a sensible minimum (e.g., `min-height: 8-12` rows) and bounded `max-height: 88-90%`, scrolling internally (`overflow-y: auto`) only when text exceeds the bound.
+- **Anti-Slit (No a la tira aplastada de 1 línea):** Boxes must not collapse into a single-line horizontal slit when containing brief notes or title bars. They declare a balanced `min-height` (at least 3 visible lines in composer boxes like `#idea-box` and `#shell-box`, at least 8-10 rows in dialogs with title, copy, and buttons) and proportional `min-width: 44-52` cells so the frame feels like a balanced card rather than a ribbon.
+- **Content-adaptive expansion:** Expandable output cards (such as `CommandOutputCard`) when expanded must not force a flat 18-row void when the command produced 1 line ("ok"); they use `height: auto; min-height: 6; max-height: 18;` fitting the actual output.
+- **Proportional modal width tiers:**
+  - Narrow/Confirmation: `min-width: 40; width: 64-68; max-width: 90%;`
+  - Standard Dialog: `min-width: 48; width: 80-84; max-width: 94%;`
+  - Wide/Form/Diff: `min-width: 60; width: 92-100; max-width: 96%;`
+
 ## Provenance and implementation state
 
 Accepted evidence:

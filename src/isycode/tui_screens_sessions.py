@@ -25,9 +25,9 @@ class IdeaNoteScreen(ModalScreen):
 
     CSS = """
     IdeaNoteScreen { align: center middle; background: #000000 58%; }
-    #idea-note-card { width: 90; max-width: 95%; height: 94%; padding: 0 1; border: solid #718291; background: #000000; }
+    #idea-note-card { width: 84; max-width: 95%; height: auto; min-height: 9; max-height: 88%; padding: 1 2; border: solid #718291; background: #000000; }
     #idea-note-heading { height: 1; color: #edf1f5; text-style: bold; }
-    #idea-note-scroll { height: 1fr; margin: 1 0; border-top: solid #3f4d59; }
+    #idea-note-scroll { height: auto; min-height: 3; max-height: 22; margin: 1 0; border-top: solid #3f4d59; }
     #idea-note-content { height: auto; }
     #idea-note-close { width: 16; }
     """
@@ -56,9 +56,9 @@ class ShellProcessesScreen(ModalScreen):
     """Inspect session-owned sandbox jobs without entering a host shell."""
     CSS = """
     ShellProcessesScreen { align: center middle; background: #000000 60%; }
-    #shell-card { width: 90%; height: 94%; border: solid #718291; padding: 0 1; background: #000000; }
-    #shell-processes { height: 1fr; max-height: 8; min-height: 3; border: none; }
-    #shell-output { height: 2fr; min-height: 4; scrollbar-size-vertical: 1; border-top: solid #3f4d59; }
+    #shell-card { width: 88; max-width: 95%; height: auto; min-height: 12; max-height: 88%; border: solid #718291; padding: 1 2; background: #000000; }
+    #shell-processes { height: auto; min-height: 3; max-height: 8; border: none; }
+    #shell-output { height: auto; min-height: 4; max-height: 16; scrollbar-size-vertical: 1; border-top: solid #3f4d59; }
     #shell-text { height: auto; }
     #shell-actions { height: 3; }
     #shell-actions Button { width: auto; height: 3; margin-right: 1; }
@@ -125,8 +125,8 @@ class PastedTextScreen(ModalScreen):
     """Review exactly what readable paste references will send."""
     CSS = """
     PastedTextScreen { align: center middle; background: #000000 58%; }
-    #paste-review-card { width: 90%; height: 94%; border: solid #718291; padding: 0 1; background: #000000; }
-    #paste-review-scroll { height: 1fr; }
+    #paste-review-card { width: 88; max-width: 95%; height: auto; min-height: 9; max-height: 88%; border: solid #718291; padding: 1 2; background: #000000; }
+    #paste-review-scroll { height: auto; min-height: 3; max-height: 22; }
     .paste-full-text { height: auto; }
     """
     BINDINGS = [Binding("escape", "close", "Close")]
@@ -162,8 +162,8 @@ class PastedTextScreen(ModalScreen):
 class QueuedMessagesScreen(ModalScreen):
     CSS = """
     QueuedMessagesScreen { align: center middle; background: #000000 58%; }
-    #queue-card { width: 90%; height: 94%; padding: 0 1; border: solid #718291; background: #000000; }
-    #queue-scroll { height: 1fr; }
+    #queue-card { width: 84; max-width: 95%; height: auto; min-height: 9; max-height: 88%; padding: 1 2; border: solid #718291; background: #000000; }
+    #queue-scroll { height: auto; min-height: 3; max-height: 22; }
     .queue-message { height: auto; }
     """
     BINDINGS = [Binding("escape", "close", "Close")]
@@ -480,7 +480,7 @@ class SessionTitleScreen(ModalScreen[str | None]):
 
     CSS = """
     SessionTitleScreen { align: center middle; background: #000000 58%; }
-    #session-title-card { width: 72; max-width: 90%; height: auto; padding: 1 2; border: solid #718291; background: #000000; }
+    #session-title-card { width: 68; max-width: 90%; height: auto; min-height: 8; padding: 1 2; border: solid #718291; background: #000000; }
     #session-title-heading { height: 1; color: #edf1f5; text-style: bold; }
     #session-title-input { height: 3; margin-bottom: 1; }
     #session-title-actions { height: 3; align-horizontal: right; }

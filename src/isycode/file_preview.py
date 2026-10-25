@@ -130,9 +130,9 @@ def guess_syntax_language(path: str | Path | None, code: str | None = None) -> s
 class FilePreviewScreen(ModalScreen[None]):
     CSS = DECISION_CSS + '''
     FilePreviewScreen { align: center middle; background: #000000 58%; }
-    #preview-card { width: 110; max-width: 96%; height: 90%; }
+    #preview-card { width: 104; max-width: 96%; height: auto; min-height: 12; max-height: 90%; }
     #preview-heading { height: auto; max-height: 4; }
-    #preview-text { height: 1fr; background: #000000; border: none; }
+    #preview-text { height: auto; min-height: 4; max-height: 26; background: #000000; border: none; }
     #preview-text .text-area--gutter { background: #000000; color: #718291; }
     #preview-text .text-area--selection { background: #002c36; }
     '''

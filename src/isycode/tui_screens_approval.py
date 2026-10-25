@@ -39,6 +39,13 @@ DECISION_CSS = """
 .isy-dialog-options { height: 4; min-height: 4; border: none; background: #000000; }
 .isy-dialog-options > .option-list--option { text-style: none; }
 .isy-dialog-options > .option-list--option-highlighted { color: #00d7ff; background: #002c36; text-style: none; }
+/* Short confirmations adapt to content rather than taking 90% of the screen. */
+.isy-dialog.dialog-fit, #tailscale-confirm-card, #context-access-card {
+    height: auto; min-height: 8; max-height: 85%;
+}
+.isy-dialog.dialog-fit .isy-dialog-body, #tailscale-confirm-card .isy-dialog-body, #context-access-card .isy-dialog-body {
+    height: auto; max-height: 14;
+}
 """
 
 

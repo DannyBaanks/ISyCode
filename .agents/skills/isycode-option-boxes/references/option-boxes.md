@@ -20,4 +20,11 @@ Use for welcome/mode decisions and edit/batch/commit/command approvals. State th
 
 The menu opens on double-click of a content box without expanding it or copying immediately. Show **Copiar selección** only as usable when an exact range exists and **Copiar caja completa** as a separate explicit action. Preserve the source box and its selection while the menu receives focus. Escape returns focus without copying. Follow the text-copy skill for ownership and payload mapping.
 
+## Box and modal card sizing (Anti-Void & Anti-Slit)
+
+- **Adaptive height:** Card containers must use `height: auto; min-height: 8-12; max-height: 88-90%;` rather than fixed `height: 90%+`. Short choices (confirmations, small selectors) adapt to content instead of rendering an empty void.
+- **Wide detail vs compact:** Wide detail menus (`.wide-detail-menu`) or multi-category Settings reserve proportional height (`height: 88-90%`) to keep sidebar categories and detail panels stable. Compact lists must shrink-fit item count.
+- **Minimum dimensions:** Modals require `min-width: 44-52` and `min-height: 8` with `padding: 1 2` to prevent cramped 1-line ribbons.
+- **Scroll containment:** Content bodies use internal scrolling (`overflow-y: auto`) with actions fixed at `height: 3; align-horizontal: right;`, remaining accessible on 80×24 viewports.
+
 Prefer existing widgets in `src/isycode/tui_widgets.py` and existing screen handlers in `tui_app_menu.py` / related screen modules. The [common TCSS asset](../../isycode-design/assets/tokens.tcss) supplies scoped style classes; it does not implement a selector or consent workflow by itself.
