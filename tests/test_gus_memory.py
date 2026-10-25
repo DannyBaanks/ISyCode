@@ -236,6 +236,11 @@ def test_the_settings_form_opens_memories_and_forgetting_asks_first(tmp_path, mo
             await pilot.pause(0.05)
         raise AssertionError(f"timed out waiting for {what}")
 
+    def memories_mounted(view):
+        screen = view.screen
+        return (isinstance(screen, GusMemoryScreen)
+                and len(screen.query("#gus-memory-list")) > 0)
+
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
@@ -243,7 +248,7 @@ def test_the_settings_form_opens_memories_and_forgetting_asks_first(tmp_path, mo
             task = asyncio.ensure_future(app._open_gus_settings())
             await until(pilot, lambda: isinstance(app.screen, GusSettingsScreen), "settings")
             await pilot.click("#gus-settings-memories")
-            await until(pilot, lambda: isinstance(app.screen, GusMemoryScreen), "memories")
+            await until(pilot, lambda: memories_mounted(app), "memories")
             screen = app.screen
             listed = "\n".join(str(child.render())
                                for child in screen.query_one("#gus-memory-list").children)
