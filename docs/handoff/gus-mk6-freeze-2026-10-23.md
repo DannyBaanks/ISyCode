@@ -20,6 +20,8 @@ Para la siguiente sesión, la de Claude o la de quien siga. Junta lo que se hizo
 | **#93** | Security hunt (GUS L0: rechazo de alias en Windows, normalización de esquemas) | **Mergeado en `main`** (`da88135`) | — |
 | **#94** | Egress hunt (sincronización de animaciones de Home y scroll seguro) | **Mergeado en `main`** (`6fe485e`) | — |
 | **#95** | Data hunt (eliminación de límites obsoletos de caracteres en drafts) | **Mergeado en `main`** (`fab2d1a`) | — |
+| **#97** | Inventario de módulos ISyCode con estado de pruebas (estable/frágil/sin pruebas) | **Mergeado en `main`** (`f791833`) | — |
+| **#98** | Reconciliación de contratos `TYPE_CHECKING` de mixins (F-05a) | **Mergeado en `main`** (`d606d46`) | — |
 | **#99** | **feat(gus): any-workspace GUS, machine reads and user memory** (ADR 0015, SEAM 16/16 DENY, memoria fuera de repo, 3 raíces) | **Consolidado / 100% Verde en CI** (Windows 24m44s, Linux, Textual 8, lint, gate, 3 paquetes) | Walk-through manual de reinicio por Danny y merge a `main` |
 | ya en `main` | MK0–MK3 (#75, #76, #77, #79) y ADR 0012 (#78) | **Mergeados** | — |
 
