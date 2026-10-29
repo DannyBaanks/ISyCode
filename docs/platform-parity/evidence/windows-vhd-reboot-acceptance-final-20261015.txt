@@ -1,0 +1,44 @@
+Windows VHD reboot/remount acceptance
+{
+  "acceptance": {
+    "execution_context": "standard user; not elevated",
+    "exit_code": 0,
+    "private_raw_log_sha256": "87444d17d92db4b190aabe3a50754bf9436d84b1755bad78baea5a94be3f8b67",
+    "status": "PASS",
+    "summary": "13 passed in 242.69s (0:04:02)"
+  },
+  "attachment_path": "detached-image-verified-and-attached; system-default device policy",
+  "checks": {
+    "bounded_provider_reopen": true,
+    "exact_fixed_image": true,
+    "image_attached_after_remount": true,
+    "native_accepted_remains_false": true,
+    "one_shot_task_removed": true,
+    "ordinary_user_acceptance_13_passed": true,
+    "private_bootstrap_snapshot_matches": true,
+    "real_reboot": true,
+    "same_registered_identity": true,
+    "verification_shell_not_elevated": true,
+    "volume_inspection": true,
+    "zero_owned_scratch_after_tests": true
+  },
+  "native_accepted": false,
+  "preboot_and_postboot_identity_sha256": "42450049397cedaceb0ce238d2cfa4d4bdb363bf28c5f67695c100cda9eca03b",
+  "preserved_failed_attempts": [
+    {
+      "artifact": "windows-vhd-reboot-acceptance-20261015.txt",
+      "artifact_sha256": "db3899ea616a1531b83ce4497bdfefaa96b1c90c1ab78222ad3cb951ad22bddc",
+      "reason": "startup runner could not load the registered private storage configuration"
+    },
+    {
+      "artifact": "windows-vhd-reboot-acceptance-r2-20261015.txt",
+      "artifact_sha256": "376debf1271a8841bf392140d287f6be18abb8a8bf1e17c95c3034e3afd391b0",
+      "private_pytest_log_sha256": "4abf3e40271d8b512657cb7e47e989e2ba3ff7d94e97a2048e89f4d0baa2a819",
+      "reason": "elevated acceptance attempt hit private-state ACL errors; same selection then passed under the standard user"
+    }
+  ],
+  "recorded_at_utc": "2026-10-15T23:17:35.306838+00:00",
+  "schema": "isycode.vhd-reboot-acceptance-final/1",
+  "scope": "The same registered VHD survived a real Windows reboot, was reattached and inspected, and all 13 real-volume acceptance controls passed under the ordinary user token. This does not demonstrate complete Windows/Linux product parity.",
+  "status": "PASS"
+}

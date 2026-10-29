@@ -1,0 +1,35 @@
+name: Native platform contracts
+on:
+  push:
+    # One run per commit (ADR 0014): branch pushes outside main only get
+    # the pull_request run. Tag pushes keep their previous coverage.
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install product and test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Run native storage, Git and session contracts
+        run: python -m pytest -q tests/test_platform_storage.py tests/test_platform_windows_git.py tests/test_iteration.py tests/test_workspace_modes.py tests/test_action_audit.py tests/test_action_audit_segments.py tests/test_git_owner.py tests/test_session_continuity_tui.py tests/test_daily_tui.py tests/test_tui_startup.py -m "not integration"
+      - name: Verify integrity-pinned bundled resources
+        run: python -m pytest -q tests/test_native_toolkit.py::test_bundled_skill_catalog_is_pinned_and_validated tests/test_native_toolkit.py::test_native_skill_activation_enters_owned_prompt_without_granting_tools tests/test_session_continuity_guard.py::test_old_sessions_stay_readable_and_the_format_is_unchanged
+      - name: Verify experimental Windows isolation and activation guard
+        if: runner.os == 'Windows'
+        run: python -m pytest -q tests/test_windows_sandbox_process.py tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_registry.py tests/test_windows_sandbox_recovery.py tests/test_windows_sandbox_acceptance.py tests/test_command_runner_windows.py tests/test_platform_sandbox.py tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_windows_sandbox_volume_acceptance.py

@@ -1,0 +1,209 @@
+"""User-wide ISyCode defaults, stored independently from any workspace."""
+from __future__ import annotations
+
+import json
+import os
+import secrets
+import stat
+from pathlib import Path
+from typing import Any
+
+from isycode.agent_loop import (
+    AGENT_STEP_CHOICES, ANSWER_TOKEN_CHOICES, DEFAULT_AGENT_STEPS, DEFAULT_ANSWER_TOKENS,
+)
+from isycode.workspace_setup import state_root
+from isycode.platform_storage import storage
+
+CHAT_TOKEN_BUDGET_CHOICES = (0, 10_000, 50_000, 100_000, 500_000)
+
+
+class UserDefaultsStore:
+    """Private defaults shared by every ISyCode workspace for this user.
+
+    This store is for preferences only. It must never contain Workspace
+    Authority grants, credentials, or workspace paths.
+    """
+
+    VERSION = 1
+    MAX_BYTES = 64 * 1024
+    NEW_WORKSPACE_CHOICES = {"ask", "temporary", "recurring"}
+    # Mode preselected for a workspace opened for the first time. It is a
+    # preference only: the chosen mode is saved in that workspace's Authority
+    # policy, and "ask" shows the mode screen.
+    NEW_WORKSPACE_MODES = {"ask", "classic", "security"}
+    ROLE_KINDS = {"agents", "subagents", "motors"}
+    LOCALES = {"es", "en", "zh"}
+    DEFAULT_LOCALE = "es"
+
+    def __init__(self, directory: Path | None = None) -> None:
+        self.directory = Path(directory or state_root()).expanduser()
+        storage.ensure_directory(self.directory, repair=True)
+        if not self.directory.is_dir() or not storage.private(self.directory):
+            raise ValueError("ISyCode user settings directory is unsafe")
+        self.directory = self.directory.resolve(strict=True)
+        self.path = self.directory / "user-defaults.json"
+
+    def load(self) -> dict[str, Any]:
+        try:
+            metadata = self.path.lstat()
+        except FileNotFoundError:
+            return {"version": self.VERSION, "new_workspace": "ask",
+                    "new_workspace_mode": "ask", "default_role": None,
+                    "agent_steps": DEFAULT_AGENT_STEPS, "answer_tokens": DEFAULT_ANSWER_TOKENS,
+                    "chat_token_budget": 0, "compact_marquee": False, "notification_sounds": True,
+                    "high_contrast": False, "ascii_only": False, "reduced_motion": False,
+                    "sidebar_file_preview": False,
+                    "locale": self.DEFAULT_LOCALE}
+        if (not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1
+                or metadata.st_size > self.MAX_BYTES or not storage.private(self.path)):
+            raise ValueError("ISyCode user settings file is unsafe")
+        flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_BINARY", 0))
+        descriptor = os.open(self.path, flags)
+        try:
+            opened = os.fstat(descriptor)
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_dev != metadata.st_dev
+                    or opened.st_ino != metadata.st_ino or opened.st_nlink != 1
+                    or opened.st_size > self.MAX_BYTES
+                    or not storage.private(self.path, fd=descriptor)):
+                raise ValueError("ISyCode user settings changed during inspection")
+            content = os.read(descriptor, self.MAX_BYTES + 1)
+        finally:
+            os.close(descriptor)
+        if len(content) > self.MAX_BYTES:
+            raise ValueError("ISyCode user settings exceed their size limit")
+        data = json.loads(content.decode("utf-8"))
+        if not isinstance(data, dict) or data.get("version") != self.VERSION:
+            raise ValueError("ISyCode user settings are malformed")
+        choice = data.get("new_workspace", "ask")
+        mode = data.get("new_workspace_mode", "ask")
+        if not isinstance(mode, str) or mode not in self.NEW_WORKSPACE_MODES:
+            raise ValueError("ISyCode new workspace mode default is invalid")
+        role = data.get("default_role")
+        if not isinstance(choice, str) or choice not in self.NEW_WORKSPACE_CHOICES:
+            raise ValueError("ISyCode new workspace default is invalid")
+        if role is not None and (
+                not isinstance(role, dict)
+                or not isinstance(role.get("kind"), str)
+                or role.get("kind") not in self.ROLE_KINDS
+                or not isinstance(role.get("name"), str)
+                or not 1 <= len(role["name"]) <= 120):
+            raise ValueError("ISyCode default role is invalid")
+        sounds = data.get("notification_sounds", True)
+        if type(sounds) is not bool:
+            raise ValueError("ISyCode notification sounds preference is invalid")
+        marquee = data.get("compact_marquee", False)
+        if type(marquee) is not bool:
+            raise ValueError("ISyCode compact marquee preference is invalid")
+        contrast = data.get("high_contrast", False)
+        if type(contrast) is not bool:
+            raise ValueError("ISyCode high contrast preference is invalid")
+        ascii_only = data.get("ascii_only", False)
+        if type(ascii_only) is not bool:
+            raise ValueError("ISyCode ASCII-only preference is invalid")
+        reduced_motion = data.get("reduced_motion", False)
+        if type(reduced_motion) is not bool:
+            raise ValueError("ISyCode reduced motion preference is invalid")
+        sidebar_preview = data.get("sidebar_file_preview", False)
+        if type(sidebar_preview) is not bool:
+            raise ValueError("ISyCode sidebar file preview preference is invalid")
+        steps = data.get("agent_steps", DEFAULT_AGENT_STEPS)
+        tokens = data.get("answer_tokens", DEFAULT_ANSWER_TOKENS)
+        budget = data.get("chat_token_budget", 0)
+        if type(budget) is not int or budget not in CHAT_TOKEN_BUDGET_CHOICES:
+            raise ValueError("ISyCode chat token budget is invalid")
+        if type(steps) is not int or steps not in AGENT_STEP_CHOICES:
+            raise ValueError("ISyCode agent step limit is invalid")
+        if tokens is not None and (type(tokens) is not int or tokens not in ANSWER_TOKEN_CHOICES):
+            raise ValueError("ISyCode answer length is invalid")
+        locale = data.get("locale", self.DEFAULT_LOCALE)
+        if not isinstance(locale, str) or locale not in self.LOCALES:
+            locale = self.DEFAULT_LOCALE
+        return {"version": self.VERSION, "new_workspace": choice, "new_workspace_mode": mode,
+                "default_role": role, "agent_steps": steps, "answer_tokens": tokens,
+                "chat_token_budget": budget, "compact_marquee": marquee, "notification_sounds": sounds,
+                "high_contrast": contrast, "ascii_only": ascii_only, "reduced_motion": reduced_motion,
+                "sidebar_file_preview": sidebar_preview, "locale": locale}
+
+    def update(self, *, new_workspace: str | None = None,
+               new_workspace_mode: str | None = None,
+               default_role: dict[str, str] | None | object = ...,
+               agent_steps: int | None = None, answer_tokens: int | None = None,
+               chat_token_budget: int | None = None, compact_marquee: bool | None = None,
+               notification_sounds: bool | None = None, high_contrast: bool | None = None,
+               ascii_only: bool | None = None, locale: str | None = None,
+               reduced_motion: bool | None = None,
+               sidebar_file_preview: bool | None = None) -> None:
+        current = self.load()
+        if sidebar_file_preview is not None:
+            if type(sidebar_file_preview) is not bool:
+                raise ValueError("ISyCode sidebar file preview preference is invalid")
+            current["sidebar_file_preview"] = sidebar_file_preview
+        if reduced_motion is not None:
+            if type(reduced_motion) is not bool:
+                raise ValueError("ISyCode reduced motion preference is invalid")
+            current["reduced_motion"] = reduced_motion
+        if locale is not None:
+            if locale not in self.LOCALES:
+                raise ValueError("ISyCode interface language is invalid")
+            current["locale"] = locale
+        if ascii_only is not None:
+            if type(ascii_only) is not bool:
+                raise ValueError("ISyCode ASCII-only preference is invalid")
+            current["ascii_only"] = ascii_only
+        if high_contrast is not None:
+            if type(high_contrast) is not bool:
+                raise ValueError("ISyCode high contrast preference is invalid")
+            current["high_contrast"] = high_contrast
+        if notification_sounds is not None:
+            if type(notification_sounds) is not bool:
+                raise ValueError("ISyCode notification sounds preference is invalid")
+            current["notification_sounds"] = notification_sounds
+        if compact_marquee is not None:
+            if type(compact_marquee) is not bool:
+                raise ValueError("ISyCode compact marquee preference is invalid")
+            current["compact_marquee"] = compact_marquee
+        if chat_token_budget is not None:
+            if type(chat_token_budget) is not int or chat_token_budget not in CHAT_TOKEN_BUDGET_CHOICES:
+                raise ValueError("ISyCode chat token budget is invalid")
+            current["chat_token_budget"] = chat_token_budget
+        if agent_steps is not None:
+            if type(agent_steps) is not int or agent_steps not in AGENT_STEP_CHOICES:
+                raise ValueError("ISyCode agent step limit is invalid")
+            current["agent_steps"] = agent_steps
+        if answer_tokens is not None:
+            if type(answer_tokens) is not int or answer_tokens not in ANSWER_TOKEN_CHOICES:
+                raise ValueError("ISyCode answer length is invalid")
+            current["answer_tokens"] = answer_tokens
+        if new_workspace is not None:
+            if new_workspace not in self.NEW_WORKSPACE_CHOICES:
+                raise ValueError("ISyCode new workspace default is invalid")
+            current["new_workspace"] = new_workspace
+        if new_workspace_mode is not None:
+            if new_workspace_mode not in self.NEW_WORKSPACE_MODES:
+                raise ValueError("ISyCode new workspace mode default is invalid")
+            current["new_workspace_mode"] = new_workspace_mode
+        if default_role is not ...:
+            if default_role is not None and (
+                    not isinstance(default_role, dict)
+                    or not isinstance(default_role.get("kind"), str)
+                    or default_role.get("kind") not in self.ROLE_KINDS
+                    or not isinstance(default_role.get("name"), str)
+                    or not 1 <= len(default_role["name"]) <= 120):
+                raise ValueError("ISyCode default role is invalid")
+            current["default_role"] = default_role
+        payload = json.dumps(current, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
+        temporary = self.directory / f".user-defaults-{secrets.token_hex(8)}.tmp"
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(temporary, flags | getattr(os, "O_BINARY", 0), 0o600)
+        try:
+            storage.protect(temporary)
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            storage.replace(temporary, self.path)
+            storage.sync_directory(self.directory)
+        finally:
+            if temporary.exists():
+                temporary.unlink()

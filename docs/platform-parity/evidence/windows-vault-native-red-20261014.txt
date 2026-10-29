@@ -1,0 +1,102 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+________________ test_vault_uses_the_shared_native_state_root _________________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-782/test_vault_uses_the_shared_nat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000027C0A937D40>
+
+    def test_vault_uses_the_shared_native_state_root(tmp_path,monkeypatch):
+        from isycode.credentials import _vault_path
+        monkeypatch.setenv('ISYCODE_STATE_HOME',str(tmp_path/'private-state'))
+>       assert _vault_path()==tmp_path/'private-state'/'credentials.sqlite3'
+E       AssertionError: assert WindowsPath('C:/Users/progr/.local/state/isycode/credentials.sqlite3') == ((WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-782/test_vault_uses_the_shared_nat0') / 'private-state') / 'credentials.sqlite3')
+E        +  where WindowsPath('C:/Users/progr/.local/state/isycode/credentials.sqlite3') = <function _vault_path at 0x0000027C09D02480>()
+
+tests\test_credential_vault_native.py:27: AssertionError
+__________ test_vault_metadata_is_private_and_does_not_store_secret ___________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-782/test_vault_metadata_is_private0')
+fake_keyring = <test_credential_vault_native.fake_keyring.<locals>.MemoryKeyring object at 0x0000027C0A98C980>
+
+    def test_vault_metadata_is_private_and_does_not_store_secret(tmp_path,fake_keyring):
+        folder=tmp_path/'vault'
+        vault=CredentialVault(folder/'credentials.sqlite3')
+        key=vault.add('test label','parity-test','synthetic acceptance','seeded-not-a-real-key')
+>       assert storage.private(folder) and storage.private(vault.path)
+E       AssertionError: assert (False)
+E        +  where False = private(WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-782/test_vault_metadata_is_private0/vault'))
+E        +    where private = <isycode.platform_windows_storage.WindowsStorage object at 0x0000027C0A8F0EC0>.private
+
+tests\test_credential_vault_native.py:34: AssertionError
+_________________ test_vault_refuses_unsafe_existing_metadata _________________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-782/test_vault_refuses_unsafe_exis0')
+fake_keyring = <test_credential_vault_native.fake_keyring.<locals>.MemoryKeyring object at 0x0000027C0ABE9580>
+
+    def test_vault_refuses_unsafe_existing_metadata(tmp_path,fake_keyring):
+        folder=tmp_path/'vault';storage.ensure_directory(folder)
+        path=folder/'credentials.sqlite3';path.write_bytes(b'untrusted-existing')
+        if os.name=='nt':
+            import win32security as s
+            d=s.ConvertStringSecurityDescriptorToSecurityDescriptor('D:P(A;;FA;;;WD)',1)
+            s.SetNamedSecurityInfo(str(path),s.SE_FILE_OBJECT, s.DACL_SECURITY_INFORMATION|s.PROTECTED_DACL_SECURITY_INFORMATION,None,None,d.GetSecurityDescriptorDacl(),None)
+        else:path.chmod(0o666)
+        before=path.read_bytes()
+        try:
+            with pytest.raises((CredentialVaultError,ValueError),match='private|unsafe'):
+>               CredentialVault(path)
+
+tests\test_credential_vault_native.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <isycode.credentials.CredentialVault object at 0x0000027C0ABE9760>
+path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-782/test_vault_refuses_unsafe_exis0/vault/credentials.sqlite3')
+
+    def __init__(self, path: Path | None = None):
+        self.path = path or _vault_path()
+        self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if self.path.is_symlink():
+            raise ValueError("Refusing to open a symbolic-link credential vault")
+        if os.name != "nt":
+            self.path.parent.chmod(0o700)
+            nofollow = getattr(os, "O_NOFOLLOW", 0)
+            fd = os.open(self.path, os.O_CREAT | os.O_RDWR | nofollow, 0o600)
+            os.close(fd)
+        try:
+            import keyring
+            from keyring.backends.fail import Keyring as FailKeyring
+    
+            self._keyring = keyring.get_keyring()
+            backend_priority = getattr(type(self._keyring), "priority", 0)
+            children = getattr(self._keyring, "backends", ())
+            if isinstance(self._keyring, FailKeyring) or backend_priority <= 0 or any(
+                    getattr(type(child), "priority", 0) <= 0 for child in children):
+                raise CredentialVaultError("No secure OS keyring backend is available")
+        except CredentialVaultError:
+            raise
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as exc:
+            # Native keyring backends can fail below Python: a broken
+            # cryptography/pyo3 binding raises PanicException, which derives
+            # from BaseException. Treat any backend load failure as "no secure
+            # keyring" so callers fail closed instead of crashing the TUI.
+            raise CredentialVaultError("Could not open the operating system keyring") from exc
+        with self._connect() as db:
+>           db.execute("""CREATE TABLE IF NOT EXISTS credentials (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                service TEXT NOT NULL,
+                purpose TEXT NOT NULL,
+                created_at REAL NOT NULL,
+                updated_at REAL NOT NULL,
+                revoked_at REAL
+            )""")
+E           sqlite3.DatabaseError: file is not a database
+
+src\isycode\credentials.py:53: DatabaseError
+=========================== short test summary info ===========================
+FAILED tests/test_credential_vault_native.py::test_vault_uses_the_shared_native_state_root
+FAILED tests/test_credential_vault_native.py::test_vault_metadata_is_private_and_does_not_store_secret
+FAILED tests/test_credential_vault_native.py::test_vault_refuses_unsafe_existing_metadata
+3 failed in 0.90s

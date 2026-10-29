@@ -1,0 +1,68 @@
+........................................................................ [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 16%]
+........................................................................ [ 22%]
+........................................................................ [ 27%]
+.......................................................................s [ 33%]
+sss..s.................................................................. [ 38%]
+........................................................................ [ 44%]
+.................................................s...................... [ 49%]
+..............F......................................................... [ 55%]
+........................................F............................... [ 60%]
+........................................................................ [ 66%]
+........................................................................ [ 71%]
+........................................................................ [ 77%]
+........................................................................ [ 82%]
+........................................................................ [ 88%]
+........................................................................ [ 93%]
+........................................................................ [ 99%]
+............                                                             [100%]
+=================================== FAILURES ===================================
+____ test_prompt_grows_to_five_content_rows_then_scrolls_and_shrinks[size1] ____
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_prompt_growth.py:33: in test_prompt_grows_to_five_content_rows_then_scrolls_and_shrinks
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_prompt_growth.py:29: in scenario
+    assert prompt.max_scroll_y > 0
+E   AssertionError: assert 0 > 0
+E    +  where 0 = PromptArea(id='prompt-input').max_scroll_y
+___________ test_install_commands_are_shown_and_nothing_is_launched ____________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_side_panel.py:111: in test_install_commands_are_shown_and_nothing_is_launched
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_side_panel.py:100: in scenario
+    assert "does not download" in text
+E   AssertionError: assert 'does not download' in ''
+=============================== warnings summary ===============================
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+  /usr/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=479295) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_prompt_growth.py::test_prompt_grows_to_five_content_rows_then_scrolls_and_shrinks[size1]
+FAILED tests/test_side_panel.py::test_install_commands_are_shown_and_nothing_is_launched
+2 failed, 1300 passed, 6 skipped, 8 warnings in 214.60s (0:03:34)

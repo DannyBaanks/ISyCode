@@ -1,0 +1,472 @@
+{
+  "started_utc": "2026-10-12T23:21:50.382568+00:00",
+  "repo": "/home/danny/Development/ISyCo Git/ISyCode",
+  "head_observed": "a425b32e9a2c245d8197dc63a7db6eb7b3363b04",
+  "scope": "Read-only independent review; only report artifacts written under new /tmp directory",
+  "ancestry": [
+    {
+      "command": [
+        "git",
+        "merge-base",
+        "--is-ancestor",
+        "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+        "db697b6302e8374ad0be8a3082fedb6cf4079ab2"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "merge-base",
+        "--is-ancestor",
+        "db697b6302e8374ad0be8a3082fedb6cf4079ab2",
+        "2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "merge-base",
+        "--is-ancestor",
+        "2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8",
+        "1871ab422d02d0145475460b1c6a911f5f0da8d1"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "merge-base",
+        "--is-ancestor",
+        "1871ab422d02d0145475460b1c6a911f5f0da8d1",
+        "da9a13b8364e902722f0b9ecdde0d33b29fbf115"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "merge-base",
+        "--is-ancestor",
+        "da9a13b8364e902722f0b9ecdde0d33b29fbf115",
+        "a425b32e9a2c245d8197dc63a7db6eb7b3363b04"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "commit_headers": [
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%aI%n%cI%n%s",
+        "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa"
+      ],
+      "exit_code": 0,
+      "stdout": "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa\n31e94a2624f82b5cadcbd823338f790ef78f950c\n2026-10-06T15:18:09-06:00\n2026-10-06T15:18:09-06:00\nfix(tui): fold action receipts into the tool card (no per-call receipt box)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%aI%n%cI%n%s",
+        "db697b6302e8374ad0be8a3082fedb6cf4079ab2"
+      ],
+      "exit_code": 0,
+      "stdout": "db697b6302e8374ad0be8a3082fedb6cf4079ab2\n0b1684e9853b01f174e313134757260cc40c7f9d\n2026-10-06T15:42:22-06:00\n2026-10-06T15:42:22-06:00\ndocs(gates): re-approve M8 after renewal (receipt-in-card contract)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%aI%n%cI%n%s",
+        "2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8"
+      ],
+      "exit_code": 0,
+      "stdout": "2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8\n8b056fbc0638adfedbd0620602ca59c61e4039bf\n2026-10-06T17:25:33-06:00\n2026-10-06T17:25:33-06:00\nchore(evidence): point M8 G8-05 artifact at the test file + regen coverage snapshot\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%aI%n%cI%n%s",
+        "1871ab422d02d0145475460b1c6a911f5f0da8d1"
+      ],
+      "exit_code": 0,
+      "stdout": "1871ab422d02d0145475460b1c6a911f5f0da8d1\n82a11dd6e37d21d22263287bef9c8c35964ae6f3\n2026-10-06T21:37:17-06:00\n2026-10-06T21:37:17-06:00\nrefactor(tui): externalize TUI stylesheet to isycode.tcss (ported from Kilo PR #9)\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%aI%n%cI%n%s",
+        "da9a13b8364e902722f0b9ecdde0d33b29fbf115"
+      ],
+      "exit_code": 0,
+      "stdout": "da9a13b8364e902722f0b9ecdde0d33b29fbf115\n1871ab422d02d0145475460b1c6a911f5f0da8d1\n2026-10-06T21:51:15-06:00\n2026-10-06T21:51:15-06:00\nchore(evidence): refresh test_visual_tui.py hash after CSS test port\n",
+      "stderr": ""
+    }
+  ],
+  "manifest": {
+    "original_sha256": "89438dcae9dbb202fb68780afc10e23bb1daf9ec47d17760a88c773b97ff080b",
+    "candidate_sha256": "89438dcae9dbb202fb68780afc10e23bb1daf9ec47d17760a88c773b97ff080b",
+    "candidate_equals_original_git_blob": true,
+    "working_sha256": "4d5343e9edafb89fc3af53dc1acbedcab23c0fea99088f57337a2185fcf0b1bb",
+    "working_equals_refreshed_git_blob": true,
+    "differing_lines": [
+      {
+        "line": 84,
+        "current": "      - tests/test_visual_tui.py",
+        "candidate": "      - src/isycode/tui_app_tools.py"
+      },
+      {
+        "line": 85,
+        "current": "        sha256: f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5",
+        "candidate": "        sha256: e322aa1010aa1a5f6c8357910789e9ab81f71b2fecaaaad09c931efbe37f6d31"
+      }
+    ],
+    "line_count_unchanged": true,
+    "git_blob_oid_original": "1051199a20560627c045992cf94cd3b08fc3705c",
+    "git_blob_oid_current": "00bf72d7086c5338aa932d53369f0c2540bc5d06"
+  },
+  "artifact_hashes": {
+    "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa:src/isycode/tui_app_tools.py": "e322aa1010aa1a5f6c8357910789e9ab81f71b2fecaaaad09c931efbe37f6d31",
+    "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa:tests/test_visual_tui.py": "e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5",
+    "2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8:tests/test_visual_tui.py": "e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5",
+    "1871ab422d02d0145475460b1c6a911f5f0da8d1:tests/test_visual_tui.py": "f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5",
+    "da9a13b8364e902722f0b9ecdde0d33b29fbf115:tests/test_visual_tui.py": "f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5"
+  },
+  "critical_metadata_unchanged": {
+    "estado": {
+      "value": "estado: APROBADO",
+      "equal_across_chain_and_candidate": true
+    },
+    "sha_evaluado": {
+      "value": "sha_evaluado: 32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+      "equal_across_chain_and_candidate": true
+    },
+    "autor": {
+      "value": "autor: opencode session (fledge)",
+      "equal_across_chain_and_candidate": true
+    },
+    "fecha_utc": {
+      "value": "fecha_utc: 2026-10-06T22:30:00Z",
+      "equal_across_chain_and_candidate": true
+    },
+    "revision": {
+      "value": "revision: aceptada",
+      "equal_across_chain_and_candidate": true
+    },
+    "revisor": {
+      "value": "revisor: Danny Baanks",
+      "equal_across_chain_and_candidate": true
+    },
+    "revision_fecha_utc": {
+      "value": "revision_fecha_utc: 2026-10-06T21:42:22Z",
+      "equal_across_chain_and_candidate": true
+    },
+    "revision_declaracion": {
+      "value": "revision_declaracion: Re-aceptación tras renovación por regla 8 (recibo dentro de la tarjeta); casos, artefactos y hashes verificados con scripts/validate_gates.py",
+      "equal_across_chain_and_candidate": true
+    },
+    "perfil_y_politica": {
+      "value": "perfil_y_politica: solo presentación; ningún cambio de permisos del producto",
+      "equal_across_chain_and_candidate": true
+    },
+    "dependencias": {
+      "value": "dependencias: G7",
+      "equal_across_chain_and_candidate": true
+    }
+  },
+  "original_raw_log": {
+    "sha256": "50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20",
+    "candidate_retains_original_raw_hash": true,
+    "equals_current_repo_bytes": true,
+    "equals_preserved_investigator_bytes": true,
+    "text": "...............................                                          [100%]\n31 passed in 32.54s\n",
+    "limits": "Summary only; no named node IDs, environment, cwd or actual SHA binding in raw output. Cannot authenticate original run as declared SHA from this log alone."
+  },
+  "archive": {
+    "git_archive_sha256": "bc07201fc92cd51858b310153f4b75f34b0bb090782adee92d11c87549b6a475",
+    "retained_archive_sha256": "bc07201fc92cd51858b310153f4b75f34b0bb090782adee92d11c87549b6a475",
+    "equal_to_git_archive_bytes": true
+  },
+  "replay_source_differs_from_archive": [],
+  "replay_record": {
+    "declared_exit_code": 0,
+    "log_hash_matches_command": true,
+    "guard_hash_matches_command": true,
+    "evaluated_commit_matches": true,
+    "cwd_points_to_archived_source": true,
+    "scope": "fresh historical replay; not the original run and not current-code acceptance"
+  },
+  "replay_xml": {
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "31",
+        "time": "33.360",
+        "timestamp": "2026-10-12T17:18:13.760541-06:00",
+        "hostname": "DannyISyCo"
+      }
+    ],
+    "cases": [
+      {
+        "class": "tests.test_ux_polish",
+        "name": "test_reject_button_is_the_default_focus",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_ux_polish",
+        "name": "test_resize_200x60_and_back_keeps_composer_and_draft",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_ux_polish",
+        "name": "test_thousand_tool_events_keep_order_and_failed_stays_failed",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_ux_polish",
+        "name": "test_receipt_expands_decision_scope_budget_recovery_without_canary",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_approval_keys",
+        "name": "test_keys_decide_every_approval_screen[y-True]",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_approval_keys",
+        "name": "test_keys_decide_every_approval_screen[n-False]",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_approval_keys",
+        "name": "test_keys_decide_every_approval_screen[escape-False]",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_approval_keys",
+        "name": "test_keys_decide_every_approval_screen[enter-False]",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_approval_keys",
+        "name": "test_every_boolean_approval_screen_uses_the_shared_keys",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_switch_rows_are_green_when_on_and_red_when_off",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_switch_row_states_are_distinguishable_without_color",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_palette_meets_wcag_aa_for_its_actual_uses",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_mcp_snapshot_counts_healthy_services",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_status_chips_use_title_case_and_leave_names_alone",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_command_bar_labels_survive_hover_and_sections_fold",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_second_click_opens_a_selected_row_and_tree_node",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_catalog_lists_missing_servers_that_discovery_skips",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_side_panel",
+        "name": "test_install_commands_are_shown_and_nothing_is_launched",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_integrated_layout",
+        "name": "test_composer_and_idea_note_fit_beside_sidebar[size0]",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_integrated_layout",
+        "name": "test_composer_and_idea_note_fit_beside_sidebar[size1]",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_integrated_layout",
+        "name": "test_history_restores_draft_and_multiline_keyboard_editing",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_narrow_sidebar_files_tab_is_visible_and_clickable",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_long_workspace_header_keeps_status_and_path_end",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_settings_groups_integrations_and_returns_without_actions",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_owned_read_keeps_receipt_in_expandable_detail",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_blocked_menu_choices_stay_out_of_the_chat",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_image_failure_retries_the_question_as_text",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_startup_splash_remains_in_chat_and_scrolls_away",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_composer_help_is_visible_without_covering_input_or_navigation",
+        "failure": false,
+        "error": false,
+        "skip": false
+      },
+      {
+        "class": "tests.test_visual_tui",
+        "name": "test_panoramic_header_fills_chat_and_leaves_composer_visible",
+        "failure": false,
+        "error": false,
+        "skip": false
+      }
+    ]
+  },
+  "validator_sha256": "3b381d10bcc068498b46d8f8fc62ffa79d29c5e787123a075cbad8e1f3a86422",
+  "baseline_current_errors": [
+    "/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml: artifact 'tests/test_visual_tui.py' sha256 mismatch"
+  ],
+  "candidate_schema_errors": [],
+  "candidate_historical_errors": [],
+  "candidate_release_current_errors": [
+    "artifact 'tests/test_approval_keys.py' sha256 mismatch",
+    "artifact 'tests/test_side_panel.py' sha256 mismatch",
+    "artifact 'src/isycode/tui_app_tools.py' sha256 mismatch"
+  ],
+  "negative_assertions": {
+    "baseline_rejects_present_g8": true,
+    "candidate_release_still_rejects_current": true
+  },
+  "finished_utc": "2026-10-12T23:22:03.468677+00:00"
+}

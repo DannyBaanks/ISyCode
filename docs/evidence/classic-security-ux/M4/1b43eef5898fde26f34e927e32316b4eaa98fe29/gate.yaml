@@ -1,0 +1,112 @@
+hito: M4
+puerta: G4
+estado: EN_REVISION
+sha_evaluado: 1b43eef5898fde26f34e927e32316b4eaa98fe29
+fecha_utc: 2026-10-02T14:05:57Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; la confianza es un registro humano fuera del checkout (ruta, dispositivo e inodo); Classic confiado cubre lecturas, ediciones recuperables y comandos solo si el sandbox resuelve; commits, secretos, autoridad y provider.request siguen pidiendo aprobación; Security no hereda el registro; este hito no abre autonomía
+dependencias: G3
+dependencias_estado:
+  G3: EN_REVISION
+casos:
+  - id: G4-01
+    prueba: tests/test_workspace_trust.py::test_ordinary_flow_has_zero_per_action_approvals tests/test_workspace_trust.py::test_yes_on_the_trust_screen_records_trust
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: tras confiar la carpeta, 10 lecturas, 5 ediciones pequeñas y 3 comandos aislados emiten 0 aprobaciones por acción; git.commit sigue pidiendo modal
+    observado: >
+      Diez lecturas con LocalWorkspaceReadOwner, cinco
+      WorkspaceWriteOwner.apply con aprobación None y tres echo preparados
+      por CommandRunOwner. issued quedó vacío. Antes de aceptar, las mismas
+      escrituras exigen modal. git.commit sigue con modal_required verdadero.
+      La pantalla de confianza con y graba trusted. Los tres comandos usaron
+      el bwrap falso de tests/test_command_runner.py. El namespace real quedó
+      demostrado en G2; este harness cuenta aprobaciones.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/pytest-not-integration.txt
+        sha256: c604b38d24670a05993dd7afe87f2e90244b65a8876dabefd69a1cdafe8bc442
+  - id: G4-02
+    prueba: tests/test_workspace_trust.py::test_budget_scope_secrets_authority_and_missing_sandbox_stay_gated
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: pasar el presupuesto, salir del alcance, leer secretos, cambiar autoridad o ejecutar sin sandbox bloquea o pide esa frontera; una aprobación de un digest no queda permanente
+    observado: >
+      Con el tope de churn en 4 bytes, la escritura se niega, app.py sigue
+      en "x = 1\n" y el motivo nombra paths, deletes y churn. Una ruta con
+      ../ y un .env se niegan. read_sensitive no entra en el perfil quieto y
+      un token emitido para otro digest no lo autoriza. git.commit con None
+      no está permitido. credentials.add no es quieto ni se permite con None.
+      enabled false en workspace.files.write niega al momento. Con
+      sandbox_executable en None, prepare explica que no hay fallback sin
+      sandbox, el comando deja de ser quieto y modal_required vuelve a ser
+      verdadero. Al reactivar el grant, la escritura vuelve a ALLOW.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/pytest-not-integration.txt
+        sha256: c604b38d24670a05993dd7afe87f2e90244b65a8876dabefd69a1cdafe8bc442
+  - id: G4-03
+    prueba: tests/test_workspace_trust.py::test_security_has_no_effects_and_revocation_is_immediate
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: Security sin grants no produce efectos; un grant parcial solo cubre su alcance; volver a Classic conserva la confianza ya dada y un deny explícito gana
+    observado: >
+      Con Classic y confianza, las herramientas headless no incluyen write,
+      edit, command ni commit. En Security, escritura y lectura con None son
+      DENY y el archivo no cambia. Un grant solo de workspace.files.read
+      permite la lectura y niega la escritura. available_tools queda vacío
+      porque list y search no están concedidos. Volver a Classic conserva
+      trusted, needs_onboarding es falso y la escritura con None es ALLOW.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/pytest-not-integration.txt
+        sha256: c604b38d24670a05993dd7afe87f2e90244b65a8876dabefd69a1cdafe8bc442
+  - id: G4-04
+    prueba: tests/test_workspace_trust.py::test_reopen_keeps_trust_and_other_roots_do_not_inherit tests/test_workspace_trust.py::test_escape_remembers_the_decline_and_a_later_yes_trusts tests/test_workspace_trust.py::test_a_linked_trust_file_is_not_rewritten_into_trust tests/test_workspace_trust.py::test_wrong_phrase_broad_root_and_inside_state_do_not_trust
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: reabrir el mismo root no repite el onboarding; una copia, un rename, un inodo nuevo, una política inválida, una frase incorrecta, un root amplio o el estado dentro del workspace no heredan confianza
+    observado: >
+      Un segundo trusted no pide otro accept. copytree no hereda. rename no
+      hereda y los bytes del registro viejo quedan. Recrear el mismo path
+      con otro inodo no hereda y el registro no se reescribe. Poner
+      policy_version en 99 deja de confiar y el fichero sigue en 99. Truncar
+      la política a "{" deja de confiar y los bytes de confianza no cambian.
+      La frase incorrecta lanza ValueError y no escribe. Un symlink en el
+      puesto del registro se reemplaza sin escribir el destino y después
+      trusted es verdadero. Un root amplio y un estado dentro del workspace
+      no confían. Escape guarda declined y el segundo arranque no vuelve a
+      preguntar.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/pytest-not-integration.txt
+        sha256: c604b38d24670a05993dd7afe87f2e90244b65a8876dabefd69a1cdafe8bc442
+  - id: G4-05
+    prueba: tests/test_workspace_trust.py::test_budget_scope_secrets_authority_and_missing_sandbox_stay_gated
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: sin sandbox siguen las lecturas y las ediciones tipadas; los comandos se quedan apagados y el mensaje no propone ejecutarlos en el host
+    observado: >
+      sandbox_executable se sustituyó por None. Este host sí tiene bubblewrap
+      0.9.0; la ausencia es un monkeypatch. Con la confianza y el grant de
+      escritura restaurado, la edición tipada sigue ALLOW. prepare dice que
+      el sandbox necesita bubblewrap, libseccomp y python3, que los comandos
+      se quedan apagados y que no hay fallback sin sandbox. La TUI, si la
+      herramienta está apagada y no hay sandbox, añade la misma frase.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M4/1b43eef5898fde26f34e927e32316b4eaa98fe29/pytest-not-integration.txt
+        sha256: c604b38d24670a05993dd7afe87f2e90244b65a8876dabefd69a1cdafe8bc442
+sin_evidencia_real:
+  - revisor distinto del autor
+  - observación humana de los modales; la aceptación de G4 pide harness y una persona mirando, así que el estado sigue EN_REVISION
+  - los 3 comandos de G4-01 usaron el bwrap falso del harness; G2 demostró el namespace real
+  - la ausencia de sandbox de G4-05 es un monkeypatch; este host tiene bubblewrap 0.9.0
+  - headless no recibió herramientas de edición aunque exista confianza
+  - no hay 0 aprobaciones para commits, secretos, red ni el bucle de agente
+  - un hardlink con nlink distinto de 1 está implementado en la lectura del registro y no tiene un test dedicado
+  - Windows y macOS
+  - G0, G1, G2 y G3 siguen EN_REVISION
+  - este push del producto no esperó los checks; el remoto imprimió Bypassed rule violations para 1b43eef, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - este push de la evidencia no esperó los checks; el remoto imprimió Bypassed rule violations para e9b372c, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - no se afirma que CI pasó
+regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1090 passed, 2 skipped, 11 deselected; 102.52s; skips anthropic ausente y TypeScript sandbox_ready ausente
+riesgos_residuales: la confianza no sigue un directorio movido ni una copia; un reemplazo en el mismo path cambia el inodo y no hereda; headless sigue sin ofrecer escrituras; deshacer en la TUI sigue preguntando aunque restore esté en el conjunto quieto
+rollback_ensayado: revertir 1b43eef5898fde26f34e927e32316b4eaa98fe29 devuelve la aprobación por acción en Classic; no borra registros de confianza ya escritos en el estado local ni abre autonomía
+revision: ausente

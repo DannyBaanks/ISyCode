@@ -1,0 +1,225 @@
+# ISyCode private tailnet setup — design
+
+**Status:** Implemented in the private worktree for review; live Serve remains opt-in and unverified
+**Date:** 2026-09-29
+**Scope:** Guided private access from a user's own tailnet to the local ISyCode
+Mobile Host, managed from ISyCode Settings. The Tailscale owner remains
+parameterized and can preserve a Gateway route separately.
+
+## Goal
+
+Let a user follow a clear, observable setup flow in the TUI to install or
+detect Tailscale, authenticate this PC into their own tailnet, and privately
+serve the loopback Mobile Host at `127.0.0.1:8765` under `/isycode` to their
+other authorized devices. Each PC remains its own host. ISyCode does not need a
+central public server.
+
+Automation is welcome for installations, tunnel setup, MCP setup, and future
+integrations. It never overrides the user's final approval: every state
+changing step goes through the action catalog, Workspace Authority,
+IsySentinel, a concrete preview, and a fresh one-use approval where required.
+
+## User flow
+
+Entry point: **Settings → Remote access → Private access (Tailscale)**.
+
+1. **Preflight — read only.** Detect OS/distribution, Tailscale CLI and daemon,
+   login state, local Mobile Host health, listener address, existing Serve config,
+   and whether the proposed route conflicts. Show findings without starting,
+   installing, or changing anything.
+2. **Choose how to install Tailscale.** For the first supported target
+   (Ubuntu/Debian), offer two explicit choices: an automated official
+   package/repository installation, or official manual instructions with no
+   local mutation. The automated preview must state that the package's
+   maintainer script may start or restart `tailscaled`; a fresh approval is
+   bound to that exact effect and package plan. ISyCode does not issue a
+   separate service-manager start and does not log in as an install side
+   effect. Automated "keep service stopped" is unavailable until a separately
+   reviewed, safely scoped suppression owner exists. Other distributions show
+   official installation steps until their installer owners are implemented.
+   The supported automated path uses three distinct approved actions: private
+   package preparation, bounded copying into a unique root-owned stage, and
+   installation from that verified stage. The final approval binds the stage
+   identity and manifest digest, exact package version and argv, and the
+   possible daemon restart. Root apt receives
+   `DEBIAN_FRONTEND=noninteractive`. If staging integrity or the exact
+   one-package simulation fails, the wizard offers manual instructions.
+   The stage preview and approval include the complete permitted fixed
+   privilege command manifest and each artifact's source, destination, byte
+   limit, final mode, owner, size, and hash checks. Staging and final install
+   each use one total monotonic deadline across all authorization prompts and
+   subprocesses.
+   Package maintainer scripts and host dpkg triggers may still run as part of
+   the official package transaction; simulation does not enumerate them.
+3. **Join the user's tailnet.** If Tailscale is installed but signed out, show
+   the exact login action and ask for approval. Start the official CLI login
+   flow, present its URL in the TUI, and wait for the user to finish browser
+   authentication. ISyCode never asks for, stores, or logs the user's Tailscale
+   password, OAuth token, or reusable auth key.
+4. **Preview private Serve.** Show the local Mobile Host target, resulting
+   tailnet-only hostname, TLS state, and the exact Serve configuration delta.
+   If the existing Serve configuration is incompatible or cannot be safely
+   preserved, stop and explain the conflict instead of replacing it.
+5. **Enable.** After a fresh approval, configure Serve in the background for
+   the Mobile Host's loopback listener. Keep the host bound to loopback; do not
+   bind it to all network interfaces. Funnel/public sharing remains disabled.
+6. **Verify and show status.** Confirm the Serve configuration and local
+   Mobile Host health at `/isycode/v1/health`, then display `Private / Online`, the tailnet URL, target,
+   and last verification time. This checks connectivity only; it does not
+   claim that a semantic operation passed local Authority or approval.
+7. **Disable.** Show which ISyCode-owned Serve mapping will be removed and ask
+   for approval. Remove only that mapping; preserve unrelated Serve services,
+   Tailscale login, firewall settings, packages, and other user configuration.
+
+At every step the user can cancel. Failures leave the last verified state
+visible and include a next step; cancellation does not attempt rollback of
+unrelated system state.
+
+## Architecture and authority
+
+- Add a Tailscale adapter that reports structured preflight/status data and
+  supports only fixed operations such as `status`, `up`/login, Serve enable,
+  Serve status, and removal of the exact ISyCode-owned mapping.
+- Add narrow execution owners for package installation and Tailscale/Serve
+  process operations. Owners accept typed values, validate executable paths,
+  enforce output/time limits, and do not invoke an arbitrary shell.
+- Register every operation in the ISyCode action catalog and owner coverage
+  report. Add applicable Systembilities for package source, executable
+  identity, local endpoint, tailnet state, route ownership, and private-only
+  exposure. No action becomes available merely because a dependency is
+  detected or a grant exists.
+- Persist only non-secret setup state in the user-private ISyCode state
+  directory: adapter version, owned mapping identity, last-known status, and
+  receipts. Never put tokens in the workspace, `.isyroot`, Bridge, logs, or
+  action receipts.
+- Keep all API key scopes, Gateway workspace IDs, `.isyroot` boundaries,
+  filesystem grants, Mobile Host pairing credentials, and MCP permissions
+  separate. A Tailscale login or Serve route grants network reachability only;
+  it is not an ISyCode action grant.
+- Tailscale identity headers may be recorded as untrusted request metadata;
+  they must not replace Gateway authentication, device pairing, Workspace
+  Authority, Sentinel, or approvals.
+- MCP and other tunnel providers can later implement the same guided
+  integration pattern, but each needs its own typed contract, owner,
+  Systembilities, user preview, and tests. They are not silently included in
+  this first adapter.
+
+## Security invariants
+
+1. Default state is disabled; no install, login, Serve, Funnel, or MCP
+   mutation occurs during startup or preflight. The user chooses automated
+   install or manual instructions inside the TUI; the manual choice has no
+   local side effects.
+2. Every mutation has an exact user-visible plan and final user approval.
+3. No implicit `sudo`, `curl | sh`, arbitrary command, or broad package-manager
+   execution path.
+4. Tailscale Serve is private to the user's tailnet. Funnel and public tunnel
+   providers are not offered in this flow.
+5. The Gateway remains on loopback; the approved proxy path is the only added
+   network reachability.
+6. Existing non-ISyCode Serve routes and tailnet configuration are preserved.
+   If safe ownership cannot be proved, disable is unavailable and the UI
+   explains how to resolve the conflict manually.
+7. Tailscale account login, Gateway API keys, provider OAuth, Mobile Host
+   pairing, and local workspace grants are distinct identities and controls.
+8. Every execution records a redacted, durable receipt. Secrets and auth URLs
+   containing credentials are never written to logs or receipts.
+9. `.isyroot` remains an empty identity/boundary marker; it does not grant
+   filesystem or network access.
+10. Serve route identity is Tailscale's `ipn.HostPort` key (`$DNS:443`), the
+    same key `tailscale serve status --json` uses for `Web` and
+    `AllowFunnel`. Owned-route records, the Sentinel check, and the
+    before/after preservation comparison all use that key. The `:443` HTTPS
+    listener that Serve creates with the first web handler (and removes with
+    the last) is the only listener change projected out of that comparison.
+11. **Serve lifetime policy.** An enabled route is a node-level, persistent
+    effect (`--bg`). ISyCode does not remove it when the TUI exits, because
+    removal is itself a mutation that requires Workspace Authority,
+    IsySentinel and a fresh human approval, and none is available at exit.
+    Instead, Settings shows "Route stays on after ISyCode exits" whenever the
+    owned route is live, explains that whatever listens on the loopback target
+    is tailnet-reachable at that path while Mobile Host is stopped, and offers
+    the approved disable action. The Mobile Host start dialog states when a
+    saved route already points at it. Grants are per `.isyroot`, but the route
+    and its ownership record are node-wide; any workspace holding
+    `tailscale.serve.disable` can remove it.
+
+## Errors and recovery
+
+- **Missing package privilege:** report the exact package action, including
+  that its maintainer script may start or restart `tailscaled`, and let the
+  user rerun through the OS authorization prompt; never fall back to an
+  unprivileged shell installer. Offer manual instructions as the no-mutation
+  alternative.
+- **Tailscale daemon unavailable:** report install/service state and offer a
+  bounded start action only if its owner and OS privilege contract are
+  implemented.
+- **Login pending or cancelled:** retain the wizard state without saving
+  credentials; provide retry and cancel.
+- **Serve conflict:** do not reset all Serve configuration. Show the conflict
+  and leave the existing service untouched.
+- **Mobile Host unavailable:** do not enable Serve; show the local health failure.
+- **Serve enable succeeds but verification fails:** report the exact owned
+  route and offer its approved disable action. Do not claim remote reachability.
+- **Tailscale missing or unsupported OS:** keep private access disabled and
+  show the official instructions for that platform.
+
+## Out of scope for the first adapter
+
+- Funnel, Cloudflare public tunnels, public DNS, or any Internet-accessible
+  endpoint.
+- A hosted ISyCo control plane or shared ISyCo Tailscale account.
+- Automatically enrolling mobile devices or generating reusable Tailscale
+  auth keys.
+- Starting the incomplete Mobile Host runtime/session API. Serve reaches only
+  the loopback health and pairing routes; runtime/session operations remain
+  unavailable until their own owners and contracts exist.
+- Automatically approving Gateway semantic calls, file access, MCP tools, or
+  provider requests.
+- Installing MCP servers or configuring MCP credentials in this change.
+
+## Acceptance criteria
+
+- Fresh install, installed-but-signed-out, signed-in, already-served,
+  conflicting Serve config, and unsupported distribution are shown as
+  distinct preflight states.
+- No system mutation occurs from opening Settings, running preflight, or
+  cancelling any screen.
+- Package install, tailnet login, Serve enable, and Serve disable each require
+  the proper owner and explicit request-bound approval.
+- Package installation is restricted to supported official repositories and
+  exact package names; no dynamic command or shell interpolation is accepted.
+- Serve maps only the Mobile Host loopback endpoint and is confirmed tailnet-only;
+  Funnel remains off.
+- Enabling and disabling preserve unrelated Serve entries and are idempotent.
+- Restart/relaunch status is read from Tailscale and the local Mobile Host rather
+  than inferred from ISyCode's saved preference.
+- A real tailnet device can reach Mobile Host over Serve; an outside device
+  cannot. Gateway key/scope and ISyCode grants remain independently enforced.
+- Cancellation, denied privilege, stale approval, wrong executable, route
+  drift, timeout, malformed CLI output, and service loss fail closed with a
+  durable redacted receipt.
+
+## Implementation phases
+
+1. **Read-only wizard and inventory:** Tailscale/Gateway discovery, settings
+   screens, step state, supported-OS guidance, and conflict display.
+2. **Action contracts:** catalog entries, Systembilities, approvals, typed
+   owners, and receipts for package install and login.
+3. **Private Serve lifecycle:** owned mapping, enable/disable, status, and
+   preservation of other Serve configuration.
+4. **Real-device witness:** pair one tailnet client, verify private URL,
+   Gateway auth/scope, cancellation, disable, and outside-tailnet denial.
+5. **Future adapters:** add each additional tunnel or MCP manager only after
+   its own owner/security design and user-reviewed scope.
+
+## Implementation evidence (2026-09-29)
+
+- **DEMONSTRATED (offline):** exact `/isycode` preview, Authority/IsySentinel binding, fresh approval, one-use receipt, enable/readback/disable, preservation of unrelated Web handlers, TCP listeners and Services, cancellation without mutation, and fail-closed route drift.
+- **DEMONSTRATED (UI smoke):** Settings renders the Private access branch and the missing-CLI install/manual choices in a temporary workspace. The smoke created no `.isyroot` and made no system change.
+- **NOT_DEMONSTRATED:** installing on a real host, completing browser login, enabling/disabling a real Serve route, reaching Mobile Host from another tailnet device, rejecting access outside the tailnet, and checking the independent Gateway API-key/workspace scopes over the tunnel.
+- Additional providers, tunnel products and MCP managers remain future adapters with their own owner and approval design.
+
+**Review note:** The implementation exposes guided opt-in steps. No package installation,
+login, or Serve change occurred during development; those operations still require
+their own explicit Authority grant, preview, and final per-step user approval.

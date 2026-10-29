@@ -1,0 +1,20 @@
+{
+  "action": "Activate the existing isycode command on the primary main source checkout",
+  "paths": [
+    {
+      "path": "/home/danny/.local/bin/isycode",
+      "kind": "symlink",
+      "tracked": false,
+      "current_literal_target": "/home/danny/.local/share/isycode-mainline/.venv/bin/isycode",
+      "current_resolved_target": "/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/isycode",
+      "replacement_target": "/home/danny/Development/ISyCo Git/ISyCode/scripts/isycode",
+      "recovery": "Move the existing symlink to isycode.backup.<UTC timestamp>.<PID> in the same bin directory before creating the new symlink."
+    }
+  ],
+  "file_count": 1,
+  "directories_removed": 0,
+  "deleted_content": 0,
+  "preserved": "Existing mainline worktree, .venv, keys, chat state, terminal preferences and running processes.",
+  "permission_rule": "Root AGENTS.md §0c.6 requires explicit approval for a replacement outside the named repository scope.",
+  "implementation": "scripts/install-path --replace-owned; tested migration accepts only the known legacy link sharing this checkout virtualenv."
+}

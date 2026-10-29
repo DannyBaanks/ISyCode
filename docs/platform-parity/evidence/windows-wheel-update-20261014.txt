@@ -1,0 +1,10 @@
+Processing d:\isycode-sandbox-5ae383aa26a8490ea9910d768b51f4a0\wheel-b1423717f99a4b6e9c7b376bc992acaa\isycode-1.0.0rc1-py3-none-any.whl
+Installing collected packages: isycode
+  Attempting uninstall: isycode
+    Found existing installation: isycode 1.0.0rc1
+    Uninstalling isycode-1.0.0rc1:
+      Successfully uninstalled isycode-1.0.0rc1
+Successfully installed isycode-1.0.0rc1
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: D:\ISyCode-Sandbox-5ae383aa26a8490ea9910d768b51f4a0\wheel-b1423717f99a4b6e9c7b376bc992acaa\venv\Scripts\python.exe -m pip install --upgrade pip

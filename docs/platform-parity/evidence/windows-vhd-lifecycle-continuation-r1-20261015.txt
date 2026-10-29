@@ -1,0 +1,148 @@
+FFF.....WinHTTP: host Internet HEAD succeeded; LPAC denied: HTTP_DENIED 10013
+.real cancellation: preparation clean, original preserved
+.real cancellation: executing Job stopped, no promotion, scratch clean
+.ss
+================================== FAILURES ===================================
+__________ test_real_volume_recovery_after_abrupt_owner_death[copy] ___________
+
+storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('D:/Development/ISyCo/windows-parity/runs/20261015/real-vhd-lifecycle-r1/basetemp/test_real_volume_recovery_afte0')
+phase = 'copy'
+
+    @pytest.mark.parametrize('phase',['copy','profile-created','running'])
+    def test_real_volume_recovery_after_abrupt_owner_death(storage,tmp_path,phase):
+        from isycode.platform_windows_sandbox_recovery import recover_owned_scratch
+        code=r'''
+    import json,os,sys
+    from pathlib import Path
+    from isycode.windows_sandbox_storage_cli import configured_storage
+    from isycode.platform_windows_sandbox_volume import BoundedStorageProvider
+    import isycode.platform_windows_sandbox_resources as native
+    from isycode.platform_windows_sandbox_process import WindowsSandboxProcess
+    lease=BoundedStorageProvider(configured_storage()).open()
+    phase=sys.argv[2]
+    if phase=='copy':
+     def die_copy(source,target,*args,**kwargs):
+      Path(target).mkdir();Path(target,'partial.txt').write_text('partial-control')
+      print(json.dumps({'root':str(Path(target).parent)}),flush=True);os._exit(17)
+     native.shutil.copytree=die_copy
+    elif phase=='profile-created':
+     original=native.write_ownership
+     def die_record(root,name,sid,**kwargs):
+      original(root,name,sid,**kwargs)
+      if kwargs.get('phase')=='PROFILE_CREATED':
+       print(json.dumps({'root':str(root)}),flush=True);os._exit(17)
+     native.write_ownership=die_record
+    r=native.WindowsSandboxResources.prepare(Path(sys.argv[1]),Path(sys.base_prefix),(),storage_lease=lease)
+    exe=r.runtime_root/'python.exe'
+    p=WindowsSandboxProcess.launch(exe,(str(exe),'-I','-c','import time;time.sleep(120)'),r.stage_root,r.environment,r.profile_sid,256,r.capability_sids)
+    print(json.dumps({'root':str(r.scratch_root),'pid':p.pid}),flush=True)
+    os._exit(17)
+    '''
+        result=subprocess.run([sys.executable,'-c',code,str(tmp_path),phase],capture_output=True,text=True,timeout=90)
+>       assert result.returncode==17,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 4, in <module>
+E         ModuleNotFoundError: No module named 'isycode'
+E         
+E       assert 1 == 17
+E        +  where 1 = CompletedProcess(args=['C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312\\python.exe', '-c', "\nimport js... (most recent call last):\n  File "<string>", line 4, in <module>\nModuleNotFoundError: No module named \'isycode\'\n').returncode
+
+tests\test_windows_sandbox_volume_lifecycle.py:75: AssertionError
+_____ test_real_volume_recovery_after_abrupt_owner_death[profile-created] _____
+
+storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('D:/Development/ISyCo/windows-parity/runs/20261015/real-vhd-lifecycle-r1/basetemp/test_real_volume_recovery_afte1')
+phase = 'profile-created'
+
+    @pytest.mark.parametrize('phase',['copy','profile-created','running'])
+    def test_real_volume_recovery_after_abrupt_owner_death(storage,tmp_path,phase):
+        from isycode.platform_windows_sandbox_recovery import recover_owned_scratch
+        code=r'''
+    import json,os,sys
+    from pathlib import Path
+    from isycode.windows_sandbox_storage_cli import configured_storage
+    from isycode.platform_windows_sandbox_volume import BoundedStorageProvider
+    import isycode.platform_windows_sandbox_resources as native
+    from isycode.platform_windows_sandbox_process import WindowsSandboxProcess
+    lease=BoundedStorageProvider(configured_storage()).open()
+    phase=sys.argv[2]
+    if phase=='copy':
+     def die_copy(source,target,*args,**kwargs):
+      Path(target).mkdir();Path(target,'partial.txt').write_text('partial-control')
+      print(json.dumps({'root':str(Path(target).parent)}),flush=True);os._exit(17)
+     native.shutil.copytree=die_copy
+    elif phase=='profile-created':
+     original=native.write_ownership
+     def die_record(root,name,sid,**kwargs):
+      original(root,name,sid,**kwargs)
+      if kwargs.get('phase')=='PROFILE_CREATED':
+       print(json.dumps({'root':str(root)}),flush=True);os._exit(17)
+     native.write_ownership=die_record
+    r=native.WindowsSandboxResources.prepare(Path(sys.argv[1]),Path(sys.base_prefix),(),storage_lease=lease)
+    exe=r.runtime_root/'python.exe'
+    p=WindowsSandboxProcess.launch(exe,(str(exe),'-I','-c','import time;time.sleep(120)'),r.stage_root,r.environment,r.profile_sid,256,r.capability_sids)
+    print(json.dumps({'root':str(r.scratch_root),'pid':p.pid}),flush=True)
+    os._exit(17)
+    '''
+        result=subprocess.run([sys.executable,'-c',code,str(tmp_path),phase],capture_output=True,text=True,timeout=90)
+>       assert result.returncode==17,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 4, in <module>
+E         ModuleNotFoundError: No module named 'isycode'
+E         
+E       assert 1 == 17
+E        +  where 1 = CompletedProcess(args=['C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312\\python.exe', '-c', "\nimport js... (most recent call last):\n  File "<string>", line 4, in <module>\nModuleNotFoundError: No module named \'isycode\'\n').returncode
+
+tests\test_windows_sandbox_volume_lifecycle.py:75: AssertionError
+_________ test_real_volume_recovery_after_abrupt_owner_death[running] _________
+
+storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('D:/Development/ISyCo/windows-parity/runs/20261015/real-vhd-lifecycle-r1/basetemp/test_real_volume_recovery_afte2')
+phase = 'running'
+
+    @pytest.mark.parametrize('phase',['copy','profile-created','running'])
+    def test_real_volume_recovery_after_abrupt_owner_death(storage,tmp_path,phase):
+        from isycode.platform_windows_sandbox_recovery import recover_owned_scratch
+        code=r'''
+    import json,os,sys
+    from pathlib import Path
+    from isycode.windows_sandbox_storage_cli import configured_storage
+    from isycode.platform_windows_sandbox_volume import BoundedStorageProvider
+    import isycode.platform_windows_sandbox_resources as native
+    from isycode.platform_windows_sandbox_process import WindowsSandboxProcess
+    lease=BoundedStorageProvider(configured_storage()).open()
+    phase=sys.argv[2]
+    if phase=='copy':
+     def die_copy(source,target,*args,**kwargs):
+      Path(target).mkdir();Path(target,'partial.txt').write_text('partial-control')
+      print(json.dumps({'root':str(Path(target).parent)}),flush=True);os._exit(17)
+     native.shutil.copytree=die_copy
+    elif phase=='profile-created':
+     original=native.write_ownership
+     def die_record(root,name,sid,**kwargs):
+      original(root,name,sid,**kwargs)
+      if kwargs.get('phase')=='PROFILE_CREATED':
+       print(json.dumps({'root':str(root)}),flush=True);os._exit(17)
+     native.write_ownership=die_record
+    r=native.WindowsSandboxResources.prepare(Path(sys.argv[1]),Path(sys.base_prefix),(),storage_lease=lease)
+    exe=r.runtime_root/'python.exe'
+    p=WindowsSandboxProcess.launch(exe,(str(exe),'-I','-c','import time;time.sleep(120)'),r.stage_root,r.environment,r.profile_sid,256,r.capability_sids)
+    print(json.dumps({'root':str(r.scratch_root),'pid':p.pid}),flush=True)
+    os._exit(17)
+    '''
+        result=subprocess.run([sys.executable,'-c',code,str(tmp_path),phase],capture_output=True,text=True,timeout=90)
+>       assert result.returncode==17,result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 4, in <module>
+E         ModuleNotFoundError: No module named 'isycode'
+E         
+E       assert 1 == 17
+E        +  where 1 = CompletedProcess(args=['C:\\Users\\progr\\AppData\\Local\\Programs\\Python\\Python312\\python.exe', '-c', "\nimport js... (most recent call last):\n  File "<string>", line 4, in <module>\nModuleNotFoundError: No module named \'isycode\'\n').returncode
+
+tests\test_windows_sandbox_volume_lifecycle.py:75: AssertionError
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_windows_sandbox_volume_lifecycle.py:240: NOT_DEMONSTRATED: exact-image operator control required
+SKIPPED [1] tests\test_windows_sandbox_volume_lifecycle.py:282: NOT_DEMONSTRATED: exact-image operator control required
+3 failed, 8 passed, 2 skipped in 114.63s (0:01:54)
+PYTEST_EXIT=1

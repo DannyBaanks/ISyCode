@@ -1,0 +1,2 @@
+{"status": "FAIL", "turn": "completed", "calc_fixed": true, "journal": "PASS", "tokens_in": 16918, "tokens_out": 352, "latency_s": {"n": 4, "min": 3.281, "median": 5.616, "max": 8.189}, "turn_wall_s": 29.696}
+sha256 a0b91af504b6bce5ce4393ba7b599faf5b3b974b28ab0b15f064885445ad20c9

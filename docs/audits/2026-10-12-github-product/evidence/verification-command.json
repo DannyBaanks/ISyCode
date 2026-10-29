@@ -1,0 +1,79 @@
+{
+  "recorded_utc": "2026-10-12T09:10:48.004305+00:00",
+  "scope": "Documentation and current compositor exports only; no global suite, model inference or real clipboard calls.",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "local_base": "65161a07e9df1d03c6dad4d77c04cdd001ae112e",
+  "commands": [
+    {
+      "argv": [
+        ".venv/bin/python",
+        "scripts/capture_readme_screenshots.py",
+        "--out",
+        "docs/screenshots/2026-10-12-product"
+      ],
+      "exit_code": 1,
+      "note": "No PYTHONPATH: existing venv resolves installed mainline module lacking locale parameter; original tool output contained traceback."
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "scripts/capture_readme_screenshots.py",
+        "--out",
+        "docs/screenshots/2026-10-12-product"
+      ],
+      "env": {
+        "PYTHONPATH": "src"
+      },
+      "exit_code": 0,
+      "log": "capture.log",
+      "source": "Intermediate capture helper with direct file preview."
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "scripts/capture_readme_screenshots.py",
+        "--out",
+        "docs/screenshots/2026-10-12-product/final"
+      ],
+      "env": {
+        "PYTHONPATH": "src"
+      },
+      "exit_code": 1,
+      "log": "capture-final.log",
+      "source": "Intermediate helper with duplicate NodeSelected read."
+    },
+    {
+      "argv": [
+        ".venv/bin/python",
+        "scripts/capture_readme_screenshots.py",
+        "--out",
+        "docs/screenshots/2026-10-12-product/complete"
+      ],
+      "env": {
+        "PYTHONPATH": "src"
+      },
+      "exit_code": 0,
+      "log": "capture-complete.log",
+      "source_sha256": "27e0cefc3f6b8b33f7cab422cf369f2eb63945966b53b9bc6b987692edd14c3f"
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/audits/2026-10-12-github-product/validate.py"
+      ],
+      "exit_code": 0,
+      "log": "documentation-validation.log"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "original_matches_base_commit": true,
+  "original_sha256": "aaee73e910b9ab8a063aedd5e6dd624f6803d55dd5cc936eda923786a9b77ccd"
+}

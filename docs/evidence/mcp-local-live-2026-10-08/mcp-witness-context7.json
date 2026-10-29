@@ -1,0 +1,113 @@
+{
+  "preset": "context7",
+  "events": [
+    {
+      "t": 1791438481.626,
+      "kind": "preset_added",
+      "preset": "context7"
+    },
+    {
+      "t": 1791438481.749,
+      "kind": "screen",
+      "screen": "TailscaleConfirmScreen",
+      "key": "y"
+    },
+    {
+      "t": 1791438482.318,
+      "kind": "screen",
+      "screen": "LocalMCPConfirmScreen",
+      "key": "y"
+    },
+    {
+      "t": 1791438497.766,
+      "kind": "start_result",
+      "running": true,
+      "seconds": 16.1,
+      "tools": [
+        "resolve-library-id",
+        "query-docs"
+      ]
+    },
+    {
+      "t": 1791438498.023,
+      "kind": "screen",
+      "screen": "LocalMCPConfirmScreen",
+      "key": "n"
+    },
+    {
+      "t": 1791438498.164,
+      "kind": "rejected_call",
+      "result": {
+        "status": "rejected_by_user"
+      }
+    },
+    {
+      "t": 1791438498.371,
+      "kind": "screen",
+      "screen": "LocalMCPConfirmScreen",
+      "key": "y"
+    },
+    {
+      "t": 1791438505.416,
+      "kind": "approved_call",
+      "function": "mcp__context7__resolve-library-id",
+      "is_error": false,
+      "text_chars": 1731,
+      "text_sha256": "a25e9653abdb1558f8614239d1f45e811d98238085e13a9a0ff819ab31ee3d02",
+      "text_head": "Available Libraries:\n\n- Title: Textual\n- Context7-compatible library ID: /textualize/textual\n- Description: The lean application framework for Python.  Build sophisticated user interfaces with a simple Python API. Run your apps in the terminal and a web browser.\n- Code Snippets: 2655\n- Source Reputa"
+    },
+    {
+      "t": 1791438505.589,
+      "kind": "after_stop",
+      "result": "{\"error\": \"that MCP tool is not available; the server may be stopped\"}",
+      "offered_tools": []
+    },
+    {
+      "t": 1791438505.603,
+      "kind": "journal",
+      "status": "PASS",
+      "decisions": 14,
+      "receipts": 13,
+      "mcp": [
+        [
+          "decision",
+          "mcp.local.start",
+          "ALLOW"
+        ],
+        [
+          "receipt",
+          "mcp.local.start",
+          null
+        ],
+        [
+          "decision",
+          "mcp.local.invoke",
+          "ALLOW"
+        ],
+        [
+          "receipt",
+          "mcp.local.invoke",
+          null
+        ]
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "screen": "TailscaleConfirmScreen",
+      "key": "y"
+    },
+    {
+      "screen": "LocalMCPConfirmScreen",
+      "key": "y"
+    },
+    {
+      "screen": "LocalMCPConfirmScreen",
+      "key": "n"
+    },
+    {
+      "screen": "LocalMCPConfirmScreen",
+      "key": "y"
+    }
+  ]
+}

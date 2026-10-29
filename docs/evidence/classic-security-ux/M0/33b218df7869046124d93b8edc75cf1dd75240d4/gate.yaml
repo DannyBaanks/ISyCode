@@ -1,0 +1,94 @@
+hito: M0
+puerta: G0
+estado: APROBADO
+sha_evaluado: 33b218df7869046124d93b8edc75cf1dd75240d4
+fecha_utc: 2026-10-05T23:59:00Z
+autor: opencode session (fledge), continuación de la auditoría ISyCode
+entorno: Linux 7.0.0-38-generic x86_64, ext4 (nvme, 91% uso), bubblewrap 0.9.0, Python 3.12.3, Textual 8.2.8, run_test 120x40, 12 CPU, 14Gi RAM
+perfil_y_politica: classic en workspace temporal de prueba; sin cambio de permisos del producto
+dependencias: ninguna
+casos:
+  - id: G0-01
+    prueba: docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/inventory.md (generado por inventory_probe.py en la misma carpeta)
+    comando: python3 docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/inventory_probe.py
+    esperado: cada owner enlaza a un test que nombra la clase; un owner sin test falla
+    observado: >
+      59 clases Owner/Systembility/Boundary/Gate/ApprovalStore inventariadas; 0 sin test.
+      La corrida primero detectó un gap real en este SHA: BridgePresenceOwner
+      (nuevo desde el inventario anterior) no tenía ningún test nombrándolo.
+      Se añadió tests/test_bridge_presence_owner.py (5 tests: digest binding,
+      deny sin grant, handshake alterado, allow path sanitizado, ERROR acotado)
+      en el commit 33b218df y el inventario regenerado quedó en 0 unmapped.
+      Las Systembility se ejercen vía ProductActionGate, como antes.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/inventory.md
+        sha256: a826e873ba2d5dec86b2cc71d0de42a6d3e6871a3daa008e6c634fccc8e58236
+      - docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/inventory_probe.py
+        sha256: b4064891d1dedcdd1538ba7eb7e8b337caccfe37fc914f45e069c923b38c693b
+      - tests/test_bridge_presence_owner.py
+        sha256: bb327653846eb5b38f5f736742f0bdd7c9bd72d5df1731f49472a76965956c10
+  - id: G0-02
+    prueba: python -m pytest -q -m "not integration" -ra --tb=line
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line
+    esperado: exit 0 y skips clasificados; un fallo inexplicado bloquea
+    observado: exit 0; 1430 passed, 1 skipped, 11 deselected; 279.73s
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/pytest-not-integration.txt
+        sha256: 82587fdb7b70cc3e533398d1b0fe0bdcfa9ca3f03138869e810d4b84fef83c31
+    skips:
+      - tests/test_native_toolkit.py:63: runtime TypeScript sandbox_ready ausente. No aprueba LSP TypeScript. (El skip de anthropic de la evidencia anterior ya no aplica: el extra está instalado en este entorno.)
+    deselected_integration:
+      - tests/test_bridge.py (2)
+      - tests/test_broker_preview.py (3)
+      - tests/test_daily_tui.py::test_full_chat_read_edit_and_diff_uses_real_owners[True]
+      - tests/test_gateway.py (5)
+  - id: G0-03
+    prueba: docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/flow_probe.py (mismo camino que test_daily_tui, con temporizadores)
+    comando: env -u ISYCODE_STATE_HOME python3 docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/flow_probe.py
+    esperado: transcripción sanitizada, conteo de aprobaciones y latencias del flujo actual
+    observado: >
+      read+edit+diff en Classic pidió exactamente 1 WriteApprovalScreen
+      (visible a los 0.162s) y terminó en 0.528s. Lectura y git_diff no
+      abrieron pantalla. Editar sin aprobación devolvió DENY
+      ("fresh request-bound approval is required") en 0.007s y el archivo
+      quedó como lo dejó el flujo aprobado (value = 2). Journal PASS.
+      Provider simulado; sin red. El probe queda preservado como artefacto
+      (la evidencia anterior lo había perdido en /tmp).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/flow.json
+        sha256: d839340c26cc7229e4c7e32393b5df7c295f07aa913302b692e9088418cf9902
+      - docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/flow_probe.py
+        sha256: eea48f5dba406200e963b9547991e7ee2536dca43e47676192b49013e39cff1a
+  - id: G0-04
+    prueba: docs/decisions/0002-classic-security-reuse.md
+    comando: lectura de ADR y de este entorno
+    esperado: ADR de reuso y threat model revisados, más la lista de capacidades sin evidencia real
+    observado: >
+      ADR 0002 vigente (alternativas de aislamiento medidas en este host,
+      threat model con amenazas no cerradas, límites OS, referencias sin
+      paridad afirmada). La revisión por persona distinta del autor queda
+      registrada en el bloque revision de este manifiesto (mecanismo nuevo
+      en scripts/validate_gates.py); sin ese bloque el validador rechaza
+      cualquier APROBADO.
+    resultado: PASS
+    artefactos:
+      - docs/decisions/0002-classic-security-reuse.md
+        sha256: ca57e614d719295b041fccbdf93f80a9a7317a955895a6cc4b9275d2016bb232
+sin_evidencia_real:
+  - Classic autónomo con 0 aprobaciones por acción (G4)
+  - staging de efectos antes de promover al árbol del usuario (cubierto por M2, ver su manifiesto)
+  - ledger persistente de presupuesto (cubierto por M3, ver su manifiesto)
+  - paridad con OpenClaw, OpenCode o Crush
+  - LSP TypeScript en este host
+  - Gateway, Bridge y broker contra servicios vivos (11 tests de integración no corridos)
+  - latencia de UI contra la caja de referencia de M9
+regresion: la suite hermética de G0-02, exit 0
+riesgos_residuales: el sandbox monta el workspace escribible; esta medición no cambia ese hecho
+rollback_ensayado: no aplica; M0 no cambia código de producto
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T00:21:46Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py

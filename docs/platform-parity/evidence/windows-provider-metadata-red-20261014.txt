@@ -1,0 +1,70 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+____________ test_observations_use_native_state_and_private_files _____________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_observations_use_native_s0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C0841D7380>
+
+    def test_observations_use_native_state_and_private_files(tmp_path,monkeypatch):
+        from isycode import capability_observations as c
+        root=tmp_path/'state';monkeypatch.setenv('ISYCODE_STATE_HOME',str(root))
+        assert c.record('parity','modelo-�','images',True)
+>       assert c._path()==root/'model-capabilities.jsonl'
+E       AssertionError: assert WindowsPath('C:/Users/progr/.local/state/isycode/model-capabilities.jsonl') == (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_observations_use_native_s0/state') / 'model-capabilities.jsonl')
+E        +  where WindowsPath('C:/Users/progr/.local/state/isycode/model-capabilities.jsonl') = <function _path at 0x000001C0841FAE80>()
+E        +    where <function _path at 0x000001C0841FAE80> = <module 'isycode.capability_observations' from 'C:\\Development\\ISyCo Git\\ISyCode\\src\\isycode\\capability_observations.py'>._path
+
+tests\test_provider_metadata_native.py:12: AssertionError
+_______________ test_preferences_directory_and_file_are_private _______________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_preferences_directory_and0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C083C4FA40>
+
+    def test_preferences_directory_and_file_are_private(tmp_path,monkeypatch):
+        from isycode.providers import _write_preferences,_preferences_path
+        monkeypatch.setenv('ISYCODE_STATE_HOME',str(tmp_path/'state'))
+        _write_preferences({'version':1,'provider':'parity','models':{}})
+        path=_preferences_path()
+>       assert storage.private(path.parent) and storage.private(path)
+E       AssertionError: assert (False)
+E        +  where False = private(WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_preferences_directory_and0/state/preferences'))
+E        +    where private = <isycode.platform_windows_storage.WindowsStorage object at 0x000001C08414A8D0>.private
+E        +    and   WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_preferences_directory_and0/state/preferences') = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_preferences_directory_and0/state/preferences/provider.json').parent
+
+tests\test_provider_metadata_native.py:22: AssertionError
+_________________ test_observation_writers_do_not_interleave __________________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-793/test_observation_writers_do_no0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C083C7BD10>
+
+    def test_observation_writers_do_not_interleave(tmp_path,monkeypatch):
+        from isycode import capability_observations as c
+        monkeypatch.setenv('ISYCODE_STATE_HOME',str(tmp_path/'state'))
+        code="from isycode.capability_observations import record; import sys; assert all(record('parity',sys.argv[1]+str(i),'steer',True) for i in range(12))"
+        jobs=[subprocess.Popen([sys.executable,'-c',code,str(i)],stdout=subprocess.PIPE,stderr=subprocess.PIPE) for i in range(3)]
+        for job in jobs:
+            out,err=job.communicate(timeout=40)
+            assert job.returncode==0,err.decode(errors='replace')
+>       rows=[json.loads(line) for line in c._path().read_text(encoding='utf-8').splitlines()]
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_provider_metadata_native.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1028: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.utf_8.IncrementalDecoder object at 0x000001C084210200>
+input = b'{"provider": "parity", "model": "modelo-\xf1", "feature": "images", "supported": true, "observed_at": "2026-10-15T02...parity", "model": "211", "feature": "steer", "supported": true, "observed_at": "2026-10-15T02:33:38.926325+00:00"}\r\n'
+final = True
+
+>   ???
+E   UnicodeDecodeError: 'utf-8' codec can't decode byte 0xf1 in position 40: invalid continuation byte
+
+<frozen codecs>:322: UnicodeDecodeError
+=========================== short test summary info ===========================
+FAILED tests/test_provider_metadata_native.py::test_observations_use_native_state_and_private_files
+FAILED tests/test_provider_metadata_native.py::test_preferences_directory_and_file_are_private
+FAILED tests/test_provider_metadata_native.py::test_observation_writers_do_not_interleave
+3 failed in 0.95s

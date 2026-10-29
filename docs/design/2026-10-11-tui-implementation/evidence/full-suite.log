@@ -1,0 +1,1041 @@
+...................................................F.................... [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+.......F................................................................ [ 15%]
+........................................................................ [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+.................FFF.................F.................................. [ 34%]
+........................................................................ [ 38%]
+.......................................F..F.....FF...................... [ 41%]
+........................................................................ [ 45%]
+..................................F..................................... [ 49%]
+.........................FF....s........................................ [ 53%]
+........................................................................ [ 57%]
+........................................................................ [ 60%]
+...................................................................FF... [ 64%]
+........................................................................ [ 68%]
+........................................................................ [ 72%]
+...................................................................F.... [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 83%]
+........................................................................ [ 87%]
+........................................................................ [ 91%]
+....................................................F..F................ [ 95%]
+........................................................................ [ 98%]
+....................                                                     [100%]
+=================================== FAILURES ===================================
+___________ test_checked_in_snapshot_matches_live_catalog_and_owners ___________
+
+    def test_checked_in_snapshot_matches_live_catalog_and_owners():
+        import json
+        from pathlib import Path
+    
+        snapshot_path = Path(__file__).resolve().parents[1] / "docs" / "security" / "m15-authority-coverage.json"
+        checked_in = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    
+>       assert checked_in == action_coverage.authority_coverage_snapshot()
+E       AssertionError: assert {'format': 'i...hes': [], ...} == {'format': 'i...hes': [], ...}
+E         
+E         Omitting 14 identical items, use -vv to show
+E         Differing items:
+E         {'request_constructors': [{'file': 'isycode/action_runtime.py', 'line': 92, 'callable': 'isycode.action_runtime._works... 2045, 'callable': 'isycode.action_runtime.GatewaySemanticOwner.invoke', 'action': 'gateway.semantic.read', ...}, ...]} != {'request_constructors': [{'file': 'isycode/action_runtime.py', 'line': 92, 'callable': 'isycode.action_runtime._works... 2045, 'callable': 'isycode.action_runtime.GatewaySemanticOwner.invoke', 'action': 'gateway.semantic.read', ...}, ...]}
+E         Use -v to get more diff
+
+tests/test_action_coverage.py:318: AssertionError
+_____________ test_reasoning_growth_and_collapse_keep_tail_visible _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_reasoning_growth_and_coll0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766512fc4440>
+capsys = <_pytest.capture.CaptureFixture object at 0x766512fc7fb0>
+
+    def test_reasoning_growth_and_collapse_keep_tail_visible(tmp_path, monkeypatch, capsys):
+        configure(tmp_path, monkeypatch)
+        growing, continue_stream = asyncio.Event(), asyncio.Event()
+        async def complete(provider, messages, **kwargs):
+            kwargs['on_chunk']('reasoning', 'Reasoning line.\n' * 70)
+            growing.set()
+            await continue_stream.wait()
+            kwargs['on_chunk']('content', 'Final answer paragraph.\n\n' * 30)
+            return {'text': 'Final answer paragraph.\n\n' * 30, 'tool_calls': []}
+        monkeypatch.setattr('isycode.tui.provider_complete', complete)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(80, 24)) as pilot:
+                await pilot.pause()
+                task = asyncio.create_task(app._run_chat('Explain.'))
+                await growing.wait()
+                await pilot.pause()
+                chat = app.query_one(ChatArea)
+                try:
+                    assert len(plain_text(app.query_one(ThoughtBlock)._body).splitlines()) == 2
+                    assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
+                finally:
+                    continue_stream.set()
+                    await task
+                await pilot.pause()
+                assert abs(chat.scroll_y - chat.max_scroll_y) <= 1
+                assert app.query_one(ThoughtBlock).collapsed
+        with capsys.disabled():
+>           asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_chat_sequence.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            task = asyncio.create_task(app._run_chat('Explain.'))
+            await growing.wait()
+            await pilot.pause()
+            chat = app.query_one(ChatArea)
+            try:
+>               assert len(plain_text(app.query_one(ThoughtBlock)._body).splitlines()) == 2
+E               AssertionError: assert 70 == 2
+E                +  where 70 = len(['Reasoning line.', 'Reasoning line.', 'Reasoning line.', 'Reasoning line.', 'Reasoning line.', 'Reasoning line.', ...])
+E                +    where ['Reasoning line.', 'Reasoning line.', 'Reasoning line.', 'Reasoning line.', 'Reasoning line.', 'Reasoning line.', ...] = <built-in method splitlines of str object at 0x12a707f0>()
+E                +      where <built-in method splitlines of str object at 0x12a707f0> = 'Reasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line....easoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\n'.splitlines
+E                +        where 'Reasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line....easoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\nReasoning line.\n' = plain_text(SelectableText())
+E                +          where SelectableText() = ThoughtBlock()._body
+E                +            where ThoughtBlock() = query_one(ThoughtBlock)
+E                +              where query_one = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).query_one
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_chat_sequence.py:173: AssertionError
+_______ test_thinking_preview_full_and_hidden_states_are_local_to_focus ________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_thinking_preview_full_and0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766526033110>
+
+    def test_thinking_preview_full_and_hidden_states_are_local_to_focus(tmp_path, monkeypatch):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                block, chat = app._mount_thought()
+                await pilot.pause()
+                block.set_text('First line\nSecond line')
+                assert plain_text(block._body) == 'First line\nSecond line'
+                assert not str(block.border_subtitle)
+                block.set_text('First line\nSecond line\nThird line\nFourth line')
+                assert plain_text(block._body) == 'First line\nSecond line'
+                assert not str(block.border_subtitle)
+                app.query_one('#prompt-input').focus()
+                await pilot.press('space')
+                assert plain_text(block._body) == 'First line\nSecond line'
+                block.focus()
+                await pilot.press('space')
+                await pilot.pause()
+                assert 'Fourth line' in plain_text(block._body)
+                assert 'collapse' in str(block.border_subtitle)
+                await pilot.press('space')
+                assert block.collapsed
+                await pilot.press('space')
+                assert not block.collapsed
+                assert plain_text(block._body) == 'First line\nSecond line'
+                block.collapse_to(6)
+                await pilot.pause()
+                assert block.collapsed
+                assert 'thought for 6s     First line Second line' in str(block.title)
+                block.query_one(BoxTitle).focus()
+                await pilot.press('enter')
+                await pilot.pause()
+                assert not block.collapsed
+                assert plain_text(block._body) == 'First line\nSecond line'
+                await pilot.press('enter')
+                assert 'Fourth line' in plain_text(block._body)
+                rail = app.query_one('#rail-lsp')
+                initial = rail.collapsed
+                rail.query_one(BoxTitle).focus()
+                await pilot.press('space')
+                await pilot.pause()
+                assert rail.collapsed != initial
+                assert not block.collapsed
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_focused_box_expansion.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            block, chat = app._mount_thought()
+            await pilot.pause()
+            block.set_text('First line\nSecond line')
+            assert plain_text(block._body) == 'First line\nSecond line'
+            assert not str(block.border_subtitle)
+            block.set_text('First line\nSecond line\nThird line\nFourth line')
+>           assert plain_text(block._body) == 'First line\nSecond line'
+E           AssertionError: assert 'First line\n...\nFourth line' == 'First line\nSecond line'
+E             
+E               First line
+E             - Second line
+E             + Second line
+E             ?            +
+E             + Third line
+E             + Fourth line
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_focused_box_expansion.py:17: AssertionError
+_______ test_completed_marquee_is_optional_bounces_and_setting_is_saved ________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_completed_marquee_is_opti0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766527c28e90>
+
+    def test_completed_marquee_is_optional_bounces_and_setting_is_saved(tmp_path, monkeypatch):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(100, 30)) as pilot:
+                await pilot.pause()
+                block, _ = app._mount_thought()
+                await pilot.pause()
+                block.set_text('A long completed reasoning note with different words. ' * 8)
+                block.collapse_to(6)
+                assert not block._marquee_enabled
+                block.toggle_marquee()
+                block._marquee_timer.pause()
+                start = str(block.title)
+                block._marquee_tick()
+                assert str(block.title) != start
+                block._marquee_offset = 10000
+                block._marquee_tick()
+                assert block._marquee_direction == -1
+                block.toggle_marquee()
+                fixed = str(block.title)
+                block._marquee_tick()
+                assert str(block.title) == fixed
+                assert fixed.startswith('thought for 6s     ')
+                app._select_menu_entry({'kind': 'marquee_toggle', 'value': '', 'label': 'toggle'})
+                from isycode.user_defaults import UserDefaultsStore
+                assert UserDefaultsStore().load()['compact_marquee'] is True
+                assert block._marquee_enabled
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_focused_box_expansion.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            block, _ = app._mount_thought()
+            await pilot.pause()
+            block.set_text('A long completed reasoning note with different words. ' * 8)
+            block.collapse_to(6)
+            assert not block._marquee_enabled
+            block.toggle_marquee()
+            block._marquee_timer.pause()
+            start = str(block.title)
+            block._marquee_tick()
+            assert str(block.title) != start
+            block._marquee_offset = 10000
+            block._marquee_tick()
+            assert block._marquee_direction == -1
+            block.toggle_marquee()
+            fixed = str(block.title)
+            block._marquee_tick()
+            assert str(block.title) == fixed
+>           assert fixed.startswith('thought for 6s     ')
+E           AssertionError: assert False
+E            +  where False = <built-in method startswith of str object at 0x766511b4bbb0>('thought for 6s     ')
+E            +    where <built-in method startswith of str object at 0x766511b4bbb0> = 'Thought for 6s     A long completed reasoning note with different words. A long co…'.startswith
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_focused_box_expansion.py:76: AssertionError
+_______ test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly ________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_thinking_title_keyboard_c0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766517df67b0>
+
+    def test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly(tmp_path, monkeypatch):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(120, 40)) as pilot:
+                block, _ = app._mount_thought()
+                await pilot.pause()
+                block.set_text("One\nTwo\nThree\nFour")
+                block.collapse_to(6)
+                block.query_one(BoxTitle).focus()
+                for key in ("space", "enter"):
+                    await pilot.press(key)
+                    await pilot.pause()
+                    assert not block.collapsed and not block._expanded
+                    assert plain_text(block._body) == "One\nTwo"
+                    await pilot.press(key)
+                    await pilot.pause()
+                    assert not block.collapsed and block._expanded
+                    assert "Four" in plain_text(block._body)
+                    await pilot.press(key)
+                    await pilot.pause()
+                    assert block.collapsed and not block._expanded
+                    assert "thought for 6s     One Two Three Four" in str(block.title)
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_focused_box_expansion.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            block, _ = app._mount_thought()
+            await pilot.pause()
+            block.set_text("One\nTwo\nThree\nFour")
+            block.collapse_to(6)
+            block.query_one(BoxTitle).focus()
+            for key in ("space", "enter"):
+                await pilot.press(key)
+                await pilot.pause()
+                assert not block.collapsed and not block._expanded
+>               assert plain_text(block._body) == "One\nTwo"
+E               AssertionError: assert 'One\nTwo\nThree\nFour' == 'One\nTwo'
+E                 
+E                   One
+E                 - Two
+E                 + Two
+E                 ?    +
+E                 + Three
+E                 + Four
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_focused_box_expansion.py:98: AssertionError
+_____ test_historical_review_records_are_valid_but_do_not_approve_release ______
+
+    def test_historical_review_records_are_valid_but_do_not_approve_release():
+        validator = _validator()
+>       assert validator.validate_tree(ROOT) == []
+E       assert ['/home/danny...256 mismatch'] == []
+E         
+E         Left contains one more item: "/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml: artifact 'tests/test_visual_tui.py' sha256 mismatch"
+E         Use -v to get more diff
+
+tests/test_gate_validator.py:43: AssertionError
+_____________ test_high_contrast_css_parses_and_overrides_surfaces _____________
+
+    def test_high_contrast_css_parses_and_overrides_surfaces():
+        from textual.css.stylesheet import Stylesheet
+        from isycode.tui_theme import HIGH_CONTRAST_CSS
+    
+        stylesheet = Stylesheet()
+        stylesheet.add_source(HIGH_CONTRAST_CSS, read_from=("test", "inline"))
+        stylesheet.parse()
+        assert "#000000" in HIGH_CONTRAST_CSS
+        assert "Screen" in HIGH_CONTRAST_CSS
+>       assert "#prompt-input" in HIGH_CONTRAST_CSS
+E       AssertionError: assert '#prompt-input' in '\nScreen { background: #000000; color: #ffffff; }\nInput, TextArea { color: #ffffff; }\nInput:focus, TextArea:focus { border: solid #ffffff; }\n'
+
+tests/test_high_contrast.py:38: AssertionError
+_______________ test_ideas_are_not_sent_until_explicit_promotion _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_ideas_are_not_sent_until_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766510d93cb0>
+
+    def test_ideas_are_not_sent_until_explicit_promotion(tmp_path, monkeypatch):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(120, 40)) as pilot:
+                prompt = app.query_one(PromptArea)
+                prompt.load_text("A new feature idea")
+                prompt.action_capture_idea()
+                assert app._idea_backlog == ["A new feature idea"]
+                assert not app._queued_messages and not app._history
+                app.push_screen(IdeaBacklogScreen(app))
+                await pilot.pause()
+                fold = app.screen.query_one("Collapsible")
+                fold.collapsed = False
+                await pilot.pause()
+                await pilot.click("#idea-promote-0")
+                await pilot.pause()
+                assert app._queued_messages == ["A new feature idea"]
+                assert not app._idea_backlog and not app._history
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_idea_backlog.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            prompt = app.query_one(PromptArea)
+            prompt.load_text("A new feature idea")
+            prompt.action_capture_idea()
+            assert app._idea_backlog == ["A new feature idea"]
+            assert not app._queued_messages and not app._history
+            app.push_screen(IdeaBacklogScreen(app))
+            await pilot.pause()
+            fold = app.screen.query_one("Collapsible")
+            fold.collapsed = False
+            await pilot.pause()
+            await pilot.click("#idea-promote-0")
+            await pilot.pause()
+>           assert app._queued_messages == ["A new feature idea"]
+E           AssertionError: assert [] == ['A new feature idea']
+E             
+E             Right contains one more item: 'A new feature idea'
+E             Use -v to get more diff
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_idea_backlog.py:23: AssertionError
+___ test_full_idea_note_opens_updates_and_closes_without_resizing_box[size0] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_full_idea_note_opens_upda0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7665267739e0>
+size = (80, 24)
+
+    @pytest.mark.parametrize('size', [(80, 24), (120, 40)])
+    def test_full_idea_note_opens_updates_and_closes_without_resizing_box(tmp_path, monkeypatch, size):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=size) as pilot:
+                await pilot.pause()
+                box = app.query_one('#idea-box')
+                region = box.region
+                app._idea_box = 'A long note. ' * 100
+                app._paint_idea_box()
+                await pilot.pause()
+                assert box.region.width == region.width
+                region = box.region
+                assert 'Space' in str(box.border_title)
+                box.focus()
+                await pilot.press('space')
+                await pilot.pause()
+                assert isinstance(app.screen, IdeaNoteScreen)
+                assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+                app._idea_box = 'Live updated note ' * 100
+                app._paint_idea_box()
+                await pilot.pause()
+                assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+                await pilot.press('escape')
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+                assert box.region == region
+                await pilot.click(box, offset=(2, 0))
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+                await pilot.click(box, offset=(4, 0))
+                await pilot.pause()
+                assert isinstance(app.screen, IdeaNoteScreen)
+                await pilot.press('escape')
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+                _, command, _ = app._plugins.route('/idea')
+                await command.handler(app, '')
+                await pilot.pause()
+                assert isinstance(app.screen, IdeaNoteScreen)
+                await pilot.click('#idea-note-close')
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_idea_note_window.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=size) as pilot:
+            await pilot.pause()
+            box = app.query_one('#idea-box')
+            region = box.region
+            app._idea_box = 'A long note. ' * 100
+            app._paint_idea_box()
+            await pilot.pause()
+            assert box.region.width == region.width
+            region = box.region
+            assert 'Space' in str(box.border_title)
+            box.focus()
+            await pilot.press('space')
+            await pilot.pause()
+            assert isinstance(app.screen, IdeaNoteScreen)
+            assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+            app._idea_box = 'Live updated note ' * 100
+            app._paint_idea_box()
+            await pilot.pause()
+            assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+            await pilot.press('escape')
+            await pilot.pause()
+            assert not isinstance(app.screen, IdeaNoteScreen)
+            assert box.region == region
+            await pilot.click(box, offset=(2, 0))
+            await pilot.pause()
+            assert not isinstance(app.screen, IdeaNoteScreen)
+            await pilot.click(box, offset=(4, 0))
+            await pilot.pause()
+>           assert isinstance(app.screen, IdeaNoteScreen)
+E           AssertionError: assert False
+E            +  where False = isinstance(Screen(id='_default'), IdeaNoteScreen)
+E            +    where Screen(id='_default') = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_idea_note_window.py:40: AssertionError
+___ test_full_idea_note_opens_updates_and_closes_without_resizing_box[size1] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_full_idea_note_opens_upda1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7665138fa090>
+size = (120, 40)
+
+    @pytest.mark.parametrize('size', [(80, 24), (120, 40)])
+    def test_full_idea_note_opens_updates_and_closes_without_resizing_box(tmp_path, monkeypatch, size):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=size) as pilot:
+                await pilot.pause()
+                box = app.query_one('#idea-box')
+                region = box.region
+                app._idea_box = 'A long note. ' * 100
+                app._paint_idea_box()
+                await pilot.pause()
+                assert box.region.width == region.width
+                region = box.region
+                assert 'Space' in str(box.border_title)
+                box.focus()
+                await pilot.press('space')
+                await pilot.pause()
+                assert isinstance(app.screen, IdeaNoteScreen)
+                assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+                app._idea_box = 'Live updated note ' * 100
+                app._paint_idea_box()
+                await pilot.pause()
+                assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+                await pilot.press('escape')
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+                assert box.region == region
+                await pilot.click(box, offset=(2, 0))
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+                await pilot.click(box, offset=(4, 0))
+                await pilot.pause()
+                assert isinstance(app.screen, IdeaNoteScreen)
+                await pilot.press('escape')
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+                _, command, _ = app._plugins.route('/idea')
+                await command.handler(app, '')
+                await pilot.pause()
+                assert isinstance(app.screen, IdeaNoteScreen)
+                await pilot.click('#idea-note-close')
+                await pilot.pause()
+                assert not isinstance(app.screen, IdeaNoteScreen)
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_idea_note_window.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=size) as pilot:
+            await pilot.pause()
+            box = app.query_one('#idea-box')
+            region = box.region
+            app._idea_box = 'A long note. ' * 100
+            app._paint_idea_box()
+            await pilot.pause()
+            assert box.region.width == region.width
+            region = box.region
+            assert 'Space' in str(box.border_title)
+            box.focus()
+            await pilot.press('space')
+            await pilot.pause()
+            assert isinstance(app.screen, IdeaNoteScreen)
+            assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+            app._idea_box = 'Live updated note ' * 100
+            app._paint_idea_box()
+            await pilot.pause()
+            assert plain_text(app.screen.query_one('#idea-note-content')) == app._idea_box
+            await pilot.press('escape')
+            await pilot.pause()
+            assert not isinstance(app.screen, IdeaNoteScreen)
+            assert box.region == region
+            await pilot.click(box, offset=(2, 0))
+            await pilot.pause()
+            assert not isinstance(app.screen, IdeaNoteScreen)
+            await pilot.click(box, offset=(4, 0))
+            await pilot.pause()
+>           assert isinstance(app.screen, IdeaNoteScreen)
+E           AssertionError: assert False
+E            +  where False = isinstance(Screen(id='_default'), IdeaNoteScreen)
+E            +    where Screen(id='_default') = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_idea_note_window.py:40: AssertionError
+________________ test_menu_dispatch_keeps_every_extracted_kind _________________
+
+    def test_menu_dispatch_keeps_every_extracted_kind():
+>       assert set(MENU_DISPATCH) == EXPECTED
+E       AssertionError: assert {'ascii_toggl...h_saved', ...} == {'ascii_toggl...h_saved', ...}
+E         
+E         Extra items in the left set:
+E         'motion_toggle'
+E         Use -v to get more diff
+
+tests/test_menu_kinds.py:127: AssertionError
+____ test_harness_list_opens_collapsed_and_preserves_each_expansion[size0] _____
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_harness_list_opens_collap0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766524a4e8d0>
+size = (80, 24)
+
+    @pytest.mark.parametrize('size', [(80, 24), (120, 40)])
+    def test_harness_list_opens_collapsed_and_preserves_each_expansion(tmp_path, monkeypatch, size):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=size) as pilot:
+                screen = MultiHarnessScreen()
+                app.push_screen(screen)
+                await pilot.pause()
+                sections = list(screen.query('.harness-section'))
+                assert len(sections) == len(CATALOG_IDS)
+                assert all(section.collapsed for section in sections)
+                first = sections[0]
+                first.query_one(CollapsibleTitle).focus()
+                await pilot.press('enter')
+                await pilot.pause()
+                assert not first.collapsed
+                assert all(section.collapsed for section in sections[1:])
+                screen.update_snapshot([
+                    {'harness_id': harness_id, 'checking': False, 'unlocked': True,
+                     'settings': [], 'version_line': 'fixture'}
+                    for harness_id in CATALOG_IDS
+                ], 4)
+                await pilot.pause()
+                assert not first.collapsed
+                assert 'ready' in first.title
+                assert all(section.collapsed for section in sections[1:])
+                first.query_one(CollapsibleTitle).focus()
+                await pilot.press('enter')
+                await pilot.pause()
+                assert first.collapsed
+                close = screen.query_one('#harness-close')
+                assert screen.query_one('#harness-card').region.contains_region(close.region)
+                await pilot.press('escape')
+                await pilot.pause()
+                assert app.screen is not screen
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_multi_harness_accordion.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=size) as pilot:
+            screen = MultiHarnessScreen()
+            app.push_screen(screen)
+            await pilot.pause()
+            sections = list(screen.query('.harness-section'))
+            assert len(sections) == len(CATALOG_IDS)
+            assert all(section.collapsed for section in sections)
+            first = sections[0]
+            first.query_one(CollapsibleTitle).focus()
+            await pilot.press('enter')
+            await pilot.pause()
+>           assert not first.collapsed
+E           AssertionError: assert not True
+E            +  where True = ExpandableBox(id='harness-fold-crush', classes='harness-section -collapsed').collapsed
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_multi_harness_accordion.py:26: AssertionError
+____ test_harness_list_opens_collapsed_and_preserves_each_expansion[size1] _____
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_harness_list_opens_collap1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7665158e1eb0>
+size = (120, 40)
+
+    @pytest.mark.parametrize('size', [(80, 24), (120, 40)])
+    def test_harness_list_opens_collapsed_and_preserves_each_expansion(tmp_path, monkeypatch, size):
+        configure(tmp_path, monkeypatch)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=size) as pilot:
+                screen = MultiHarnessScreen()
+                app.push_screen(screen)
+                await pilot.pause()
+                sections = list(screen.query('.harness-section'))
+                assert len(sections) == len(CATALOG_IDS)
+                assert all(section.collapsed for section in sections)
+                first = sections[0]
+                first.query_one(CollapsibleTitle).focus()
+                await pilot.press('enter')
+                await pilot.pause()
+                assert not first.collapsed
+                assert all(section.collapsed for section in sections[1:])
+                screen.update_snapshot([
+                    {'harness_id': harness_id, 'checking': False, 'unlocked': True,
+                     'settings': [], 'version_line': 'fixture'}
+                    for harness_id in CATALOG_IDS
+                ], 4)
+                await pilot.pause()
+                assert not first.collapsed
+                assert 'ready' in first.title
+                assert all(section.collapsed for section in sections[1:])
+                first.query_one(CollapsibleTitle).focus()
+                await pilot.press('enter')
+                await pilot.pause()
+                assert first.collapsed
+                close = screen.query_one('#harness-close')
+                assert screen.query_one('#harness-card').region.contains_region(close.region)
+                await pilot.press('escape')
+                await pilot.pause()
+                assert app.screen is not screen
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_multi_harness_accordion.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=size) as pilot:
+            screen = MultiHarnessScreen()
+            app.push_screen(screen)
+            await pilot.pause()
+            sections = list(screen.query('.harness-section'))
+            assert len(sections) == len(CATALOG_IDS)
+            assert all(section.collapsed for section in sections)
+            first = sections[0]
+            first.query_one(CollapsibleTitle).focus()
+            await pilot.press('enter')
+            await pilot.pause()
+>           assert not first.collapsed
+E           AssertionError: assert not True
+E            +  where True = ExpandableBox(id='harness-fold-crush', classes='harness-section -collapsed').collapsed
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_multi_harness_accordion.py:26: AssertionError
+________________ test_tool_note_line_renders_semantic_summaries ________________
+
+    def test_tool_note_line_renders_semantic_summaries():
+        from isycode.tui_app_sessions import _tool_note_line
+>       assert _tool_note_line(1, {"name": "workspace_list",
+                                   "arguments": '{"path":"."}',
+                                   "result": '{"entries":[1,2,3]}'}) == "1. 📂 workspace_list · . · 3 entries"
+E       AssertionError: assert '1. ▸ workspa.... · 3 entries' == '1. 📂 workspa.... · 3 entries'
+E         
+E         - 1. 📂 workspace_list · . · 3 entries
+E         ?    ^
+E         + 1. ▸ workspace_list · . · 3 entries
+E         ?    ^
+
+tests/test_session_search_screen.py:117: AssertionError
+_________________ test_operation_icon_falls_back_to_ascii_tags _________________
+
+    def test_operation_icon_falls_back_to_ascii_tags():
+        from isycode.operation_style import operation_icon
+>       assert operation_icon("workspace_read") == "📄"
+E       AssertionError: assert '▤' == '📄'
+E         
+E         - 📄
+E         + ▤
+
+tests/test_session_search_screen.py:139: AssertionError
+___ test_consecutive_same_tools_group_as_tree_with_distinct_operation_colors ___
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_consecutive_same_tools_gr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x76652674f380>
+
+    def test_consecutive_same_tools_group_as_tree_with_distinct_operation_colors(tmp_path, monkeypatch):
+        configure(tmp_path, monkeypatch)
+        async def impl(self, call):
+            return call["id"], json.dumps({"status": "ok"})
+        monkeypatch.setattr(TUIApp, "_dispatch_chat_tool_impl", impl)
+        async def scenario():
+            app = TUIApp()
+            async with app.run_test(size=(100, 40)) as pilot:
+                await pilot.pause()
+                for index, name in enumerate(("workspace_read", "workspace_read", "workspace_grep", "workspace_read")):
+                    await app._dispatch_chat_tool({"id": str(index), "function": {"name": name, "arguments": json.dumps({"path": f"file{index}.py"})}})
+                await pilot.pause()
+                groups = list(app.query(ToolActivityGroup))
+                assert len(groups) == 3
+                assert len(groups[0].leaves) == 2
+                assert groups[0].leaves[0][0].title.startswith("├─ ")
+                assert groups[0].leaves[1][0].title.startswith("└─ ")
+                assert "Completed" in groups[0].leaves[0][0].title
+                assert all(leaf._title.collapsed_symbol == "" and leaf._title.expanded_symbol == "" for leaf, _ in groups[0].leaves)
+                for single in groups[1:]:
+                    leaf = single.leaves[0][0]
+                    assert not leaf._title.display
+                    assert not leaf.collapsed
+                    assert "└─" not in leaf.title
+                    single.collapsed = False
+                assert "file1.py" in groups[0].leaves[1][0].title
+                assert len({operation_color(n) for n in ("workspace_read", "workspace_grep", "workspace_run", "workspace_write")}) == 4
+>       asyncio.run(scenario())
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_tool_activity_groups.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            for index, name in enumerate(("workspace_read", "workspace_read", "workspace_grep", "workspace_read")):
+                await app._dispatch_chat_tool({"id": str(index), "function": {"name": name, "arguments": json.dumps({"path": f"file{index}.py"})}})
+            await pilot.pause()
+            groups = list(app.query(ToolActivityGroup))
+            assert len(groups) == 3
+            assert len(groups[0].leaves) == 2
+            assert groups[0].leaves[0][0].title.startswith("├─ ")
+            assert groups[0].leaves[1][0].title.startswith("└─ ")
+            assert "Completed" in groups[0].leaves[0][0].title
+            assert all(leaf._title.collapsed_symbol == "" and leaf._title.expanded_symbol == "" for leaf, _ in groups[0].leaves)
+            for single in groups[1:]:
+                leaf = single.leaves[0][0]
+                assert not leaf._title.display
+                assert not leaf.collapsed
+                assert "└─" not in leaf.title
+                single.collapsed = False
+            assert "file1.py" in groups[0].leaves[1][0].title
+>           assert len({operation_color(n) for n in ("workspace_read", "workspace_grep", "workspace_run", "workspace_write")}) == 4
+E           AssertionError: assert 1 == 4
+E            +  where 1 = len({'#edf1f5'})
+
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_tool_activity_groups.py:34: AssertionError
+___________ test_memory_requests_are_bounded_approved_and_journaled ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_memory_requests_are_bound0')
+
+    def test_memory_requests_are_bounded_approved_and_journaled(tmp_path):
+        workspace = tmp_path / "project"
+        workspace.mkdir()
+        state = tmp_path / "state"
+        approvals = ActionApprovalStore()
+        base = WorkspaceAuthority(workspace, state_directory=state / "authority")
+        owner = WorkspaceMemoryOwner(workspace, base, approvals, state_directory=state / "memory")
+        preview = owner.prepare("store", {
+            "topic": "decisions-demo", "content": "No ICM code is used."
+        })
+        assert not (state / "memory").exists()
+        assert owner.execute(preview).decision == "DENY"
+    
+        changed_authority = OneShotActionAuthority(base, preview.request)
+        changed_owner = WorkspaceMemoryOwner(
+            workspace, changed_authority, approvals, state_directory=state / "memory")
+        changed = replace(preview, arguments={**preview.arguments, "content": "changed"})
+        assert changed_owner.execute(changed).decision == "DENY"
+    
+        authorized = WorkspaceMemoryOwner(
+            workspace, OneShotActionAuthority(base, preview.request), approvals,
+            state_directory=state / "memory")
+        outcome = authorized.execute(preview)
+        assert outcome.decision == "ALLOW" and outcome.receipt is not None
+>       assert ActionAuditJournal(workspace).verify().receipts == 1
+E       AssertionError: assert 2 == 1
+E        +  where 2 = ActionAuditReport(status='PASS', records=6, decisions=4, receipts=2, unverifiable=0, recent=({'kind': 'decision', 'tim...'result_digest': 'e4c15f34c54ac0e80fe655d311607e97184c65089b4e942b759fdad146bb900b', 'outcome': 'SUCCESS'}), reason='').receipts
+E        +    where ActionAuditReport(status='PASS', records=6, decisions=4, receipts=2, unverifiable=0, recent=({'kind': 'decision', 'tim...'result_digest': 'e4c15f34c54ac0e80fe655d311607e97184c65089b4e942b759fdad146bb900b', 'outcome': 'SUCCESS'}), reason='') = verify()
+E        +      where verify = <isycode.action_audit.ActionAuditJournal object at 0x766511943500>.verify
+E        +        where <isycode.action_audit.ActionAuditJournal object at 0x766511943500> = ActionAuditJournal(PosixPath('/tmp/pytest-of-danny/pytest-5/test_memory_requests_are_bound0/project'))
+
+tests/test_workspace_memory.py:123: AssertionError
+_____ test_tui_memory_tools_require_confirmation_and_mark_recall_untrusted _____
+
+tmp_path = PosixPath('/tmp/pytest-of-danny/pytest-5/test_tui_memory_tools_require_0')
+
+    def test_tui_memory_tools_require_confirmation_and_mark_recall_untrusted(tmp_path):
+        import json
+    
+        from isycode.tui_app_tools import ToolMixin
+    
+        class Host(ToolMixin):
+            def __init__(self, allowed):
+                self._workspace_root = tmp_path / "workspace"
+                self._workspace_root.mkdir(exist_ok=True)
+                self._action_approvals = ActionApprovalStore()
+                self.allowed = allowed
+                self.screens = []
+    
+            async def _await_screen(self, screen):
+                self.screens.append(screen)
+                return self.allowed
+    
+            def _append(self, message, color=None):
+                pass
+    
+        async def run():
+            denied = Host(False)
+            response = json.loads(await denied._call_workspace_memory(
+                "memory_store", {"topic": "test", "content": "not stored"}))
+            assert response["status"] == "rejected_by_user"
+            assert denied.screens[0].sends_to_model is False
+    
+            allowed = Host(True)
+            response = json.loads(await allowed._call_workspace_memory(
+                "memory_store", {"topic": "test", "content": "stored"}))
+            assert response["stored"] is True
+            assert allowed.screens[0].operation == "store"
+            assert allowed.screens[0].sends_to_model is False
+    
+            reader = Host(True)
+            response = json.loads(await reader._call_workspace_memory(
+                "memory_recall", {"query": "stored"}))
+            assert response["data"]["count"] == 1
+            assert response["trust_notice"]
+            assert reader.screens[0].sends_to_model is True
+    
+>       asyncio.run(run())
+
+tests/test_workspace_memory.py:207: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def run():
+        denied = Host(False)
+        response = json.loads(await denied._call_workspace_memory(
+            "memory_store", {"topic": "test", "content": "not stored"}))
+        assert response["status"] == "rejected_by_user"
+        assert denied.screens[0].sends_to_model is False
+    
+        allowed = Host(True)
+        response = json.loads(await allowed._call_workspace_memory(
+            "memory_store", {"topic": "test", "content": "stored"}))
+        assert response["stored"] is True
+        assert allowed.screens[0].operation == "store"
+        assert allowed.screens[0].sends_to_model is False
+    
+        reader = Host(True)
+        response = json.loads(await reader._call_workspace_memory(
+            "memory_recall", {"query": "stored"}))
+>       assert response["data"]["count"] == 1
+E       assert 2 == 1
+
+tests/test_workspace_memory.py:203: AssertionError
+=============================== warnings summary ===============================
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+  /usr/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=142906) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners
+FAILED tests/test_chat_sequence.py::test_reasoning_growth_and_collapse_keep_tail_visible
+FAILED tests/test_focused_box_expansion.py::test_thinking_preview_full_and_hidden_states_are_local_to_focus
+FAILED tests/test_focused_box_expansion.py::test_completed_marquee_is_optional_bounces_and_setting_is_saved
+FAILED tests/test_focused_box_expansion.py::test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly
+FAILED tests/test_gate_validator.py::test_historical_review_records_are_valid_but_do_not_approve_release
+FAILED tests/test_high_contrast.py::test_high_contrast_css_parses_and_overrides_surfaces
+FAILED tests/test_idea_backlog.py::test_ideas_are_not_sent_until_explicit_promotion
+FAILED tests/test_idea_note_window.py::test_full_idea_note_opens_updates_and_closes_without_resizing_box[size0]
+FAILED tests/test_idea_note_window.py::test_full_idea_note_opens_updates_and_closes_without_resizing_box[size1]
+FAILED tests/test_menu_kinds.py::test_menu_dispatch_keeps_every_extracted_kind
+FAILED tests/test_multi_harness_accordion.py::test_harness_list_opens_collapsed_and_preserves_each_expansion[size0]
+FAILED tests/test_multi_harness_accordion.py::test_harness_list_opens_collapsed_and_preserves_each_expansion[size1]
+FAILED tests/test_session_search_screen.py::test_tool_note_line_renders_semantic_summaries
+FAILED tests/test_session_search_screen.py::test_operation_icon_falls_back_to_ascii_tags
+FAILED tests/test_tool_activity_groups.py::test_consecutive_same_tools_group_as_tree_with_distinct_operation_colors
+FAILED tests/test_workspace_memory.py::test_memory_requests_are_bounded_approved_and_journaled
+FAILED tests/test_workspace_memory.py::test_tui_memory_tools_require_confirmation_and_mark_recall_untrusted
+18 failed, 1873 passed, 1 skipped, 11 deselected, 8 warnings in 494.11s (0:08:14)

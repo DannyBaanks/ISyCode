@@ -1,0 +1,13 @@
+{
+  "command": "/home/danny/.local/bin/isycode",
+  "source_commit": "8c668a307daf475bbc4ed14dc639b425a7f7d061",
+  "size": [
+    80,
+    24
+  ],
+  "private_security_state": true,
+  "settings_after_real_sgr_click": true,
+  "exit": 0,
+  "traceback": false,
+  "sha256": "d4ae705d0dd648781ddf179333f9f1c3d2d930bedbd6cd95587cd5adaf59b4b4"
+}

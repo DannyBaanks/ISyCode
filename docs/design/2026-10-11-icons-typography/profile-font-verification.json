@@ -1,0 +1,29 @@
+{
+  "ubuntu_sha256": "507870a3fe5737eb5b02f366587d30607c02a5ad45d8fe94b3ee20a80ccad32a",
+  "fallback_sha256": "c805f9436dbc268644c1d9584f01a601a653e028e08fd74b9b949f6cf8304d88",
+  "mapped_symbols": 21,
+  "missing_in_ubuntu": [
+    "settings",
+    "shield",
+    "connection",
+    "code",
+    "skills",
+    "folder",
+    "chat",
+    "copy",
+    "clock",
+    "warning",
+    "search",
+    "idea",
+    "branch",
+    "book",
+    "python",
+    "typescript",
+    "rust"
+  ],
+  "missing_in_fallback": [],
+  "fallback_symbols_match_M_advance": true,
+  "ubuntu_advance_at_14px": 7.84,
+  "fallback_size_adjust_percent": 93.0154095701541,
+  "scope": "cmap/hmtx data and preview resources; actual terminal fallback and cell rendering NOT_DEMONSTRATED"
+}

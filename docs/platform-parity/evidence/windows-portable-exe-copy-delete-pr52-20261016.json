@@ -1,0 +1,69 @@
+{
+  "recorded_at": "2026-10-15T22:49:34.886260-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "packager": "PyInstaller 6.22.3",
+    "build": "one-file Windows x64",
+    "install": "portable EXE copied into a disposable Unicode/space path",
+    "temporary_volume": "D:"
+  },
+  "command": "create disposable venv; pip install <repo> pyinstaller==6.22.3 from PyPI; PyInstaller --clean --onefile with the CI collection/metadata options; copy EXE to a Unicode/space path; run five CLI smokes; delete copy",
+  "checks": [
+    {
+      "label": "create isolated packaging venv",
+      "exit_code": 0,
+      "command": "py -m venv <temporary D: directory>\\venv"
+    },
+    {
+      "label": "install package and pinned packager with clean dependencies",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\python.exe -m pip --isolated --disable-pip-version-check --no-cache-dir install --index-url https://pypi.org/simple C:\\Development\\ISyCode-worktrees\\windows-parity pyinstaller==6.22.3"
+    },
+    {
+      "label": "packager version",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\python.exe -m PyInstaller --version"
+    },
+    {
+      "label": "build one-file Windows executable",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\python.exe -m PyInstaller --clean --noconfirm --onefile --name isycode --paths C:\\Development\\ISyCode-worktrees\\windows-parity\\src --distpath <temporary D: directory>\\dist --workpath <temporary D: directory>\\build --specpath <temporary D: directory>\\spec --collect-all rich --collect-all textual --collect-all keyring --copy-metadata isycode --copy-metadata keyring --collect-data isycode --copy-metadata rich --copy-metadata textual --copy-metadata pathspec --copy-metadata aiohttp C:\\Development\\ISyCode-worktrees\\windows-parity\\packaging\\isycode_entry.py"
+    },
+    {
+      "label": "portable executable CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\ISyCode portátil prueba 52\\isycode.exe --version"
+    },
+    {
+      "label": "portable executable CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\ISyCode portátil prueba 52\\isycode.exe --help"
+    },
+    {
+      "label": "portable executable CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\ISyCode portátil prueba 52\\isycode.exe doctor"
+    },
+    {
+      "label": "portable executable CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\ISyCode portátil prueba 52\\isycode.exe dirs"
+    },
+    {
+      "label": "portable executable CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\ISyCode portátil prueba 52\\isycode.exe models"
+    },
+    {
+      "label": "portable uninstall",
+      "exit_code": 0,
+      "result": "copied executable deleted; absence verified"
+    }
+  ],
+  "exit_code": 0,
+  "exe_sha256": "dc7f095afda2775673d53eead2c5dcfdad2578026e6227f6e9da679d15dc04e6",
+  "result": "build, five CLI smokes, portable copy and delete verification passed; no standalone self-upgrade mechanism exercised",
+  "output": "docs/platform-parity/evidence/windows-portable-exe-copy-delete-pr52-20261016.txt",
+  "output_sha256": "d6c2b734a3350574f959fabf0a45e57aa687a12c57370e1cbc709deea96a9437"
+}

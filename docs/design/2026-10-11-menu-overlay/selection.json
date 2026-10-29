@@ -1,0 +1,19 @@
+{
+  "selected_proposal": 1,
+  "user_message": "como la primera me gusto mucho",
+  "tool": "built-in image_gen",
+  "mode": "compositing",
+  "status": "VISUAL_MOCKUP_NOT_IMPLEMENTED",
+  "inputs": [
+    {
+      "path": "/tmp/codex-clipboard-15b27f01-5829-4f26-8cc9-a822dc6a2226.png",
+      "sha256": "e853a6e9e41ce1eec14ae3d3dcc4131d55089caca9b25306eac523957a7c0094",
+      "role": "edit_target"
+    },
+    {
+      "path": "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-11-menu-coherence/propuesta-1.png",
+      "sha256": "2cf6722bb9e86e427e300faa0c308192de3964e8a6072c5a107b09ee807bcfc6",
+      "role": "selected_style_reference"
+    }
+  ]
+}

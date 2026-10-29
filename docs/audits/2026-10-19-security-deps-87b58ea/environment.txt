@@ -1,0 +1,9 @@
+Audit timestamp UTC: 2026-10-19T07:55:25.553278+00:00
+Repository: ISyCode
+Git revision: 87b58ea (local main)
+Python environment: local .venv, Python 3.12.3
+uv: 0.12.17
+pip-audit: 2.10.1
+Advisory service: OSV API
+Dependency resolution: uv pip compile from pyproject.toml with all extras; Linux/Python 3.10 and Windows/Python 3.12.
+No lockfile exists in the audited checkout.

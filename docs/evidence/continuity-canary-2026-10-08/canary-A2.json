@@ -1,0 +1,76 @@
+{
+  "scenario": "A2",
+  "model": "z-ai/glm-5.3-flash",
+  "started": "2026-10-08T05:16:46Z",
+  "turn": "completed",
+  "final_role": "assistant",
+  "final_answer": "ZAFIRO-7319",
+  "codeword_in_answer": true,
+  "notes": [
+    "Compacting · summarizing 28 earlier messages to free up context",
+    "Compacted · earlier messages summarized; the saved conversation keeps the full transcript"
+  ],
+  "history_len": 14,
+  "calls": [
+    {
+      "n": 1,
+      "t": 1791436608.48243,
+      "model": "z-ai/glm-5.3-flash",
+      "kind": "summary",
+      "messages": 2,
+      "chars": 42643,
+      "sha256": "69cdfa2e21ef944e0a65acd00d051bd88be4247898b279c933d467b9f944606c",
+      "has_capsule": false,
+      "has_request_0": true,
+      "has_summary_notes": false,
+      "ok": true,
+      "answer": "## Working Notes\n\n**User's goals / decisions**\n- In request-0, the user provided a code word to be remembered for later use: **ZAFIRO-7319**. This is the only substantive instruction in the conversati",
+      "usage": {
+        "prompt_tokens": 8416,
+        "completion_tokens": 625,
+        "total_tokens": 9041,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 358,
+          "rejected_prediction_tokens": null
+        }
+      }
+    },
+    {
+      "n": 2,
+      "t": 1791436664.332959,
+      "model": "z-ai/glm-5.3-flash",
+      "kind": "chat",
+      "messages": 15,
+      "chars": 23198,
+      "sha256": "af78a1a8766afdfc01c9adad4d8dafa734ca418c34f298c6bfc53bfb270a9df3",
+      "has_capsule": false,
+      "has_request_0": false,
+      "has_summary_notes": true,
+      "ok": true,
+      "answer": "ZAFIRO-7319",
+      "usage": {
+        "prompt_tokens": 7177,
+        "completion_tokens": 55,
+        "total_tokens": 7232,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 47,
+          "rejected_prediction_tokens": null
+        }
+      }
+    }
+  ],
+  "journal": "PASS",
+  "finished": "2026-10-08T05:18:16Z"
+}

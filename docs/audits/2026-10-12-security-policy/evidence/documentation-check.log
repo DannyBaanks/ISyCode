@@ -1,0 +1,8 @@
+{
+  "local_links_checked": 41,
+  "issue_form_yaml": "valid",
+  "git_diff_check_exit": 0,
+  "private_reporting_enabled": false,
+  "errors": [],
+  "scope": "Documentation only; no runtime tests, vulnerability submission, repository setting changes or public issue creation."
+}

@@ -1,0 +1,73 @@
+{
+  "repository": "https://github.com/itshover/itshover",
+  "ref": "e5fc90512d9bcd8e6cba407ebf88cb9458989ca3",
+  "branch": "master",
+  "license_file": "Apache-2.0",
+  "metadata_conflict": "package.json and a README feature still say MIT",
+  "notice_file": "No NOTICE entry found in pinned recursive tree",
+  "assets": [
+    {
+      "path": "licenses/itshover-Apache-2.0.txt",
+      "upstream_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/LICENSE",
+      "sha256": "eb10cf9a74f47aa160e7fe2848529d985003c5f2310cb1c2769b0d81f027c6a5",
+      "bytes": 9686
+    },
+    {
+      "path": "sources/itshover/README.md",
+      "upstream_path": "README.md",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/README.md",
+      "sha256": "56748819d1266e3d3bae91baedb3816186bd3a8bab940fef6f06e131b7cc89bf",
+      "bytes": 2704
+    },
+    {
+      "path": "sources/itshover/package.json",
+      "upstream_path": "package.json",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/package.json",
+      "sha256": "74e5dcc487787b03a64363a478458605f6c93e5c634a792cef67f67877faf0ca",
+      "bytes": 1587
+    },
+    {
+      "path": "sources/itshover/icons/copy-icon.tsx",
+      "upstream_path": "icons/copy-icon.tsx",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/icons/copy-icon.tsx",
+      "sha256": "f245cb5be1cb42af21bd2f11061091346c7b19c251bb9d061beabd6bfa4dcead",
+      "bytes": 2017
+    },
+    {
+      "path": "sources/itshover/icons/terminal-icon.tsx",
+      "upstream_path": "icons/terminal-icon.tsx",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/icons/terminal-icon.tsx",
+      "sha256": "f129fb92e3763f0f69d9ad9798784cdb09cbeb7a2acdac39def5d1b9ee577e78",
+      "bytes": 1838
+    },
+    {
+      "path": "sources/itshover/icons/refresh-icon.tsx",
+      "upstream_path": "icons/refresh-icon.tsx",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/icons/refresh-icon.tsx",
+      "sha256": "d7da3b2bdc35544610bc1a3f3abbdf1d2e5194093efb95eb7949b5394c78861e",
+      "bytes": 1710
+    },
+    {
+      "path": "sources/itshover/icons/plug-connected-icon.tsx",
+      "upstream_path": "icons/plug-connected-icon.tsx",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/icons/plug-connected-icon.tsx",
+      "sha256": "2996f63703ab6a814f7d1e255cf8949dc1f4ad6c65c92c83530b7e51ed17d52f",
+      "bytes": 2754
+    },
+    {
+      "path": "sources/itshover/icons/shield-check.tsx",
+      "upstream_path": "icons/shield-check.tsx",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/icons/shield-check.tsx",
+      "sha256": "a22dc98627805816524ab6dd9137c66d9da95ae7e8075228d3de9288d8a2c421",
+      "bytes": 2023
+    },
+    {
+      "path": "sources/itshover/icons/simple-checked-icon.tsx",
+      "upstream_path": "icons/simple-checked-icon.tsx",
+      "url": "https://raw.githubusercontent.com/itshover/itshover/e5fc90512d9bcd8e6cba407ebf88cb9458989ca3/icons/simple-checked-icon.tsx",
+      "sha256": "8148990e664fbb4c8f02162a9c9e58fa4dcdfb8825bb18f6524e8542565ca5e1",
+      "bytes": 1675
+    }
+  ]
+}

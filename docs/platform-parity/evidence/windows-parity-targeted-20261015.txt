@@ -1,0 +1,47 @@
+F......sF.ssssss..ss......s...s.F.......s......F........s.ssssss........ [ 88%]
+......sss                                                                [100%]
+================================== FAILURES ===================================
+_____________ test_g7_01_dirty_repo_diagnose_edit_test_diff_undo ______________
+tests\test_everyday_flows.py:79: in test_g7_01_dirty_repo_diagnose_edit_test_diff_undo
+    preview = runner.prepare(["echo", "tests-pass"])
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\command_runner.py:195: in prepare
+    raise ValueError(sandbox_backend.unavailable_reason())
+E   ValueError: the Windows LPAC command sandbox is pending native acceptance; commands stay disabled and there is no unsandboxed fallback
+_____________ test_file_leaf_enables_preview_modal_and_copy_path ______________
+C:\Development\ISyCo Git\ISyCode\tests\test_file_preview_tui.py:40: in test_file_leaf_enables_preview_modal_and_copy_path
+    with capsys.disabled():asyncio.run(run())
+                           ^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_file_preview_tui.py:22: in run
+    await p.click('#file-copy-path');await p.pause();assert copied[-1]==str(file)
+                                                            ^^^^^^^^^^
+E   IndexError: list index out of range
+_____ test_historical_review_records_are_valid_but_do_not_approve_release _____
+tests\test_gate_validator.py:44: in test_historical_review_records_are_valid_but_do_not_approve_release
+    assert validator.validate_tree(ROOT) == []
+E   assert ['C:\\Develop...ismatch', ...] == []
+E     
+E     Left contains 106 more items, first extra item: "C:\\Development\\ISyCo Git\\ISyCode\\docs\\evidence\\classic-security-ux\\M0\\33b218df7869046124d93b8edc75cf1dd75240d... artifact 'docs/evidence/classic-security-ux/M0/33b218df7869046124d93b8edc75cf1dd75240d4/inventory.md' sha256 mismatch"
+E     Use -v to get more diff
+_ test_historical_source_is_verified_at_evaluated_commit_without_releasing_current_code _
+tests\test_gate_historical_source.py:26: in test_historical_source_is_verified_at_evaluated_commit_without_releasing_current_code
+    assert validator.validate_tree(tmp_path) == []
+E   assert ['C:\\Users\\...256 mismatch'] == []
+E     
+E     Left contains one more item: "C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-839\\test_historical_source_is_veri0\\docs\\evidence\...ic-security-ux\\M6\\c7a21c35e34ade00fd804ea8f82928f2917501ca\\gate.yaml: artifact 'scripts/fixture.py' sha256 mismatch"
+E     Use -v to get more diff
+=========================== short test summary info ===========================
+FAILED tests/test_everyday_flows.py::test_g7_01_dirty_repo_diagnose_edit_test_diff_undo
+FAILED tests/test_file_preview_tui.py::test_file_leaf_enables_preview_modal_and_copy_path
+FAILED tests/test_gate_validator.py::test_historical_review_records_are_valid_but_do_not_approve_release
+FAILED tests/test_gate_historical_source.py::test_historical_source_is_verified_at_evaluated_commit_without_releasing_current_code
+4 failed, 55 passed, 22 skipped in 28.66s

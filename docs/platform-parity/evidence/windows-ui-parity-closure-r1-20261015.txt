@@ -1,0 +1,155 @@
+......F.......F..................FFF...                                  [100%]
+================================== FAILURES ===================================
+_________ test_sibling_read_and_native_approved_edit_use_its_own_root _________
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:54: in test_sibling_read_and_native_approved_edit_use_its_own_root
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:44: in scenario
+    assert isinstance(app.screen, WriteApprovalScreen)
+E   AssertionError: assert False
+E    +  where False = isinstance(Screen(id='_default'), WriteApprovalScreen)
+E    +    where Screen(id='_default') = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+------------------------------ Captured log call ------------------------------
+ERROR    asyncio:base_events.py:1833 unhandled exception during asyncio.run() shutdown
+task: <Task finished name='Task-7030' coro=<ToolMixin._dispatch_chat_tool() done, defined at C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py:61> exception=NoMatches("No nodes match 'ChatArea' on Screen(id='_default')")>
+Traceback (most recent call last):
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py", line 44, in scenario
+    assert isinstance(app.screen, WriteApprovalScreen)
+AssertionError: assert False
+ +  where False = isinstance(Screen(id='_default'), WriteApprovalScreen)
+ +    where Screen(id='_default') = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 103, in _dispatch_chat_tool
+    result = await self._dispatch_chat_tool_impl(call)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 268, in _dispatch_chat_tool_impl
+    return tool_call_id, await self._dispatch_write_tool(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_workspace.py", line 536, in _dispatch_write_tool
+    choice = True if delegated else await self._await_screen(
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py", line 2957, in _await_screen
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 129, in _dispatch_chat_tool
+    self.query_one(ChatArea).follow_tail()
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\dom.py", line 1533, in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+textual.css.query.NoMatches: No nodes match 'ChatArea' on Screen(id='_default')
+___________ test_readded_alias_invalidates_pending_diff_and_warning ___________
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:520: in wait_for
+    return await fut
+           ^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py:1556: in _set_folder_auto_edit
+    if enabled and not await self._await_screen(AutomaticEditsWarningScreen(root)):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py:2957: in _await_screen
+    return await future
+           ^^^^^^^^^^^^
+E   asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:189: in test_readded_alias_invalidates_pending_diff_and_warning
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:185: in scenario
+    assert not await asyncio.wait_for(task, 10)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:519: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\timeouts.py:115: in __aexit__
+    raise TimeoutError from exc_val
+E   TimeoutError
+____ test_long_onboarding_keeps_choices_visible_at_80x24[QuickStartScreen] ____
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:231: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:221: in scenario
+    assert app.screen.focused is copy
+E   AssertionError: assert OptionList(id='quick-start-options', classes='isy-dialog-options') is OnboardingCopy(id='quick-start-copy', classes='isy-dialog-body')
+E    +  where OptionList(id='quick-start-options', classes='isy-dialog-options') = QuickStartScreen().focused
+E    +    where QuickStartScreen() = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+__ test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen] ___
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:231: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:221: in scenario
+    assert app.screen.focused is copy
+E   AssertionError: assert OptionList(id='workspace-mode-options', classes='isy-dialog-options') is OnboardingCopy(id='workspace-mode-copy', classes='isy-dialog-body')
+E    +  where OptionList(id='workspace-mode-options', classes='isy-dialog-options') = WorkspaceModeScreen().focused
+E    +    where WorkspaceModeScreen() = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+__ test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceSetupScreen] __
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:231: in test_long_onboarding_keeps_choices_visible_at_80x24
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_design_interactions.py:221: in scenario
+    assert app.screen.focused is copy
+E   AssertionError: assert OptionList(id='workspace-setup-options', classes='isy-dialog-options') is OnboardingCopy(id='workspace-setup-copy', classes='isy-dialog-body')
+E    +  where OptionList(id='workspace-setup-options', classes='isy-dialog-options') = WorkspaceSetupScreen().focused
+E    +    where WorkspaceSetupScreen() = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'focus', 'nocolor', 'dark'}).screen
+=========================== short test summary info ===========================
+FAILED tests/test_workspace_folders_tui.py::test_sibling_read_and_native_approved_edit_use_its_own_root
+FAILED tests/test_workspace_folders_tui.py::test_readded_alias_invalidates_pending_diff_and_warning
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[QuickStartScreen]
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceModeScreen]
+FAILED tests/test_design_interactions.py::test_long_onboarding_keeps_choices_visible_at_80x24[WorkspaceSetupScreen]
+5 failed, 34 passed in 96.19s (0:01:36)

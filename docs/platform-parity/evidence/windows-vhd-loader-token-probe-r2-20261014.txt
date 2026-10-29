@@ -1,0 +1,4 @@
+original exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-2tmay0tv\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-2tmay0tv\\runtime\\python312.dll', 5)]
+dos-environment exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-2tmay0tv\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-2tmay0tv\\runtime\\python312.dll', 5)]
+traverse-only exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-2tmay0tv\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-2tmay0tv\\runtime\\python312.dll', 5)]
+exit=0

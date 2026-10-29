@@ -1,0 +1,30 @@
+{
+  "source_commit": "8c668a307daf475bbc4ed14dc639b425a7f7d061",
+  "scope": "Native Textual focused/hover-safe model rows; temporary Security state; no model or effect executed.",
+  "captures": [
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-80x24/09-models-readable.svg",
+      "sha256": "a69cfd879c4a021660541c3323b9cb61e121b4bfa129513a0a86f1c140428658"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-80x24/21-subagent-model-readable.svg",
+      "sha256": "1e1a67ca2759e7a761d8f722b2d220d9c7596be9820eb795c142dd3f4f2b5658"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-100x30/09-models-readable.svg",
+      "sha256": "8a895b34ae6eec520e9c2af7b6a86fb8c02db8a4ee21810b9a2f0894a58498e9"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-100x30/21-subagent-model-readable.svg",
+      "sha256": "f0e55c3b225f6201c7570c2ab12e6e8236ba5272a67f8dbb8d27bbc6bca2ee04"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-140x40/09-models-readable.svg",
+      "sha256": "56eef673c697bdc1193cd4cac24fb7f67c24918c71292eb73bc9d045404f8416"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-140x40/21-subagent-model-readable.svg",
+      "sha256": "14ad44b1f95da7d548da064cd390a6fea937fb5456a1193cb838dadd801f2985"
+    }
+  ]
+}

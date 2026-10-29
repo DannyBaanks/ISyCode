@@ -1,0 +1,1 @@
+Design tokens match the accepted skill palette.

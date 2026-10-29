@@ -1,0 +1,52 @@
+{
+  "recorded_at": "2026-10-14T20:13:06.516436-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "principal": "ordinary user for all acceptance tests; operator elevation only for exact owned-VHD attachment"
+  },
+  "source_parent": "8331f535d58f666ad29d3a728b779746882673dd",
+  "commands": [
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_windows_sandbox_volume_acceptance.py -q -s",
+      "environment": "ISYCODE_WINDOWS_SANDBOX_STORAGE_CONFIG selected from private config-path.txt, same provisioned dedicated image",
+      "exit_code": 0,
+      "result": "13 passed in 225.68s",
+      "output": "windows-vhd-real-acceptance-final-20261014.txt"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_command_runner_windows.py -q",
+      "exit_code": 0,
+      "result": "12 passed in 100.96s",
+      "output": "windows-vhd-owner-regressions-20261014.txt"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_windows_sandbox_process.py tests/test_windows_sandbox_paths.py tests/test_windows_sandbox_operator.py tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_effect_ledger.py -q",
+      "exit_code": 0,
+      "result": "65 passed, 10 skipped in 123.85s",
+      "output": "windows-vhd-loader-regression-20261014.txt"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_windows_sandbox_paths.py tests/test_windows_sandbox_operator.py -q",
+      "exit_code": 0,
+      "result": "11 passed in 2.03s",
+      "output": "windows-vhd-operator-alias-final-20261014.txt"
+    },
+    {
+      "command": ".venv/Scripts/python.exe docs/platform-parity/evidence/verify-vhd-attachment-20261014.py",
+      "exit_code": 0,
+      "output": "windows-vhd-attachment-verified-20261014.txt"
+    }
+  ],
+  "scope": "Specific real VHD controls and Windows command owner; not complete product parity or release activation.",
+  "negative_evidence": "Earlier failed harness/probe runs remain historical; only final isolated acceptance is the canonical passing run. Raw pytest logs preserve their original whitespace/encoding.",
+  "not_demonstrated": [
+    "Linux rerun",
+    "fresh revised provisioning cycle",
+    "real reboot",
+    "schema2 crash recovery on VHD",
+    "complete Internet/IPv6/IPC matrix",
+    "additional runtimes"
+  ],
+  "native_accepted": false
+}

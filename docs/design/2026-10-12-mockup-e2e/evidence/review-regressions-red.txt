@@ -1,0 +1,65 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_catalog_refresh_keeps_model_identity_or_disables_removed_preview[False] _
+tests/test_mockup_selectors.py:150: in test_catalog_refresh_keeps_model_identity_or_disables_removed_preview
+    assert "claude-opus-4-6" in str(screen.query_one("#model-detail").render())
+E   AssertionError: assert 'claude-opus-4-6' in 'Click a model. Context, reasoning and tools show here.'
+E    +  where 'Click a model. Context, reasoning and tools show here.' = str(Content('Click a model. Context, reasoning and tools show here.', spans=[Span(0, 54, style='#a9b5c2')]))
+E    +    where Content('Click a model. Context, reasoning and tools show here.', spans=[Span(0, 54, style='#a9b5c2')]) = render()
+E    +      where render = Static(id='model-detail').render
+E    +        where Static(id='model-detail') = query_one('#model-detail')
+E    +          where query_one = ModelsScreen(classes='-short -narrow').query_one
+_ test_catalog_refresh_keeps_model_identity_or_disables_removed_preview[True] __
+tests/test_mockup_selectors.py:144: in test_catalog_refresh_keeps_model_identity_or_disables_removed_preview
+    assert use.disabled
+E   AssertionError: assert False
+E    +  where False = Button(id='models-use', classes='-primary -style-default', variant='primary').disabled
+__________ test_picker_marks_resolved_default_when_no_model_was_saved __________
+tests/test_mockup_selectors.py:167: in test_picker_marks_resolved_default_when_no_model_was_saved
+    assert "current" in str(current.label)
+E   AssertionError: assert 'current' in 'GPT 6 Luna'
+E    +  where 'GPT 6 Luna' = str(Content('GPT 6 Luna', spans=[Span(0, 10, style='#edf1f5')]))
+E    +    where Content('GPT 6 Luna', spans=[Span(0, 10, style='#edf1f5')]) = ModelChoice(id='model-choice-0', classes='model-choice -style-default').label
+__ test_reasoning_setting_matches_provider_default[anthropic-claude-opus-4-6] __
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:88: in test_reasoning_setting_matches_provider_default
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:87: in scenario
+    assert row["display_value"] == "Medium"
+E   AssertionError: assert 'Default' == 'Medium'
+E     
+E     - Medium
+E     + Default
+______ test_reasoning_setting_matches_provider_default[openai-gpt-6-sol] _______
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:88: in test_reasoning_setting_matches_provider_default
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:87: in scenario
+    assert row["display_value"] == "Medium"
+E   AssertionError: assert 'Default' == 'Medium'
+E     
+E     - Medium
+E     + Default
+=========================== short test summary info ============================
+FAILED tests/test_mockup_selectors.py::test_catalog_refresh_keeps_model_identity_or_disables_removed_preview[False]
+FAILED tests/test_mockup_selectors.py::test_catalog_refresh_keeps_model_identity_or_disables_removed_preview[True]
+FAILED tests/test_mockup_selectors.py::test_picker_marks_resolved_default_when_no_model_was_saved
+FAILED tests/test_mockup_settings.py::test_reasoning_setting_matches_provider_default[anthropic-claude-opus-4-6]
+FAILED tests/test_mockup_settings.py::test_reasoning_setting_matches_provider_default[openai-gpt-6-sol]
+5 failed, 23 deselected in 3.53s

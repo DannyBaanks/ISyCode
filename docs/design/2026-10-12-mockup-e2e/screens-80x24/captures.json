@@ -1,0 +1,1436 @@
+{
+  "size": [
+    80,
+    24
+  ],
+  "locale": "es",
+  "scope": "Offline fixture renders; no live provider or execution outcome asserted.",
+  "snapshots": [
+    {
+      "name": "01-overview",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "lsp-install-hint",
+          "region": [
+            55,
+            33,
+            27,
+            1
+          ]
+        },
+        {
+          "id": "refresh-openisy",
+          "region": [
+            54,
+            41,
+            28,
+            1
+          ]
+        },
+        {
+          "id": "review-plan",
+          "region": [
+            54,
+            42,
+            22,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "dd9ffb89bcb6f5ac6b236e544974314dfd4c809c54a8a3878aa61cfd9384c205"
+    },
+    {
+      "name": "02-files",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "230d9478642fe402238a867e9788a17527d340ed728d01327ddd441e3e1ada03"
+    },
+    {
+      "name": "03-settings-conversation",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "0e71c817d7e63b14e543759e2f407c0c67a3ae4cdf2dcd01d2e7a8d3fc3f7d96"
+    },
+    {
+      "name": "04-settings-preferences",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "23334b23359aaaa8fa3b16824f98377d77f3e291ea99a03ae12cd9416e6e68bb"
+    },
+    {
+      "name": "04-settings-permissions",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "d3b7fa9381a62fe6663651bb6ad1f48ca6f6c523c77b8a5a95d5184b56da2fd4"
+    },
+    {
+      "name": "04-settings-connections",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "d522eb5b6293fc523e23ab8dd21ad8e60a17529554dc3e6099964c7c24b64778"
+    },
+    {
+      "name": "05-providers",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "5bf02ca61246a7c2823c771a07d5b6ad16f5baf68c0d7bf4679dd12b7123808e"
+    },
+    {
+      "name": "06-authority",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "0b724ad0627137685bce0025abb24eae24e001856173c995062e43ea2d915698"
+    },
+    {
+      "name": "07-commands",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "f86e83a5a9c92add205af0a44b5b28d0caf850aeeaa0e38eda9726a24fdea96a"
+    },
+    {
+      "name": "08-connections",
+      "screen": "Screen",
+      "buttons": [
+        {
+          "id": "sidebar-button",
+          "region": [
+            1,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "sessions-button",
+          "region": [
+            18,
+            23,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "harness-button",
+          "region": [
+            30,
+            23,
+            17,
+            1
+          ]
+        },
+        {
+          "id": "settings-button",
+          "region": [
+            46,
+            23,
+            5,
+            1
+          ]
+        },
+        {
+          "id": "show-overview",
+          "region": [
+            54,
+            4,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "show-files",
+          "region": [
+            66,
+            4,
+            13,
+            1
+          ]
+        },
+        {
+          "id": "file-up",
+          "region": [
+            54,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "file-refresh",
+          "region": [
+            62,
+            7,
+            8,
+            1
+          ]
+        },
+        {
+          "id": "workspace-folders",
+          "region": [
+            70,
+            7,
+            9,
+            1
+          ]
+        },
+        {
+          "id": "file-copy-path",
+          "region": [
+            54,
+            15,
+            12,
+            1
+          ]
+        },
+        {
+          "id": "file-open-preview",
+          "region": [
+            66,
+            15,
+            13,
+            1
+          ]
+        }
+      ],
+      "svg_sha256": "d47a79e53602f6da4081644f90f64c9bf34081e88750272446c2e01b69095a2a"
+    },
+    {
+      "name": "09-models",
+      "screen": "ModelsScreen",
+      "buttons": [
+        {
+          "id": "models-close",
+          "region": [
+            51,
+            18,
+            9,
+            3
+          ]
+        },
+        {
+          "id": "models-use",
+          "region": [
+            61,
+            18,
+            15,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "9c102137111dd10e91c74f1ffd7389024eba27758145c8dc8e98d33166abd0b5"
+    },
+    {
+      "name": "10-harness",
+      "screen": "MultiHarnessScreen",
+      "buttons": [
+        {
+          "id": "harness-close",
+          "region": [
+            66,
+            18,
+            10,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "62a2522e1d89e93e803bf42e19c4b6e7358503ee437ac156fa619c9223795075"
+    },
+    {
+      "name": "11-sessions",
+      "screen": "SessionSearchScreen",
+      "buttons": [
+        {
+          "id": "session-search-close",
+          "region": [
+            54,
+            18,
+            10,
+            3
+          ]
+        },
+        {
+          "id": "session-search-open",
+          "region": [
+            65,
+            18,
+            9,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "5dd75f73ff8dfe2250dfb60329b54f4dc275f45ba6ec13076e65e184a72f0d0e"
+    },
+    {
+      "name": "12-review-edit",
+      "screen": "WriteApprovalScreen",
+      "buttons": [
+        {
+          "id": "write-approval-reject",
+          "region": [
+            5,
+            12,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "write-approval-apply",
+          "region": [
+            41,
+            12,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "write-approval-always",
+          "region": [
+            5,
+            15,
+            71,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "7154e8047af5b7c8bccbb6f8208bb58aef49aeb40d5de73a76bcb8f71f4b4ff1"
+    },
+    {
+      "name": "13-review-command",
+      "screen": "CommandApprovalScreen",
+      "buttons": [
+        {
+          "id": "command-approval-reject",
+          "region": [
+            5,
+            15,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "command-approval-run",
+          "region": [
+            41,
+            15,
+            35,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "5e9a7a19905f049f9301c2a2b52909f5557a112d9fb70fa39cbc5112a4171394"
+    },
+    {
+      "name": "14-text-copy",
+      "screen": "CopyMenuScreen",
+      "buttons": [
+        {
+          "id": "copy-selection",
+          "region": [
+            5,
+            14,
+            23,
+            3
+          ]
+        },
+        {
+          "id": "copy-whole",
+          "region": [
+            28,
+            14,
+            23,
+            3
+          ]
+        },
+        {
+          "id": "copy-cancel",
+          "region": [
+            51,
+            14,
+            24,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "8860d405e81d0775d7a2f761d56d987dbcb73573f39aa0067a28b513177e35cb"
+    },
+    {
+      "name": "15-welcome",
+      "screen": "WorkspaceModeScreen",
+      "buttons": [
+        {
+          "id": "workspace-mode-security",
+          "region": [
+            5,
+            16,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "workspace-mode-continue",
+          "region": [
+            41,
+            16,
+            35,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "f5f2a1008773343ebc78a4cc5e76627e396ac34fc217123183c6bccc4ee35686"
+    },
+    {
+      "name": "16-ideas",
+      "screen": "IdeaNoteScreen",
+      "buttons": [
+        {
+          "id": "idea-note-close",
+          "region": [
+            4,
+            19,
+            16,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "369ab7e2f88e5d1cbd2a648cf703badfb7f029a33595058c40c8d5c7b7ecd79f"
+    },
+    {
+      "name": "17-output",
+      "screen": "ShellProcessesScreen",
+      "buttons": [
+        {
+          "id": "shell-stop",
+          "region": [
+            6,
+            18,
+            24,
+            3
+          ]
+        },
+        {
+          "id": "shell-close",
+          "region": [
+            31,
+            18,
+            10,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "936dc024834e4f2fc01c9e74c623e933f5b3b414dd7c6de615c6a75062aa6196"
+    },
+    {
+      "name": "18-mcp-form",
+      "screen": "MCPArgumentsScreen",
+      "buttons": [
+        {
+          "id": "mcp-arguments-cancel",
+          "region": [
+            5,
+            18,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "mcp-arguments-review",
+          "region": [
+            41,
+            18,
+            35,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "64444982e1d3a567ad3711c86736ccb9f241dfb2d783780562f6efec8bdc6ef4"
+    },
+    {
+      "name": "19-gateway-form",
+      "screen": "GatewaySemanticQueryScreen",
+      "buttons": [
+        {
+          "id": "semantic-query-cancel",
+          "region": [
+            5,
+            18,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "semantic-query-review",
+          "region": [
+            41,
+            18,
+            35,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "b07507093952eb1d5c67fc3770d1b5886831dd82ea9481c3732e26063bf6f27f"
+    },
+    {
+      "name": "20-folders",
+      "screen": "AddWorkspaceFolderScreen",
+      "buttons": [
+        {
+          "id": "folder-cancel",
+          "region": [
+            39,
+            18,
+            18,
+            3
+          ]
+        },
+        {
+          "id": "folder-add",
+          "region": [
+            58,
+            18,
+            18,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "7e0291569d8c1962dd2b214ca0db4cfa8d837c8267426dac83a788d560e242e6"
+    },
+    {
+      "name": "21-subagent-model",
+      "screen": "SubagentModelScreen",
+      "buttons": [
+        {
+          "id": "child-cancel",
+          "region": [
+            29,
+            19,
+            18,
+            3
+          ]
+        },
+        {
+          "id": "child-launch",
+          "region": [
+            48,
+            19,
+            28,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "0a171aacab9ea0190b9b32c0dc2098588cc3c148eb46180e0d322258d22ba2e6"
+    },
+    {
+      "name": "22-credentials",
+      "screen": "AddCredentialScreen",
+      "buttons": [
+        {
+          "id": "credential-cancel",
+          "region": [
+            5,
+            15,
+            35,
+            3
+          ]
+        },
+        {
+          "id": "credential-save",
+          "region": [
+            41,
+            15,
+            35,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "a4b5d1d2ea7b7ef090648c26d253cb8bc57524d376c9481951391dc6fb6df381"
+    },
+    {
+      "name": "23-rtk",
+      "screen": "RTKSettingsScreen",
+      "buttons": [
+        {
+          "id": "rtk-enable",
+          "region": [
+            4,
+            18,
+            23,
+            4
+          ]
+        },
+        {
+          "id": "rtk-disable",
+          "region": [
+            28,
+            18,
+            23,
+            3
+          ]
+        },
+        {
+          "id": "rtk-close",
+          "region": [
+            52,
+            18,
+            23,
+            3
+          ]
+        }
+      ],
+      "svg_sha256": "26075d6d694f3140cca73b0eca72a931f250cad3cf7c674286f4fc161244d5fb"
+    }
+  ]
+}

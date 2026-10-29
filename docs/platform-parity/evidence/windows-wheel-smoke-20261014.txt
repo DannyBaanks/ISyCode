@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+installed CLI: ['--version'] exit 0
+installed CLI: ['--help'] exit 0
+  File "C:\Development\ISyCo Git\ISyCode\docs\platform-parity\evidence\verify-installed-wheel-20261014.py", line 17, in <module>
+    assert result.returncode==0,(args,result.stderr[:400])
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: (['doctor', '--json'], 'Traceback (most recent call last):\n  File "<frozen runpy>", line 198, in _run_module_as_main\n  File "<frozen runpy>", line 88, in _run_code\n  File "D:\\ISyCode-Sandbox-5ae383aa26a8490ea9910d768b51f4a0\\wheel-b1423717f99a4b6e9c7b376bc992acaa\\venv\\Scripts\\isycode.exe\\__main__.py", line 7, in <module>\n  File "D:\\ISyCode-Sandbox-5ae383aa26a8490ea9910d768b51f4a0\\wheel-b1423717f99a4b6e9c7b376bc992acaa\\ven')

@@ -1,0 +1,9 @@
+{
+  "artifact": "tests/test_visual_tui.py",
+  "gate_evaluated_commit": "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+  "expected_sha256": "f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5",
+  "evaluated_commit_file_sha256": "e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5",
+  "pre_implementation_file_sha256": "f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5",
+  "working_file_sha256": "df23be98e544849c12694ea8d416aa14f3f8299be3dca46c99ab833406306109",
+  "status": "UNRESOLVED_HISTORICAL_ASSOCIATION; no approval changed"
+}

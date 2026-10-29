@@ -1,0 +1,6310 @@
+# ISyCode zh catalog. msgid is the stable English source identifier.
+msgid ""
+msgstr ""
+"Language: zh\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Temporary input-copy budget: {mib} MiB for this command."
+msgstr "本次命令的临时输入复制预算：{mib} MiB。"
+
+msgid "Larger than the default 512 MiB: needs more temporary disk space and copy time. This does not grant extra permissions; sandbox and file-change limits are unchanged. Insufficient disk space still stops the run."
+msgstr "超过默认的 512 MiB：需要更多临时磁盘空间和复制时间。这不会授予额外权限；sandbox 和文件更改限制保持不变。磁盘空间不足时仍不会执行命令。"
+
+msgid "ISyCode  ·  COMMAND BROWSER"
+msgstr "ISyCode  ·  命令浏览器"
+
+msgid "Categories"
+msgstr "分类"
+
+msgid "Choose an action"
+msgstr "选择一项操作"
+
+msgid "Agent · Workspace · Integrations · Providers · Session · Settings"
+msgstr "代理 · 工作区 · 集成 · 提供商 · 会话 · 设置"
+
+msgid "Type to filter; press Tab to move to the list. Use ↑/↓ and Enter to inspect an action. Ctrl+O opens it; Esc clears the filter or goes back. In chat, type / for quick commands."
+msgstr "输入以筛选；按 Tab 移到列表。用 ↑/↓ 和 Enter 查看操作。Ctrl+O 打开；Esc 清除筛选或返回。在聊天中输入 / 使用快捷命令。"
+
+msgid "Open action · Ctrl+O"
+msgstr "打开操作 · Ctrl+O"
+
+msgid "Search commands…"
+msgstr "搜索命令…"
+
+msgid "Copy selection / text"
+msgstr "复制所选 / 文本"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Add sibling folder"
+msgstr "添加同级文件夹"
+
+msgid "Allow proposed file edits"
+msgstr "允许建议的文件编辑"
+
+msgid "This grants reads/searches and optionally edits for this exact folder. Every edit asks until you explicitly enable automatic edits. Commands and other projects receive no new access."
+msgstr "这会授予对此确切文件夹的读取/搜索，以及可选的编辑。在你明确启用自动编辑之前，每次编辑都会询问。命令和其他项目不会获得新的访问。"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Add folder"
+msgstr "添加文件夹"
+
+msgid "Danger: allow automatic file edits"
+msgstr "危险：允许自动文件编辑"
+
+msgid "The assistant may create or overwrite files here without showing each diff for approval. Model mistakes or malicious instructions in files can damage your work. Review changes with Git and keep backups."
+msgstr "助手可能在此创建或覆盖文件，而不再逐个显示 diff 供你批准。模型错误或文件中的恶意指令可能损坏你的工作。请用 Git 审查更改并保留备份。"
+
+msgid "This setting persists for this workspace. Disable it from Files → Folders. Authority, ISySentinel, path protections and journaling stay active; they cannot guarantee that an allowed edit is correct. Commands, deletes, moves and commits still require their own approvals."
+msgstr "此设置会保留在本工作区。可在 文件 → 文件夹 中关闭。Authority、ISySentinel、路径保护和日志仍然有效；它们不能保证已允许的编辑是正确的。命令、删除、移动和 commit 仍需要各自的批准。"
+
+msgid "Enable automatic edits"
+msgstr "启用自动编辑"
+
+msgid "Alias, e.g. other-project"
+msgstr "别名，例如 other-project"
+
+msgid "Cancel sign-in"
+msgstr "取消登录"
+
+msgid "Sign in with ChatGPT"
+msgstr "使用 ChatGPT 登录"
+
+msgid "Open this official link in your browser. Browser login requires the browser on the same computer as ISyCode; use device code for remote/headless machines."
+msgstr "在浏览器中打开此官方链接。浏览器登录要求浏览器与 ISyCode 在同一台计算机上；远程/无界面机器请使用设备码。"
+
+msgid "Waiting for sign-in… Your plan determines available models and usage limits. This does not add API credits."
+msgstr "正在等待登录… 你的套餐决定可用模型和用量限额。这不会增加 API 额度。"
+
+msgid "Enter this one-use code: "
+msgstr "输入此一次性代码："
+
+msgid "Native RTK · output compression"
+msgstr "原生 RTK · 输出压缩"
+
+msgid "Inspecting installation…"
+msgstr "正在检查安装…"
+
+msgid "Checking the binary in the command sandbox…"
+msgstr "正在命令 sandbox 中检查该二进制…"
+
+msgid "Enable this binary"
+msgstr "启用此二进制"
+
+msgid "Disable"
+msgstr "禁用"
+
+msgid "Subagent · select a model from your providers"
+msgstr "子代理 · 从你的提供商中选择模型"
+
+msgid "Assigned task and requested files go to this provider. File edits use current grants and approvals. The parent waits; Cancel sends nothing."
+msgstr "分配的任务和请求的文件会发给此提供商。文件编辑使用当前授权和批准。父级等待；取消则什么也不发送。"
+
+msgid "Find a model or provider…"
+msgstr "查找模型或提供商…"
+
+msgid "Launch selected model"
+msgstr "启动所选模型"
+
+msgid "Navigate"
+msgstr "导航"
+
+msgid "Role · choose a catalog"
+msgstr "角色 · 选择目录"
+
+msgid "on"
+msgstr "开"
+
+msgid "off"
+msgstr "关"
+
+msgid "Settings · Workspace preferences"
+msgstr "设置 · 工作区偏好"
+
+msgid "Workspace command migration"
+msgstr "工作区命令迁移"
+
+msgid "Settings · Integrations"
+msgstr "设置 · 集成"
+
+msgid "Workspace folders · explicit access"
+msgstr "工作区文件夹 · 显式访问"
+
+msgid "Settings · My defaults"
+msgstr "设置 · 我的默认值"
+
+msgid "Filter this list…"
+msgstr "筛选此列表…"
+
+msgid "Paste API key…"
+msgstr "粘贴 API 密钥…"
+
+msgid "Search workspace paths…"
+msgstr "搜索工作区路径…"
+
+msgid "Chat ready"
+msgstr "聊天就绪"
+
+msgid "ISyCode agents"
+msgstr "ISyCode 代理"
+
+msgid "ISyCode specialists"
+msgstr "ISyCode 专家"
+
+msgid "ISyCo CLI motors"
+msgstr "ISyCo CLI 引擎"
+
+msgid "Compression by RTK · https://github.com/rtk-ai/rtk · permissions unchanged."
+msgstr "由 RTK 压缩 · https://github.com/rtk-ai/rtk · 权限不变。"
+
+msgid "Distinct bell rhythms for completion, approval, questions and errors; requires terminal audible bell."
+msgstr "完成、批准、提问和错误使用不同铃声；需要终端响铃。"
+
+msgid "Pure-black surfaces with brightened borders and controls; body text reaches at least 7:1."
+msgstr "纯黑表面、更亮的边框和控件；正文对比度至少 7:1。"
+
+msgid "Plain [x]/[ ]/[ON]/[OFF] marks instead of Unicode glyphs, for terminals without Unicode."
+msgstr "用纯 [x]/[ ]/[ON]/[OFF] 标记代替 Unicode 字形，供无 Unicode 的终端使用。"
+
+msgid "Conversation"
+msgstr "对话"
+
+msgid "Preferences"
+msgstr "偏好"
+
+msgid "Permissions"
+msgstr "权限"
+
+msgid "Connections"
+msgstr "连接"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Workspace preferences"
+msgstr "工作区偏好"
+
+msgid "These personal defaults follow you between workspaces."
+msgstr "这些个人默认值会随你在工作区之间生效。"
+
+msgid "Access stays separate for each workspace; these defaults never turn on permissions."
+msgstr "每个工作区的访问保持独立；这些默认值绝不会打开权限。"
+
+msgid "Change it from Providers; model selection is already saved globally."
+msgstr "在「提供商」中更改；模型选择已全局保存。"
+
+msgid "Role guidance is global preference only; it never grants permissions."
+msgstr "角色指南只是全局偏好；从不授予权限。"
+
+msgid "↑↓ navigate  ·  Enter select  ·  Esc cancel  ·  type to filter"
+msgstr "↑↓ 浏览  ·  Enter 选择  ·  Esc 取消  ·  输入以筛选"
+
+msgid "↑↓ move · Enter open · Click preview · Double-click open · Esc back · Shift+Tab search"
+msgstr "↑↓ 移动 · Enter 打开 · 单击预览 · 双击打开 · Esc 返回 · Shift+Tab 搜索"
+
+msgid "Idea box\nCapture an idea · Ctrl+Shift+Enter"
+msgstr "想法箱\n记下想法 · Ctrl+Shift+Enter"
+
+msgid "ShellBox · no processes"
+msgstr "ShellBox · 无进程"
+
+msgid "{name}  ·  {description}"
+msgstr "{name}  ·  {description}"
+
+msgid "needs attention"
+msgstr "需要注意"
+
+msgid "RTK compression · {state}"
+msgstr "RTK 压缩 · {state}"
+
+msgid "Providers & models"
+msgstr "提供商与模型"
+
+msgid "Reasoning level"
+msgstr "推理级别"
+
+msgid "Notification sounds · {state}"
+msgstr "通知声音 · {state}"
+
+msgid "High contrast display · {state}"
+msgstr "高对比度显示 · {state}"
+
+msgid "ASCII-only display · {state}"
+msgstr "仅 ASCII 显示 · {state}"
+
+msgid "Language · {name}"
+msgstr "语言 · {name}"
+
+msgid "Interface language for ISyCode. This does not change permissions or workspace files."
+msgstr "ISyCode 的界面语言。这不会更改权限或工作区文件。"
+
+msgid "Choose role"
+msgstr "选择角色"
+
+msgid "Context"
+msgstr "上下文"
+
+msgid "My defaults · all workspaces"
+msgstr "我的默认值 · 所有工作区"
+
+msgid "Compact text scroll · {state}"
+msgstr "紧凑文本滚动 · {state}"
+
+msgid "Optional connections and remote access. Permissions remain separate."
+msgstr "可选连接与远程访问。权限仍然分开。"
+
+msgid "Back to Settings"
+msgstr "返回设置"
+
+msgid "The exact file is reviewed; the legacy original stays in place."
+msgstr "会审查确切文件；旧版原件保持原位。"
+
+msgid "No valid legacy workspace commands found."
+msgstr "未找到有效的旧版工作区命令。"
+
+msgid "Tool servers · MCP & Gateway"
+msgstr "工具服务器 · MCP 与 Gateway"
+
+msgid "Language servers · LSP"
+msgstr "语言服务器 · LSP"
+
+msgid "Mobile host status"
+msgstr "移动主机状态"
+
+msgid "Bridge coordination · blocked in Secure"
+msgstr "Bridge 协调 · 在 Secure 中已阻止"
+
+msgid "Private access · Tailscale"
+msgstr "私有访问 · Tailscale"
+
+msgid "Refresh integration catalogs"
+msgstr "刷新集成目录"
+
+msgid "Add sibling folder…"
+msgstr "添加同级文件夹…"
+
+msgid "Default model · {provider} · {model}"
+msgstr "默认模型 · {provider} · {model}"
+
+msgid "Clear my default role"
+msgstr "清除我的默认角色"
+
+msgid "Applies only to folders opened for the first time; each workspace keeps its own mode and you can switch it in Settings → Authority."
+msgstr "仅适用于首次打开的文件夹；每个工作区保留自己的模式，可在 设置 → Authority 中切换。"
+
+msgid "Clear selected skills"
+msgstr "清除所选技能"
+
+msgid "Skills guide the current chat; they do not add tools or authority."
+msgstr "技能只指导当前聊天；不添加工具或权限。"
+
+msgid "Makes a read-only catalog request only after you select this item."
+msgstr "仅在你选择此项后发出只读目录请求。"
+
+msgid "Gateway semantic operations · native HTTP"
+msgstr "Gateway 语义操作 · 原生 HTTP"
+
+msgid "One explicit read-only symbols/search request; this does not use MCP."
+msgstr "一次明确的只读符号/搜索请求；不使用 MCP。"
+
+msgid "Semantic broker · choose folder and preview recipe"
+msgstr "语义代理 · 选择文件夹并预览配方"
+
+msgid "Inspects the fixed ISyCo semantic broker recipe, checks a read grant for the chosen subtree, and shows a hashed, read-only plan. Docker is not started by this preview."
+msgstr "检查固定的 ISyCo 语义 broker 配方，核对所选子树的读取授权，并显示带哈希的只读计划。此预览不会启动 Docker。"
+
+msgid "Build + Start semantic broker…"
+msgstr "构建 + 启动语义代理…"
+
+msgid "Shows the exact recipe, network effects, root and sandbox; asks before Docker build/start, then verifies health on a loopback-only port."
+msgstr "显示确切配方、网络影响、根目录和 sandbox；在 Docker build/start 之前询问，然后在仅回环端口上验证健康。"
+
+msgid "Open workspace file browser"
+msgstr "打开工作区文件浏览器"
+
+msgid "Open provider selector"
+msgstr "打开提供商选择器"
+
+msgid "OAuth methods"
+msgstr "OAuth 方法"
+
+msgid "/help"
+msgstr "/help"
+
+msgid "Opaque workspace match label; it does not grant access."
+msgstr "不透明的工作区匹配标签；不授予访问权限。"
+
+msgid "Open Files view"
+msgstr "打开文件视图"
+
+msgid "Current · {name} ({kind})"
+msgstr "当前 · {name}（{kind}）"
+
+msgid "Initialize this workspace's .isycode/"
+msgstr "初始化此工作区的 .isycode/"
+
+msgid "Keeps non-security preferences local; file writes still need a separate review."
+msgstr "将非安全偏好保存在本地；文件写入仍需单独审查。"
+
+msgid "Overrides personal defaults for this .isyroot only; permissions are unaffected."
+msgstr "仅覆盖此 .isyroot 的个人默认值；权限不受影响。"
+
+msgid "Copy legacy workspace commands…"
+msgstr "复制旧版工作区命令…"
+
+msgid "Copies validated .isycode-commands/*.md files after diff approval; originals remain."
+msgstr "在 diff 批准后复制已验证的 .isycode-commands/*.md；原件保留。"
+
+msgid "Authority & Security"
+msgstr "Authority & Security"
+
+msgid "Multi Harness · settings & repair Compose"
+msgstr "Multi Harness · 设置与修复 Compose"
+
+msgid "Named API keys"
+msgstr "命名的 API 密钥"
+
+msgid "Action journal · verify / inspect"
+msgstr "操作日志 · 验证 / 检查"
+
+msgid "Choose context file (.md / .txt)"
+msgstr "选择上下文文件（.md / .txt）"
+
+msgid "Commands & shortcuts"
+msgstr "命令与快捷键"
+
+msgid "Workspace files"
+msgstr "工作区文件"
+
+msgid "Workspace folders & automatic edits"
+msgstr "文件夹与自动编辑"
+
+msgid "Clear selected role"
+msgstr "清除所选角色"
+
+msgid "Integrations · MCP, LSP, Gateway & remote access"
+msgstr "集成 · MCP、LSP、Gateway 与远程访问"
+
+msgid "This folder has no .isyroot marker; preferences are not persisted here."
+msgstr "此文件夹没有 .isyroot 标记；偏好不会保存在这里。"
+
+msgid "Workspace preferences unavailable · {error}"
+msgstr "工作区偏好不可用 · {error}"
+
+msgid "Initialize .isycode/ before saving preferences."
+msgstr "保存偏好前请先初始化 .isycode/。"
+
+msgid "Migration is available only in a workspace with its own .isyroot."
+msgstr "仅在拥有自己的 .isyroot 的工作区中可以迁移。"
+
+msgid "Migration unavailable · {error}"
+msgstr "迁移不可用 · {error}"
+
+msgid "Copy /{name} into .isycode/commands/"
+msgstr "将 /{name} 复制到 .isycode/commands/"
+
+msgid "Browse"
+msgstr "浏览"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Default role · {name}"
+msgstr "默认角色 · {name}"
+
+msgid "Default role · none"
+msgstr "默认角色 · 无"
+
+msgid "Use current role ({name}) as my default"
+msgstr "将当前角色（{name}）设为我的默认值"
+
+msgid "Superpowers · pinned MIT Markdown; select to toggle guidance for this chat"
+msgstr "Superpowers · 固定的 MIT Markdown；选择以开关此聊天的指南"
+
+msgid "Load account models · {provider}"
+msgstr "加载账户模型 · {provider}"
+
+msgid "Previously selected model; not verified against this account."
+msgstr "先前选择的模型；未对照此账户验证。"
+
+msgid "The live catalog request was denied; this asks once, saves the host grant for this workspace, and reloads the provider's real models."
+msgstr "实时目录请求被拒绝；此项询问一次，为此工作区保存主机授权，并重新加载提供商的真实模型。"
+
+msgid "Hardcoded preset model, not verified against this account; load the account catalog for the provider's real list."
+msgstr "硬编码预设模型，未对照此账户验证；加载账户目录以获取提供商真实列表。"
+
+msgid "Loading account catalog…"
+msgstr "正在加载账户目录…"
+
+msgid "No LSP servers detected"
+msgstr "未检测到 LSP 服务器"
+
+msgid "Install or configure a supported language server."
+msgstr "安装或配置受支持的语言服务器。"
+
+msgid "Current Directory · {path}"
+msgstr "当前目录 · {path}"
+
+msgid "Provider · {name}"
+msgstr "提供商 · {name}"
+
+msgid "Role · {name}"
+msgstr "角色 · {name}"
+
+msgid "Workspace Root · {path}"
+msgstr "工作区根目录 · {path}"
+
+msgid "Launch Directory · {path}"
+msgstr "启动目录 · {path}"
+
+msgid "Root Source · {source}"
+msgstr "根来源 · {source}"
+
+msgid "Gateway Binding · {id}"
+msgstr "Gateway 绑定 · {id}"
+
+msgid "Current Folder · {path}"
+msgstr "当前文件夹 · {path}"
+
+msgid "Keyboard shortcuts"
+msgstr "键盘快捷键"
+
+msgid "Commands"
+msgstr "命令"
+
+msgid "{status} {alias} · {path}"
+msgstr "{status} {alias} · {path}"
+
+msgid "OFF · Security requires each review"
+msgstr "关 · Security 要求每次审查"
+
+msgid "Only file creation/edits. Authority and ISySentinel stay active."
+msgstr "仅文件创建/编辑。Authority 和 ISySentinel 仍保持有效。"
+
+msgid "Files and standalone workspace settings are kept. This chat loses access."
+msgstr "文件和独立工作区设置会保留。此聊天将失去访问权限。"
+
+msgid "Folder settings unavailable · {error}"
+msgstr "文件夹设置不可用 · {error}"
+
+msgid "Recent · {provider} · {model}  · recent"
+msgstr "最近 · {provider} · {model}  · 最近"
+
+msgid "Grant network access to {label} and load its real catalog"
+msgstr "授予 {label} 网络访问并加载其真实目录"
+
+msgid "Current model {model} is not in the refreshed {label} catalog · still selected · choose a replacement explicitly"
+msgstr "当前模型 {model} 不在已刷新的 {label} 目录中 · 仍保持选中 · 请明确选择替换项"
+
+msgid "  ⚠ no tools"
+msgstr "  ⚠ 无工具"
+
+msgid "{count} unavailable in tested endpoint · retained in capability results"
+msgstr "{count} 个在测试端点不可用 · 已保留在能力结果中"
+
+msgid "Managed broker inventory unavailable"
+msgstr "托管代理清单不可用"
+
+msgid "Private state could not be read; no Docker action is available."
+msgstr "无法读取私有状态；没有可用的 Docker 操作。"
+
+msgid "Listed by the connected service; discovery does not authorize calls."
+msgstr "由已连接服务列出；发现并不授权调用。"
+
+msgid "Add {name} preset"
+msgstr "添加 {name} 预设"
+
+msgid "Real LSP initialize + workspace/symbol, read-only .isyroot mount, no network; each request needs a grant and one-use approval."
+msgstr "真实 LSP initialize + workspace/symbol，只读挂载 .isyroot，无网络；每次请求需要授权和一次性批准。"
+
+msgid "Detected executable only; no safe LSP execution adapter is connected for this server."
+msgstr "仅检测到可执行文件；此服务器没有已连接的安全 LSP 执行适配器。"
+
+msgid "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · Ctrl+B sidebar"
+msgstr "Enter 发送 · Ctrl+J 换行 · Esc 返回 · Ctrl+P 命令 · Ctrl+B 侧栏"
+
+msgid "API key is stored outside this project."
+msgstr "API 密钥存储在此项目之外。"
+
+msgid "Config ignored · {error}"
+msgstr "配置已忽略 · {error}"
+
+msgid "Config warning · {error}"
+msgstr "配置警告 · {error}"
+
+msgid "Clear this workspace's default role"
+msgstr "清除此工作区的默认角色"
+
+msgid "ON — dangerous; disable"
+msgstr "开 — 危险；关闭"
+
+msgid "OFF — enable…"
+msgstr "关 — 开启…"
+
+msgid "{alias} · automatic edits {state}"
+msgstr "{alias} · 自动编辑 {state}"
+
+msgid "Remove attachment · {alias}"
+msgstr "移除附加 · {alias}"
+
+msgid "{name} · active"
+msgstr "{name} · 已启用"
+
+msgid "{name} · discovered"
+msgstr "{name} · 已发现"
+
+msgid "{label}  ·  {model}  ◂ current  · preset"
+msgstr "{label}  ·  {model}  ◂ 当前  · 预设"
+
+msgid "{label}  ·  {model}  · preset"
+msgstr "{label}  ·  {model}  · 预设"
+
+msgid "{label}  ·  {model}{marker}  · catalog"
+msgstr "{label}  ·  {model}{marker}  · 目录"
+
+msgid "Manage broker · {name} · {status}"
+msgstr "管理 broker · {name} · {status}"
+
+msgid "{name}  ·  {status}"
+msgstr "{name}  ·  {status}"
+
+msgid "Configured services · {state}"
+msgstr "已配置服务 · {state}"
+
+msgid "ISyCo Gateway · {name}"
+msgstr "ISyCo Gateway · {name}"
+
+msgid "ISyCo Gateway MCP · {state}"
+msgstr "ISyCo Gateway MCP · {state}"
+
+msgid "{label} · {status}"
+msgstr "{label} · {status}"
+
+msgid "Sidebar"
+msgstr "侧栏"
+
+msgid "Sessions"
+msgstr "会话"
+
+msgid "Multi Harness"
+msgstr "Multi Harness"
+
+msgid "Providers"
+msgstr "提供商"
+
+msgid "Role"
+msgstr "角色"
+
+msgid "Inject context"
+msgstr "注入上下文"
+
+msgid "Model ▾"
+msgstr "模型 ▾"
+
+msgid "Save key"
+msgstr "保存密钥"
+
+msgid "Use {name} as this workspace's default role"
+msgstr "将 {name} 用作此工作区的默认角色"
+
+msgid "workspace symbol search"
+msgstr "工作区符号搜索"
+
+msgid "Settings · Authority & Security"
+msgstr "设置 · Authority & Security"
+
+msgid "Security · Action journal (read-only)"
+msgstr "Security · 操作日志（只读）"
+
+msgid "Choose what ISyCode can do in this workspace. Everything else stays off."
+msgstr "选择 ISyCode 可以在此工作区做什么。其余保持关闭。"
+
+msgid "Some actions ask again before they run, even when turned on. Press ? on any option to see what it does."
+msgstr "即使已开启，有些操作运行前仍会再问一次。在任意选项上按 ? 查看其作用。"
+
+msgid "Check ISyCo Gateway"
+msgstr "检查 ISyCo Gateway"
+
+msgid "Checks whether your local ISyCo Gateway is available."
+msgstr "检查本地 ISyCo Gateway 是否可用。"
+
+msgid "Find Gateway tools"
+msgstr "查找 Gateway 工具"
+
+msgid "Shows which extra tools the Gateway offers. Finding a tool does not run it."
+msgstr "显示 Gateway 提供的额外工具。找到工具并不会运行它。"
+
+msgid "Search and understand code with Gateway"
+msgstr "用 Gateway 搜索并理解代码"
+
+msgid "Sends a search you review first. Each search asks for approval before it runs."
+msgstr "发送你先审查的搜索。每次搜索运行前都会请求批准。"
+
+msgid "Protection is always on"
+msgstr "保护始终开启"
+
+msgid "ISyCode checks every action before it runs. Turning an option on never gives access beyond this workspace, and sensitive actions still ask you first."
+msgstr "ISyCode 在每项操作运行前都会检查。打开选项绝不会授予此工作区以外的访问，敏感操作仍会先询问你。"
+
+msgid "File edits follow folder approval settings; other changes always ask."
+msgstr "文件编辑遵循文件夹批准设置；其他更改始终询问。"
+
+msgid "Turning a permission on lets the assistant propose that kind of action. Files → Folders controls automatic file edits. Commands, moves, deletes and commits still require approval."
+msgstr "打开权限后，助手可以提议该类操作。文件 → 文件夹 控制自动文件编辑。命令、移动、删除和 commit 仍需批准。"
+
+msgid "Classic is ready for the local coding loop: read/edit, chat, sessions, Git review, and sandboxed commands where supported. Each edit, delete/move, command and commit still asks first. Security starts with grants off; use individual grants or the reviewed coding-tool bundle. Both keep Sentinel and the journal."
+msgstr "Classic 已可用于本地编码循环：读/改、聊天、会话、Git 审查，以及受支持时的 sandbox 命令。每次编辑、删除/移动、命令和 commit 仍会先询问。Security 默认关闭授权；使用单项授权或已审查的编码工具包。两者都保留 Sentinel 和日志。"
+
+msgid "Turn on all coding tools…"
+msgstr "开启全部编码工具…"
+
+msgid "One step for read, search, edit, move, delete, undo, sandboxed commands, git and Python checks (whatever this computer supports). Each change, command and commit still asks you first, and IsySentinel still checks every action."
+msgstr "一步开启读、搜、编辑、移动、删除、撤销、sandbox 命令、git 和 Python 检查（以本机支持者为准）。每次更改、命令和 commit 仍会先询问你，IsySentinel 仍检查每项操作。"
+
+msgid "Read and search workspace files"
+msgstr "读取并搜索工作区文件"
+
+msgid "Lets ISyCode list, read, and find files here. It cannot change or delete them."
+msgstr "允许 ISyCode 在此列出、读取和查找文件。不能更改或删除它们。"
+
+msgid "Edit workspace files · folder approval settings apply"
+msgstr "编辑工作区文件 · 适用文件夹批准设置"
+
+msgid "The assistant can propose creating, changing, moving and deleting files here. You see the diff unless this folder is trusted for quiet Classic, or automatic edits are on. A trusted folder still stays inside the effect budget. /undo reverts the last change. Sensitive files stay off-limits."
+msgstr "助手可以提议在此创建、更改、移动和删除文件。除非此文件夹在安静 Classic 下受信任或已开启自动编辑，否则你会看到 diff。受信任文件夹仍受效果预算限制。/undo 撤销上次更改。敏感文件始终不可及。"
+
+msgid "Copy selected text to the clipboard"
+msgstr "将所选文本复制到剪贴板"
+
+msgid "Selecting text with the mouse (or Ctrl+C on a selection, or Copy path) copies it. Only your own gesture copies; the assistant cannot. The journal records the size, never the text. API keys are never copied."
+msgstr "用鼠标选中文本（或对选区按 Ctrl+C，或复制路径）会复制它。只有你自己的手势会复制；助手不能。日志记录大小，从不记录文本。API 密钥绝不会被复制。"
+
+msgid "Read public web pages"
+msgstr "读取公开网页"
+
+msgid "Read-only HTTPS; no credentials, private hosts or redirects. Each new host asks first."
+msgstr "只读 HTTPS；无凭据、私有主机或重定向。每个新主机都会先询问。"
+
+msgid "Browse optional integrations"
+msgstr "浏览可选集成"
+
+msgid "Reads the optional integrations list. It does not enable their tools."
+msgstr "读取可选集成列表。不会启用它们的工具。"
+
+msgid "Allow git commits in this workspace?"
+msgstr "允许在此工作区进行 git commit？"
+
+msgid "Turn off git commits?"
+msgstr "关闭 git commit？"
+
+msgid "Let ISyCode see git status and diffs?"
+msgstr "允许 ISyCode 查看 git status 和 diff？"
+
+msgid "Hide git status and diffs?"
+msgstr "隐藏 git status 和 diff？"
+
+msgid "JOURNAL_INVALID · verifier unavailable"
+msgstr "JOURNAL_INVALID · 验证器不可用"
+
+msgid "Save conversations in this workspace"
+msgstr "在此工作区保存对话"
+
+msgid "Keeps this workspace's chats in your private ISyCode state folder, outside the project, so you can resume them. Common secrets are redacted before saving."
+msgstr "将此工作区的聊天保存在项目外的私有 ISyCode 状态文件夹中，以便恢复。常见密钥在保存前会被遮盖。"
+
+msgid "Save conversations · recurring workspaces only"
+msgstr "保存对话 · 仅限常用工作区"
+
+msgid "Temporary runs never keep chat history."
+msgstr "临时运行从不保留聊天记录。"
+
+msgid "See git status and diffs"
+msgstr "查看 git status 和 diffs"
+
+msgid "Lets the assistant see the branch, changed files and diffs. Sensitive files stay hidden, and repositories that configure their own programs are refused."
+msgstr "允许助手查看 branch、更改的文件和 diffs。敏感文件保持隐藏，配置了自有程序的仓库会被拒绝。"
+
+msgid "Create git commits · asks before every commit"
+msgstr "创建 git commit · 每次 commit 前询问"
+
+msgid "The assistant can propose a commit. You review the exact files, message and diff. Hooks never run and nothing is pushed."
+msgstr "助手可以提议一次 commit。你审查确切文件、说明和 diff。从不运行 hooks，也不会 push。"
+
+msgid "Run commands in a sandbox"
+msgstr "在 sandbox 中运行命令"
+
+msgid "The assistant can propose programs like tests or a build. Each exact command asks unless this folder is trusted for quiet Classic. It runs without network, with sensitive files hidden, and can only change files inside this workspace. There is no unsandboxed fallback."
+msgstr "助手可以提议运行测试或构建等程序。除非此文件夹在安静 Classic 下受信任，否则每条确切命令都会询问。无网络运行、敏感文件被隐藏，且只能更改此工作区内的文件。没有非沙箱回退。"
+
+msgid "Run commands · sandbox not available on this computer"
+msgstr "运行命令 · 此计算机没有 sandbox"
+
+msgid "Needs bubblewrap, libseccomp and python3 on Linux. Commands stay off. There is no unsandboxed fallback."
+msgstr "Linux 上需要 bubblewrap、libseccomp 和 python3。命令保持关闭。没有非沙箱回退。"
+
+msgid "Connect to the selected AI model"
+msgstr "连接到所选 AI 模型"
+
+msgid "Sends your messages to the model you chose. A saved API key is kept separately."
+msgstr "将你的消息发送到你选择的模型。已保存的 API 密钥单独存放。"
+
+msgid "Model connection · not ready yet"
+msgstr "模型连接 · 尚未就绪"
+
+msgid "Choose a model provider in Settings first."
+msgstr "请先在设置中选择模型提供商。"
+
+msgid "Run a Gateway tool"
+msgstr "运行 Gateway 工具"
+
+msgid "You will review the tool and its details, then approve each run separately."
+msgstr "你会审查工具及其详情，然后分别批准每次运行。"
+
+msgid "Local code help"
+msgstr "本地代码帮助"
+
+msgid "Uses the protected language helper to find code symbols on this computer."
+msgstr "使用受保护的语言助手在此计算机上查找代码符号。"
+
+msgid "Check Python files after edits"
+msgstr "编辑后检查 Python 文件"
+
+msgid "After you apply a change to a .py file, the protected Pyright helper reports errors and warnings to you and to the assistant. It cannot change files."
+msgstr "你对 .py 文件应用更改后，受保护的 Pyright 助手会向你和助手报告错误和警告。它不能更改文件。"
+
+msgid "Web pages · asks for each new host"
+msgstr "网页 · 每个新主机都会询问"
+
+msgid "The webfetch tool requests a separate bounded host grant before reading a public HTTPS page."
+msgstr "webfetch 工具在读取公开 HTTPS 页面之前会请求单独的有界主机授权。"
+
+msgid "Optional integrations · not set up"
+msgstr "可选集成 · 未设置"
+
+msgid "You can connect these later from Settings."
+msgstr "你可以稍后在设置中连接这些。"
+
+msgid "Lets ISyCode start the loopback Mobile Host at {address} and accept one-use PIN pairing. Paired devices can read the runtime list and send heartbeats; they cannot read files, run tools, or open sessions. Starting still asks first."
+msgstr "允许 ISyCode 在 {address} 启动回环 Mobile Host 并接受一次性 PIN 配对。已配对设备可以读取运行时列表并发送心跳；不能读文件、运行工具或打开会话。启动仍会先询问。"
+
+msgid "— Other saved permissions —"
+msgstr "— 其他已保存权限 —"
+
+msgid "Every other permission saved for this workspace."
+msgstr "为此工作区保存的所有其他权限。"
+
+msgid "blocked · no Secure owner · saved grant ignored"
+msgstr "已阻止 · 无 Secure owner · 忽略已保存授权"
+
+msgid "Protection settings are unavailable · everything stays off"
+msgstr "保护设置不可用 · 全部保持关闭"
+
+msgid "{label} · not ready yet"
+msgstr "{label} · 尚未就绪"
+
+msgid "Integrity · {status} · {records} records · {decisions} decisions · {receipts} receipts"
+msgstr "完整性 · {status} · {records} 条记录 · {decisions} 项决定 · {receipts} 张回执"
+
+msgid "No durable decisions recorded for this workspace"
+msgstr "此工作区没有已记录的持久决定"
+
+msgid "Delete current conversation · asks every time"
+msgstr "删除当前对话 · 每次询问"
+
+msgid "Lets you delete the saved conversation that is open right now. The permission covers only that conversation, and each deletion still asks you."
+msgstr "允许删除当前打开的已保存对话。该权限只覆盖那一次对话，每次删除仍会询问你。"
+
+msgid "Delete a conversation · open a saved one first"
+msgstr "删除对话 · 请先打开已保存的对话"
+
+msgid "Deleting works one conversation at a time. Open a saved conversation from Sessions, then come back here to allow deleting that one."
+msgstr "删除一次只针对一个对话。从「会话」打开已保存对话，再回到这里允许删除那一个。"
+
+msgid "Gateway tools · not ready yet"
+msgstr "Gateway 工具 · 尚未就绪"
+
+msgid "Finish setting up the local Gateway connection first."
+msgstr "请先完成本地 Gateway 连接设置。"
+
+msgid "Local code help · not ready yet"
+msgstr "本地代码帮助 · 尚未就绪"
+
+msgid "ISyCode will show this as an option when its protected helper is ready."
+msgstr "受保护助手就绪后，ISyCode 会把此项显示为选项。"
+
+msgid "Read-only local symbols; each request is reviewed before its protected process starts."
+msgstr "只读本地符号；每个请求在其受保护进程启动前都会审查。"
+
+msgid "ON · asks before each use"
+msgstr "开 · 每次使用前询问"
+
+msgid "ON"
+msgstr "开"
+
+msgid "{label} · {state}"
+msgstr "{label} · {state}"
+
+msgid "Scope: {scope}. Select to remove this saved permission."
+msgstr "范围：{scope}。选择以移除此已保存权限。"
+
+msgid "NOT_VERIFIABLE · {count} records lack an owner identity"
+msgstr "NOT_VERIFIABLE · {count} 条记录缺少 owner 身份"
+
+msgid "Cancel review"
+msgstr "取消审查"
+
+msgid "Iterate with this review"
+msgstr "用此次审查进行迭代"
+
+msgid "Select provider"
+msgstr "选择提供商"
+
+msgid "xAI · use Grok in ISyCode"
+msgstr "xAI · 在 ISyCode 中使用 Grok"
+
+msgid "OpenAI · choose connection method"
+msgstr "OpenAI · 选择连接方式"
+
+msgid "Settings · API keys"
+msgstr "设置 · API 密钥"
+
+msgid "Models"
+msgstr "模型"
+
+msgid "Models · account catalog"
+msgstr "模型 · 账户目录"
+
+msgid "Add an ISyCo Gateway key · asks first"
+msgstr "添加 ISyCo Gateway 密钥 · 会先询问"
+
+msgid "Default · provider decides"
+msgstr "默认 · 由提供商决定"
+
+msgid "Reasoning · {model}"
+msgstr "推理 · {model}"
+
+msgid "Back"
+msgstr "返回"
+
+msgid "Models · {family}"
+msgstr "模型 · {family}"
+
+msgid "— Additional provider accounts —"
+msgstr "— 其他提供商账户 —"
+
+msgid "API key · console.x.ai"
+msgstr "API 密钥 · console.x.ai"
+
+msgid "Saved in the OS keyring. Chat goes to api.x.ai."
+msgstr "保存在操作系统钥匙串中。聊天发往 api.x.ai。"
+
+msgid "Uses the grok CLI sign-in already on this machine. Chat goes to cli-chat-proxy.grok.com."
+msgstr "使用本机已有的 grok CLI 登录。聊天发往 cli-chat-proxy.grok.com。"
+
+msgid "Sign in with device code"
+msgstr "使用设备码登录"
+
+msgid "Sign in with browser"
+msgstr "使用浏览器登录"
+
+msgid "The sign-in stays in the grok CLI. ISyCode does not copy the token into the project."
+msgstr "登录保留在 grok CLI 中。ISyCode 不会把 token 复制进项目。"
+
+msgid "Manually enter API key · separate API quota"
+msgstr "手动输入 API 密钥 · 独立 API 配额"
+
+msgid "ChatGPT Pro/Plus · browser"
+msgstr "ChatGPT Pro/Plus · 浏览器"
+
+msgid "ChatGPT Pro/Plus · headless/device code"
+msgstr "ChatGPT Pro/Plus · 无界面/设备码"
+
+msgid "Use saved ChatGPT sign-in · checked on request"
+msgstr "使用已保存的 ChatGPT 登录 · 按需检查"
+
+msgid "Disconnect ChatGPT account…"
+msgstr "断开 ChatGPT 账户…"
+
+msgid "Subscription needs official Codex CLI and an unlocked OS keyring. Plan limits apply."
+msgstr "订阅需要官方 Codex CLI 和解锁的系统密钥环。受套餐限额约束。"
+
+msgid "Saved in your OS keyring for your user; never in the project or logs."
+msgstr "保存在你的用户操作系统钥匙串中；绝不写入项目或日志。"
+
+msgid "Loading models from the selected provider…"
+msgstr "正在从所选提供商加载模型…"
+
+msgid "needs {env}"
+msgstr "需要 {env}"
+
+msgid "  ← currently active"
+msgstr "  ← 当前使用"
+
+msgid "  ·  {blurb}"
+msgstr "  ·  {blurb}"
+
+msgid "This account is not connected to ISyCode inference yet."
+msgstr "此账户尚未连接到 ISyCode 推理。"
+
+msgid "Additional provider catalog · {state}"
+msgstr "额外提供商目录 · {state}"
+
+msgid "Use Grok sign-in · {note}"
+msgstr "使用 Grok 登录 · {note}"
+
+msgid "Add a key for {name} · asks first"
+msgstr "为 {name} 添加密钥 · 先询问"
+
+msgid "Credential vault unavailable"
+msgstr "凭据保险库不可用"
+
+msgid "Check the user-private state directory and permissions."
+msgstr "请检查用户私有状态目录和权限。"
+
+msgid "Each use is decided and recorded in this workspace's action journal."
+msgstr "每次使用都会在此工作区的操作日志中决定并记录。"
+
+msgid "Provider credential configuration could not be loaded."
+msgstr "无法加载提供商凭据配置。"
+
+msgid "Language preference could not be saved"
+msgstr "无法保存语言偏好"
+
+msgid "{mark}  {label}{note}"
+msgstr "{mark}  {label}{note}"
+
+msgid "{blurb}. {status}. Default model: {default}"
+msgstr "{blurb}。{status}。默认模型：{default}"
+
+msgid "·  {label}  ·  {blurb}"
+msgstr "·  {label}  ·  {blurb}"
+
+msgid "ISyCode does not yet have an authorization flow for this provider."
+msgstr "ISyCode 尚无此提供商的授权流程。"
+
+msgid "OAuth discovery · {state}"
+msgstr "OAuth 发现 · {state}"
+
+msgid "Allow using the saved {name} key here · asks first"
+msgstr "允许在此使用已保存的 {name} 密钥 · 先询问"
+
+msgid "{name}  ·  {service}  ·  removed"
+msgstr "{name}  ·  {service}  ·  已移除"
+
+msgid "Purpose: {purpose}"
+msgstr "用途：{purpose}"
+
+msgid "{name}  ·  {service}  ·  saved · value hidden · select to remove"
+msgstr "{name}  ·  {service}  ·  已保存 · 值已隐藏 · 选择以移除"
+
+msgid "Configure {env} before listing account models."
+msgstr "列出账户模型前请先配置 {env}。"
+
+msgid "Model catalog unavailable ({error}); current selection is unchanged."
+msgstr "模型目录不可用（{error}）；当前选择未更改。"
+
+msgid "{name}  ·  OAuth available, not connected"
+msgstr "{name}  · OAuth 可用，未连接"
+
+msgid "Provider model request {decision}."
+msgstr "提供商模型请求 {decision}。"
+
+msgid "The provider returned an empty model catalog."
+msgstr "提供商返回了空的模型目录。"
+
+msgid "Open this family's variants."
+msgstr "打开此系列的变体。"
+
+msgid "▸ {family} · {count} models"
+msgstr "▸ {family} · {count} 个模型"
+
+msgid "Settings · Private access"
+msgstr "设置 · 私有访问"
+
+msgid "Private access · Authority grants"
+msgstr "私有访问 · Authority 授权"
+
+msgid "Settings · Bridge coordination"
+msgstr "设置 · Bridge 协调"
+
+msgid "Settings · Mobile host"
+msgstr "设置 · 移动主机"
+
+msgid "Blocked · no registered action owner"
+msgstr "已阻止 · 没有已注册的操作所有者"
+
+msgid "Bridge leases are coordination signals, never Workspace Authority grants. Secure does not run hello, heartbeat, peek, send, lease, or wake until each path has an owner and gate."
+msgstr "Bridge 租约是协调信号，绝不是 Workspace Authority 授权。在每条路径都有 owner 和门控之前，Secure 不会运行 hello、heartbeat、peek、send、lease 或 wake。"
+
+msgid "Checking local Tailscale status…"
+msgstr "正在检查本地 Tailscale 状态…"
+
+msgid "Permissions and authority…"
+msgstr "权限与授权…"
+
+msgid "Refresh status"
+msgstr "刷新状态"
+
+msgid "Manual setup steps"
+msgstr "手动设置步骤"
+
+msgid "Tailscale · {status}"
+msgstr "Tailscale · {status}"
+
+msgid "Grant read-only Tailscale inventory"
+msgstr "授予只读 Tailscale 清单"
+
+msgid "No supported Tailscale CLI or apt-get was found."
+msgstr "未找到受支持的 Tailscale CLI 或 apt-get。"
+
+msgid "New pairing PIN · asks first"
+msgstr "新配对 PIN · 会先询问"
+
+msgid "Replaces the current PIN and clears failed attempts. Needs the Mobile Host grant."
+msgstr "替换当前 PIN 并清除失败尝试。需要 Mobile Host 授权。"
+
+msgid "Refresh host status"
+msgstr "刷新主机状态"
+
+msgid "Start Mobile Host · local approval required"
+msgstr "启动移动主机 · 需要本地批准"
+
+msgid "Listener stopped · no pairing credentials issued"
+msgstr "监听已停止 · 未签发配对凭据"
+
+msgid "Route stays on after ISyCode exits · {url}"
+msgstr "ISyCode 退出后路由仍保持 · {url}"
+
+msgid "Manual installation steps"
+msgstr "手动安装步骤"
+
+msgid "This permission is scoped to this workspace and exact executable. Mutations still need a fresh approval."
+msgstr "此权限限定于此工作区和确切可执行文件。变更仍需新的批准。"
+
+msgid "Authority policy unavailable · all actions deny"
+msgstr "Authority 策略不可用 · 所有操作均拒绝"
+
+msgid "Host alive · http://{address}:{port}"
+msgstr "主机在线 · http://{address}:{port}"
+
+msgid "One device exchange; token expires in one hour."
+msgstr "一次设备交换；token 一小时后过期。"
+
+msgid "Install Tailscale · supported Ubuntu/Debian · three approvals"
+msgstr "安装 Tailscale · 支持的 Ubuntu/Debian · 三次批准"
+
+msgid "Automated installation unavailable on this system"
+msgstr "此系统无法自动安装"
+
+msgid "ISyCode automates only the reviewed Ubuntu/Debian package transaction."
+msgstr "ISyCode 只自动化已审查的 Ubuntu/Debian 软件包事务。"
+
+msgid "{verb} {action} · {executable}"
+msgstr "{verb} {action} · {executable}"
+
+msgid "Pairing PIN · {pin} · expires in 5 minutes"
+msgstr "配对 PIN · {pin} · 5 分钟后过期"
+
+msgid "Use the official manual instructions; ISyCode will not run an unverified installer."
+msgstr "请使用官方手动说明；ISyCode 不会运行未验证的安装程序。"
+
+msgid "Log in to this tailnet…"
+msgstr "登录此 tailnet…"
+
+msgid "Check browser login status"
+msgstr "检查浏览器登录状态"
+
+msgid "Cancel local login process"
+msgstr "取消本地登录过程"
+
+msgid "Disable ISyCode Mobile Host route…"
+msgstr "禁用 ISyCode 移动主机路由…"
+
+msgid "Revoke"
+msgstr "撤销"
+
+msgid "Grant"
+msgstr "授予"
+
+msgid "Enable private Mobile Host route…"
+msgstr "启用私有移动主机路由…"
+
+msgid "Serve inventory is unavailable or conflicting"
+msgstr "Serve 清单不可用或存在冲突"
+
+msgid "ISyCode will not change unknown or conflicting Serve configuration."
+msgstr "ISyCode 不会更改未知或冲突的 Serve 配置。"
+
+msgid "Conversations"
+msgstr "对话"
+
+msgid "this conversation"
+msgstr "此对话"
+
+msgid "Start a new conversation"
+msgstr "开始新对话"
+
+msgid "{title} · {count} messages · {when} · current"
+msgstr "{title} · {count} 条消息 · {when} · 当前"
+
+msgid "{title} · {count} messages · {when}"
+msgstr "{title} · {count} 条消息 · {when}"
+
+msgid "No saved conversations yet"
+msgstr "还没有已保存的对话"
+
+msgid "Skills"
+msgstr "技能"
+
+msgid "MCP"
+msgstr "MCP"
+
+msgid "Load workspace AGENTS.md"
+msgstr "加载工作区 AGENTS.md"
+
+msgid "Reads only this workspace's AGENTS.md through its read permission."
+msgstr "仅通过其读取权限读取此工作区的 AGENTS.md。"
+
+msgid "Choose a document here or in a sibling project; external files ask for explicit permission."
+msgstr "在此处或兄弟项目中选择文档；外部文件需要明确许可。"
+
+msgid "Context · workspace documents"
+msgstr "上下文 · 工作区文档"
+
+msgid "Context: {name}"
+msgstr "上下文: {name}"
+
+msgid "Remove injected context"
+msgstr "移除已注入的上下文"
+
+msgid "Enter / Space / double-click expand"
+msgstr "Enter / 空格 / 双击展开"
+
+msgid "Queued"
+msgstr "已排队"
+
+msgid "Delete this iteration?"
+msgstr "删除此迭代？"
+
+msgid "Delete iteration · y"
+msgstr "删除迭代 · y"
+
+msgid "This permanently removes this one iteration ledger."
+msgstr "这将永久删除这一份迭代账本。"
+
+msgid "Delete this conversation?"
+msgstr "删除此对话？"
+
+msgid "Delete conversation · y"
+msgstr "删除对话 · y"
+
+msgid "This permanently removes this one transcript."
+msgstr "这将永久删除这一份记录。"
+
+msgid "Undo · move back"
+msgstr "撤销 · 移回"
+
+msgid "Move file"
+msgstr "移动文件"
+
+msgid "Delete file"
+msgstr "删除文件"
+
+msgid "External model review · GPT 6 Luna · OpenAI API"
+msgstr "外部模型审查 · GPT 6 Luna · OpenAI API"
+
+msgid "Only the text below will be sent. The reviewer has no tools. One HTTP request, max 1,200 output tokens; automatic retries are disabled."
+msgstr "只会发送下面的文本。审查器没有工具。一次 HTTP 请求，最多 1,200 个输出 token；已禁用自动重试。"
+
+msgid "Remember permission for this exact file"
+msgstr "记住此确切文件的权限"
+
+msgid "Workspace context pack · review before reading"
+msgstr "工作区上下文包 · 读取前审查"
+
+msgid "{title}\n\n{detail} A one-use, session-bound approval will be checked before deletion."
+msgstr "{title}\n\n{detail} 删除前会检查一次性、绑定到本会话的批准。"
+
+msgid "Send this text"
+msgstr "发送此文本"
+
+msgid "No · n"
+msgstr "否 · n"
+
+msgid "Allow once · y"
+msgstr "允许一次 · y"
+
+msgid "Cancel · n"
+msgstr "取消 · n"
+
+msgid "{label} · y"
+msgstr "{label} · y"
+
+msgid "Undo · remove file"
+msgstr "撤销 · 删除文件"
+
+msgid "Undo · restore file"
+msgstr "撤销 · 恢复文件"
+
+msgid "Create new file"
+msgstr "创建新文件"
+
+msgid "Reject · n"
+msgstr "拒绝 · n"
+
+msgid "Apply change · y"
+msgstr "应用更改 · y"
+
+msgid "Reject all · n"
+msgstr "全部拒绝 · n"
+
+msgid "Review each · e"
+msgstr "逐项审查 · e"
+
+msgid "Approve all {count} · a"
+msgstr "全部批准 {count} · a"
+
+msgid "Run command · y"
+msgstr "运行命令 · y"
+
+msgid "Commit · y"
+msgstr "commit · y"
+
+msgid "Read and send once · y"
+msgstr "读取并发送一次 · y"
+
+msgid "Approve once · y"
+msgstr "批准一次 · y"
+
+msgid "Keep · n"
+msgstr "保留 · n"
+
+msgid "Replace whole file"
+msgstr "替换整个文件"
+
+msgid "Change file"
+msgstr "更改文件"
+
+msgid "Trust folder this session · s"
+msgstr "本会话信任文件夹 · s"
+
+msgid "Always allow…"
+msgstr "始终允许…"
+
+msgid "Caution: {reason}. A marker here would make every folder below it without its own .isyroot share this workspace's grants and sessions. Your 'recurring' default is not applied here.\n\n"
+msgstr "注意：{reason}。这里放标记会让其下每个没有自己的 .isyroot 的文件夹共享此工作区的授权和会话。你的「常用」默认值不会在这里生效。\n\n"
+
+msgid "Your provider key is already in the environment, so chat works right away."
+msgstr "提供商密钥已在环境中，聊天可以立即使用。"
+
+msgid "No provider key detected yet; you can add one later in Settings → Providers."
+msgstr "尚未检测到提供商密钥；稍后可在 设置 → 提供商 中添加。"
+
+msgid "ISyCode will stop listing, reading, and searching files in this workspace. Your files and conversations stay where they are."
+msgstr "ISyCode 将停止在此工作区列出、读取和搜索文件。你的文件和对话仍留在原处。"
+
+msgid "ISyCode can list folders, read text files, find file names, and use a chosen AGENTS.md to understand your project. It cannot edit or delete files, run commands, or access folders outside this workspace. You will still be asked before sensitive actions."
+msgstr "ISyCode 可以列出文件夹、读取文本文件、查找文件名，并使用你选择的 AGENTS.md 来理解项目。它不能编辑或删除文件、运行命令，也不能访问此工作区以外的文件夹。敏感操作前仍会询问你。"
+
+msgid "Set up this workspace?"
+msgstr "要设置此工作区吗？"
+
+msgid "Launch directory:\n{path}\n\n{warning}If this is a recurring project, Yes creates an empty .isyroot here and saves chat sessions in your private ISyCode state directory. .isyroot identifies the workspace; it does not grant filesystem access. Not now keeps this run temporary, and its chat history is removed when ISyCode exits."
+msgstr "启动目录：\n{path}\n\n{warning}如果这是常用项目，选「是」会在此创建空的 .isyroot，并把聊天会话保存在你的私有 ISyCode 状态目录。.isyroot 标识工作区；它不授予文件系统访问。选「现在不要」则本次运行为临时，退出 ISyCode 时聊天记录会被删除。"
+
+msgid "Use recurring mode for new folders?"
+msgstr "新文件夹使用常用模式？"
+
+msgid "When ISyCode first opens a folder without a saved choice, it will create an empty .isyroot marker there. This remembers the workspace identity only; it does not grant file access or copy permissions from another workspace. Broad folders such as your home directory, its parents, the temporary directory, or a mount point still ask first, so unrelated projects never share one workspace by accident."
+msgstr "当 ISyCode 第一次打开尚未保存选择的文件夹时，会在那里创建一个空的 .isyroot 标记。这只记住工作区身份；不会授予文件访问，也不会从另一个工作区复制权限。主目录、其上级、临时目录或挂载点等宽泛文件夹仍会先询问，以免不相关的项目意外共享同一个工作区。"
+
+msgid "Welcome to ISyCode · how do you want to start?"
+msgstr "欢迎使用 ISyCode · 你想如何开始？"
+
+msgid "{root}\n{provider_line}\nQuick Start: this folder becomes a recurring Classic workspace — read/search, edit proposals and chat are ready. One more confirmation turns on all coding tools; edits, commands and commits still ask until you approve them.\nCustom setup: choose recurrence, Classic or Security, and each tool step by step.\nBoth paths keep IsySentinel and the action journal on everything."
+msgstr "{root}\n{provider_line}\n快速开始：此文件夹成为 Classic 常用工作区 — 读/搜、编辑提议和聊天已就绪。再确认一次即可开启全部编码工具；编辑、命令和 commit 在你批准之前仍会询问。\n自定义设置：逐步选择是否常用、Classic 或 Security，以及每一项工具。\n两条路径都对所有操作保留 IsySentinel 和操作日志。"
+
+msgid "How should ISyCode work in this folder?"
+msgstr "ISyCode 应如何在此文件夹中工作？"
+
+msgid "Allow semantic broker preview?"
+msgstr "允许语义代理预览？"
+
+msgid "Add a named API key"
+msgstr "添加命名 API 密钥"
+
+msgid "Saved in the operating system keyring and never shown after saving. Use service id `isyco-gateway` to supply the Gateway MCP."
+msgstr "保存在操作系统密钥环中，保存后不再显示。使用服务 id `isyco-gateway` 为 Gateway MCP 提供密钥。"
+
+msgid "Yes · recurring workspace"
+msgstr "是 · 常用工作区"
+
+msgid "No · temporary run"
+msgstr "否 · 临时运行"
+
+msgid "Yes, remember this workspace"
+msgstr "是，记住此工作区"
+
+msgid "No, keep it temporary"
+msgstr "否，保持临时"
+
+msgid "Use for new folders · y"
+msgstr "用于新文件夹 · y"
+
+msgid "Quick Start · ready in under a minute"
+msgstr "快速开始 · 一分钟内就绪"
+
+msgid "Custom setup · choose each step"
+msgstr "自定义设置 · 逐步选择"
+
+msgid "Classic · Ready To Use"
+msgstr "Classic · 即开即用"
+
+msgid "Security · everything off until I allow it"
+msgstr "Security · 在我允许之前全部关闭"
+
+msgid "Turn off file reading?"
+msgstr "关闭文件读取？"
+
+msgid "Allow ISyCode to read workspace files?"
+msgstr "允许 ISyCode 读取工作区文件？"
+
+msgid "Turn off this option?"
+msgstr "关闭此选项？"
+
+msgid "Turn on this option?"
+msgstr "开启此选项？"
+
+msgid "Turn off Gateway tools?"
+msgstr "关闭 Gateway 工具？"
+
+msgid "Allow Gateway tools?"
+msgstr "允许 Gateway 工具？"
+
+msgid "Turn off local code help?"
+msgstr "关闭本地代码帮助？"
+
+msgid "Allow local code help?"
+msgstr "允许本地代码帮助？"
+
+msgid "Grant preview · y"
+msgstr "授予预览 · y"
+
+msgid "Name shown in Settings"
+msgstr "设置中显示的名称"
+
+msgid "Service id, e.g. isyco-gateway"
+msgstr "服务 id，例如 isyco-gateway"
+
+msgid "Purpose / where this key is used"
+msgstr "用途 / 此密钥的使用位置"
+
+msgid "Turn off · y"
+msgstr "关闭 · y"
+
+msgid "Turn on · y"
+msgstr "开启 · y"
+
+msgid "Copy reviewed Compose"
+msgstr "复制已审查的 Compose"
+
+msgid "Back · Esc"
+msgstr "返回 · Esc"
+
+msgid "MULTI HARNESS  /  FIELD NOTES"
+msgstr "MULTI HARNESS  /  现场笔记"
+
+msgid "Use folder"
+msgstr "使用文件夹"
+
+msgid "Save selection"
+msgstr "保存选择"
+
+msgid "Copy transcript"
+msgstr "复制记录"
+
+msgid "Find a model, id or family…"
+msgstr "查找模型、id 或系列…"
+
+msgid "Conversations  0"
+msgstr "对话  0"
+
+msgid "Copy model"
+msgstr "复制模型"
+
+msgid "No models listed for this provider yet · refresh its account catalog."
+msgstr "此提供商还没有列出模型 · 请刷新其账户目录。"
+
+msgid "Choose folder…"
+msgstr "选择文件夹…"
+
+msgid "Prepare repair Compose"
+msgstr "准备修复 Compose"
+
+msgid "Refresh account catalog · "
+msgstr "刷新账户目录 · "
+
+msgid "Enter a JSON object; arguments are not sent until the next confirmation."
+msgstr "输入一个 JSON 对象；参数在下一次确认之前不会发送。"
+
+msgid "ISyCo Gateway · semantic operations"
+msgstr "ISyCo Gateway · 语义操作"
+
+msgid "Operation payload · JSON (fields are validated for the selected operation)"
+msgstr "操作载荷 · JSON（字段会按所选操作校验）"
+
+msgid "Confirm local LSP search"
+msgstr "确认本地 LSP 搜索"
+
+msgid "Review semantic broker build + start"
+msgstr "审查语义代理的构建 + 启动"
+
+msgid "Manage semantic broker"
+msgstr "管理语义代理"
+
+msgid "Discovered input schema\n"
+msgstr "已发现的输入模式\n"
+
+msgid "Review call…"
+msgstr "审查调用…"
+
+msgid "Approve once and invoke · y"
+msgstr "批准一次并调用 · y"
+
+msgid "Review request…"
+msgstr "审查请求…"
+
+msgid "Approve once and run · y"
+msgstr "批准一次并运行 · y"
+
+msgid "Symbol name…"
+msgstr "符号名称…"
+
+msgid "Review search…"
+msgstr "审查搜索…"
+
+msgid "Approve once and search · y"
+msgstr "批准一次并搜索 · y"
+
+msgid "Approve · Build + Start · y"
+msgstr "批准 · 构建 + 启动 · y"
+
+msgid "Health"
+msgstr "健康检查"
+
+msgid "Logs…"
+msgstr "日志…"
+
+msgid "Start…"
+msgstr "启动…"
+
+msgid "Stop…"
+msgstr "停止…"
+
+msgid "Remove…"
+msgstr "移除…"
+
+msgid "Idea box · full note"
+msgstr "想法箱 · 完整笔记"
+
+msgid "Close · Esc"
+msgstr "关闭 · Esc"
+
+msgid "ShellBox · sandbox processes · session lifetime"
+msgstr "ShellBox · sandbox 进程 · 会话期间"
+
+msgid "Read Bridge presence?"
+msgstr "读取 Bridge 在线状态？"
+
+msgid "This lists recent agent names only. It does not connect, claim a lease, send a message, or wake anyone. One confirmation, nothing remembered."
+msgstr "只列出最近的代理名称。不会连接、领取租约、发送消息或唤醒任何人。一次确认，不会记住任何内容。"
+
+msgid "No matching conversations"
+msgstr "没有匹配的对话"
+
+msgid "Rename conversation"
+msgstr "重命名对话"
+
+msgid "Search all conversations"
+msgstr "搜索全部对话"
+
+msgid "Find in console"
+msgstr "在控制台中查找"
+
+msgid "Type to search the current console"
+msgstr "输入以搜索当前控制台"
+
+msgid "Session changed elsewhere"
+msgstr "会话已在别处更改"
+
+msgid "Select a process to inspect its output."
+msgstr "选择进程以查看其输出。"
+
+msgid "Stop selected"
+msgstr "停止所选"
+
+msgid "Read names"
+msgstr "读取名称"
+
+msgid "Search titles and transcript…"
+msgstr "搜索标题和记录…"
+
+msgid "New session"
+msgstr "新会话"
+
+msgid "Rename"
+msgstr "重命名"
+
+msgid "Fork"
+msgstr "派生"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Conversation name"
+msgstr "对话名称"
+
+msgid "Save name"
+msgstr "保存名称"
+
+msgid "Type terms found in any title or message…"
+msgstr "输入任意标题或消息中的词语…"
+
+msgid "Search this conversation…"
+msgstr "搜索此对话…"
+
+msgid "↑ Previous"
+msgstr "↑ 上一个"
+
+msgid "Next ↓"
+msgstr "下一个 ↓"
+
+msgid "Save mine as a new conversation (Fork: …) · the saved one stays as it is"
+msgstr "将我的另存为新对话（Fork: …） · 已保存的保持不变"
+
+msgid "Open the saved version"
+msgstr "打开已保存版本 · 仅存在于此窗口的内容会被丢弃"
+
+msgid "Continue without saving"
+msgstr "不保存继续 · Esc · 在你选择之前不会写入"
+
+msgid "No pending messages."
+msgstr "没有待发消息。"
+
+msgid "No captured ideas."
+msgstr "没有已记下的想法。"
+
+msgid "Your answer"
+msgstr "你的回答"
+
+msgid "Send"
+msgstr "发送"
+
+msgid "Remove from draft"
+msgstr "从草稿移除"
+
+msgid "Remove pending message"
+msgstr "移除待发消息"
+
+msgid "Promote to message queue"
+msgstr "提升到消息队列"
+
+msgid "Discard idea"
+msgstr "丢弃想法"
+
+msgid "ISYCODE  ·  WORKSPACE"
+msgstr "ISYCODE  ·  工作区"
+
+msgid "Overview"
+msgstr "概览"
+
+msgid "Files"
+msgstr "文件"
+
+msgid "Refresh integrations"
+msgstr "刷新集成"
+
+msgid "No plan pending"
+msgstr "无待审计划"
+
+msgid "Workspace"
+msgstr "工作区"
+
+msgid "↑ Up"
+msgstr "↑ 上级"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Folders"
+msgstr "文件夹"
+
+msgid "Copy path"
+msgstr "复制路径"
+
+msgid "Open preview"
+msgstr "打开预览"
+
+msgid "Select a file to preview it."
+msgstr "选择文件以预览。"
+
+msgid "IsySentinel"
+msgstr "IsySentinel"
+
+msgid "Reading Workspace Authority and the action journal…"
+msgstr "正在读取 Workspace Authority 与操作日志…"
+
+msgid "MCPs"
+msgstr "MCP"
+
+msgid "Tool service status has not been checked."
+msgstr "尚未检查工具服务状态。"
+
+msgid "LSPs"
+msgstr "LSP"
+
+msgid "Checking installed language servers…"
+msgstr "正在检查已安装的语言服务器…"
+
+msgid "Install commands"
+msgstr "安装命令"
+
+msgid "ISyCode skill catalog has not been checked."
+msgstr "尚未检查 ISyCode 技能目录。"
+
+msgid "ISyCode skills"
+msgstr "ISyCode 技能"
+
+msgid "Connections · 4"
+msgstr "连接 · 4"
+
+msgid "ISyCo Gateway"
+msgstr "ISyCo Gateway"
+
+msgid "Gateway status has not been checked."
+msgstr "尚未检查 Gateway 状态。"
+
+msgid "Gateway MCP"
+msgstr "Gateway MCP"
+
+msgid "Tool catalog has not been checked."
+msgstr "尚未检查工具目录。"
+
+msgid "Mobile Host"
+msgstr "移动主机"
+
+msgid "Not started"
+msgstr "未启动"
+
+msgid "Loading…"
+msgstr "加载中…"
+
+msgid "Not checked"
+msgstr "未检查"
+
+msgid "No mobile clients connected."
+msgstr "没有已连接的移动客户端。"
+
+msgid "Bridge Coordination"
+msgstr "Bridge 协调"
+
+msgid "Disabled · No Bridge Handshake"
+msgstr "已关闭 · 无 Bridge 握手"
+
+msgid "↑/↓ select · Enter or double-click open · Ctrl+D delete selected conversation"
+msgstr "↑/↓ 选择 · Enter 或双击打开 · Ctrl+D 删除所选对话"
+
+msgid "+ New"
+msgstr "+ 新建"
+
+msgid "+ New conversation"
+msgstr "+ 新对话"
+
+msgid "Bridge"
+msgstr "Bridge"
+
+msgid "Bridge presence…"
+msgstr "Bridge 在线…"
+
+msgid "Bridge presence off"
+msgstr "Bridge 在线已关闭"
+
+msgid "Hide"
+msgstr "隐藏"
+
+msgid "All"
+msgstr "全部"
+
+msgid "Working"
+msgstr "进行中"
+
+msgid "Needs input"
+msgstr "需要输入"
+
+msgid "Idle"
+msgstr "空闲"
+
+msgid "Select a conversation to inspect it."
+msgstr "选择对话以查看。"
+
+msgid "Guidance available to ISyCode"
+msgstr "ISyCode 可用的指南"
+
+msgid "Current and available model IDs"
+msgstr "当前和可用的模型 ID"
+
+msgid "Connected tool services and their status"
+msgstr "已连接的工具服务及其状态"
+
+msgid "LSP"
+msgstr "LSP"
+
+msgid "Language server status"
+msgstr "语言服务器状态"
+
+msgid "Workspace files and directories"
+msgstr "工作区文件和目录"
+
+msgid "Roles"
+msgstr "角色"
+
+msgid "ISyCode agents and ISyCo motors"
+msgstr "ISyCode 代理与 ISyCo 电机"
+
+msgid "Provider catalog and credentials"
+msgstr "提供商目录与凭据"
+
+msgid "Session"
+msgstr "会话"
+
+msgid "Session actions and current state"
+msgstr "会话操作与当前状态"
+
+msgid "Workspace root and navigation"
+msgstr "工作区根目录与导航"
+
+msgid "Slash commands and keyboard shortcuts"
+msgstr "斜杠命令与键盘快捷键"
+
+msgid "Spanish"
+msgstr "西班牙语"
+
+msgid "English"
+msgstr "英语"
+
+msgid "Chinese"
+msgstr "中文"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "Ask me when I open a new folder"
+msgstr "打开新文件夹时询问我"
+
+msgid "Always use temporary mode for new folders"
+msgstr "新文件夹始终使用临时模式"
+
+msgid "Make new folders recurring by default"
+msgstr "默认将新文件夹设为常用"
+
+msgid "Ask me which mode a new folder uses"
+msgstr "询问新文件夹使用哪种模式"
+
+msgid "Start new folders in Classic · Ready To Use"
+msgstr "以 Classic · 即可使用 打开新文件夹"
+
+msgid "Start new folders in Security · everything off until I allow it"
+msgstr "以 Security · 在我允许之前全部关闭 打开新文件夹"
+
+msgid "Grok is signed in on this machine"
+msgstr "此计算机已登录 Grok"
+
+msgid "Grok sign-in expired"
+msgstr "Grok 登录已过期"
+
+msgid "No Grok sign-in yet"
+msgstr "尚未登录 Grok"
+
+msgid "Mode · Classic · Ready To Use; switch to Security…"
+msgstr "模式 · Classic · 即可使用；切换到 Security…"
+
+msgid "Mode · Security · nothing runs until you allow it; switch to Classic…"
+msgstr "模式 · Security · 在你允许之前不运行任何操作；切换到 Classic…"
+
+msgid "Mobile Host on this computer"
+msgstr "此计算机上的 Mobile Host"
+
+msgid "Mobile Host on this computer · partial saved grant"
+msgstr "此计算机上的 Mobile Host · 部分已保存授权"
+
+msgid "Choose the provider and model used for this conversation."
+msgstr "选择此对话使用的提供商和模型。"
+
+msgid "Choose supported reasoning settings for the active provider and model."
+msgstr "为当前提供商和模型选择受支持的推理设置。"
+
+msgid "Choose instructions for how the agent should work."
+msgstr "选择代理应如何工作的说明。"
+
+msgid "Remove the selected role from this conversation."
+msgstr "从此对话中移除所选角色。"
+
+msgid "Review the context available to the agent."
+msgstr "查看代理可用的上下文。"
+
+msgid "Choose a Markdown or text file to add to the conversation."
+msgstr "选择要添加到对话的 Markdown 或文本文件。"
+
+msgid "Compression by RTK · https://github.com/rtk-ai/rtk · opt-in, permissions unchanged."
+msgstr "由 RTK 压缩 · https://github.com/rtk-ai/rtk · 需选择加入，权限不变。"
+
+msgid "Personal defaults shared across your workspaces."
+msgstr "在你的工作区之间共享的个人默认值。"
+
+msgid "Create workspace preferences after reviewing the proposed files."
+msgstr "在审查提议的文件后创建工作区偏好。"
+
+msgid "Preferences for this workspace; permissions are separate."
+msgstr "此工作区的偏好；权限是分开的。"
+
+msgid "Review and copy legacy commands; preserve their originals."
+msgstr "审查并复制旧版命令；保留原件。"
+
+msgid "Browse commands and keyboard shortcuts."
+msgstr "浏览命令和键盘快捷键。"
+
+msgid "Distinct bell rhythms for completion, approval, questions and errors; terminal audible bell must be enabled."
+msgstr "完成、批准、提问和错误使用不同铃声；必须启用终端响铃。"
+
+msgid "Switch control surfaces to pure black with brightened borders; the palette already meets WCAG AA on black."
+msgstr "将控件表面改为纯黑并加亮边框；调色板在黑色上已满足 WCAG AA。"
+
+msgid "Replace ✓/✗/●/○ and the banner art with plain ASCII marks for terminals without Unicode."
+msgstr "在无 Unicode 的终端上用纯 ASCII 标记替换 ✓/✗/●/○ 和横幅图。"
+
+msgid "Scroll completed text in collapsed headers. Click header text to toggle one box; the arrow opens it."
+msgstr "在折叠标题中滚动已完成文本。点击标题文字可开关一个框；箭头打开它。"
+
+msgid "Inspect or change workspace permissions and approval settings."
+msgstr "查看或更改工作区权限和批准设置。"
+
+msgid "Manage named API credentials and their allowed uses."
+msgstr "管理命名 API 凭据及其允许用途。"
+
+msgid "Inspect recorded actions and verify their receipts."
+msgstr "查看已记录操作并验证其回执。"
+
+msgid "Review workspace folders and per-folder automatic edit settings."
+msgstr "查看工作区文件夹及每个文件夹的自动编辑设置。"
+
+msgid "Inspect other harness settings; copying requires a separate confirmation."
+msgstr "查看其他 harness 设置；复制需要单独确认。"
+
+msgid "Manage MCP, LSP, Gateway and remote connections with separate permissions."
+msgstr "用单独权限管理 MCP、LSP、Gateway 和远程连接。"
+
+msgid "Browse workspace files."
+msgstr "浏览工作区文件。"
+
+msgid "key in environment"
+msgstr "环境变量中的密钥"
+
+msgid "key saved"
+msgstr "已保存密钥"
+
+msgid "legacy key saved"
+msgstr "已保存旧密钥"
+
+msgid "legacy key"
+msgstr "旧密钥"
+
+msgid "no key required"
+msgstr "无需密钥"
+
+msgid "subscription"
+msgstr "订阅"
+
+msgid "Grok sign-in"
+msgstr "Grok 登录"
+
+msgid "credential store unavailable"
+msgstr "凭据存储不可用"
+
+msgid "Nemotron via NVIDIA NIM"
+msgstr "通过 NVIDIA NIM 的 Nemotron"
+
+msgid "API key or ChatGPT subscription"
+msgstr "API 密钥或 ChatGPT 订阅"
+
+msgid "Claude models via API key"
+msgstr "通过 API 密钥使用 Claude 模型"
+
+msgid "OpenCode catalog, OpenAI-compatible"
+msgstr "OpenCode 目录，兼容 OpenAI"
+
+msgid "OpenCode Go endpoint"
+msgstr "OpenCode Go 端点"
+
+msgid "ChatGPT Web via the local bridge on 127.0.0.1:8792"
+msgstr "通过 127.0.0.1:8792 本地桥接的 ChatGPT Web"
+
+msgid "API key or Grok sign-in"
+msgstr "API 密钥或 Grok 登录"
+
+msgid "Gemini, OpenAI-compatible endpoint"
+msgstr "Gemini，兼容 OpenAI 的端点"
+
+msgid "One key, many models"
+msgstr "一把密钥，多个模型"
+
+msgid "Fast OpenAI-compatible inference"
+msgstr "快速的 OpenAI 兼容推理"
+
+msgid "Direct API"
+msgstr "直接 API"
+
+msgid "Fireworks inference API"
+msgstr "Fireworks 推理 API"
+
+msgid "OpenAI-compatible inference"
+msgstr "兼容 OpenAI 的推理"
+
+msgid "Moonshot OpenAI-compatible API"
+msgstr "Moonshot 兼容 OpenAI 的 API"
+
+msgid "GLM coding endpoint"
+msgstr "GLM 编码端点"
+
+msgid "Alibaba compatible-mode API"
+msgstr "阿里云兼容模式 API"
+
+msgid "Router, OpenAI-compatible"
+msgstr "路由，兼容 OpenAI"
+
+msgid "OpenAI-compatible catalog"
+msgstr "兼容 OpenAI 的目录"
+
+msgid "AI Gateway endpoint"
+msgstr "AI Gateway 端点"
+
+msgid "OpenAI-compatible API"
+msgstr "兼容 OpenAI 的 API"
+
+msgid "Scaleway Generative APIs"
+msgstr "Scaleway 生成式 API"
+
+msgid "Token Factory, OpenAI-compatible"
+msgstr "Token Factory，兼容 OpenAI"
+
+msgid "Local server"
+msgstr "本地服务器"
+
+msgid "Local server on 127.0.0.1:1234"
+msgstr "本地服务器 127.0.0.1:1234"
+
+msgid "Local server on 127.0.0.1:8080"
+msgstr "本地服务器 127.0.0.1:8080"
+
+msgid "No ISyCode transport yet"
+msgstr "尚无 ISyCode 传输"
+
+msgid "Set a preset, or ask for a base URL before one is added"
+msgstr "设置预设，或在添加之前提供 base URL"
+
+msgid "Copy text"
+msgstr "复制文本"
+
+msgid "Copy selection"
+msgstr "复制选中内容"
+
+msgid "Copy whole box"
+msgstr "复制整个文本框"
+
+msgid "Only the selected characters are copied. Whole-box copy is a separate choice."
+msgstr "只复制选中的字符。复制整个文本框是单独的选项。"
+
+msgid "No text selected."
+msgstr "未选中文本。"
+
+msgid "Space expand / collapse · double-click copy"
+msgstr "空格展开 / 折叠 · 双击打开复制菜单"
+
+msgid "Reduced motion · {state}"
+msgstr "减少动态效果 · {state}"
+
+msgid "Keep activity symbols static and disable compact text scrolling."
+msgstr "保持活动符号静止并关闭紧凑文字滚动。"
+
+msgid "Thought for {elapsed}"
+msgstr "思考了 {elapsed}"
+
+msgid "Attachments · review before sending"
+msgstr "附件 · 发送前检查"
+
+msgid "{label} · {count} characters"
+msgstr "{label} · {count} 个字符"
+
+msgid "Ctrl+C or Copy selection copies only the marked text. Copy whole box and Copy path are separate explicit choices. The assistant cannot copy. The journal records the size, never the text. API keys are never copied."
+msgstr "Ctrl+C 或“复制选中内容”只复制标记的文本。“复制整个文本框”和“复制路径”是单独的显式选项。助手无法复制。日志只记录大小，不记录文本。API 密钥永不复制。"
+
+msgid "Switch this workspace to Classic?"
+msgstr "将此工作区切换到 Classic？"
+
+msgid "Switch this workspace to Security?"
+msgstr "将此工作区切换到 Security？"
+
+msgid "Use Classic"
+msgstr "使用 Classic"
+
+msgid "Use Security"
+msgstr "使用 Security"
+
+msgid "Everything starts off; you allow each capability in Settings → Authority. Permissions you granted explicitly stay as they are."
+msgstr "所有功能默认关闭；可在设置 → 权限中逐项允许。你显式授予的权限保持不变。"
+
+msgid "Reading/searching, edit proposals, chat, sessions and Git review work without granting each capability. Sandbox commands are ready when supported. The next screen can trust this folder for ordinary edits and isolated tests. Until then, edits, delete/move, commands and commits still ask. Commits, secrets and authority changes keep asking. Integrations still need explicit permission; free shell and sensitive files stay unavailable."
+msgstr "读取、搜索、编辑建议、聊天、会话和 Git 审查无需逐项授权。系统支持时可使用 sandbox 命令。下一屏可将此文件夹设为可信，以进行普通编辑和隔离测试。在此之前，编辑、删除、移动、命令和 commit 仍需确认。commit、秘密和权限变更始终需确认。集成仍需显式权限；自由 shell 和敏感文件保持不可用。"
+
+msgid "Folder: {root}\n"
+msgstr "文件夹：{root}\n"
+
+msgid "+{added} / -{removed} lines. This puts the file back as it was before ISyCode's last change; nothing changes unless you apply it."
+msgstr "+{added} / -{removed} 行。将文件恢复到 ISyCode 上次修改前的状态；应用前不会更改。"
+
+msgid "+{added} / -{removed} lines. The assistant proposed this change; nothing is written unless you apply it. If the file changes before it is applied, the change is refused."
+msgstr "+{added} / -{removed} 行。助手提出了此更改；应用前不会写入。如果文件在应用前发生变化，则拒绝此更改。"
+
+msgid "Run a command · {cwd}"
+msgstr "运行命令 · {cwd}"
+
+msgid "workspace root"
+msgstr "工作区根目录"
+
+msgid "Program: {program}\nStops after {timeout} s · network blocked · {hidden} sensitive paths hidden\nIt may change files in this workspace; those changes cannot be undone with /undo. Nothing runs unless you approve it."
+msgstr "程序：{program}\n{timeout} 秒后停止 · 网络已阻止 · 已隐藏 {hidden} 个敏感路径\n可能更改此工作区中的文件；这些更改无法用 /undo 撤销。批准前不会运行任何内容。"
+
+msgid "Command · review"
+msgstr "命令 · 审查"
+
+msgid "Exact command"
+msgstr "完整命令"
+
+msgid "Brighten text and focused frames while keeping the shared black surfaces."
+msgstr "增强文本和焦点边框的对比度，同时保留统一的黑色背景。"
+
+msgid "Scroll completed text in collapsed headers. Use Space to expand a box. Reduced motion disables this scrolling."
+msgstr "在折叠标题中滚动已完成的文本。按空格展开文本框。减少动态效果会关闭此滚动。"
+
+# Accepted menu layout and exact decision chrome.
+
+msgid "Provider"
+msgstr "提供商"
+
+msgid "Context file"
+msgstr "上下文文件"
+
+msgid "RTK compression"
+msgstr "RTK 压缩"
+
+msgid "Notification sounds"
+msgstr "通知声音"
+
+msgid "Reduced motion"
+msgstr "减少动画"
+
+msgid "High contrast display"
+msgstr "高对比度"
+
+msgid "ASCII-only display"
+msgstr "仅使用 ASCII"
+
+msgid "My defaults"
+msgstr "个人默认设置"
+
+msgid "Compact text scroll"
+msgstr "紧凑文本滚动"
+
+msgid "Workspace folders"
+msgstr "工作区文件夹"
+
+msgid "Action journal"
+msgstr "操作日志"
+
+msgid "All workspaces"
+msgstr "所有工作区"
+
+msgid "This workspace"
+msgstr "此工作区"
+
+msgid "Personalize ISyCode for this workspace."
+msgstr "为此工作区自定义 ISyCode。"
+
+msgid "Choose the model used for this conversation."
+msgstr "选择用于此对话的模型。"
+
+msgid "Choose model"
+msgstr "选择模型"
+
+msgid "Continue"
+msgstr "继续"
+
+msgid "Custom setup"
+msgstr "自定义设置"
+
+msgid "Idea backlog · captured ideas are not instructions"
+msgstr "待办想法 · 已记录想法不是指令"
+
+msgid "Inspect"
+msgstr "查看"
+
+msgid "Inspect a harness · Gap map prepares repair proposals for review."
+msgstr "查看 harness · 差异图为审查准备修复建议。"
+
+msgid "Loaded"
+msgstr "已加载"
+
+msgid "Manage"
+msgstr "管理"
+
+msgid "Message queue · Select queued + empty Send steers · Esc restores draft"
+msgstr "消息队列 · 选择排队消息并空白发送以 steer · Esc 恢复草稿"
+
+msgid "Multi Harness · inspection"
+msgstr "Multi Harness · 查看"
+
+msgid "No matching models"
+msgstr "没有匹配的模型"
+
+msgid "No models available."
+msgstr "没有可用模型。"
+
+msgid "No session processes."
+msgstr "此会话没有进程。"
+
+msgid "None"
+msgstr "无"
+
+msgid "None configured"
+msgstr "未配置"
+
+msgid "OFF"
+msgstr "关闭"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Question"
+msgstr "问题"
+
+msgid "Removed"
+msgstr "已移除"
+
+msgid "Repair Compose · review proposal"
+msgstr "修复 Compose · 审查建议"
+
+msgid "Review"
+msgstr "审查"
+
+msgid "Scope: {scope}"
+msgstr "范围：{scope}"
+
+msgid "Security"
+msgstr "Security"
+
+msgid "Selected"
+msgstr "已选择"
+
+msgid "Selected · {model} · {provider}"
+msgstr "已选择 · {model} · {provider}"
+
+msgid "Session · full last message"
+msgstr "会话 · 完整的最后一条消息"
+
+msgid "Sources"
+msgstr "来源"
+
+msgid "[?]"
+msgstr "[?]"
+
+msgid "current"
+msgstr "当前"
+
+msgid "messages"
+msgstr "条消息"
+
+msgid "ready"
+msgstr "就绪"
+
+msgid "{count} checking…"
+msgstr "正在检查 {count} 项…"
+
+msgid "↑↓ move · Enter choose · Click preview · Esc back · Shift+Tab search"
+msgstr "↑↓ 移动 · Enter 选择 · 单击预览 · Esc 返回 · Shift+Tab 搜索"
+
+msgid "↑↓ move · Enter choose · Esc back · Tab search"
+msgstr "↑↓ 移动 · Enter 选择 · Esc 返回 · Tab 搜索"
+
+msgid "↑↓ move · Enter inspect · Esc back"
+msgstr "↑↓ 移动 · Enter 查看 · Esc 返回"
+
+msgid "↑↓ move · Enter open · Esc back"
+msgstr "↑↓ 移动 · Enter 打开 · Esc 返回"
+
+msgid "↑↓ move · Esc back"
+msgstr "↑↓ 移动 · Esc 返回"
+
+msgid "↑↓ scroll · Tab actions · Enter choose · Esc cancel"
+msgstr "↑↓ 滚动 · Tab 操作 · Enter 选择 · Esc 取消"
+
+msgid "⚙"
+msgstr "⚙"
+
+msgid "Search results"
+msgstr "搜索结果"
+
+msgid "Models · {provider}"
+msgstr "模型 · {provider}"
+
+msgid "↑↓ move · Enter open · Esc back · Shift+Tab search"
+msgstr "↑↓ 移动 · Enter 打开 · Esc 返回 · Shift+Tab 搜索"
+
+msgid "Add a model ID to {provider}…"
+msgstr "向 {provider} 添加模型 ID…"
+
+msgid "+ Add"
+msgstr "+ 添加"
+
+msgid "added"
+msgstr "已添加"
+
+msgid "Type a model ID first."
+msgstr "请先输入模型 ID。"
+
+msgid "Model ID not added · {reason}"
+msgstr "未添加模型 ID · {reason}"
+
+msgid "{label}  ·  {model}  · added by you"
+msgstr "{label}  ·  {model}  · 由你添加"
+
+msgid "Model ID you added; not verified against this account."
+msgstr "你添加的模型 ID；未针对此账户验证。"
+
+msgid "↑↓ move · ←→ effort · Enter choose · Esc back · Tab search"
+msgstr "↑↓ 移动 · ←→ 推理强度 · Enter 选择 · Esc 返回 · Tab 搜索"
+
+msgid "Effort"
+msgstr "推理强度"
+
+msgid "auto"
+msgstr "自动"
+
+msgid "none"
+msgstr "无"
+
+msgid "minimal"
+msgstr "极少"
+
+msgid "low"
+msgstr "低"
+
+msgid "medium"
+msgstr "中"
+
+msgid "high"
+msgstr "高"
+
+msgid "xhigh"
+msgstr "很高"
+
+msgid "max"
+msgstr "最高"
+
+msgid "this model publishes no adjustable levels · provider default"
+msgstr "此模型未公布可调级别 · 使用提供商默认值"
+
+msgid "Provider decides · currently {level}"
+msgstr "由提供商决定 · 当前 {level}"
+
+msgid "Provider decides the reasoning effort"
+msgstr "由提供商决定推理强度"
+
+msgid "No reasoning — fastest replies"
+msgstr "不推理 — 回复最快"
+
+msgid "Thinking disabled — fastest replies"
+msgstr "关闭思考 — 回复最快"
+
+msgid "Thinking enabled for this model"
+msgstr "为此模型开启思考"
+
+msgid "Barely any reasoning — very fast"
+msgstr "极少推理 — 非常快"
+
+msgid "Faster responses, lighter reasoning — good for simpler tasks"
+msgstr "更快回复、较轻推理 — 适合简单任务"
+
+msgid "Balanced speed and reasoning quality for most tasks"
+msgstr "速度与推理质量平衡，适合大多数任务"
+
+msgid "Deeper reasoning for complex problems — slower"
+msgstr "更深入推理，适合复杂问题 — 较慢"
+
+msgid "Extra-deep reasoning — slower and costlier"
+msgstr "超深推理 — 更慢且更贵"
+
+msgid "Maximum reasoning budget — slowest but strongest"
+msgstr "最大推理预算 — 最慢但最强"
+
+msgid "Copy whole file"
+msgstr "复制整个文件"
+
+msgid "Sidebar file preview · {state}"
+msgstr "侧边栏文件预览 · {state}"
+
+msgid "Sidebar file preview"
+msgstr "侧边栏文件预览"
+
+msgid "Show a preview box below the file tree in the sidebar."
+msgstr "在侧边栏文件树下方显示预览框。"
+
+msgid "OpenAI & ChatGPT · choose connection method…"
+msgstr "OpenAI 和 ChatGPT · 选择连接方式…"
+
+msgid "Owner"
+msgstr "所有者"
+
+msgid "Scope"
+msgstr "范围"
+
+msgid "Duration"
+msgstr "期限"
+
+msgid "Not granted"
+msgstr "未授予"
+
+msgid "workspace authority"
+msgstr "工作区权限"
+
+msgid "workspace file edit"
+msgstr "工作区文件编辑"
+
+msgid "local MCP server"
+msgstr "本地 MCP 服务器"
+
+msgid "local MCP tool"
+msgstr "本地 MCP 工具"
+
+msgid "tailscale private-access"
+msgstr "Tailscale 私有访问"
+
+msgid "sandboxed command run"
+msgstr "sandbox 命令运行"
+
+msgid "git commit"
+msgstr "git commit"
+
+msgid "browser page read"
+msgstr "浏览器页面读取"
+
+msgid "workspace context pack"
+msgstr "工作区上下文包"
+
+msgid "workspace memory"
+msgstr "工作区记忆"
+
+msgid "session deletion"
+msgstr "会话删除"
+
+msgid "session delete"
+msgstr "会话删除"
+
+msgid "chat session store"
+msgstr "聊天会话存储"
+
+msgid "workspace trust"
+msgstr "工作区信任"
+
+msgid "lsp diagnostics"
+msgstr "LSP 诊断"
+
+msgid "git"
+msgstr "git"
+
+msgid "sandboxed commands"
+msgstr "sandbox 命令"
+
+msgid "external model review"
+msgstr "外部模型审查"
+
+msgid "provider network access"
+msgstr "提供商网络访问"
+
+msgid "Gateway MCP target"
+msgstr "Gateway MCP 目标"
+
+msgid "local LSP process"
+msgstr "本地 LSP 进程"
+
+msgid "broker preview"
+msgstr "代理预览"
+
+msgid "Gateway MCP tool"
+msgstr "Gateway MCP 工具"
+
+msgid "Gateway semantic HTTP"
+msgstr "Gateway 语义 HTTP"
+
+msgid "local LSP search"
+msgstr "本地 LSP 搜索"
+
+msgid "semantic broker provision"
+msgstr "语义代理配置"
+
+msgid "broker operation"
+msgstr "代理操作"
+
+msgid "the text shown below"
+msgstr "下方显示的文本"
+
+msgid "listed workspace files"
+msgstr "列出的工作区文件"
+
+msgid "{count} files"
+msgstr "{count} 个文件"
+
+msgid "one-use approval"
+msgstr "单次使用审批"
+
+msgid "one-use, one HTTP request"
+msgstr "单次使用，一次 HTTP 请求"
+
+msgid "one-use, digest-bound approval"
+msgstr "单次使用、绑定摘要的审批"
+
+msgid "one-use, stops after {timeout} s"
+msgstr "单次使用，{timeout} 秒后停止"
+
+msgid "persistent workspace grant"
+msgstr "持久工作区授权"
+
+msgid "persistent workspace setting"
+msgstr "持久工作区设置"
+
+msgid "persistent workspace trust"
+msgstr "持久工作区信任"
+
+msgid "one conversation grant"
+msgstr "单会话授权"
+
+msgid "until ISyCode exits"
+msgstr "直到 ISyCode 退出"
+
+msgid "one-use tool call"
+msgstr "单次工具调用"
+
+msgid "persistent grant (until revoked)"
+msgstr "持久授权（直到撤销）"
+
+msgid "persistent grant (every call still approved)"
+msgstr "持久授权（每次调用仍需批准）"
+
+msgid "one-use, grants revoked after attempt"
+msgstr "单次使用，尝试后撤销授权"
+
+msgid "one-use, grant revoked after operation"
+msgstr "单次使用，操作后撤销授权"
+
+msgid "no tools, no file access, no retries"
+msgstr "无工具，无文件访问，无重试"
+
+msgid "no other host actions, no filesystem access"
+msgstr "无其他主机操作，无文件系统访问"
+
+msgid "no other files, no commands, no secrets"
+msgstr "无其他文件，无命令，无机密"
+
+msgid "no push, no hooks, no other files"
+msgstr "不推送，无钩子，无其他文件"
+
+msgid "no writes, no commands, no secrets"
+msgstr "无写入，无命令，无机密"
+
+msgid "no authority, no grants, no other memory"
+msgstr "无权限，无授权，无其他记忆"
+
+msgid "no other sessions, no filesystem access"
+msgstr "无其他会话，无文件系统访问"
+
+msgid "other conversations, unconfirmed deletions"
+msgstr "其他会话，未确认的删除"
+
+msgid "sensitive files, .isyroot, and unapproved folder writes stay off-limits"
+msgstr "敏感文件、.isyroot 以及未批准的文件夹写入仍处于禁止状态"
+
+msgid "privilege escalation, ungranted capabilities"
+msgstr "权限提升、未授予的功能"
+
+msgid "commits, secrets, authority changes"
+msgstr "commit、机密、权限更改"
+
+msgid "secrets, credentials, project files"
+msgstr "机密、凭据、项目文件"
+
+msgid "file modifications, network access"
+msgstr "文件修改、网络访问"
+
+msgid "remote push, git hooks"
+msgstr "远程推送、git 钩子"
+
+msgid "network access, unsandboxed execution"
+msgstr "网络访问、非沙箱执行"
+
+msgid "network blocked, no other paths, no undo"
+msgstr "网络已阻止，无其他路径，不可撤销"
+
+msgid "no other MCP calls; runs with user permissions (no filesystem isolation)"
+msgstr "无其他 MCP 调用；以用户权限运行（无文件系统隔离）"
+
+msgid "no other MCP servers; runs with user permissions (no filesystem isolation)"
+msgstr "无其他 MCP 服务器；以用户权限运行（无文件系统隔离）"
+
+msgid "no other tool calls, no automatic retries"
+msgstr "无其他工具调用，无自动重试"
+
+msgid "no tool execution, no file access, no secrets"
+msgstr "无工具执行，无文件访问，无机密"
+
+msgid "no automatic tool runs, no local filesystem access"
+msgstr "无自动工具运行，无本地文件系统访问"
+
+msgid "no internet, no general commands, no writes"
+msgstr "无网络，无通用命令，无写入"
+
+msgid "no Docker, no containers, no workspace.files.read"
+msgstr "无 Docker，无容器，无 workspace.files.read"
+
+msgid "no other MCP calls, no local filesystem access"
+msgstr "无其他 MCP 调用，无本地文件系统访问"
+
+msgid "no writes, no commands, no model context"
+msgstr "无写入，无命令，无模型上下文"
+
+msgid "no writes, no network, no Gateway"
+msgstr "无写入，无网络，无 Gateway"
+
+msgid "no credentials, no host network, no other containers"
+msgstr "无凭据，无主机网络，无其他容器"
+
+msgid "no provision, no other containers, no host access"
+msgstr "无配置，无其他容器，无主机访问"
+
+# ISyCode status chips, help rows and panel labels.
+msgid "  ·  Current"
+msgstr "  ·  当前"
+
+msgid "Cancel · Esc"
+msgstr "取消 · Esc"
+
+msgid "Capture an idea · Ctrl+Shift+Enter"
+msgstr "记录想法 · Ctrl+Shift+Enter"
+
+msgid "Capture prompt idea to backlog"
+msgstr "将 prompt 中的想法加入待办"
+
+msgid "Chat & Reasoning"
+msgstr "对话与推理"
+
+msgid "Checking Workspace Authority and IsySentinel…"
+msgstr "正在检查 Workspace Authority 与 IsySentinel…"
+
+msgid "Checking the configured model"
+msgstr "正在检查已配置的模型"
+
+msgid "Close (Esc)"
+msgstr "关闭 (Esc)"
+
+msgid "Close popup / return to chat"
+msgstr "关闭弹窗 / 返回对话"
+
+msgid "Connections and tools (LSPs, MCPs, Skills) in the rail"
+msgstr "连接与工具（LSPs、MCPs、Skills）在侧栏中"
+
+msgid "Copy selected text via Workspace Authority"
+msgstr "通过 Workspace Authority 复制所选文本"
+
+msgid "Could not open the browser. Copy the official URL and open it manually."
+msgstr "无法打开浏览器。请复制官方链接并手动打开。"
+
+msgid "Cycle reasoning (title → preview → full)"
+msgstr "切换推理显示（标题 → 预览 → 完整）"
+
+msgid "Double-click"
+msgstr "双击"
+
+msgid "Enter send · Ctrl+J newline · Esc back · Ctrl+P commands · F1 help"
+msgstr "Enter 发送 · Ctrl+J 换行 · Esc 返回 · Ctrl+P 命令 · F1 帮助"
+
+msgid "Esc / F1 / ? closes · all commands stay behind Workspace Authority"
+msgstr "Esc / F1 / ? 关闭 · 所有命令都受 Workspace Authority 约束"
+
+msgid "External Hive · unavailable"
+msgstr "外部 Hive · 不可用"
+
+msgid "Focus Files / Overview rail"
+msgstr "聚焦 文件 / 概览 侧栏"
+
+msgid "Fold or expand agent task list"
+msgstr "折叠或展开任务列表"
+
+msgid "ISyCode · Keyboard Shortcuts & Quick Help"
+msgstr "ISyCode · 快捷键与快速帮助"
+
+msgid "Idea box"
+msgstr "想法框"
+
+msgid "Idea · Space"
+msgstr "Idea · 空格"
+
+msgid "Idea · Space expand"
+msgstr "Idea · 空格展开"
+
+msgid "Increase / decrease reasoning effort"
+msgstr "提高 / 降低推理强度"
+
+msgid "Insert a newline in composer"
+msgstr "在输入框插入换行"
+
+msgid "Launch repair conversation"
+msgstr "启动修复对话"
+
+msgid "Move focus to chat composer"
+msgstr "将焦点移到聊天输入框"
+
+msgid "Navigation"
+msgstr "导航"
+
+msgid "Open copy menu for block / title"
+msgstr "打开块/标题的复制菜单"
+
+msgid "Open semantic command palette"
+msgstr "打开语义命令面板"
+
+msgid "Open sign-in in browser"
+msgstr "在浏览器中打开登录"
+
+msgid "Read-only · select with mouse or Ctrl+A; Ctrl+C copies"
+msgstr "只读 · 用鼠标或 Ctrl+A 选择；Ctrl+C 复制"
+
+msgid "Repair all gaps"
+msgstr "修复所有缺口"
+
+msgid "Repair plan · choose how to execute"
+msgstr "修复计划 · 选择执行方式"
+
+msgid "Review compacted pasted text"
+msgstr "查看已压缩的粘贴文本"
+
+msgid "Search rendered console output"
+msgstr "搜索已渲染的控制台输出"
+
+msgid "Search session titles and transcripts"
+msgstr "搜索会话标题与记录"
+
+msgid "Select all text in focused block"
+msgstr "选中焦点块中的全部文本"
+
+msgid "Send message / submit prompt"
+msgstr "发送消息 / 提交 prompt"
+
+msgid "Sign-in link failed safety validation; it will not be opened."
+msgstr "登录链接未通过安全校验；不会被打开。"
+
+msgid "Switch between ShellBox and IdeaBox"
+msgstr "在 ShellBox 与 IdeaBox 之间切换"
+
+msgid "Thinking…"
+msgstr "思考中…"
+
+msgid "Toggle Workspace Rail / sidebar"
+msgstr "切换工作区侧栏"
+
+msgid "Tools & Clipboard"
+msgstr "工具与剪贴板"
+
+msgid "Widen / narrow workspace rail"
+msgstr "加宽或缩窄工作区侧栏"
+
+msgid "details in the right rail"
+msgstr "详情在右侧栏"
+
+msgid "MCPs · {state}"
+msgstr "MCPs · {state}"
+
+msgid "MCPs · {on}/{total} on"
+msgstr "MCPs · {on}/{total} 已启用"
+
+msgid "MCPs · none"
+msgstr "MCPs · 无服务器"
+
+msgid "Skills · {state}"
+msgstr "Skills · {state}"
+
+msgid "Skills · {count} available"
+msgstr "Skills · {count} 个可用"
+
+msgid "Skills · none"
+msgstr "Skills · 未配置"
+
+msgid "LSPs · none"
+msgstr "LSPs · 无服务器"
+
+msgid "LSPs · {ready} ready"
+msgstr "LSPs · {ready} 个就绪"
+
+msgid "LSPs · {ready} ready · {missing} missing"
+msgstr "LSPs · {ready} 个就绪 · {missing} 个缺失"
+
+msgid "not configured"
+msgstr "未配置"
+
+msgid "not checked"
+msgstr "未检查"
+
+msgid "unavailable"
+msgstr "不可用"
+
+msgid "denied"
+msgstr "已拒绝"
+
+msgid "checking"
+msgstr "检查中"
+
+msgid "error"
+msgstr "错误"
+
+msgid "Ready"
+msgstr "就绪"
+
+msgid "IsySentinel · {allowed} allow · {denied} deny"
+msgstr "IsySentinel · 允许 {allowed} · 拒绝 {denied}"
+
+msgid "Describe a task, ask a question, or type / for commands..."
+msgstr "描述任务、提问，或输入 / 调用命令..."
+
+msgid "loading"
+msgstr "加载中"
+
+msgid "none configured"
+msgstr "未配置"
+
+msgid "none available for this project"
+msgstr "此项目没有可用的"
+
+msgid "Not On PATH"
+msgstr "不在 PATH 中"
+
+msgid "no language server"
+msgstr "没有语言服务器"
+
+msgid "workspace symbols"
+msgstr "工作区符号"
+
+msgid "installed · sandbox does not run it"
+msgstr "已安装 · sandbox 无法运行"
+
+msgid "installed · sandbox unavailable"
+msgstr "已安装 · sandbox 不可用"
+
+msgid "connected tool services"
+msgstr "已连接的工具服务"
+
+msgid "To: {to}"
+msgstr "发送给：{to}"
+
+msgid "Topic: {topic}"
+msgstr "主题：{topic}"
+
+msgid "The message leaves this workspace. A Bridge lease is coordination, not access to files, commands or the network."
+msgstr "消息将离开此工作区。Bridge 租约只是协调，不代表可以访问文件、命令或网络。"
+
+msgid "Send this Bridge message?"
+msgstr "发送这条 Bridge 消息？"
+
+msgid "Wake this session?"
+msgstr "唤醒此会话？"
+
+msgid "Use this folder?"
+msgstr "使用此文件夹？"
+
+msgid "Save this model selection?"
+msgstr "保存此模型选择？"
+
+msgid "Copy this transcript?"
+msgstr "复制此记录？"
+
+msgid "Save mine as a new conversation"
+msgstr "将我的内容另存为新会话 · 已保存的保持不变"
+
+msgid "Workspace Root"
+msgstr "工作区根目录"
+
+msgid "Launch Directory"
+msgstr "启动目录"
+
+msgid "Model"
+msgstr "模型"
+
+msgid "no bridge"
+msgstr "无 bridge"
+
+msgid "Workspace identity"
+msgstr "工作区身份"
+
+msgid "Provider request {decision} · {reason}; no further request was sent."
+msgstr "提供商请求 {decision} · {reason}；未再发送任何请求。"
+
+msgid "request was not completed"
+msgstr "请求未完成"
+
+msgid "To chat here: Settings → Authority → “Connect to the selected AI model” (or “Turn on all coding tools…”)."
+msgstr "要在此处聊天：设置 → Authority →“连接到所选 AI 模型”（或“开启所有编码工具…”）。"
+
+msgid "Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+msgstr "已保留 prompt · /retry 会准备好供你审阅。已完成的工具效果仍然保留；再次发送前请先检查。"
+
+msgid "Chat failed ({kind}). The request was not completed."
+msgstr "聊天失败（{kind}）。请求未完成。"
+
+msgid "Use /resume to retry."
+msgstr "使用 /resume 重试。"
+
+msgid "retry after {seconds}s"
+msgstr "{seconds} 秒后重试"
+
+msgid "{operation} failed · {kind}: {hint}{suffix}."
+msgstr "{operation}失败 · {kind}：{hint}{suffix}。"
+
+msgid "Chat"
+msgstr "聊天"
+
+msgid "Compaction"
+msgstr "压缩"
+
+msgid "Model catalog"
+msgstr "模型目录"
+
+msgid "Connection check"
+msgstr "连接检查"
+
+msgid "Planning"
+msgstr "规划"
+
+msgid "one-use, stops after {seconds} s"
+msgstr "一次性，{seconds} 秒后停止"
+
+msgid "New conversation."
+msgstr "新对话。"
+
+msgid "Completed"
+msgstr "已完成"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Rejected"
+msgstr "已拒绝"
+
+msgid "Timed out"
+msgstr "已超时"
+
+msgid "Cancelled"
+msgstr "已取消"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Exit {code}"
+msgstr "退出码 {code}"
+
+msgid "Provider reports that image input is not supported"
+msgstr "提供商表示不支持图像输入"
+
+msgid "Provider reports that steering is not supported"
+msgstr "提供商表示不支持 steer"
+
+msgid "Provider credentials are missing, invalid or rejected"
+msgstr "提供商凭据缺失、无效或被拒绝"
+
+msgid "Provider reports exhausted quota or a billing restriction"
+msgstr "提供商表示配额已用尽或存在计费限制"
+
+msgid "Provider request limit reached; wait before retrying"
+msgstr "已达到提供商请求上限；请稍后再试"
+
+msgid "Selected model is unavailable to this account"
+msgstr "所选模型对此账户不可用"
+
+msgid "Provider model or endpoint was not found"
+msgstr "未找到提供商模型或端点"
+
+msgid "Provider account lacks permission for this request"
+msgstr "提供商账户无权执行此请求"
+
+msgid "Provider service failed or is overloaded"
+msgstr "提供商服务失败或过载"
+
+msgid "Could not connect to the provider"
+msgstr "无法连接到提供商"
+
+msgid "Provider did not respond in time"
+msgstr "提供商未及时响应"
+
+msgid "Provider response was interrupted"
+msgstr "提供商响应被中断"
+
+msgid "Provider rejected the request parameters"
+msgstr "提供商拒绝了请求参数"
+
+msgid "Request is larger than the model context window"
+msgstr "请求超出模型上下文窗口"
+
+msgid "Workspace Authority denied or could not verify the request"
+msgstr "Workspace Authority 拒绝了请求或无法验证"
+
+msgid "Provider failure without a recognized diagnostic"
+msgstr "提供商故障，无可识别的诊断"
+
+msgid "Failed · {kind}"
+msgstr "失败 · {kind}"
+
+msgctxt "file rail"
+msgid "Refresh"
+msgstr "刷新"
+
+msgctxt "file rail"
+msgid "Open preview"
+msgstr "预览"
+
+msgid "1. Open {url} and sign in."
+msgstr "1. 打开 {url} 并登录。"
+
+msgid "2. Create an API key and copy it. Most consoles show it only once."
+msgstr "2. 创建一个 API 密钥并复制。大多数控制台只显示一次。"
+
+msgid "3. Paste it below and choose Save key."
+msgstr "3. 粘贴到下方并选择“保存密钥”。"
+
+msgid "Connect {name}"
+msgstr "连接 {name}"
+
+msgid "Create an access token with permission to call Inference Providers."
+msgstr "创建一个有权调用 Inference Providers 的访问 token。"
+
+msgid "Create the key under AI Gateway → API Keys in your Vercel dashboard."
+msgstr "在 Vercel 控制台的 AI Gateway → API Keys 中创建密钥。"
+
+msgid "No API key was entered; nothing was saved."
+msgstr "未输入 API 密钥；未保存任何内容。"
+
+msgid "Open API Keys in the Cerebras Cloud console and create a key."
+msgstr "在 Cerebras Cloud 控制台打开 API Keys 并创建密钥。"
+
+msgid "Open API keys in the Token Factory console and create a key."
+msgstr "在 Token Factory 控制台打开 API keys 并创建密钥。"
+
+msgid "Open API-KEY management in Model Studio and create a pay-as-you-go key."
+msgstr "在 Model Studio 打开 API-KEY 管理并创建按量付费密钥。"
+
+msgid "Open page"
+msgstr "打开页面"
+
+msgid "OpenCode Go needs an active Go subscription on the same account."
+msgstr "OpenCode Go 需要同一账户上有效的 Go 订阅。"
+
+msgid "Opens the key dialog with the page where {name} keys are created. Saved in your OS keyring for your user; never in the project or logs."
+msgstr "打开密钥对话框，并显示创建 {name} 密钥的页面。保存在你用户的系统钥匙串中，绝不写入项目或日志。"
+
+msgid "Paste a key first."
+msgstr "请先粘贴密钥。"
+
+msgid "Paste the key below and choose Save key."
+msgstr "将密钥粘贴到下方并选择“保存密钥”。"
+
+msgid "Saved in your OS keyring for your user; never in this project, its logs or the chat."
+msgstr "保存在你用户的系统钥匙串中；绝不写入此项目、其日志或聊天。"
+
+msgid "Sign in, then Settings → API Keys (or Get API Key on any model). Keys start with nvapi-."
+msgstr "登录后进入 Settings → API Keys（或在任意模型上点 Get API Key）。密钥以 nvapi- 开头。"
+
+msgid "This preset uses the GLM coding endpoint: use a Coding Plan key."
+msgstr "此预设使用 GLM 编码端点：请使用 Coding Plan 密钥。"
+
+msgid "You can also set {env} in your environment and restart ISyCode."
+msgstr "你也可以在环境中设置 {env} 并重启 ISyCode。"
+
+msgid "key available"
+msgstr "密钥可用"
+
+msgid "key needed"
+msgstr "需要密钥"
+
+msgid "{name} needs an API key before ISyCode can list its models or chat."
+msgstr "{name} 需要 API 密钥，ISyCode 才能列出其模型或聊天。"
+
+msgid "{name} · {status} · add or replace"
+msgstr "{name} · {status} · 添加或替换"
+
+msgid "3. Paste it below and choose Use for this session."
+msgstr "3. 粘贴到下方并选择“仅本次会话使用”。"
+
+msgid "Kept in memory for this run only; never written to disk, this project, its logs or the chat."
+msgstr "仅在本次运行期间保存在内存中；绝不写入磁盘、此项目、其日志或聊天。"
+
+msgid "No secure OS keyring is available here; nothing was saved."
+msgstr "此处没有可用的安全系统钥匙串；未保存任何内容。"
+
+msgid "No secure OS keyring is available on this machine, so the key cannot be saved. It can still be used for this session; you will paste it again next time."
+msgstr "此设备没有可用的安全系统钥匙串，因此无法保存密钥。仍可在本次会话中使用；下次需要重新粘贴。"
+
+msgid "Paste the key below and choose Use for this session."
+msgstr "将密钥粘贴到下方并选择“仅本次会话使用”。"
+
+msgid "Use for this session"
+msgstr "仅本次会话使用"
+
+msgid "key for this session"
+msgstr "本次会话的密钥"
+
+msgid "{name} key kept in memory for this session only; nothing was saved."
+msgstr "{name} 密钥仅在本次会话中保存在内存中；未保存任何内容。"
+
+# Flow (ADR 0010)
+msgid "A turn is running. Switch to {mode} anyway?"
+msgstr "回合正在运行。仍要切换到 {mode} 吗？"
+
+# Flow (ADR 0010)
+msgid "A turn is still running. Stop it before undoing."
+msgstr "回合仍在运行。请先停止，再撤销。"
+
+# Flow (ADR 0010)
+msgid "Cancel the turn and switch"
+msgstr "取消回合并切换"
+
+# Flow (ADR 0010)
+msgid "Choose Classic, Flow or Security for this workspace."
+msgstr "为此工作区选择 Classic、Flow 或 Security。"
+
+# Flow (ADR 0010)
+msgid "Classic · recommended"
+msgstr "Classic · 推荐"
+
+# Flow (ADR 0010)
+msgid "Flow could not prepare recovery. Nothing started; prompt kept."
+msgstr "Flow 无法准备恢复记录。未启动操作；prompt 已保留。"
+
+# Flow (ADR 0010)
+msgid "Flow recovery record could not be closed. Inspect files and the action journal before continuing."
+msgstr "无法关闭 Flow 恢复记录。继续之前请检查文件和操作日志。"
+
+# Flow (ADR 0010)
+msgid "Flow turn restored · {count} files. Commits remain in Git history."
+msgstr "Flow 回合已恢复 · {count} 个文件。commit 保留在 Git 历史中。"
+
+# Flow (ADR 0010)
+msgid "Flow turn · {count} files · /undo restores this turn; later human edits are kept."
+msgstr "Flow 回合 · {count} 个文件 · /undo 恢复此回合；保留之后的人工修改。"
+
+# Flow (ADR 0010)
+msgid "Flow · recoverable local work without questions"
+msgstr "Flow · 无需逐次确认的可恢复本地工作"
+
+# Flow (ADR 0010)
+msgid "Kept later change · {path}"
+msgstr "已保留后续修改 · {path}"
+
+# Flow (ADR 0010)
+msgid "No recorded Flow turn to undo."
+msgstr "没有可撤销的 Flow 回合记录。"
+
+# Flow (ADR 0010)
+msgid "Nothing undone · {reason}"
+msgstr "未撤销任何操作 · {reason}"
+
+# Flow (ADR 0010)
+msgid "Switch this workspace to {mode}?"
+msgstr "将此工作区切换到 {mode} 吗？"
+
+# Flow (ADR 0010)
+msgid "The current turn is cancelled before the engine restarts. Completed effects stay in the action journal and can be undone; nothing new is started."
+msgstr "切换模式前将取消当前回合。已完成的效果保留在操作日志中并可撤销；不会启动新操作。"
+
+# Flow (ADR 0010)
+msgid "Use {mode}"
+msgstr "使用 {mode}"
+
+# Flow (ADR 0010)
+msgid "Workflow"
+msgstr "工作模式"
+
+# Flow (ADR 0010)
+msgid "Workflow · {mode}"
+msgstr "工作模式 · {mode}"
+
+# Flow (ADR 0010)
+msgid "Workspace now uses {mode} mode."
+msgstr "工作区现已使用 {mode} 模式。"
+
+# Flow (ADR 0010)
+msgid "{mode} · current"
+msgstr "{mode} · 当前"
+
+# Flow (ADR 0010)
+msgid "{root}\nClassic (recommended): review edits and commands, or trust this folder for quiet local work.\nFlow: edits, moves, deletes and sandboxed shell commands run without questions. Each chat turn is recorded; /undo restores its files while keeping later human changes. Commits of this turn's own files can run quietly.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel, budgets and receipts. Push, secrets, integrations and authority changes still ask or stay off. Flow commands need a verified sandbox; command network stays off."
+msgstr "{root}\nClassic（推荐）：审核编辑和命令，或信任此文件夹以减少本地操作确认。\nFlow：编辑、移动、删除和隔离环境内的 shell 命令无需逐次确认。每个聊天回合都有记录；/undo 恢复其文件，同时保留后续人工修改。仅属于当前回合的文件可以静默 commit。\nSecurity：默认关闭所有权限，直到您允许。\n所有模式都保留 Sentinel、预算和收据。推送、密钥、集成及权限更改仍需确认或保持关闭。Flow 命令需要经过验证的隔离环境；命令网络保持关闭。"
+
+# Flow (ADR 0010)
+msgid "Flow works on its own: reading, edits, moves, deletes and sandboxed commands run without asking, and a shell is available inside the sandbox. Each turn is recorded so you can undo it with /undo. Push, credentials, provider and authority changes, integrations and network for commands still ask or stay off. Classic is recommended for large work, if you are new to the TUI or want more control; Security is for sensitive files and explicit permissions."
+msgstr "Flow 自主工作：读取、编辑、移动、删除及隔离环境内的命令无需逐次确认，shell 仅在隔离环境内可用。每个回合都有记录，可通过 /undo 撤销。推送、密钥、提供商和权限更改、集成及命令网络仍需确认或保持关闭。大型任务、初次使用或需要更多控制时推荐 Classic；敏感文件和显式授权使用 Security。"
+
+msgid "Local work follows the selected workflow; sensitive actions still ask or stay off."
+msgstr "本地工作遵循所选工作模式；敏感操作仍需确认或保持关闭。"
+
+msgid "Flow records recoverable workspace changes for /undo. Explicit denials, budgets and sandbox boundaries still apply."
+msgstr "Flow 记录可通过 /undo 恢复的工作区修改。显式拒绝、预算和隔离边界仍然适用。"
+
+# Role switch and Flow /run
+msgid "Shift+Tab role"
+msgstr "Shift+Tab 角色"
+
+# Role switch and Flow /run
+msgid "Role · none"
+msgstr "角色 · 无"
+
+# Role switch and Flow /run
+msgid "Flow could not prepare recovery. Nothing ran."
+msgstr "Flow 无法准备恢复记录。未执行任何操作。"
+
+# Sidebar sections
+msgid "Click or Space expand / collapse"
+msgstr "点击或空格 展开 / 折叠"
+
+# UI text wrapped in tr() (i18n sweep)
+msgid "Tasks · {done}/{total} done ✓"
+msgstr "任务 · 已完成 {done}/{total} ✓"
+
+msgid "now: {task}"
+msgstr "当前：{task}"
+
+msgid "click or Ctrl+T to expand"
+msgstr "点击或 Ctrl+T 展开"
+
+msgid "Tasks · {done}/{total} done"
+msgstr "任务 · 已完成 {done}/{total}"
+
+msgid "click or Ctrl+T to fold"
+msgstr "点击或 Ctrl+T 折叠"
+
+msgid "Selected sibling folder: {selected_folder}"
+msgstr "已选同级文件夹：{selected_folder}"
+
+msgid "Folder: {root}"
+msgstr "文件夹：{root}"
+
+msgid "Captured original output · SHA-256 {digest}"
+msgstr "已捕获原始输出 · SHA-256 {digest}"
+
+msgid "Use /rtk recall <64-character SHA-256>"
+msgstr "使用 /rtk recall <64 位 SHA-256>"
+
+msgid "Compression by RTK · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\nOff by default. The approved command runs once, unchanged. RTK filters its captured output inside an empty, network-denied sandbox. Authority, Sentinel, approvals and file revocations still apply.\n\nOriginal output stays private and is linked by SHA-256 to the command receipt. Savings are byte/4 estimates, not provider billing or tokenizer measurements. A changed binary needs a new explicit opt-in."
+msgstr "由 RTK 压缩 · Apache-2.0\nhttps://github.com/rtk-ai/rtk\n\n默认关闭。已批准的命令只运行一次，内容不变。RTK 在一个空的、禁止网络的 sandbox 中过滤捕获的输出。Authority、Sentinel、批准和文件撤销仍然适用。\n\n原始输出保持私密，并通过 SHA-256 关联到命令回执。节省量是按 字节/4 的估算，不是提供商计费或分词器测量。二进制文件变更后需要重新明确启用。"
+
+msgid "Unavailable · {value}"
+msgstr "不可用 · {value}"
+
+msgid "{version}\n{path}\nSHA-256 {sha256}"
+msgstr "{version}\n{path}\nSHA-256 {sha256}"
+
+msgid "Not changed · {value}"
+msgstr "未更改 · {value}"
+
+msgid "Mode unknown · nothing is assumed granted"
+msgstr "模式未知 · 不假定任何授权"
+
+msgid "Mode · {mode}"
+msgstr "模式 · {mode}"
+
+msgid "Active permissions · {count}"
+msgstr "生效的权限 · {count}"
+
+msgid "partial · some actions denied"
+msgstr "部分 · 某些操作被拒绝"
+
+msgid "Latest decisions"
+msgstr "最近的决定"
+
+msgid "allow"
+msgstr "允许"
+
+msgid "deny"
+msgstr "拒绝"
+
+msgid "you approved"
+msgstr "你已批准"
+
+msgid "by your setting"
+msgstr "按你的设置"
+
+msgid "No decisions yet in this session"
+msgstr "本次会话尚无决定"
+
+msgid "Journal · {journal}"
+msgstr "日志 · {journal}"
+
+msgid "Classic · trusted folder"
+msgstr "Classic · 受信任的文件夹"
+
+msgid "Classic · asks before each change"
+msgstr "Classic · 每次更改前询问"
+
+msgid "Security · everything off until granted"
+msgstr "Security · 全部关闭，直到你授权"
+
+msgid "{provider_hint}\nChoose another model or Cancel. Completed effects remain; retry may repeat work."
+msgstr "{provider_hint}\n请选择其他模型或取消。已完成的效果会保留；重试可能重复工作。"
+
+msgid "{get} · {len} models"
+msgstr "{get} · {len} 个模型"
+
+msgid "Stopping external review…"
+msgstr "正在停止外部审查…"
+
+msgid "Stopping subagent…"
+msgstr "正在停止子代理…"
+
+msgid "Stopping response…"
+msgstr "正在停止回复…"
+
+msgid "models.dev snapshot (offline; not verified against this account). reasoning={value} · context={value2} · tool_call={value3}"
+msgstr "models.dev snapshot（离线；未针对此账户验证）。reasoning={value} · context={value2} · tool_call={value3}"
+
+msgid "yes"
+msgstr "是"
+
+msgid "no"
+msgstr "否"
+
+msgid "NO — chat needs tools"
+msgstr "否 — 聊天需要工具"
+
+msgid "{container} · 127.0.0.1:{host_port} · recipe {value}"
+msgstr "{container} · 127.0.0.1:{host_port} · 配方 {value}"
+
+msgid "{value} · Enter to review arguments and request a one-use approval"
+msgstr "{value} · 按 Enter 审查参数并请求一次性批准"
+
+msgid "Interrupted"
+msgstr "已中断"
+
+msgid "Failed · {name}"
+msgstr "失败 · {name}"
+
+msgid "Plan ready · review it in Overview"
+msgstr "计划已就绪 · 在概览中查看"
+
+msgid "{len} captured ideas · /ideas reviews and promotes"
+msgstr "已捕获 {len} 个想法 · /ideas 可审阅并采用"
+
+msgid "Folder unavailable · {value}"
+msgstr "文件夹不可用 · {value}"
+
+msgid ".isycode/ is available only in a workspace with its own .isyroot marker."
+msgstr ".isycode/ 仅在带有自己 .isyroot 标记的工作区中可用。"
+
+msgid "Workspace config unavailable · {value}"
+msgstr "工作区配置不可用 · {value}"
+
+msgid "Initialization stopped · {path} unchanged"
+msgstr "初始化已停止 · {path} 未更改"
+
+msgid "Workspace setup {decision} · {value}"
+msgstr "工作区设置 {decision} · {value}"
+
+msgid "{text} · receipt {receipt_id}"
+msgstr "{text} · 回执 {receipt_id}"
+
+msgid "Start new folders in Classic?"
+msgstr "新文件夹默认使用 Classic？"
+
+msgid "Every folder you open for the first time will read files, propose edits you approve, chat with your provider and save conversations and keys without asking for each permission. IsySentinel and the action journal still check and record everything. Folders you already use keep their mode."
+msgstr "你首次打开的每个文件夹都会读取文件、提出由你批准的编辑、与你的提供商对话，并保存对话和密钥，而不逐项请求权限。IsySentinel 和操作日志仍会检查并记录一切。你已在使用的文件夹保持原有模式。"
+
+msgid "Use Classic for new folders"
+msgstr "新文件夹使用 Classic"
+
+msgid "Default mode saved for new workspaces"
+msgstr "已为新工作区保存默认模式"
+
+msgid "Could not save the default mode; existing settings remain"
+msgstr "无法保存默认模式；现有设置保持不变"
+
+msgid "Default saved for new workspaces"
+msgstr "已为新工作区保存默认值"
+
+msgid "Could not save your global default; existing settings remain"
+msgstr "无法保存全局默认值；现有设置保持不变"
+
+msgid "Allow pasting from the clipboard?"
+msgstr "允许从剪贴板粘贴？"
+
+msgid "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes."
+msgstr "仅在你按下 Ctrl+V 时读取文本或图片。内容会保留在草稿中直到你发送；日志不记录任何图片或文本字节。"
+
+msgid "Allow paste"
+msgstr "允许粘贴"
+
+msgid "Image attached · Ctrl+P reviews attachments"
+msgstr "已附加图片 · Ctrl+P 查看附件"
+
+msgid "Clipboard content could not be attached"
+msgstr "无法附加剪贴板内容"
+
+msgid "Focus a message or a preview, then press Copy."
+msgstr "请先聚焦一条消息或预览，再按复制。"
+
+msgid "Allow copying in this workspace?"
+msgstr "允许在此工作区复制？"
+
+msgid "Copies text or paths you select to the OS clipboard. Other applications may read it. The model receives no clipboard tool; copied contents are not written to the journal."
+msgstr "将你选择的文本或路径复制到系统剪贴板。其他应用可能会读取它。模型不会获得剪贴板工具；复制的内容不会写入日志。"
+
+msgid "Allow copy"
+msgstr "允许复制"
+
+msgid "API keys are never copied."
+msgstr "API 密钥永远不会被复制。"
+
+msgid "Copy failed · Workspace Authority is unavailable."
+msgstr "复制失败 · Workspace Authority 不可用。"
+
+msgid "Copy request sent to terminal. If paste stays empty, install wl-clipboard (Wayland) or xclip (X11); some terminals ignore OSC 52."
+msgstr "已向终端发送复制请求。如果粘贴为空，请安装 wl-clipboard（Wayland）或 xclip（X11）；某些终端会忽略 OSC 52。"
+
+msgid "Copied {len} characters to the {where}."
+msgstr "已将 {len} 个字符复制到{where}。"
+
+msgid "Copying is off for this workspace · turn on “Copy selected text” in Settings → Authority."
+msgstr "此工作区已关闭复制 · 请在 设置 → Authority 中开启“复制所选文本”。"
+
+msgid "Nothing copied · {value}"
+msgstr "未复制任何内容 · {value}"
+
+msgid "Draft saved up to 16,000 characters; full text remains in the composer"
+msgstr "草稿最多保存 16,000 个字符；完整文本仍在输入框中"
+
+msgid "Draft not saved · {value}"
+msgstr "草稿未保存 · {value}"
+
+msgid "Draft not saved · private state unavailable"
+msgstr "草稿未保存 · 私有状态不可用"
+
+msgid "Pending messages cleared"
+msgstr "已清除待发送消息"
+
+msgid "Steer attempt pending; draft kept"
+msgstr "steer 尝试待处理；草稿已保留"
+
+msgid "Steering queue is full; this draft is kept."
+msgstr "steer 队列已满；此草稿已保留。"
+
+msgid "Steering queued · current tool effects remain; pending calls will be skipped."
+msgstr "steer 已排队 · 当前工具的效果保留；待处理的调用将被跳过。"
+
+msgid "Message queue is full; draft kept"
+msgstr "消息队列已满；草稿已保留"
+
+msgid "Queued · {len} pending · {fit_cells} · /queue reviews"
+msgstr "已排队 · {len} 条待发送 · {fit_cells} · /queue 查看"
+
+msgid "Still working. Your message remains in the composer; send it again when ready."
+msgstr "仍在处理中。你的消息仍在输入框中；准备好后再发送。"
+
+msgid "Context loaded · {relative_path} · owned read; no permissions changed."
+msgstr "已加载上下文 · {relative_path} · 由所属模块读取；未更改任何权限。"
+
+msgid "Context not loaded · {value}"
+msgstr "未加载上下文 · {value}"
+
+msgid "Review cancelled · no automatic retry; inspect before requesting again"
+msgstr "审查已取消 · 不会自动重试；请检查后再请求"
+
+msgid "Review copied to composer · edit it, then press Enter to send"
+msgstr "审查已复制到输入框 · 编辑后按 Enter 发送"
+
+msgid "Staying in {get} mode."
+msgstr "保持 {get} 模式。"
+
+msgid "Mode could not be changed ({name}); nothing was switched."
+msgstr "无法更改模式（{name}）；未做任何切换。"
+
+msgid "{count} pending approvals invalidated."
+msgstr "已使 {count} 个待处理批准失效。"
+
+msgid "1 pending approval invalidated."
+msgstr "已使 1 个待处理批准失效。"
+
+msgid "Coordinate with other agents · Bridge"
+msgstr "与其他代理协调 · Bridge"
+
+msgid "Registers this window as a peer so it can read its own messages, send a message to another registered agent and wake an idle one. Every message shows the exact recipient and text and asks you first. A Bridge lease marks who is working on what; it never grants access to files, commands or the network."
+msgstr "将此窗口注册为对等方，以便读取自己的消息、向另一个已注册的代理发送消息并唤醒空闲代理。每条消息都会显示确切的收件人和文本，并先征求你的同意。Bridge 租约只标记谁在做什么；它从不授予对文件、命令或网络的访问权。"
+
+msgid "Selected provider is unknown; no network grant was changed."
+msgstr "所选提供商未知；未更改任何网络授权。"
+
+msgid "Provider endpoint is invalid; no network grant was changed."
+msgstr "提供商端点无效；未更改任何网络授权。"
+
+msgid "Provider network {value} for {host}. Credential and tool permissions remain separate."
+msgstr "提供商网络（{host}）：{value}。凭据和工具权限仍然分开。"
+
+msgid "granted"
+msgstr "已授权"
+
+msgid "revoked"
+msgstr "已撤销"
+
+msgid "Provider network policy could not be saved; requests remain denied."
+msgstr "无法保存提供商网络策略；请求仍被拒绝。"
+
+msgid "Invalid network grant request; no permission changed."
+msgstr "网络授权请求无效；未更改任何权限。"
+
+msgid "{value} {label} access for {host}."
+msgstr "{host} 的 {label} 访问：{value}。"
+
+msgid "Granted"
+msgstr "已授权"
+
+msgid "Revoked"
+msgstr "已撤销"
+
+msgid "Network grant could not be saved; access remains denied."
+msgstr "无法保存网络授权；访问仍被拒绝。"
+
+msgid "Session permission could not be saved ({name})."
+msgstr "无法保存会话权限（{name}）。"
+
+msgid "Open a saved conversation before granting its deletion."
+msgstr "请先打开一个已保存的对话，再授权删除它。"
+
+msgid "This permission applies only to conversation {value} in this workspace. Every deletion still requires reviewing the exact conversation and confirming it."
+msgstr "此权限仅适用于此工作区中的对话 {value}。每次删除仍需审查该对话并确认。"
+
+msgid "previously selected"
+msgstr "先前选择的"
+
+msgid "Turn on reading workspace files first; editing builds on it."
+msgstr "请先开启读取工作区文件；编辑依赖于它。"
+
+msgid "Edit permission could not be saved ({name})."
+msgstr "无法保存编辑权限（{name}）。"
+
+msgid "Local code help is not ready yet; nothing changed."
+msgstr "本地代码帮助尚未就绪；未做任何更改。"
+
+msgid "Python checks after edits {value}."
+msgstr "编辑后的 Python 检查：{value}。"
+
+msgid "allowed"
+msgstr "已允许"
+
+msgid "turned off"
+msgstr "已关闭"
+
+msgid "Check permission could not be saved ({name})."
+msgstr "无法保存检查权限（{name}）。"
+
+msgid "Git {value} {value2} for this workspace."
+msgstr "此工作区的 Git {value}：{value2}。"
+
+msgid "commits"
+msgstr "commit"
+
+msgid "status and diffs"
+msgstr "状态和 diff"
+
+msgid "Git permission could not be saved ({name})."
+msgstr "无法保存 Git 权限（{name}）。"
+
+msgid "Clipboard permission could not be saved ({name})."
+msgstr "无法保存剪贴板权限（{name}）。"
+
+msgid "The command sandbox is not available here; commands stay off."
+msgstr "此处无法使用命令 sandbox；命令保持关闭。"
+
+msgid "Command permission could not be saved ({name})."
+msgstr "无法保存命令权限（{name}）。"
+
+msgid "Bridge permission could not be saved ({name})."
+msgstr "无法保存 Bridge 权限（{name}）。"
+
+msgid "Unknown permission; nothing changed."
+msgstr "未知权限；未做任何更改。"
+
+msgid "Remove saved permission"
+msgstr "移除已保存的权限"
+
+msgid "Remove permission"
+msgstr "移除权限"
+
+msgid "Remove the saved permission for {group} · {label} (`{action_id}`) in this workspace, including its saved scope?"
+msgstr "要移除此工作区中 {group} · {label}（`{action_id}`）的已保存权限及其范围吗？"
+
+msgid "Saved permission removed · {action_id}."
+msgstr "已移除已保存的权限 · {action_id}。"
+
+msgid "Saved permission could not be removed."
+msgstr "无法移除已保存的权限。"
+
+msgid "Gateway URL is invalid; no MCP grant was changed."
+msgstr "Gateway URL 无效；未更改任何 MCP 授权。"
+
+msgid "Gateway MCP invocation {value} for this workspace. Each tool call still needs an explicit one-use approval."
+msgstr "此工作区的 Gateway MCP 调用：{value}。每次工具调用仍需明确的一次性批准。"
+
+msgid "MCP invocation grant could not be saved; calls remain denied."
+msgstr "无法保存 MCP 调用授权；调用仍被拒绝。"
+
+msgid "This folder is too broad for the quiet Classic profile. Each edit and command still asks."
+msgstr "此文件夹范围过大，不适用 Classic 免询问配置。每次编辑和命令仍会询问。"
+
+msgid "LSP sandbox changed or is unavailable; no process grant was changed."
+msgstr "LSP sandbox 已更改或不可用；未更改任何进程授权。"
+
+msgid "Sandboxed LSP process {value} for this workspace."
+msgstr "此工作区的 sandbox LSP 进程：{value}。"
+
+msgid "LSP process grant could not be saved; the server remains denied."
+msgstr "无法保存 LSP 进程授权；服务器仍被拒绝。"
+
+msgid "Turn on all coding tools?"
+msgstr "开启所有编码工具？"
+
+msgid "Turn on coding tools"
+msgstr "开启编码工具"
+
+msgid "Coding tools on · {len} permissions saved; changes, commands and commits follow their approval settings."
+msgstr "编码工具已开启 · 已保存 {len} 项权限；更改、命令和 commit 遵循各自的批准设置。"
+
+msgid "Coding tools could not be saved ({name})."
+msgstr "无法保存编码工具（{name}）。"
+
+msgid "Trust this folder?"
+msgstr "信任此文件夹？"
+
+msgid "Trust this folder"
+msgstr "信任此文件夹"
+
+msgid "Workspace grant could not be saved ({name})."
+msgstr "无法保存工作区授权（{name}）。"
+
+msgid "Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."
+msgstr "Classic 免询问已对常规编辑和 sandbox 测试开启。commit、密钥和权限变更仍会询问。"
+
+msgid "Time: {strftime}\nRequest: {value}… · Authority: {authority}\nSystembilities: {checks}\nFailed checks: {value2}\nReceipt binds a request digest and result digest, but the request/result payload is not retained. Target and successful Systembility details are not persisted; no secret or prompt is shown."
+msgstr "时间：{strftime}\n请求：{value}… · Authority：{authority}\nSystembilities：{checks}\n失败的检查：{value2}\n回执绑定了请求摘要和结果摘要，但不保留请求/结果内容。目标及成功的 Systembility 详情不会持久保存；不会显示任何密钥或 prompt。"
+
+msgid "Quiet Classic stays off. Each edit and command still asks."
+msgstr "Classic 免询问保持关闭。每次编辑和命令仍会询问。"
+
+msgid "Trust was not saved. Each edit and command still asks."
+msgstr "未保存信任设置。每次编辑和命令仍会询问。"
+
+msgid "Response stopped. This partial answer was not added to chat history."
+msgstr "回复已停止。此部分回答未加入聊天记录。"
+
+msgid "Response stopped; no partial answer was received."
+msgstr "回复已停止；未收到任何部分回答。"
+
+msgid "Stream interrupted ({transport_reason}). Use /resume to continue without repeating completed tools."
+msgstr "stream 中断（{transport_reason}）。使用 /resume 继续，不会重复已完成的工具。"
+
+msgid "The stream failed before an answer ({transport_reason}). Use /resume to retry."
+msgstr "在得到回答前 stream 失败（{transport_reason}）。使用 /resume 重试。"
+
+msgid "Stream interrupted · use /resume"
+msgstr "stream 中断 · 使用 /resume"
+
+msgid "Compacting · summarizing {len} earlier messages to free up context"
+msgstr "正在压缩 · 汇总 {len} 条较早的消息以释放上下文"
+
+msgid "(the provider ended the response during reasoning; its endpoint may have reached its own output or context limit)"
+msgstr "（提供商在推理过程中结束了回复；其端点可能已达到自身的输出或上下文限制）"
+
+msgid "Unapplied steering kept in the composer for review."
+msgstr "未应用的 steer 已保留在输入框中供你查看。"
+
+msgid "The model provider rejected turn continuation ({text}). Use /retry to submit the prompt again."
+msgstr "模型提供商拒绝继续该回合（{text}）。使用 /retry 重新提交 prompt。"
+
+msgid "Turn continuation rejected by provider"
+msgstr "提供商拒绝继续该回合"
+
+msgid "A response is already running"
+msgstr "已有回复正在进行"
+
+msgid "No interrupted turn to resume."
+msgstr "没有可恢复的中断回合。"
+
+msgid "No interrupted turn to resume"
+msgstr "没有可恢复的中断回合"
+
+msgid "No interrupted prompt to retry."
+msgstr "没有可重试的中断 prompt。"
+
+msgid "Your current draft is kept. Clear it before using /retry."
+msgstr "你当前的草稿已保留。使用 /retry 前请先清空。"
+
+msgid "Retry draft ready · review previous effects, then press Enter to send."
+msgstr "重试草稿已就绪 · 请检查之前的效果，然后按 Enter 发送。"
+
+msgid "Compaction skipped · {value}; earlier messages are left out of this request"
+msgstr "已跳过压缩 · {value}；较早的消息不会包含在此请求中"
+
+msgid "no summary returned"
+msgstr "未返回摘要"
+
+msgid "Compacted · earlier messages summarized; the saved conversation keeps the full transcript"
+msgstr "已压缩 · 较早的消息已汇总；已保存的对话保留完整记录"
+
+msgid "Still working · finish or cancel the current reply first."
+msgstr "仍在处理中 · 请先完成或取消当前回复。"
+
+msgid "Nothing to compact yet."
+msgstr "暂无可压缩的内容。"
+
+msgid "Context capsule · {len} earlier messages and old tool results condensed to fit {resolved_chat_model}; the saved conversation keeps everything"
+msgstr "上下文胶囊 · 已将 {len} 条较早消息和旧工具结果压缩以适配 {resolved_chat_model}；已保存的对话保留全部内容"
+
+msgid "/{name} found in {workspace_commands_dir} but it could not be read · {value}"
+msgstr "在 {workspace_commands_dir} 中找到 /{name}，但无法读取 · {value}"
+
+msgid "/{name} · {source} prompt · {description}"
+msgstr "/{name} · {source} prompt · {description}"
+
+msgid "Attached @{path} · receipt {receipt_id}"
+msgstr "已附加 @{path} · 回执 {receipt_id}"
+
+msgid "@{path} not attached · {value}"
+msgstr "未附加 @{path} · {value}"
+
+msgid "Tool batch · {len} proposed writes · one review for all"
+msgstr "工具 batch · {len} 项拟议写入 · 一次审查全部"
+
+msgid "✓ Batch approved · {len} one-use approvals, one per file"
+msgstr "✓ batch 已批准 · {len} 个一次性批准，每个文件一个"
+
+msgid "✗ Batch rejected · {len} files unchanged"
+msgstr "✗ batch 已拒绝 · {len} 个文件未更改"
+
+msgid "Resuming interrupted turn…"
+msgstr "正在恢复中断的回合…"
+
+msgid "Picture not sent · this model does not take images. The question goes as text."
+msgstr "图片未发送 · 此模型不支持图片。问题将以文本发送。"
+
+msgid "Trying steering · original turn retained until response."
+msgstr "正在尝试 steer · 在收到回复前保留原回合。"
+
+msgid "Picture not accepted · sending the question as text."
+msgstr "图片未被接受 · 正在以文本发送问题。"
+
+msgid "Context capsule · the request was larger than the model window; {removed} earlier messages or tool results condensed and sent again · no tool effects repeated"
+msgstr "上下文胶囊 · 请求超出了模型窗口；已将 {removed} 条较早消息或工具结果压缩后重新发送 · 未重复任何工具效果"
+
+msgid "↻ {recovery_label} · retrying in {delay_s}s ({attempt}/{max_attempts})"
+msgstr "↻ {recovery_label} · {delay_s} 秒后重试（{attempt}/{max_attempts}）"
+
+msgid "⚠ Recovery stopped after {count} automatic attempts · {reason} · no tool effects were repeated."
+msgstr "⚠ 自动尝试 {count} 次后停止恢复 · {reason} · 未重复任何工具效果。"
+
+msgid "⚠ Recovery stopped after 1 automatic attempt · {reason} · no tool effects were repeated."
+msgstr "⚠ 自动尝试 1 次后停止恢复 · {reason} · 未重复任何工具效果。"
+
+msgid "Provider stream interrupted for steering; partial output is retained on screen."
+msgstr "为 steer 而中断了提供商的 stream；部分输出保留在屏幕上。"
+
+msgid "✓ Response recovered after {count} automatic retries · no tool effects repeated"
+msgstr "✓ 经过 {count} 次自动重试后已恢复回复 · 未重复任何工具效果"
+
+msgid "✓ Response recovered after 1 automatic retry · no tool effects repeated"
+msgstr "✓ 经过 1 次自动重试后已恢复回复 · 未重复任何工具效果"
+
+msgid "Response recovered"
+msgstr "回复已恢复"
+
+msgid "Steering accepted · continuing the turn."
+msgstr "已接受 steer · 继续该回合。"
+
+msgid "Tool result reused · {name_str} · already executed"
+msgstr "已复用工具结果 · {name_str} · 已执行"
+
+msgid "Tool denied · decision preserved from interrupted turn"
+msgstr "工具被拒绝 · 保留了中断回合中的决定"
+
+msgid "Tool denied · no explicit workspace read grant"
+msgstr "工具被拒绝 · 没有明确的工作区读取授权"
+
+msgid "Tool note not retained: malformed tool metadata."
+msgstr "未保留工具说明：工具元数据格式错误。"
+
+msgid "/models · unknown provider · opening the current one"
+msgstr "/models · 未知提供商 · 打开当前提供商"
+
+msgid "Selected skills cleared."
+msgstr "已清除所选技能。"
+
+msgid "Bundled skills: {join}"
+msgstr "内置技能：{join}"
+
+msgid "/skills use <name> toggles guidance; /skills clear disables it."
+msgstr "/skills use <名称> 切换指导；/skills clear 将其关闭。"
+
+msgid "MCP {value} {value2}."
+msgstr "MCP {value} {value2}。"
+
+msgid "stopped"
+msgstr "已停止"
+
+msgid "was not running"
+msgstr "未在运行"
+
+msgid "/run · {exc}"
+msgstr "/run · {exc}"
+
+msgid "Usage: /run <program> [arguments] · no shell, pipes or redirects"
+msgstr "用法：/run <程序> [参数] · 不支持 shell、管道或重定向"
+
+msgid "Your commands (~/.config/isycode/commands):"
+msgstr "你的命令（~/.config/isycode/commands）："
+
+msgid "Workspace commands live in {workspace_commands_dir}/<name>.md; @path attaches a workspace file to your message."
+msgstr "工作区命令位于 {workspace_commands_dir}/<名称>.md；@路径 可将工作区文件附加到你的消息。"
+
+msgid "New here? /help tour shows the lay of the land."
+msgstr "初次使用？/help tour 带你了解整体布局。"
+
+msgid "README picker blocked · desktop.file_picker has no registered action owner"
+msgstr "README 选择器被阻止 · desktop.file_picker 没有已注册的操作所有者"
+
+msgid "Workspace · {workspace_root}"
+msgstr "工作区 · {workspace_root}"
+
+msgid "Model · {model_display_label}"
+msgstr "模型 · {model_display_label}"
+
+msgid "Anything else is plain chat with the configured model."
+msgstr "其他内容均为与所配置模型的普通聊天。"
+
+msgid "Usage: /review <text to send to GPT-6 Luna>"
+msgstr "用法：/review <要发送给 GPT-6 Luna 的文本>"
+
+msgid "Review text is limited to 8,000 characters. Narrow it and try again."
+msgstr "审查文本限 8,000 个字符。请缩短后重试。"
+
+msgid "This TUI session already used its one external review request."
+msgstr "本次 TUI 会话已用掉唯一一次外部审查请求。"
+
+msgid "OpenAI API review is not configured. Add OPENAI_API_KEY through Providers first."
+msgstr "尚未配置 OpenAI API 审查。请先在“提供商”中添加 OPENAI_API_KEY。"
+
+msgid "OpenAI API review needs OPENAI_API_KEY. No text was sent."
+msgstr "OpenAI API 审查需要 OPENAI_API_KEY。未发送任何文本。"
+
+msgid "Roundtrip is not available with the configured HTTP(S) proxy. No review text was sent; the proxy will not be bypassed."
+msgstr "配置了 HTTP(S) 代理时无法使用往返审查。未发送审查文本；不会绕过代理。"
+
+msgid "External review cancelled; no text was sent."
+msgstr "外部审查已取消；未发送任何文本。"
+
+msgid "Sending one explicit review request to OpenAI API"
+msgstr "正在向 OpenAI API 发送一次明确的审查请求"
+
+msgid "OpenAI review {decision} · {value}; no review was added."
+msgstr "OpenAI 审查 {decision} · {value}；未添加任何审查。"
+
+msgid "no verifiable response"
+msgstr "没有可验证的回复"
+
+msgid "External review cancelled in flight. No retry was made, and partial output was discarded."
+msgstr "外部审查在进行中被取消。未重试，部分输出已丢弃。"
+
+msgid "External review failed or timed out. No retry was made."
+msgstr "外部审查失败或超时。未重试。"
+
+msgid "External review failed ({name}); no retry was made."
+msgstr "外部审查失败（{name}）；未重试。"
+
+msgid "External reviewer returned no text; nothing was added to the conversation."
+msgstr "外部审查者未返回文本；未向对话添加任何内容。"
+
+msgid "The reviewer has no tools. Its feedback is not authority."
+msgstr "审查者没有工具。其反馈不构成授权。"
+
+msgid "Keys · credential status"
+msgstr "密钥 · 凭据状态"
+
+msgid "Use /providers to choose a provider. Secret values are never displayed."
+msgstr "使用 /providers 选择提供商。密钥值永远不会显示。"
+
+msgid "Provider-reported usage only; ISyCode does not cap tokens or estimate billing."
+msgstr "仅显示提供商报告的用量；ISyCode 不限制 token 也不估算费用。"
+
+msgid "Project context removed."
+msgstr "已移除项目上下文。"
+
+msgid "Usage: /plan <intent>"
+msgstr "用法：/plan <意图>"
+
+msgid "Folder removed · {value} · {value2}"
+msgstr "已移除文件夹 · {value} · {value2}"
+
+msgid "revoked {count} permission(s) ISyCode had given it"
+msgstr "已撤销 ISyCode 授予它的 {count} 项权限"
+
+msgid "its own permissions were left as they were"
+msgstr "其自身的权限保持不变"
+
+msgid "Folder not removed · {value}"
+msgstr "未移除文件夹 · {value}"
+
+msgid "Usage: /commit <message> · commits every changed file after review"
+msgstr "用法：/commit <消息> · 审查后 commit 所有已更改的文件"
+
+msgid "Choose a role first; no default was changed."
+msgstr "请先选择一个角色；未更改任何默认值。"
+
+msgid "Subagent · {model_display_label} · {status}"
+msgstr "子代理 · {model_display_label} · {status}"
+
+msgid "Default role saved for all workspaces"
+msgstr "已为所有工作区保存默认角色"
+
+msgid "Could not save the default role"
+msgstr "无法保存默认角色"
+
+msgid "Global default role cleared"
+msgstr "已清除全局默认角色"
+
+msgid "Could not clear the default role"
+msgstr "无法清除默认角色"
+
+msgid "Bridge is blocked in Secure · no execution owner is connected"
+msgstr "Bridge 在 Secure 中被阻止 · 未连接任何执行所有者"
+
+msgid "Role selected · {value} · {engine}"
+msgstr "已选择角色 · {value} · {engine}"
+
+msgid "ISyCode role loaded · {value}; role guidance does not grant permissions"
+msgstr "已加载 ISyCode 角色 · {value}；角色指导不授予权限"
+
+msgid "{value} role motor loaded into the ISyCode role context."
+msgstr "已将 {value} 角色引擎载入 ISyCode 角色上下文。"
+
+msgid "Workflow: {get}"
+msgstr "流程：{get}"
+
+msgid "Scope: {join}"
+msgstr "范围：{join}"
+
+msgid "Guardrail: {rule}"
+msgstr "护栏：{rule}"
+
+msgid "Verdicts: {join}"
+msgstr "裁决：{join}"
+
+msgid "CLI operations:"
+msgstr "CLI 操作："
+
+msgid "The workflow is loaded; no CLI operation has run from this chat."
+msgstr "流程已加载；本聊天未运行任何 CLI 操作。"
+
+msgid "{name} · {service} · {state}. API key value remains hidden."
+msgstr "{name} · {service} · {state}。API 密钥的值保持隐藏。"
+
+msgid "Role guidance cleared"
+msgstr "已清除角色指导"
+
+msgid "Not checked · Gateway host has no read grant. Configure it in Settings · Authority & Security."
+msgstr "未检查 · Gateway 主机没有读取授权。请在 设置 · Authority & Security 中配置。"
+
+msgid "Checking Gateway MCP authorization…"
+msgstr "正在检查 Gateway MCP 授权…"
+
+msgid "Loading · starting the native Gateway MCP tool catalog…"
+msgstr "正在加载 · 启动原生 Gateway MCP 工具目录…"
+
+msgid "Provider response received · receipt {receipt_id} · this checks chat connectivity, not tool compatibility."
+msgstr "已收到提供商回复 · 回执 {receipt_id} · 这只检查聊天连接，不检查工具兼容性。"
+
+msgid "Provider not verified · {decision} · {value}"
+msgstr "提供商未验证 · {decision} · {value}"
+
+msgid "Connection check unavailable ({name})."
+msgstr "连接检查不可用（{name}）。"
+
+msgid "Allow Grok sign-in chat?"
+msgstr "允许使用 Grok 登录进行聊天？"
+
+msgid "ISyCode may send this workspace's chat to cli-chat-proxy.grok.com using the grok sign-in on this machine. The token stays in the grok CLI. File permissions stay separate."
+msgstr "ISyCode 可以使用本机的 grok 登录将此工作区的聊天发送到 cli-chat-proxy.grok.com。token 保留在 grok CLI 中。文件权限仍然分开。"
+
+msgid "Allow"
+msgstr "允许"
+
+msgid "No live Grok sign-in. Use device code or browser first."
+msgstr "没有有效的 Grok 登录。请先使用设备码或浏览器登录。"
+
+msgid "Grok sign-in not selected."
+msgstr "未选择 Grok 登录。"
+
+msgid "Grok CLI not found. Install the official grok CLI first."
+msgstr "未找到 Grok CLI。请先安装官方 grok CLI。"
+
+msgid "Sign in to Grok for ISyCode?"
+msgstr "为 ISyCode 登录 Grok？"
+
+msgid "Runs the official grok login. The sign-in stays in the grok CLI. After it finishes, ISyCode can send chat with that sign-in. The token is not copied into this project or the chat."
+msgstr "运行官方 grok 登录。登录信息保留在 grok CLI 中。完成后，ISyCode 可以使用该登录发送聊天。token 不会复制到此项目或聊天中。"
+
+msgid "Sign in"
+msgstr "登录"
+
+msgid "Starting grok login."
+msgstr "正在启动 grok login。"
+
+msgid "Grok login did not start ({name})."
+msgstr "grok login 未启动（{name}）。"
+
+msgid "Grok login did not start. The API key path is unchanged."
+msgstr "grok login 未启动。API 密钥方式不变。"
+
+msgid "Grok sign-in did not finish. The API key path is unchanged."
+msgstr "Grok 登录未完成。API 密钥方式不变。"
+
+msgid "Grok sign-in not verifiable · {value}"
+msgstr "无法验证 Grok 登录 · {value}"
+
+msgid "Grok sign-in blocked · {value}"
+msgstr "Grok 登录被阻止 · {value}"
+
+msgid "Signed in with grok, but ISyCode was not allowed to use it."
+msgstr "已通过 grok 登录，但 ISyCode 未获准使用它。"
+
+msgid "Runs official Codex app-server at {executable}. Account storage: {home} in the OS keyring. Contacts auth.openai.com and chatgpt.com. Connecting explicitly grants this connector and subscription requests in this workspace; file permissions stay separate. ChatGPT plan limits apply; API-key billing remains separate. Never share login codes."
+msgstr "在 {executable} 运行官方 Codex app-server。账户存储：系统密钥环中的 {home}。会联系 auth.openai.com 和 chatgpt.com。连接即明确授权此连接器及此工作区中的订阅请求；文件权限仍然分开。适用 ChatGPT 套餐限制；API 密钥计费另行计算。切勿分享登录码。"
+
+msgid "ChatGPT sign-in blocked · {value}"
+msgstr "ChatGPT 登录被阻止 · {value}"
+
+msgid "ChatGPT account disconnected. API keys are unchanged."
+msgstr "已断开 ChatGPT 账户。API 密钥不变。"
+
+msgid "ChatGPT sign-in cancelled."
+msgstr "已取消 ChatGPT 登录。"
+
+msgid "ChatGPT sign-in verified · plan {plan} · subscription limits apply"
+msgstr "ChatGPT 登录已验证 · 套餐 {plan} · 适用订阅限制"
+
+msgid "ChatGPT sign-in not completed · {value}"
+msgstr "ChatGPT 登录未完成 · {value}"
+
+msgid "ChatGPT connection unavailable ({name}). Install official Codex CLI, unlock the OS keyring and check Authority grants."
+msgstr "ChatGPT 连接不可用（{name}）。请安装官方 Codex CLI、解锁系统密钥环并检查 Authority 授权。"
+
+msgid "This model does not expose adjustable reasoning levels"
+msgstr "此模型不提供可调的推理等级"
+
+msgid "Reasoning · {capitalize}{value}"
+msgstr "推理 · {capitalize}{value}"
+
+msgid "· next request"
+msgstr "· 下一次请求"
+
+msgid "Featured model, found in this account's {label} catalog."
+msgstr "推荐模型，已在此账户的 {label} 目录中找到。"
+
+msgid "★ {label} · not in this account's catalog"
+msgstr "★ {label} · 不在此账户的目录中"
+
+msgid "{label} did not list a model matching {label2}; it may not be offered here yet."
+msgstr "{label} 未列出与 {label2} 匹配的模型；此处可能尚未提供。"
+
+msgid "{name} configuration unavailable"
+msgstr "{name} 配置不可用"
+
+msgid "Provider is selected for this run; private preference could not be saved."
+msgstr "已为本次运行选择该提供商；无法保存私有偏好。"
+
+msgid "This provider is configured for ISyCode chat; the optional IsyMotron planner keeps its own provider until its adapter supports it."
+msgstr "此提供商已为 ISyCode 聊天配置；可选的 IsyMotron 规划器在其适配器支持前继续使用自己的提供商。"
+
+msgid "Selected for this session · {model_display_label}"
+msgstr "已为本次会话选择 · {model_display_label}"
+
+msgid "Allow managing {label} API keys?"
+msgstr "允许管理 {label} API 密钥？"
+
+msgid "ISyCode may save, use and remove {label} API keys in your operating-system keyring. Keys are stored for your user (every workspace), never in the project, the action journal or chat history. Each use is recorded in this workspace's journal; each save and each removal still asks you first."
+msgstr "ISyCode 可以在你的操作系统密钥环中保存、使用和删除 {label} API 密钥。密钥按用户保存（所有工作区），绝不保存在项目、操作日志或聊天记录中。每次使用都会记录在此工作区的日志中；每次保存和删除仍会先征求你的同意。"
+
+msgid "No secure OS keyring is available here; nothing was saved. Set {env} in your environment instead."
+msgstr "此处没有安全的系统密钥环；未保存任何内容。请改为在环境中设置 {env}。"
+
+msgid "API key not saved; permission was not granted."
+msgstr "API 密钥未保存；未授予权限。"
+
+msgid "API key not saved ({name})."
+msgstr "API 密钥未保存（{name}）。"
+
+msgid "Save the {label} API key?"
+msgstr "保存 {label} API 密钥？"
+
+msgid "The key you pasted will be saved in your OS keyring for {label}. The newest saved key for a service is the one ISyCode uses."
+msgstr "你粘贴的密钥将保存到系统密钥环中，用于 {label}。ISyCode 使用每个服务最新保存的密钥。"
+
+msgid "API key not saved; the pasted value was discarded."
+msgstr "API 密钥未保存；已丢弃粘贴的值。"
+
+msgid "API key not saved · {value}"
+msgstr "API 密钥未保存 · {value}"
+
+msgid "{label} API key saved · receipt {receipt_id}"
+msgstr "{label} API 密钥已保存 · 回执 {receipt_id}"
+
+msgid "Permission not changed ({name})."
+msgstr "权限未更改（{name}）。"
+
+msgid "API key not removed; permission was not granted."
+msgstr "API 密钥未删除；未授予权限。"
+
+msgid "API key cannot be removed ({name})."
+msgstr "无法删除 API 密钥（{name}）。"
+
+msgid "The key is deleted from your OS keyring. ISyCode then uses an older saved key or an environment variable for this service, if any."
+msgstr "该密钥将从系统密钥环中删除。之后 ISyCode 将使用此服务较早保存的密钥或环境变量（如有）。"
+
+msgid "Remove key"
+msgstr "删除密钥"
+
+msgid "Remove this {label} API key?"
+msgstr "删除此 {label} API 密钥？"
+
+msgid "API key kept."
+msgstr "已保留 API 密钥。"
+
+msgid "Model: {model_line}"
+msgstr "模型：{model_line}"
+
+msgid "Model: {e}"
+msgstr "模型：{e}"
+
+msgid "Model: configuration error ({name})."
+msgstr "模型：配置错误（{name}）。"
+
+msgid "Sound preference could not be saved"
+msgstr "无法保存声音偏好"
+
+msgid "High contrast preference could not be saved"
+msgstr "无法保存高对比度偏好"
+
+msgid "ASCII-only preference could not be saved"
+msgstr "无法保存仅 ASCII 偏好"
+
+msgid "Compact text scroll preference could not be saved"
+msgstr "无法保存紧凑文本滚动偏好"
+
+msgid "Sidebar file preview preference could not be saved"
+msgstr "无法保存侧边栏文件预览偏好"
+
+msgid "Sidebar width · {width} columns"
+msgstr "侧边栏宽度 · {width} 列"
+
+msgid "Language servers were not installed · commands are under LSPs"
+msgstr "未安装语言服务器 · 命令在 LSPs 中"
+
+msgid "{name} · {state}\nWorkflow guidance only. /skills clear removes selected guidance."
+msgstr "{name} · {state}\n仅为流程指导。/skills clear 可移除所选指导。"
+
+msgid "{name} · {origin}\n{description}\nDiscovery only. This does not activate the skill."
+msgstr "{name} · {origin}\n{description}\n仅用于发现。不会启用该技能。"
+
+msgid "Alive · {scheme}://{address}:{port} · {transport}"
+msgstr "运行中 · {scheme}://{address}:{port} · {transport}"
+
+msgid "startup failed"
+msgstr "启动失败"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Installed CLI: {value}\nTailnet identity: {value2}\nServe inventory: {serve_state}\nGateway: {value3} · {value4}\nTailnet login, Serve reachability, Gateway API keys, and workspace grants are separate."
+msgstr "已安装的 CLI：{value}\nTailnet 身份：{value2}\nServe 清单：{serve_state}\nGateway：{value3} · {value4}\nTailnet 登录、Serve 可达性、Gateway API 密钥和工作区授权相互独立。"
+
+msgid "not detected"
+msgstr "未检测到"
+
+msgid "not verified"
+msgstr "未验证"
+
+msgid "healthy"
+msgstr "运行正常"
+
+msgid "Tailscale Serve keeps this private route until you disable it here; ISyCode does not remove it on exit because removal is itself an approved change. While Mobile Host is stopped, whatever listens on {target} is reachable from your tailnet at this path. Disable the route when you are not using it."
+msgstr "Tailscale Serve 会保留这条私有路由，直到你在此禁用；ISyCode 退出时不会移除它，因为移除本身也是需批准的更改。Mobile Host 停止时，任何在 {target} 上监听的服务都可通过此路径从你的 tailnet 访问。不用时请禁用该路由。"
+
+msgid "Workspace Authority · Tailscale"
+msgstr "Workspace Authority · Tailscale"
+
+msgid "{value} `{action}` for this workspace?\n\nExact executable: {executable}\n\nA grant permits only this owner and executable to request the action. It does not log in, install packages, expose the Gateway, or bypass IsySentinel. Every mutation still needs its own one-use approval."
+msgstr "要为此工作区{value} `{action}` 吗？\n\n确切的可执行文件：{executable}\n\n授权仅允许此所有者和可执行文件请求该操作。它不会登录、安装软件包、暴露 Gateway 或绕过 IsySentinel。每次变更仍需单独的一次性批准。"
+
+msgid "Tailscale authority change cancelled; no grant changed."
+msgstr "已取消 Tailscale 授权变更；未更改任何授权。"
+
+msgid "Workspace grant {value} · {action}."
+msgstr "工作区授权{value} · {action}。"
+
+msgid "saved"
+msgstr "已保存"
+
+msgid "Tailscale grant was not changed ({name})."
+msgstr "Tailscale 授权未更改（{name}）。"
+
+msgid "Installation blocked · explicitly grant this exact action in Settings → Private access → Permissions."
+msgstr "安装被阻止 · 请在 设置 → 私有访问 → 权限 中明确授权此确切操作。"
+
+msgid "Prepare official Tailscale package"
+msgstr "准备官方 Tailscale 软件包"
+
+msgid "Download and verify"
+msgstr "下载并验证"
+
+msgid "Package preparation cancelled; no package transaction ran."
+msgstr "已取消软件包准备；未运行任何软件包事务。"
+
+msgid "Package preparation {decision} · {value}"
+msgstr "软件包准备 {decision} · {value}"
+
+msgid "Approve this step"
+msgstr "批准此步骤"
+
+msgid "Installation cancelled before this step; no later step ran."
+msgstr "在此步骤前已取消安装；未运行后续步骤。"
+
+msgid "Tailscale install {decision} · {value}"
+msgstr "Tailscale 安装 {decision} · {value}"
+
+msgid "Tailscale step complete · {action_id} · receipt verified."
+msgstr "Tailscale 步骤已完成 · {action_id} · 回执已验证。"
+
+msgid "Automated Tailscale install unavailable ({name}). Use the official manual instructions."
+msgstr "无法自动安装 Tailscale（{name}）。请按官方手动说明操作。"
+
+msgid "Login status check blocked · grant read-only inventory first."
+msgstr "登录状态检查被阻止 · 请先授权只读清单。"
+
+msgid "Login blocked · grant this exact Tailscale executable in Settings → Private access → Permissions."
+msgstr "登录被阻止 · 请在 设置 → 私有访问 → 权限 中授权此确切的 Tailscale 可执行文件。"
+
+msgid "Sign in to Tailscale"
+msgstr "登录 Tailscale"
+
+msgid "Start browser login"
+msgstr "在浏览器中登录"
+
+msgid "Tailscale login cancelled; no process started."
+msgstr "已取消 Tailscale 登录；未启动任何进程。"
+
+msgid "Tailscale login {decision} · {value}"
+msgstr "Tailscale 登录 {decision} · {value}"
+
+msgid "Open this official login link in your browser: {login_url}"
+msgstr "在浏览器中打开此官方登录链接：{login_url}"
+
+msgid "Tailscale login could not start ({name})."
+msgstr "无法启动 Tailscale 登录（{name}）。"
+
+msgid "No active Tailscale login attempt in this process."
+msgstr "此进程中没有正在进行的 Tailscale 登录。"
+
+msgid "Official Tailscale login link: {login_url}"
+msgstr "官方 Tailscale 登录链接：{login_url}"
+
+msgid "Tailscale login · {state} · {reason}"
+msgstr "Tailscale 登录 · {state} · {reason}"
+
+msgid "Serve inventory blocked · grant read-only Tailscale status first."
+msgstr "Serve 清单被阻止 · 请先授权只读的 Tailscale 状态。"
+
+msgid "Serve change blocked · grant this exact Tailscale executable in Settings → Private access → Permissions."
+msgstr "Serve 变更被阻止 · 请在 设置 → 私有访问 → 权限 中授权此确切的 Tailscale 可执行文件。"
+
+msgid "Private Tailscale Serve"
+msgstr "私有 Tailscale Serve"
+
+msgid "Tailscale Serve change cancelled; no command ran."
+msgstr "已取消 Tailscale Serve 变更；未运行任何命令。"
+
+msgid "Tailscale Serve · {decision} · {text}"
+msgstr "Tailscale Serve · {decision} · {text}"
+
+msgid "Receipt · {receipt_id}"
+msgstr "回执 · {receipt_id}"
+
+msgid "Private Serve blocked · {reason}. No route change was approved."
+msgstr "私有 Serve 被阻止 · {reason}。未批准任何路由变更。"
+
+msgid "Manual private-access setup"
+msgstr "手动设置私有访问"
+
+msgid "Done"
+msgstr "完成"
+
+msgid "Bridge is blocked in Secure · execution owner not connected"
+msgstr "Bridge 在 Secure 中被阻止 · 执行所有者未连接"
+
+msgid "Bridge startup blocked in Secure · no execution owner is connected"
+msgstr "Bridge 启动在 Secure 中被阻止 · 未连接任何执行所有者"
+
+msgid "Start Mobile Host first; no PIN was issued."
+msgstr "请先启动 Mobile Host；未发放任何 PIN。"
+
+msgid "Mobile Host grant cancelled; no PIN was issued."
+msgstr "已取消 Mobile Host 授权；未发放任何 PIN。"
+
+msgid "New PIN unavailable ({name}); nothing changed."
+msgstr "无法生成新 PIN（{name}）；未做任何更改。"
+
+msgid "Issue a new pairing PIN"
+msgstr "发放新的配对 PIN"
+
+msgid "Replace the current Mobile Host PIN, if any, and clear failed pairing attempts. The new PIN works once, for 5 minutes, from any device that can reach this host, including your tailnet through a saved private route."
+msgstr "替换当前的 Mobile Host PIN（如有），并清除失败的配对尝试。新 PIN 仅可使用一次，有效期 5 分钟，可从任何能访问此主机的设备使用，包括通过已保存私有路由访问的 tailnet。"
+
+msgid "Issue PIN"
+msgstr "发放 PIN"
+
+msgid "New PIN cancelled; the current PIN is unchanged."
+msgstr "已取消新 PIN；当前 PIN 不变。"
+
+msgid "New pairing PIN {pin} (expires in 5 minutes, one device)."
+msgstr "新的配对 PIN {pin}（5 分钟后过期，限一台设备）。"
+
+msgid "New PIN denied · {value}"
+msgstr "新 PIN 被拒绝 · {value}"
+
+msgid "Grant Mobile Host for this workspace"
+msgstr "为此工作区授权 Mobile Host"
+
+msgid "Grant these actions"
+msgstr "授权这些操作"
+
+msgid "Allow `mobile.host.start` only at {mobile_host_address}, `mobile.pair` only for the one-use Mobile Host pairing challenge, and `mobile.pair.issue` to replace that PIN (each new PIN still asks first). The listener binds loopback only; if a private Tailscale route to it is enabled, tailnet devices can reach it through that route. Pair-issued tokens can read the runtime inventory, request runtime selection, and send heartbeats; they cannot read files, execute runtimes, or access sessions."
+msgstr "仅在 {mobile_host_address} 允许 `mobile.host.start`，仅为一次性 Mobile Host 配对挑战允许 `mobile.pair`，并允许 `mobile.pair.issue` 替换该 PIN（每个新 PIN 仍会先询问）。监听器只绑定回环地址；如果启用了通向它的私有 Tailscale 路由，tailnet 设备可通过该路由访问。配对发放的 token 可以读取运行时清单、请求选择运行时并发送心跳；不能读取文件、执行运行时或访问会话。"
+
+msgid "Bound to loopback. {value}"
+msgstr "仅绑定回环地址。{value}"
+
+msgid "Your saved private route {route} makes it reachable from your tailnet while it runs."
+msgstr "你保存的私有路由 {route} 使其在运行期间可从你的 tailnet 访问。"
+
+msgid "No saved private Tailscale route points here."
+msgstr "没有已保存的私有 Tailscale 路由指向这里。"
+
+msgid "MCP catalog changed or is unavailable; refresh it before calling a tool."
+msgstr "MCP 目录已更改或不可用；调用工具前请先刷新。"
+
+msgid "Gateway URL is invalid; no MCP request was sent."
+msgstr "Gateway URL 无效；未发送任何 MCP 请求。"
+
+msgid "MCP call cancelled; no tool was invoked."
+msgstr "已取消 MCP 调用；未调用任何工具。"
+
+msgid "MCP · awaiting local grant for {name}"
+msgstr "MCP · 等待 {name} 的本地授权"
+
+msgid "MCP call denied before dispatch ({name})."
+msgstr "MCP 调用在发送前被拒绝（{name}）。"
+
+msgid "MCP call {decision} · {value}"
+msgstr "MCP 调用 {decision} · {value}"
+
+msgid "MCP call blocked · {name}"
+msgstr "MCP 调用被阻止 · {name}"
+
+msgid "MCP {name} · Gateway returned a result"
+msgstr "MCP {name} · Gateway 返回了结果"
+
+msgid "MCP tool completed · {name}"
+msgstr "MCP 工具已完成 · {name}"
+
+msgid "Workspace root could not be resolved; no Gateway request was sent."
+msgstr "无法解析工作区根目录；未向 Gateway 发送任何请求。"
+
+msgid "Gateway URL is invalid; no semantic request was sent."
+msgstr "Gateway URL 无效；未发送任何语义请求。"
+
+msgid "Mobile Host grant cancelled; no listener started."
+msgstr "已取消 Mobile Host 授权；未启动任何监听器。"
+
+msgid "Semantic search cancelled; no Gateway request was sent."
+msgstr "已取消语义搜索；未向 Gateway 发送任何请求。"
+
+msgid "Gateway {operation} · awaiting local grant and remote scope"
+msgstr "Gateway {operation} · 等待本地授权和远程范围"
+
+msgid "Semantic request denied before dispatch ({name})."
+msgstr "语义请求在发送前被拒绝（{name}）。"
+
+msgid "Gateway {operation} {decision} · {value}"
+msgstr "Gateway {operation} {decision} · {value}"
+
+msgid "Gateway {operation} blocked · check workspace binding, host grant, and isyco.semantic key scope"
+msgstr "Gateway {operation} 被阻止 · 请检查工作区绑定、主机授权和 isyco.semantic 密钥范围"
+
+msgid "Gateway semantic {operation} · response from configured workspace"
+msgstr "Gateway 语义 {operation} · 来自所配置工作区的响应"
+
+msgid "{verified_receipt_line} · configured workspace IDs matched"
+msgstr "{verified_receipt_line} · 所配置的工作区 ID 匹配"
+
+msgid "Native Gateway {operation} completed"
+msgstr "原生 Gateway {operation} 已完成"
+
+msgid "Broker preview blocked · desktop.file_picker has no registered action owner"
+msgstr "代理预览被阻止 · desktop.file_picker 没有已注册的操作所有者"
+
+msgid "Broker provisioning blocked · desktop.file_picker has no registered action owner"
+msgstr "代理配置被阻止 · desktop.file_picker 没有已注册的操作所有者"
+
+msgid "Managed broker unavailable ({name}); no Docker action ran."
+msgstr "托管代理不可用（{name}）；未运行任何 Docker 操作。"
+
+msgid "Broker {operation} cancelled; no Docker action ran."
+msgstr "代理 {operation} 已取消；未运行任何 Docker 操作。"
+
+msgid "Semantic broker · {operation} · checking exact registry identity"
+msgstr "语义代理 · {operation} · 正在检查确切的注册表身份"
+
+msgid "Broker {operation} failed ({name}); review registry and Docker state."
+msgstr "代理 {operation} 失败（{name}）；请检查注册表和 Docker 状态。"
+
+msgid "Broker {operation} {decision} · {value}"
+msgstr "代理 {operation} {decision} · {value}"
+
+msgid "Broker {operation} not verified"
+msgstr "代理 {operation} 未验证"
+
+msgid "Semantic broker · {operation}\n{text}"
+msgstr "语义代理 · {operation}\n{text}"
+
+msgid "Semantic broker {operation} completed · local receipt verified"
+msgstr "语义代理 {operation} 已完成 · 本地回执已验证"
+
+msgid "This LSP adapter is not available in a supported sandbox."
+msgstr "此 LSP 适配器在受支持的 sandbox 中不可用。"
+
+msgid "Workspace Authority is unavailable; LSP process is denied."
+msgstr "Workspace Authority 不可用；LSP 进程被拒绝。"
+
+msgid "LSP process grant declined; no language server was started."
+msgstr "LSP 进程授权被拒绝；未启动任何语言服务器。"
+
+msgid "Start Mobile Host"
+msgstr "启动 Mobile Host"
+
+msgid "Start host"
+msgstr "启动主机"
+
+msgid "Start the ISyCode Mobile Host on loopback only: http://127.0.0.1:8765. This enables the temporary pairing PIN shown in Settings. {exposure}"
+msgstr "仅在回环地址启动 ISyCode Mobile Host：http://127.0.0.1:8765。这会启用设置中显示的临时配对 PIN。{exposure}"
+
+msgid "LSP request cancelled; no language server was started."
+msgstr "已取消 LSP 请求；未启动任何语言服务器。"
+
+msgid "Mobile Host start cancelled; no listener started."
+msgstr "已取消启动 Mobile Host；未启动任何监听器。"
+
+msgid "LSP · awaiting local grant and starting sandbox"
+msgstr "LSP · 等待本地授权并启动 sandbox"
+
+msgid "LSP request denied before start ({name})."
+msgstr "LSP 请求在启动前被拒绝（{name}）。"
+
+msgid "LSP request {decision} · {value}"
+msgstr "LSP 请求 {decision} · {value}"
+
+msgid "LSP request blocked · grant sandbox in Authority settings"
+msgstr "LSP 请求被阻止 · 请在 Authority 设置中授权 sandbox"
+
+msgid "{label} LSP · {query} · verified workspace/symbol response"
+msgstr "{label} LSP · {query} · 已验证 workspace/symbol 响应"
+
+msgid "LSP request completed · sandbox closed"
+msgstr "LSP 请求已完成 · sandbox 已关闭"
+
+msgid "Mobile Host granted for this workspace. Starting it still asks first."
+msgstr "已为此工作区授权 Mobile Host。启动时仍会先询问。"
+
+msgid "Mobile Host grant cancelled; nothing changed."
+msgstr "已取消 Mobile Host 授权；未做任何更改。"
+
+msgid "Revoke Mobile Host for this workspace"
+msgstr "撤销此工作区的 Mobile Host"
+
+msgid "Remove the saved `mobile.host.start`, `mobile.pair` and `mobile.pair.issue` grants. New starts, new PINs and new pairing are denied. A host already running keeps serving devices paired earlier until ISyCode exits; their tokens still expire within an hour."
+msgstr "移除已保存的 `mobile.host.start`、`mobile.pair` 和 `mobile.pair.issue` 授权。新的启动、新 PIN 和新配对都将被拒绝。已在运行的主机会继续为先前配对的设备服务，直到 ISyCode 退出；它们的 token 仍会在一小时内过期。"
+
+msgid "Revoke Mobile Host grants"
+msgstr "撤销 Mobile Host 授权"
+
+msgid "Mobile Host grants revoked for this workspace."
+msgstr "已撤销此工作区的 Mobile Host 授权。"
+
+msgid "Mobile Host grants unchanged."
+msgstr "Mobile Host 授权未更改。"
+
+msgid "Mobile Host grants could not be changed; starts and pairing stay denied unless a valid saved grant remains."
+msgstr "无法更改 Mobile Host 授权；除非仍有有效的已保存授权，否则启动和配对仍被拒绝。"
+
+msgid "Mobile Host start denied · {value}"
+msgstr "Mobile Host 启动被拒绝 · {value}"
+
+msgid "Mobile Host started at http://127.0.0.1:8765 · pairing PIN {code} (expires in 5 minutes)."
+msgstr "Mobile Host 已在 http://127.0.0.1:8765 启动 · 配对 PIN {code}（5 分钟后过期）。"
+
+msgid "Mobile Host could not start ({name})."
+msgstr "无法启动 Mobile Host（{name}）。"
+
+msgid "Conversation deletion · {decision} · {value}"
+msgstr "删除对话 · {decision} · {value}"
+
+msgid "Iteration kept."
+msgstr "已保留迭代。"
+
+msgid "Iteration deletion · {decision} · {value}"
+msgstr "删除迭代 · {decision} · {value}"
+
+msgid "Conversation not saved · {value}"
+msgstr "对话未保存 · {value}"
+
+msgid "Session management needs a recurring workspace and session permissions."
+msgstr "会话管理需要常用工作区和会话权限。"
+
+msgid "This conversation has not diverged; it saves normally."
+msgstr "此对话未出现分歧；会正常保存。"
+
+msgid "Search unavailable · {value}"
+msgstr "搜索不可用 · {value}"
+
+msgid "Portable session JSON · common secret patterns redacted; review before sharing:"
+msgstr "可移植会话 JSON · 已遮盖常见密钥模式；分享前请检查："
+
+msgid "Export denied · {value}"
+msgstr "导出被拒绝 · {value}"
+
+msgid "Session {operation} completed · {changed}"
+msgstr "会话 {operation} 已完成 · {changed}"
+
+msgid "Session unchanged · {value}"
+msgstr "会话未更改 · {value}"
+
+msgid "/sessions list|new|resume ID|search TEXT|rename TITLE|fork|export|import JSON|delete|diverged"
+msgstr "/sessions list|new|resume ID|search 文本|rename 标题|fork|export|import JSON|delete|diverged"
+
+msgid "Session changed elsewhere · this window stopped saving to it; nothing was merged or overwritten."
+msgstr "会话已在别处更改 · 此窗口已停止保存到该会话；未 merge 或覆盖任何内容。"
+
+msgid "Not saved as a new conversation · {value}"
+msgstr "未另存为新对话 · {value}"
+
+msgid "Saved this window's continuity as a new conversation · {value} · the other one stays as it was."
+msgstr "已将此窗口的内容另存为新对话 · {value} · 另一个对话保持原样。"
+
+msgid "A turn is still running here; stop it (Esc) before opening the saved version."
+msgstr "此处仍有回合在进行；请先停止（Esc）再打开已保存版本。"
+
+msgid "Discard what exists only in this window?"
+msgstr "丢弃仅存在于此窗口的内容？"
+
+msgid "Messages, draft and notes from this window that are not in the saved conversation will be lost. The saved version opens exactly as it is."
+msgstr "此窗口中不在已保存对话里的消息、草稿和笔记将会丢失。已保存版本将原样打开。"
+
+msgid "Discard and open saved"
+msgstr "丢弃并打开已保存版本"
+
+msgid "Kept this window as it is · still not saving · /sessions diverged to choose again."
+msgstr "此窗口保持原样 · 仍未保存 · 使用 /sessions diverged 重新选择。"
+
+msgid "Saved version not opened · {value}"
+msgstr "未打开已保存版本 · {value}"
+
+msgid "Continuing without saving · this conversation is not written by this window until you choose · closing ISyCode discards what exists only here · /sessions diverged to choose again."
+msgstr "继续而不保存 · 在你选择之前此窗口不会写入此对话 · 关闭 ISyCode 将丢弃仅存在于此处的内容 · 使用 /sessions diverged 重新选择。"
+
+msgid "Earlier tools · {len} · not run again"
+msgstr "较早的工具 · {len} · 不会再次运行"
+
+msgid "No other conversation is open."
+msgstr "没有其他打开的对话。"
+
+msgid "/msg <name or id> <message>"
+msgstr "/msg <名称或 id> <消息>"
+
+msgid "That conversation is on screen. Type the message here."
+msgstr "该对话已在屏幕上。请在此输入消息。"
+
+msgid "Write the message after the name. /msg <name or id> <message>"
+msgstr "请在名称后输入消息。/msg <名称或 id> <消息>"
+
+msgid "That message is too large."
+msgstr "该消息过大。"
+
+msgid "That conversation is not open."
+msgstr "该对话未打开。"
+
+msgid "{title} already has 8 messages waiting. Draft kept."
+msgstr "{title} 已有 8 条消息在等待。草稿已保留。"
+
+msgid "Queued for {title}. It answers after the current reply."
+msgstr "已为 {title} 排队。将在当前回复后作答。"
+
+msgid "Sent to {title}. It answers there as your message."
+msgstr "已发送到 {title}。它会在那里作为你的消息作答。"
+
+msgid "[Hive] Dispatched message to agent @{agent_id} in conversation lane {lane_key}."
+msgstr "[Hive] 已向对话 lane {lane_key} 中的代理 @{agent_id} 发送消息。"
+
+msgid "[Hive] Queued message for agent @{agent_id} behind its current turn."
+msgstr "[Hive] 已为代理 @{agent_id} 排队，排在其当前回合之后。"
+
+msgid "[Hive] Agent @{agent_id} lane queue is full; message remains pending in inbox."
+msgstr "[Hive] 代理 @{agent_id} 的 lane 队列已满；消息仍在收件箱中等待。"
+
+msgid "Keep the draft; Send must be empty to steer a selected queued message"
+msgstr "保留草稿；要用所选的排队消息进行 steer，发送框必须为空"
+
+msgid "A steer attempt is still pending; this message stays queued"
+msgstr "仍有 steer 尝试待处理；此消息保持排队"
+
+msgid "Steer got no confirmed response · message returned to the queue"
+msgstr "steer 未获得确认的回复 · 消息已退回队列"
+
+msgid "Draft kept; queued message stays pending"
+msgstr "草稿已保留；排队消息仍待发送"
+
+msgid "Queue paused · {text}"
+msgstr "队列已暂停 · {text}"
+
+msgid "Saving conversations is off · turn it on in Settings → Authority."
+msgstr "保存对话已关闭 · 请在 设置 → Authority 中开启。"
+
+msgid "Conversations unavailable · {value}"
+msgstr "对话不可用 · {value}"
+
+msgid "Folder selection for {label} failed · {value}"
+msgstr "为 {label} 选择文件夹失败 · {value}"
+
+msgid "Multi Harness folder not saved · {value}"
+msgstr "Multi Harness 文件夹未保存 · {value}"
+
+msgid "Multi Harness · {label} folder saved"
+msgstr "Multi Harness · 已保存 {label} 文件夹"
+
+msgid "Multi Harness model selection was not saved"
+msgstr "未保存 Multi Harness 模型选择"
+
+msgid "Model selection saved · {model_display_label}"
+msgstr "已保存模型选择 · {model_display_label}"
+
+msgid "Transcript copy failed · {value}"
+msgstr "复制对话记录失败 · {value}"
+
+msgid "Transcript copy could not access the conversation owner."
+msgstr "复制对话记录时无法访问对话所有者。"
+
+msgid "Transcript copy stopped · {value}"
+msgstr "复制对话记录已停止 · {value}"
+
+msgid "Transcript copy stopped · session id was not returned."
+msgstr "复制对话记录已停止 · 未返回会话 id。"
+
+msgid "Copied transcript from {label} · {len} messages"
+msgstr "已从 {label} 复制对话记录 · {len} 条消息"
+
+msgid "Repair compose is empty."
+msgstr "修复内容为空。"
+
+msgid "Repair conversation opened · running the compose in the background."
+msgstr "已打开修复对话 · 正在后台运行修复内容。"
+
+msgid "Repair lane is busy; the compose is queued."
+msgstr "修复 lane 繁忙；修复内容已排队。"
+
+msgid "Repair compose queued behind the current turn."
+msgstr "修复内容已排在当前回合之后。"
+
+msgid "External Hive launch is unavailable; opening an ISyCode repair conversation with the current model."
+msgstr "无法从外部启动 Hive；正在用当前模型打开 ISyCode 修复对话。"
+
+msgid "Iteration sessions unavailable; ordinary sessions preserved."
+msgstr "迭代会话不可用；普通会话已保留。"
+
+msgid "Only recurring workspaces keep conversations; this run stays in memory."
+msgstr "只有常用工作区会保存对话；本次运行仅保存在内存中。"
+
+msgid "Iteration unavailable or denied."
+msgstr "迭代不可用或被拒绝。"
+
+msgid "Saving conversations is off; nothing was resumed."
+msgstr "保存对话已关闭；未恢复任何内容。"
+
+msgid "Conversation not resumed · {value}"
+msgstr "未恢复对话 · {value}"
+
+msgid "Conversation reopened · {title} · {len} messages"
+msgstr "已重新打开对话 · {title} · {len} 条消息"
+
+msgid "Conversation unavailable · {value}"
+msgstr "对话不可用 · {value}"
+
+msgid "Enable Delete current conversation in Settings → Authority first."
+msgstr "请先在 设置 → Authority 中开启“删除当前对话”。"
+
+msgid "Conversation kept."
+msgstr "已保留对话。"
+
+msgid "Memory {decision} · {value}"
+msgstr "记忆 {decision} · {value}"
+
+msgid "Memory {operation} · receipt {receipt_id}"
+msgstr "记忆 {operation} · 回执 {receipt_id}"
+
+msgid "Model: {model_display_name} · {provider_label}"
+msgstr "模型：{model_display_name} · {provider_label}"
+
+msgid "Host: {host_name}"
+msgstr "主机：{host_name}"
+
+msgid "\n  Understood: {understood}"
+msgstr "\n  理解为：{understood}"
+
+msgid "Plan ({len} steps):"
+msgstr "计划（{len} 步）："
+
+msgid "\n  Proposal only · it carries no authority."
+msgstr "\n  仅为提议 · 不具任何授权。"
+
+msgid "Execution is disabled in Secure until each step has an ISyCode owner, grant, Sentinel decision and required approval."
+msgstr "在 Secure 中，执行将保持禁用，直到每个步骤都有 ISyCode 所有者、授权、Sentinel 决定和所需的批准。"
+
+msgid "Tokens: {value}"
+msgstr "Token：{value}"
+
+msgid "\n  {origin} proposal is ready for inspection; it cannot be run through IsyMotron."
+msgstr "\n  {origin} 提议已可供检查；无法通过 IsyMotron 运行。"
+
+msgid "\n  Refused: {value}"
+msgstr "\n  已拒绝：{value}"
+
+msgid "no plan possible"
+msgstr "无法制定计划"
+
+msgid "This is correct behavior, not a failure."
+msgstr "这是正确的行为，并非故障。"
+
+msgid "\n  Plan rejected: {reason}. No executable plan was retained."
+msgstr "\n  计划被拒绝：{reason}。未保留任何可执行计划。"
+
+msgid "\n  Planning failed ({name}). No executable plan was retained."
+msgstr "\n  规划失败（{name}）。未保留任何可执行计划。"
+
+msgid "No plan to run. Use /plan <intent> first."
+msgstr "没有可运行的计划。请先使用 /plan <意图>。"
+
+msgid "Wait for the current task to finish before running a plan."
+msgstr "请等待当前任务完成后再运行计划。"
+
+msgid "Plan cleared · authority could not be revalidated"
+msgstr "已清除计划 · 无法重新验证授权"
+
+msgid "Authority could not be revalidated ({name}); plan cleared."
+msgstr "无法重新验证授权（{name}）；已清除计划。"
+
+msgid "Plan cleared · authority changed"
+msgstr "已清除计划 · 授权已更改"
+
+msgid "Host identity, grants, capabilities, or scopes changed after planning. Create a new plan before execution."
+msgstr "规划后主机身份、授权、能力或范围已更改。执行前请创建新计划。"
+
+msgid "Plan cleared · authority details unavailable"
+msgstr "已清除计划 · 授权详情不可用"
+
+msgid "Authority details could not be loaded ({name}); plan cleared."
+msgstr "无法加载授权详情（{name}）；已清除计划。"
+
+msgid "\n  Review {last_plan_origin} plan ({n} steps; {effect}):"
+msgstr "\n  审查 {last_plan_origin} 计划（{n} 步；{effect}）："
+
+msgid "Host: {last_plan_host}"
+msgstr "主机：{last_plan_host}"
+
+msgid "Host identity: {get} · {get2} · {get3}"
+msgstr "主机身份：{get} · {get2} · {get3}"
+
+msgid "Scope {capability}: {scope_text}"
+msgstr "范围 {capability}：{scope_text}"
+
+msgid "Select {label} in Overview within 10s to execute it."
+msgstr "请在 10 秒内在概览中选择 {label} 以执行。"
+
+msgid "Awaiting confirmation · expires in 10s"
+msgstr "等待确认 · 10 秒后过期"
+
+msgid "\n  Executing on {host_name}..."
+msgstr "\n  正在 {host_name} 上执行..."
+
+msgid "DENY before execution: {e} No step was submitted to the host; plan cleared."
+msgstr "执行前 DENY：{e} 未向主机提交任何步骤；已清除计划。"
+
+msgid "Execution returned no status ({name}); the host outcome is unknown. Do not retry until host state or receipts are checked."
+msgstr "执行未返回状态（{name}）；主机上的结果未知。在检查主机状态或回执之前请勿重试。"
+
+msgid "Receipt verification unavailable ({name}); allowed steps remain untrusted."
+msgstr "回执验证不可用（{name}）；已允许的步骤仍不可信。"
+
+msgid "{index}. ALLOW decision · UNKNOWN execution ({detail}) · receipt {value} · verify {verify_status}"
+msgstr "{index}. ALLOW 决定 · 执行情况未知（{detail}）· 回执 {value} · 验证 {verify_status}"
+
+msgid "{index}. ALLOW decision · execution evidence not trusted · receipt {value} · verify {verify_status}"
+msgstr "{index}. ALLOW 决定 · 执行证据不可信 · 回执 {value} · 验证 {verify_status}"
+
+msgid "{index}. ALLOW — receipt {value} · verify PASS"
+msgstr "{index}. ALLOW — 回执 {value} · 验证 PASS"
+
+msgid "Read result:\n{preview}"
+msgstr "读取结果：\n{preview}"
+
+msgid "Directory listed. Use Files for the filtered browser view."
+msgstr "已列出目录。使用“文件”查看筛选后的视图。"
+
+msgid "{index}. DENY — {reason} · receipt {value} · verify {verify_status}"
+msgstr "{index}. DENY — {reason} · 回执 {value} · 验证 {verify_status}"
+
+msgid "Stopped at step {stopped_at}: {stop_reason}"
+msgstr "在第 {stopped_at} 步停止：{stop_reason}"
+
+msgid "\n  Done: {ok_count} demonstrated, {deny_count} denied, {unknown_count} unknown."
+msgstr "\n  完成：{ok_count} 项已证实，{deny_count} 项被拒绝，{unknown_count} 项未知。"
+
+msgid "Local read-only execution; write capabilities were removed from this runtime."
+msgstr "本地只读执行；已从此运行时移除写入能力。"
+
+msgid "Demo execution only; real workspace writes are not enabled here."
+msgstr "仅为演示执行；此处未启用真实的工作区写入。"
+
+msgid "Tool duration · {label} · {elapsed}"
+msgstr "工具耗时 · {label} · {elapsed}"
+
+msgid "MCP · awaiting local grant for {gateway_tool_target}"
+msgstr "MCP · 等待 {gateway_tool_target} 的本地授权"
+
+msgid "MCP {gateway_tool_target} · Gateway returned a result"
+msgstr "MCP {gateway_tool_target} · Gateway 返回了结果"
+
+msgid "Bridge is not available here ({name})."
+msgstr "此处无法使用 Bridge（{name}）。"
+
+msgid "Bridge registration was denied."
+msgstr "Bridge 注册被拒绝。"
+
+msgid "Registered on the Bridge as {identity}."
+msgstr "已在 Bridge 上注册为 {identity}。"
+
+msgid "Tool denied · unregistered tool name"
+msgstr "工具被拒绝 · 未注册的工具名"
+
+msgid "Tool denied · {name} · invalid arguments"
+msgstr "工具被拒绝 · {name} · 参数无效"
+
+msgid "✗ Batch rejected · nothing was written"
+msgstr "✗ batch 已拒绝 · 未写入任何内容"
+
+msgid "Applying batch-approved write · {get}"
+msgstr "正在应用 batch 批准的写入 · {get}"
+
+msgid "Tool denied · {action_id} · authority/owner unavailable"
+msgstr "工具被拒绝 · {action_id} · 授权/所有者不可用"
+
+msgid "✓ {alias} · {value} · completed"
+msgstr "✓ {alias} · {value} · 已完成"
+
+msgid "Iteration · {title} · {status}"
+msgstr "迭代 · {title} · {status}"
+
+msgid "Iteration paused · {text} · /iteration retry {iteration_session_id}"
+msgstr "迭代已暂停 · {text} · /iteration retry {iteration_session_id}"
+
+msgid "Finish the active task before starting an iteration."
+msgstr "请先完成当前任务再开始迭代。"
+
+msgid "Usage: /iteration <objective> · choose three participants. Esc cancels."
+msgstr "用法：/iteration <目标> · 选择三位参与者。Esc 取消。"
+
+msgid "Iteration order · {join}"
+msgstr "迭代顺序 · {join}"
+
+msgid "Iteration · {status}"
+msgstr "迭代 · {status}"
+
+msgid "Iteration aborted; durable contributions preserved."
+msgstr "迭代已中止；持久贡献已保留。"
+
+msgid "Iteration unavailable · {name}"
+msgstr "迭代不可用 · {name}"
+
+msgid "Subagent · {model_display_label} · starting"
+msgstr "子代理 · {model_display_label} · 正在启动"
+
+msgid "Subagent · {model_display_label} · {value}"
+msgstr "子代理 · {model_display_label} · {value}"
+
+msgid "Subagent tool · {name}"
+msgstr "子代理工具 · {name}"
+
+msgid "Subagent · {model_display_label}\n{shown}"
+msgstr "子代理 · {model_display_label}\n{shown}"
+
+msgid "Subagent · cancelled; completed effects remain in the action journal"
+msgstr "子代理 · 已取消；已完成的效果保留在操作日志中"
+
+msgid "Subagent · {provider_hint}"
+msgstr "子代理 · {provider_hint}"
+
+msgid "Skill unavailable or selection too large; existing guidance preserved."
+msgstr "技能不可用或选择过大；保留现有指导。"
+
+msgid "MCP {name} configured. /mcp start {name} reviews the npm download/process before starting."
+msgstr "已配置 MCP {name}。/mcp start {name} 会在启动前审查 npm 下载/进程。"
+
+msgid "MCP preset could not be added; inspect the private config, existing name and available presets."
+msgstr "无法添加 MCP 预设；请检查私有配置、现有名称和可用预设。"
+
+msgid "MCP config problem · {value}"
+msgstr "MCP 配置问题 · {value}"
+
+msgid "No local MCP servers configured. Add them to {mcp_config_path} as {{\"servers\": {{\"name\": {{\"command\": [\"program\", \"arg\"]}}}}}}."
+msgstr "未配置本地 MCP 服务器。请按 {{\"servers\": {{\"name\": {{\"command\": [\"program\", \"arg\"]}}}}}} 的格式添加到 {mcp_config_path}。"
+
+msgid "/mcp start <name> asks before starting; each tool call asks again."
+msgstr "/mcp start <名称> 会在启动前询问；每次工具调用也会再次询问。"
+
+msgid "MCP {name} cannot start · {value}"
+msgstr "MCP {name} 无法启动 · {value}"
+
+msgid "Allow this server"
+msgstr "允许此服务器"
+
+msgid "Allow MCP server {name} in this workspace?"
+msgstr "允许在此工作区使用 MCP 服务器 {name}？"
+
+msgid "Saves a grant for {executable} and for calls to {name}. Starting it and every tool call still ask first. The server runs with your user's permissions."
+msgstr "为 {executable} 及对 {name} 的调用保存授权。启动它以及每次工具调用仍会先询问。该服务器以你的用户权限运行。"
+
+msgid "MCP {name} not allowed; nothing started."
+msgstr "未允许 MCP {name}；未启动任何内容。"
+
+msgid "MCP grant could not be saved ({name})."
+msgstr "无法保存 MCP 授权（{name}）。"
+
+msgid "MCP {name} not started."
+msgstr "MCP {name} 未启动。"
+
+msgid "MCP {name} started · {len} tools · receipt {receipt_id}"
+msgstr "MCP {name} 已启动 · {len} 个工具 · 回执 {receipt_id}"
+
+msgid "MCP {name} {decision} · {value}"
+msgstr "MCP {name} {decision} · {value}"
+
+msgid "MCP call requested · {server}.{tool} · review it"
+msgstr "已请求 MCP 调用 · {server}.{tool} · 请审查"
+
+msgid "MCP call rejected · nothing was sent"
+msgstr "MCP 调用已拒绝 · 未发送任何内容"
+
+msgid "MCP {decision} · {value}"
+msgstr "MCP {decision} · {value}"
+
+msgid "Browser snapshot contained no readable page text; raw output withheld."
+msgstr "浏览器 snapshot 中没有可读的页面文本；已隐藏原始输出。"
+
+msgid "Browser text discarded · it was not shared with the model."
+msgstr "已丢弃浏览器文本 · 未与模型共享。"
+
+msgid "MCP ALLOW · {server}.{tool} · receipt {receipt_id}"
+msgstr "MCP ALLOW · {server}.{tool} · 回执 {receipt_id}"
+
+msgid "Workspace pack cancelled · no file contents were read"
+msgstr "已取消工作区打包 · 未读取任何文件内容"
+
+msgid "Workspace pack failed · {value}"
+msgstr "工作区打包失败 · {value}"
+
+msgid "Workspace pack · {len} files · ~{estimated_tokens} tokens"
+msgstr "工作区打包 · {len} 个文件 · 约 {estimated_tokens} 个 token"
+
+msgid "Memory action denied · explicitly revoked in workspace authority"
+msgstr "记忆操作被拒绝 · 已在工作区授权中明确撤销"
+
+msgid "Memory {operation} rejected · nothing was read or changed"
+msgstr "记忆 {operation} 已拒绝 · 未读取或更改任何内容"
+
+msgid "Context access declined · no file was read"
+msgstr "已拒绝上下文访问 · 未读取任何文件"
+
+msgid "Context access failed · {name}"
+msgstr "上下文访问失败 · {name}"
+
+msgid "Context loaded · {source} · {requester} · {persistence} · receipt {receipt_id}"
+msgstr "已加载上下文 · {source} · {requester} · {persistence} · 回执 {receipt_id}"
+
+msgid "Pyright check skipped · {value}"
+msgstr "已跳过 Pyright 检查 · {value}"
+
+msgid "Pyright · {path} · no errors or warnings"
+msgstr "Pyright · {path} · 没有错误或警告"
+
+msgid "Pyright {severity} · {path}:{line}:{column} · {value}"
+msgstr "Pyright {severity} · {path}:{line}:{column} · {value}"
+
+msgid "Nothing undone · {value}"
+msgstr "未撤销任何内容 · {value}"
+
+msgid "Undo cancelled · {path} unchanged"
+msgstr "已取消撤销 · {path} 未更改"
+
+msgid "Undo {decision} · {value}"
+msgstr "撤销 {decision} · {value}"
+
+msgid "Commit not proposed · {reason}"
+msgstr "未提议 commit · {reason}"
+
+msgid "Commit · {len} files from this turn · /undo to revert"
+msgstr "commit · 本回合的 {len} 个文件 · /undo 可撤回"
+
+msgid "Commit requested · {len} files · review it"
+msgstr "已请求 commit · {len} 个文件 · 请审查"
+
+msgid "Commit rejected · nothing was committed"
+msgstr "commit 已拒绝 · 未 commit 任何内容"
+
+msgid "Git {decision} · {action} · {value}"
+msgstr "Git {decision} · {action} · {value}"
+
+msgid "Git · {branch} · {value}"
+msgstr "Git · {branch} · {value}"
+
+msgid "clean"
+msgstr "干净"
+
+msgid "{count} changed files"
+msgstr "{count} 个文件已更改"
+
+msgid "1 changed file"
+msgstr "1 个文件已更改"
+
+msgid "Committed {commit_id} · receipt {receipt_id}"
+msgstr "已提交 {commit_id} · 回执 {receipt_id}"
+
+msgid "Git ALLOW · {action} · receipt {receipt_id}"
+msgstr "Git ALLOW · {action} · 回执 {receipt_id}"
+
+msgid "Command denied · workspace.command.run · {reason}"
+msgstr "命令被拒绝 · workspace.command.run · {reason}"
+
+msgid "Command denied · {reason}"
+msgstr "命令被拒绝 · {reason}"
+
+msgid "Command · quiet {title} · {value}"
+msgstr "命令 · {title} 免询问 · {value}"
+
+msgid "Command requested · {value} · review it"
+msgstr "已请求命令 · {value} · 请审查"
+
+msgid "Command rejected · nothing ran"
+msgstr "命令已拒绝 · 未运行任何内容"
+
+msgid "Command denied by user"
+msgstr "命令被用户拒绝"
+
+msgid "Command authorized"
+msgstr "命令已授权"
+
+msgid "Command outcome · {decision}"
+msgstr "命令结果 · {decision}"
+
+msgid "Tool denied · {action} · not enabled for this workspace"
+msgstr "工具被拒绝 · {action} · 此工作区未启用"
+
+msgid "Tool denied · {action} · {reason}"
+msgstr "工具被拒绝 · {action} · {reason}"
+
+msgid "Tool · quiet {title} · {action} · {path}"
+msgstr "工具 · {title} 免询问 · {action} · {path}"
+
+msgid "Tool requested · {action} · {path} · review it"
+msgstr "已请求工具 · {action} · {path} · 请审查"
+
+msgid "✗ You rejected · {path} · nothing changed"
+msgstr "✗ 你已拒绝 · {path} · 未做任何更改"
+
+msgid "✓ You approved · {value} {path}"
+msgstr "✓ 你已批准 · {value} {path}"
+
+msgid "Tool ALLOW · {text} · receipt {receipt_id}"
+msgstr "工具 ALLOW · {text} · 回执 {receipt_id}"
+
+msgid "Tool {decision} · {action} · {value}"
+msgstr "工具 {decision} · {action} · {value}"
+
+msgid "Diff · {path} · +{added} −{removed} · applied without a review screen"
+msgstr "diff · {path} · +{added} −{removed} · 未经审查界面直接应用"
+
+msgid "Tool denied · workspace.files.write · file editing is off"
+msgstr "工具被拒绝 · workspace.files.write · 文件编辑已关闭"
+
+msgid "Tool denied · workspace_edit · invalid arguments"
+msgstr "工具被拒绝 · workspace_edit · 参数无效"
+
+msgid "Tool denied · workspace.files.write · invalid arguments"
+msgstr "工具被拒绝 · workspace.files.write · 参数无效"
+
+msgid "Tool denied · workspace.files.write · {reason}"
+msgstr "工具被拒绝 · workspace.files.write · {reason}"
+
+msgid "Injected · {path}"
+msgstr "已注入 · {path}"
+
+msgid "Tool · quiet {title} · {verb} · {path}"
+msgstr "工具 · {title} 免询问 · {verb} · {path}"
+
+msgid "Tool · batch-approved · {verb} · {path}"
+msgstr "工具 · 已 batch 批准 · {verb} · {path}"
+
+msgid "ISyCode local receipt {value} verified PASS. Content stays in this process memory."
+msgstr "ISyCode 本地回执 {value} 验证 PASS。内容仅保留在此进程内存中。"
+
+msgid "Tool · session trust · {verb} · {path}"
+msgstr "工具 · 会话信任 · {verb} · {path}"
+
+msgid "Tool requested · {verb} · {path} · review the diff{value}"
+msgstr "已请求工具 · {verb} · {path} · 请审查 diff{value}"
+
+msgid "matched ignoring {match}"
+msgstr "忽略 {match} 后匹配"
+
+msgid "Trust granted for this session only · folder {folder_alias} · writes apply without asking until ISyCode closes; nothing is saved"
+msgstr "仅为本次会话授予信任 · 文件夹 {folder_alias} · 在关闭 ISyCode 前写入无需询问；不会保存任何内容"
+
+msgid "✗ You rejected · {path} · nothing was written"
+msgstr "✗ 你已拒绝 · {path} · 未写入任何内容"
+
+msgid "✓ Quiet {title} · {folder_alias} · {path}"
+msgstr "✓ {title} 免询问 · {folder_alias} · {path}"
+
+msgid "Tool ALLOW · workspace.files.write · {path} · receipt {receipt_id}"
+msgstr "工具 ALLOW · workspace.files.write · {path} · 回执 {receipt_id}"
+
+msgid "Tool {decision} · workspace.files.write · {value}"
+msgstr "工具 {decision} · workspace.files.write · {value}"
+
+msgid "Injected AGENTS.md context removed"
+msgstr "已移除注入的 AGENTS.md 上下文"
+
+msgid "Context picker unavailable · {error}"
+msgstr "上下文选择器不可用 · {error}"
+
+msgid "Workspace preference not prepared · {value}"
+msgstr "工作区偏好未准备好 · {value}"
+
+msgid "Preference unchanged · {path}"
+msgstr "偏好未更改 · {path}"
+
+msgid "Preference not saved · {value}"
+msgstr "偏好未保存 · {value}"
+
+msgid "Context selection cancelled"
+msgstr "已取消上下文选择"
+
+msgid "Command unchanged · /{name}"
+msgstr "命令未更改 · /{name}"
+
+msgid "Copied /{name} · legacy original kept · receipt {receipt_id}"
+msgstr "已复制 /{name} · 保留旧版原件 · 回执 {receipt_id}"
+
+msgid "Command not copied · {value}"
+msgstr "命令未复制 · {value}"
+
+msgid "Folder picker unavailable · {value}"
+msgstr "文件夹选择器不可用 · {value}"
+
+msgid "Folder added · {alias} · {path}"
+msgstr "已添加文件夹 · {alias} · {path}"
+
+msgid "Folder not added · {value}"
+msgstr "未添加文件夹 · {value}"
+
+msgid "Automatic edit setting unchanged · {value}"
+msgstr "自动编辑设置未更改 · {value}"
+
+msgid "Automatic file edits · {alias} · {value}"
+msgstr "自动文件编辑 · {alias} · {value}"
+
+msgid "ON — dangerous"
+msgstr "开启 — 危险"
+
+msgid "OFF — each edit asks"
+msgstr "关闭 — 每次编辑都会询问"
+
+msgid "Context request denied · {value}"
+msgstr "上下文请求被拒绝 · {value}"
+
+msgid "Idea captured · {len} pending · /ideas reviews"
+msgstr "已捕获想法 · {len} 条待处理 · /ideas 查看"
+
+msgid "No compacted text in this draft."
+msgstr "此草稿中没有压缩的文本。"
+
+msgid "Enter: steer · Space: expand · Esc: undo"
+msgstr "Enter：steer · 空格：展开 · Esc：撤销"
+
+msgid "Owner: agent context load\nScope: {path}\nDuration: one-use approval\nNot granted: no edits, no commands, no secrets, no other files"
+msgstr "所有者：代理上下文加载\n范围：{path}\n期限：一次性批准\n未授予：编辑、命令、密钥或其他文件"
+
+msgid "Review {len} proposed changes in one go"
+msgstr "一次审查 {len} 项拟议更改"
+
+msgid "Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets"
+msgstr "所有者：工作区文件编辑（batch）\n范围：{len} 个文件 · +{added} / -{removed} 行\n期限：每项更改一次性、绑定摘要的批准\n未授予：其他文件、命令或密钥"
+
+msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
+msgstr "共 {len} 个文件 +{added} / -{removed} 行。在此批准会为每项更改发放一次性、绑定摘要的批准——不会创建持久权限，应用前发生变化的文件将被拒绝。"
+
+msgid "RTK suggestion: {join}"
+msgstr "RTK 建议：{join}"
+
+msgid "Executes the original once; output compression by native RTK pipe.\n{version} · SHA-256 {sha256}"
+msgstr "原命令执行一次；输出由原生 RTK 管道压缩。\n{version} · SHA-256 {sha256}"
+
+msgid "Commit {count} files"
+msgstr "commit {count} 个文件"
+
+msgid "Commit 1 file"
+msgstr "commit 1 个文件"
+
+msgid "{message_}\n\nFiles: {files}\nHooks do not run and nothing is pushed. If a file changes before you approve, the commit is refused."
+msgstr "{message_}\n\n文件：{files}\n不会运行钩子，也不会推送。如果在你批准前有文件变化，commit 将被拒绝。"
+
+msgid "Share page text with the model? · {page_title}"
+msgstr "与模型共享页面文本？· {page_title}"
+
+msgid "Filtered {input_chars} source characters to {filtered_chars}. {timing} Fidelity and coverage are not automatically certified. The page is untrusted data. Approving sends exactly the text below to your selected model; saved conversations may retain it.{suffix}"
+msgstr "已将 {input_chars} 个源字符过滤为 {filtered_chars} 个。{timing} 保真度和覆盖率不会自动认证。该页面是不可信数据。批准后会将下方文本原样发送给你选择的模型；已保存的对话可能会保留它。{suffix}"
+
+msgid "Discard · n"
+msgstr "丢弃 · n"
+
+msgid "Share with model · y"
+msgstr "与模型共享 · y"
+
+msgid "The listed files will be read and their contents returned to the selected model. The token count is approximate. File contents are untrusted data, never instructions."
+msgstr "将读取所列文件并把内容返回给所选模型。token 数量为近似值。文件内容是不可信数据，绝不是指令。"
+
+msgid "Workspace memory · {operation}"
+msgstr "工作区记忆 · {operation}"
+
+msgid "{copy}\n\nHost: {host}"
+msgstr "{copy}\n\n主机：{host}"
+
+msgid "Host: {host}"
+msgstr "主机：{host}"
+
+msgid "Workspace: {root}\n\nThis stores only the broker.preview grant for this .isyroot. The selected project still needs its own workspace.files.read grant. Preview reads recipe metadata and hashes, does not launch Docker, and cannot start a container."
+msgstr "工作区：{root}\n\n这只会为此 .isyroot 保存 broker.preview 授权。所选项目仍需要自己的 workspace.files.read 授权。预览只读取配方元数据和哈希，不会启动 Docker，也无法启动容器。"
+
+msgid "Click a model. Context, reasoning and tools show here."
+msgstr "点击一个模型。上下文、推理和工具信息显示在此。"
+
+msgid "Folders  0/{len}"
+msgstr "文件夹  0/{len}"
+
+msgid "Confirm Gateway MCP call · {tool_name}"
+msgstr "确认 Gateway MCP 调用 · {tool_name}"
+
+msgid "{value}\nEndpoint: {endpoint}\nThis sends the exact arguments below to the Gateway MCP. A one-use approval is required; the remote Gateway validates its own key and operation policy."
+msgstr "{value}\n端点：{endpoint}\n这会将下方参数原样发送到 Gateway MCP。需要一次性批准；远程 Gateway 会校验其自身的密钥和操作策略。"
+
+msgid "Endpoint: {endpoint}\nConfigured workspace ID: {workspace_id}\nThe ID is an operator-managed binding, not a filesystem grant. Each request is denied if the Gateway reports a different ID."
+msgstr "端点：{endpoint}\n所配置的工作区 ID：{workspace_id}\n该 ID 是由运维管理的绑定，而非文件系统授权。如果 Gateway 报告的 ID 不同，每个请求都会被拒绝。"
+
+msgid "Confirm native Gateway · {operation}"
+msgstr "确认原生 Gateway · {operation}"
+
+msgid "POST {endpoint}/v1/{operation}\nExpected workspace ID: {workspace_id}\n\nExact payload:\n{payload}\n\nThis is native HTTP, not MCP. The Gateway independently checks its isyco.semantic scope and workspace ID. The result stays in this TUI and is not added to model context. A one-use local approval is required."
+msgstr "POST {endpoint}/v1/{operation}\n预期的工作区 ID：{workspace_id}\n\n确切的请求内容：\n{payload}\n\n这是原生 HTTP，不是 MCP。Gateway 会独立检查其 isyco.semantic 范围和工作区 ID。结果仅保留在此 TUI 中，不会加入模型上下文。需要一次性本地批准。"
+
+msgid "{label} · workspace symbol search"
+msgstr "{label} · 工作区符号搜索"
+
+msgid "Local workspace: {root}\nQuery goes only to the sandboxed local language server."
+msgstr "本地工作区：{root}\n查询只会发送给 sandbox 中的本地语言服务器。"
+
+msgid "Server: {label} · operation: workspace/symbol\nQuery: {query_text}\nWorkspace root: {root}\n\nISyCode starts the approved Bubblewrap sandbox after the workspace.files.read grant is checked. The workspace is read-only; seccomp denies network access (TypeScript uses anonymous local IPC), and output/time limits apply. No Gateway or provider receives this query."
+msgstr "服务器：{label} · 操作：workspace/symbol\n查询：{query_text}\n工作区根目录：{root}\n\nISyCode 在检查 workspace.files.read 授权后启动已批准的 Bubblewrap sandbox。工作区为只读；seccomp 禁止网络访问（TypeScript 使用匿名本地 IPC），并适用输出和时间限制。任何 Gateway 或提供商都不会收到此查询。"
+
+msgid "Project root: {project}\nRecipe root: {source_root}\nRecipe SHA-256: {digest}\nImage: {image}\nFiles:\n{file_rows}\n\nBuild effect: Docker daemon builds this recipe and may download base images and Python packages. Runtime: internal-only Docker network, random 127.0.0.1 port, project mounted read-only at /workspace, read-only container filesystem, all Linux capabilities dropped, no-new-privileges, 128 PIDs, 1 CPU, 2 GiB memory, bounded temporary storage, and no credentials mounted. ISyCode will grant the exact Docker executable for these two actions, bind one-use approvals to this root and recipe digest, then revoke those grants after the attempt. Failed health checks remove only the container/network created by this request."
+msgstr "项目根目录：{project}\n配方根目录：{source_root}\n配方 SHA-256：{digest}\n镜像：{image}\n文件：\n{file_rows}\n\n构建影响：Docker 守护进程会构建此配方，并可能下载基础镜像和 Python 软件包。运行时：仅内部的 Docker 网络、随机的 127.0.0.1 端口、项目以只读方式挂载于 /workspace、只读的容器文件系统、移除所有 Linux 能力、no-new-privileges、128 个 PID、1 个 CPU、2 GiB 内存、有限的临时存储，且不挂载任何凭据。ISyCode 将为这两个操作授权确切的 Docker 可执行文件，把一次性批准绑定到此根目录和配方摘要，并在尝试后撤销这些授权。健康检查失败时，只会删除本次请求创建的容器和网络。"
+
+msgid "Project: {project}\nStatus: {get} · 127.0.0.1:{get2}\nContainer: {get3}\nRecipe: {get4}\n\nLogs are capped and common credential patterns are redacted. Stop and Remove require a second one-use confirmation. Start reuses this registered container. Remove deletes this container and its dedicated network; the shared image stays."
+msgstr "项目：{project}\n状态：{get} · 127.0.0.1:{get2}\n容器：{get3}\n配方：{get4}\n\n日志有上限，常见凭据模式会被遮盖。停止和删除需要再次一次性确认。启动会复用此已注册的容器。删除会移除此容器及其专用网络；共享镜像会保留。"
+
+msgid "Confirm broker {operation}"
+msgstr "确认代理 {operation}"
+
+msgid "Project: {project}\nContainer: {container}\n\n{effect}\nThis grants only the exact Docker executable and broker target for this single operation; the temporary grant is revoked afterward."
+msgstr "项目：{project}\n容器：{container}\n\n{effect}\n这仅为此单次操作授权确切的 Docker 可执行文件和代理目标；临时授权随后会被撤销。"
+
+msgid "Gateway MCP · {name}"
+msgstr "Gateway MCP · {name}"
+
+msgid "Message queue is full"
+msgstr "消息队列已满"
+
+msgid "Idea promoted · queued for the next turn"
+msgstr "想法已采用 · 已排入下一回合"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "{count} calls"
+msgstr "{count} 次调用"
+
+msgid "{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}"
+msgstr "{name}  ·  工作区 {workspace_root}  ·  启动于 {launch_dir}"
+
+msgid "Workspace Root · {workspace_root}"
+msgstr "工作区根目录 · {workspace_root}"
+
+msgid "Launch Directory · {launch_dir}"
+msgstr "启动目录 · {launch_dir}"
+
+msgid "Filesystem Authority · loading ISyCode grants…"
+msgstr "文件系统授权 · 正在加载 ISyCode 授权…"
+
+msgid "Cancelling…"
+msgstr "正在取消…"
+
+msgid "API key for {credential_label} · saved in your OS keyring for your user, never in this project or its logs. Saving asks you to confirm."
+msgstr "{credential_label} 的 API 密钥 · 按用户保存在系统密钥环中，绝不保存在此项目或其日志中。保存时会请你确认。"
+
+msgid "Folder unavailable: {exc}"
+msgstr "文件夹不可用：{exc}"
+
+msgid "{len} results · {get} directories scanned{skipped_note}{limit_note}"
+msgstr "{len} 个结果 · 已扫描 {get} 个目录{skipped_note}{limit_note}"
+
+msgid "{relative} · {size} bytes · UTF-8\n{verified_receipt_line}"
+msgstr "{relative} · {size} 字节 · UTF-8\n{verified_receipt_line}"
+
+msgid "Presence unavailable"
+msgstr "在线状态不可用"
+
+msgid "Queued · {len}{value}     {fit_cells}"
+msgstr "已排队 · {len}{value}     {fit_cells}"
+
+msgid "Execution unavailable in Secure"
+msgstr "Secure 中不可执行"
+
+msgid "ShellBox · {active} active · {len} total\nEnter / Space: processes · Ctrl+S: IdeaBox"
+msgstr "ShellBox · {active} 个运行中 · 共 {len} 个\nEnter / 空格：进程 · Ctrl+S：IdeaBox"
+
+msgid "Folders  {ready}/{len}"
+msgstr "文件夹  {ready}/{len}"
+
+msgid "Conversations  {transcript_count}"
+msgstr "对话  {transcript_count}"
+
+msgid "Invalid request: {exc}"
+msgstr "无效请求：{exc}"
+
+msgid "Processed"
+msgstr "已处理"
+
+msgid "{value} / {total} matches  ·  Enter next  ·  Shift+Enter previous"
+msgstr "{value} / {total} 个匹配  ·  Enter 下一个  ·  Shift+Enter 上一个"
+
+msgid "No matches"
+msgstr "无匹配"
+
+msgid "plan an intent via IsyMotron"
+msgstr "通过 IsyMotron 规划意图"
+
+msgid "choose and preview a workspace README.md"
+msgstr "选择并预览工作区的 README.md"
+
+msgid "open the provider selector"
+msgstr "打开提供商选择器"
+
+msgid "show credential status grouped by setup state"
+msgstr "按设置状态分组显示凭据状态"
+
+msgid "undo ISyCode's last file change (shows the diff first)"
+msgstr "撤销 ISyCode 的上一次文件更改（先显示 diff）"
+
+msgid "native RTK settings; recall <sha256> shows captured original output"
+msgstr "原生 RTK 设置；recall <sha256> 显示捕获的原始输出"
+
+msgid "run one command in the workspace sandbox (asks first)"
+msgstr "在工作区 sandbox 中运行一条命令（先询问）"
+
+msgid "expand the current idea note"
+msgstr "展开当前的想法笔记"
+
+msgid "summarize earlier messages to free up context"
+msgstr "汇总较早的消息以释放上下文"
+
+msgid "local MCP: add <preset>, list, start <name>, stop <name>"
+msgstr "本地 MCP：add <预设>、list、start <名称>、stop <名称>"
+
+msgid "sequential iteration with three chosen models; /iteration retry <id>"
+msgstr "使用三个所选模型依次迭代；/iteration retry <id>"
+
+msgid "delegate a task; choose a recent model before launch"
+msgstr "委派任务；启动前选择一个最近使用的模型"
+
+msgid "models for the current provider"
+msgstr "当前提供商的模型"
+
+msgid "bundled workflow guidance: list, use <name>, clear"
+msgstr "内置流程指导：list、use <名称>、clear"
+
+msgid "show git branch and changed files"
+msgstr "显示 git branch 和已更改的文件"
+
+msgid "show the git diff (optional path, --staged)"
+msgstr "显示 git diff（可选路径，--staged）"
+
+msgid "commit changed files after reviewing the diff"
+msgstr "审查 diff 后 commit 已更改的文件"
+
+msgid "list commands"
+msgstr "列出命令"
+
+msgid "show current workspace, provider, and chat role"
+msgstr "显示当前工作区、提供商和聊天角色"
+
+msgid "list/new/resume/search/rename/fork/export/import conversations"
+msgstr "对话的 list/new/resume/search/rename/fork/export/import"
+
+msgid "send your words to another conversation; it answers them as your message"
+msgstr "将你的话发送到另一个对话；它会把它们当作你的消息来回答"
+
+msgid "open the read-only Multi Harness settings map"
+msgstr "打开只读的 Multi Harness 设置图"
+
+msgid "prepare interrupted prompt for review; never auto-replays tools"
+msgstr "准备中断的 prompt 以供审查；绝不会自动重放工具"
+
+msgid "resume an interrupted turn without repeating completed tools"
+msgstr "恢复中断的回合，不重复已完成的工具"
+
+msgid "local configuration and dependencies; no network requests"
+msgstr "本地配置和依赖；不发起网络请求"
+
+msgid "test selected provider with one owned request (uses API quota)"
+msgstr "用一次自有请求测试所选提供商（消耗 API 配额）"
+
+msgid "show provider-reported chat token usage"
+msgstr "显示提供商报告的聊天 token 用量"
+
+msgid "read workspace AGENTS.md with permission, or clear"
+msgstr "在获得许可后读取工作区 AGENTS.md，或清除"
+
+msgid "ask GPT-6 Luna for one explicit external review"
+msgstr "请 GPT-6 Luna 进行一次明确的外部审查"
+
+msgid "workspace setup preference"
+msgstr "工作区设置偏好"
+
+msgid "future folders without a saved choice"
+msgstr "尚无已保存选择的未来文件夹"
+
+msgid "persistent user preference"
+msgstr "持久的用户偏好"
+
+msgid "no file access, no permissions copied between workspaces"
+msgstr "无文件访问，不在工作区之间复制权限"
+
+msgid "workspace file read"
+msgstr "工作区文件读取"
+
+msgid "no edits, no commands, no folders outside workspace"
+msgstr "无编辑、无命令、无工作区外的文件夹"
+
+msgid "List files"
+msgstr "列出文件"
+
+msgid "Read file contents"
+msgstr "读取文件内容"
+
+msgid "Search file names"
+msgstr "搜索文件名"
+
+msgid "Inject selected context document"
+msgstr "注入所选的上下文文档"
+
+msgid "Read ISyCode workspace preferences"
+msgstr "读取 ISyCode 工作区偏好"
+
+msgid "List ISyCode workspace prompt commands"
+msgstr "列出 ISyCode 工作区 prompt 命令"
+
+msgid "Initialize or update ISyCode workspace config"
+msgstr "初始化或更新 ISyCode 工作区配置"
+
+msgid "Create or edit files"
+msgstr "创建或编辑文件"
+
+msgid "Undo an ISyCode file change"
+msgstr "撤销一次 ISyCode 文件更改"
+
+msgid "Undo every file change of one ISyCode turn"
+msgstr "撤销某个 ISyCode 回合的所有文件更改"
+
+msgid "Run a command in the workspace sandbox"
+msgstr "在工作区 sandbox 中运行命令"
+
+msgid "Git"
+msgstr "Git"
+
+msgid "See git status of the workspace"
+msgstr "查看工作区的 git 状态"
+
+msgid "See git diffs of the workspace"
+msgstr "查看工作区的 git diff"
+
+msgid "Create a git commit"
+msgstr "创建 git commit"
+
+msgid "Publish one reviewed ref to one remote"
+msgstr "将一个已审查的引用发布到一个远程"
+
+msgid "Move or rename files"
+msgstr "移动或重命名文件"
+
+msgid "Delete files"
+msgstr "删除文件"
+
+msgid "Read sensitive files"
+msgstr "读取敏感文件"
+
+msgid "Accounts"
+msgstr "账户"
+
+msgid "Connect/disconnect ChatGPT subscription"
+msgstr "连接/断开 ChatGPT 订阅"
+
+msgid "Network"
+msgstr "网络"
+
+msgid "Send prompts to the selected model provider"
+msgstr "向所选模型提供商发送 prompt"
+
+msgid "Sign in with the official grok CLI"
+msgstr "使用官方 grok CLI 登录"
+
+msgid "Read a public HTTPS page"
+msgstr "读取公开的 HTTPS 页面"
+
+msgid "Read an external integration catalog"
+msgstr "读取外部集成目录"
+
+msgid "Use ISyCo semantic analysis"
+msgstr "使用 ISyCo 语义分析"
+
+msgid "Read files through ISyCo Gateway"
+msgstr "通过 ISyCo Gateway 读取文件"
+
+msgid "Write files through ISyCo Gateway"
+msgstr "通过 ISyCo Gateway 写入文件"
+
+msgid "Credentials"
+msgstr "凭据"
+
+msgid "Start a provider OAuth flow"
+msgstr "启动提供商 OAuth 流程"
+
+msgid "Save a named API key"
+msgstr "保存命名的 API 密钥"
+
+msgid "Use a saved API key"
+msgstr "使用已保存的 API 密钥"
+
+msgid "Revoke a saved API key"
+msgstr "撤销已保存的 API 密钥"
+
+msgid "Discover MCP servers and tools"
+msgstr "发现 MCP 服务器和工具"
+
+msgid "Invoke an MCP tool"
+msgstr "调用 MCP 工具"
+
+msgid "Start a local MCP server from your config"
+msgstr "从你的配置启动本地 MCP 服务器"
+
+msgid "Call a tool of a local MCP server"
+msgstr "调用本地 MCP 服务器的工具"
+
+msgid "Discover installed language servers"
+msgstr "发现已安装的语言服务器"
+
+msgid "Start a language server"
+msgstr "启动语言服务器"
+
+msgid "Stop a language server"
+msgstr "停止语言服务器"
+
+msgid "Check a file with a language server after an edit"
+msgstr "编辑后用语言服务器检查文件"
+
+msgid "Peers"
+msgstr "对等方"
+
+msgid "Detect the grit peer-claim registry"
+msgstr "检测 grit 对等声明注册表"
+
+msgid "Read grit peer claims touching one file (advisory)"
+msgstr "读取涉及某个文件的 grit 对等声明（仅供参考）"
+
+msgid "Semantic broker"
+msgstr "语义代理"
+
+msgid "Preview a broker recipe"
+msgstr "预览代理配方"
+
+msgid "Build a semantic broker image"
+msgstr "构建语义代理镜像"
+
+msgid "Start a semantic broker"
+msgstr "启动语义代理"
+
+msgid "Read broker health and status"
+msgstr "读取代理健康状况和状态"
+
+msgid "Read broker logs"
+msgstr "读取代理日志"
+
+msgid "Stop a semantic broker"
+msgstr "停止语义代理"
+
+msgid "Remove a broker container/image"
+msgstr "删除代理容器/镜像"
+
+msgid "Start the local Mobile Host"
+msgstr "启动本地 Mobile Host"
+
+msgid "Stop the local Mobile Host"
+msgstr "停止本地 Mobile Host"
+
+msgid "Pair a mobile device"
+msgstr "配对移动设备"
+
+msgid "Issue a new one-use pairing PIN"
+msgstr "发放新的一次性配对 PIN"
+
+msgid "Read a remote session"
+msgstr "读取远程会话"
+
+msgid "Create a remote session"
+msgstr "创建远程会话"
+
+msgid "Cancel a remote turn"
+msgstr "取消远程回合"
+
+msgid "Respond to a remote approval"
+msgstr "回应远程批准"
+
+msgid "Connect to the optional Bridge"
+msgstr "连接可选的 Bridge"
+
+msgid "Read Bridge messages"
+msgstr "读取 Bridge 消息"
+
+msgid "Send a Bridge message"
+msgstr "发送 Bridge 消息"
+
+msgid "Claim a coordination lease"
+msgstr "申领协调租约"
+
+msgid "Release a coordination lease"
+msgstr "释放协调租约"
+
+msgid "Wake another registered agent"
+msgstr "唤醒另一个已注册的代理"
+
+msgid "Read recent Bridge agent names"
+msgstr "读取最近的 Bridge 代理名称"
+
+msgid "L1 tools"
+msgstr "L1 工具"
+
+msgid "Create a staged L1 tool"
+msgstr "创建暂存的 L1 工具"
+
+msgid "Validate a staged L1 tool"
+msgstr "验证暂存的 L1 工具"
+
+msgid "Run L1 tool tests and probe"
+msgstr "运行 L1 工具测试和探测"
+
+msgid "Activate an L1 tool"
+msgstr "启用 L1 工具"
+
+msgid "Disable an L1 tool"
+msgstr "停用 L1 工具"
+
+msgid "Roll back an L1 tool generation"
+msgstr "回滚 L1 工具版本"
+
+msgid "Create a persistent conversation"
+msgstr "创建持久对话"
+
+msgid "Resume a persistent conversation"
+msgstr "恢复持久对话"
+
+msgid "Delete a persistent conversation"
+msgstr "删除持久对话"
+
+msgid "Memory"
+msgstr "记忆"
+
+msgid "Read this workspace's private memory"
+msgstr "读取此工作区的私有记忆"
+
+msgid "Write or consolidate this workspace's private memory"
+msgstr "写入或整合此工作区的私有记忆"
+
+msgid "Permanently forget one memory"
+msgstr "永久遗忘一条记忆"
+
+msgid "Desktop"
+msgstr "桌面"
+
+msgid "Paste an image or text from the clipboard"
+msgstr "从剪贴板粘贴图片或文本"
+
+msgid "Copy selected text or a path to the clipboard"
+msgstr "将所选文本或路径复制到剪贴板"
+
+msgid "Open the native file picker"
+msgstr "打开原生文件选择器"
+
+msgid "Private access"
+msgstr "私有访问"
+
+msgid "Inspect local Tailscale status"
+msgstr "检查本地 Tailscale 状态"
+
+msgid "Prepare an isolated signed Tailscale package"
+msgstr "准备隔离的已签名 Tailscale 软件包"
+
+msgid "Stage verified Tailscale package as root"
+msgstr "以 root 暂存已验证的 Tailscale 软件包"
+
+msgid "Install the official Tailscale package"
+msgstr "安装官方 Tailscale 软件包"
+
+msgid "Start Tailscale browser login"
+msgstr "启动 Tailscale 浏览器登录"
+
+msgid "Enable private Gateway Serve route"
+msgstr "启用私有 Gateway Serve 路由"
+
+msgid "Disable owned private Gateway Serve route"
+msgstr "禁用自有的私有 Gateway Serve 路由"
+
+msgid "Select conversational guidance"
+msgstr "选择对话指导"
+
+msgid "Edit workspace files"
+msgstr "编辑工作区文件"
+
+msgid "Create git commits"
+msgstr "创建 git commit"
+
+msgid "Local MCP servers"
+msgstr "本地 MCP 服务器"
+
+msgid "Write this workspace's private memory"
+msgstr "写入此工作区的私有记忆"
+
+msgid "Forget memories in this workspace"
+msgstr "遗忘此工作区中的记忆"
+
+msgid "Paste images or text from the clipboard"
+msgstr "从剪贴板粘贴图片或文本"
+
+msgid "Coordinate with other agents"
+msgstr "与其他代理协调"
+
+msgid "Model ID"
+msgstr "模型 ID"
+
+msgid "Family"
+msgstr "系列"
+
+msgid "Reasoning"
+msgstr "推理"
+
+msgid "Tools (model)"
+msgstr "工具（模型）"
+
+msgid "Tools (route)"
+msgstr "工具（路由）"
+
+msgid "Input"
+msgstr "输入"
+
+msgid "Output"
+msgstr "输出"
+
+msgid "Cached input"
+msgstr "缓存输入"
+
+msgid "Pricing"
+msgstr "价格"
+
+msgid "Chat on this machine"
+msgstr "本机聊天"
+
+msgid "Disable thinking for this model."
+msgstr "关闭此模型的思考。"
+
+msgid "Enable thinking for this model."
+msgstr "开启此模型的思考。"
+
+msgid "No reasoning effort. Supported by this chat/tool transport."
+msgstr "不进行推理。此聊天/工具传输支持该选项。"
+
+msgid "Lower reasoning effort."
+msgstr "较低的推理强度。"
+
+msgid "Medium reasoning effort."
+msgstr "中等推理强度。"
+
+msgid "Higher reasoning effort."
+msgstr "较高的推理强度。"
+
+msgid "Extra high reasoning effort."
+msgstr "极高的推理强度。"
+
+msgid "Maximum reasoning effort."
+msgstr "最高推理强度。"
+
+msgid "Minimal reasoning effort."
+msgstr "最低推理强度。"
+
+msgid "Use the provider's default reasoning behavior."
+msgstr "使用提供商默认的推理行为。"
+
+msgid "This provider/model does not publish supported levels in the loaded catalog. Keep its default."
+msgstr "此提供商/模型未在已加载的目录中公布支持的等级。保持其默认值。"
+
+msgid "Popular"
+msgstr "热门"
+
+msgid "Off"
+msgstr "关闭"
+
+msgid "On"
+msgstr "开启"
+
+msgid "Low"
+msgstr "低"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "High"
+msgstr "高"
+
+msgid "Xhigh"
+msgstr "极高"
+
+msgid "Max"
+msgstr "最高"
+
+msgid "Minimal"
+msgstr "最低"
+
+msgid "Integrations"
+msgstr "集成"
+
+msgid "MCP / LSP / Gateway"
+msgstr "MCP / LSP / Gateway"
+
+msgid "Missing CLI"
+msgstr "缺少 CLI"
+
+msgid "Signed in"
+msgstr "已登录"
+
+msgid "Signed out"
+msgstr "已退出登录"
+
+msgid "Not authorized"
+msgstr "未授权"
+
+msgid "Status only; this item does not run an action."
+msgstr "仅显示状态；此项不会执行任何操作。"
+
+msgid "No extra summary is available. Press Enter or double-click to open."
+msgstr "没有更多摘要。按 Enter 或双击打开。"
+
+msgid "Allow conversation deletion?"
+msgstr "允许删除对话？"
+
+msgid "Disable conversation deletion?"
+msgstr "禁用删除对话？"
+
+msgid "Allow file edits in this workspace?"
+msgstr "允许在此工作区编辑文件？"
+
+msgid "Turn off file edits?"
+msgstr "关闭文件编辑？"
+
+msgid "Allow deletion"
+msgstr "允许删除"
+
+msgid "Disable deletion"
+msgstr "禁用删除"
+
+msgid "Allow edits"
+msgstr "允许编辑"
+
+msgid "Turn off edits"
+msgstr "关闭编辑"
+
+msgid "Call once"
+msgstr "调用一次"
+
+msgid "read and search files"
+msgstr "读取和搜索文件"
+
+msgid "edit, move, delete and undo files"
+msgstr "编辑、移动、删除和撤销文件"
+
+msgid "copy selected text to the clipboard"
+msgstr "将所选文本复制到剪贴板"
+
+msgid "run approved commands in the sandbox"
+msgstr "在 sandbox 中运行已批准的命令"
+
+msgid "git status, diffs and approved commits"
+msgstr "git 状态、diff 和已批准的 commit"
+
+msgid "check Python files after edits"
+msgstr "编辑后检查 Python 文件"
+
+msgid "connect to the selected AI model ({host})"
+msgstr "连接所选的 AI 模型（{host}）"
+
+msgid "commands (needs bubblewrap on Linux)"
+msgstr "命令（Linux 上需要 bubblewrap）"
+
+msgid "git (no repository here)"
+msgstr "git（此处没有仓库）"
+
+msgid "Saves grants in {root} for: {labels}. File edits follow your folder approval settings; commands, deletes, moves and commits ask first. IsySentinel checks every action and the journal records it. You can turn each one off in this menu."
+msgstr "在 {root} 中为以下内容保存授权：{labels}。文件编辑遵循你的文件夹批准设置；命令、删除、移动和 commit 会先询问。IsySentinel 检查每个操作，日志会记录它。你可以在此菜单中逐项关闭。"
+
+msgid "Not available here: {missing}."
+msgstr "此处不可用：{missing}。"
+
+msgid "stopped after the time limit"
+msgstr "已达时间上限而停止"
+
+msgid "exit code {code}"
+msgstr "退出码 {code}"
+
+msgid "File context from this folder can be sent to that provider."
+msgstr "此文件夹的文件上下文可能会发送给该提供商。"
+
+msgid "This confirmation does not send the folder contents by itself."
+msgstr "此确认本身不会发送文件夹内容。"
+
+msgid "Workspace root: {root}\nMode: {mode}\nProvider: {provider}\n{note}\nTrusting this folder lets Classic read and search it, and make recoverable edits, creates, moves and deletes inside the effect budget, and run isolated sandboxed tests, without a question for each one. Commits, secrets, authority changes, new network destinations and anything without a sandbox still ask or stay off. A revoked permission still wins. This is not a permanent approval for every tool, and it does not turn Security on or off."
+msgstr "工作区根目录：{root}\n模式：{mode}\n提供商：{provider}\n{note}\n信任此文件夹后，Classic 可以读取和搜索它，在效果预算内进行可恢复的编辑、创建、移动和删除，并运行隔离的 sandbox 测试，而无需逐项询问。commit、密钥、权限变更、新的网络目标以及任何没有 sandbox 的操作仍会询问或保持关闭。已撤销的权限仍然优先。这不是对所有工具的永久批准，也不会开启或关闭 Security。"
+
+msgid "output limit reached"
+msgstr "已达输出上限"
+
+msgid "No output."
+msgstr "无输出。"
+
+msgid "Output reached the execution owner's limit; more bytes were not retained."
+msgstr "输出已达执行所有者的上限；未保留更多字节。"
+
+msgid "Waiting for output…"
+msgstr "等待输出…"
+
+msgid "A recurring workspace gets an empty .isyroot marker when first opened. This identifies the workspace; it does not grant file access. Home, its parents, temp and mount points still ask first."
+msgstr "常用工作区在首次打开时会获得一个空的 .isyroot 标记。它用于标识工作区；不会授予文件访问权限。主目录及其上级目录、临时目录和挂载点仍会先询问。"
+
+msgid "Applies only when this folder has no saved choice yet."
+msgstr "仅在此文件夹尚无已保存选择时适用。"
+
+msgid "Read-only verification. No repair is attempted. Request digests cannot be recomputed because request bodies are not stored."
+msgstr "只读验证。不会尝试任何修复。由于未存储请求正文，无法重新计算请求摘要。"
+
+msgid "Switch between API key and ChatGPT subscription, or disconnect."
+msgstr "在 API 密钥和 ChatGPT 订阅之间切换，或断开连接。"
+
+msgid "No additional provider auth metadata is available."
+msgstr "没有更多提供商认证元数据。"
+
+msgid "Grant this provider host in Settings → Authority & Security."
+msgstr "请在 设置 → Authority & Security 中授权此提供商主机。"
+
+msgid "Checking"
+msgstr "检查中"
+
+msgid "External catalog denied"
+msgstr "外部目录被拒绝"
+
+msgid "Configuration error"
+msgstr "配置错误"
+
+msgid "Refresh failed"
+msgstr "刷新失败"
+
+msgid "No MCP Servers"
+msgstr "没有 MCP 服务器"
+
+msgid "No Skills"
+msgstr "没有技能"
+
+msgid "{count} available"
+msgstr "{count} 个可用"
+
+msgid "select one below for details"
+msgstr "在下方选择一项查看详情"
+
+msgid "No Language Servers"
+msgstr "没有语言服务器"
+
+msgid "none detected"
+msgstr "未检测到"
+
+msgid "not on PATH"
+msgstr "不在 PATH 中"
+
+msgid "Skills · {value}"
+msgstr "技能 · {value}"
+
+msgid "No skills available"
+msgstr "没有可用的技能"
+
+msgid "Available skills ({value})"
+msgstr "可用技能（{value}）"
+
+msgid "Blocked in Secure · no Bridge owner"
+msgstr "在 Secure 中被阻止 · 没有 Bridge 所有者"
+
+msgid "Filesystem Authority · list/read/name-search granted for this workspace"
+msgstr "文件系统授权 · 已允许在此工作区列出/读取/搜索文件名"
+
+msgid "Filesystem Authority · no read grant; tree enumeration is unavailable"
+msgstr "文件系统授权 · 没有读取授权；无法列出目录树"
+
+msgid "auth metadata unavailable"
+msgstr "认证元数据不可用"
+
+msgid "connected account"
+msgstr "已连接的账户"
+
+msgid "available account"
+msgstr "可用账户"
+
+msgid "auth required"
+msgstr "需要认证"
+
+msgid "disconnected"
+msgstr "已断开"
+
+msgid "unsupported"
+msgstr "不支持"
+
+msgid "conflict"
+msgstr "冲突"
+
+msgid "ok"
+msgstr "正常"
+
+msgid "owned"
+msgstr "自有"
+
+msgid "Selected skills · {names}"
+msgstr "已选技能 · {names}"
+
+msgid "Workspace mode · click to switch between Classic, Flow and Security"
+msgstr "工作区模式 · 点击在 Classic、Flow 和 Security 之间切换"
+
+msgid "GUS model · {model}"
+msgstr "GUS 模型 · {model}"
+
+msgid "GUS model"
+msgstr "GUS 模型"
+
+msgid "GUS model · {provider}"
+msgstr "GUS 模型 · {provider}"
+
+msgid "Current · {model}"
+msgstr "当前 · {model}"
+
+msgid "GUS never falls back to the chat model. It needs tool calls and a window of 32k tokens or more."
+msgstr "GUS 绝不会退回使用聊天模型。它需要 tool calls 和至少 32k token 的上下文窗口。"
+
+msgid "Tool calls are off for this provider; GUS needs them to edit."
+msgstr "此提供商的 tool calls 已关闭；GUS 需要它们来编辑。"
+
+msgid "No provider is ready yet"
+msgstr "还没有可用的提供商"
+
+msgid "Add a key in Providers & models, or start a local model server (Ollama, LM Studio, llama.cpp)."
+msgstr "在“提供商与模型”中添加密钥，或启动本地模型服务（Ollama、LM Studio、llama.cpp）。"
+
+msgid "window unknown"
+msgstr "窗口未知"
+
+msgid "not set"
+msgstr "未设置"
+
+msgid "Window unknown: GUS plans for 32k until the real window is known."
+msgstr "窗口未知：在得知实际窗口前，GUS 按 32k 规划。"
+
+msgid "No models listed for this provider"
+msgstr "此提供商没有列出模型"
+
+msgid "Type a model id for it in Providers & models first."
+msgstr "请先在“提供商与模型”中为它输入模型 ID。"
+
+msgid "GUS model not saved · {reason}"
+msgstr "GUS 模型未保存 · {reason}"
+
+msgid "GUS model · {model} · window unknown, planned as 32k"
+msgstr "GUS 模型 · {model} · 窗口未知，按 32k 规划"
+
+msgid "The model GUS uses to maintain ISyCode: another provider or a local model, 32k tokens or more."
+msgstr "GUS 用于维护 ISyCode 的模型：其他提供商或本地模型，窗口至少 32k token。"
+
+msgid "GUS cannot use this provider."
+msgstr "GUS 无法使用此提供商。"
+
+msgid "This model has no tool calls; GUS needs them to edit."
+msgstr "此模型不支持 tool calls；GUS 需要它们来编辑。"
+
+msgid "Window below 32k tokens: GUS's fixed context would not fit."
+msgstr "窗口小于 32k token：GUS 的固定上下文放不下。"
+
+msgid "GUS has no model yet. Choose one in Settings → GUS model."
+msgstr "GUS 还没有模型。请在“设置 → GUS 模型”中选择。"
+
+msgid "Clear conversation"
+msgstr "清空对话"
+
+msgid "Conversation cleared."
+msgstr "对话已清空。"
+
+msgid "Enable GUS"
+msgstr "启用 GUS"
+
+msgid "Enable GUS in this workspace?"
+msgstr "在此工作区启用 GUS？"
+
+msgid "Enter send · Esc close · on a gus/* branch GUS edits with its tools; elsewhere it reads and answers"
+msgstr "Enter 发送 · Esc 关闭 · 在 gus/* 分支上 GUS 用其工具编辑；其他情况下只阅读并回答"
+
+msgid "GUS could not answer · {reason}"
+msgstr "GUS 无法回答 · {reason}"
+
+msgid "GUS could not be enabled · {reason}"
+msgstr "无法启用 GUS · {reason}"
+
+msgid "GUS enabled in this workspace"
+msgstr "已在此工作区启用 GUS"
+
+msgid "GUS in this workspace · {state}"
+msgstr "此工作区中的 GUS · {state}"
+
+msgid "GUS is still answering."
+msgstr "GUS 仍在回答。"
+
+msgid "GUS is thinking…"
+msgstr "GUS 正在思考…"
+
+msgid "GUS maintains ISyCode with its own model ({destination}). Enabling it here lets GUS read its fixed project context (AGENTS.md, the design skill and standard, ADR titles) with receipts and send it, with your messages to GUS, to that model. In this version GUS has no tools: it reads and answers. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS 使用自己的模型（{destination}）维护 ISyCode。在此启用后，GUS 会带收据读取其固定项目上下文（AGENTS.md、设计 skill 和标准、ADR 标题），并将其连同你发给 GUS 的消息发送到该模型。此版本中 GUS 没有工具：只读取和回答。它不会给自己授予任何权限；可随时在“设置”中关闭。"
+
+msgid "GUS role not loaded · {reason}"
+msgstr "GUS 角色未加载 · {reason}"
+
+msgid "GUS turned off in this workspace"
+msgstr "已在此工作区关闭 GUS"
+
+msgid "GUS works only in the ISyCode repository."
+msgstr "GUS 只在 ISyCode 仓库中工作。"
+
+msgid "GUS · {model}"
+msgstr "GUS · {model}"
+
+msgid "Talk to GUS"
+msgstr "与 GUS 对话"
+
+msgid "Write to GUS…"
+msgstr "给 GUS 写消息…"
+
+msgid "You"
+msgstr "你"
+
+msgid "no model chosen yet"
+msgstr "尚未选择模型"
+
+msgid "{provider} / {model}"
+msgstr "{provider} / {model}"
+
+msgid "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)"
+msgstr "与 ISyCode 维护者 GUS 对话；/gus branch <主题> 会创建 gus/<主题>，/gus seal 运行检查门（仅限 ISyCode 仓库）"
+
+msgid "GUS answers here only after you enable it for this workspace; turning it off keeps its transcript."
+msgstr "只有在你为此工作区启用后，GUS 才会在这里回答；关闭它会保留其对话记录。"
+
+msgid "Open GUS's own conversation. It reads its project context and answers; it has no tools yet."
+msgstr "打开 GUS 自己的对话。它读取项目上下文并回答；还没有工具。"
+
+msgid "GUS is not enabled for this workspace."
+msgstr "此工作区未启用 GUS。"
+
+msgid "This message is too large for GUS's model window."
+msgstr "此消息对 GUS 模型的窗口来说太大。"
+
+msgid "GUS's model returned no answer."
+msgstr "GUS 的模型没有返回回答。"
+
+msgid "GUS, the ISyCode maintainer · click to talk to it"
+msgstr "GUS，ISyCode 维护者 · 点击与它对话"
+
+msgid "Create {branch} for GUS?"
+msgstr "要为 GUS 创建 {branch} 吗？"
+
+msgid "ISyCode creates {branch} at {base} (from {current}) and switches to it. Your files are not changed. GUS edits only on this branch; you activate its work by merging it, and undo it by reverting that merge."
+msgstr "ISyCode 会在 {base}（来自 {current}）创建 {branch} 并切换到该分支。你的文件不会改变。GUS 只在这个分支上编辑；合并它即启用其工作，回退该合并即可撤销。"
+
+msgid "Create branch · y"
+msgstr "创建分支 · y"
+
+msgid "no push, no hooks, no other branch; L0 stays out of GUS's reach"
+msgstr "不推送、不运行 hooks、不创建其他分支；L0 不在 GUS 的范围内"
+
+msgid "git branch"
+msgstr "git branch"
+
+msgid "GUS branch not proposed · {reason}"
+msgstr "未提出 GUS 分支 · {reason}"
+
+msgid "GUS branch rejected · nothing changed"
+msgstr "已拒绝 GUS 分支 · 没有任何更改"
+
+msgid "GUS branch {decision} · {reason}"
+msgstr "GUS 分支 {decision} · {reason}"
+
+msgid "On {branch} · receipt {receipt_id}"
+msgstr "位于 {branch} · 回执 {receipt_id}"
+
+msgid "Create GUS branches"
+msgstr "创建 GUS 分支"
+
+msgid "Create and switch to a new gus/* branch"
+msgstr "创建并切换到新的 gus/* 分支"
+
+msgid "GUS · {value}"
+msgstr "GUS · {value}"
+
+msgid "GUS edits only on a gus/* branch · /gus branch <topic>"
+msgstr "GUS 只在 gus/* 分支上编辑 · /gus branch <主题>"
+
+msgid "L0 changed and is still changed: {paths}. Review it with git."
+msgstr "L0 已更改且仍未恢复：{paths}。请用 git 检查。"
+
+msgid "L0 changed ({paths}); the whole turn was undone."
+msgstr "L0 已更改（{paths}）；整个回合已撤销。"
+
+msgid "Changed {count} files · /undo puts this turn back."
+msgstr "已更改 {count} 个文件 · /undo 可撤销此回合。"
+
+msgid "GUS edits only on a gus/* branch. Create one with /gus branch <topic>."
+msgstr "GUS 只在 gus/* 分支上编辑。用 /gus branch <主题> 创建一个。"
+
+msgid "Another turn is recording this workspace; try again when it ends."
+msgstr "另一个回合正在记录此工作区；请在其结束后重试。"
+
+msgid "GUS's model returned an invalid tool batch."
+msgstr "GUS 的模型返回了无效的工具批次。"
+
+msgid "GUS's model returned a tool call without identity."
+msgstr "GUS 的模型返回了没有标识的工具调用。"
+
+msgid "A tool result did not match its request."
+msgstr "工具结果与其请求不匹配。"
+
+msgid "Generations are sealed on a gus/* branch · /gus branch <topic>"
+msgstr "生成只在 gus/* 分支上封存 · /gus branch <主题>"
+
+msgid "Seal GUS's work on {branch}?"
+msgstr "要封存 GUS 在 {branch} 上的工作吗？"
+
+msgid "ISyCode checks what GUS committed on this branch. V: nothing in L0 changed. T: the tests of the touched code. A: the coverage auditor and L0 tests. L: lint. T, A and L run in the command sandbox. Only if all pass is the work sealed; you activate it by merging the branch."
+msgstr "ISyCode 检查 GUS 在此分支上提交的内容。V：L0 没有任何更改。T：所改代码的测试。A：覆盖率审计和 L0 测试。L：lint。T、A 和 L 在命令沙箱中运行。只有全部通过才会封存；合并该分支即可启用。"
+
+msgid "Run the gates"
+msgstr "运行检查门"
+
+msgid "GUS generation not prepared · {reason}"
+msgstr "未准备 GUS 生成 · {reason}"
+
+msgid "GUS gates running on {branch}…"
+msgstr "GUS 检查门正在 {branch} 上运行…"
+
+msgid "Sealed {branch} · {gates} · seal {seal}"
+msgstr "已封存 {branch} · {gates} · 封印 {seal}"
+
+msgid "Rejected {branch} · {gates} · {reason}"
+msgstr "已拒绝 {branch} · {gates} · {reason}"
+
+msgid "GUS gates running…"
+msgstr "GUS 检查门正在运行…"

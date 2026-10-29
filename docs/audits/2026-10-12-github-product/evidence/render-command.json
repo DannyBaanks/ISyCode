@@ -1,0 +1,20 @@
+{
+  "recorded_utc": "2026-10-12T09:10:48.183883+00:00",
+  "argv": [
+    "/usr/bin/python3",
+    "-"
+  ],
+  "procedure": "Exact heredoc reproduced in docs/screenshots/2026-10-12-product/GUIA.md",
+  "dependency": "PyGObject Rsvg 2.0 (system librsvg)",
+  "exit_code": 0,
+  "outputs": [
+    "complete/01-overview.png",
+    "complete/02-files.png",
+    "complete/03-settings.png"
+  ],
+  "dimensions": [
+    1482,
+    1026
+  ],
+  "visually_inspected": true
+}

@@ -1,0 +1,1 @@
+{"theme":"dark","enabledPlugins":{"fake.plugin":true},"skipDangerousModePermissionPrompt":true,"hooks":{"SessionEnd":[{"hooks":[{"command":"never-copy-me"}]}]}}

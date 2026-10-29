@@ -1,0 +1,33 @@
+{
+  "timestamp_utc": "2026-10-12T23:17:51.501670+00:00",
+  "repo": "/home/danny/Development/ISyCo Git/ISyCode",
+  "head": "a425b32e9a2c245d8197dc63a7db6eb7b3363b04",
+  "archive_command": [
+    "git",
+    "archive",
+    "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+    "--",
+    "src",
+    "tests",
+    "pyproject.toml"
+  ],
+  "archive_sha256": "bc07201fc92cd51858b310153f4b75f34b0bb090782adee92d11c87549b6a475",
+  "evaluated_commit": "32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa",
+  "variants": {
+    "reviewed": {
+      "commit": "db697b6302e8374ad0be8a3082fedb6cf4079ab2",
+      "sha256": "89438dcae9dbb202fb68780afc10e23bb1daf9ec47d17760a88c773b97ff080b"
+    },
+    "artifact-substitution": {
+      "commit": "2d7d8a0f2d6a530fe42c19aca8f6946b813eaef8",
+      "sha256": "fe1fba9ffad79d56a801e1345b1796dcbeae4bf0e0a3f40e45b5ef62f813a511"
+    },
+    "before-invalid-refresh": {
+      "commit": "1871ab422d02d0145475460b1c6a911f5f0da8d1",
+      "sha256": "fe1fba9ffad79d56a801e1345b1796dcbeae4bf0e0a3f40e45b5ef62f813a511"
+    }
+  },
+  "invalid_manifest_sha256": "4d5343e9edafb89fc3af53dc1acbedcab23c0fea99088f57337a2185fcf0b1bb",
+  "raw_log_sha256": "50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20",
+  "original_evaluated_visual_test_sha256": "e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5"
+}

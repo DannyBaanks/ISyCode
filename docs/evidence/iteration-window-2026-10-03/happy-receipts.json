@@ -1,0 +1,40 @@
+[
+  {
+    "attempt_id": "c2484cc6abb5402eb247f51d8e64dd64",
+    "based_on_seq": 1,
+    "duration": 0.01715826988220215,
+    "error_hint": null,
+    "error_kind": null,
+    "error_type": null,
+    "iteration_session_id": "bb6fbad1ca004cd8ad8c5ae2da432589",
+    "kind": "receipt",
+    "model": "fixture-a",
+    "outcome": "SUCCESS",
+    "participant_id": "77bd3db7aff547fbb77d7dee56ce2d91",
+    "produced_seq": 2,
+    "provider": "nvidia",
+    "read_from_seq": 1,
+    "read_through_seq": 1,
+    "round_id": "21bdb80cd1a8452eb8afc8408fe878b8",
+    "turn_id": "5062920660fac1b53ec5bb5559c70521"
+  },
+  {
+    "attempt_id": "da670853856b4b33b9be2a83e081ac0a",
+    "based_on_seq": 2,
+    "duration": 0.020748376846313477,
+    "error_hint": null,
+    "error_kind": null,
+    "error_type": null,
+    "iteration_session_id": "bb6fbad1ca004cd8ad8c5ae2da432589",
+    "kind": "receipt",
+    "model": "fixture-b",
+    "outcome": "SUCCESS",
+    "participant_id": "8c1433eac583444c80a9c145af158e2e",
+    "produced_seq": 3,
+    "provider": "openai",
+    "read_from_seq": 1,
+    "read_through_seq": 2,
+    "round_id": "21bdb80cd1a8452eb8afc8408fe878b8",
+    "turn_id": "843a0f0bbb5f22d018eaa0ad2d552890"
+  }
+]

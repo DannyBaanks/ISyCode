@@ -1,0 +1,18 @@
+{
+  "reviewer": "/root/final_ui_review",
+  "initial_revision": "2a96e9e",
+  "initial_findings": [
+    {
+      "priority": "P2",
+      "summary": "Positional model row identity can apply a different model after catalog recomposition."
+    },
+    {
+      "priority": "P2",
+      "summary": "Settings reasoning omits provider preset default."
+    }
+  ],
+  "reviewed_revision": "7ecbe9f19f7b2f113945598d11b977b1d1f19e6d",
+  "result": "APPROVED: no remaining actionable findings in fix diff",
+  "tests": "28 focused tests passed in 22.68s; independent offline 80x24 probes: reorder, remove, filter and identical ID across providers.",
+  "scope": "Read-only fix review; full hermetic suite is parent verification; no live services or desktop clipboard roundtrip."
+}

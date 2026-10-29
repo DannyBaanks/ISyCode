@@ -1,0 +1,23 @@
+............................F..........                                  [100%]
+================================== FAILURES ===================================
+___ test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection ___
+tests\test_design_interactions.py:123: in test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_design_interactions.py:113: in scenario
+    assert copied == [("one", "selection")]
+E   AssertionError: assert [] == [('one', 'selection')]
+E     
+E     Right contains one more item: ('one', 'selection')
+E     Use -v to get more diff
+=========================== short test summary info ===========================
+FAILED tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection
+1 failed, 38 passed in 92.07s (0:01:32)

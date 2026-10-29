@@ -1,0 +1,9 @@
+Windows VHD reboot/remount acceptance
+{
+  "error_type": "RuntimeError",
+  "failure_sha256": "2d4c612294765738157bbacf5c9e078d7e813eaccadab5f12626a5db23bfb18a",
+  "one_shot_task_removed": true,
+  "recorded_at_utc": "2026-10-15T23:02:02.846331+00:00",
+  "schema": "isycode.vhd-reboot-acceptance-result/1",
+  "status": "FAIL"
+}

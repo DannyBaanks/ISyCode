@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-15T21:13:10.559094-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10"
+  },
+  "command": "py -m pytest -q tests/test_updater.py",
+  "exit_code": 0,
+  "result": "36 passed, 1 skipped in 129.24s (0:02:09)",
+  "output": "docs/platform-parity/evidence/windows-updater-native-path-fix-pr52-20261015.txt",
+  "output_sha256": "adabfe03b4cd25969ad32877ebbf76c8a8fc809e82efb18865b07ddb110e176b",
+  "notes": "Windows local; verifies the platform-specific source launcher path. The one skip is platform-specific."
+}

@@ -1,0 +1,160 @@
+........................................................................ [  3%]
+.........................s...........................sss................ [  6%]
+........................................................................ [ 10%]
+.....................................................................s.. [ 13%]
+.......sssssssssssssssssssssssssssssssssss.............................. [ 16%]
+........................................................................ [ 20%]
+.............................s..s....................................... [ 23%]
+.................................s...ssssssssss.........s..............s [ 26%]
+.s.s.s.s....ssss.s......ssssss..s...................s.........s.......s. [ 30%]
+.....................................................s.ssssss........... [ 33%]
+...........sss..ss.....................s.F.............................. [ 36%]
+...........................................s...s....ssssss.............. [ 40%]
+......sssssss...ss............sss.s.ssssssssssssssssssssssssssss........ [ 43%]
+..................................................F......F.............. [ 46%]
+........................F....................FFFs....................... [ 50%]
+...........sF........F..sFF....F
+================================== FAILURES ===================================
+___ test_multi_harness_button_opens_and_escape_closes_without_blocking_app ____
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:520: in wait_for
+    return await fut
+           ^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\pilot.py:238: in click
+    return await self._post_mouse_events(
+C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\pilot.py:470: in _post_mouse_events
+    await self.pause()
+C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\pilot.py:544: in pause
+    await wait_for_idle(0)
+C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\_wait.py:29: in wait_for_idle
+    await sleep(SLEEP_GRANULARITY)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:665: in sleep
+    return await future
+           ^^^^^^^^^^^^
+E   asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+C:\Development\ISyCo Git\ISyCode\tests\test_harness_tui.py:64: in test_multi_harness_button_opens_and_escape_closes_without_blocking_app
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_harness_tui.py:49: in scenario
+    await asyncio.wait_for(pilot.click("#harness-button"), timeout=2)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:519: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\timeouts.py:115: in __aexit__
+    raise TimeoutError from exc_val
+E   TimeoutError
+_ test_unscoped_picker_reveals_the_current_model_without_requiring_expansion __
+tests\test_mockup_selectors.py:70: in test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+    assert screen.focused is current
+E   AssertionError: assert Input(id='models-search') is ModelChoice(id='model-choice-0', classes='-style-default model-choice')
+E    +  where Input(id='models-search') = ModelsScreen().focused
+_________ test_picker_marks_resolved_default_when_no_model_was_saved __________
+tests\test_mockup_selectors.py:187: in test_picker_marks_resolved_default_when_no_model_was_saved
+    assert screen.focused is current
+E   AssertionError: assert Input(id='models-search') is ModelChoice(id='model-choice-0', classes='-style-default model-choice')
+E    +  where Input(id='models-search') = ModelsScreen().focused
+_______ test_reveal_does_not_crash_when_the_current_row_is_not_mounted ________
+C:\Development\ISyCo Git\ISyCode\tests\test_model_decision_surface.py:246: in test_reveal_does_not_crash_when_the_current_row_is_not_mounted
+    run(scenario)
+C:\Development\ISyCo Git\ISyCode\tests\test_model_decision_surface.py:82: in run
+    asyncio.run(main())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_model_decision_surface.py:81: in main
+    await scenario(app, pilot)
+C:\Development\ISyCo Git\ISyCode\tests\test_model_decision_surface.py:243: in scenario
+    assert "gpt-6-luna" in str(screen.query_one("#model-detail").render())
+E   AssertionError: assert 'gpt-6-luna' in 'Click a model. Context, reasoning and tools show here.'
+E    +  where 'Click a model. Context, reasoning and tools show here.' = str(Content('Click a model. Context, reasoning and tools show here.', spans=[Span(0, 54, style='#a9b5c2')]))
+E    +    where Content('Click a model. Context, reasoning and tools show here.', spans=[Span(0, 54, style='#a9b5c2')]) = render()
+E    +      where render = Static(id='model-detail').render
+E    +        where Static(id='model-detail') = query_one('#model-detail')
+E    +          where query_one = ModelsScreen().query_one
+_________ test_mcp_presets_preserve_private_config_and_never_replace __________
+tests\test_native_toolkit.py:23: in test_mcp_presets_preserve_private_config_and_never_replace
+    assert path.stat().st_mode&0o777==0o600
+E   AssertionError: assert (33206 & 511) == 384
+E    +  where 33206 = os.stat_result(st_mode=33206, st_ino=844424932280977, st_dev=12568582857050768973, st_nlink=1, st_uid=0, st_gid=0, st_size=255, st_atime=1792062927, st_mtime=1792062927, st_ctime=1792062927).st_mode
+E    +    where os.stat_result(st_mode=33206, st_ino=844424932280977, st_dev=12568582857050768973, st_nlink=1, st_uid=0, st_gid=0, st_size=255, st_atime=1792062927, st_mtime=1792062927, st_ctime=1792062927) = stat()
+E    +      where stat = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-882/test_mcp_presets_preserve_priv0/mcp.json').stat
+________________ test_native_lsp_catalog_and_read_only_runtime ________________
+tests\test_native_toolkit.py:38: in test_native_lsp_catalog_and_read_only_runtime
+    assert server['state']=='sandbox_ready'
+E   AssertionError: assert 'installed_unavailable' == 'sandbox_ready'
+E     
+E     - sandbox_ready
+E     + installed_unavailable
+_________ test_lsp_source_index_skips_fifos_links_and_oversized_files _________
+tests\test_native_toolkit.py:50: in test_lsp_source_index_skips_fifos_links_and_oversized_files
+    fifo=tmp_path/'blocked.ts';os.mkfifo(fifo)
+                               ^^^^^^^^^
+E   AttributeError: module 'os' has no attribute 'mkfifo'
+_____________________ test_symlink_state_file_is_rejected _____________________
+tests\test_private_access.py:53: in test_symlink_state_file_is_rejected
+    store.state_path.symlink_to(target)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-882\\test_symlink_state_file_is_rej0\\other' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-882\\test_symlink_state_file_is_rej0\\state\\tailscale-serve.json'
+_________________ test_symlinked_parent_directory_is_rejected _________________
+tests\test_private_access.py:108: in test_symlinked_parent_directory_is_rejected
+    link.symlink_to(real_parent, target_is_directory=True)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-882\\test_symlinked_parent_director0\\real-parent' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-882\\test_symlinked_parent_director0\\linked-parent'
+____ test_private_access_preflight_enable_verify_disable_keeps_other_route ____
+tests\test_private_tailnet_witness.py:43: in test_private_access_preflight_enable_verify_disable_keeps_other_route
+    enable_preview = owner.preview_enable()
+                     ^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_serve.py:195: in preview_enable
+    return self._prepare("tailscale.serve.enable")[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_serve.py:102: in _prepare
+    raise ValueError("canonical Tailscale executable is unavailable")
+E   ValueError: canonical Tailscale executable is unavailable
+_____ test_cancelled_private_route_preview_has_no_command_or_saved_state ______
+tests\test_private_tailnet_witness.py:80: in test_cancelled_private_route_preview_has_no_command_or_saved_state
+    owner.preview_enable()  # Opening and cancelling the confirmation view is read-only.
+    ^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_serve.py:195: in preview_enable
+    return self._prepare("tailscale.serve.enable")[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_serve.py:102: in _prepare
+    raise ValueError("canonical Tailscale executable is unavailable")
+E   ValueError: canonical Tailscale executable is unavailable
+_________ test_user_commands_skip_symlinks_large_files_and_bad_names __________
+tests\test_prompt_expansion.py:52: in test_user_commands_skip_symlinks_large_files_and_bad_names
+    (folder / "link.md").symlink_to(folder / "review.md")
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-882\\test_user_commands_skip_symlin0\\commands\\review.md' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-882\\test_user_commands_skip_symlin0\\commands\\link.md'
+=========================== short test summary info ===========================
+FAILED tests/test_harness_tui.py::test_multi_harness_button_opens_and_escape_closes_without_blocking_app
+FAILED tests/test_mockup_selectors.py::test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+FAILED tests/test_mockup_selectors.py::test_picker_marks_resolved_default_when_no_model_was_saved
+FAILED tests/test_model_decision_surface.py::test_reveal_does_not_crash_when_the_current_row_is_not_mounted
+FAILED tests/test_native_toolkit.py::test_mcp_presets_preserve_private_config_and_never_replace
+FAILED tests/test_native_toolkit.py::test_native_lsp_catalog_and_read_only_runtime
+FAILED tests/test_native_toolkit.py::test_lsp_source_index_skips_fifos_links_and_oversized_files
+FAILED tests/test_private_access.py::test_symlink_state_file_is_rejected - OS...
+FAILED tests/test_private_access.py::test_symlinked_parent_directory_is_rejected
+FAILED tests/test_private_tailnet_witness.py::test_private_access_preflight_enable_verify_disable_keeps_other_route
+FAILED tests/test_private_tailnet_witness.py::test_cancelled_private_route_preview_has_no_command_or_saved_state
+FAILED tests/test_prompt_expansion.py::test_user_commands_skip_symlinks_large_files_and_bad_names
+!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 12 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+12 failed, 961 passed, 139 skipped, 11 deselected in 1074.83s (0:17:54)

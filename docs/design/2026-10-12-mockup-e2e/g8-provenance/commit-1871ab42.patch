@@ -1,0 +1,47 @@
+commit 1871ab422d02d0145475460b1c6a911f5f0da8d1
+Author:     DannyBaanks <danielbaanksyy@gmail.com>
+AuthorDate: Tue Oct 6 21:37:17 2026 -0600
+Commit:     DannyBaanks <danielbaanksyy@gmail.com>
+CommitDate: Tue Oct 6 21:37:17 2026 -0600
+
+    refactor(tui): externalize TUI stylesheet to isycode.tcss (ported from Kilo PR #9)
+    
+    Moves the ~205-line inline CSS attribute to src/isycode/isycode.tcss
+    via Textual's CSS_PATH idiom (absolute, cwd-independent), includes
+    *.tcss in package-data, and adds Kilo's test verifying the external
+    stylesheet is packaged and applied. Ported from Kilo PR #9 onto current
+    main; their tomllib fallback (already fixed), setup.py/MANIFEST.in
+    cruft and old-baseline type hints were dropped.
+
+diff --git a/tests/test_visual_tui.py b/tests/test_visual_tui.py
+index 37daa43..0b6b36e 100644
+--- a/tests/test_visual_tui.py
++++ b/tests/test_visual_tui.py
+@@ -2,6 +2,7 @@ from isycode.tui import plain_text
+ import asyncio
+ import json
+ import os
++from pathlib import Path
+ 
+ from rich.cells import cell_len
+ from textual.widgets import Button, Collapsible as TextualCollapsible, Static
+@@ -316,3 +317,19 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
+ 
+     with capsys.disabled():
+         asyncio.run(scenario())
++
++
++def test_external_stylesheet_is_packaged_and_applied(tmp_path, monkeypatch):
++    from isycode.tui import TUIApp
++    assert (Path(__file__).resolve().parents[1] / "src" / "isycode" / "isycode.tcss").is_file()
++
++    async def scenario():
++        app = TUIApp()
++        async with app.run_test(size=(100, 30)) as pilot:
++            await pilot.pause()
++            sources = {str(path) for path in app.stylesheet.source}
++            assert any("isycode.tcss" in path for path in sources)
++            prompt = app.query_one("#prompt-input")
++            assert prompt.styles.background.hex in {"#242529", "#292630"}
++
++    asyncio.run(scenario())

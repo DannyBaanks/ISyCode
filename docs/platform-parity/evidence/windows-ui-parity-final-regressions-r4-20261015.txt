@@ -1,0 +1,21 @@
+.............................F......................................     [100%]
+================================== FAILURES ===================================
+____________ test_message_reaches_another_conversation_as_the_user ____________
+C:\Development\ISyCo Git\ISyCode\tests\test_session_messages.py:72: in test_message_reaches_another_conversation_as_the_user
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_session_messages.py:50: in scenario
+    assert first is not None and first.session_id
+E   assert (<isycode.conversation_lane.ConversationLane object at 0x00000214295426C0> is not None and None)
+E    +  where None = <isycode.conversation_lane.ConversationLane object at 0x00000214295426C0>.session_id
+=========================== short test summary info ===========================
+FAILED tests/test_session_messages.py::test_message_reaches_another_conversation_as_the_user
+1 failed, 67 passed in 226.04s (0:03:46)

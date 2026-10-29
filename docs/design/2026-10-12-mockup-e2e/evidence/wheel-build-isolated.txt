@@ -1,0 +1,13 @@
+Processing ./.
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: isycode
+  Building wheel for isycode (pyproject.toml): started
+  Building wheel for isycode (pyproject.toml): finished with status 'done'
+  Created wheel for isycode: filename=isycode-0.1.0-py3-none-any.whl size=9037062 sha256=08b9845b2be906eeca6ce78e92dbe0fad84d8f5708ae79402b2b1c6244fbba4f
+  Stored in directory: /tmp/pip-ephem-wheel-cache-exfh0394/wheels/43/9c/69/d2fe88860d776eb0c8a7ec8f9446a54451b2d25d28a82e74a8
+Successfully built isycode

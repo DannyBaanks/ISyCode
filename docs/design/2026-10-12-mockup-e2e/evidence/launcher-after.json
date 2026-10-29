@@ -1,0 +1,10 @@
+{
+  "command": "/home/danny/.local/bin/isycode",
+  "literal_target": "/home/danny/Development/ISyCo Git/ISyCode/scripts/isycode",
+  "resolved_target": "/home/danny/Development/ISyCo Git/ISyCode/scripts/isycode",
+  "module": "/home/danny/Development/ISyCo Git/ISyCode/src/isycode/tui.py",
+  "help_exit": 0,
+  "backup_preserved": [
+    "/home/danny/.local/bin/isycode.backup.20261013T030508Z.814965"
+  ]
+}

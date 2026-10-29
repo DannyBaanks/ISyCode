@@ -1,0 +1,6 @@
+uv pip compile --all-extras --python-version 3.10 --python-platform linux --no-annotate --no-header --quiet --output-file linux-py310-requirements.txt pyproject.toml
+uv pip compile --all-extras --python-version 3.12 --python-platform windows --no-annotate --no-header --quiet --output-file windows-py312-requirements.txt pyproject.toml
+uv tool run --from pip-audit pip-audit --requirement linux-py310-requirements.txt --format json --vulnerability-service osv --strict --no-deps --disable-pip
+uv tool run --from pip-audit pip-audit --requirement windows-py312-requirements.txt --format json --vulnerability-service osv --strict --no-deps --disable-pip
+uv tool run --from pip-audit pip-audit --path .venv/lib/python3.12/site-packages --format json --vulnerability-service osv --strict
+Secret heuristic: scan git-tracked text files (<12 MB) for PEM private-key headers and common AWS/GitHub/Google/Stripe/Slack/OpenAI/Anthropic token formats. Output contains file/rule names only, never matched values.

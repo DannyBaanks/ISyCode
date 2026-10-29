@@ -1,0 +1,72 @@
+hito: M0
+puerta: G0
+estado: EN_REVISION
+sha_evaluado: db6c86314ce73ddb19e776f03db4a25eb08c9eb4
+fecha_utc: 2026-10-02T11:44:02Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, bubblewrap 0.9.0, Python 3.12.3, Textual 8.2.8, run_test 120x40, 12 CPU, 14Gi RAM
+perfil_y_politica: classic en workspace temporal de prueba; sin cambio de permisos del producto
+dependencias: ninguna
+casos:
+  - id: G0-01
+    prueba: docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/inventory.md
+    comando: inventario estático de clases Owner y Systembility contra tests/test_*.py
+    esperado: cada owner enlaza a un test que nombra la clase; un owner sin test falla
+    observado: 0 owners sin test. Las Systembility se construyen en ProductActionGate y no aparecen por nombre en los tests.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/inventory.md
+        sha256: b77ea80ee8085248275fc31b9187f0a227a4dd79675ba288d16463fc0bda4a99
+  - id: G0-02
+    prueba: python -m pytest -q -m "not integration" -ra --tb=line
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: exit 0 y skips clasificados; un fallo inexplicado bloquea
+    observado: exit 0; 1047 passed, 2 skipped, 11 deselected; 162.38s
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/pytest-not-integration.txt
+        sha256: 532ee4b7429fa9332544f37c7dc50ae07b0226f7e03436ee636f4e39486e3edf
+    skips:
+      - tests/test_anthropic_provider.py:84: extra opcional anthropic no instalado. No aprueba el provider nativo.
+      - tests/test_native_toolkit.py:63: runtime TypeScript sandbox_ready ausente. No aprueba LSP TypeScript.
+    deselected_integration:
+      - tests/test_bridge.py (2)
+      - tests/test_broker_preview.py (3)
+      - tests/test_daily_tui.py::test_full_chat_read_edit_and_diff_uses_real_owners[True]
+      - tests/test_gateway.py (5)
+  - id: G0-03
+    prueba: /tmp/isycode-m0-flow.py sobre el mismo camino que test_daily_tui
+    comando: ./.venv/bin/python /tmp/isycode-m0-flow.py
+    esperado: transcripción sanitizada, conteo de aprobaciones y latencias del flujo actual
+    observado: >
+      read+edit+diff en Classic pidió 1 WriteApprovalScreen (0.801s–1.152s) y terminó en 1.161s.
+      Con unittest real en bwrap pidió esa pantalla más 1 CommandApprovalScreen y terminó en 5.967s.
+      Lectura y git_diff no abrieron pantalla. Editar sin aprobación devolvió DENY
+      ("fresh request-bound approval is required") en 0.203s y no cambió el archivo.
+      Journal PASS. Provider simulado. El caso con comando también escribió el grant explícito
+      que ya escribe el test de integración.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M0/db6c86314ce73ddb19e776f03db4a25eb08c9eb4/flow.json
+        sha256: c64778086d99e8e705c3e12692200c863f419ec67f33f17b3e1e9d955b9956ff
+  - id: G0-04
+    prueba: docs/decisions/0002-classic-security-reuse.md
+    comando: lectura de ADR y de este entorno
+    esperado: ADR de reuso y threat model revisados, más la lista de capacidades sin evidencia real
+    observado: ADR escrita por el autor. Falta un revisor distinto.
+    resultado: EN_REVISION
+    artefactos:
+      - docs/decisions/0002-classic-security-reuse.md
+sin_evidencia_real:
+  - Classic autónomo con 0 aprobaciones por acción
+  - staging de efectos antes de promover al árbol del usuario
+  - ledger persistente de presupuesto
+  - paridad con OpenClaw, OpenCode o Crush
+  - LSP TypeScript en este host
+  - provider Anthropic nativo en este host
+  - Gateway, Bridge y broker contra servicios vivos (11 tests de integración no corridos)
+  - latencia de UI contra la caja de referencia de M9
+regresion: la suite hermética de G0-02, exit 0
+riesgos_residuales: el sandbox monta el workspace escribible; esta medición no cambia ese hecho
+rollback_ensayado: no aplica; M0 no cambia código de producto
+revision: ausente

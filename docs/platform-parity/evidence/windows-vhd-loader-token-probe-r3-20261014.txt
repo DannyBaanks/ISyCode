@@ -1,0 +1,5 @@
+DLL descriptor: D:PAI(A;;FA;;;S-1-5-21-1262463267-1333140832-2374598671-1001)(A;;FA;;;SY)(A;;0x1200a9;;;S-1-15-2-2237309558-4016923285-397878336-2103504623-2696466390-342034076-1527647182)S:AI(ML;;NW;;;LW)
+attributes-traverse exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-u4zo8_av\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-u4zo8_av\\runtime\\python312.dll', 5)]
+root-read exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-u4zo8_av\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-u4zo8_av\\runtime\\python312.dll', 5)]
+root-full-control exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-u4zo8_av\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-u4zo8_av\\runtime\\python312.dll', 5)]
+exit=0

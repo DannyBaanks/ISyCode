@@ -1,0 +1,151 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ISyCode — Auditoría E2E local</title><style>body{margin:0;background:#111318;color:#e6e6eb;font:17px/1.6 system-ui,sans-serif} main{max-width:1100px;margin:auto;padding:36px 24px 90px} h1{font-size:34px;line-height:1.2} h2{margin-top:52px;border-top:1px solid #414650;padding-top:22px} h3{margin-top:35px} a{color:#9bcaff} code{background:#262a35;padding:2px 5px;border-radius:4px;font-size:.88em} table{border-collapse:collapse;width:100%;font-size:15px;display:block;overflow:auto} th,td{border:1px solid #414650;padding:10px;text-align:left;vertical-align:top} th{background:#262a35} img{display:block;max-width:100%;height:auto;border:1px solid #414650;margin:16px 0 30px} nav{position:sticky;top:0;background:#111318ee;backdrop-filter:blur(8px);padding:12px 0;border-bottom:1px solid #414650} nav a{margin-right:14px;font-size:15px} h3[id]{scroll-margin-top:70px} .note{color:#b8beca} @media print{body{background:white;color:black} nav{display:none} main{padding:0} img{max-height:700px;object-fit:contain} a{color:#224466}}</style><main><nav><a href="#F1">Modo</a><a href="#F2">Controles</a><a href="#F3">Foco</a><a href="#F4">Arranque</a><a href="#F5">Preview</a><a href="#F6">Idioma</a><a href="#capturas">Capturas</a><a href="AUDITORIA.md">Markdown</a></nav><h1>Auditoría E2E local de ISyCode — 11 de octubre de 2026</h1>
+<p>El ciclo local de programación funciona, pero la interfaz todavía tiene fallos que afectan decisiones y navegación. Se confirmaron <strong>6 hallazgos: 2 P1 y 4 P2</strong>. El más importante es que la cabecera puede mostrar <strong>Security mientras la política efectiva es Classic</strong>. No se demostró un bypass de IsySentinel: se demostró información de estado incorrecta en la UI.</p>
+<p><strong>Referencia auditada:</strong> <code>/home/danny/Development/ISyCo Git/ISyCode</code>, commit <code>c9bb088533694959dc2d5924612fc4a217c610bd</code>, Python 3.12.3, Textual 8.2.8, Ubuntu. La suite empezó a las 03:39 del 11 de octubre, hora de Ciudad de México. El directorio <code>2026-10-11-e2e-1830</code> es un identificador de corrida, no su hora.</p>
+<p><strong>Alcance:</strong> auditoría de comportamiento y UI/UX de la TUI local. Se usaron workspaces, HOME y directorios de estado aislados. La inferencia fue determinista y simulada; la aplicación, Authority, Sentinel, owners, sesiones, Git, archivos y sandbox de comandos fueron reales. No se modificó código del producto ni configuración de tus cuentas. Las capturas son exportaciones originales de Textual rasterizadas localmente; no son capturas de una terminal física.</p>
+<h2>Validación ejecutada</h2>
+<p>| Verificación | Resultado observado | Evidencia |
+| --- | --- | --- |
+| Suite establecida en CONTRIBUTING y CI: <code>pytest -q -m 'not integration'</code> | 1,875 aprobadas; 3 omitidas; 11 excluidas; exit 0 | <a href="suite.log">salida completa</a>, <a href="suite.xml">JUnit</a>, <a href="suite-command.json">comando y entorno</a> |
+| E2E local con Bubblewrap real: lectura → edición aprobada → unittest → diff | 1 aprobada; exit 0 | <a href="real-sandbox.log">salida</a>, <a href="real-sandbox-command.json">comando</a> |
+| Recorrido interactivo equivalente | Archivo pasó de <code>value = 1</code> a <code>value = 2</code>; unittest exit 0; diff llegó al modelo simulado; 5 llamadas del fixture | capturas 10–13, <a href="classic-provider-calls.json">llamadas del fixture</a> |
+| Ayuda y versión mediante el launcher | Ambos exit 0; versión 0.1.0 | <a href="cli-smoke.json">salidas y comandos</a> |
+| Cadenas de journals de los 3 fixtures principales | PASS, sin registros no verificables | archivos <code>fixture-verification-*.json</code> y <code>raw-journal-*.jsonl</code> |
+| Comprobación de los hallazgos contra estados y eventos capturados | Todos los testigos confirmados | <a href="verify_evidence.py">verificador</a>, <a href="evidence-verification.json">resultado</a> |</p>
+<p>La suite completa no detectó estos fallos de experiencia. Su aprobación demuestra la cobertura que ejecuta, no que todos los controles sean visibles, que el foco esté en un elemento utilizable o que el estado mostrado coincida con la política.</p>
+<h2>Hallazgos priorizados</h2>
+<h3 id="F1">F1 — P1: la cabecera conserva el modo anterior después de cambiar permisos</h3>
+<p><strong>Reproducir:</strong> abrir en Security → Configuración → Authority &amp; Security → Modo → Classic → confirmar el cambio → rechazar la confianza automática opcional → cerrar menús. La política devuelve <code>classic</code>, pero la cabecera conserva <code>● Security</code>. Un mensaje atraviesa el gate del provider en Classic y llega al fixture de inferencia mientras la cabecera sigue diciendo Security. En el cambio inverso, Security bloqueó el envío y la cabecera conservó Classic.</p>
+<p><strong>Esperado:</strong> el indicador de modo se actualiza después de guardar la política, antes de devolver el control al usuario. <strong>Impacto:</strong> el usuario interpreta sus permisos a partir de un estado incorrecto. No es evidencia de evasión de permisos; el backend sí aplicó la política efectiva.</p>
+<p><strong>Evidencia:</strong> capturas 24–26 y sus JSON: <code>24-security-blocked-chat.json</code>, <code>25-classic-shown-as-security.json</code>, <code>26-chat-allowed-with-security-banner.json</code>. El fixture de Security→Classic registró una llamada autorizada al provider simulado.</p>
+<p><strong>Causa localizada:</strong> <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_app_authority.py:122">_change_workspace_mode</span> llama a <code>_update_workspace_identity_ui</code>, que actualiza etiquetas de la barra lateral pero no repinta Banner. <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui.py:835">_update_workspace_identity_ui</span>. El Banner obtiene el modo vigente al llamar <code>set_compact</code>; resize o abrir/cerrar el rail lo refrescan posteriormente.</p>
+<p><strong>Corrección recomendada:</strong> repintar el indicador desde la política recién guardada; verificar las dos direcciones del cambio sin resize y sin abrir otro panel.</p>
+<h3 id="F2">F2 — P1: F6 oculta Configuración en 80×24</h3>
+<p><strong>Reproducir:</strong> terminal 80×24, idioma español, barra lateral cerrada → F6 → intentar pulsar el engranaje. El área del chat mide 52 columnas, pero el engranaje se coloca en <code>x=62</code>, fuera de esa área. El clic no abre Configuración; el foco sigue en el árbol. El selector de modelo también queda cortado. Abrir con Ctrl+B o redimensionar sigue una ruta distinta que oculta el botón de modelo y permite acceder al engranaje.</p>
+<p><strong>Impacto:</strong> un atajo principal de archivos deja inaccesible por ratón el acceso a configuración y permisos. <strong>Esperado:</strong> todos los caminos que muestran el rail aplican el mismo ajuste de la barra inferior.</p>
+<p><strong>Evidencia:</strong> capturas 06 y 16, estado de widgets y evento del clic en <code>classic-events.jsonl</code>; <code>main=(0,1,52,23)</code>, <code>settings-button=(62,23,5,1)</code>.</p>
+<p><strong>Causa localizada:</strong> <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_app_rail.py:590">_set_rail_view</span> muestra el rail sin programar <code>_update_model_button_visibility</code>, que sí se usa en Ctrl+B y resize. <strong>Corrección recomendada:</strong> centralizar el ajuste de controles para todos los caminos de apertura. Verificar visibilidad efectiva y clic, no solo <code>display=True</code>.</p>
+<h3 id="F3">F3 — P2: Nueva conversación pierde el foco del editor</h3>
+<p><strong>Reproducir:</strong> completar un turno → Sesiones → <code>+ Nueva conversación</code> → escribir <code>abc</code>. El chat nuevo aparece, pero el foco pasa a <code>work-refresh</code>, un botón cuyo rectángulo es <code>(0,0,0,0)</code>. El editor no recibe los caracteres. Se reprodujo nuevamente desde otro chat; Ctrl+L recupera el foco.</p>
+<p><strong>Esperado:</strong> tras crear/abrir el chat, el editor visible recibe el foco. <strong>Impacto:</strong> la acción parece funcionar, pero la siguiente interacción natural falla silenciosamente.</p>
+<p><strong>Evidencia:</strong> captura 15, su JSON y eventos de <code>press a,b,c</code>. <strong>Causa localizada:</strong> <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_app_sessions.py:811">_start_new_conversation</span> y <code>_show_lane</code> restauran contenido y visibilidad sin enfocar el editor después de ocultar WorkList. <strong>Corrección recomendada:</strong> transferir el foco después del cambio de layout, en todas las rutas de retorno al chat.</p>
+<h3 id="F4">F4 — P2: onboarding sin límite de altura</h3>
+<p><strong>Reproducir:</strong> primer arranque, español, 80×24 → configuración personalizada → espacio recurrente → elegir modo. La tarjeta de modo mide 27 filas en una pantalla de 24. La bienvenida mide 26. El borde inferior y parte de la zona de opciones se recortan. En esta corrida las dos etiquetas de modo todavía se alcanzan a leer: no se afirma que Security sea imposible de elegir. Esc sí seleccionó Security.</p>
+<p><strong>Impacto:</strong> una decisión de permisos aparece pegada al límite de la pantalla, sin margen para textos o rutas más largos. <strong>Esperado:</strong> explicación desplazable con opciones siempre visibles y un máximo de altura.</p>
+<p><strong>Evidencia:</strong> capturas 03–05 y regiones JSON. <strong>Causa localizada:</strong> <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_screens_grants.py:125">QuickStartScreen</span> y <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_screens_grants.py:173">WorkspaceModeScreen</span> usan <code>height:auto</code> sin limitar ni desplazar el cuerpo. <strong>Corrección recomendada:</strong> limitar la tarjeta y reservar espacio para las opciones; probar texto español, rutas largas y alturas pequeñas.</p>
+<h3 id="F5">F5 — P2: la vista previa del rail queda reducida a una línea</h3>
+<p><strong>Reproducir:</strong> 80×24 → Archivos → seleccionar <code>src/helper.py</code>. La lectura funciona y genera receipt. El estado contiene el código completo, pero el contenedor de preview ocupa <code>y=20..27</code> dentro de un Files view que termina en <code>y=22</code>. Solo se ve la primera línea de metadata: el código y el receipt quedan fuera de la región visible del padre.</p>
+<p><strong>Impacto:</strong> el usuario no puede inspeccionar el archivo ni el resultado de lectura en el rail. <strong>Control positivo:</strong> <code>Abrir vista previa</code> sí abre un modal completo y legible; captura 18.</p>
+<p><strong>Evidencia:</strong> capturas 17–18 y JSON. <strong>Causa localizada:</strong> <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/isycode.tcss:88">layout de archivos</span>: el árbol tiene mínimo 6 filas, el preview altura 7, y los demás controles consumen el resto. <strong>Corrección recomendada:</strong> asignar alturas adaptativas o dar a los archivos un panel desplazable; preservar al menos un área útil de lectura.</p>
+<h3 id="F6">F6 — P2: textos críticos sin traducir y traducción que se pierde al repintar</h3>
+<p>Con español seleccionado, el resumen de edición, los riesgos del comando, el cambio de modo, la recuperación de error y la vista de sesiones aparecen parcial o totalmente en inglés. La Caja de ideas arranca traducida y después de un turno pasa a <code>Idea box / Capture an idea</code>. Esto excede nombres de producto que deliberadamente permanecen sin traducir.</p>
+<p><strong>Impacto:</strong> instrucciones de aprobación, irreversibilidad y recuperación pueden no ser comprendidas por el usuario que eligió español. <strong>Evidencia:</strong> capturas 10–12, 14, 18–22, 24–26.</p>
+<p><strong>Causas localizadas:</strong> <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_screens_approval.py:216">resumen de escritura</span>, <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_screens_approval.py:343">consentimiento de comando</span>, <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_app_authority.py:101">cambio de modo</span> y <span title="/home/danny/Development/ISyCo%20Git/ISyCode/src/isycode/tui_app_sessions.py:312">repintado de IdeaBox</span> contienen texto literal sin <code>tr</code>.</p>
+<p><strong>Corrección recomendada:</strong> cubrir primero consentimientos y errores, luego estados dinámicos. Comprobar el idioma después de turnos, cambios de conversación y switches de modo; la traducción del primer render no cubre esos estados.</p>
+<h2>Recorrido y salud por paso</h2>
+<p>| Paso | Recorrido | Salud | Capturas |
+| --- | --- | --- | --- |
+| 1 | Bienvenida y configuración personalizada | Con recorte de altura | 03 |
+| 2 | Elegir espacio recurrente | Funcional; información clara | 04 |
+| 3 | Elegir modo; Esc selecciona Security | Funcional, tarjeta recortada | 05 |
+| 4 | Intentar listar archivos sin grant en Security | Denegado como corresponde; mensaje del rail recortado | 06 |
+| 5 | Overview Classic, configuración y búsqueda de Authority | Funcional; navegación y filtro útiles | 07–09 |
+| 6 | Leer y proponer edición; revisar/aprobar cambio | Funcional; rechazo enfocado por defecto; idioma incompleto | 10–11 |
+| 7 | Revisar y ejecutar unittest en sandbox real | Funcional; comando exacto, exit 0; idioma incompleto | 12–13 |
+| 8 | Sesiones, selección y conversación nueva | Lista y detalles funcionan; nuevo chat pierde foco | 14–15 |
+| 9 | F6, archivo y preview ampliado | Rail y barra inferior fallan en 80×24; modal completo funciona | 16–18 |
+| 10 | Streaming lento y cola de otro mensaje | Funcional en el fixture | 19 |
+| 11 | Cancelar con borrador nuevo | Borrador y cola preservados; la advertencia aclara que el parcial no se guardó | 20 |
+| 12 | Error HTTP 401 | Original recuperado; no se reenvía automáticamente; texto inglés | 21 |
+| 13 | Classic→Security y nuevo intento de chat | Política aplicada; ninguna llamada adicional al provider; cabecera incorrecta | 22–24 |
+| 14 | Security→Classic y chat | Política Classic aplicada; inferencia simulada alcanzada; cabecera incorrecta | 25–26 |</p>
+<h2>UI/UX y accesibilidad</h2>
+<p>Fortalezas observadas: personalidad visual consistente del paisaje y el gato; filtro de configuración útil; diff previo a editar; comando exacto antes de ejecutarlo; rechazo como foco inicial en consentimientos; estado ON/OFF escrito además del color; recuperación del prompt y conservación de borradores.</p>
+<p>Los problemas de foco, recorte y estado afectan uso con teclado, baja visión y comprensión de permisos. No se certifica WCAG ni soporte de lector de pantalla. Los colores de una terminal física dependen de su fuente, tamaño y configuración. Como riesgo adicional, los controles inferiores usan <code>#9b5de5</code> sobre <code>#1e1e1e</code> en la exportación, aproximadamente 4.04:1. Eso queda por debajo de la referencia 4.5:1 para texto normal, aunque el SVG exporta texto de 20px en negrita; por ello no se cuenta como incumplimiento confirmado. Conviene verificar tamaños reales y fondos reales, además del modo opcional de alto contraste.</p>
+<p>Oportunidades de diseño: reducir el texto inicial manteniendo un detalle expandible; hacer visibles los siguientes pasos de recuperación; aprovechar espacio libre para identificar el modelo sin reducir siempre el nombre a ocho columnas. Son mejoras propuestas, no fallos funcionales adicionales confirmados.</p>
+<h2>Límites y NOT_DEMONSTRATED</h2>
+<ul>
+<li>Inferencia real, OAuth y catálogos de cuentas de OpenAI/ChatGPT, Anthropic, Gateway y otros providers: NOT_DEMONSTRATED. El fixture sustituyó inferencia y suprimió las sondas opcionales de arranque. <code>Checking the configured model</code> en capturas no es prueba de una sonda colgada.</li>
+<li>MCP remoto/local conectado, Mobile Host, Bridge de la aplicación, Tailscale, sincronización entre equipos y despliegues: NOT_DEMONSTRATED en esta corrida. La suite local cubre contratos; no sustituye conexiones reales.</li>
+<li>Copia de portapapeles contra el escritorio, selector nativo, lector de pantalla, terminal física, otros sistemas operativos y paquetes publicados: NOT_DEMONSTRATED.</li>
+<li>El E2E con comando real es local. No prueba sandbox en todas las distribuciones ni todas las clases de comando.</li>
+<li>La respuesta del fixture es texto prefijado; no debe interpretarse como juicio del modelo sobre la corrección del cambio. La corrección del ejemplo se comprobó con unittest y el diff real.</li>
+<li>No se corrigieron los hallazgos. El siguiente trabajo recomendado es F1 y F2, seguido de F3 y los layouts estrechos.</li>
+</ul>
+<h2>Evidencia y reproducción</h2>
+<p><code>audit_driver.py</code> arranca la TUI real con HOME/estado y proyecto aislados, recibe acciones JSON y guarda SVG, PNG, estado de widgets y eventos. <code>render_svg.py</code> rasteriza el SVG original mediante librsvg/cairo sin red. <code>verify_evidence.py</code> comprueba testigos guardados; no es una nueva prueba de producto. Los comandos de la suite y del sandbox están guardados como argv exactos.</p>
+<p>La captura 01 se rechazó porque ImageMagick generó un PNG vacío; su SVG se preservó. La 02 se rasterizó correctamente con librsvg como ensayo monocromo, pero no se usa como paso adicional. Las capturas 03–06 son monocromas porque el proceso inicial heredó <code>NO_COLOR=1</code>; son válidas para layout y comportamiento, no para evaluar la paleta. Las 07–26 se capturaron con <code>TERM=xterm-256color</code>, <code>COLORTERM=truecolor</code> y sin NO_COLOR. Todas las usadas se abrieron e inspeccionaron. Los controles decorativos de ventana son parte del exportador Rich, no del producto.</p>
+<p>El commit del producto se mantuvo durante toda la corrida y el diff de sus archivos rastreados quedó vacío. Los hashes de fuente están en <code>source-SHA256SUMS.txt</code>; los del informe y evidencia en <code>SHA256SUMS.txt</code>. Se preservaron journals crudos, negativos y estados capturados. Solo se añadió esta carpeta de auditoría; no se borró ni movió contenido existente.</p>
+<h2 id="capturas">Capturas inspeccionadas, en orden</h2>
+<h3>Captura 03 — Bienvenida en 80×24</h3>
+<p>F4: la tarjeta mide 26 filas; el borde inferior se recorta. Captura monocroma.</p>
+<p><img src="03-first-run-narrow.png" alt="Bienvenida en 80×24" /></p>
+<h3>Captura 04 — Espacio recurrente</h3>
+<p>La elección funciona y explica .isyroot. Captura monocroma.</p>
+<p><img src="04-recurrence.png" alt="Espacio recurrente" /></p>
+<h3>Captura 05 — Elegir modo</h3>
+<p>F4: 27 filas en un terminal de 24; Esc sí seleccionó Security. Captura monocroma.</p>
+<p><img src="05-mode-narrow.png" alt="Elegir modo" /></p>
+<h3>Captura 06 — Archivos sin grant</h3>
+<p>Listado denegado en Security; el rail recorta el mensaje. Captura monocroma.</p>
+<p><img src="06-security-files.png" alt="Archivos sin grant" /></p>
+<h3>Captura 07 — Overview Classic</h3>
+<p>Paisaje, compositor y estados en 140×40. La sonda de modelo se suprimió en el fixture.</p>
+<p><img src="07-classic-overview-140x40.png" alt="Overview Classic" /></p>
+<h3>Captura 08 — Configuración</h3>
+<p>El filtro y agrupación permiten encontrar Authority.</p>
+<p><img src="08-settings.png" alt="Configuración" /></p>
+<h3>Captura 09 — Permisos en Classic</h3>
+<p>ON/OFF se comunica con texto y color; estados de las integraciones diferenciados.</p>
+<p><img src="09-authority-classic.png" alt="Permisos en Classic" /></p>
+<h3>Captura 10 — Aprobar edición</h3>
+<p>Diff real y rechazo enfocado por defecto. F6: resumen sin traducir.</p>
+<p><img src="10-edit-approval.png" alt="Aprobar edición" /></p>
+<h3>Captura 11 — Aprobación estrecha</h3>
+<p>El diff y acción principal caben; la etiqueta de confianza se parte y pierde su atajo visible.</p>
+<p><img src="11-edit-approval-80x24.png" alt="Aprobación estrecha" /></p>
+<h3>Captura 12 — Consentimiento de comando</h3>
+<p>Comando exacto y riesgos antes de ejecutar. F6: título y explicación en inglés.</p>
+<p><img src="12-command-approval.png" alt="Consentimiento de comando" /></p>
+<h3>Captura 13 — E2E local completado</h3>
+<p>Lectura, edición, unittest con exit 0 y diff real; inferencia simulada. F6: IdeaBox perdió su traducción.</p>
+<p><img src="13-chat-complete.png" alt="E2E local completado" /></p>
+<h3>Captura 14 — Lista de sesiones</h3>
+<p>Selección y detalle legibles en 140×40; F6: varios estados sin traducir.</p>
+<p><img src="14-sessions.png" alt="Lista de sesiones" /></p>
+<h3>Captura 15 — Conversación nueva</h3>
+<p>F3: el foco está en work-refresh oculto; abc no aparece en el editor.</p>
+<p><img src="15-new-chat-lost-focus.png" alt="Conversación nueva" /></p>
+<h3>Captura 16 — F6 y barra inferior</h3>
+<p>F2: el engranaje queda fuera del área principal y no se abre con clic.</p>
+<p><img src="16-files-80x24-settings-hidden.png" alt="F6 y barra inferior" /></p>
+<h3>Captura 17 — Lectura en el rail</h3>
+<p>F5: el archivo se leyó, pero solo aparece metadata; código y receipt están recortados.</p>
+<p><img src="17-file-preview-clipped.png" alt="Lectura en el rail" /></p>
+<h3>Captura 18 — Vista ampliada</h3>
+<p>Control positivo: el modal sí muestra el código; lectura y cierre funcionales.</p>
+<p><img src="18-full-file-preview.png" alt="Vista ampliada" /></p>
+<h3>Captura 19 — Streaming y cola</h3>
+<p>El segundo mensaje queda en cola mientras el primero sigue pendiente en el fixture.</p>
+<p><img src="19-live-queue.png" alt="Streaming y cola" /></p>
+<h3>Captura 20 — Cancelación</h3>
+<p>Borrador nuevo y cola preservados; el parcial no se agregó a historial. F6: explicación en inglés.</p>
+<p><img src="20-cancel-keeps-draft.png" alt="Cancelación" /></p>
+<h3>Captura 21 — HTTP 401 simulado</h3>
+<p>Original restaurado, sin reenvío automático. F6: diagnóstico y recuperación en inglés.</p>
+<p><img src="21-provider-error-recovery.png" alt="HTTP 401 simulado" /></p>
+<h3>Captura 22 — Cambiar a Security</h3>
+<p>Confirmación explícita con cancelar como foco inicial. F6: consentimiento sin traducir.</p>
+<p><img src="22-security-switch-confirm.png" alt="Cambiar a Security" /></p>
+<h3>Captura 23 — Authority en Security</h3>
+<p>Modo y política cambiados; los OFF constan en el JSON. En 80×24 el menú requiere desplazarse.</p>
+<p><img src="23-security-grants-off.png" alt="Authority en Security" /></p>
+<h3>Captura 24 — Security deniega</h3>
+<p>No hubo llamada adicional al fixture; prompt preservado. F1: cabecera conserva Classic.</p>
+<p><img src="24-security-blocked-chat.png" alt="Security deniega" /></p>
+<h3>Captura 25 — Cambiar de Security a Classic</h3>
+<p>F1: texto informa Classic y política classic, pero cabecera continúa Security.</p>
+<p><img src="25-classic-shown-as-security.png" alt="Cambiar de Security a Classic" /></p>
+<h3>Captura 26 — Chat con indicador desactualizado</h3>
+<p>F1: una solicitud autorizada en Classic llega al fixture mientras el indicador dice Security.</p>
+<p><img src="26-chat-allowed-with-security-banner.png" alt="Chat con indicador desactualizado" /></p>
+</main></html>

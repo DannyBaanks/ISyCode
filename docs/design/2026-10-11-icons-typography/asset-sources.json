@@ -1,0 +1,257 @@
+{
+  "created_at": "2026-10-11T13:15:25.726528+00:00",
+  "nerd_fonts_ref": "ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620",
+  "tabler_ref": "a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d",
+  "assets": [
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/JetBrainsMono/NoLigatures/JetBrainsMonoNLNerdFontMono-Regular.ttf",
+      "file": "fonts/jetbrains.ttf",
+      "sha256": "d9a80146bbf2ff23b187316a3e82ee2a2ceab8220267fe09ac150ca46ab2c3bd",
+      "bytes": 2491088,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/CascadiaCode/CaskaydiaCoveNerdFontMono-Regular.ttf",
+      "file": "fonts/cascadia.ttf",
+      "sha256": "4e1e371b188bca589ec1ee7df494ca7bbb187c1c38228c059e5705f4029a9dc0",
+      "bytes": 2931984,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/IosevkaTerm/IosevkaTermNerdFontMono-Regular.ttf",
+      "file": "fonts/iosevka.ttf",
+      "sha256": "a1cd7f03639dd9b8c8ba94d1a17fe3785623ed81f2ddf22f08d72f4f79e18c8c",
+      "bytes": 14377008,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/JetBrainsMono/NoLigatures/OFL.txt",
+      "file": "licenses/jetbrains-OFL.txt",
+      "sha256": "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad",
+      "bytes": 4399,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/CascadiaCode/LICENSE",
+      "file": "licenses/cascadia-OFL.txt",
+      "sha256": "82c05d6c53dfa0c9025985c19e371810020b74ed2c61d51d370f2a8ab2506d52",
+      "bytes": 4395,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/IosevkaTerm/LICENSE.md",
+      "file": "licenses/iosevka-OFL.md",
+      "sha256": "7484961b97b41985d54c21700e53f7142a7007d72401acbd32c0b9c6a5a0b558",
+      "bytes": 4493,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/JetBrainsMono/NoLigatures/README.md",
+      "file": "sources/jetbrains-README.md",
+      "sha256": "eaf2685b73fe318c788a218659077042060e950836c25f871af3b35884d14669",
+      "bytes": 3832,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/CascadiaCode/README.md",
+      "file": "sources/cascadia-README.md",
+      "sha256": "b45677ea3cf9b41e88e7def5f4ebce9127476acbfe8774b39fd4ac652761b2ac",
+      "bytes": 5490,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/patched-fonts/IosevkaTerm/README.md",
+      "file": "sources/iosevka-README.md",
+      "sha256": "3aa78f413510d4646b049ceedde57b71fa637b9aeee0f8215edc2a336b6a962c",
+      "bytes": 3978,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/LICENSE",
+      "file": "licenses/nerd-fonts-LICENSE.txt",
+      "sha256": "1f6ad4edae6479aaace3112ede5279a23284ae54b2a34db66357aef5f64df160",
+      "bytes": 6200,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/src/glyphs/README.md",
+      "file": "sources/nerd-glyphs-README.md",
+      "sha256": "b3382c86b928820ff4135bc4c2cf0da5d871b3c2262b72711a00b21f2daf534a",
+      "bytes": 2355,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/license-audit.md",
+      "file": "sources/nerd-license-audit.md",
+      "sha256": "c2a3f634fa1e5001912f4f19a42fa86fdef5654691b70000f936089325aa404f",
+      "bytes": 8470,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/glyphnames.json",
+      "file": "sources/glyphnames.json",
+      "sha256": "d2fa6615a38eb527462cb71ff17aa44b1d6453d437ed263ab8d5b458393669e8",
+      "bytes": 545560,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/ab5d1281ae5a9d4b1fde2d12e45e2e2d6a608620/readme.md",
+      "file": "sources/nerd-fonts-README.md",
+      "sha256": "490ae11d4e146c8570180fa9f3af4db616739a1012a7b8626325ecc16405318d",
+      "bytes": 52258,
+      "provenance": "Downloaded by fetch-assets.py from pinned Nerd Fonts ref before interruption"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/settings.svg",
+      "file": "icons/tabler/settings.svg",
+      "sha256": "ef9cf42d822c00b4fad5bc5eeceddd4e1ec3774bb7ddd09891d0fba274bc3e95",
+      "bytes": 942,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/shield-check.svg",
+      "file": "icons/tabler/shield-check.svg",
+      "sha256": "7d12a28bb5b8ba69445a94118aa96b57a513f8d45e23974665f25c597eaccc30",
+      "bytes": 527,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/plug-connected.svg",
+      "file": "icons/tabler/plug-connected.svg",
+      "sha256": "0894139c4c7995ddc73e69fe204d0fbebaed02fe27770e142cf2c5b20434d00b",
+      "bytes": 625,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/code.svg",
+      "file": "icons/tabler/code.svg",
+      "sha256": "ff3d40c83c1a908bc3aa173671232e5015dba2f7f3538edc23fa2218a3d329e2",
+      "bytes": 454,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/sparkles.svg",
+      "file": "icons/tabler/sparkles.svg",
+      "sha256": "fb229226d919ddddc8c09d3269b748f437b5f0dd46072209cb8f3046e84b38fe",
+      "bytes": 542,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/folder.svg",
+      "file": "icons/tabler/folder.svg",
+      "sha256": "acdf398775addb8104673e5a8ef29d01d40184c6a5b3c62a93f10309cf9ef253",
+      "bytes": 450,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/message.svg",
+      "file": "icons/tabler/message.svg",
+      "sha256": "0797af3ec861f73e60d4b98ac974ac2cbcfbe7240c97c5ec639a52815f075de3",
+      "bytes": 553,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/terminal-2.svg",
+      "file": "icons/tabler/terminal-2.svg",
+      "sha256": "ea232ff7461f39a6c65c5919c0f9b28de29d2586730a9eeef2b2428526ceb069",
+      "bytes": 515,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/copy.svg",
+      "file": "icons/tabler/copy.svg",
+      "sha256": "3a455a299db4ec939fd0473d15c81c1d3f30f65dec81a7de816317c989b06073",
+      "bytes": 627,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/clock.svg",
+      "file": "icons/tabler/clock.svg",
+      "sha256": "971b0b2d3b5b17ae240cd3aac1a09710ab680d8c41900f1a37a0e430994d7fda",
+      "bytes": 445,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/check.svg",
+      "file": "icons/tabler/check.svg",
+      "sha256": "e206067a7d570997b5b3a7d30ab287c0b15a492787649a8b96dff8fad2862fbe",
+      "bytes": 389,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/alert-triangle.svg",
+      "file": "icons/tabler/alert-triangle.svg",
+      "sha256": "25b1f0c39f34647017df84a0cdc9e691c697737094a5956c360ab448a7fd5bef",
+      "bytes": 569,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/x.svg",
+      "file": "icons/tabler/x.svg",
+      "sha256": "9350785360414c39450c3505f17d1745e55a7534edace8548e30cf49e3727d43",
+      "bytes": 406,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/player-pause.svg",
+      "file": "icons/tabler/player-pause.svg",
+      "sha256": "d9be9ab25e52cdcae17def18d41edc0855fa44caa8492cde2b5b8cd085e8c5a6",
+      "bytes": 528,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/search.svg",
+      "file": "icons/tabler/search.svg",
+      "sha256": "3dd53b9606283dfa0adcb0b10a7d9a4432369d4bebcfacf67f80fbe358381c34",
+      "bytes": 433,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/bulb.svg",
+      "file": "icons/tabler/bulb.svg",
+      "sha256": "4f4688352f60a3d65ca9abb8cebc9fc3c3d3b9f2fbc47784b44b22008a69f0fc",
+      "bytes": 530,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/arrows-split.svg",
+      "file": "icons/tabler/arrows-split.svg",
+      "sha256": "6992e73d0309c721fc7fd9155f0590db634548c8229907110390fbd3e3f695fd",
+      "bytes": 488,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/icons/outline/book.svg",
+      "file": "icons/tabler/book.svg",
+      "sha256": "1f55b129a72746a98e1aaffc55ae7b43d004db036968afb022b3f9fbd7da87c9",
+      "bytes": 522,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/LICENSE",
+      "file": "licenses/tabler-MIT.txt",
+      "sha256": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db",
+      "bytes": 1073,
+      "provenance": "Source equality verified"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/a4ce1404bc6d24d3c365afe7b258d6bf6f48d62d/README.md",
+      "file": "sources/tabler-README.md",
+      "sha256": "339fcf8acf5739d3769feee8bb16789ad5b1987ad69dab851d302b2c77f3e776",
+      "bytes": 14112,
+      "provenance": "Source equality verified"
+    },
+    {
+      "local_source": "/usr/share/fonts/truetype/ubuntu/UbuntuSansMono[wght].ttf",
+      "file": "fonts/ubuntu-current.ttf",
+      "sha256": "507870a3fe5737eb5b02f366587d30607c02a5ad45d8fe94b3ee20a80ccad32a",
+      "bytes": 230324
+    },
+    {
+      "local_source": "/usr/share/doc/fonts-ubuntu/copyright",
+      "file": "licenses/ubuntu-font-copyright.txt",
+      "sha256": "bca346a561b9668925ff55af1fcf0e10e65e07b1b40dd057bb4f3ded848ef8cf",
+      "bytes": 28095
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection PASSED [100%]
+
+============================== 1 passed in 4.26s ==============================

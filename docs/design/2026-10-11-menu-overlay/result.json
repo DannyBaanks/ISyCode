@@ -1,0 +1,27 @@
+{
+  "created_at": "2026-10-11T11:00:34.018820+00:00",
+  "repo_revision_before_overlay": "e1875dd1ed6ec2fff56addd970aa94472b8f72d0",
+  "tool": "built-in image_gen",
+  "selected_proposal": 1,
+  "status": "VISUAL_MOCKUP_NOT_IMPLEMENTED",
+  "initial": {
+    "path": "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-11-menu-overlay/settings-sidebar-initial.png",
+    "sha256": "1c499e16ff8ceb4515eeb4f7f72a613da9fe0a202d4357e471a0d7b6253ab20f",
+    "width": 1672,
+    "height": 941
+  },
+  "accepted": {
+    "path": "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-11-menu-overlay/settings-sidebar-propuesta-1.png",
+    "sha256": "68f115cf2d32efcceb8e1fc054a30387614aa246cc2116f029ea6a3c19fdb16b",
+    "width": 1672,
+    "height": 941
+  },
+  "generation_source": "/home/danny/.codex/generated_images/01a12a51-e035-7232-a1fd-901adafa4273/exec-4fa48413-0482-4e12-b463-c0466e1874bc.png",
+  "inspection": {
+    "settings_categories": "Conversación, Preferencias, Permisos, Conexiones",
+    "sidebar": "Flat sections, shared contrast/border/focus treatment",
+    "copy_hint": "Space: expandir · Doble clic: menú de copia",
+    "cat_and_composer": "Visible below modal",
+    "limitation": "Generative composition at 1672x941; not a pixel-identical 1920x1080 capture or runtime evidence."
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "file": "isycode/clipboard_owner.py",
+    "callable": "isycode.clipboard_owner.ClipboardOwner.paste",
+    "old_line": 102,
+    "new_line": 101
+  },
+  {
+    "file": "isycode/clipboard_owner.py",
+    "callable": "isycode.clipboard_owner.ClipboardOwner.copy",
+    "old_line": 124,
+    "new_line": 123
+  },
+  {
+    "file": "isycode/tui_app_sessions.py",
+    "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
+    "old_line": 931,
+    "new_line": 932
+  },
+  {
+    "file": "isycode/tui_app_sessions.py",
+    "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
+    "old_line": 971,
+    "new_line": 972
+  }
+]

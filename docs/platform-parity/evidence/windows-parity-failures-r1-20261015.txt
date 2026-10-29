@@ -1,0 +1,47 @@
+.F...F.Fsss..ssFF.....s..
+================================== FAILURES ===================================
+_ test_unscoped_picker_reveals_the_current_model_without_requiring_expansion __
+tests\test_mockup_selectors.py:70: in test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+    assert screen.focused is current
+E   AssertionError: assert Input(id='models-search') is ModelChoice(id='model-choice-0', classes='model-choice -style-default')
+E    +  where Input(id='models-search') = ModelsScreen().focused
+_________ test_mcp_presets_preserve_private_config_and_never_replace __________
+tests\test_native_toolkit.py:23: in test_mcp_presets_preserve_private_config_and_never_replace
+    add_preset('playwright',path)
+src\isycode\mcp_presets.py:36: in add_preset
+    storage.ensure_directory(path.parent)
+src\isycode\platform_windows_storage.py:165: in ensure_directory
+    raise ValueError('private state directory is unsafe')
+E   ValueError: private state directory is unsafe
+_________________ test_lsp_source_index_skips_oversized_files _________________
+tests\test_native_toolkit.py:60: in test_lsp_source_index_skips_oversized_files
+    assert _read_indexed_source(tmp_path,regular)=='export class Safe {}'
+E   AssertionError: assert None == 'export class Safe {}'
+E    +  where None = <function _read_indexed_source at 0x000002D7F2987740>(WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-883/test_lsp_source_index_skips_ov0'), WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-883/test_lsp_source_index_skips_ov0/safe.ts'))
+____ test_private_access_preflight_enable_verify_disable_keeps_other_route ____
+tests\test_private_tailnet_witness.py:38: in test_private_access_preflight_enable_verify_disable_keeps_other_route
+    assert preflight.decision == "ALLOW" and preflight.receipt is not None
+E   AssertionError: assert ('DENY' == 'ALLOW'
+E     
+E     - ALLOW
+E     + DENY)
+_____ test_cancelled_private_route_preview_has_no_command_or_saved_state ______
+tests\test_private_tailnet_witness.py:81: in test_cancelled_private_route_preview_has_no_command_or_saved_state
+    owner.preview_enable()  # Opening and cancelling the confirmation view is read-only.
+    ^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_serve.py:200: in preview_enable
+    return self._prepare("tailscale.serve.enable")[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_serve.py:93: in _prepare
+    snapshot = self._inventory.authorized_snapshot()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\isycode\tailscale_read.py:81: in authorized_snapshot
+    raise ValueError("read-only Tailscale inventory is not authorized")
+E   ValueError: read-only Tailscale inventory is not authorized
+=========================== short test summary info ===========================
+FAILED tests/test_mockup_selectors.py::test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+FAILED tests/test_native_toolkit.py::test_mcp_presets_preserve_private_config_and_never_replace
+FAILED tests/test_native_toolkit.py::test_lsp_source_index_skips_oversized_files
+FAILED tests/test_private_tailnet_witness.py::test_private_access_preflight_enable_verify_disable_keeps_other_route
+FAILED tests/test_private_tailnet_witness.py::test_cancelled_private_route_preview_has_no_command_or_saved_state
+5 failed, 14 passed, 6 skipped in 18.08s

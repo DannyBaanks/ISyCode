@@ -1,0 +1,224 @@
+import asyncio
+from isycode.tui import TUIApp, ThoughtBlock, BoxTitle, plain_text
+from test_daily_tui import configure
+
+def test_thinking_preview_full_and_hidden_states_are_local_to_focus(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            block, chat = app._mount_thought()
+            await pilot.pause()
+            block.set_text('First line\nSecond line')
+            assert plain_text(block._body).startswith('First line\nSecond line')
+            assert not str(block.border_subtitle)
+            block.set_text('First line\nSecond line\nThird line\nFourth line')
+            await pilot.pause()
+            assert block._body.region.height == 2
+            assert plain_text(block._body).startswith('First line\nSecond line')
+            assert not str(block.border_subtitle)
+            app.query_one('#prompt-input').focus()
+            await pilot.press('space')
+            assert plain_text(block._body).startswith('First line\nSecond line')
+            block.focus()
+            await pilot.press('space')
+            await pilot.pause()
+            assert 'Fourth line' in plain_text(block._body)
+            assert 'collapse' in str(block.border_subtitle)
+            await pilot.press('space')
+            assert block.collapsed
+            await pilot.press('space')
+            assert not block.collapsed
+            assert plain_text(block._body).startswith('First line\nSecond line')
+            block.collapse_to(6)
+            await pilot.pause()
+            assert block.collapsed
+            assert 'Thought for 6s     First line Second line' in str(block.title)
+            block.query_one(BoxTitle).focus()
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block.collapsed
+            assert plain_text(block._body).startswith('First line\nSecond line')
+            await pilot.press('space')
+            assert 'Fourth line' in plain_text(block._body)
+            rail = app.query_one('#rail-lsp')
+            initial = rail.collapsed
+            rail.query_one(BoxTitle).focus()
+            await pilot.press('space')
+            await pilot.pause()
+            assert rail.collapsed != initial
+            assert not block.collapsed
+    asyncio.run(scenario())
+
+
+def test_completed_marquee_is_optional_bounces_and_setting_is_saved(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            block, _ = app._mount_thought()
+            await pilot.pause()
+            block.set_text('A long completed reasoning note with different words. ' * 8)
+            block.collapse_to(6)
+            assert not block._marquee_enabled
+            block.toggle_marquee()
+            block._marquee_timer.pause()
+            start = str(block.title)
+            block._marquee_tick()
+            assert str(block.title) != start
+            block._marquee_offset = 10000
+            block._marquee_tick()
+            assert block._marquee_direction == -1
+            block.toggle_marquee()
+            fixed = str(block.title)
+            block._marquee_tick()
+            assert str(block.title) == fixed
+            assert fixed.startswith('Thought for 6s     ')
+            app._select_menu_entry({'kind': 'marquee_toggle', 'value': '', 'label': 'toggle'})
+            from isycode.user_defaults import UserDefaultsStore
+            assert UserDefaultsStore().load()['compact_marquee'] is True
+            assert block._marquee_enabled
+    asyncio.run(scenario())
+
+
+def test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            block, _ = app._mount_thought()
+            await pilot.pause()
+            block.set_text("One\nTwo\nThree\nFour")
+            block.collapse_to(6)
+            block.query_one(BoxTitle).focus()
+            for _ in range(2):
+                key = "space"
+                await pilot.press(key)
+                await pilot.pause()
+                assert not block.collapsed and not block._expanded
+                assert block._body.region.height == 2
+                await pilot.press(key)
+                await pilot.pause()
+                assert not block.collapsed and block._expanded
+                assert "Four" in plain_text(block._body)
+                await pilot.press(key)
+                await pilot.pause()
+                assert block.collapsed and not block._expanded
+                assert "Thought for 6s     One Two Three Four" in str(block.title)
+    asyncio.run(scenario())
+
+
+def test_clicking_expanded_thinking_keeps_chat_at_tail(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        from types import SimpleNamespace
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            # History above keeps the chat scrollable, so focusing a tall
+            # expanded block would otherwise centre it and release the tail.
+            for index in range(20):
+                app._append(f"history line {index}")
+                await pilot.pause()
+            block, chat = app._mount_thought()
+            await pilot.pause()
+            chat.resume_tail()
+            await pilot.pause()
+            block.set_text('\n'.join(f'Reasoning line {index}' for index in range(1, 60)))
+            block._expanded = True
+            block.collapsed = False
+            await pilot.pause()
+            await pilot.pause(0.3)
+            chat.resume_tail()
+            await pilot.pause()
+            assert chat.scroll_y >= chat.max_scroll_y and chat._following_tail()
+            # A click on the reasoning body focuses the block. Focusing it with
+            # the default scroll_visible=True releases the chat's tail anchor and
+            # scrolls the viewport up off the answer; the fix must not move it.
+            block.on_click(SimpleNamespace(widget=block._body))
+            await pilot.pause()
+            await pilot.pause(0.3)
+            assert chat._following_tail(), 'focusing the thinking block released the tail anchor'
+            assert chat.scroll_y >= chat.max_scroll_y, 'focusing the thinking block scrolled off the tail'
+    asyncio.run(scenario())
+
+
+def test_clicking_and_collapsing_large_reasoning_text(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            block, chat = app._mount_thought()
+            await pilot.pause()
+            
+            # 35 lines of detailed reasoning text (large text block)
+            big_text = '\n'.join([f'Line {i}: This is reasoning step number {i} with some detailed thoughts and explanations.' for i in range(1, 35)])
+            block.set_text(big_text)
+            await pilot.pause()
+            
+            # Cycle 1: Focus container and cycle states
+            block.focus()
+            await pilot.pause()
+            assert not block._expanded and not block.collapsed
+            assert block._body.region.height == 2
+            
+            # 1. Expand to full
+            await pilot.press('space')
+            await pilot.pause()
+            assert block._expanded and not block.collapsed
+            assert block._body.region.height > 2
+            
+            # 2. Minimize to collapsed
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and block.collapsed
+            assert app.focused is block
+            
+            # 3. Press space again (to preview)
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and not block.collapsed
+            assert block._body.region.height == 2
+            
+            # 4. Press space again (to full)
+            await pilot.press('space')
+            await pilot.pause()
+            assert block._expanded and not block.collapsed
+            
+            # Cycle 2: User clicks inside the body text (SelectableText)
+            block._body.focus()
+            await pilot.pause()
+            assert app.focused == block._body
+            
+            # User presses space to minimize from focused body
+            # Crucial regression: Focus must transfer to container, not be lost to None
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and block.collapsed
+            assert app.focused is block
+            
+            # Now user can immediately press space to re-expand without focus loss
+            await pilot.press('space')
+            await pilot.pause()
+            assert not block._expanded and not block.collapsed
+            assert block._body.region.height == 2
+            
+            # Massive text stress test (20,000 characters) - must not block or freeze
+            giant_text = ('Detailed reasoning step for large multi-modal plan. ' * 400) + '\nEnd of thought.'
+            block.set_text(giant_text)
+            await pilot.pause()
+            await pilot.press('space')
+            await pilot.pause()
+            assert block._expanded and not block.collapsed
+            await pilot.press('space')
+            await pilot.pause()
+            assert block.collapsed and not block._expanded
+            assert app.focused is block
+    asyncio.run(scenario())
+
+
+
+

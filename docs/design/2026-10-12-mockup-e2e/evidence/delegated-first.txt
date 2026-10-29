@@ -1,0 +1,11 @@
+...................................F.                                    [100%]
+=================================== FAILURES ===================================
+__________________ test_models_screen_renders_family_variants __________________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_model_families.py:166: in test_models_screen_renders_family_variants
+    assert any("glm-5.3-flash" in label for label in labels), labels
+E   AssertionError: ['Refresh account catalog · OpenAI API', 'Auto', 'Nemotron 3 Ultra 550b a55b', 'DeepSeek v4 Flash', 'DeepSeek v4 Pro', 'Kimi k3', ...]
+E   assert False
+E    +  where False = any(<generator object test_models_screen_renders_family_variants.<locals>.<genexpr> at 0x76c07330d150>)
+=========================== short test summary info ============================
+FAILED tests/test_model_families.py::test_models_screen_renders_family_variants
+1 failed, 36 passed in 27.74s

@@ -1,0 +1,7 @@
+{
+  "historical_manifest_restored_exactly": true,
+  "artifact_at_evaluated_commit_verified": true,
+  "original_invalid_manifest_preserved": true,
+  "review_status": "Independent reviewer invocation failed due to account usage limit; no independent approval claimed.",
+  "scope": "Historic recovery only. No release or HEAD approval."
+}

@@ -1,0 +1,839 @@
+FFFFFFFFFFFFFFF                                                          [100%]
+=================================== FAILURES ===================================
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size0] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e2087590>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on MCPInvocationConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭────────────── locals ───────────────╮                                      │
+│ │ self = MCPInvocationConfirmScreen() │                                      │
+│ ╰─────────────────────────────────────╯                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on MCPInvocationConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size1] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1e797c0>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on MCPInvocationConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭────────────── locals ───────────────╮                                      │
+│ │ self = MCPInvocationConfirmScreen() │                                      │
+│ ╰─────────────────────────────────────╯                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on MCPInvocationConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size0] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1cd3aa0>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on GatewaySemanticConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭─────────────── locals ────────────────╮                                    │
+│ │ self = GatewaySemanticConfirmScreen() │                                    │
+│ ╰───────────────────────────────────────╯                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on GatewaySemanticConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size1] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e19ab7d0>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on GatewaySemanticConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭─────────────── locals ────────────────╮                                    │
+│ │ self = GatewaySemanticConfirmScreen() │                                    │
+│ ╰───────────────────────────────────────╯                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on GatewaySemanticConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size0] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1902ba0>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on LSPConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭───────── locals ──────────╮                                                │
+│ │ self = LSPConfirmScreen() │                                                │
+│ ╰───────────────────────────╯                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on LSPConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size1] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1a58860>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on LSPConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭───────── locals ──────────╮                                                │
+│ │ self = LSPConfirmScreen() │                                                │
+│ ╰───────────────────────────╯                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on LSPConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size0] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1967620>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on BrokerProvisionConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭─────────────── locals ────────────────╮                                    │
+│ │ self = BrokerProvisionConfirmScreen() │                                    │
+│ ╰───────────────────────────────────────╯                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on BrokerProvisionConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size1] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1cd0980>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on BrokerProvisionConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭─────────────── locals ────────────────╮                                    │
+│ │ self = BrokerProvisionConfirmScreen() │                                    │
+│ ╰───────────────────────────────────────╯                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on BrokerProvisionConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size0] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1e78a10>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on BrokerOperationConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭─────────────── locals ────────────────╮                                    │
+│ │ self = BrokerOperationConfirmScreen() │                                    │
+│ ╰───────────────────────────────────────╯                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on BrokerOperationConfirmScreen()
+_ test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size1] _
+tests/test_mockup_integrations.py:34: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1ed3fe0>
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_integrations.py:43: in test_long_confirmations_keep_cancel_visible_and_enter_rejects
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:32: in scenario
+    async with app.run_test(size=size) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:604: in _pre_process
+    await self._dispatch_message(events.Mount())
+.venv/lib/python3.12/site-packages/textual/message_pump.py:727: in _dispatch_message
+    await self.on_event(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:808: in on_event
+    await self._on_message(event)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_approval.py:112: in on_mount
+    self.query_one(Button).focus()
+    ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/dom.py:1533: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match 'Button' on BrokerOperationConfirmScreen()
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_approval.py:112 in on_mount              │
+│                                                                              │
+│   109 │   def on_mount(self) -> None:                                        │
+│   110 │   │   # Scrollable review content must never become an implicit cons │
+│   111 │   │   # The first action in this family is always the refusing actio │
+│ ❱ 112 │   │   self.query_one(Button).focus()                                 │
+│   113 │                                                                      │
+│   114 │   def action_approve(self) -> None:                                  │
+│   115 │   │   self.dismiss(True)                                             │
+│                                                                              │
+│ ╭─────────────── locals ────────────────╮                                    │
+│ │ self = BrokerOperationConfirmScreen() │                                    │
+│ ╰───────────────────────────────────────╯                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+NoMatches: No nodes match 'Button' on BrokerOperationConfirmScreen()
+_________ test_mcp_invalid_json_keeps_draft_then_returns_exact_object __________
+tests/test_mockup_integrations.py:65: in test_mcp_invalid_json_keeps_draft_then_returns_exact_object
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:52: in scenario
+    await app.push_screen(screen, results.append)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e1a44b60>
+_ test_forms_and_management_keep_actions_reachable[<lambda>-semantic-payload] __
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:79: in scenario
+    await app.push_screen(screen)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e199ca70>
+_ test_forms_and_management_keep_actions_reachable[<lambda>-mcp-arguments-input] _
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:79: in scenario
+    await app.push_screen(screen)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e12af4d0>
+_______ test_forms_and_management_keep_actions_reachable[<lambda>-None0] _______
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:79: in scenario
+    await app.push_screen(screen)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e144fcb0>
+_______ test_forms_and_management_keep_actions_reachable[<lambda>-None1] _______
+tests/test_mockup_integrations.py:87: in test_forms_and_management_keep_actions_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:79: in scenario
+    await app.push_screen(screen)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/app.py:2952: in push_screen
+    self._load_screen_css(next_screen)
+.venv/lib/python3.12/site-packages/textual/app.py:2849: in _load_screen_css
+    self.stylesheet.reparse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:427: in reparse
+    stylesheet.parse()
+.venv/lib/python3.12/site-packages/textual/css/stylesheet.py:403: in parse
+    raise StylesheetParseError(error_renderable)
+E   textual.css.stylesheet.StylesheetParseError: <textual.css.stylesheet.StylesheetErrors object at 0x7336e12551c0>
+=========================== short test summary info ============================
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>0-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>1-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>2-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>3-size1]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size0]
+FAILED tests/test_mockup_integrations.py::test_long_confirmations_keep_cancel_visible_and_enter_rejects[<lambda>4-size1]
+FAILED tests/test_mockup_integrations.py::test_mcp_invalid_json_keeps_draft_then_returns_exact_object
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-semantic-payload]
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-mcp-arguments-input]
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-None0]
+FAILED tests/test_mockup_integrations.py::test_forms_and_management_keep_actions_reachable[<lambda>-None1]
+15 failed in 2.27s

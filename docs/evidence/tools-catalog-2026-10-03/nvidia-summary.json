@@ -1,0 +1,27 @@
+{
+  "catalog_models": 81,
+  "availability": {
+    "available": 17,
+    "endpoint_404": 55,
+    "not_demonstrated": 9
+  },
+  "vision_second_pass": {
+    "passed": 6,
+    "challenge_failed": 4,
+    "not_demonstrated": 7
+  },
+  "confirmed_vision_union": [
+    "google/diffusiongemma-26b-a4b-it",
+    "google/gemma-4-31b-it",
+    "meta/llama-3.2-11b-vision-instruct",
+    "meta/llama-3.2-90b-vision-instruct",
+    "meta/muse-glimmer-30b",
+    "nvidia/ising-calibration-1.5-31b",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+  ],
+  "glm_5_3": {
+    "availability": "AVAILABLE",
+    "vision": "NOT_DEMONSTRATED"
+  },
+  "scope": "This account and NVIDIA chat endpoint at test time; 404 is not proof of provider deprecation. Results do not transfer authority or support to other endpoints."
+}

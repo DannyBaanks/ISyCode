@@ -1,0 +1,6 @@
+Use case: precise-object-edit. The attached image is the edit target: the Consola modular ISyCode menu contact sheet.
+Change ONLY the highlighted text selection inside the 'Texto y copia' panel in the middle band's far-right component. Every other pixel, panel, typography, border, color, labels, dimensions and all seventeen menus must remain the same. Do not recompose the board.
+The code there has line 1 def calcular(x, y):, line 2 resultado = x + y, and line 3 return resultado.
+Currently only line 3 is highlighted white. Make BOTH consecutive lines 2 AND 3 visibly selected as one continuous mouse range, with a WHITE background and BLACK readable code text across both lines. Line 1 and lines 4/5 MUST remain unselected on their original dark background. Highlight only code characters, not line numbers.
+Keep the small popover exactly where it is, with the unchanged labels 'Copiar selección · 2 líneas' and 'Copiar caja completa'.
+The popover must now truthfully match the TWO highlighted code lines. Preserve all panel titles including Authority & Security, large Configuración, Overview, Files, Models and Providers. No other edits.

@@ -1,0 +1,16 @@
+{
+  "inspected_and_archived": 7,
+  "attached_per_generation": 5,
+  "reason": "Image Gen permits at most five referenced_image_paths; selected Settings, high-contrast sidebar, high-contrast Authority, Models, and Multi Harness.",
+  "selected_original_paths": [
+    "/tmp/codex-clipboard-a6e873f8-5e5f-417a-9df7-77ed10306f6a.png",
+    "/tmp/codex-clipboard-15b27f01-5829-4f26-8cc9-a822dc6a2226.png",
+    "/tmp/codex-clipboard-1966fa96-844d-4b29-bbda-9d9c565dc801.png",
+    "/tmp/codex-clipboard-c62041e2-d714-4963-8dac-086d6113b83f.png",
+    "/tmp/codex-clipboard-30b6c922-9a26-49a3-b03c-1780fe8eec01.png"
+  ],
+  "failed_attempt": {
+    "returned_image": false,
+    "error": "referenced_image_paths must contain at most 5 paths"
+  }
+}

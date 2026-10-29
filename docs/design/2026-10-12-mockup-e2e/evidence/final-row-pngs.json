@@ -1,0 +1,30 @@
+{
+  "source_commit": "8c668a307daf475bbc4ed14dc639b425a7f7d061",
+  "renderer": "librsvg; native SVG preserved",
+  "images": [
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-80x24/09-models-readable.png",
+      "sha256": "31c665ef284c860a7b50a15e56e061044bb655b78a6ac205dc7e1ec71f570da2"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-80x24/21-subagent-model-readable.png",
+      "sha256": "459be8065ac05e6af6b2703ee102c109b47b1bd4825e961bfab447f54d766b0e"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-100x30/09-models-readable.png",
+      "sha256": "9a50b98991560206f399094c6d1d27d0d56826d569873ef30b200916e8a9d599"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-100x30/21-subagent-model-readable.png",
+      "sha256": "86d597d97c043b3e6c944c30489bf5b6d4f41c154f8e9996a278ee66720a1d5c"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-140x40/09-models-readable.png",
+      "sha256": "745fbacae760aaefdadbd69521664fb7f5f90299d81f75693367b5336a820b12"
+    },
+    {
+      "file": "docs/design/2026-10-12-mockup-e2e/rows-complete-140x40/21-subagent-model-readable.png",
+      "sha256": "e701bf7f608e22774d8bb6831d2259078bfac4a85390209e2d8c63d4cedd30c1"
+    }
+  ]
+}

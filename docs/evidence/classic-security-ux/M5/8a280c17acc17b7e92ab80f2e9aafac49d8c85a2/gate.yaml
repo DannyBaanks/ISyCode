@@ -1,0 +1,92 @@
+hito: M5
+puerta: G5
+estado: APROBADO
+sha_evaluado: 8a280c17acc17b7e92ab80f2e9aafac49d8c85a2
+fecha_utc: 2026-10-06T01:30:00Z
+autor: opencode session (fledge)
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; fixtures con clave CANARIO, nunca credenciales reales; prueba viva opt-in no ejercitada
+dependencias: G3
+dependencias_estado:
+  G3: APROBADO
+casos:
+  - id: G5-01
+    prueba: tests/test_egress.py::test_g5_01_canary_reaches_only_the_allowed_provider
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: key canario aparece únicamente en transporte de provider permitido; cero ocurrencias en subprocess, logs, recibos, sesiones o otro proveedor
+    observado: >
+      Pasó con fixture SSE local. El canario viaja solo en el header
+      Authorization del host autorizado (127.0.0.1:port), nunca en el cuerpo;
+      el owner hacia otro endpoint devuelve DENY sin enviar nada; el canario
+      no aparece en textos, razones, recibo (ids y digests) ni en archivos
+      bajo el state dir, el workspace o state_root().
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+      - tests/test_egress.py
+        sha256: 4601bb14a0c96aa92c31f40103ae5dfa3d6789920090804a8161e5967d2fe89b
+  - id: G5-02
+    prueba: tests/test_egress.py::test_g5_02_redirect_proxy_and_rebind_do_not_widen_the_destination
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: redirect entre origins, proxy, DNS rebinding y destino privado inesperado no amplían scope; capturar tráfico con fixture controlado
+    observado: >
+      Pasó. Redirects cross-origin no heredan Authorization, proxies de
+      entorno ignorados, y un host que resuelve distinto al destino revisado
+      no amplía scope (fixture con servidores locales capturando bytes).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+  - id: G5-03
+    prueba: tests/test_egress.py::test_g5_03_sandbox_and_mcp_do_not_exfiltrate
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: curl, Python socket, build hooks y MCP no exfiltran desde sandbox ni usan provider como proxy genérico
+    observado: >
+      Pasó con bubblewrap real: el comando sandbox lleva --unshare-all y
+      nunca --share-net; el environment del proceso no hereda OPENAI_API_KEY
+      ni ISYMOTRON_API_KEY (solo variables explícitas por config MCP);
+      ninguna acción del catálogo es "download"; el intento de conexión
+      desde dentro del sandbox no llega al sink local.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+  - id: G5-04
+    prueba: tests/test_egress.py::test_g5_04_publication_requires_exact_approval tests/test_egress.py::test_g5_04_commit_does_not_push
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: push/publicación/envío sin autorización no sale; cambiar payload/destino invalida aprobación; rechazar no genera efecto externo
+    observado: >
+      Pasó. Sin grant ni approval no hay transporte; con approval pero sin
+      grant sigue DENY; sin transporte configurado la razón es "no publication
+      transport"; con grant + approval el transporte recibe remote/ref/digest
+      exactos (cambio de payload/destino produce request distinto, digest
+      distinto). Commit local nunca invoca push.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+  - id: G5-05
+    prueba: tests/test_egress.py::test_g5_05_revoking_a_provider_does_not_switch_endpoint
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_workspace_trust.py tests/test_egress.py -ra --tb=short
+    esperado: caída/revocación de servicio no activa otro provider, credencial, endpoint o owner implícitamente
+    observado: >
+      Pasó. Con provider.request revocado la ejecución es DENY y no se llama
+      al transporte; con grant limitado a OTRO puerto, el endpoint distinto
+      sigue DENY; ningún fallback activa otro provider ni otra credencial
+      (el canario nunca aparece en texto ni razón).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/8a280c17acc17b7e92ab80f2e9aafac49d8c85a2/gate-tests.txt
+        sha256: 768452a6c31588169dbd8c22e525ff032330825c2ac5b3ea8c2573bb9206df64
+      - tests/test_egress.py
+        sha256: 4601bb14a0c96aa92c31f40103ae5dfa3d6789920090804a8161e5967d2fe89b
+sin_evidencia_real:
+  - prueba viva opt-in contra un provider real con scope y gasto autorizados (los fixtures son locales; no se usaron credenciales reales)
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1455 passed, 1 skipped, 11 deselected; 292.64s
+riesgos_residuales: los fixtures capturan tráfico HTTP plano local; TLS real queda cubierto por el mismo owner pero no se midió contra un endpoint TLS vivo
+rollback_ensayado: no aplica cambio de producto en esta renovación; tests herméticos
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T05:59:51Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py
