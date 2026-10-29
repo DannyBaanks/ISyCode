@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "standard_version": "1.0.0",
+  "direction": "Contraste esencial / proposal 1",
+  "accepted_on": "2026-10-11",
+  "scope": "ISyCode Textual TUI authoring; design targets, not production configuration",
+  "colors": {
+    "surface": "#000000",
+    "selected_surface": "#03252d",
+    "text": "#edf1f5",
+    "muted": "#a9b5c2",
+    "focus": "#38e1ee",
+    "border": "#718291",
+    "separator": "#3f4d59",
+    "success": "#7fe39d",
+    "warning": "#f2c068",
+    "security": "#f2955e",
+    "error": "#f7888e"
+  },
+  "typography_reference": {
+    "font": "Ubuntu Sans Mono",
+    "icon_mode": "unicode",
+    "browser_size_px": 14,
+    "browser_line_height": 1.3,
+    "terminal_font_owner": "terminal preferences",
+    "terminal_point_size_conversion": "NOT_DEMONSTRATED"
+  },
+  "terminal_layout": {
+    "panel_padding_cells": [1, 2],
+    "sidebar_padding_cells": [0, 1],
+    "border_style": "solid",
+    "smallest_review_size": [80, 24]
+  }
+}

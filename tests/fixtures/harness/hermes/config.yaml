@@ -1,0 +1,21 @@
+model:
+  default: hermes-test
+  provider: openai
+  base_url: https://secret-endpoint.example
+agent:
+  reasoning_effort: high
+display:
+  skin: midnight
+  compact: true
+web:
+  backend: fake
+command_allowlist:
+  - git status
+platform_toolsets:
+  - terminal
+known_plugin_toolsets:
+  - fake
+plugins:
+  clone_timeout_seconds: 5
+skills:
+  creation_nudge_interval: 2

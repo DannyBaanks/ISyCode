@@ -1,0 +1,114 @@
+from isycode.harness_graph import (
+    CATALOG_IDS,
+    SEED_OPTIONS,
+    Gap,
+    HarnessSetting,
+    copyable_default_model,
+    gap_status,
+    present_by_semantic,
+    repair_compose_all,
+    repair_targets,
+)
+
+
+def test_catalog_is_the_reviewed_fifteen_in_order():
+    assert CATALOG_IDS == (
+        "crush", "qwen", "opencode", "claude", "codex", "grok", "hermes",
+        "fx", "openclaw", "pi", "kimi", "cursor", "copilot", "commandcode", "kilo",
+    )
+
+
+def test_gap_rule_uses_four_harnesses_and_never_counts_unmapped_or_secret():
+    option = SEED_OPTIONS["user_skills"]
+    assert gap_status(option, {"claude", "codex", "hermes"}).status == "WATCH"
+    gap = gap_status(option, {"claude", "codex", "hermes", "openclaw"})
+    assert gap == Gap("user_skills", ("claude", "codex", "hermes", "openclaw"), "absent", "ADD")
+    assert gap_status(SEED_OPTIONS["provider_endpoint"], {"a", "b", "c", "d"}).status == "DO_NOT_MERGE"
+    assert gap_status(SEED_OPTIONS["web_fetch"], set()).status == "WATCH"
+    assert gap_status(SEED_OPTIONS["secret_skip"], {"codex"}) is None
+    assert gap_status(option, {"claude", "codex", "hermes", "openclaw"}, ignored=frozenset({"user_skills"})) is None
+
+
+def test_present_counts_each_harness_once_and_drops_unmapped_and_non_equivalent_semantics():
+    rows = [
+        HarnessSetting("codex", "config.toml", "model", "str", "default_model", "same"),
+        HarnessSetting("codex", "config.toml", "model2", "str", "default_model", "same"),
+        HarnessSetting("grok", "config.toml", "ui.permission_mode", "str", None, "unmapped"),
+        HarnessSetting("hermes", "config.yaml", "model.default", "str", "default_model", "same"),
+    ]
+    assert present_by_semantic(rows)["default_model"] == {"codex", "hermes"}
+    assert None not in present_by_semantic(rows)
+
+
+def test_non_equivalent_opencode_plugin_row_can_be_displayed_without_counting_toward_n():
+    rows = [
+        HarnessSetting("claude", "settings.json", "enabledPlugins", "object",
+                       "enabled_plugins", "same"),
+        HarnessSetting("opencode", "opencode.jsonc", "plugin[]", "list",
+                       "enabled_plugins", "non_equivalent", counts_toward_n=False),
+    ]
+    assert present_by_semantic(rows)["enabled_plugins"] == {"claude"}
+
+
+def test_default_model_copy_guard_requires_exact_preset_and_safe_model_id():
+    assert copyable_default_model("openai", "gpt-5.6-sol", preset_ids={"openai", "anthropic"})
+    assert not copyable_default_model("gemini", "gemini-4", preset_ids={"google"})
+    assert not copyable_default_model("managed:kimi-code", "kimi", preset_ids={"openai"})
+    assert not copyable_default_model("openai", "bad model with spaces", preset_ids={"openai"})
+    assert not copyable_default_model("openai", "x" * 257, preset_ids={"openai"})
+
+
+def test_reviewed_seed_has_separate_web_nodes_and_expected_targets():
+    assert SEED_OPTIONS["web_fetch"].isycode_target == "src/isycode/web_fetch.py:WebFetchOwner.execute"
+    assert SEED_OPTIONS["web_search"].isycode_target == "absent"
+    assert SEED_OPTIONS["default_model"].isycode_target == "src/isycode/providers.py:save_provider_selection"
+    assert SEED_OPTIONS["reasoning_effort"].isycode_target == "src/isycode/providers.py:Provider.reasoning_effort"
+    assert SEED_OPTIONS["folder_trust"].transfer == "non_transferable"
+
+
+def test_repair_compose_all_bundles_actionable_rows():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+        {"semantic_id": "user_skills", "harnesses": ("codex", "claude", "hermes", "grok"), "status": "ADD", "target_label": "Missing in ISyCode", "title": "User skills"},
+        {"semantic_id": "ui_theme", "harnesses": ("codex", "claude"), "status": "WATCH", "target_label": "Not an ISyCode setting", "title": "UI theme"},
+        {"semantic_id": "approval_bypass", "harnesses": ("codex", "claude"), "status": "DO_NOT_MERGE", "target_label": "Not an ISyCode setting", "title": "Approval bypass"},
+    ]
+    brief = repair_compose_all(rows)
+    assert "Gaps covered: 2" in brief
+    assert "User skills" in brief
+    assert "UI theme" in brief
+    assert "Approval bypass" not in brief
+    assert "Default model" not in brief
+
+
+def test_repair_compose_all_returns_aligned_message_when_no_actionable_gaps():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+    ]
+    assert repair_compose_all(rows) == "No gaps to repair · the harness map is aligned."
+
+
+def test_repair_targets_lists_cli_and_files_for_actionable_rows_only():
+    rows = [
+        {"semantic_id": "default_model", "harnesses": ("codex", "claude"), "status": "ALIGNED", "target_label": "target", "title": "Default model"},
+        {"semantic_id": "user_skills", "harnesses": ("codex", "claude", "hermes", "grok"), "status": "ADD", "target_label": "Missing in ISyCode", "title": "User skills"},
+        {"semantic_id": "web_fetch", "harnesses": ("codex", "claude"), "status": "WATCH",
+         "target_label": "src/isycode/web_fetch.py:WebFetchOwner.execute", "title": "Web fetch"},
+        {"semantic_id": "approval_bypass", "harnesses": ("codex", "claude"), "status": "DO_NOT_MERGE", "target_label": "absent", "title": "Approval bypass"},
+    ]
+    targets = repair_targets(rows)
+    assert [t["semantic_id"] for t in targets] == ["user_skills", "web_fetch"]
+    skills = targets[0]
+    assert skills["harnesses"] == ("codex", "claude", "hermes", "grok")
+    assert skills["files"] == []
+    web = targets[1]
+    assert web["files"] == ["src/isycode/web_fetch.py:WebFetchOwner.execute"]
+
+
+def test_repair_targets_uses_seed_option_target_over_row_label():
+    rows = [
+        {"semantic_id": "web_fetch", "harnesses": ("codex", "claude"), "status": "WATCH",
+         "target_label": "row-label-ignored", "title": "Web fetch"},
+    ]
+    targets = repair_targets(rows)
+    assert targets[0]["files"] == ["src/isycode/web_fetch.py:WebFetchOwner.execute"]

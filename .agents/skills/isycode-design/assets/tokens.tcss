@@ -1,0 +1,24 @@
+/* ISyCode Design Skills v1. Authoring asset, not installed production CSS.
+   Palette source: tokens.json. All selectors are scoped to explicit classes.
+   Terminal fonts/sizes are deliberately absent: the terminal owns them. */
+
+.isy-surface { background: #000000; color: #edf1f5; }
+.isy-panel {
+    background: #000000;
+    color: #edf1f5;
+    border: solid #718291;
+    padding: 1 2;
+}
+.isy-panel:focus-within { border: solid #38e1ee; }
+.isy-option { background: #000000; color: #edf1f5; }
+.isy-option.-selected { background: #03252d; color: #38e1ee; }
+.isy-sidebar { border-left: solid #3f4d59; padding: 0 1; }
+.isy-sidebar-section { border-top: solid #3f4d59; padding: 1 0; }
+Input.isy-search { background: #000000; color: #edf1f5; border: solid #718291; }
+Input.isy-search:focus { border: solid #38e1ee; }
+Button.isy-action { background: #000000; color: #edf1f5; border: solid #718291; }
+Button.isy-action:focus { border: solid #38e1ee; }
+.isy-muted { color: #a9b5c2; }
+.isy-success { color: #7fe39d; }
+.isy-warning { color: #f2c068; }
+.isy-error { color: #f7888e; }

@@ -1,0 +1,7 @@
+theme = "dark"
+[notifications]
+enabled = true
+[editor]
+command = "evil-editor"
+[upgrade]
+auto_install = true

@@ -1,0 +1,3 @@
+{"role":"user","content":"body must not enter graph"}
+{"role":"assistant","content":"fixture assistant reply"}
+{"role":"system","content":"fixture system instruction"}

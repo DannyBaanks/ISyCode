@@ -1,0 +1,192 @@
+/* Palette exported from ISyCode Design Skills tokens.json. */
+$isy-surface: #000000;
+$isy-selected-surface: #03252d;
+$isy-text: #edf1f5;
+$isy-muted: #a9b5c2;
+$isy-focus: #38e1ee;
+$isy-border: #718291;
+$isy-separator: #3f4d59;
+$isy-success: #7fe39d;
+$isy-warning: #f2c068;
+$isy-security: #f2955e;
+$isy-error: #f7888e;
+
+/* Shared ISyCode surfaces. Screen-specific layout and action semantics stay local. */
+Screen { background: $isy-surface; color: $isy-text; }
+Widget {
+    scrollbar-size: 1 1;
+    scrollbar-color: $isy-border;
+    scrollbar-color-hover: $isy-muted;
+    scrollbar-color-active: $isy-focus;
+    scrollbar-background: $isy-surface;
+    scrollbar-background-hover: $isy-surface;
+    scrollbar-background-active: $isy-surface;
+}
+Input, TextArea { background: $isy-surface !important; color: $isy-text !important; border: solid $isy-border !important; }
+Input:focus, TextArea:focus { border: solid $isy-focus !important; }
+Input > .input--placeholder { color: $isy-muted; text-style: none; }
+Select > SelectCurrent, Select > SelectOverlay {
+    background: $isy-surface !important; color: $isy-text;
+    border: solid $isy-border !important; background-tint: transparent;
+}
+Select:focus > SelectCurrent, Select > SelectOverlay:focus { border: solid $isy-focus !important; }
+SelectCurrent > Static#label { color: $isy-text; }
+ModalScreen > Vertical, ModalScreen > VerticalScroll {
+    background: $isy-surface !important; color: $isy-text;
+    border: solid $isy-border !important; max-height: 95%; max-width: 96%;
+}
+ModalScreen VerticalScroll, ModalScreen OptionList { background: $isy-surface !important; }
+/* Flat action buttons: no second frame inside a dialog. A borderless button
+   declares its own height, so dialog geometry stays what it was. */
+ModalScreen Button {
+    border: none !important; background: $isy-surface !important; color: $isy-text !important;
+    background-tint: transparent; tint: transparent; min-width: 8; height: 3;
+}
+ModalScreen Button:hover, ModalScreen Button:focus {
+    border: none !important; background: $isy-selected-surface !important; color: $isy-focus !important;
+}
+ModalScreen Button.-primary { color: $isy-focus !important; }
+ModalScreen Button.-warning { color: $isy-warning !important; }
+ModalScreen Button.-error { color: $isy-error !important; }
+ModalScreen Button:disabled { color: $isy-muted !important; text-style: dim; }
+
+/* F-07: security-policy DENY toast — orange, distinct from error red. */
+Toast.-security-denied { border-left: outer $isy-security; }
+Toast.-security-denied .toast--title { color: $isy-security; }
+
+OptionList > .option-list--option-highlighted { background: $isy-selected-surface !important; color: $isy-focus !important; text-style: none; }
+OptionList > .option-list--option { background: $isy-surface; color: $isy-text; text-style: none; }
+OptionList > .option-list--option-disabled { color: $isy-muted; }
+Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-surface; color: $isy-focus; }
+#chat, #command-bar { background: $isy-surface !important; }
+#side-panel { background: $isy-surface !important; border: none !important; border-left: solid $isy-separator !important; padding: 1; }
+#rail-card { background: $isy-surface !important; border: none !important; padding: 0; }
+.panel-title, .section-title { color: $isy-text; }
+.rail-copy { color: $isy-muted; }
+#overview-view CollapsibleTitle { text-style: none; color: $isy-text; }
+#overview-view CollapsibleTitle:hover, #overview-view CollapsibleTitle:focus { background: $isy-selected-surface; color: $isy-focus; }
+#overview-view Collapsible:focus-within { border-bottom: solid $isy-focus; }
+#side-panel Button { color: $isy-text; }
+#side-panel .rail-copy { padding-bottom: 0; }
+#work-list { background: $isy-surface; }
+#work-list Button { color: $isy-text; background: $isy-surface; text-style: none; }
+#work-list Button:hover, #work-list Button:focus, #work-list Button.filter-on { background: $isy-selected-surface; color: $isy-focus; text-style: none; }
+#key-entry-label { color: $isy-muted; }
+#side-panel Button:focus, #side-panel Button:hover, #side-panel Button.rail-lit { background: $isy-selected-surface; color: $isy-focus; }
+#rail-tabs { border: none !important; border-bottom: solid $isy-separator !important; height: 2; }
+#workspace-tree { border: none !important; background: $isy-surface !important; min-height: 2; height: 1fr; }
+#file-preview-box { height: 1fr; min-height: 5; }
+#file-preview-scroll { border: none !important; border-top: solid $isy-separator !important; background: $isy-surface !important; height: 1fr; min-height: 5; }
+#file-preview { height: auto; }
+#file-preview-meta { height: auto; max-height: 2; color: $isy-muted; }
+#file-actions { height: 1; }
+#command-bar Button { color: $isy-text; background: $isy-surface !important; }
+#command-bar Button:hover, #command-bar Button:focus { background: $isy-selected-surface !important; color: $isy-focus; }
+#settings-button { width: 5; dock: right; }
+#model-button { max-width: 28; text-wrap: nowrap; text-overflow: ellipsis; }
+#prompt-input, #idea-box, #shell-box, #queued-box, #agent-tasks, .user-turn, .external-review, .tool-activity, CommandOutputCard {
+    background: $isy-surface !important; color: $isy-text; border: solid $isy-border;
+}
+#prompt-input:focus, #idea-box:focus, #shell-box:focus, ThoughtBlock:focus-within, ExpandableBox:focus-within, CommandOutputCard:focus-within { border: solid $isy-focus; }
+CollapsibleTitle { text-style: none; color: $isy-text; }
+#action-card { background: $isy-surface !important; border: solid $isy-border !important; height: 94%; padding: 1 2; }
+#action-title { height: 1; color: $isy-text; margin-bottom: 1; }
+#action-description { height: auto; max-height: 2; color: $isy-muted; margin-bottom: 1; }
+#action-search { margin-bottom: 1; }
+#action-body { height: 1fr; min-height: 3; }
+#settings-categories { display: none; width: 20; height: 1fr; border: none; border-right: solid $isy-separator; padding: 0 1 0 0; margin-right: 1; }
+#action-results { width: 1fr; height: 1fr; }
+#action-list { height: 1fr; padding: 0; }
+#action-detail { height: auto; min-height: 2; max-height: 4; margin-top: 1; padding: 0; border-left: none; color: $isy-muted; }
+#action-hint { height: auto; max-height: 2; margin-top: 1; color: $isy-muted; }
+#action-card.compact-menu { padding: 0 1; }
+#action-card.compact-menu #settings-categories { width: 16; }
+#action-card.wide-detail-menu #action-results { layout: horizontal; }
+#action-card.wide-detail-menu #action-list { width: 3fr; height: 1fr; }
+#action-card.wide-detail-menu #action-detail { width: 2fr; height: 1fr; max-height: 100%; margin: 0 0 0 2; padding-left: 1; border-left: solid $isy-separator; overflow-y: auto; }
+#action-detail { border-top: solid $isy-separator; }
+#action-card.provider-menu #action-list > .option-list--option-highlighted { background: $isy-selected-surface; color: $isy-focus; }
+/* Onboarding cards fit their content; only the copy scrolls. */
+#quick-start-card, #workspace-mode-card, #workspace-setup-card { height: auto !important; max-height: 92% !important; }
+#quick-start-copy, #workspace-mode-copy, #workspace-setup-copy { height: auto !important; max-height: 11; min-height: 1; overflow-y: auto; }
+#quick-start-title, #workspace-mode-title, #workspace-setup-title { height: auto !important; max-height: 3; color: $isy-text !important; }
+#quick-start-options, #workspace-mode-options { height: 4 !important; }
+#workspace-setup-options { height: 4 !important; }
+#workspace-setup-actions Button { width: 1fr; min-width: 0; height: 3 !important; text-wrap: nowrap; text-overflow: ellipsis; }
+#slash-suggestions { background: $isy-surface !important; border: solid $isy-border; }
+
+/* Shared inner surfaces and emphasis; no second chrome palette. */
+OptionList, Collapsible, Collapsible > Contents, Collapsible > CollapsibleTitle { background: $isy-surface; color: $isy-text; }
+#settings-categories, #action-list { background: $isy-surface !important; color: $isy-text; }
+#settings-categories > .option-list--option-highlighted { background: $isy-selected-surface !important; color: $isy-focus !important; }
+#queue-scroll { height: 1fr; }
+.queue-message { height: auto; }
+#write-approval-title, #command-approval-title, #tailscale-confirm-title, #models-title, #harness-title, #idea-note-heading { color: $isy-text !important; }
+ExpandableBox { border-bottom: solid $isy-separator; }
+
+ModalScreen { align: center middle; background: #000000 65%; }
+/* Selector rows stay one row each: they are choices, not action buttons. */
+.model-choice, .child-model-choice {
+    border: none !important; border-left: solid $isy-surface !important;
+    padding: 0 1; text-style: none !important; content-align: left top;
+    height: 1; min-height: 1;
+}
+.model-choice:focus, .model-choice:hover, .model-choice.-selected,
+.child-model-choice:focus, .child-model-choice:hover, .child-model-choice.-selected {
+    border: none !important; border-left: solid $isy-focus !important;
+}
+#model-detail-scroll { border-left: solid $isy-separator; }
+
+/* Reusable menu anatomy, also used by approvals and selectors. */
+.isy-dialog { background: $isy-surface; color: $isy-text; border: solid $isy-border; }
+.isy-dialog-title { height: auto; max-height: 2; color: $isy-text; text-style: bold; }
+.isy-dialog-body { background: $isy-surface; color: $isy-text; }
+.isy-dialog-actions { height: 3; margin-top: 1; align-horizontal: right; }
+.isy-dialog-hint { height: auto; max-height: 2; color: $isy-muted; }
+
+/* Dialog: the shared decision frame. Three widths, three tones, one anatomy.
+   No screen declares its own card geometry. */
+Dialog { align: center middle; background: #000000 65%; }
+Dialog .isy-dialog-card {
+    width: 84; max-width: 94%; height: auto; max-height: 92%;
+    padding: 1 2; background: $isy-surface; border: solid $isy-border;
+}
+Dialog.dialog-narrow .isy-dialog-card { width: 76; }
+Dialog.dialog-wide .isy-dialog-card { width: 100; }
+Dialog.dialog-fill .isy-dialog-card { height: 92%; }
+/* Consent must be the loudest surface on screen, not another grey card. */
+Dialog.dialog-approval .isy-dialog-card { border: solid $isy-warning; }
+Dialog.dialog-approval .isy-dialog-title { color: $isy-warning; }
+Dialog.dialog-danger .isy-dialog-card { border: solid $isy-error; }
+Dialog.dialog-danger .isy-dialog-title { color: $isy-error; }
+Dialog .isy-dialog-note { height: auto; max-height: 12; margin-bottom: 1; }
+Dialog .isy-dialog-body { height: auto; max-height: 16; }
+Dialog.dialog-fill .isy-dialog-body { height: 1fr; max-height: 100%; }
+Dialog .isy-dialog-structural { height: auto; margin-bottom: 1; color: $isy-muted; }
+Dialog .isy-dialog-detail { height: auto; }
+Dialog .isy-dialog-copy { height: auto; color: $isy-text; }
+Dialog .isy-dialog-preview { height: auto; max-height: 6; margin: 1 0; }
+/* Provider key: the steps scroll so the field and the actions stay on 80x24. */
+ProviderKeyScreen .isy-dialog-note { max-height: 7; }
+ProviderKeyScreen #provider-key-input { height: 3; }
+ProviderKeyScreen #provider-key-error { height: auto; color: $isy-warning; display: none; }
+Dialog .isy-dialog-actions Button {
+    margin-left: 1; min-width: 8; width: 1fr; overflow: hidden;
+}
+Dialog.dialog-actions-vertical .isy-dialog-actions {
+    layout: vertical; height: auto;
+}
+Dialog.dialog-actions-vertical .isy-dialog-actions Button {
+    margin: 0 0 1 0;
+}
+
+/* Identity is one line; the dialog holds the full path and the bridge name. */
+#side-panel #rail-identity {
+    height: 1 !important; min-height: 1; width: 100%;
+    color: $isy-muted; background: $isy-surface !important;
+    text-align: left; text-wrap: nowrap; text-overflow: ellipsis;
+    border: none !important; padding: 0;
+}
+#side-panel #rail-identity:hover, #side-panel #rail-identity:focus {
+    color: $isy-focus; background: $isy-selected-surface !important;
+}

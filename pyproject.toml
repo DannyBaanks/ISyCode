@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isycode"
+version = "1.0.0rc1"
+description = "ISyCo terminal agent with ISyCode-owned workspace authority and integrations"
+requires-python = ">=3.10"
+dependencies = [
+  "rich>=13.7,<15",
+  "pathspec>=0.12,<2",
+  "textual==8.2.8",
+  "aiohttp>=3.9,<4",
+  "keyring>=25.7,<26",
+  "pywin32>=306; sys_platform == 'win32'",
+  "tomli>=2; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+vision-probe = ["Pillow>=10,<13"]
+# Native Claude provider (Anthropic Messages API).
+anthropic = ["anthropic>=1.10,<2"]
+# The hermetic suite: several TUI tests are async (pytest.mark.asyncio).
+test = ["pytest>=8", "pytest-asyncio>=1.0"]
+
+[project.scripts]
+isycode = "isycode.launcher:main"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+include = ["isycode*"]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+markers = [
+  "integration: requires an external ISyCo checkout or running Gateway service",
+]
+
+[tool.setuptools.package-data]
+isycode = ["*.tcss", "assets/*.rgbz", "assets/*.png", "assets/*.gf", "assets/*.txt", "assets/*.json", "bundled_skills/manifest.json", "bundled_skills/LICENSE", "bundled_skills/**/*.md", "agents/*.md", "locales/*/LC_MESSAGES/*.po"]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = ["src"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["isycode"]
+branch = true
