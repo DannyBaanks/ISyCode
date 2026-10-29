@@ -1,0 +1,15 @@
+{
+  "exit": 0,
+  "source_commit": "7ecbe9f19f7b2f113945598d11b977b1d1f19e6d",
+  "scope": "Isolated git archive build; build dependencies from PyPI; no runtime installation or checkout build output.",
+  "name": "isycode-0.1.0-py3-none-any.whl",
+  "sha256": "126bd53b0867f7315cd88aa408bb99d03a75a1ef486e4661d1b333a6d77133f0",
+  "required_assets_present": [
+    "isycode/tui_presentation.py",
+    "isycode/tui_screens_harness.py",
+    "isycode/design.tcss",
+    "isycode/locales/en/LC_MESSAGES/isycode.po",
+    "isycode/locales/es/LC_MESSAGES/isycode.po",
+    "isycode/locales/zh/LC_MESSAGES/isycode.po"
+  ]
+}

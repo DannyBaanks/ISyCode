@@ -1,0 +1,31 @@
+Windows web host approval regression repetitions — 2026-10-15
+=== repetition 1/10 ===
+..                                                                       [100%]
+2 passed in 10.49s
+=== repetition 2/10 ===
+..                                                                       [100%]
+2 passed in 9.96s
+=== repetition 3/10 ===
+..                                                                       [100%]
+2 passed in 9.64s
+=== repetition 4/10 ===
+..                                                                       [100%]
+2 passed in 9.70s
+=== repetition 5/10 ===
+..                                                                       [100%]
+2 passed in 9.69s
+=== repetition 6/10 ===
+..                                                                       [100%]
+2 passed in 9.80s
+=== repetition 7/10 ===
+..                                                                       [100%]
+2 passed in 10.06s
+=== repetition 8/10 ===
+..                                                                       [100%]
+2 passed in 9.81s
+=== repetition 9/10 ===
+..                                                                       [100%]
+2 passed in 10.24s
+=== repetition 10/10 ===
+..                                                                       [100%]
+2 passed in 10.22s

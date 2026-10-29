@@ -1,0 +1,6 @@
+real schema2 recovery: copy RECOVERED
+.real schema2 recovery: profile-created RECOVERED
+.real schema2 recovery: running RECOVERED
+......WinHTTP: host Internet HEAD succeeded; LPAC denied: HTTP_DENIED 10013
+.
+9 passed in 116.73s (0:01:56)

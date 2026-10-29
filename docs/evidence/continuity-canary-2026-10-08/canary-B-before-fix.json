@@ -1,0 +1,31 @@
+{
+  "scenario": "B",
+  "model": "openai/gpt-oss-20b",
+  "started": "2026-10-08T05:20:14Z",
+  "turn": "completed",
+  "final_role": "assistant",
+  "final_answer": "answer-19: noted. The parser module tokenizes input, builds an AST and reports errors with line numbers. The parser module tokenizes input, builds an AST and reports errors with line numbers. The parser module tokenizes input, builds an AST and reports errors with line numbers. The parser module tokenizes input, builds an AST and reports errors with line numbers. The parser module tokenizes input,",
+  "codeword_in_answer": false,
+  "notes": [],
+  "history_len": 40,
+  "calls": [
+    {
+      "n": 1,
+      "t": 1791436816.3972013,
+      "model": "openai/gpt-oss-20b",
+      "kind": "chat",
+      "messages": 42,
+      "chars": 896367,
+      "sha256": "17ce86cf0d519d3117b097ca2f0b91d55d15305e52eb7acf120f1278907f6e24",
+      "has_capsule": false,
+      "has_request_0": true,
+      "has_summary_notes": false,
+      "error": "StreamError",
+      "error_kind": "REQUEST",
+      "http_status": 400,
+      "provider_code": null
+    }
+  ],
+  "journal": "PASS",
+  "finished": "2026-10-08T05:20:24Z"
+}

@@ -1,0 +1,23 @@
+.......sF.ssssss..ss......s...s.s.......s...............s.ssssss........ [ 88%]
+......sss                                                                [100%]
+================================== FAILURES ===================================
+_____________ test_file_leaf_enables_preview_modal_and_copy_path ______________
+C:\Development\ISyCo Git\ISyCode\tests\test_file_preview_tui.py:41: in test_file_leaf_enables_preview_modal_and_copy_path
+    with capsys.disabled():asyncio.run(run())
+                           ^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_file_preview_tui.py:23: in run
+    await p.click('#file-copy-path');await p.pause();assert copied[-1]==str(file)
+                                                            ^^^^^^^^^^
+E   IndexError: list index out of range
+=========================== short test summary info ===========================
+FAILED tests/test_file_preview_tui.py::test_file_leaf_enables_preview_modal_and_copy_path
+1 failed, 57 passed, 23 skipped in 22.21s

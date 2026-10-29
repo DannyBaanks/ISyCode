@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-12-mockup-e2e/evidence/final-row-captures.py", line 67, in <module>
+    asyncio.run(capture(out, (columns, rows)))
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-12-mockup-e2e/evidence/final-row-captures.py", line 32, in capture
+    WorkspaceTrust().decline(authority)
+  File "/home/danny/Development/ISyCo Git/ISyCode/src/isycode/workspace_trust.py", line 130, in decline
+    self._write_decision(authority, "declined")
+  File "/home/danny/Development/ISyCo Git/ISyCode/src/isycode/workspace_trust.py", line 134, in _write_decision
+    raise ValueError("only a Classic workspace can record this decision")
+ValueError: only a Classic workspace can record this decision

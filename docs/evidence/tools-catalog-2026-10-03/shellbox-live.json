@@ -1,0 +1,7 @@
+{
+  "sandbox": "/usr/bin/bwrap",
+  "outcome": "DEMONSTRATED",
+  "returned_before_exit": true,
+  "cancelled": true,
+  "output": "SHELLBOX_LIVE\n"
+}

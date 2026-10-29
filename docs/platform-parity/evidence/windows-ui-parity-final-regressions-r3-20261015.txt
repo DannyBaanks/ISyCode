@@ -1,0 +1,24 @@
+.........................................................F..........     [100%]
+================================== FAILURES ===================================
+___ test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection ___
+tests\test_design_interactions.py:143: in test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_design_interactions.py:119: in scenario
+    assert pilot.app.screen.selected == "one"
+E   AssertionError: assert 'on' == 'one'
+E     
+E     - one
+E     ?   -
+E     + on
+=========================== short test summary info ===========================
+FAILED tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection
+1 failed, 67 passed in 206.05s (0:03:26)

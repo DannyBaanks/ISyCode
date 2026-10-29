@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+if command -v realpath >/dev/null 2>&1; then
+    SCRIPT_REAL_PATH=$(realpath -- "$0")
+elif readlink -f -- "$0" >/dev/null 2>&1; then
+    SCRIPT_REAL_PATH=$(readlink -f -- "$0")
+else
+    SCRIPT_REAL_PATH=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$0" 2>/dev/null || echo "$0")
+fi
+SCRIPT_DIRECTORY=$(CDPATH= cd -- "$(dirname -- "$SCRIPT_REAL_PATH")" && pwd)
+ISYCODE_REPOSITORY=$(CDPATH= cd -- "$SCRIPT_DIRECTORY/.." && pwd)
+if [ -n "${ISYCODE_PYTHON:-}" ]; then
+    : # Honor an explicit interpreter override.
+elif [ -x "$ISYCODE_REPOSITORY/.venv/bin/python" ]; then
+    ISYCODE_PYTHON="$ISYCODE_REPOSITORY/.venv/bin/python"
+else
+    ISYCODE_PYTHON=python3
+fi
+
+ISYCODE_SOURCE="$ISYCODE_REPOSITORY/src"
+if [ -n "${PYTHONPATH:-}" ]; then
+    PYTHONPATH="$ISYCODE_SOURCE:$PYTHONPATH"
+else
+    PYTHONPATH="$ISYCODE_SOURCE"
+fi
+export PYTHONPATH
+exec "$ISYCODE_PYTHON" -m isycode "$@"

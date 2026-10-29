@@ -1,0 +1,5 @@
+interface:
+  display_name: "ISyCode · Settings y sidebar"
+  short_description: "Settings por categorías y sidebar con secciones planas"
+policy:
+  allow_implicit_invocation: true

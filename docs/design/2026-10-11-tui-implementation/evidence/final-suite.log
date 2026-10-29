@@ -1,0 +1,102 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 15%]
+........................................................................ [ 18%]
+........................................................................ [ 22%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+...........................................F............................ [ 34%]
+........................................................................ [ 37%]
+........................................................................ [ 41%]
+........................................................................ [ 45%]
+........................................................................ [ 49%]
+.....................................s.................................. [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 60%]
+........................................................................ [ 64%]
+........................................................................ [ 68%]
+...................FFF...................................F.............. [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 79%]
+........................................................................ [ 83%]
+........................................................................ [ 87%]
+........................................................................ [ 91%]
+........................................................................ [ 94%]
+........................................................................ [ 98%]
+...................F......                                               [100%]
+=================================== FAILURES ===================================
+_____ test_historical_review_records_are_valid_but_do_not_approve_release ______
+tests/test_gate_validator.py:43: in test_historical_review_records_are_valid_but_do_not_approve_release
+    assert validator.validate_tree(ROOT) == []
+E   assert ['/home/danny...256 mismatch'] == []
+E     
+E     Left contains one more item: "/home/danny/Development/ISyCo Git/ISyCode/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml: artifact 'tests/test_visual_tui.py' sha256 mismatch"
+E     Use -v to get more diff
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.prepare] _
+tests/test_tailscale_authority.py:196: in test_tailscale_actions_require_exact_grant_owner_and_fresh_approval
+    assert authorize(setup, request, approval=approval).status == "ALLOW"
+E   AssertionError: assert 'DENY' == 'ALLOW'
+E     
+E     - ALLOW
+E     + DENY
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage] _
+tests/test_tailscale_authority.py:196: in test_tailscale_actions_require_exact_grant_owner_and_fresh_approval
+    assert authorize(setup, request, approval=approval).status == "ALLOW"
+E   AssertionError: assert 'DENY' == 'ALLOW'
+E     
+E     - ALLOW
+E     + DENY
+_ test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install] _
+tests/test_tailscale_authority.py:196: in test_tailscale_actions_require_exact_grant_owner_and_fresh_approval
+    assert authorize(setup, request, approval=approval).status == "ALLOW"
+E   AssertionError: assert 'DENY' == 'ALLOW'
+E     
+E     - ALLOW
+E     + DENY
+_ test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt _
+tests/test_tailscale_install.py:224: in test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt
+    assert str(owner.plan().private_directory).startswith(str(owner.root.parent / "state"))
+E   assert False
+E    +  where False = <built-in method startswith of str object at 0x797515933d80>('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0/state')
+E    +    where <built-in method startswith of str object at 0x797515933d80> = '/tmp/isycode-final-test-state-_rbldoux/tailscale-apt/10a6c693cf1d17f0-a0d1a2741d857f01a72c606f0ea44fb8'.startswith
+E    +      where '/tmp/isycode-final-test-state-_rbldoux/tailscale-apt/10a6c693cf1d17f0-a0d1a2741d857f01a72c606f0ea44fb8' = str(PosixPath('/tmp/isycode-final-test-state-_rbldoux/tailscale-apt/10a6c693cf1d17f0-a0d1a2741d857f01a72c606f0ea44fb8'))
+E    +        where PosixPath('/tmp/isycode-final-test-state-_rbldoux/tailscale-apt/10a6c693cf1d17f0-a0d1a2741d857f01a72c606f0ea44fb8') = UbuntuDebianInstallPlan(os_id='ubuntu', codename='noble', apt_executable='/tmp/pytest-of-danny/pytest-13/test_preparat...Languages "none";\n', update_argv=('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0/apt-get', 'update')).private_directory
+E    +          where UbuntuDebianInstallPlan(os_id='ubuntu', codename='noble', apt_executable='/tmp/pytest-of-danny/pytest-13/test_preparat...Languages "none";\n', update_argv=('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0/apt-get', 'update')) = plan()
+E    +            where plan = <isycode.tailscale_install.TailscalePackageInstallOwner object at 0x797511b83620>.plan
+E    +    and   '/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0/state' = str((PosixPath('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0') / 'state'))
+E    +      where PosixPath('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0') = PosixPath('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0/workspace').parent
+E    +        where PosixPath('/tmp/pytest-of-danny/pytest-13/test_preparation_requires_dist0/workspace') = <isycode.tailscale_install.TailscalePackageInstallOwner object at 0x797511b83620>.root
+_________________ test_checkpoints_live_outside_the_workspace __________________
+tests/test_workspace_write.py:268: in test_checkpoints_live_outside_the_workspace
+    assert owner.checkpoints.directory.resolve().is_relative_to((tmp_path / "state").resolve())
+E   AssertionError: assert False
+E    +  where False = is_relative_to(PosixPath('/tmp/pytest-of-danny/pytest-13/test_checkpoints_live_outside_0/state'))
+E    +    where is_relative_to = PosixPath('/tmp/isycode-final-test-state-_rbldoux/checkpoints/1a75edf28419a4e39811bda7df8850f6').is_relative_to
+E    +      where PosixPath('/tmp/isycode-final-test-state-_rbldoux/checkpoints/1a75edf28419a4e39811bda7df8850f6') = resolve()
+E    +        where resolve = PosixPath('/tmp/isycode-final-test-state-_rbldoux/checkpoints/1a75edf28419a4e39811bda7df8850f6').resolve
+E    +          where PosixPath('/tmp/isycode-final-test-state-_rbldoux/checkpoints/1a75edf28419a4e39811bda7df8850f6') = <isycode.workspace_write.CheckpointStore object at 0x79751725a1b0>.directory
+E    +            where <isycode.workspace_write.CheckpointStore object at 0x79751725a1b0> = <isycode.workspace_write.WorkspaceWriteOwner object at 0x797517258b30>.checkpoints
+E    +    and   PosixPath('/tmp/pytest-of-danny/pytest-13/test_checkpoints_live_outside_0/state') = resolve()
+E    +      where resolve = (PosixPath('/tmp/pytest-of-danny/pytest-13/test_checkpoints_live_outside_0') / 'state').resolve
+=============================== warnings summary ===============================
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+  /usr/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=344029) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_gate_validator.py::test_historical_review_records_are_valid_but_do_not_approve_release
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.prepare]
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install.stage]
+FAILED tests/test_tailscale_authority.py::test_tailscale_actions_require_exact_grant_owner_and_fresh_approval[tailscale.install]
+FAILED tests/test_tailscale_install.py::test_preparation_requires_distinct_grant_and_one_use_approval_before_network_or_apt
+FAILED tests/test_workspace_write.py::test_checkpoints_live_outside_the_workspace
+6 failed, 1891 passed, 1 skipped, 11 deselected, 8 warnings in 517.41s (0:08:37)

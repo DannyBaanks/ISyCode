@@ -1,0 +1,108 @@
+F..F....F...                                                             [100%]
+================================== FAILURES ===================================
+___ test_readonly_double_click_preserves_marked_range_until_copy_or_cancel ____
+tests\test_design_interactions.py:165: in test_readonly_double_click_preserves_marked_range_until_copy_or_cancel
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_design_interactions.py:164: in scenario
+    assert copied == [("one\ntwo\n", "selection")]
+E   AssertionError: assert [] == [('one\ntwo\n', 'selection')]
+E     
+E     Right contains one more item: ('one\ntwo\n', 'selection')
+E     Use -v to get more diff
+__________ test_model_accordions_filter_and_open_provider_reasoning ___________
+C:\Development\ISyCo Git\ISyCode\tests\test_model_reasoning_ui.py:68: in test_model_accordions_filter_and_open_provider_reasoning
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_model_reasoning_ui.py:26: in scenario
+    assert not screen.query_one('#model-provider-openai', Collapsible).collapsed
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\dom.py:1505: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '#model-provider-openai' on ModelsScreen()
+_______________ test_native_add_and_always_button_at_80_columns _______________
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:244: in test_native_add_and_always_button_at_80_columns
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:230: in scenario
+    assert isinstance(app.screen, AutomaticEditsWarningScreen)
+E   AssertionError: assert False
+E    +  where False = isinstance(Screen(id='_default'), <class 'isycode.folder_screens.AutomaticEditsWarningScreen'>)
+E    +    where Screen(id='_default') = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'nocolor', 'focus', 'dark'}).screen
+------------------------------ Captured log call ------------------------------
+ERROR    asyncio:base_events.py:1833 unhandled exception during asyncio.run() shutdown
+task: <Task finished name='Task-6464' coro=<ToolMixin._dispatch_chat_tool() done, defined at C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py:61> exception=NoMatches("No nodes match 'ChatArea' on Screen(id='_default')")>
+Traceback (most recent call last):
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py", line 230, in scenario
+    assert isinstance(app.screen, AutomaticEditsWarningScreen)
+AssertionError: assert False
+ +  where False = isinstance(Screen(id='_default'), <class 'isycode.folder_screens.AutomaticEditsWarningScreen'>)
+ +    where Screen(id='_default') = TUIApp(title='TUIApp', classes={'-dark-mode'}, pseudo_classes={'nocolor', 'focus', 'dark'}).screen
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 103, in _dispatch_chat_tool
+    result = await self._dispatch_chat_tool_impl(call)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 268, in _dispatch_chat_tool_impl
+    return tool_call_id, await self._dispatch_write_tool(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_workspace.py", line 541, in _dispatch_write_tool
+    delegated = await self._set_folder_auto_edit(folder_alias, True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py", line 1556, in _set_folder_auto_edit
+    if enabled and not await self._await_screen(AutomaticEditsWarningScreen(root)):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py", line 2957, in _await_screen
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 129, in _dispatch_chat_tool
+    self.query_one(ChatArea).follow_tail()
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\dom.py", line 1533, in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+textual.css.query.NoMatches: No nodes match 'ChatArea' on Screen(id='_default')
+=========================== short test summary info ===========================
+FAILED tests/test_design_interactions.py::test_readonly_double_click_preserves_marked_range_until_copy_or_cancel
+FAILED tests/test_model_reasoning_ui.py::test_model_accordions_filter_and_open_provider_reasoning
+FAILED tests/test_workspace_folders_tui.py::test_native_add_and_always_button_at_80_columns
+3 failed, 9 passed in 46.91s

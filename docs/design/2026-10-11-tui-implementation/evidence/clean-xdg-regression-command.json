@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_tailscale_authority.py",
+    "tests/test_tailscale_install.py",
+    "tests/test_workspace_write.py",
+    "tests/test_workspace_memory.py",
+    "tests/test_design_interactions.py",
+    "tests/test_quick_start.py",
+    "--tb=short"
+  ],
+  "environment": {
+    "ISYCODE_STATE_HOME": "unset",
+    "XDG_STATE_HOME": "/tmp/isycode-clean-xdg-2uvl53hf"
+  },
+  "exit_code": 0,
+  "utc": "2026-10-12T07:44:52.050995+00:00"
+}

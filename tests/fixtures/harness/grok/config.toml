@@ -1,0 +1,7 @@
+[ui]
+yolo = true
+permission_mode = "strict"
+fork_secondary_model = "grok-secondary"
+auto_dark_theme = "auto"
+vim_mode = true
+compact_mode = true

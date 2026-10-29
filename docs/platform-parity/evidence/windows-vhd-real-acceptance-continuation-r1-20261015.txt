@@ -1,0 +1,17 @@
+capacity: 535752704 exit: 1 output: Traceback (most recent call last):
+
+  File "<string>", line 3, in <module>
+
+OSError: [Errno 28] No space left on device
+
+
+....sparse exit: 0 logical bytes: 0 control-denied
+
+
+.compressed exit: 0 logical bytes: 0 control-denied
+
+
+......real owner result: ActionOutcome(text='{"argv": ["python", "-c", "from pathlib import Path; Path(\\"resultado � con espacios.txt\\").write_text(\\"verificado\\",encoding=\\"utf-8\\")"], "cwd": ".", "exit_code": 0, "output": "", "output_bytes": 0, "output_truncated": false, "staging": {"backend": "copy", "pending": [], "pending_count": 0, "promoted": ["resultado � con espacios.txt"], "promoted_count": 1, "promotion": {"state": "committed"}, "refused": [], "refused_count": 0}, "timed_out": false}', decision='ALLOW', receipt=ActionReceipt(receipt_id='rcpt_16558f5e2c3cb3d6', action_id='workspace.command.run', request_digest='d9eb5845009a20ca3d970e3823fbce011aa50f74e38c8c350bea3d6c90f8abf4', decision='ALLOW', outcome='SUCCESS', result_digest='918a8ccd043bf5e2ace16de85cded717f008cf24376f1ebf793ac4a0517dd1b6'), reason='sandboxed command finished with exit code 0')
+..
+13 passed in 227.87s (0:03:47)
+PYTEST_EXIT=0

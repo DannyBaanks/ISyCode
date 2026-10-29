@@ -1,0 +1,1 @@
+{"lsp":{"py":{"command":"pylsp","args":[],"enabled":true}},"mcp":{"fake":{"command":"fake","args":[],"type":"stdio","env":{"TOKEN":"never"}}},"models":{"large":{"provider":"openai","model":"gpt-test"}}}

@@ -1,0 +1,19 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+_____________ test_launcher_reconfigures_legacy_redirected_output _____________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-803/test_launcher_reconfigures_leg0')
+
+    def test_launcher_reconfigures_legacy_redirected_output(tmp_path):
+        env=dict(os.environ,ISYCODE_STATE_HOME=str(tmp_path/'state'),XDG_CONFIG_HOME=str(tmp_path/'config'))
+        script="import sys;sys.stdout.reconfigure(encoding='cp1252');from isycode.launcher import main;raise SystemExit(main(['--help']))"
+        result=subprocess.run([sys.executable,'-c',script],capture_output=True,env=env,timeout=20)
+        assert result.returncode==0,result.stderr
+>       text=result.stdout.decode('utf-8')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'utf-8' codec can't decode byte 0xb7 in position 8: invalid start byte
+
+tests\test_native_cli_stdio.py:10: UnicodeDecodeError
+=========================== short test summary info ===========================
+FAILED tests/test_native_cli_stdio.py::test_launcher_reconfigures_legacy_redirected_output
+1 failed in 1.26s

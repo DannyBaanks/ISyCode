@@ -1,0 +1,83 @@
+{
+  "screen": "FilePreviewScreen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-r7dduhtt",
+  "mode": "classic",
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "preview-card",
+      "region": [
+        2,
+        1,
+        76,
+        21
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "preview-heading",
+      "region": [
+        5,
+        3,
+        70,
+        2
+      ],
+      "focus": false,
+      "text": "/tmp/isycode-e2e-audit-r7dduhtt/project/src/helper.py\nRead-only · select with mouse or Ctrl+A; Ctrl+C copies"
+    },
+    {
+      "type": "TextArea",
+      "id": "preview-text",
+      "region": [
+        5,
+        5,
+        70,
+        12
+      ],
+      "focus": true
+    },
+    {
+      "type": "Horizontal",
+      "id": "preview-actions",
+      "region": [
+        5,
+        17,
+        70,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "preview-copy",
+      "region": [
+        30,
+        17,
+        26,
+        1
+      ],
+      "focus": false,
+      "label": "Copiar selección / texto"
+    },
+    {
+      "type": "Button",
+      "id": "preview-close",
+      "region": [
+        57,
+        17,
+        18,
+        1
+      ],
+      "focus": false,
+      "label": "Cerrar"
+    }
+  ],
+  "provider_mode": "tools",
+  "provider_calls": 5,
+  "file_value": "value = 2\n"
+}

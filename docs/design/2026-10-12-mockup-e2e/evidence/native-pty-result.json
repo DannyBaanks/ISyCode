@@ -1,0 +1,13 @@
+{
+  "size": [
+    80,
+    24
+  ],
+  "launcher": "/home/danny/Development/ISyCo Git/ISyCode/scripts/isycode",
+  "state": "temporary Security workspace; no credentials or grants",
+  "mouse_input": "SGR single click at 78,24",
+  "settings_title_observed_after_click": true,
+  "exit": 0,
+  "traceback_observed": false,
+  "raw_sha256": "565e62e0202d03d52469fa872dd47e23d615a53f37d929165e3a0bba6053f8ee"
+}

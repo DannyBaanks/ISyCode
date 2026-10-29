@@ -1,0 +1,45 @@
+Windows IPC, runtime allowlist, and wheel acceptance — 2026-10-15
+
+Real-VHD lifecycle selection
+Environment: Windows 11 Home x64, CPython 3.12.10, pywin32 312.
+Command: `py -m pytest -p no:cacheprovider --basetemp <private-D-run> -q -s
+-rs --tb=short tests/test_windows_sandbox_volume_lifecycle.py`.
+The runner loaded the registered storage config through its private operator
+pointer; its value and path are intentionally omitted. Exit 0; 12 passed,
+3 skipped in 178.97 seconds. Exact raw output remains in the protected D: run
+directory; SHA-256 `F25F3139632EDF5D16252DA09FD60C4C3637B336666714C4DBBA5559F9A124C3`.
+A post-run read-only check reopened the registered volume with the same identity
+and found zero owned scratch directories; see
+`windows-vhd-post-lifecycle-20261015.txt`.
+
+The named-pipe extension passed: LPAC `CreateNamedPipeW` returned
+`ERROR_ACCESS_DENIED` (5). The earlier host-created-pipe test separately
+denied LPAC access. The host-open direction for an LPAC-created pipe remains
+NOT_DEMONSTRATED because the LPAC process could not create that pipe.
+
+AF_UNIX was skipped as NOT_DEMONSTRATED. The host can create a family-1 socket
+object but bind fails with `bad family`; CPython's `socketpair` fallback only
+supports AF_INET/AF_INET6. LPAC created a family-1 socket object but bind
+failed with the same unavailable-family error. There is no positive AF_UNIX
+endpoint control on this host, so these results do not show a sandbox denial.
+Host probe: `windows-afunix-host-control-20261015.txt`.
+
+Runtime allowlist
+Command: `py -m pytest tests/test_platform_sandbox.py -q -s`.
+Exit 0; 6 passed. The backend accepts its explicit CPython runtime and rejects
+`cmd.exe`, Node, Bun, and the installed absolute Node/Bun paths. Node and Bun
+are present on the host but are not supported by this sandbox. Test log:
+`windows-runtime-allowlist-20261015.txt`; host resolver inventory:
+`windows-runtime-inventory-20261015.txt`.
+
+Wheel install/uninstall
+A wheel was built from a private copy of the current `pyproject.toml` and
+`src/`. In a fresh D: virtual environment whose path contains spaces and
+Unicode, `isycode.exe --version` and `--help` succeeded; `pip uninstall`
+removed the distribution and launcher. This used `--no-deps` with system
+dependencies visible and does not certify clean dependency installation or a
+standalone EXE install/update flow. Summary:
+`windows-wheel-install-uninstall-20261015.txt`.
+
+The full Windows non-integration suite was not rerun after these focused test
+additions. Product sandbox execution remains disabled (`NATIVE_ACCEPTED=False`).

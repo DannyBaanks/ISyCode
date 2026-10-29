@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+tests/test_agent_questions.py::test_asking_the_user_is_not_an_authority_action PASSED
+tests/test_agent_questions.py::test_question_screen_returns_a_choice_text_or_cancellation PASSED
+
+============================== 2 passed in 5.80s ==============================

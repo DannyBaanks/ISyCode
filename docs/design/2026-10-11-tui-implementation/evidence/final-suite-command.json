@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-m",
+    "not integration",
+    "--junitxml=docs/design/2026-10-11-tui-implementation/evidence/final-suite.xml",
+    "--tb=short"
+  ],
+  "cwd": "/home/danny/Development/ISyCo Git/ISyCode",
+  "environment": {
+    "ISYCODE_STATE_HOME": "/tmp/isycode-final-test-state-_rbldoux"
+  },
+  "started_utc": "2026-10-12T06:43:13.913061+00:00",
+  "finished_utc": "2026-10-12T06:51:55.252434+00:00",
+  "exit_code": 1
+}

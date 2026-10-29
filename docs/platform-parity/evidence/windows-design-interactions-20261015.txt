@@ -1,0 +1,56 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection FAILED [100%]
+
+================================== FAILURES ===================================
+___ test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection ___
+tests\test_design_interactions.py:119: in test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_design_interactions.py:118: in scenario
+    assert copied[-1] == ("one\ntwo\n", "content_box")
+E   AssertionError: assert ('one', 'selection') == ('one\ntwo\n', 'content_box')
+E     
+E     At index 0 diff: 'one' != 'one\ntwo\n'
+E     
+E     Full diff:
+E       (
+E     -     'one\n'
+E     ?         --
+E     +     'one',
+E     ?          +
+E     +     'selection',
+E     -     'two\n',
+E     -     'content_box',
+E       )
+=========================== short test summary info ===========================
+FAILED tests/test_design_interactions.py::test_space_only_expansion_copy_menu_snapshot_cancel_and_empty_selection - AssertionError: assert ('one', 'selection') == ('one\ntwo\n', 'content_box')
+  
+  At index 0 diff: 'one' != 'one\ntwo\n'
+  
+  Full diff:
+    (
+  -     'one\n'
+  ?         --
+  +     'one',
+  ?          +
+  +     'selection',
+  -     'two\n',
+  -     'content_box',
+    )
+============================== 1 failed in 4.09s ==============================

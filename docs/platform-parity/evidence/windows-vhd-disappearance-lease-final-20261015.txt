@@ -1,0 +1,4 @@
+real disappearance: active lease attempt {'detach_code': 0, 'still_attached': False} missing volume refused; exact image restored
+.
+1 passed, 12 deselected in 1.39s
+PYTEST_EXIT=0

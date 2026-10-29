@@ -1,0 +1,2 @@
+// fixture only
+{"plugin":["fake-plugin"],"lsp":{"py":{"command":["pylsp"]}},"mcp":{"fake":{"type":"local","command":["fake"],"environment":{"API_KEY":"never"}}}}

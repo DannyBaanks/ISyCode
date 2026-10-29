@@ -1,0 +1,95 @@
+{
+  "screen": "TailscaleConfirmScreen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-r7dduhtt",
+  "mode": "classic",
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "tailscale-confirm-card",
+      "region": [
+        3,
+        2,
+        73,
+        19
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "tailscale-confirm-title",
+      "region": [
+        6,
+        4,
+        67,
+        2
+      ],
+      "focus": false,
+      "text": "Switch this workspace to Security?"
+    },
+    {
+      "type": "VerticalScroll",
+      "id": "tailscale-confirm-copy",
+      "region": [
+        6,
+        6,
+        67,
+        10
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        7,
+        7,
+        65,
+        2
+      ],
+      "focus": false,
+      "text": "Everything starts off; you allow each capability in Settings → Authority. Permissions you granted explicitly stay as they are."
+    },
+    {
+      "type": "Horizontal",
+      "id": "tailscale-confirm-actions",
+      "region": [
+        6,
+        16,
+        67,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "tailscale-cancel",
+      "region": [
+        38,
+        16,
+        16,
+        1
+      ],
+      "focus": true,
+      "label": "Cancelar · n"
+    },
+    {
+      "type": "Button",
+      "id": "tailscale-confirm",
+      "region": [
+        55,
+        16,
+        18,
+        1
+      ],
+      "focus": false,
+      "label": "Use Security · y"
+    }
+  ],
+  "provider_mode": "failure",
+  "provider_calls": 7,
+  "file_value": "value = 2\n"
+}

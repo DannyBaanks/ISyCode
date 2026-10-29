@@ -1,0 +1,15 @@
+.......................................                                  [100%]
+=============================== warnings summary ===============================
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+  /usr/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=314530) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+39 passed, 8 warnings in 12.95s

@@ -1,0 +1,10 @@
+Windows runtime allowlist regression
+recorded_at_utc=2026-10-16T00:20:06.065681+00:00
+command=py -m pytest tests/test_platform_sandbox.py -q -s
+environment=Windows 11 x64; CPython 3.12.10
+exit_status=0
+pytest_summary=6 passed in 26.78s
+raw_output_begin
+......
+6 passed in 26.78s
+raw_output_end

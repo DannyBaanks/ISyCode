@@ -1,0 +1,21 @@
+{
+  "witness": "clipboard.copy",
+  "date": "2026-10-04",
+  "host": "linux",
+  "display": "X11",
+  "wayland": false,
+  "tool": ["xclip", "-selection", "clipboard"],
+  "owner": "ClipboardOwner.copy",
+  "source": "selection",
+  "grant": "clipboard.copy",
+  "decision": "ALLOW",
+  "method": "xclip",
+  "characters": 36,
+  "readback_match": true,
+  "previous_clipboard_restored": true,
+  "previous_clipboard_bytes": 673,
+  "text_sha256": "2ac8066eb8f9eb8060578408f350e81bd4a1bb27049679c813174f29ee448e2e",
+  "journal_stores_text": false,
+  "model_tool": false,
+  "note": "Temporary workspace under /tmp. The previous clipboard bytes were not recorded."
+}

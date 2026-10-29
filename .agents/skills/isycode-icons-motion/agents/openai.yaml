@@ -1,0 +1,5 @@
+interface:
+  display_name: "ISyCode · Iconos y movimiento"
+  short_description: "Iconos con significado y animaciones útiles en la TUI"
+policy:
+  allow_implicit_invocation: true

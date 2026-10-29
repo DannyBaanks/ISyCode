@@ -1,0 +1,25 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_______ test_model_row_text_stays_visible_when_focused_or_hovered[size0] _______
+tests/test_mockup_selectors.py:55: in test_model_row_text_stays_visible_when_focused_or_hovered
+    assert name in "\n".join(strip.text for strip in strips)
+E   AssertionError: assert 'GPT 6 Luna' in ''
+E    +  where '' = <built-in method join of str object at 0xb45778>(<generator object test_model_row_text_stays_visible_when_focused_or_hovered.<locals>.<genexpr> at 0x718e642ac280>)
+E    +    where <built-in method join of str object at 0xb45778> = '\n'.join
+_______ test_model_row_text_stays_visible_when_focused_or_hovered[size1] _______
+tests/test_mockup_selectors.py:55: in test_model_row_text_stays_visible_when_focused_or_hovered
+    assert name in "\n".join(strip.text for strip in strips)
+E   AssertionError: assert 'GPT 6 Luna' in ''
+E    +  where '' = <built-in method join of str object at 0xb45778>(<generator object test_model_row_text_stays_visible_when_focused_or_hovered.<locals>.<genexpr> at 0x718e64969600>)
+E    +    where <built-in method join of str object at 0xb45778> = '\n'.join
+_______ test_model_row_text_stays_visible_when_focused_or_hovered[size2] _______
+tests/test_mockup_selectors.py:55: in test_model_row_text_stays_visible_when_focused_or_hovered
+    assert name in "\n".join(strip.text for strip in strips)
+E   AssertionError: assert 'GPT 6 Luna' in ''
+E    +  where '' = <built-in method join of str object at 0xb45778>(<generator object test_model_row_text_stays_visible_when_focused_or_hovered.<locals>.<genexpr> at 0x718e647262c0>)
+E    +    where <built-in method join of str object at 0xb45778> = '\n'.join
+=========================== short test summary info ============================
+FAILED tests/test_mockup_selectors.py::test_model_row_text_stays_visible_when_focused_or_hovered[size0]
+FAILED tests/test_mockup_selectors.py::test_model_row_text_stays_visible_when_focused_or_hovered[size1]
+FAILED tests/test_mockup_selectors.py::test_model_row_text_stays_visible_when_focused_or_hovered[size2]
+3 failed, 20 deselected in 1.20s

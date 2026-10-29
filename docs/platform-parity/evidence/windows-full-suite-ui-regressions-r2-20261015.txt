@@ -1,0 +1,55 @@
+.....F..F...                                                             [100%]
+================================== FAILURES ===================================
+__________ test_message_waits_when_the_other_conversation_is_working __________
+C:\Development\ISyCo Git\ISyCode\tests\test_session_messages.py:120: in test_message_waits_when_the_other_conversation_is_working
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_session_messages.py:107: in scenario
+    assert first.queued_messages == ["ping-from-danny"]
+E   AssertionError: assert [] == ['ping-from-danny']
+E     
+E     Right contains one more item: 'ping-from-danny'
+E     Use -v to get more diff
+_______________ test_native_add_and_always_button_at_80_columns _______________
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:520: in wait_for
+    return await fut
+           ^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py:1539: in _add_workspace_folder
+    selected = await self._await_screen(
+C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py:2957: in _await_screen
+    return await future
+           ^^^^^^^^^^^^
+E   asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:247: in test_native_add_and_always_button_at_80_columns
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_workspace_folders_tui.py:217: in scenario
+    await asyncio.wait_for(task, 10)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:519: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\timeouts.py:115: in __aexit__
+    raise TimeoutError from exc_val
+E   TimeoutError
+=========================== short test summary info ===========================
+FAILED tests/test_session_messages.py::test_message_waits_when_the_other_conversation_is_working
+FAILED tests/test_workspace_folders_tui.py::test_native_add_and_always_button_at_80_columns
+2 failed, 10 passed in 62.80s (0:01:02)

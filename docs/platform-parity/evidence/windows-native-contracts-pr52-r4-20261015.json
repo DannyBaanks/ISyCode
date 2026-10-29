@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-15T20:44:11.736820-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10"
+  },
+  "command": "py -m pytest -vv tests/test_platform_storage.py tests/test_platform_windows_git.py tests/test_iteration.py tests/test_workspace_modes.py tests/test_action_audit.py tests/test_action_audit_segments.py tests/test_git_owner.py tests/test_session_continuity_tui.py tests/test_daily_tui.py tests/test_tui_startup.py -m \"not integration\" --basetemp D:\\isycode-pr52-native-r4",
+  "exit_code": 0,
+  "result": "129 passed, 2 skipped, 1 deselected in 138.76s",
+  "output": "docs/platform-parity/evidence/windows-native-contracts-pr52-r4-20261015.txt",
+  "output_sha256": "2f973d100f32a607b4be7995e25b771454fac52ba1316e19bec72fbb77435926",
+  "notes": "Windows local run with trusted Git available; changed UI test passes on the trusted-Git branch. GitHub runner exercises and verifies the fail-closed no-trusted-Git branch."
+}

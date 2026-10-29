@@ -1,0 +1,95 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 17 items
+
+tests/test_agent_loop.py::test_short_history_is_sent_whole PASSED
+tests/test_agent_loop.py::test_long_history_keeps_recent_turns_that_fit_and_starts_at_a_user_message PASSED
+tests/test_agent_loop.py::test_a_huge_last_message_is_still_kept PASSED
+tests/test_agent_loop.py::test_summary_request_marks_the_transcript_as_data_and_carries_the_previous_summary PASSED
+tests/test_agent_loop.py::test_compaction_elides_oldest_tool_results_but_keeps_every_call_answered PASSED
+tests/test_agent_loop.py::test_summary_instructions_are_bounded_context_not_transcript_commands PASSED
+tests/test_agent_loop.py::test_legacy_limits_remain_readable_without_imposing_automatic_caps PASSED
+tests/test_agent_loop.py::test_chat_turn_has_no_automatic_caps_and_can_be_stopped_as_a_whole PASSED
+tests/test_agent_panel.py::test_eight_agents_one_hundred_events_each_never_mix PASSED
+tests/test_agent_panel.py::test_incremental_refresh_keeps_cursor_and_folds_deltas PASSED
+tests/test_agent_panel.py::test_distinct_actions_have_distinct_effects PASSED
+tests/test_agent_panel.py::test_unknown_run_detail_is_empty_and_states_are_distinct PASSED
+tests/test_agent_polling.py::test_polling_respects_interval_and_visible_backoff PASSED
+tests/test_agent_polling.py::test_reconnect_rebuilds_and_reports PASSED
+tests/test_agent_polling.py::test_g6a07_event_display_and_ack_latency_p95 PASSED
+tests/test_agent_questions.py::test_asking_the_user_is_not_an_authority_action PASSED
+tests/test_agent_questions.py::test_question_screen_returns_a_choice_text_or_cancellation FAILED
+
+================================== FAILURES ===================================
+_________ test_question_screen_returns_a_choice_text_or_cancellation __________
+C:\Development\ISyCo Git\ISyCode\tests\test_agent_questions.py:66: in test_question_screen_returns_a_choice_text_or_cancellation
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_agent_questions.py:29: in scenario
+    assert app.screen.id == "agent-question"
+E   AssertionError: assert '_default' == 'agent-question'
+E     
+E     - agent-question
+E     + _default
+------------------------------ Captured log call ------------------------------
+ERROR    asyncio:base_events.py:1833 unhandled exception during asyncio.run() shutdown
+task: <Task finished name='Task-455' coro=<ToolMixin._dispatch_chat_tool() done, defined at C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py:61> exception=NoMatches("No nodes match 'ChatArea' on Screen(id='_default')")>
+Traceback (most recent call last):
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\tests\test_agent_questions.py", line 29, in scenario
+    assert app.screen.id == "agent-question"
+AssertionError: assert '_default' == 'agent-question'
+  
+  - agent-question
+  + _default
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 103, in _dispatch_chat_tool
+    result = await self._dispatch_chat_tool_impl(call)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 225, in _dispatch_chat_tool_impl
+    answer = await self._await_screen(AgentQuestionScreen(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui.py", line 2957, in _await_screen
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\src\isycode\tui_app_tools.py", line 129, in _dispatch_chat_tool
+    self.query_one(ChatArea).follow_tail()
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Development\ISyCo Git\ISyCode\.venv\Lib\site-packages\textual\dom.py", line 1533, in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+textual.css.query.NoMatches: No nodes match 'ChatArea' on Screen(id='_default')
+=========================== short test summary info ===========================
+FAILED tests/test_agent_questions.py::test_question_screen_returns_a_choice_text_or_cancellation - AssertionError: assert '_default' == 'agent-question'
+  
+  - agent-question
+  + _default
+======================== 1 failed, 16 passed in 27.76s ========================

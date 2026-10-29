@@ -1,0 +1,41 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+........................................................................ [ 20%]
+........................................................................ [ 25%]
+........................................................................ [ 31%]
+........ssss..s......................................................... [ 36%]
+........................................................................ [ 41%]
+........................................................................ [ 46%]
+...............s........................................................ [ 51%]
+........................................................................ [ 56%]
+........................................................................ [ 62%]
+........................................................................ [ 67%]
+........................................................................ [ 72%]
+........................................................................ [ 77%]
+........................................................................ [ 82%]
+........................................................................ [ 87%]
+........................................................................ [ 93%]
+........................................................................ [ 98%]
+.......................                                                  [100%]
+=============================== warnings summary ===============================
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+tests/test_effect_ledger.py::test_eight_workers_share_one_cap
+  /usr/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=1116454) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_gateway.py:25: needs a running ISyCo Gateway; set ISYCODE_LIVE_GATEWAY=1 (test_gateway_write_file writes and deletes a test file)
+SKIPPED [1] tests/test_gateway.py:34: needs a running ISyCo Gateway; set ISYCODE_LIVE_GATEWAY=1 (test_gateway_write_file writes and deletes a test file)
+SKIPPED [1] tests/test_gateway.py:43: needs a running ISyCo Gateway; set ISYCODE_LIVE_GATEWAY=1 (test_gateway_write_file writes and deletes a test file)
+SKIPPED [1] tests/test_gateway.py:51: needs a running ISyCo Gateway; set ISYCODE_LIVE_GATEWAY=1 (test_gateway_write_file writes and deletes a test file)
+SKIPPED [1] tests/test_gateway.py:88: needs a running ISyCo Gateway; set ISYCODE_LIVE_GATEWAY=1 (test_gateway_write_file writes and deletes a test file)
+SKIPPED [1] tests/test_native_toolkit.py:63: TypeScript sandbox runtime not installed
+1385 passed, 6 skipped, 8 warnings in 212.52s (0:03:32)

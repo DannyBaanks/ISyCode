@@ -1,0 +1,1373 @@
+{
+  "screen": "Screen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-r7dduhtt",
+  "mode": "classic",
+  "widgets": [
+    {
+      "type": "Banner",
+      "id": "banner",
+      "region": [
+        0,
+        0,
+        80,
+        1
+      ],
+      "focus": false,
+      "text": ":3_ ISYCODE  /tmp/isycode-e2e-audit-r7dduhtt/project                 ● Classic"
+    },
+    {
+      "type": "Horizontal",
+      "id": "workspace-layout",
+      "region": [
+        0,
+        1,
+        80,
+        23
+      ],
+      "focus": false
+    },
+    {
+      "type": "Vertical",
+      "id": "main",
+      "region": [
+        0,
+        1,
+        80,
+        23
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "work-heading",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "/tmp/isycode-e2e-audit-r7dduhtt/project    2 idle"
+    },
+    {
+      "type": "Horizontal",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "work-new",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "+ Nueva conversación"
+    },
+    {
+      "type": "Button",
+      "id": "work-refresh",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Actualizar"
+    },
+    {
+      "type": "Button",
+      "id": "work-bridge",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Presencia Bridge…"
+    },
+    {
+      "type": "Button",
+      "id": "work-hide",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Ocultar"
+    },
+    {
+      "type": "Horizontal",
+      "id": "work-filters",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-all",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Todas"
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-generating",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "En curso"
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-waiting",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Espera respuesta"
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-idle",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Inactiva"
+    },
+    {
+      "type": "Horizontal",
+      "id": "work-body",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "SessionOptionList",
+      "id": "work-conversations",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "options": [
+        "Idle  2",
+        "◇ GPT 6 Luna · Draft conversation  ·  project    now                  [×]",
+        "◇ GPT 6 Luna · Lee app.py, cambia value a 2, ejecuta unittest y mués… [×]"
+      ],
+      "highlighted": 1
+    },
+    {
+      "type": "Static",
+      "id": "work-presence",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Presencia Bridge apagada"
+    },
+    {
+      "type": "ChatArea",
+      "id": "chat",
+      "region": [
+        0,
+        1,
+        80,
+        14
+      ],
+      "focus": false
+    },
+    {
+      "type": "IdleBoard",
+      "id": "idle-board",
+      "region": [
+        2,
+        -11,
+        73,
+        12
+      ],
+      "focus": false,
+      "text": "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n◇ Checking the configured model\n\nLSPs                    MCPs               Skills\n● Pyright Language Se…  ○ None configured  ● brainstorming\n● rust-analyzer                            ● systematic-debugging\n● TypeScript Language…                     ● test-driven-develop…\n● clangd                                   ● writing-plans\n                                           ● verification-before…\n                                           ● requesting-code-rev…"
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        2,
+        1,
+        73,
+        1
+      ],
+      "focus": false,
+      "text": "  New conversation."
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        4,
+        3,
+        69,
+        1
+      ],
+      "focus": false,
+      "text": "03:54"
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        4,
+        5,
+        69,
+        3
+      ],
+      "focus": false,
+      "text": "Este mensaje debe recuperarse si el proveedor devuelve HTTP 401."
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        2,
+        9,
+        73,
+        2
+      ],
+      "focus": false,
+      "text": "  Chat failed · APIKEY: Provider credentials are missing, invalid or rejected · HTTP 401."
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        2,
+        11,
+        73,
+        2
+      ],
+      "focus": false,
+      "text": "  Prompt kept · /retry prepares it for review. Any completed tool effects remain; inspect them before sending again."
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        2,
+        13,
+        73,
+        1
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Vertical",
+      "id": "composer",
+      "region": [
+        0,
+        15,
+        80,
+        9
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Vertical",
+      "id": "queue-stack",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "QueuedBox",
+      "id": "queued-box",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "QueuedTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Queued · 0     "
+    },
+    {
+      "type": "OptionList",
+      "id": "queued-options",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "options": [],
+      "highlighted": null
+    },
+    {
+      "type": "Static",
+      "id": "queue-warning",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Button",
+      "id": "queue-steer-help",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "[?]"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Horizontal",
+      "id": "idea-box-row",
+      "region": [
+        1,
+        15,
+        78,
+        4
+      ],
+      "focus": false
+    },
+    {
+      "type": "ActivityStatus",
+      "id": "activity-status",
+      "region": [
+        1,
+        15,
+        15,
+        3
+      ],
+      "focus": false,
+      "text": "             \n          z⢣⠕\nChat listo ⠈⢗"
+    },
+    {
+      "type": "IdeaBox",
+      "id": "idea-box",
+      "region": [
+        16,
+        15,
+        47,
+        4
+      ],
+      "focus": false,
+      "text": "Idea box     GPT 6 Luna / None · OpenAI API\nCapture an idea · Ctrl+Shift+Enter"
+    },
+    {
+      "type": "Static",
+      "id": "usage-status",
+      "region": [
+        63,
+        15,
+        16,
+        3
+      ],
+      "focus": false,
+      "text": "     ~16/≈1.1M\n[░░░░░░░░░] 0%\n      0 +? tok"
+    },
+    {
+      "type": "PromptArea",
+      "id": "prompt-input",
+      "region": [
+        1,
+        19,
+        78,
+        3
+      ],
+      "focus": true,
+      "text": "Este mensaje debe recuperarse si el proveedor devuelve HTTP 401."
+    },
+    {
+      "type": "Static",
+      "id": "composer-hint",
+      "region": [
+        0,
+        22,
+        80,
+        1
+      ],
+      "focus": false,
+      "text": "Enter enviar · Ctrl+J nueva línea · Esc atrás · Ctrl+P comandos · Ctrl+B barra lateral"
+    },
+    {
+      "type": "Horizontal",
+      "id": "command-bar",
+      "region": [
+        0,
+        23,
+        80,
+        1
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "sidebar-button",
+      "region": [
+        1,
+        23,
+        17,
+        1
+      ],
+      "focus": false,
+      "label": "Barra lateral"
+    },
+    {
+      "type": "Button",
+      "id": "sessions-button",
+      "region": [
+        18,
+        23,
+        12,
+        1
+      ],
+      "focus": false,
+      "label": "Sesiones"
+    },
+    {
+      "type": "Button",
+      "id": "harness-button",
+      "region": [
+        30,
+        23,
+        17,
+        1
+      ],
+      "focus": false,
+      "label": "Multi Harness"
+    },
+    {
+      "type": "Button",
+      "id": "model-button",
+      "region": [
+        47,
+        23,
+        14,
+        1
+      ],
+      "focus": false,
+      "label": "GPT 6 L… ▾"
+    },
+    {
+      "type": "BarSpacer",
+      "id": "bar-spacer",
+      "region": [
+        61,
+        23,
+        13,
+        1
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Button",
+      "id": "settings-button",
+      "region": [
+        74,
+        23,
+        5,
+        1
+      ],
+      "focus": false,
+      "label": "⚙"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "ISYCODE  ·  ESPACIO"
+    },
+    {
+      "type": "Horizontal",
+      "id": "rail-tabs",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "show-overview",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Resumen"
+    },
+    {
+      "type": "Button",
+      "id": "show-files",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Archivos"
+    },
+    {
+      "type": "Vertical",
+      "id": "rail-card",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-sentinel",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ IsySentinel · 91 Allow · 0 Deny"
+    },
+    {
+      "type": "Static",
+      "id": "sentinel-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Mode · Classic · asks before each change\nActive permissions · 13\n✓ Save a named API key\n✓ Revoke a saved API key\n✓ Use a saved API key\n✓ Create git commits\n✓ See git status and diffs\n✓ Connect to the selected AI model\n✓ Save conversations in this workspace\n✓ Run commands in a sandbox\n✓ Read and search workspace files\n✓ Edit workspace files\n✓ Forget memories in this workspace\n✓ Read this workspace's private memory\n✓ Write this workspace's private memory\n\nLatest decisions\n✓ session.create\n  allow · 03:54:41\n✓ session.resume\n  allow · 03:54:41\n✓ session.create\n  allow · 03:54:40\n✓ session.resume\n  allow · 03:54:40\n✓ session.create\n  allow · 03:54:40\n✓ session.resume\n  allow · 03:54:40\n✓ provider.request\n  allow · 03:54:40\n✓ credentials.use\n  allow · 03:54:40\nJournal · empty"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-mcp",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ MCPs"
+    },
+    {
+      "type": "Static",
+      "id": "mcp-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El estado de los servicios de herramientas no se ha comprobado."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-lsp",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ LSPs · 2 Ready · 3 Missing"
+    },
+    {
+      "type": "Static",
+      "id": "lsp-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "✓ Pyright Language Server\n  Workspace Symbols\n✗ rust-analyzer\n  Installed · Sandbox Unavailable\n✗ TypeScript Language Server\n  Installed · Sandbox Unavailable\n○ gopls\n  Not On PATH\n✓ clangd\n  Workspace Symbols\n○ Eclipse JDT Language Server\n  Not On PATH\n○ Python LSP Server\n  Not On PATH"
+    },
+    {
+      "type": "Button",
+      "id": "lsp-install-hint",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Comandos de instalación"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-skills",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Skills"
+    },
+    {
+      "type": "Static",
+      "id": "skill-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El catálogo de skills de ISyCode no se ha comprobado."
+    },
+    {
+      "type": "ActivateTree",
+      "id": "skills-tree",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-connections",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Conexiones · 4"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-gateway",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ ISyCo Gateway"
+    },
+    {
+      "type": "Static",
+      "id": "gateway-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El estado de Gateway no se ha comprobado."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-gateway-mcp",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Gateway MCP"
+    },
+    {
+      "type": "Static",
+      "id": "gateway-mcp-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El catálogo de herramientas no se ha comprobado."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-mobile",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Mobile Host"
+    },
+    {
+      "type": "Static",
+      "id": "mobile-host-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Arrancando el host móvil local…"
+    },
+    {
+      "type": "Static",
+      "id": "mobile-client-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "No hay clientes móviles conectados."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-bridge",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Coordinación Bridge"
+    },
+    {
+      "type": "Static",
+      "id": "bridge-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Desactivado · sin handshake de Bridge"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-workspace",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Espacio de trabajo"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Workspace Root · /tmp/isycode-e2e-audit-r7dduhtt/project"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-launch-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Launch Directory · /tmp/isycode-e2e-audit-r7dduhtt/project"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-source-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Root Source · .isyroot · Classic Mode"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-authority-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Filesystem Authority · list/read/name-search granted for this workspace"
+    },
+    {
+      "type": "Button",
+      "id": "refresh-openisy",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Actualizar integraciones"
+    },
+    {
+      "type": "Button",
+      "id": "review-plan",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "No plan pending"
+    },
+    {
+      "type": "Vertical",
+      "id": "files-view",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Horizontal",
+      "id": "file-controls",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "file-up",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "↑ Subir"
+    },
+    {
+      "type": "Button",
+      "id": "file-refresh",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Actualizar"
+    },
+    {
+      "type": "Button",
+      "id": "workspace-folders",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Carpetas"
+    },
+    {
+      "type": "Input",
+      "id": "file-search",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "value": "",
+      "placeholder": "Buscar rutas del espacio…"
+    },
+    {
+      "type": "ActivateTree",
+      "id": "workspace-tree",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Horizontal",
+      "id": "file-actions",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "file-copy-path",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Copiar ruta"
+    },
+    {
+      "type": "Button",
+      "id": "file-open-preview",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Abrir vista previa"
+    },
+    {
+      "type": "VerticalScroll",
+      "id": "file-preview-scroll",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "file-preview",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "src/helper.py · 27 bytes · UTF-8\nISySentinel ALLOW · local receipt rcpt_01604a7 verified\n\ndef helper():\n    return 1\n"
+    },
+    {
+      "type": "Vertical",
+      "id": "action-card",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "action-title",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Configuración\nConversación · Preferencias · Permisos · Conexiones"
+    },
+    {
+      "type": "Input",
+      "id": "action-search",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "value": "",
+      "placeholder": "Filtrar esta lista…"
+    },
+    {
+      "type": "PreviewOptionList",
+      "id": "action-list",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "options": [
+        "Conversación    Proveedores y modelos",
+        "Conversación    Nivel de razonamiento",
+        "Conversación    Elegir rol",
+        "Conversación    Contexto",
+        "Conversación    Elegir archivo de contexto (.md / .txt)",
+        "Conversación    Quitar el rol seleccionado",
+        "Preferencias    Compresión RTK · desactivado",
+        "Preferencias    Sonidos de notificación · activado",
+        "Preferencias    Pantalla de alto contraste · desactivado",
+        "Preferencias    Pantalla solo ASCII · desactivado",
+        "Preferencias    Idioma · Español",
+        "Preferencias    Mis valores · todos los espacios de trabajo",
+        "Preferencias    Desplazamiento compacto de texto · desactivado",
+        "Preferencias    Inicializar .isycode/ de este espacio",
+        "Preferencias    Preferencias del espacio",
+        "Preferencias    Copiar comandos heredados del espacio…",
+        "Preferencias    Comandos y atajos",
+        "Permisos        Authority & Security",
+        "Permisos        Claves de API con nombre",
+        "Permisos        Diario de acciones · verificar / inspeccionar",
+        "Permisos        Carpetas y ediciones automáticas",
+        "Conexiones      Multi Harness · ajustes y reparar Compose",
+        "Conexiones      Archivos del espacio de trabajo",
+        "Conexiones      Integraciones · MCP, LSP, Gateway y acceso remoto"
+      ],
+      "highlighted": 0
+    },
+    {
+      "type": "Static",
+      "id": "action-detail",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Elige el proveedor y el modelo de esta conversación."
+    },
+    {
+      "type": "Static",
+      "id": "action-hint",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "↑↓ mover · Enter abrir · Clic previsualizar · Doble clic abrir · Esc atrás · Mayús+Tab buscar"
+    },
+    {
+      "type": "Static",
+      "id": "key-entry-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "La clave de API se guarda fuera de este proyecto."
+    },
+    {
+      "type": "Input",
+      "id": "provider-key-input",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "value": "",
+      "placeholder": "Pegar clave de API…"
+    },
+    {
+      "type": "Horizontal",
+      "id": "key-entry-buttons",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "save-provider-key",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Guardar clave"
+    },
+    {
+      "type": "Button",
+      "id": "cancel-provider-key",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Cancelar"
+    },
+    {
+      "type": "FooterKey",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    }
+  ],
+  "provider_mode": "failure",
+  "provider_calls": 7,
+  "file_value": "value = 2\n"
+}

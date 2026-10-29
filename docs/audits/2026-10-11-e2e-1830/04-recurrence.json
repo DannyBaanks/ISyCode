@@ -1,0 +1,100 @@
+{
+  "screen": "WorkspaceSetupScreen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-80itaaaf",
+  "mode": null,
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "workspace-setup-card",
+      "region": [
+        4,
+        0,
+        72,
+        24
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "workspace-setup-title",
+      "region": [
+        7,
+        2,
+        66,
+        2
+      ],
+      "focus": false,
+      "text": "¿Configurar este espacio de trabajo?"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-setup-copy",
+      "region": [
+        7,
+        4,
+        66,
+        8
+      ],
+      "focus": false,
+      "text": "Directorio de arranque:\n/tmp/isycode-e2e-audit-80itaaaf/project\n\nSi este es un proyecto recurrente, Sí crea un .isyroot vacío aquí y guarda las sesiones de chat en tu directorio privado de estado de ISyCode. .isyroot identifica el espacio; no concede acceso al sistema de archivos. Ahora no deja esta ejecución temporal, y su historial se elimina al salir de ISyCode."
+    },
+    {
+      "type": "OptionList",
+      "id": "workspace-setup-options",
+      "region": [
+        7,
+        13,
+        66,
+        5
+      ],
+      "focus": true,
+      "options": [
+        "Sí · espacio recurrente",
+        "No · ejecución temporal"
+      ],
+      "highlighted": 0
+    },
+    {
+      "type": "Horizontal",
+      "id": "workspace-setup-actions",
+      "region": [
+        7,
+        19,
+        66,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "workspace-setup-yes",
+      "region": [
+        23,
+        19,
+        27,
+        1
+      ],
+      "focus": false,
+      "label": "Sí, recordar este espacio"
+    },
+    {
+      "type": "Button",
+      "id": "workspace-setup-no",
+      "region": [
+        51,
+        19,
+        22,
+        1
+      ],
+      "focus": false,
+      "label": "No, dejarlo temporal"
+    }
+  ],
+  "provider_mode": "success",
+  "provider_calls": 0,
+  "file_value": "value = 1\n"
+}

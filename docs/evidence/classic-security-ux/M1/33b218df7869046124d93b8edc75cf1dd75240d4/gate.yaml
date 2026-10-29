@@ -1,0 +1,96 @@
+hito: M1
+puerta: G1
+estado: APROBADO
+sha_evaluado: 33b218df7869046124d93b8edc75cf1dd75240d4
+fecha_utc: 2026-10-05T23:59:00Z
+autor: opencode session (fledge), continuación de la auditoría ISyCode
+entorno: Linux 7.0.0-38-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; Classic sigue pidiendo aprobación por edición y por comando; este hito no abre autonomía
+dependencias: G0
+dependencias_estado:
+  G0: APROBADO
+casos:
+  - id: G1-01
+    prueba: tests/test_gate_equivalence.py y tests/test_effect_policy.py
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_gate_equivalence.py tests/test_effect_policy.py tests/test_staging.py tests/test_effect_ledger.py tests/test_bridge_presence_owner.py -ra --tb=line
+    esperado: la misma lectura tiene la misma decisión en owner, gate y headless; owner desconocido, checks vacíos, excepción y acción sin clase deniegan; una denegación explícita gana al preset
+    observado: >
+      39/39 passed en el SHA evaluado. La misma lectura Classic devuelve
+      ALLOW en LocalWorkspaceReadOwner, ProductActionGate y headless;
+      Security sin grants devuelve DENY en las tres. owner_id desconocido,
+      IsySentinel sin Systembilities y una Systembility que lanza deniegan.
+      workspace.files.read revocado en Classic sigue en el preset y aun así DENY.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/gate-tests.txt
+        sha256: 7b7a911da4924711c32a2a6c7475930b6cfd6c32c277f31e7262512a338e6b99
+      - tests/test_gate_equivalence.py
+        sha256: 19c11a6ed96f7ede6eb3eabccd2551dc879a7ea9704bc2e1635e51cf45dc98ff
+      - tests/test_effect_policy.py
+        sha256: cde421c9fabaad2d75ef4974f6f9413c878cf70e5e919ec7f89fdd00af7c7efc
+  - id: G1-02
+    prueba: tests/test_gate_equivalence.py::test_revocation_changed_digest_expiry_reuse_and_other_workspace_write_nothing
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_gate_equivalence.py -ra --tb=line
+    esperado: revocación, digest cambiado, aprobación expirada o reutilizada y otro workspace no producen un efecto nuevo
+    observado: >
+      La prueba pasó dentro de la corrida de 39. Solo la edición aprobada se
+      escribió una vez; revocar entre preview y apply, cambiar el archivo,
+      expirar el token y reutilizarlo devolvieron DENY sin segunda escritura.
+      Un request de otro workspace también DENY y dejó ambos archivos intactos.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/gate-tests.txt
+        sha256: 7b7a911da4924711c32a2a6c7475930b6cfd6c32c277f31e7262512a338e6b99
+  - id: G1-03
+    prueba: tests/test_gate_equivalence.py::test_receipt_text_is_presentation_and_imports_no_policy
+    comando: env -u ISYCODE_STATE_HOME python3 -m pytest -q tests/test_gate_equivalence.py -ra --tb=line
+    esperado: la extracción conserva la suite y los componentes visuales no importan la política
+    observado: >
+      La prueba pasó. Los cambios de presentación del 2026-10-05 (M-UX1.3 alto
+      contraste, M-UX3.1 modelo inline, M-UX3.2 búsqueda cross-session) tocaron
+      tui_theme, tui_app_* y shortcuts sin importar política; el snapshot de
+      cobertura M15 se regeneró por desplazamiento de líneas y sigue con
+      authority_frontier_pass=true y 0 bypasses (verificado en la suite hermética).
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/gate-tests.txt
+        sha256: 7b7a911da4924711c32a2a6c7475930b6cfd6c32c277f31e7262512a338e6b99
+      - docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/pytest-not-integration.txt
+        sha256: 82587fdb7b70cc3e533398d1b0fe0bdcfa9ca3f03138869e810d4b84fef83c31
+  - id: G1-04
+    prueba: scripts/validate_gates.py, tests/test_gate_validator.py y el job gate-evidence
+    comando: python3 scripts/validate_gates.py --self-test && python3 scripts/validate_gates.py
+    esperado: CI rechaza manifest ausente, dependencias falsas, SHA ajeno, test omitido y bypass; el check remoto obligatorio queda probado
+    observado: >
+      El self-test local rechaza documento vacío, SHA ajeno, test omitido,
+      dependencia falsa y caso FAIL/UNKNOWN/SKIP. NUEVO en este SHA: el
+      mecanismo de aceptación independiente existe — APROBADO exige
+      revision: aceptada, revisor distinto del autor y fecha; auto-aprobación,
+      aceptación ausente y dependencia falsamente APROBADA se rechazan
+      (16 tests en tests/test_gate_validator.py). El job gate-evidence corre
+      ambos comandos en .github/workflows/ci.yml y el empaquetado depende de
+      los dos jobs de tests y de ese job. API leída de vuelta el 2026-10-05:
+      contexts Tests (Linux), Tests (Linux, Textual 8) y Gate evidence,
+      strict false, enforce_admins false. El propietario sigue pudiendo
+      pushear; no se anuncia enforcement contra el admin.
+    resultado: PASS
+    artefactos:
+      - scripts/validate_gates.py
+        sha256: faf34277623fff41854a71efec1cbc553b8963abaef5393ba31afc4c0aefc74e
+      - tests/test_gate_validator.py
+        sha256: 4b2b6f21c1cacd359f5ea01b4eaa56ff6f91a412e0151efdb2d6c7abf06e93ba
+      - docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/ci.yml
+        sha256: a91b1c4f09b68003a1f24c5873fbb6cfe243919153cc80d315b086ba01cb83c9
+      - docs/evidence/classic-security-ux/M1/33b218df7869046124d93b8edc75cf1dd75240d4/branch-protection.json
+        sha256: cbec6de5829daff15dfb7160a4681f3b81ff8a505df200c76ef93fde70c7df09
+sin_evidencia_real:
+  - una PR de bypass rechazada por los checks requeridos
+  - enforce_admins encendido
+  - Classic autónomo con 0 aprobaciones por acción
+regresion: env -u ISYCODE_STATE_HOME python3 -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1430 passed, 1 skipped, 11 deselected; 279.73s
+riesgos_residuales: la versión de política no entra en el journal; el sandbox sigue montando el workspace escribible; Security no borra grants explícitos previos; enforce_admins apagado deja al owner como bypass posible
+rollback_ensayado: revertir hasta c040d21 quita solo el mecanismo de aceptación y sus tests; M1 no cambia grants guardados
+revision: aceptada
+revisor: Danny Baanks
+revision_fecha_utc: 2026-10-06T00:21:46Z
+revision_declaracion: Revisión independiente del propietario; casos, artefactos y hashes verificados con scripts/validate_gates.py

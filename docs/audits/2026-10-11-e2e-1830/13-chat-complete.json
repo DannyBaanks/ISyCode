@@ -1,0 +1,1655 @@
+{
+  "screen": "Screen",
+  "size": [
+    140,
+    40
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-r7dduhtt",
+  "mode": "classic",
+  "widgets": [
+    {
+      "type": "Banner",
+      "id": "banner",
+      "region": [
+        0,
+        0,
+        140,
+        1
+      ],
+      "focus": false,
+      "text": ":3_ ISYCODE  /tmp/isycode-e2e-audit-r7dduhtt/project                                                                             ● Classic"
+    },
+    {
+      "type": "Horizontal",
+      "id": "workspace-layout",
+      "region": [
+        0,
+        1,
+        140,
+        39
+      ],
+      "focus": false
+    },
+    {
+      "type": "Vertical",
+      "id": "main",
+      "region": [
+        0,
+        1,
+        140,
+        39
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "work-heading",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Horizontal",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "work-new",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "+ Nueva conversación"
+    },
+    {
+      "type": "Button",
+      "id": "work-refresh",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Actualizar"
+    },
+    {
+      "type": "Button",
+      "id": "work-bridge",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Presencia Bridge…"
+    },
+    {
+      "type": "Button",
+      "id": "work-hide",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Ocultar"
+    },
+    {
+      "type": "Horizontal",
+      "id": "work-filters",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-all",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Todas"
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-generating",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "En curso"
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-waiting",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Espera respuesta"
+    },
+    {
+      "type": "Button",
+      "id": "work-filter-idle",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Inactiva"
+    },
+    {
+      "type": "Horizontal",
+      "id": "work-body",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "SessionOptionList",
+      "id": "work-conversations",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "options": [],
+      "highlighted": null
+    },
+    {
+      "type": "SessionDetails",
+      "id": "work-details",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Elige una conversación para inspeccionarla."
+    },
+    {
+      "type": "Static",
+      "id": "work-presence",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Presencia Bridge apagada"
+    },
+    {
+      "type": "ChatArea",
+      "id": "chat",
+      "region": [
+        0,
+        1,
+        140,
+        31
+      ],
+      "focus": false
+    },
+    {
+      "type": "IdleBoard",
+      "id": "idle-board",
+      "region": [
+        2,
+        -42,
+        133,
+        29
+      ],
+      "focus": false,
+      "text": "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        4,
+        -12,
+        129,
+        1
+      ],
+      "focus": false,
+      "text": "03:48"
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        4,
+        -10,
+        129,
+        3
+      ],
+      "focus": false,
+      "text": "Lee app.py, cambia value a 2, ejecuta unittest y muéstrame el diff."
+    },
+    {
+      "type": "ToolActivityGroup",
+      "id": null,
+      "region": [
+        2,
+        -6,
+        133,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        3,
+        -5,
+        132,
+        1
+      ],
+      "focus": false,
+      "text": "▶ 📄 workspace_read · app.py · Completed · <1s"
+    },
+    {
+      "type": "Collapsible",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Contents",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "  ✓ main · read app.py · completed\nDecision · ALLOW\nReceipt · rcpt_08f0fa5fc298f65f\nScope · read app.py\nBudget · churn 0 B used · 268435456 B remaining · 0 paths · 0 deletes\nRecovery · /undo restores the last applied change; journal verification in Settings\nTool duration · 📄 workspace_read · app.py · <1s"
+    },
+    {
+      "type": "ToolActivityGroup",
+      "id": null,
+      "region": [
+        2,
+        -2,
+        133,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        3,
+        -1,
+        132,
+        1
+      ],
+      "focus": false,
+      "text": "▶ ✏️ workspace_edit · app.py · Completed · 33s"
+    },
+    {
+      "type": "Collapsible",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Contents",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "  Tool requested · edit · app.py · review the diff\n  ✓ You approved · main · app.py\n  Tool ALLOW · workspace.files.write · app.py · receipt rcpt_f9399d942e41a4ba\nTool duration · ✏️ workspace_edit · app.py · 33s"
+    },
+    {
+      "type": "ToolActivityGroup",
+      "id": null,
+      "region": [
+        2,
+        2,
+        133,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        3,
+        3,
+        132,
+        1
+      ],
+      "focus": false,
+      "text": "▶ ⚙️ workspace_run · Exit 0 · 27s"
+    },
+    {
+      "type": "Collapsible",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Contents",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "  Command requested · python3 -m unittest -v · review it\nTool duration · ⚙️ workspace_run · 27s"
+    },
+    {
+      "type": "CommandOutputCard",
+      "id": null,
+      "region": [
+        2,
+        6,
+        133,
+        4
+      ],
+      "focus": false
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        4,
+        7,
+        129,
+        2
+      ],
+      "focus": false,
+      "text": "\nOK"
+    },
+    {
+      "type": "ToolActivityGroup",
+      "id": null,
+      "region": [
+        2,
+        11,
+        133,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        3,
+        12,
+        132,
+        1
+      ],
+      "focus": false,
+      "text": "▶ ⑂ git_diff · app.py · Completed · <1s"
+    },
+    {
+      "type": "Collapsible",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Contents",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "  Git ALLOW · git.diff · receipt rcpt_1784518a2b963bb8\nTool duration · ⑂ git_diff · app.py · <1s"
+    },
+    {
+      "type": "ThoughtBlock",
+      "id": null,
+      "region": [
+        4,
+        15,
+        129,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        5,
+        16,
+        127,
+        1
+      ],
+      "focus": false,
+      "text": "▶ thought for <1s     Revisando el ejemplo local sin servicios externos."
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Revisando el ejemplo local sin servicios externos."
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        4,
+        19,
+        129,
+        1
+      ],
+      "focus": false,
+      "text": "03:49"
+    },
+    {
+      "type": "SelectableText",
+      "id": null,
+      "region": [
+        2,
+        20,
+        133,
+        10
+      ],
+      "focus": false,
+      "text": "RichVisual(SelectableText(), <rich.markdown.Markdown object at 0x76ebf6924080>)"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        2,
+        30,
+        133,
+        1
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Vertical",
+      "id": "composer",
+      "region": [
+        0,
+        32,
+        140,
+        8
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Vertical",
+      "id": "queue-stack",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "QueuedBox",
+      "id": "queued-box",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "QueuedTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ En cola"
+    },
+    {
+      "type": "OptionList",
+      "id": "queued-options",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "options": [],
+      "highlighted": null
+    },
+    {
+      "type": "Static",
+      "id": "queue-warning",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Button",
+      "id": "queue-steer-help",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "[?]"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Horizontal",
+      "id": "idea-box-row",
+      "region": [
+        1,
+        32,
+        138,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "ActivityStatus",
+      "id": "activity-status",
+      "region": [
+        1,
+        32,
+        27,
+        3
+      ],
+      "focus": false,
+      "text": "            ⡸⠦⠾⡀         \n           z⢣⠭⠬⠓⠉⠉⢆      \nChat listo  ⠈⠢⠤⠤⠤⢤⣊⡰     "
+    },
+    {
+      "type": "IdeaBox",
+      "id": "idea-box",
+      "region": [
+        28,
+        32,
+        83,
+        3
+      ],
+      "focus": false,
+      "text": "Idea box     GPT 6 Luna / None · OpenAI API\nCapture an idea · Ctrl+Shift+Enter"
+    },
+    {
+      "type": "Static",
+      "id": "usage-status",
+      "region": [
+        111,
+        32,
+        28,
+        3
+      ],
+      "focus": false,
+      "text": "     ~54/≈1.1M\n[░░░░░░░░░] 0%\n      0 +? tok"
+    },
+    {
+      "type": "PromptArea",
+      "id": "prompt-input",
+      "region": [
+        1,
+        35,
+        138,
+        3
+      ],
+      "focus": true,
+      "text": ""
+    },
+    {
+      "type": "Static",
+      "id": "composer-hint",
+      "region": [
+        0,
+        38,
+        140,
+        1
+      ],
+      "focus": false,
+      "text": "Enter enviar · Ctrl+J nueva línea · Esc atrás · Ctrl+P comandos · Ctrl+B barra lateral"
+    },
+    {
+      "type": "Horizontal",
+      "id": "command-bar",
+      "region": [
+        0,
+        39,
+        140,
+        1
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "sidebar-button",
+      "region": [
+        1,
+        39,
+        17,
+        1
+      ],
+      "focus": false,
+      "label": "Barra lateral"
+    },
+    {
+      "type": "Button",
+      "id": "sessions-button",
+      "region": [
+        18,
+        39,
+        12,
+        1
+      ],
+      "focus": false,
+      "label": "Sesiones"
+    },
+    {
+      "type": "Button",
+      "id": "harness-button",
+      "region": [
+        30,
+        39,
+        17,
+        1
+      ],
+      "focus": false,
+      "label": "Multi Harness"
+    },
+    {
+      "type": "Button",
+      "id": "model-button",
+      "region": [
+        47,
+        39,
+        14,
+        1
+      ],
+      "focus": false,
+      "label": "GPT 6 L… ▾"
+    },
+    {
+      "type": "BarSpacer",
+      "id": "bar-spacer",
+      "region": [
+        61,
+        39,
+        73,
+        1
+      ],
+      "focus": false,
+      "text": ""
+    },
+    {
+      "type": "Button",
+      "id": "settings-button",
+      "region": [
+        134,
+        39,
+        5,
+        1
+      ],
+      "focus": false,
+      "label": "⚙"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "ISYCODE  ·  ESPACIO"
+    },
+    {
+      "type": "Horizontal",
+      "id": "rail-tabs",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "show-overview",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Resumen"
+    },
+    {
+      "type": "Button",
+      "id": "show-files",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Archivos"
+    },
+    {
+      "type": "QuietVerticalScroll",
+      "id": "overview-view",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Vertical",
+      "id": "rail-card",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-sentinel",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ IsySentinel · 44 Allow · 0 Deny"
+    },
+    {
+      "type": "Static",
+      "id": "sentinel-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Mode · Classic · asks before each change\nActive permissions · 13\n✓ Save a named API key\n✓ Revoke a saved API key\n✓ Use a saved API key\n✓ Create git commits\n✓ See git status and diffs\n✓ Connect to the selected AI model\n✓ Save conversations in this workspace\n✓ Run commands in a sandbox\n✓ Read and search workspace files\n✓ Edit workspace files\n✓ Forget memories in this workspace\n✓ Read this workspace's private memory\n✓ Write this workspace's private memory\n\nLatest decisions\n✓ session.create\n  allow · 03:49:28\n✓ session.resume\n  allow · 03:49:28\n✓ session.create\n  allow · 03:49:28\n✓ session.create\n  allow · 03:49:28\n✓ session.create\n  allow · 03:49:28\n✓ session.resume\n  allow · 03:49:28\n✓ provider.request\n  allow · 03:49:28\n✓ session.create\n  allow · 03:49:28\nJournal · empty"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-mcp",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ MCPs"
+    },
+    {
+      "type": "Static",
+      "id": "mcp-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El estado de los servicios de herramientas no se ha comprobado."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-lsp",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ LSPs · 2 Ready · 3 Missing"
+    },
+    {
+      "type": "Static",
+      "id": "lsp-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "✓ Pyright Language Server\n  Workspace Symbols\n✗ rust-analyzer\n  Installed · Sandbox Unavailable\n✗ TypeScript Language Server\n  Installed · Sandbox Unavailable\n○ gopls\n  Not On PATH\n✓ clangd\n  Workspace Symbols\n○ Eclipse JDT Language Server\n  Not On PATH\n○ Python LSP Server\n  Not On PATH"
+    },
+    {
+      "type": "Button",
+      "id": "lsp-install-hint",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Comandos de instalación"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-skills",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Skills"
+    },
+    {
+      "type": "Static",
+      "id": "skill-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El catálogo de skills de ISyCode no se ha comprobado."
+    },
+    {
+      "type": "ActivateTree",
+      "id": "skills-tree",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-connections",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Conexiones · 4"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-gateway",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ ISyCo Gateway"
+    },
+    {
+      "type": "Static",
+      "id": "gateway-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El estado de Gateway no se ha comprobado."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-gateway-mcp",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Gateway MCP"
+    },
+    {
+      "type": "Static",
+      "id": "gateway-mcp-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "El catálogo de herramientas no se ha comprobado."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-mobile",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Mobile Host"
+    },
+    {
+      "type": "Static",
+      "id": "mobile-host-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Arrancando el host móvil local…"
+    },
+    {
+      "type": "Static",
+      "id": "mobile-client-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "No hay clientes móviles conectados."
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-bridge",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Coordinación Bridge"
+    },
+    {
+      "type": "Static",
+      "id": "bridge-status",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Desactivado · sin handshake de Bridge"
+    },
+    {
+      "type": "ExpandableBox",
+      "id": "rail-workspace",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "BoxTitle",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "▶ Espacio de trabajo"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Workspace Root · /tmp/isycode-e2e-audit-r7dduhtt/project"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-launch-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Launch Directory · /tmp/isycode-e2e-audit-r7dduhtt/project"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-source-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Root Source · .isyroot · Classic Mode"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-authority-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Filesystem Authority · list/read/name-search granted for this workspace"
+    },
+    {
+      "type": "Button",
+      "id": "refresh-openisy",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Actualizar integraciones"
+    },
+    {
+      "type": "Button",
+      "id": "review-plan",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "No plan pending"
+    },
+    {
+      "type": "Horizontal",
+      "id": "file-controls",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "file-up",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "↑ Subir"
+    },
+    {
+      "type": "Button",
+      "id": "file-refresh",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Actualizar"
+    },
+    {
+      "type": "Button",
+      "id": "workspace-folders",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Carpetas"
+    },
+    {
+      "type": "Input",
+      "id": "file-search",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "value": "",
+      "placeholder": "Buscar rutas del espacio…"
+    },
+    {
+      "type": "ActivateTree",
+      "id": "workspace-tree",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Horizontal",
+      "id": "file-actions",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "file-copy-path",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Copiar ruta"
+    },
+    {
+      "type": "Button",
+      "id": "file-open-preview",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Abrir vista previa"
+    },
+    {
+      "type": "VerticalScroll",
+      "id": "file-preview-scroll",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "file-preview",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "5 entries · /tmp/isycode-e2e-audit-r7dduhtt/project\nISySentinel ALLOW · local receipt rcpt_b9127e5 verified"
+    },
+    {
+      "type": "Vertical",
+      "id": "action-card",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "action-title",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Configuración\nConversación · Preferencias · Permisos · Conexiones"
+    },
+    {
+      "type": "Input",
+      "id": "action-search",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "value": "",
+      "placeholder": "Filtrar esta lista…"
+    },
+    {
+      "type": "PreviewOptionList",
+      "id": "action-list",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "options": [
+        "Conversación    Proveedores y modelos",
+        "Conversación    Nivel de razonamiento",
+        "Conversación    Elegir rol",
+        "Conversación    Contexto",
+        "Conversación    Elegir archivo de contexto (.md / .txt)",
+        "Conversación    Quitar el rol seleccionado",
+        "Preferencias    Compresión RTK · desactivado",
+        "Preferencias    Sonidos de notificación · activado",
+        "Preferencias    Pantalla de alto contraste · desactivado",
+        "Preferencias    Pantalla solo ASCII · desactivado",
+        "Preferencias    Idioma · Español",
+        "Preferencias    Mis valores · todos los espacios de trabajo",
+        "Preferencias    Desplazamiento compacto de texto · desactivado",
+        "Preferencias    Inicializar .isycode/ de este espacio",
+        "Preferencias    Preferencias del espacio",
+        "Preferencias    Copiar comandos heredados del espacio…",
+        "Preferencias    Comandos y atajos",
+        "Permisos        Authority & Security",
+        "Permisos        Claves de API con nombre",
+        "Permisos        Diario de acciones · verificar / inspeccionar",
+        "Permisos        Carpetas y ediciones automáticas",
+        "Conexiones      Multi Harness · ajustes y reparar Compose",
+        "Conexiones      Archivos del espacio de trabajo",
+        "Conexiones      Integraciones · MCP, LSP, Gateway y acceso remoto"
+      ],
+      "highlighted": 0
+    },
+    {
+      "type": "Static",
+      "id": "action-detail",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "Elige el proveedor y el modelo de esta conversación."
+    },
+    {
+      "type": "Static",
+      "id": "action-hint",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "↑↓ mover · Enter abrir · Clic previsualizar · Doble clic abrir · Esc atrás · Mayús+Tab buscar"
+    },
+    {
+      "type": "Static",
+      "id": "key-entry-label",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "text": "La clave de API se guarda fuera de este proyecto."
+    },
+    {
+      "type": "Input",
+      "id": "provider-key-input",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "value": "",
+      "placeholder": "Pegar clave de API…"
+    },
+    {
+      "type": "Horizontal",
+      "id": "key-entry-buttons",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "save-provider-key",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Guardar clave"
+    },
+    {
+      "type": "Button",
+      "id": "cancel-provider-key",
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false,
+      "label": "Cancelar"
+    },
+    {
+      "type": "FooterKey",
+      "id": null,
+      "region": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "focus": false
+    }
+  ],
+  "provider_mode": "tools",
+  "provider_calls": 5,
+  "file_value": "value = 2\n"
+}

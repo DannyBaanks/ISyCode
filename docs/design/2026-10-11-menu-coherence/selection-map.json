@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-11",
+  "status": "three complete visual directions, awaiting user selection",
+  "scope": "Mockups and interaction plan only. No product behavior implemented.",
+  "options": [
+    {
+      "option": 1,
+      "name": "Contraste esencial",
+      "source": "/home/danny/.codex/generated_images/01a12a51-e035-7232-a1fd-901adafa4273/exec-5ae33510-755b-4899-a319-8a76fc8af8ab.png",
+      "saved": "propuesta-1.png",
+      "note": "First accepted direction; 17 menu families visible.",
+      "actual_dimensions": [
+        1672,
+        941
+      ],
+      "sha256": "2cf6722bb9e86e427e300faa0c308192de3964e8a6072c5a107b09ee807bcfc6",
+      "source_copy_identical": true
+    },
+    {
+      "option": 2,
+      "name": "Paneles por tarea",
+      "source": "/home/danny/.codex/generated_images/01a12a51-e035-7232-a1fd-901adafa4273/exec-c8099c3d-da52-400a-9fc3-31875eb1cd39.png",
+      "saved": "propuesta-2.png",
+      "note": "Refined second direction; missing Authority panel added. Original incomplete sheet retained under rejected/.",
+      "actual_dimensions": [
+        1672,
+        941
+      ],
+      "sha256": "6a5b3e177a659e02362cd190fccc212610d610a4a4d8e9584bddd4906995a52f",
+      "source_copy_identical": true
+    },
+    {
+      "option": 3,
+      "name": "Consola modular",
+      "source": "/home/danny/.codex/generated_images/01a12a51-e035-7232-a1fd-901adafa4273/exec-089ea650-1d21-4ddd-973e-2538956bcd52.png",
+      "saved": "propuesta-3.png",
+      "note": "Refined third direction; exactly two lines highlighted in the copy specimen. Initial one-line specimen retained under rejected/.",
+      "actual_dimensions": [
+        1672,
+        941
+      ],
+      "sha256": "979e196a9ab9140edd30a9e5ea29d58f1848f091ef64b6d582a4f01a06a1313d",
+      "source_copy_identical": true
+    }
+  ],
+  "manually_inspected": true,
+  "checks": [
+    "17 representative menu families visible in each accepted sheet",
+    "Settings prominent and consistent with sidebar",
+    "Authority panel included",
+    "Copy specimen highlights exactly two lines",
+    "No desktop chrome, full app banner or cat included"
+  ],
+  "limits": [
+    "Images are generated visual proposals; UI text and state values are illustrative, not runtime facts.",
+    "Source references requested at 3840x2160; actual generation dimensions are recorded per option.",
+    "Literal colors, typography, gesture behavior and terminal accessibility require implementation and verification later."
+  ],
+  "rejected": [
+    {
+      "path": "rejected/paneles-sin-authority.png",
+      "reason": "Authority omitted; superseded by propuesta-2.png"
+    },
+    {
+      "path": "rejected/consola-seleccion-una-linea.png",
+      "reason": "Only one selected line shown despite two-line label; superseded by propuesta-3.png"
+    }
+  ]
+}

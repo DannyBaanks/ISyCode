@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-15T21:13:10.558094-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10"
+  },
+  "command": "py -m pytest -q tests/test_windows_sandbox_process.py tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_registry.py tests/test_windows_sandbox_recovery.py tests/test_windows_sandbox_acceptance.py tests/test_command_runner_windows.py tests/test_platform_sandbox.py tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_windows_sandbox_volume_acceptance.py --basetemp D:\\isycode-pr52-sandbox-r2",
+  "exit_code": 0,
+  "result": "115 passed, 13 skipped, 1 xfailed in 461.69s (0:07:41)",
+  "output": "docs/platform-parity/evidence/windows-native-sandbox-pr52-r2-20261015.txt",
+  "output_sha256": "1033f6f52ddaf74d4ae5c94be7d04db5121652c18d400fbcabc7060a0625af00",
+  "notes": "The local Windows native sandbox selection passed after filtering the optional python3.exe alias and making fixtures use private roots. Skips are explicit unavailable host/operator controls; this does not enable the Windows sandbox."
+}

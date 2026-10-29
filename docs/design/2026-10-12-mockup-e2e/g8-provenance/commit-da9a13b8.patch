@@ -1,0 +1,21 @@
+commit da9a13b8364e902722f0b9ecdde0d33b29fbf115
+Author:     DannyBaanks <danielbaanksyy@gmail.com>
+AuthorDate: Tue Oct 6 21:51:15 2026 -0600
+Commit:     DannyBaanks <danielbaanksyy@gmail.com>
+CommitDate: Tue Oct 6 21:51:15 2026 -0600
+
+    chore(evidence): refresh test_visual_tui.py hash after CSS test port
+
+diff --git a/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml b/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml
+index a47f7d8..00bf72d 100644
+--- a/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml
++++ b/docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml
+@@ -82,7 +82,7 @@ casos:
+       - docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate-tests.txt
+         sha256: 50af6f0b3b849d8b395605d2fde6bd6526c528aec94379f00052bd280e69dd20
+       - tests/test_visual_tui.py
+-        sha256: e1662ec6d275b4d085e05fede52fe5c2470fe8cedb095be192e2aac52459c2b5
++        sha256: f8d2599d0f8e577ac29c03bac3ffbdebeaee0f96cece38834bfa7d1ce58574c5
+ sin_evidencia_real:
+   - revisión en terminal física real (los snapshots son pilot/Textual)
+   - widget del sidebar de agentes M6A renderizado en la TUI viva

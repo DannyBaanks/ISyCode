@@ -1,0 +1,109 @@
+{
+  "verified_at": "2026-10-11T19:20:17.021317+00:00",
+  "scope": "Design-authoring skill library, catalog and TCSS template syntax. No production TUI runtime test.",
+  "skill_count": 5,
+  "commands": [
+    {
+      "command": "python3 '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design/scripts/catalog.py' list",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "isycode-design | ISyCode · Design\nisycode-option-boxes | ISyCode · Cajas y opciones\nisycode-settings-sidebar | ISyCode · Settings y sidebar\nisycode-text-copy | ISyCode · Texto y copia\nisycode-icons-motion | ISyCode · Iconos y movimiento\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design/scripts/catalog.py' search cajas opciones",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "isycode-option-boxes | ISyCode · Cajas y opciones\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design/scripts/catalog.py' check",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "OK: 5 skills; fingerprints, references and palette consistent\nScope: authoring catalog integrity; runtime TUI behavior is not checked\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design/scripts/catalog.py' show isycode-option-boxes",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "---\nname: isycode-option-boxes\ndescription: \"Add or revise ISyCode Textual option boxes, searchable selectors, list/detail dialogs, forms and copy menus using the accepted visual patterns. Use for component construction, not general chat text or unrelated products.\"\n---\n\n# ISyCode option boxes\n\nLoad [the shared visual standard](../isycode-design/references/visual-standard.md) if it is not already in context. Choose a pattern from [option-box contracts](references/option-boxes.md) rather than adding another visual family.\n\nInspect the current screen and its handlers. Reuse its data source and activation path; replacing list chrome does not authorize activating accounts, models, commands or grants. Separate preview/current/selected state from the action that commits a choice. Use one cyan focus/selection, plain black surfaces, readable help and explicit action labels.\n\nFor content boxes, follow [text/copy behavior](../isycode-text-copy/SKILL.md). List choices and real buttons still activate with Enter; the Space-only expansion rule is for content containers, not every control.\n\nUse measured terminal cells, bounded modal height and a scrollable content area. Keep search, dismiss and primary actions reachable in 80×24. Search typing should not activate a result or steal Space from the input. Empty, loading, disabled and error states have explanatory text; do not substitute a success-looking icon.\n\nVerify the changed opening, filtering, selection, activation, cancellation and focus-return paths. Show the affected view and report any remaining runtime gap. If only a mockup was requested, keep it a mockup rather than silently adding a production component.\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design/scripts/catalog.py' show ../../AGENTS.md",
+      "exit_code": 2,
+      "expected_exit_code": 2,
+      "stdout": "",
+      "stderr": "Unknown registered skill: ../../AGENTS.md\n"
+    },
+    {
+      "command": "python3 '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design/scripts/install-local.py'",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "READY: isycode-design\nREADY: isycode-option-boxes\nREADY: isycode-settings-sidebar\nREADY: isycode-text-copy\nREADY: isycode-icons-motion\nCanonical files stay in the ISyCode repository; reload skills/start a new Codex session to refresh discovery.\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 /home/danny/.codex/skills/.system/skill-creator/scripts/quick_validate.py '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-design'",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Skill is valid!\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 /home/danny/.codex/skills/.system/skill-creator/scripts/quick_validate.py '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-option-boxes'",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Skill is valid!\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 /home/danny/.codex/skills/.system/skill-creator/scripts/quick_validate.py '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-settings-sidebar'",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Skill is valid!\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 /home/danny/.codex/skills/.system/skill-creator/scripts/quick_validate.py '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-text-copy'",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Skill is valid!\n",
+      "stderr": ""
+    },
+    {
+      "command": "python3 /home/danny/.codex/skills/.system/skill-creator/scripts/quick_validate.py '/home/danny/Development/ISyCo Git/ISyCode/.agents/skills/isycode-icons-motion'",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Skill is valid!\n",
+      "stderr": ""
+    },
+    {
+      "command": "git diff --check -- AGENTS.md .agents/skills",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "in_process_checks": {
+    "ui_yaml_metadata": "validated field types, short-description length and implicit invocation for each registered skill",
+    "local_symlinks": "all registered skills resolve to canonical repository folders, with matching SKILL.md SHA-256",
+    "tcss": "parsed successfully using Textual Stylesheet"
+  },
+  "not_demonstrated": [
+    "Skill picker refresh or model selection in a new Codex session",
+    "Production redesign, content-box gestures and real terminal clipboard/motion/font behavior"
+  ],
+  "baseline_commit": "65dbbb0f54070d619ed5c56258a6ad4e9eb0980c",
+  "finalization_notes": [
+    {
+      "check": "git diff --cached --check",
+      "initial_exit_code": 2,
+      "initial_output": "docs/design/isycode-design-skills/validation.log:119: new blank line at EOF.\n",
+      "repair": "Removed an extra serialization blank line at log EOF. Captured command stdout/stderr in validation.json are unchanged."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+ISyCode · terminal workspace agent
+
+Usage:
+  isycode                 Start the chat TUI in the current directory
+  isycode tui              Start the chat TUI
+  isycode cli              Browse actions by semantic category
+  isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
+  isycode sessions ...      List/show/search/rename/delete local conversations; add --json
+  isycode models [--json]   Show local provider/model metadata; no network calls
+  isycode stats [--json]    Aggregate locally recorded session usage
+  isycode dirs [--json]     Show config/state locations and precedence, never values
+  isycode completion SHELL  Print bash, zsh or fish completion
+  isycode update           Update this ISyCode installation (alias: actualizar)
+  isycode update --check   Check for updates without installing or advancing
+  isycode update --yes     Pre-approve the stash/merge confirmation
+  isycode actualizar       Actualizar el checkout limpio o preparar una instalación
+  isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
+  isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
+  isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
+                           add --json for machine-readable output. Only read-only
+                           tools that were granted run; nothing asks for approval.
+  isycode --help           Show this help
+  isycode --version        Show the installed version
+
+The CLI browser groups actions by purpose. It does not run arbitrary shell commands.

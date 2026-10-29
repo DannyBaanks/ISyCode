@@ -1,0 +1,57 @@
+{
+  "recorded_at": "2026-10-15T22:45:49.653964-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "install": "fresh Windows venv; dependencies fetched from https://pypi.org/simple; user pip config and credentials excluded",
+    "temporary_volume": "D:"
+  },
+  "command": "py -m venv <temporary D: directory>\\venv; venv\\Scripts\\python.exe -m pip --isolated --no-cache-dir install --index-url https://pypi.org/simple <repo>; isycode.exe --version/--help/doctor/dirs/models; pip uninstall -y isycode",
+  "checks": [
+    {
+      "label": "clean dependency installation",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\python.exe -m pip --isolated --disable-pip-version-check --no-cache-dir install --index-url https://pypi.org/simple C:\\Development\\ISyCode-worktrees\\windows-parity"
+    },
+    {
+      "label": "installed CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\isycode.exe --version"
+    },
+    {
+      "label": "installed CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\isycode.exe --help"
+    },
+    {
+      "label": "installed CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\isycode.exe doctor"
+    },
+    {
+      "label": "installed CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\isycode.exe dirs"
+    },
+    {
+      "label": "installed CLI smoke",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\isycode.exe models"
+    },
+    {
+      "label": "uninstall",
+      "exit_code": 0,
+      "command": "<temporary D: directory>\\venv\\Scripts\\python.exe -m pip --isolated uninstall -y isycode"
+    },
+    {
+      "label": "uninstall verification",
+      "exit_code": 0,
+      "distribution_metadata": "absent",
+      "launcher_present": false
+    }
+  ],
+  "exit_code": 0,
+  "result": "clean dependency installation, five CLI smokes and pip uninstall passed; post-uninstall distribution metadata and launcher absent",
+  "output": "docs/platform-parity/evidence/windows-clean-source-install-pr52-20261016.txt",
+  "output_sha256": "4b21df99bd0fb9008bdced373f8a68dfd8df060185f08b42b806b508a88939e4"
+}

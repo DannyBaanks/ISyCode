@@ -1,0 +1,4 @@
+device ACL readback: D:(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;S-1-5-21-1262463267-1333140832-2374598671-1001)(A;;FX;;;S-1-15-2-2)
+exit -1073741790 output b''
+principal: S-1-15-2-2 owned write: ABSENT
+exit=0

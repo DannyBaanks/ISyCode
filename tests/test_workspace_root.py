@@ -1,0 +1,273 @@
+"""Workspace marker discovery stays separate from IsyMotron authority."""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import pytest
+
+from isycode import config
+from isycode import authority
+from isycode.workspace import WorkspaceUnavailable, virtual_grant_children
+
+
+def _discover(path: Path):
+    assert hasattr(config, "discover_workspace_identity"), (
+        "ISyCode does not yet discover .isyroot workspace identity"
+    )
+    return config.discover_workspace_identity(path)
+
+
+def test_marker_in_launch_directory_is_workspace_root(tmp_path: Path):
+    (tmp_path / ".isyroot").touch()
+
+    identity = _discover(tmp_path)
+
+    assert identity.launch_dir == tmp_path.resolve()
+    assert identity.workspace_root == tmp_path.resolve()
+    assert identity.workspace_root_source == "isyroot"
+
+
+@pytest.mark.parametrize("depth", [1, 3])
+def test_marker_in_parent_is_found_without_escaping_nearest_root(tmp_path: Path, depth: int):
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / ".isyroot").touch()
+    launch = root
+    for index in range(depth):
+        launch = launch / f"child-{index}"
+        launch.mkdir()
+
+    identity = _discover(launch)
+
+    assert identity.workspace_root == root.resolve()
+    assert identity.launch_dir == launch.resolve()
+    assert identity.workspace_root_source == "isyroot"
+
+
+def test_nearest_marker_wins(tmp_path: Path):
+    outer = tmp_path / "outer"
+    inner = outer / "inner"
+    launch = inner / "project"
+    launch.mkdir(parents=True)
+    (outer / ".isyroot").touch()
+    (inner / ".isyroot").touch()
+
+    identity = _discover(launch)
+
+    assert identity.workspace_root == inner.resolve()
+
+
+def test_missing_marker_falls_back_to_canonical_launch_directory(tmp_path: Path):
+    launch = tmp_path / "project"
+    launch.mkdir()
+
+    identity = _discover(launch)
+
+    assert identity.workspace_root == launch.resolve()
+    assert identity.workspace_root_source == "fallback"
+
+
+def test_discovery_terminates_at_filesystem_root():
+    filesystem_root = Path(Path.cwd().anchor)
+    identity = _discover(filesystem_root)
+
+    assert identity.launch_dir == filesystem_root
+    assert identity.workspace_root == filesystem_root
+    assert identity.workspace_root_source in {"isyroot", "fallback"}
+
+
+def test_symlinked_launch_path_uses_canonical_workspace(tmp_path: Path):
+    root = tmp_path / "real-root"
+    launch = root / "project"
+    launch.mkdir(parents=True)
+    (root / ".isyroot").touch()
+    alias = tmp_path / "launch-link"
+    try:
+        alias.symlink_to(launch, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlinks are unavailable on this platform")
+
+    identity = _discover(alias)
+
+    assert identity.launch_dir == launch.resolve()
+    assert identity.workspace_root == root.resolve()
+
+
+def test_symlink_marker_is_not_a_workspace_boundary(tmp_path: Path):
+    launch = tmp_path / "project"
+    launch.mkdir()
+    external_marker = tmp_path / "marker-target"
+    external_marker.touch()
+    try:
+        (launch / ".isyroot").symlink_to(external_marker)
+    except OSError:
+        pytest.skip("file symlinks are unavailable on this platform")
+
+    identity = _discover(launch)
+
+    assert identity.workspace_root == launch.resolve()
+    assert identity.workspace_root_source == "fallback"
+
+
+def test_nonempty_marker_is_not_a_workspace_boundary(tmp_path: Path):
+    launch = tmp_path / "project"
+    launch.mkdir()
+    (launch / ".isyroot").write_text("not an empty marker")
+
+    identity = _discover(launch)
+
+    assert identity.workspace_root == launch.resolve()
+    assert identity.workspace_root_source == "fallback"
+
+
+def test_navigation_parent_never_crosses_workspace_boundary(tmp_path: Path):
+    root = tmp_path / "repo"
+    child = root / "ISyCode" / "isycode"
+    child.mkdir(parents=True)
+    assert hasattr(authority, "workspace_parent"), "workspace boundary helper is missing"
+
+    assert authority.workspace_parent(root, root) == root.resolve()
+    assert authority.workspace_parent(root, child) == (root / "ISyCode").resolve()
+
+
+def test_files_tree_virtual_root_contains_only_grant_derived_nodes(tmp_path: Path):
+    from types import SimpleNamespace
+
+    root = tmp_path / "ISyCo"
+    authorized = root / "ISyCode" / "src"
+    authorized.mkdir(parents=True)
+    unrelated = root / "private"
+    unrelated.mkdir()
+    grant = SimpleNamespace(path=str(authorized))
+
+    nodes = virtual_grant_children(root.resolve(), [grant])
+
+    assert nodes == [{
+        "name": "ISyCode", "kind": "directory",
+        "path": str(root / "ISyCode"), "locked": True, "bytes": 0,
+    }]
+    deeper = virtual_grant_children((root / "ISyCode").resolve(), [grant])
+    assert deeper[0]["name"] == "src"
+    assert deeper[0]["locked"] is False
+    authorized_node = virtual_grant_children((root / "ISyCode" / "src").resolve(), [grant])
+    assert authorized_node == []
+
+
+def test_workspace_path_rejects_any_parent_above_isyroot(tmp_path: Path):
+    root = tmp_path / "repo"
+    child = root / "project"
+    child.mkdir(parents=True)
+
+    with pytest.raises(WorkspaceUnavailable):
+        authority.validate_workspace_path(root, root.parent)
+
+
+def test_symlink_path_outside_workspace_is_rejected(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("private")
+    link = root / "escape"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlinks are unavailable on this platform")
+    assert hasattr(authority, "validate_workspace_path"), "workspace path guard is missing"
+
+    with pytest.raises(WorkspaceUnavailable):
+        authority.validate_workspace_path(root, link / "secret.txt")
+
+
+def test_syroot_does_not_create_or_widen_filesystem_grants(tmp_path: Path):
+    root = tmp_path / "workspace"
+    child_grant = root / "ISyCode"
+    child_grant.mkdir(parents=True)
+    (root / ".isyroot").touch()
+    assert hasattr(authority, "narrow_read_roots"), "grant intersection helper is missing"
+
+    narrowed = authority.narrow_read_roots(root, [
+        {"id": "project", "label": "ISyCode", "path": str(child_grant)},
+    ])
+
+    assert [Path(item["path"]) for item in narrowed] == [child_grant.resolve()]
+    assert Path(root).resolve() not in [Path(item["path"]) for item in narrowed]
+    assert authority.narrow_read_roots(root, []) == []
+
+
+def test_single_directory_grant_keeps_existing_workspace_behavior(tmp_path: Path):
+    root = tmp_path / "project"
+    root.mkdir()
+    assert hasattr(authority, "narrow_read_roots"), "grant intersection helper is missing"
+
+    narrowed = authority.narrow_read_roots(root, [
+        {"id": "home", "label": "Home", "path": str(tmp_path)},
+    ])
+
+    assert len(narrowed) == 1
+    assert Path(narrowed[0]["path"]) == root.resolve()
+
+
+def test_workspace_identity_keeps_launch_and_root_as_distinct_values(tmp_path: Path):
+    root = tmp_path / "repo"
+    launch = root / "project"
+    launch.mkdir(parents=True)
+    (root / ".isyroot").touch()
+
+    identity = _discover(launch)
+
+    assert identity.workspace_root == root.resolve()
+    assert identity.launch_dir == launch.resolve()
+    assert identity.workspace_root != identity.launch_dir
+
+
+def test_gateway_workspace_id_is_stable_and_scoped_to_canonical_root(tmp_path: Path, monkeypatch):
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    monkeypatch.delenv("ISYCODE_GATEWAY_WORKSPACE_ID", raising=False)
+
+    first_id = config.gateway_workspace_id(first)
+
+    assert first_id == config.gateway_workspace_id(first.resolve())
+    assert first_id.startswith("isyco-ws-")
+    assert len(first_id) == len("isyco-ws-") + 32
+    assert first_id != config.gateway_workspace_id(second)
+
+
+def test_gateway_workspace_id_honors_explicit_operator_override(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("ISYCODE_GATEWAY_WORKSPACE_ID", "operator-workspace")
+
+    assert config.gateway_workspace_id(tmp_path) == "operator-workspace"
+
+
+def test_state_index_honors_state_env_and_platform_fallback(tmp_path: Path, monkeypatch):
+    """F-10: the resolver keeps the override and native platform fallback."""
+    from isycode.state_index import StateIndex, get_state_index
+
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "explicit"))
+    assert StateIndex().state_root() == tmp_path / "explicit"
+    assert get_state_index().state_root() == tmp_path / "explicit"
+
+    monkeypatch.delenv("ISYCODE_STATE_HOME")
+    if os.name == "nt":
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+        assert get_state_index().state_root() == tmp_path / "local" / "ISyCode"
+    else:
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))
+        assert get_state_index().state_root() == tmp_path / "xdg" / "isycode"
+
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
+    assert get_state_index().state_root() == get_state_index().default_root()
+
+
+def test_state_root_function_delegates_to_state_index(tmp_path: Path, monkeypatch):
+    """The legacy state_root() import keeps working through the resolver."""
+    monkeypatch.setenv("ISYCODE_STATE_HOME", str(tmp_path / "s"))
+
+    from isycode.state_index import get_state_index
+    from isycode.workspace_setup import state_root
+
+    assert state_root() == get_state_index().state_root() == tmp_path / "s"

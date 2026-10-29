@@ -1,0 +1,4 @@
+guid-env-dos-cwd exit -1073741515 output b''
+dos-env-dos-cwd exit -1073741515 output b''
+dos-env-guid-cwd exit -1073741515 output b''
+exit=0

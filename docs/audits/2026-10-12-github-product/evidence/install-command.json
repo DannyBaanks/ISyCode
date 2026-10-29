@@ -1,0 +1,56 @@
+{
+  "utc": "2026-10-12T08:54:09.798878+00:00",
+  "scope": "Fresh clone of public main; source installation and local help only, no provider calls.",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "clone",
+        "--depth",
+        "1",
+        "https://github.com/DannyBaanks/ISyCode.git",
+        "/tmp/isycode-readme-install-yf2b83a9/ISyCode"
+      ],
+      "cwd": "/tmp/isycode-readme-install-yf2b83a9",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "venv",
+        ".venv"
+      ],
+      "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "/tmp/isycode-readme-install-yf2b83a9/ISyCode/.venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "-e",
+        "."
+      ],
+      "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "/tmp/isycode-readme-install-yf2b83a9/ISyCode/.venv/bin/isycode",
+        "--version"
+      ],
+      "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "/tmp/isycode-readme-install-yf2b83a9/ISyCode/.venv/bin/isycode",
+        "--help"
+      ],
+      "cwd": "/tmp/isycode-readme-install-yf2b83a9/ISyCode",
+      "exit_code": 0
+    }
+  ]
+}

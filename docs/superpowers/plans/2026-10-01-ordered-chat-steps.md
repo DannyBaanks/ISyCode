@@ -1,0 +1,11 @@
+# Ordered chat steps and stable scrolling
+
+User request: on the updated claude/ecstatic-albattani-bpt2hf branch, display each streamed explanation/reasoning segment above the tool(s) it leads to, followed by the next model segment. Keep the latest output visible as widgets grow, while respecting the user scrolling up to read history.
+
+Design: retain sequential typed tool execution and exact approvals. Separate display state per provider round rather than rewriting a turn-wide widget. Accumulate assistant transcript text separately with paragraph boundaries; do not display transport JSON. Show reasoning only when the provider supplies it, and finish its block before tool execution. Handle provider responses without callbacks without losing text. Preserve failure/cancel prompt recovery.
+
+Scroll: anchor a small trailing child using Textual's native layout-aware anchor. User scrolling clears the anchor; reaching the bottom resumes it. New mounts, streamed updates and collapses must respect that state. Keep the anchor when clearing/resuming conversations and pause it for explicit transcript-search navigation.
+
+Validation: full-app fake-provider test with multiple rounds and real owned reads verifies widget order and saved text; streaming growth test verifies follow, manual history reading, and return to bottom. Run existing startup, recovery, approval, side-panel and local suite tests on Python3.10/3.12 as appropriate; regenerate authority snapshot; review; commit/push a separate branch based on user's updated branch. OAuth work is preserved in git stash, not discarded or mixed into this change.
+
+Completed validation: seven new full-app/rendering tests passed on Python 3.12. The local suite before the final queued-collapse race fix passed 671 tests; the final complete Python 3.10 suite passed 672 tests, with 3 skips and 11 integration tests deselected. A focused Python 3.10 startup/recovery/approval/proxy/chat run also passed 33 tests. Independent review reproduced the queued Collapsible expansion race while reading history; the fix suppresses automatic scrolling while streaming or collapsed, and its new regression test passed independently. Authority coverage was regenerated; no execution authority changed. Provider responses were simulated; no live model verification was performed for this change.

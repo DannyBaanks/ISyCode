@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "library": "ISyCode Design Skills",
+  "library_version": "1.0.0",
+  "created_on": "2026-10-11",
+  "scope": "Developer authoring guidance for ISyCode Textual; does not change the application bundled-skills manifest",
+  "shared_standard": "isycode-design/references/visual-standard.md",
+  "shared_tokens": "isycode-design/assets/tokens.json",
+  "skills": [
+    {
+      "name": "isycode-design",
+      "title": "ISyCode · Design",
+      "summary": "Estándar visual compartido y rutas para editar la TUI.",
+      "tags": [
+        "standard",
+        "estandar",
+        "visual",
+        "tokens",
+        "contraste",
+        "fuentes",
+        "tui",
+        "design"
+      ],
+      "path": "isycode-design/SKILL.md",
+      "sha256": "cb84ecbb8dcb3c54a253ecd3960809db7cc18a62e2e964eaa40b288615183f18"
+    },
+    {
+      "name": "isycode-option-boxes",
+      "title": "ISyCode · Cajas y opciones",
+      "summary": "Crear cajas de opciones, menús, selectores, formularios y decisiones.",
+      "tags": [
+        "cajas",
+        "opciones",
+        "menus",
+        "menu",
+        "selectors",
+        "options",
+        "forms",
+        "busqueda",
+        "modelos",
+        "proveedores",
+        "sesiones",
+        "formularios"
+      ],
+      "path": "isycode-option-boxes/SKILL.md",
+      "sha256": "786d5be533b3b35e251d7269764ad54cbdd8662f4562908d25e04a86b48f3ffc"
+    },
+    {
+      "name": "isycode-settings-sidebar",
+      "title": "ISyCode · Settings y sidebar",
+      "summary": "Settings por categorías y sidebar Overview/Files con secciones planas.",
+      "tags": [
+        "settings",
+        "configuracion",
+        "sidebar",
+        "rail",
+        "archivos",
+        "overview",
+        "files",
+        "categorias",
+        "preferencias"
+      ],
+      "path": "isycode-settings-sidebar/SKILL.md",
+      "sha256": "4b66225ecd0d96da075623392021f5307149b87e1d6e5bae0571d457962eeb92"
+    },
+    {
+      "name": "isycode-text-copy",
+      "title": "ISyCode · Texto y copia",
+      "summary": "Space para expandir, menú de copia y selección exacta de texto.",
+      "tags": [
+        "copy",
+        "copia",
+        "copiar",
+        "texto",
+        "seleccion",
+        "doble clic",
+        "space",
+        "expandir",
+        "clipboard",
+        "portapapeles"
+      ],
+      "path": "isycode-text-copy/SKILL.md",
+      "sha256": "68eb9a6bed3236c4847e23428ebcd3fccb54b55e73927eb074b4f7e68e142b50"
+    },
+    {
+      "name": "isycode-icons-motion",
+      "title": "ISyCode · Iconos y movimiento",
+      "summary": "Iconos con significado, estados distintos y movimiento útil con fallback.",
+      "tags": [
+        "iconos",
+        "icons",
+        "motion",
+        "movimiento",
+        "animaciones",
+        "itshover",
+        "its hover",
+        "unicode",
+        "ascii",
+        "nerd fonts",
+        "estado",
+        "font fallback"
+      ],
+      "path": "isycode-icons-motion/SKILL.md",
+      "sha256": "481e46921d5913cda3e9cb5dd7086c8aa349e29f808da94df7a08b47c6e5a05f"
+    }
+  ]
+}

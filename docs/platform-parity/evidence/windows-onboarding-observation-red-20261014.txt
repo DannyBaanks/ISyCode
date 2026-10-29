@@ -1,0 +1,21 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+_____________ test_onboarding_then_observation_reload_is_private ______________
+
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-798/test_onboarding_then_observati0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000286D66AA3C0>
+
+    def test_onboarding_then_observation_reload_is_private(tmp_path,monkeypatch):
+        from isycode.workspace_setup import WorkspaceSetupStore
+        from isycode import capability_observations as c
+        root=tmp_path/'onboarding';monkeypatch.setenv('ISYCODE_STATE_HOME',str(root))
+        setup=WorkspaceSetupStore()
+>       assert c.record('parity','after-onboarding','steer',True)
+E       AssertionError: assert False
+E        +  where False = <function record at 0x00000286D66AFCE0>('parity', 'after-onboarding', 'steer', True)
+E        +    where <function record at 0x00000286D66AFCE0> = <module 'isycode.capability_observations' from 'C:\\Development\\ISyCo Git\\ISyCode\\src\\isycode\\capability_observations.py'>.record
+
+tests\test_provider_metadata_native.py:47: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_provider_metadata_native.py::test_onboarding_then_observation_reload_is_private
+1 failed, 3 deselected in 0.44s

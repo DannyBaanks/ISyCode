@@ -1,0 +1,208 @@
+........................................................................ [  3%]
+.........................s...........................sss................ [  6%]
+............FF...........FF.F........................................... [  9%]
+........................................................................ [ 13%]
+..s.........sssssssssssssssssssssssssssssssssss......................... [ 16%]
+........................................................................ [ 19%]
+..................................s..s...................s.............. [ 23%]
+.......................................s...ssssssssss.........s......... [ 26%]
+.....s.s.s.s.s....ssss.s......ssssss..s...................s.........s... [ 29%]
+....s......ssss..s..............................................s.ssssss [ 33%]
+......................sss..ss.....................s..................... [ 36%]
+.......................................................s...s....ssssss.. [ 39%]
+..................sssssss...ss............sss.s.ssssssssssssssssssssssss [ 43%]
+ssss.................................................................... [ 46%]
+............................................................sss......... [ 49%]
+.........................ss........s..s.......s......................... [ 53%]
+........................sss..ss.sssssssss.ss......s..................... [ 56%]
+........................................................................ [ 59%]
+........................................................................ [ 63%]
+....sssssssssssss....................................................... [ 66%]
+.....................................sssssssssssssssssssss..s........... [ 69%]
+.........................................ssssssssssss................... [ 73%]
+..........................sssss.s....................................s.. [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 83%]
+....s..........x........................................................ [ 86%]
+................................sssssssssssss............sssssssssssssss [ 89%]
+ssss.............s...s..................sssssssssssssssssss..ssss....... [ 93%]
+........................sssssss................................ss....s.. [ 96%]
+........s.....................s..ssssssssssssssssssssssssssssssssssssss. [ 99%]
+..                                                                       [100%]
+================================== FAILURES ===================================
+________________ test_two_agents_collaborate_without_collision ________________
+
+    def test_two_agents_collaborate_without_collision():
+        """A works under lease, B cannot steal it, B takes over after release."""
+        topic = f"isycode-m3-{uuid.uuid4().hex[:8]}"
+        workdir = Path(tempfile.mkdtemp(prefix="isycode-m3-"))
+>       a = BridgeClient(f"isycode-m3a-{uuid.uuid4().hex[:6]}")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Development\ISyCo Git\ISyCode\tests\test_bridge.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\bridge.py:104: in __init__
+    self.handshake = find_handshake()
+                     ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def find_handshake() -> Path:
+        configured = os.environ.get("ISYCO_ROOT", "").strip()
+        candidates = [Path(configured).expanduser()] if configured else []
+        candidates.append(PROJECT_ROOT.parent.parent / "ISyCo")
+        candidates.append(Path.home() / "Development" / "ISyCo")
+        for candidate in candidates:
+            root = candidate.resolve()
+            script = root / "bridge_core" / "capabilities" / "cap.agent_bridge" / "handshake.py"
+            if (root / ".iesyroot").is_file() and script.is_file():
+                return script
+        checked = ", ".join(str(path) for path in candidates)
+>       raise BridgeError(f"Bridge handshake not found; configure ISYCO_ROOT. Checked: {checked}")
+E       isycode.bridge.BridgeError: Bridge handshake not found; configure ISYCO_ROOT. Checked: D:\Development\ISyCo, C:\Users\progr\Development\ISyCo
+
+src\isycode\bridge.py:32: BridgeError
+___________________________ test_heartbeat_and_peek ___________________________
+
+    def test_heartbeat_and_peek():
+        """Agents can heartbeat and peek the mailbox."""
+>       a = BridgeClient(f"isycode-m3c-{uuid.uuid4().hex[:6]}")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Development\ISyCo Git\ISyCode\tests\test_bridge.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\bridge.py:104: in __init__
+    self.handshake = find_handshake()
+                     ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def find_handshake() -> Path:
+        configured = os.environ.get("ISYCO_ROOT", "").strip()
+        candidates = [Path(configured).expanduser()] if configured else []
+        candidates.append(PROJECT_ROOT.parent.parent / "ISyCo")
+        candidates.append(Path.home() / "Development" / "ISyCo")
+        for candidate in candidates:
+            root = candidate.resolve()
+            script = root / "bridge_core" / "capabilities" / "cap.agent_bridge" / "handshake.py"
+            if (root / ".iesyroot").is_file() and script.is_file():
+                return script
+        checked = ", ".join(str(path) for path in candidates)
+>       raise BridgeError(f"Bridge handshake not found; configure ISYCO_ROOT. Checked: {checked}")
+E       isycode.bridge.BridgeError: Bridge handshake not found; configure ISYCO_ROOT. Checked: D:\Development\ISyCo, C:\Users\progr\Development\ISyCo
+
+src\isycode\bridge.py:32: BridgeError
+______________ test_recipe_is_fixed_to_configured_isyco_checkout ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001F9EAE7EED0>
+
+    @pytest.mark.integration
+    def test_recipe_is_fixed_to_configured_isyco_checkout(monkeypatch):
+        checkout = Path.home() / "Development" / "ISyCo"
+        monkeypatch.setenv("ISYCO_ROOT", str(checkout))
+    
+>       recipe = load_reviewed_recipe()
+                 ^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Development\ISyCo Git\ISyCode\tests\test_broker_preview.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\broker.py:366: in load_reviewed_recipe
+    checkout = _configured_isyco_root()
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _configured_isyco_root() -> Path:
+        configured = os.environ.get("ISYCO_ROOT", "").strip()
+        candidates = [Path(configured).expanduser()] if configured else []
+        candidates.extend((Path.home() / "Development" / "ISyCo",
+                           Path.home() / "Development" / "ISyCo Git" / "ISyCo"))
+        for candidate in candidates:
+            try:
+                root = candidate.resolve(strict=True)
+            except (OSError, RuntimeError):
+                continue
+            if ((root / "tools" / "semantic_gateway" / "Dockerfile").is_file()
+                    and (root / "tools" / "semantic_gateway" / "semantic_gateway" / "app.py").is_file()):
+                return root
+>       raise FileNotFoundError("configured ISyCo checkout with semantic broker recipe was not found")
+E       FileNotFoundError: configured ISyCo checkout with semantic broker recipe was not found
+
+src\isycode\broker.py:361: FileNotFoundError
+_______ test_preview_requires_read_authority_and_never_executes_docker ________
+
+tmp_path = WindowsPath('D:/Development/ISyCo/windows-parity/runs/20261015/full-suite-d-final/test_preview_requires_read_aut0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001F9E8537F80>
+
+    @pytest.mark.integration
+    def test_preview_requires_read_authority_and_never_executes_docker(tmp_path, monkeypatch):
+        checkout = Path.home() / "Development" / "ISyCo"
+        monkeypatch.setenv("ISYCO_ROOT", str(checkout))
+        workspace = tmp_path / "workspace"
+        project = workspace / "chosen"
+        project.mkdir(parents=True)
+        authority = WorkspaceAuthority(workspace, state_directory=tmp_path / "state")
+        authority.set_grant("workspace.files.read", enabled=True, path_prefixes=[project])
+        authority.set_grant("broker.preview", enabled=True)
+        owner = BrokerPreviewOwner(workspace, authority, ActionApprovalStore())
+    
+        outcome = owner.preview(project, None)
+    
+>       assert outcome.decision == "ALLOW"
+E       AssertionError: assert 'DENY' == 'ALLOW'
+E         
+E         - ALLOW
+E         + DENY
+
+C:\Development\ISyCo Git\ISyCode\tests\test_broker_preview.py:44: AssertionError
+________ test_provision_owner_requires_grants_and_uses_bound_approvals ________
+
+tmp_path = WindowsPath('D:/Development/ISyCo/windows-parity/runs/20261015/full-suite-d-final/test_provision_owner_requires_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001F9EBBE3D40>
+
+    @pytest.mark.integration
+    def test_provision_owner_requires_grants_and_uses_bound_approvals(
+            tmp_path, monkeypatch):
+        import isycode.broker as broker_module
+    
+        checkout = Path.home() / "Development" / "ISyCo"
+        monkeypatch.setenv("ISYCO_ROOT", str(checkout))
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        workspace = tmp_path / "workspace"
+        project = workspace / "chosen"
+        project.mkdir(parents=True)
+        fake_docker = tmp_path / "docker"
+        fake_docker.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        fake_docker.chmod(0o700)
+        monkeypatch.setattr(broker_module.shutil, "which", lambda name: str(fake_docker))
+>       recipe = load_reviewed_recipe()
+                 ^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Development\ISyCo Git\ISyCode\tests\test_broker_preview.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\isycode\broker.py:366: in load_reviewed_recipe
+    checkout = _configured_isyco_root()
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _configured_isyco_root() -> Path:
+        configured = os.environ.get("ISYCO_ROOT", "").strip()
+        candidates = [Path(configured).expanduser()] if configured else []
+        candidates.extend((Path.home() / "Development" / "ISyCo",
+                           Path.home() / "Development" / "ISyCo Git" / "ISyCo"))
+        for candidate in candidates:
+            try:
+                root = candidate.resolve(strict=True)
+            except (OSError, RuntimeError):
+                continue
+            if ((root / "tools" / "semantic_gateway" / "Dockerfile").is_file()
+                    and (root / "tools" / "semantic_gateway" / "semantic_gateway" / "app.py").is_file()):
+                return root
+>       raise FileNotFoundError("configured ISyCo checkout with semantic broker recipe was not found")
+E       FileNotFoundError: configured ISyCo checkout with semantic broker recipe was not found
+
+src\isycode\broker.py:361: FileNotFoundError
+=========================== short test summary info ===========================
+FAILED tests/test_bridge.py::test_two_agents_collaborate_without_collision - ...
+FAILED tests/test_bridge.py::test_heartbeat_and_peek - isycode.bridge.BridgeE...
+FAILED tests/test_broker_preview.py::test_recipe_is_fixed_to_configured_isyco_checkout
+FAILED tests/test_broker_preview.py::test_preview_requires_read_authority_and_never_executes_docker
+FAILED tests/test_broker_preview.py::test_provision_owner_requires_grants_and_uses_bound_approvals
+5 failed, 1827 passed, 329 skipped, 1 xfailed in 1858.72s (0:30:58)

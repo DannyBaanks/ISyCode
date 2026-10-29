@@ -1,0 +1,47 @@
+...................F......F..............................sss....ss...... [ 81%]
+..s..s.......s..                                                         [100%]
+================================== FAILURES ===================================
+_ test_unscoped_picker_reveals_the_current_model_without_requiring_expansion __
+
+    @pytest.mark.asyncio
+    async def test_unscoped_picker_reveals_the_current_model_without_requiring_expansion():
+        app = SelectorProbe()
+        app._account_models_attempted = {"openai"}
+        async with app.run_test(size=(100, 30)) as pilot:
+            screen = ModelsScreen(MODELS)
+            await app.push_screen(screen)
+            await pilot.pause()
+            current = next(row for row in screen.query(ModelChoice)
+                           if screen.choices[row.id]["value"] == "openai|gpt-6-luna")
+            assert current.region.width > 0
+            assert screen.query_one("#models-scroll").region.contains_region(current.region)
+>           assert screen.focused is current
+E           AssertionError: assert None is ModelChoice(id='model-choice-0', classes='model-choice -style-default')
+E            +  where None = ModelsScreen().focused
+
+tests\test_mockup_selectors.py:70: AssertionError
+_________ test_picker_marks_resolved_default_when_no_model_was_saved __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D4B05A3B00>
+
+    @pytest.mark.asyncio
+    async def test_picker_marks_resolved_default_when_no_model_was_saved(monkeypatch):
+        monkeypatch.setattr("isycode.providers.selected_model_name", lambda: "")
+        app = SelectorProbe()
+        async with app.run_test(size=(100, 30)) as pilot:
+            screen = ModelsScreen(MODELS, provider_scope="openai")
+            await app.push_screen(screen)
+            await pilot.pause()
+            current = next(row for row in screen.query(ModelChoice)
+                           if screen.choices[row.id]["value"] == "openai|gpt-6-luna")
+            assert "current" in str(current.label)
+>           assert screen.focused is current
+E           AssertionError: assert None is ModelChoice(id='model-choice-0', classes='model-choice -style-default')
+E            +  where None = ModelsScreen().focused
+
+tests\test_mockup_selectors.py:187: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_mockup_selectors.py::test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+FAILED tests/test_mockup_selectors.py::test_picker_marks_resolved_default_when_no_model_was_saved
+2 failed, 78 passed, 8 skipped in 104.10s (0:01:44)
+EXIT=1

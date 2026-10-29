@@ -1,0 +1,8 @@
+original exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-r01sdgov\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-r01sdgov\\runtime\\python312.dll', 5)]
+dos-environment exit -1073741515 output b'' access [('E:\\', 5), ('\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\isycode-lpac-r01sdgov\\runtime\\python312.dll', 5), ('E:\\isycode-lpac-r01sdgov\\runtime\\python312.dll', 5)]
+Traceback (most recent call last):
+  File "C:\Development\ISyCo Git\ISyCode\docs\platform-parity\evidence\probe-vhd-loader-20261014.py", line 63, in <module>
+    acl.AddAce(security.ACL_REVISION, acl.GetAceCount(), original_acl.GetAce(index))
+    ^^^^^^^^^^
+AttributeError: 'PyACL' object has no attribute 'AddAce'
+exit=1

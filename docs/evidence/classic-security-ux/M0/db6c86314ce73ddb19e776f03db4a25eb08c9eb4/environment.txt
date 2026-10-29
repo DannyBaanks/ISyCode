@@ -1,0 +1,18 @@
+fecha_utc: 2026-10-02T11:44:02Z
+sha_evaluado: db6c86314ce73ddb19e776f03db4a25eb08c9eb4
+os: Linux 7.0.0-34-generic x86_64
+filesystem: ext4 en /dev/nvme0n1p2, uso 91%
+python: 3.12.3
+textual: 8.2.8
+bubblewrap: 0.9.0 (/usr/bin/bwrap)
+libseccomp: libseccomp.so.2
+unshare: /usr/bin/unshare
+fuse-overlayfs: ausente en PATH
+firejail: ausente en PATH
+nsjail: ausente en PATH
+cpu: 12
+ram_total: 14Gi
+ram_disponible_en_la_medicion: ~1.4Gi
+terminal_del_flujo: Textual run_test 120x40
+provider_del_flujo: simulado
+sandbox_del_flujo_con_comando: /usr/bin/bwrap

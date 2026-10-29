@@ -1,0 +1,26 @@
+{
+  "utc": "2026-10-12T09:14:02.236743+00:00",
+  "source_base": "65161a07e9df1d03c6dad4d77c04cdd001ae112e",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "show",
+        "--format=",
+        "--check",
+        "e8ce919"
+      ],
+      "exit_code": 2,
+      "log": "svg-whitespace.log"
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/audits/2026-10-12-github-product/validate.py"
+      ],
+      "exit_code": 0,
+      "log": "final-documentation-validation.log"
+    }
+  ],
+  "scope": "Authored documentation/forms/capture code passes; full raw SVG change has retained exporter whitespace warnings. No application-global suite claim."
+}

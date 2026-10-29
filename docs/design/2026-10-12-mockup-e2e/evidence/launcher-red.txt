@@ -1,0 +1,12 @@
+..F.......                                                               [100%]
+=================================== FAILURES ===================================
+_ test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup __
+tests/test_launcher.py:64: in test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup
+    assert result.returncode == 0, result.stderr
+E   AssertionError: Refusing to replace existing command: /tmp/pytest-of-danny/pytest-38/test_installer_explicitly_migr0/bin/isycode
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/home/danny/Development/ISyCo Git/ISyCode/scripts/install-path', '--replace-owned'], returncod...r='Refusing to replace existing command: /tmp/pytest-of-danny/pytest-38/test_installer_explicitly_migr0/bin/isycode\n').returncode
+=========================== short test summary info ============================
+FAILED tests/test_launcher.py::test_installer_explicitly_migrates_only_its_legacy_symlink_and_keeps_backup
+1 failed, 9 passed in 0.13s

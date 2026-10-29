@@ -1,0 +1,3 @@
+AF_UNIX host endpoint denied to LPAC: af-unix-connect-denied:10013
+.
+1 passed in 10.31s

@@ -1,0 +1,71 @@
+.............................................F.......................... [  5%]
+...s.................................................................... [ 10%]
+........................................................................ [ 15%]
+........................................................................ [ 21%]
+........................................................................ [ 26%]
+........................................................................ [ 31%]
+....ssss..s............................................................. [ 36%]
+........................................................................ [ 42%]
+........................................................................ [ 47%]
+..........s............................................................. [ 52%]
+........................................................................ [ 57%]
+........................................................................ [ 63%]
+........................................................................ [ 68%]
+........................................................................ [ 73%]
+........................................................................ [ 78%]
+........................................................................ [ 84%]
+.......................................F..F............................. [ 89%]
+........................................................................ [ 94%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+=================================== FAILURES ===================================
+___________ test_checked_in_snapshot_matches_live_catalog_and_owners ___________
+tests/test_action_coverage.py:293: in test_checked_in_snapshot_matches_live_catalog_and_owners
+    assert checked_in == action_coverage.authority_coverage_snapshot()
+E   AssertionError: assert {'format': 'i...hes': [], ...} == {'format': 'i...hes': [], ...}
+E     
+E     Omitting 12 identical items, use -vv to show
+E     Differing items:
+E     {'request_constructors': [{'file': 'isycode/action_runtime.py', 'line': 91, 'callable': 'isycode.action_runtime._works...ntime.py', 'line': 2019, 'callable': 'isycode.action_runtime.LPSSymbolOwner.search', 'action': 'lsp.start', ...}, ...]} != {'request_constructors': [{'file': 'isycode/action_runtime.py', 'line': 91, 'callable': 'isycode.action_runtime._works...ntime.py', 'line': 2019, 'callable': 'isycode.action_runtime.LPSSymbolOwner.search', 'action': 'lsp.start', ...}, ...]}
+E     {'dynamic_request_constructors':...
+E     
+E     ...Full output truncated (2 lines hidden), use '-vv' to show
+___________ test_sessions_filters_and_details_use_real_selected_row ____________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_work_list.py:151: in test_sessions_filters_and_details_use_real_selected_row
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_work_list.py:149: in scenario
+    assert listing.option_count == 2
+E   AssertionError: assert 0 == 2
+E    +  where 0 = SessionOptionList(id='work-conversations').option_count
+____ test_session_model_precedes_long_title_and_delete_click_does_not_open _____
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_work_list.py:258: in test_session_model_precedes_long_title_and_delete_click_does_not_open
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_work_list.py:254: in scenario
+    assert calls == ['saved-session', 'saved-session']
+E   AssertionError: assert ['saved-session'] == ['saved-sessi...aved-session']
+E     
+E     Right contains one more item: 'saved-session'
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners
+FAILED tests/test_work_list.py::test_sessions_filters_and_details_use_real_selected_row
+FAILED tests/test_work_list.py::test_session_model_precedes_long_title_and_delete_click_does_not_open
+3 failed, 1359 passed, 7 skipped in 234.90s (0:03:54)

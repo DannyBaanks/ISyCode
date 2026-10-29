@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_daily_tui.py::test_full_chat_read_edit_and_diff_uses_real_owners[True]",
+    "--junitxml=/home/danny/Development/ISyCo Git/ISyCode/docs/audits/2026-10-11-e2e-1830/real-sandbox.xml"
+  ],
+  "cwd": "/home/danny/Development/ISyCo Git/ISyCode",
+  "isolated_home": "/tmp/isycode-audit-local-integration-3caf3s1f"
+}

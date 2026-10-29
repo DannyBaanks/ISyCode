@@ -1,0 +1,21 @@
+{
+  "recorded_at": "2026-10-15T21:31:37.302895-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "pytest_environment": "project .venv",
+    "temp_volume": "D:"
+  },
+  "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_process.py tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_registry.py tests/test_windows_sandbox_recovery.py tests/test_windows_sandbox_acceptance.py tests/test_command_runner_windows.py tests/test_platform_sandbox.py tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_windows_sandbox_volume_acceptance.py --basetemp D:\\isycode-pr52-sandbox-r3",
+  "exit_code": 1,
+  "result": "13 failed, 74 passed, 13 skipped, 1 xfailed, 28 errors in 135.94s",
+  "output": "docs/platform-parity/evidence/windows-native-sandbox-pr52-r3-20261016.txt.gz",
+  "output_sha256": "9700302bc32f101be8791e9f3a3b855a7ec12d5114498801b164d90b56469ff9",
+  "notes": "Diagnostic run after replacing tempfile allocation. It exposed that Path.anchor is a string for a root-derived allocation path. No hosted data was used. The type mismatch was corrected and the passing rerun is recorded as r4.",
+  "compression": "gzip",
+  "original_path": "docs/platform-parity/evidence/windows-native-sandbox-pr52-r3-20261016.txt",
+  "original_size_bytes": 128548,
+  "original_sha256": "b048a31dcb7a1aa8ff3434c6712fc82fc136227e39d82ddd3a655b5ab91f1234",
+  "compressed_size_bytes": 6149,
+  "verified_lossless": true
+}

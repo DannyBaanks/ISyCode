@@ -1,0 +1,41 @@
+F
+================================== FAILURES ===================================
+________ test_real_volume_disappearance_refuses_start_without_fallback ________
+
+storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-807/test_real_volume_disappearance0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000260453487D0>
+
+    def test_real_volume_disappearance_refuses_start_without_fallback(storage,tmp_path,monkeypatch):
+        import time,asyncio
+        from isycode.platform_windows_sandbox_volume import BoundedStorageProvider
+        import isycode.platform_windows_sandbox as native
+        directory=os.environ.get('ISYCODE_TEST_VHD_DISAPPEARANCE_CONTROL')
+        if not directory:pytest.skip('NOT_DEMONSTRATED: exact-image operator control required')
+        control=Path(directory)
+        def wait(name):
+            deadline=time.monotonic()+40
+            while not (control/name).exists():
+                if (control/'operator-error.json').exists():raise AssertionError((control/'operator-error.json').read_text())
+                if time.monotonic()>deadline:raise TimeoutError(name)
+                time.sleep(.05)
+            return json.loads((control/name).read_text(encoding='utf-8'))
+        def signal(name):(control/name).write_text('{}',encoding='utf-8')
+>       wait('operator-ready.json')
+
+tests\test_windows_sandbox_volume_lifecycle.py:250: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'operator-ready.json'
+
+    def wait(name):
+        deadline=time.monotonic()+40
+        while not (control/name).exists():
+>           if (control/'operator-error.json').exists():raise AssertionError((control/'operator-error.json').read_text())
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: {"error":"operator.py shadowed Python stdlib; no VHD mutation occurred"}
+
+tests\test_windows_sandbox_volume_lifecycle.py:245: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_windows_sandbox_volume_lifecycle.py::test_real_volume_disappearance_refuses_start_without_fallback
+1 failed, 11 deselected in 32.40s

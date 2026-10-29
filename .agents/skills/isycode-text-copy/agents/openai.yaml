@@ -1,0 +1,5 @@
+interface:
+  display_name: "ISyCode · Texto y copia"
+  short_description: "Selección exacta y gestos de copia sin empalmes"
+policy:
+  allow_implicit_invocation: true
