@@ -1,0 +1,8 @@
+cwd=C:\Development\ISyCo Git\ISyCode
+ISYCO_ROOT=<temporary isolated Bridge root on D:>
+bridge_handshake_sha256=
+B062ACA8C66A7DFDB24185869D87A2CB58FFDCC42E60806CB864F592C3B47BD0
+command=py -m pytest -p no:cacheprovider --basetemp D:\Development\ISyCo\windows-parity\runs\20261015\bridge-integration-r1\basetemp -q tests/test_bridge.py
+..                                                                       [100%]
+2 passed in 5.16s
+EXIT_STATUS=0

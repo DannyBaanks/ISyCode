@@ -1,0 +1,107 @@
+{
+  "screen": "CommandApprovalScreen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-r7dduhtt",
+  "mode": "classic",
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "command-approval-card",
+      "region": [
+        2,
+        2,
+        76,
+        19
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "command-approval-title",
+      "region": [
+        5,
+        4,
+        70,
+        1
+      ],
+      "focus": false,
+      "text": "Run a command · workspace root"
+    },
+    {
+      "type": "VerticalScroll",
+      "id": "command-approval-argv",
+      "region": [
+        5,
+        5,
+        70,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        7,
+        6,
+        66,
+        1
+      ],
+      "focus": false,
+      "text": "python3 -m unittest -v"
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        5,
+        9,
+        70,
+        4
+      ],
+      "focus": false,
+      "text": "Program: /usr/bin/python3\nStops after 120 s · network blocked · 2 sensitive paths hidden\nIt may change files in this workspace; those changes cannot be undone with /undo. Nothing runs unless you approve it."
+    },
+    {
+      "type": "Horizontal",
+      "id": "command-approval-actions",
+      "region": [
+        5,
+        14,
+        70,
+        5
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "command-approval-reject",
+      "region": [
+        6,
+        14,
+        34,
+        5
+      ],
+      "focus": true,
+      "label": "Rechazar · n"
+    },
+    {
+      "type": "Button",
+      "id": "command-approval-run",
+      "region": [
+        41,
+        14,
+        34,
+        5
+      ],
+      "focus": false,
+      "label": "Ejecutar comando · y"
+    }
+  ],
+  "provider_mode": "tools",
+  "provider_calls": 3,
+  "file_value": "value = 2\n"
+}

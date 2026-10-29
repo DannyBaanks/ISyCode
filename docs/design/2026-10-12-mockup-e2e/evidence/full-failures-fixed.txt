@@ -1,0 +1,23 @@
+.....................F........................................           [100%]
+=================================== FAILURES ===================================
+___________ test_model_accordions_filter_and_open_provider_reasoning ___________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_model_reasoning_ui.py:68: in test_model_accordions_filter_and_open_provider_reasoning
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_model_reasoning_ui.py:42: in scenario
+    found = next((item for item in current.query('.model-choice')
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_model_reasoning_ui.py:43: in <genexpr>
+    if current.choices[item.id].get('value') ==
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'model-catalog-0'
+=========================== short test summary info ============================
+FAILED tests/test_model_reasoning_ui.py::test_model_accordions_filter_and_open_provider_reasoning
+1 failed, 61 passed in 43.08s

@@ -1,0 +1,16 @@
+{
+  "system": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.10",
+  "cwd": "C:\\Development\\ISyCo Git\\ISyCode",
+  "sdk": "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um\\virtdisk.h",
+  "sdk_sha256": "b920639bce6e101c9a29f99d2d1bb5c36c9c36e9a2c665e20eb23b452b81996a",
+  "configured_real_storage": false,
+  "provisioning_performed": false,
+  "real_acceptance": "NOT_DEMONSTRATED",
+  "native_accepted": false,
+  "native_command": ".venv/Scripts/python.exe -m pytest -q tests/test_windows_sandbox_process.py tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_registry.py tests/test_windows_sandbox_recovery.py tests/test_windows_sandbox_acceptance.py tests/test_command_runner_windows.py tests/test_platform_sandbox.py tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_windows_sandbox_volume_acceptance.py -k \"not execution_file_budget\"",
+  "native_result": "108 passed, 8 skipped, 1 deselected; exit 0; 657.49s",
+  "provider_command": ".venv/Scripts/python.exe -m pytest -q tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_windows_sandbox_volume_acceptance.py -rs",
+  "provider_result": "46 passed, 13 skipped; exit 0; 1.23s",
+  "scope": "Overlapping selections are not summed. Earlier Linux evidence not rerun; no operational disk mutations."
+}

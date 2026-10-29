@@ -1,0 +1,63 @@
+{
+  "scenario": "C",
+  "model": "z-ai/glm-5.3-flash",
+  "started": "2026-10-08T05:18:25Z",
+  "turn": "completed",
+  "final_role": "assistant",
+  "final_answer": "1. Tests catch bugs early, when they are cheapest and easiest to fix.\n2. They let you refactor and improve code with confidence, knowing failures will surface immediately.\n3. They serve as living documentation, showing exactly how the code is meant to behave.\n4. They protect users from regressions, keeping old features working as new ones are added.",
+  "codeword_in_answer": false,
+  "notes": [
+    "✓ Response recovered after 1 automatic retry · no tool effects repeated"
+  ],
+  "history_len": 2,
+  "calls": [
+    {
+      "n": 1,
+      "t": 1791436707.3347592,
+      "model": "z-ai/glm-5.3-flash",
+      "kind": "chat",
+      "messages": 2,
+      "chars": 3411,
+      "sha256": "3a3b928a3f6f94c3416520d6fed969e53610f53f40d9ee0caed363bec01b692d",
+      "has_capsule": false,
+      "has_request_0": false,
+      "has_summary_notes": false,
+      "cut_after_real_chunks": 3,
+      "error": "StreamError",
+      "error_kind": "STREAM",
+      "http_status": null,
+      "provider_code": null
+    },
+    {
+      "n": 2,
+      "t": 1791436739.9412599,
+      "model": "z-ai/glm-5.3-flash",
+      "kind": "chat",
+      "messages": 2,
+      "chars": 3411,
+      "sha256": "3a3b928a3f6f94c3416520d6fed969e53610f53f40d9ee0caed363bec01b692d",
+      "has_capsule": false,
+      "has_request_0": false,
+      "has_summary_notes": false,
+      "ok": true,
+      "answer": "1. Tests catch bugs early, when they are cheapest and easiest to fix.\n2. They let you refactor and improve code with confidence, knowing failures will surface immediately.\n3. They serve as living docu",
+      "usage": {
+        "prompt_tokens": 3314,
+        "completion_tokens": 101,
+        "total_tokens": 3415,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 28,
+          "rejected_prediction_tokens": null
+        }
+      }
+    }
+  ],
+  "journal": "PASS",
+  "finished": "2026-10-08T05:19:30Z"
+}

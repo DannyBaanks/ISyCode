@@ -1,0 +1,161 @@
+real cancellation: preparation clean, original preserved
+.F
+================================== FAILURES ===================================
+____________ test_real_volume_owner_cancellation_does_not_promote _____________
+
+fut = <coroutine object Event.wait at 0x0000027A4CF5ECE0>, timeout = 30
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:520: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <asyncio.locks.Event object at 0x0000027A4CEE9640 [unset]>
+
+    async def wait(self):
+        """Block until the internal flag is true.
+    
+        If the internal flag is true on entry, return True
+        immediately.  Otherwise, block until another coroutine calls
+        set() to set the flag to true, then return True.
+        """
+        if self._value:
+            return True
+    
+        fut = self._get_loop().create_future()
+        self._waiters.append(fut)
+        try:
+>           await fut
+E           asyncio.exceptions.CancelledError
+
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\locks.py:212: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-805/test_real_volume_owner_cancell0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000027A4CDB9400>
+
+    def test_real_volume_owner_cancellation_does_not_promote(storage,tmp_path,monkeypatch):
+        import asyncio
+        import isycode.platform_windows_sandbox as backend
+        import isycode.platform_windows_sandbox_resources as native
+        from isycode.command_runner import CommandRunOwner
+        from isycode.workspace_authority import WorkspaceAuthority
+        from isycode.approvals import ActionApprovalStore
+        monkeypatch.setattr(backend,'NATIVE_ACCEPTED',True)
+        (tmp_path/'.isyroot').write_text('');(tmp_path/'original.txt').write_text('preserve-original')
+        authority=WorkspaceAuthority(tmp_path);authority.set_mode('classic')
+        owner=CommandRunOwner(tmp_path,authority,ActionApprovalStore())
+        captured=[];prepare=native.WindowsSandboxResources.prepare
+        def capture(*args,**kwargs):
+            resource=prepare(*args,**kwargs);captured.append(resource);return resource
+        monkeypatch.setattr(native.WindowsSandboxResources,'prepare',capture)
+        preview=owner.prepare(['python','-c','from pathlib import Path;import time;Path("not-promoted.txt").write_text("staged");print("ready",flush=True);time.sleep(120)'])
+        async def scenario():
+            ready=asyncio.Event();owner._on_output=lambda text:ready.set() if 'ready' in text else None
+            task=asyncio.create_task(owner.run(preview,owner.approvals.issue(preview.request)))
+            try:
+                await asyncio.wait_for(ready.wait(),30)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):await task
+            finally:
+                if not task.done():task.cancel()
+>       asyncio.run(scenario())
+
+tests\test_windows_sandbox_volume_lifecycle.py:227: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_windows_sandbox_volume_lifecycle.py:222: in scenario
+    await asyncio.wait_for(ready.wait(),30)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:519: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x0000027A4D1DAC40>
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is exceptions.CancelledError:
+                # Since there are no new cancel requests, we're
+                # handling this.
+>               raise TimeoutError from exc_val
+E               TimeoutError
+
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\timeouts.py:115: TimeoutError
+=========================== short test summary info ===========================
+FAILED tests/test_windows_sandbox_volume_lifecycle.py::test_real_volume_owner_cancellation_does_not_promote
+1 failed, 1 passed, 9 deselected in 47.41s

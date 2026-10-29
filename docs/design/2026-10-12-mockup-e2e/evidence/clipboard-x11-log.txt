@@ -1,0 +1,34 @@
+{
+  "source_commit": "8c668a307daf475bbc4ed14dc639b425a7f7d061",
+  "scope": "Actual native widget mouse selection and copy-menu gestures, real ClipboardOwner/Sentinel/grant/journal, private Xvfb and xclip; user desktop clipboard untouched.",
+  "copies": [
+    {
+      "source": "selection",
+      "text": "uno  \ndos",
+      "backend": "xclip",
+      "receipt": true
+    },
+    {
+      "source": "selection",
+      "text": "uno  \ndos",
+      "backend": "xclip",
+      "receipt": true
+    },
+    {
+      "source": "selection",
+      "text": "uno  \ndos",
+      "backend": "xclip",
+      "receipt": true
+    },
+    {
+      "source": "content_box",
+      "text": "uno  \ndos\ntres\n",
+      "backend": "xclip",
+      "receipt": true
+    }
+  ],
+  "receipts": 4,
+  "space_only_expansion": true,
+  "denied_before_grant": true,
+  "exit": 0
+}

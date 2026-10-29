@@ -1,0 +1,6 @@
+command=py -m pytest -q tests/test_updater.py
+environment=Windows local; Python 3.12.10
+
+............................s........                                    [100%]
+36 passed, 1 skipped in 129.24s (0:02:09)
+exit_code=0

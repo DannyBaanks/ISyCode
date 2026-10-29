@@ -1,0 +1,121 @@
+........................................................................ [  3%]
+.........................s.............................................. [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 14%]
+....FF.................................................................. [ 18%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+...............s........................................................ [ 29%]
+.....................F.................................................. [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 40%]
+................................................F....................... [ 44%]
+........................................................................ [ 48%]
+........................................................................ [ 51%]
+.....F........s......................................................... [ 55%]
+........................................................................ [ 59%]
+........................................................................ [ 62%]
+........................................................................ [ 66%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 77%]
+........................................................................ [ 81%]
+........................................................................ [ 85%]
+........................................................................ [ 88%]
+........................................................................ [ 92%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+...                                                                      [100%]
+=================================== FAILURES ===================================
+_____________ test_command_choice_tiles_fit_and_reject_is_focused ______________
+tests/test_command_cards.py:111: in test_command_choice_tiles_fit_and_reject_is_focused
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_command_cards.py:108: in scenario
+    assert reject.region.height == run.region.height == 5
+E   AssertionError: assert 3 == 5
+E    +  where 3 = Region(x=41, y=15, width=35, height=3).height
+E    +    where Region(x=41, y=15, width=35, height=3) = Button(id='command-approval-run', classes='-warning -style-default', variant='warning').region
+___________ test_harness_counter_boxes_update_without_touching_todo ____________
+tests/test_command_cards.py:134: in test_harness_counter_boxes_update_without_touching_todo
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_command_cards.py:131: in scenario
+    assert folders.region.height == sessions.region.height == 3
+E   AssertionError: assert 1 == 3
+E    +  where 1 = Region(x=19, y=3, width=16, height=1).height
+E    +    where Region(x=19, y=3, width=16, height=1) = Static(id='harness-sessions-count', classes='harness-count').region
+______________ test_file_leaf_enables_preview_modal_and_copy_path ______________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_file_preview_tui.py:39: in test_file_leaf_enables_preview_modal_and_copy_path
+    with capsys.disabled():asyncio.run(run())
+                           ^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_file_preview_tui.py:32: in run
+    assert app.screen.query_one('#preview-copy').disabled
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/.venv/lib/python3.12/site-packages/textual/dom.py:1505: in query_one
+    raise NoMatches(f"No nodes match {query_selector!r} on {base_node!r}")
+E   textual.css.query.NoMatches: No nodes match '#preview-copy' on FilePreviewScreen()
+________________ test_spanish_settings_title_and_english_switch ________________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_localization.py:130: in test_spanish_settings_title_and_english_switch
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_localization.py:116: in scenario
+    assert any(entry["label"].startswith("Idioma ·") for entry in app._menu_entries)
+E   assert False
+E    +  where False = any(<generator object test_spanish_settings_title_and_english_switch.<locals>.scenario.<locals>.<genexpr> at 0x7ef51bb97030>)
+___________ test_model_accordions_filter_and_open_provider_reasoning ___________
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_model_reasoning_ui.py:67: in test_model_accordions_filter_and_open_provider_reasoning
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_model_reasoning_ui.py:48: in scenario
+    assert button is not None, 'filtered model button never appeared'
+E   AssertionError: filtered model button never appeared
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED tests/test_command_cards.py::test_command_choice_tiles_fit_and_reject_is_focused
+FAILED tests/test_command_cards.py::test_harness_counter_boxes_update_without_touching_todo
+FAILED tests/test_file_preview_tui.py::test_file_leaf_enables_preview_modal_and_copy_path
+FAILED tests/test_localization.py::test_spanish_settings_title_and_english_switch
+FAILED tests/test_model_reasoning_ui.py::test_model_accordions_filter_and_open_provider_reasoning
+5 failed, 1939 passed, 3 skipped, 11 deselected in 578.51s (0:09:38)

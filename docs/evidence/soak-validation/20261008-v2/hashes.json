@@ -1,0 +1,13 @@
+{
+  "python": "3.12.3",
+  "sha256": {
+    "docs/evidence/soak-validation/20261008-v2/diagnostic.log": "d197fe5399d645bc1b2a3923c05a9930242e09e977fb93025c72d40b9eaca809",
+    "docs/evidence/soak-validation/20261008-v2/regressions.log": "09c233d49f2e0345bcc2b397c9abb447b88062b946fc39aa069ec2393ae489b5",
+    "docs/evidence/soak-validation/20261008-v2/REPORT.md": "cee486e5e19654b5f85bb337bb2894c5a182973304275562d25599d7974a31a0",
+    "docs/evidence/soak-validation/20261008-v2/diagnostic.json": "0147c5f9fda4f58945a6e2154d9fb4844c24337e138c473a664a3386c4ac03d2",
+    "scripts/soak_g9.py": "62518ff5ac8d65adad94efd049e91efd5b12b19307f3c5609f2f478c172c0c7d",
+    "tests/test_soak_g9_validation.py": "c791de51dfdfc99cf58ae43071feee7f277460b6f51e38e1a45a75eb9ebb9c3d",
+    "docs/soak-g9.md": "91d887d3fdc61298470595793a29d3193da643cfa2727a82b4db21d0748dd5d2",
+    "docs/GUIA.md": "008f000492000f938e7ec53d80b77473bdbb63a7ee9cdf329b3874c236532fec"
+  }
+}

@@ -1,0 +1,34 @@
+Use case: compositing.
+Asset type: one high-fidelity screenshot mockup of ISyCode, a terminal TUI.
+Input 1 is the EDIT TARGET: the user's actual 1920x1080 Ubuntu terminal screenshot with ISyCode in high contrast. Input 2 is STYLE AND COMPONENT REFERENCE ONLY: the selected first proposal, "Contraste esencial", a contact sheet of terminal menus.
+Primary request: apply the selected first proposal to the actual screenshot. Show one real application state with the redesigned Settings modal open over the main pane and the redesigned right sidebar visible. Produce a single full-screen screenshot, NOT a contact sheet, collage, or floating menus on an empty background.
+Preserve the edit target's full desktop framing, aspect ratio, Ubuntu top bar, terminal title bar and tabs, dock, brand/path, Classic mode indicator, lighthouse night pixel artwork, model status, ASCII green cat, composer and overall main/sidebar geometry. Do not redesign or repaint the artwork. Keep all parts outside the modified menu/sidebar unchanged as closely as possible. No watermark or caption outside the UI.
+
+Layout: sidebar remains in its original right column, roughly x1520..1900, y145..1013 in the 1920x1080 target. Place an opaque Settings modal in the main pane, roughly x315..1360, y235..805, so the right sidebar and the lower ASCII cat/composer remain visible. Some lighthouse artwork is naturally occluded by the modal; retain the surrounding artwork. Use the same readable monospace terminal typography as the actual app. All new shapes must be plausible Textual terminal widgets, straight thin borders, no glass, gradients, ornamental shadows, web switch pills or rounded SaaS cards.
+Apply reference 2's exact essential-contrast language: true black surfaces; near-white primary text; muted cool light-gray secondary text and thin gray borders; cyan reserved for selected/focused navigation or action; semantic green/red/yellow statuses with words. Flat sections with lightweight horizontal separators. Keep spacing compact and consistent.
+
+Settings modal: reproduce the top-left Configuración component of reference 2 at comfortable real-screen scale. Header "Configuración" and subheader "Personaliza ISyCode para este workspace." Left category index, with selected "Conversación" on a dark cyan row with bright cyan left rule/arrow; other categories "Preferencias", "Permisos", "Conexiones". A single thin vertical separator divides this navigation from the content. Right content has aligned label / value / description columns and two groups separated by a quiet horizontal line. Exact rows:
+"Proveedor" | "NVIDIA NIM" | "Proveedor de modelos para este workspace."
+"Modelo" | "GLM 5.3" | "Modelo por defecto."
+"Razonamiento" | "Automático" | "Nivel de razonamiento del modelo."
+"Rol" | "Programador" | "Rol por defecto en las conversaciones."
+"Contexto" | "Automático" | "Archivos de contexto por defecto."
+"Archivo de contexto" | "Ninguno" | "Usar archivo .md / .txt como contexto."
+"Limpiar rol" | "Preguntar" | "Confirmar al cambiar de rol."
+Below content, a flat subtle charcoal description area: "Configura el proveedor y modelo que se usarán en las conversaciones." Footer: "↑↓ mover · Enter abrir · Esc volver · Shift+Tab buscar". Add a small subdued close control at top right, consistent with the thin-border language. Wrap descriptions cleanly if needed, no clipped words.
+
+Right sidebar: replace the original bulky nested gray frames with reference 2's clean black sidebar component, while keeping its exact right-column placement. Header "ISYCODE · WORKSPACE"; selected cyan-outlined "Resumen" and quiet "Archivos" tabs. Flat sections:
+"Estado general"
+"● IsySentinel · 7 herramientas"
+"○ MCP · Sin configurar" and muted "No hay servicios MCP."
+"LSP · 2 listos · 3 pendientes"
+"● Pyright · Listo" (green)
+"● clangd · Listo" (green)
+"× rust-analyzer · No disponible" (red) with muted "Instalado · sandbox no disponible"
+"× TypeScript · No disponible" (red) with muted "Instalado · sandbox no disponible"
+"○ gopls · Fuera de PATH" (muted)
+Separate section "Skills · 6 disponibles", muted "planificación, depuración, revisión de código…"
+Separate section "Conexiones", "● NVIDIA NIM · Configurado" green.
+Footer of sidebar "↑↓ mover · Enter abrir · Esc volver". Readable no ellipsis cutting status names. No nested interior borders, no giant empty gutters.
+Keep the lower Idea box in place and only update its border hint to "Space: expandir · Doble clic: menú de copia", illustrating the selected future interaction. The ASCII cat beside it must remain.
+This is only a visual screenshot composition, do not present implemented or running-state verification.

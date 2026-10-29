@@ -1,0 +1,52 @@
+{
+  "format": "g9-soak-v2",
+  "active_seconds": 2.8094960460002767,
+  "worker_cycles": 3,
+  "warm_baselines": {},
+  "cycles": 3,
+  "restarts": 0,
+  "rss_samples": [
+    {
+      "cycle": 0,
+      "rss_mib": 93.2,
+      "orphans": 0,
+      "write_verified": true,
+      "undo_verified": true,
+      "journal_verified": true,
+      "worker": "0"
+    },
+    {
+      "cycle": 1,
+      "rss_mib": 100.4,
+      "orphans": 0,
+      "write_verified": true,
+      "undo_verified": true,
+      "journal_verified": true,
+      "worker": "0"
+    },
+    {
+      "cycle": 2,
+      "rss_mib": 108.0,
+      "orphans": 0,
+      "write_verified": true,
+      "undo_verified": true,
+      "journal_verified": true,
+      "worker": "0"
+    }
+  ],
+  "failures": [],
+  "started": 1791441134.5876343,
+  "source_sha256": "62518ff5ac8d65adad94efd049e91efd5b12b19307f3c5609f2f478c172c0c7d",
+  "finished": 1791441137.3973103,
+  "final_rss_mib": 108.1,
+  "checks": {
+    "duration": false,
+    "cycles": false,
+    "restarts": false,
+    "no_failures": true,
+    "no_orphans": true,
+    "effects": true,
+    "rss": false
+  },
+  "status": "FAIL"
+}

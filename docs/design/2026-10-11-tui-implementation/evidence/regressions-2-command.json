@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_workspace_memory.py",
+    "tests/test_focused_box_expansion.py",
+    "tests/test_idea_backlog.py",
+    "tests/test_session_search_screen.py",
+    "tests/test_design_interactions.py",
+    "tests/test_action_coverage.py",
+    "--tb=short"
+  ],
+  "environment": {
+    "ISYCODE_STATE_HOME": "/tmp/isycode-test-state-t_55fjgy"
+  },
+  "exit_code": 0
+}

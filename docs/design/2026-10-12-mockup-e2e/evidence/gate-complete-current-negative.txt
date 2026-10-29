@@ -1,0 +1,2 @@
+usage: validate_gates.py [-h] [--root ROOT] [--self-test] [--require-approved]
+validate_gates.py: error: unrecognized arguments: docs/evidence/classic-security-ux/M8/32aa6ccbb4604fe9c33b7bdbb8e152716a4cbeaa/gate.yaml

@@ -1,0 +1,37 @@
+{
+  "utc": "2026-10-12T21:53:27.716893+00:00",
+  "base_commit": "204aa75d2be880d51145f740ac53449fecd27d01",
+  "commands": [
+    {
+      "argv": [
+        "gh",
+        "api",
+        "repos/DannyBaanks/ISyCode/private-vulnerability-reporting"
+      ],
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "SECURITY.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "docs/reference/README.md",
+        ".github/ISSUE_TEMPLATE/bug_report.yml"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "checks": "Read-only local-link/whitespace inspection, PyYAML parse and GitHub GET.",
+  "github_docs": "https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately",
+  "source_sha256": {
+    "SECURITY.md": "b9e24c5d41ae979b72a9035219fbbc3f37ce06fbc37e0ae25d64e5ee316fd2a0",
+    "README.md": "ca4036f239c54bf397a33e355015cac3959138678ea911e8c52d3c66a150c505",
+    "CONTRIBUTING.md": "51e098bb021ed5a8322098a3b8cad20e95f723743c72a31d6020b72292420f6f",
+    "docs/reference/README.md": "3a69b6c1efec249acca4b7a354d4ac7d784dd5b632a9ea285e393f9de601723b",
+    ".github/ISSUE_TEMPLATE/bug_report.yml": "7586f7cc86aa3ea37ec9ec4bcdba5eef7cbea1d0481841ebec7521d6a18a3e93"
+  }
+}

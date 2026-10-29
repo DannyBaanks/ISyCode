@@ -1,0 +1,36 @@
+real owner result: ActionOutcome(text='Command could not start.', decision='ERROR', receipt=None, reason="sandboxed command failed to start ('\\\\\\\\?\\\\Volume{cbd14f15-0000-0000-0000-010000000000}\\\\isycode-lpac-1x4q2wuh\\\\workspace\\\\resultado � con espacios.txt' is not in the subpath of '\\\\\\\\?\\\\E:\\\\isycode-lpac-1x4q2wuh\\\\workspace')")
+F
+================================== FAILURES ===================================
+_________ test_real_volume_owner_promotes_unicode_with_exact_approval _________
+
+real_storage = StorageConfig(volume_guid='\\\\?\\Volume{cbd14f15-0000-0000-0000-010000000000}\\', backing_file=WindowsPath('D:/ISyCod...4-988d-2c0428ae3042', backing_file_id='44ace772ace75cc4:20000000117c2', capacity_bytes=535752704, max_bytes=536870912))
+tmp_path = WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-770/test_real_volume_owner_promote0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000017B582FB830>
+
+    def test_real_volume_owner_promotes_unicode_with_exact_approval(real_storage, tmp_path, monkeypatch):
+        import asyncio
+        import isycode.platform_windows_sandbox as native
+        from isycode.command_runner import CommandRunOwner
+        from isycode.workspace_authority import WorkspaceAuthority
+        from isycode.approvals import ActionApprovalStore
+        monkeypatch.setattr(native, 'NATIVE_ACCEPTED', True)  # acceptance harness only
+        (tmp_path / '.isyroot').write_text('')
+        authority = WorkspaceAuthority(tmp_path)
+        authority.set_mode('classic')
+        owner = CommandRunOwner(tmp_path, authority, ActionApprovalStore())
+        preview = owner.prepare(['python', '-c',
+            'from pathlib import Path; Path("resultado � con espacios.txt").write_text("verificado",encoding="utf-8")'])
+        assert asyncio.run(owner.run(preview, None)).decision == 'DENY'
+        outcome = asyncio.run(owner.run(preview, owner.approvals.issue(preview.request)))
+        print('real owner result:', outcome)
+>       assert outcome.decision == 'ALLOW', outcome.text
+E       AssertionError: Command could not start.
+E       assert 'ERROR' == 'ALLOW'
+E         
+E         - ALLOW
+E         + ERROR
+
+tests\test_windows_sandbox_volume_acceptance.py:162: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_windows_sandbox_volume_acceptance.py::test_real_volume_owner_promotes_unicode_with_exact_approval
+1 failed, 12 deselected in 64.06s (0:01:04)

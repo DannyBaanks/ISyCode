@@ -1,0 +1,94 @@
+........................................................................ [  3%]
+.........................s...........................FsF.F........F..... [  6%]
+..............FF.....FF
+================================== FAILURES ===================================
+_______ test_unsafe_authority_returns_denied_diagnostics_json[symlink] ________
+C:\Development\ISyCo Git\ISyCode\tests\test_audit_config_diagnostics.py:110: in test_unsafe_authority_returns_denied_diagnostics_json
+    authority.policy_path.symlink_to(target)
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-800\\test_unsafe_authority_returns_1\\outside-policy.json' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-800\\test_unsafe_authority_returns_1\\state\\workspace-authority\\grants-ce356890d66d03382e71dfd5ead7b183.json'
+__ test_unsafe_authority_returns_denied_diagnostics_json[directory-symlink] ___
+C:\Development\ISyCo Git\ISyCode\tests\test_audit_config_diagnostics.py:104: in test_unsafe_authority_returns_denied_diagnostics_json
+    (unsafe_root / 'workspace-authority').symlink_to(
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1386: in symlink_to
+    os.symlink(target, self, target_is_directory)
+E   OSError: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-800\\test_unsafe_authority_returns_3\\state\\workspace-authority' -> 'C:\\Users\\progr\\AppData\\Local\\Temp\\pytest-of-progr\\pytest-800\\test_unsafe_authority_returns_3\\unsafe-state\\workspace-authority'
+_________________ test_rollback_keeps_the_original_file_mode __________________
+tests\test_audit_recovery.py:28: in test_rollback_keeps_the_original_file_mode
+    assert (root / "a.txt").stat().st_mode & 0o777 == 0o751
+E   AssertionError: assert (33206 & 511) == 489
+E    +  where 33206 = os.stat_result(st_mode=33206, st_ino=6473924465614815, st_dev=12568582857050768973, st_nlink=1, st_uid=0, st_gid=0, st_size=4, st_atime=1792032415, st_mtime=1792032415, st_ctime=1792032415).st_mode
+E    +    where os.stat_result(st_mode=33206, st_ino=6473924465614815, st_dev=12568582857050768973, st_nlink=1, st_uid=0, st_gid=0, st_size=4, st_atime=1792032415, st_mtime=1792032415, st_ctime=1792032415) = stat()
+E    +      where stat = (WindowsPath('C:/Users/progr/AppData/Local/Temp/pytest-of-progr/pytest-800/test_rollback_keeps_the_origin0/project') / 'a.txt').stat
+________ test_menu_is_a_large_centered_card_that_explains_each_option _________
+C:\Development\ISyCo Git\ISyCode\tests\test_authority_menu.py:117: in test_menu_is_a_large_centered_card_that_explains_each_option
+    labels = asyncio.run(scenario())
+             ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_authority_menu.py:106: in scenario
+    assert card.size.width >= 100 and card.size.height >= 30
+E   AssertionError: assert (104 >= 100 and 29 >= 30)
+E    +  where 104 = Size(width=104, height=29).width
+E    +    where Size(width=104, height=29) = Vertical(id='action-card').size
+E    +  and   29 = Size(width=104, height=29).height
+E    +    where Size(width=104, height=29) = Vertical(id='action-card').size
+______________ test_presence_button_never_reaches_bridge_client _______________
+tests\test_bridge_presence.py:35: in test_presence_button_never_reaches_bridge_client
+    source = Path(__file__).resolve().parents[1].joinpath("src", "isycode", "tui.py").read_text()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:1028: in read_text
+    return f.read()
+           ^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py:23: in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 39114: character maps to <undefined>
+__________ test_presence_button_lists_names_only_after_confirmation ___________
+C:\Development\ISyCo Git\ISyCode\tests\test_bridge_presence.py:86: in test_presence_button_lists_names_only_after_confirmation
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_bridge_presence.py:81: in scenario
+    assert "peer" in text and "idle" in text
+E   AssertionError: assert ('peer' in 'Presence unavailable')
+_________________ test_read_allow_path_returns_sanitized_rows _________________
+tests\test_bridge_presence_owner.py:63: in test_read_allow_path_returns_sanitized_rows
+    assert outcome.decision == "ALLOW"
+E   AssertionError: assert 'DENY' == 'ALLOW'
+E     
+E     - ALLOW
+E     + DENY
+_________________ test_read_denies_when_the_subprocess_fails __________________
+tests\test_bridge_presence_owner.py:80: in test_read_denies_when_the_subprocess_fails
+    assert outcome.decision == "ERROR"
+E   AssertionError: assert 'DENY' == 'ERROR'
+E     
+E     - ERROR
+E     + DENY
+=========================== short test summary info ===========================
+FAILED tests/test_audit_config_diagnostics.py::test_unsafe_authority_returns_denied_diagnostics_json[symlink]
+FAILED tests/test_audit_config_diagnostics.py::test_unsafe_authority_returns_denied_diagnostics_json[directory-symlink]
+FAILED tests/test_audit_recovery.py::test_rollback_keeps_the_original_file_mode
+FAILED tests/test_authority_menu.py::test_menu_is_a_large_centered_card_that_explains_each_option
+FAILED tests/test_bridge_presence.py::test_presence_button_never_reaches_bridge_client
+FAILED tests/test_bridge_presence.py::test_presence_button_lists_names_only_after_confirmation
+FAILED tests/test_bridge_presence_owner.py::test_read_allow_path_returns_sanitized_rows
+FAILED tests/test_bridge_presence_owner.py::test_read_denies_when_the_subprocess_fails
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 8 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+8 failed, 157 passed, 2 skipped, 12 deselected in 287.54s (0:04:47)

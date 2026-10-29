@@ -1,0 +1,113 @@
+hito: M5
+puerta: G5
+estado: EN_REVISION
+sha_evaluado: c6d434b2e3a7b1cfddef172de03cf5b06ff26f95
+fecha_utc: 2026-10-02T15:13:16Z
+autor: grok session 01a0fc42
+entorno: Linux 7.0.0-34-generic x86_64, ext4, bubblewrap 0.9.0, libseccomp.so.2, curl 8.5.0, Python 3.12.3, Textual 8.2.8, 12 CPU, 14Gi RAM
+perfil_y_politica: policy version 1; la red del sandbox de comandos no se comparte y no hay grant que la reabra; provider.request sigue fuera del conjunto quieto; un destino nuevo se revisa antes de enviar; git.push no está en Classic ni en el conjunto quieto y no tiene transporte por defecto; este hito no abre red universal ni el bucle de agente
+dependencias: G3
+dependencias_estado:
+  G3: EN_REVISION
+casos:
+  - id: G5-01
+    prueba: tests/test_egress.py::test_g5_01_canary_reaches_only_the_allowed_provider
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: el canario sale solo en el transporte del provider concedido; no aparece en el journal, el recibo, el texto del resultado ni en otro listener
+    observado: >
+      El listener permitido en 127.0.0.1 recibió Authorization Bearer con el
+      canario de prueba y el texto de la respuesta fue ok. El journal, el
+      recibo, el texto y el motivo del resultado, el árbol de estado y el
+      workspace no contienen el canario. El segundo puerto, sin grant, no
+      llamó a send y su listener quedó vacío. Este caso no arranca bwrap; el
+      entorno del subproceso, el socket y curl están en G5-03.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/pytest-not-integration.txt
+        sha256: f6ed2da8c8aaacbbb8805005346feacda6b6a514724632817580c57d65ddde3e
+  - id: G5-02
+    prueba: tests/test_egress.py::test_g5_02_redirect_proxy_and_rebind_do_not_widen_the_destination
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: un 302, un proxy ambiente y un nombre que resuelve a una dirección privada no amplían el destino; un literal de loopback concedido sigue pudiendo completar
+    observado: >
+      El 302 dejó el listener del Location vacío y la excepción nombra HTTP
+      302. Con getproxies y proxy_bypass en falso, el stream async, el stream
+      sync y Provider.models niegan ambient proxy y el listener queda vacío.
+      rebind.example.test resuelto a 127.0.0.1 se niega por unexpected private
+      address y ese listener queda vacío. http://127.0.0.1 con getproxies vacío
+      completó con el texto local. Este proceso no tiene variables de proxy.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/pytest-not-integration.txt
+        sha256: f6ed2da8c8aaacbbb8805005346feacda6b6a514724632817580c57d65ddde3e
+  - id: G5-03
+    prueba: tests/test_egress.py::test_g5_03_sandbox_and_mcp_do_not_exfiltrate
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: python y curl dentro del sandbox real no alcanzan un listener del host ni ven las keys del host; MCP no copia esas keys; un host no concedido no llama a send; no hay acción de descarga
+    observado: >
+      run_staged con bwrap real, promote falso. El hijo Python salió distinto
+      de 0, imprimió KEYS seguido de salto de línea, PermissionError u
+      OSError, y no imprimió CONNECTED ni el canario ni el nombre de la key.
+      curl al listener del host salió distinto de 0 y el listener recibió 0
+      bytes. El argv del sandbox tiene --unshare-all y no tiene --share-net.
+      process_environment vacío omite las keys del host; una variable escrita
+      en la config de MCP se conserva y no es el canario. Un provider cuyo
+      host no está concedido no llamó a send. Ningún id del catálogo contiene
+      download y el comando preparado lleva network denied.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/pytest-not-integration.txt
+        sha256: f6ed2da8c8aaacbbb8805005346feacda6b6a514724632817580c57d65ddde3e
+  - id: G5-04
+    prueba: tests/test_egress.py::test_g5_04_publication_requires_exact_approval tests/test_egress.py::test_g5_04_commit_does_not_push
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: publicar exige el remoto https, la ref y el digest exactos más una aprobación de un uso; sin transporte no hay push; el commit local no invoca push
+    observado: >
+      Sin grant, sin aprobación o con aprobación y sin grant, el transporte
+      no se llamó. Con el grant del remoto exacto y una aprobación fresca hubo
+      un ALLOW y una llamada. La misma aprobación otra vez es DENY. Cambiar
+      el digest o el remoto es DENY. Sin transporte el motivo nombra que no
+      hay publication transport. enabled false es DENY. Classic con la frase
+      de confianza deja git.push con modal y fuera del conjunto quieto, y
+      run con None es DENY. git.push no está en CLASSIC_ACTIONS, en el
+      conjunto quieto, en GIT_ACTIONS ni en GIT_TOOL_NAMES. El commit real
+      espiado contiene commit y no contiene push. No se hizo git push.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/pytest-not-integration.txt
+        sha256: f6ed2da8c8aaacbbb8805005346feacda6b6a514724632817580c57d65ddde3e
+  - id: G5-05
+    prueba: tests/test_egress.py::test_g5_05_revoking_a_provider_does_not_switch_endpoint
+    comando: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line
+    esperado: la key genérica del provider activo no se entrega a otro provider; revocar o conceder otro host no llama a send
+    observado: >
+      Con el provider activo openai y la key genérica en el canario,
+      load_api_key de anthropic devolvió cadena vacía. enabled false en
+      provider.request no llamó a send. Un grant de 127.0.0.1:1 no llamó a
+      send para 127.0.0.1:9. El canario no está en el texto ni en el motivo,
+      ni en los ficheros de estado o del workspace de la prueba.
+    resultado: PASS
+    artefactos:
+      - docs/evidence/classic-security-ux/M5/c6d434b2e3a7b1cfddef172de03cf5b06ff26f95/pytest-not-integration.txt
+        sha256: f6ed2da8c8aaacbbb8805005346feacda6b6a514724632817580c57d65ddde3e
+sin_evidencia_real:
+  - revisor distinto del autor
+  - gasto opt-in contra un provider real
+  - git push en vivo; el transporte de G5-04 es un recorder en proceso
+  - este proceso no tiene variables de proxy; la negativa es fail-closed
+  - Provider.models, el stream sync y el SDK de Anthropic pueden volver a resolver el nombre después de la revisión
+  - el stream de chat sí fija la dirección revisada; el túnel proxy se eliminó y _upgrade_client_tls queda sin uso
+  - MCP no entra en el sandbox de comandos; una key escrita por el usuario en mcp.json sigue presente
+  - LSP conserva --share-net y seccomp; no se cerró en este hito
+  - un nombre que resuelve a una IP privada se niega; un literal de loopback configurado sigue permitido
+  - git.push está declarado y no tiene transporte por defecto, así que no hay push de extremo a extremo
+  - no hay acción de descarga ni red universal
+  - Windows y macOS
+  - G0, G1, G2, G3 y G4 siguen EN_REVISION
+  - este push del producto no esperó los checks; el remoto imprimió Bypassed rule violations para c6d434b, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - este push de la evidencia no esperó los checks; el remoto imprimió Bypassed rule violations para e82d32b, 3 de 3 checks esperados, enforce_admins sigue apagado
+  - no se afirma que CI pasó
+regresion: ./.venv/bin/python -m pytest -q -m "not integration" -ra --tb=line; exit 0; 1096 passed, 2 skipped, 11 deselected; 108.39s; skips anthropic ausente y TypeScript sandbox_ready ausente
+riesgos_residuales: la ventana de rebinding queda en el catálogo sync y en el cliente Anthropic que crea el SDK; un mcp.json escrito por el usuario puede llevar una key; LSP sigue con namespace de red compartido
+rollback_ensayado: revertir c6d434b2e3a7b1cfddef172de03cf5b06ff26f95 devuelve --share-net al sandbox de comandos, el CONNECT del stream y quita el owner de git.push; no borra grants de prueba ya escritos bajo el estado local ni abre el bucle
+revision: ausente

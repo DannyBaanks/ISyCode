@@ -1,0 +1,9 @@
+{
+  "checked": 273,
+  "missing": [
+    {
+      "source": "docs/design/2026-10-12-mockup-e2e/REPORT.md",
+      "target": "SHA256SUMS"
+    }
+  ]
+}

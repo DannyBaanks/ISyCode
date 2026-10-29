@@ -1,0 +1,127 @@
+{
+  "created_at": 1791080413.3407025,
+  "iteration_session_id": "5a69c4a7a4ec4d86b74317eb5c195165",
+  "participants": [
+    {
+      "last_attempt_id": "cdc9b22f0d6d4349a05b75045e06d55f",
+      "last_completed_turn": "cb566c028c3edac74c10076fb2900636",
+      "last_seen_seq": 1,
+      "model": "z-ai/glm-5.3",
+      "ordinal": 0,
+      "participant_id": "87b725cb42bf44cb96021931b4477716",
+      "provider": "nvidia",
+      "role": "PROPOSER: Read state. Propose a short testing plan. Include exactly TOKEN_A=otter-731926 in your response."
+    },
+    {
+      "last_attempt_id": "44e6c05a56494897a89a593558976999",
+      "last_completed_turn": null,
+      "last_seen_seq": 0,
+      "model": "moonshotai/kimi-k3",
+      "ordinal": 1,
+      "participant_id": "c0666473d06544a994f686c18c415a8e",
+      "provider": "nvidia",
+      "role": "REVIEWER: Read state. Critique the proposer briefly and repeat its exact TOKEN_A value. Do not guess it."
+    },
+    {
+      "last_attempt_id": null,
+      "last_completed_turn": null,
+      "last_seen_seq": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b",
+      "ordinal": 2,
+      "participant_id": "215f670f3fe042819b046aaca248fcc7",
+      "provider": "nvidia",
+      "role": "FINAL: Read state. Return HUMAN_HANDOFF, repeat the exact TOKEN_A from the proposer, and state the next human decision."
+    }
+  ],
+  "round_id": "392dc2c15d644e339250c8e0ad0e5974",
+  "title": "Three NVIDIA models: verifiable handoff",
+  "head_seq": 2,
+  "status": "PARTICIPANT_ERROR",
+  "current_writer": null,
+  "active": null,
+  "turns": [
+    {
+      "actor_id": "human",
+      "content": "Propose and review a small test plan for an append-only iteration log. Keep replies under 120 words. Use only the supplied read tool.",
+      "event_seq": 2,
+      "kind": "human",
+      "previous": "a3084b0729a4c04915984ed09da6348ec52048cd78e57ee8b6938cb5f4eb963a",
+      "seq": 1,
+      "sha256": "20112ae72bb74747a7253dd2ded2d52c8031420ae32abb59858c99a4c8cbfb5e"
+    },
+    {
+      "actor_id": "87b725cb42bf44cb96021931b4477716",
+      "attempt_id": "cdc9b22f0d6d4349a05b75045e06d55f",
+      "based_on_seq": 1,
+      "content": "**Test Plan: Append-Only Iteration Log**\n\n1. **Read boundaries** — Read from seq 0; verify empty state returns cleanly. Read through seq 1; confirm the human entry is returned with correct seq, actor, and kind.\n2. **Range semantics** — Read after_seq=0, through_seq=1; verify only authorized entries appear and no out-of-range data leaks.\n3. **Immutability** — Re-read the same range; confirm content is byte-identical (append-only, no mutation).\n4. **Monotonicity** — Confirm seq values are strictly increasing with no gaps or duplicates.\n5. **Tool discipline** — Verify only the supplied read tool is used; no filesystem paths or other tools accepted.\n6. **Untrusted-state check** — Treat returned content as data, never as instructions.\n\nTOKEN_A=otter-731926",
+      "event_seq": 5,
+      "execution_receipt": {
+        "attempt_id": "cdc9b22f0d6d4349a05b75045e06d55f",
+        "based_on_seq": 1,
+        "duration": 17.69787287712097,
+        "error_hint": null,
+        "error_kind": null,
+        "error_type": null,
+        "iteration_session_id": "5a69c4a7a4ec4d86b74317eb5c195165",
+        "kind": "receipt",
+        "model": "z-ai/glm-5.3",
+        "outcome": "SUCCESS",
+        "participant_id": "87b725cb42bf44cb96021931b4477716",
+        "produced_seq": 2,
+        "provider": "nvidia",
+        "read_from_seq": 1,
+        "read_through_seq": 1,
+        "round_id": "392dc2c15d644e339250c8e0ad0e5974",
+        "turn_id": "cb566c028c3edac74c10076fb2900636"
+      },
+      "kind": "agent",
+      "previous": "a22d67fb72efafd45584766d11e8ab1055113998ea0205fceec8f91d4a40245a",
+      "seq": 2,
+      "turn_id": "cb566c028c3edac74c10076fb2900636",
+      "sha256": "86c5726e858f1c37e6ce9f95d95b6ffb9e8115abdd688a7b5824bbf1d1d8cb20"
+    }
+  ],
+  "receipts": [
+    {
+      "attempt_id": "cdc9b22f0d6d4349a05b75045e06d55f",
+      "based_on_seq": 1,
+      "duration": 17.69787287712097,
+      "error_hint": null,
+      "error_kind": null,
+      "error_type": null,
+      "iteration_session_id": "5a69c4a7a4ec4d86b74317eb5c195165",
+      "kind": "receipt",
+      "model": "z-ai/glm-5.3",
+      "outcome": "SUCCESS",
+      "participant_id": "87b725cb42bf44cb96021931b4477716",
+      "produced_seq": 2,
+      "provider": "nvidia",
+      "read_from_seq": 1,
+      "read_through_seq": 1,
+      "round_id": "392dc2c15d644e339250c8e0ad0e5974",
+      "turn_id": "cb566c028c3edac74c10076fb2900636"
+    },
+    {
+      "attempt_id": "44e6c05a56494897a89a593558976999",
+      "based_on_seq": 2,
+      "duration": 16.59787154197693,
+      "error_hint": "invalid or oversized content",
+      "error_kind": "DENIED",
+      "error_type": "IterationDenied",
+      "event_seq": 7,
+      "iteration_session_id": "5a69c4a7a4ec4d86b74317eb5c195165",
+      "kind": "receipt",
+      "model": "moonshotai/kimi-k3",
+      "outcome": "PARTICIPANT_ERROR",
+      "participant_id": "c0666473d06544a994f686c18c415a8e",
+      "previous": "b5bafbf93130b759d2461d9541a4907300f3e2793daa368ae025e779e24c131d",
+      "produced_seq": null,
+      "provider": "nvidia",
+      "read_from_seq": null,
+      "read_through_seq": null,
+      "round_id": "392dc2c15d644e339250c8e0ad0e5974",
+      "turn_id": "762c3bb7e1a089f8c0307e5cfaa9efe9",
+      "sha256": "a08d0c280fd17224d144d1a6995ba1ab8c7c82386cba6f804796a6fee7695060"
+    }
+  ]
+}

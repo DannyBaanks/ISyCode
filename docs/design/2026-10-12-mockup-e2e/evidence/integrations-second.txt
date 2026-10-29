@@ -1,0 +1,23 @@
+..........F....                                                          [100%]
+=================================== FAILURES ===================================
+_________ test_mcp_invalid_json_keeps_draft_then_returns_exact_object __________
+tests/test_mockup_integrations.py:65: in test_mcp_invalid_json_keeps_draft_then_returns_exact_object
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_mockup_integrations.py:64: in scenario
+    assert results == [{"query": "[exact]", "limit": 2}]
+E   AssertionError: assert [] == [{'query': '[..., 'limit': 2}]
+E     
+E     Right contains one more item: {'query': '[exact]', 'limit': 2}
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/test_mockup_integrations.py::test_mcp_invalid_json_keeps_draft_then_returns_exact_object
+1 failed, 14 passed in 3.33s

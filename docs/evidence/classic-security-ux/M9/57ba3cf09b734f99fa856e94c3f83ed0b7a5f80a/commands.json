@@ -1,0 +1,43 @@
+{
+  "recorded_utc": "2026-10-08T06:52:22Z",
+  "application_sha_evaluado": "57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a",
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "cpus": 12,
+  "commands": [
+    {
+      "command": "PYTHONPATH='<repo>/.venv/lib/python3.12/site-packages:<repo>/src' /usr/bin/python3.12 -m pytest -q tests/test_turn_control.py tests/test_workspace_trust.py tests/test_egress.py tests/test_gate_equivalence.py tests/test_effect_policy.py tests/test_staging.py tests/test_effect_ledger.py tests/test_agent_events.py tests/test_instruction_queue.py tests/test_agent_panel.py tests/test_agent_polling.py tests/test_everyday_flows.py tests/test_ux_polish.py tests/test_approval_keys.py tests/test_side_panel.py tests/test_m9_adversarial.py tests/test_g9_live_checks.py tests/test_g9_usability.py tests/test_soak_g9_validation.py",
+      "exit": 0,
+      "log": "runtime-regressions.log"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_gate_historical_source.py tests/test_gate_validator.py tests/test_g9_live_checks.py tests/test_g9_usability.py tests/test_soak_g9_validation.py",
+      "exit": 0,
+      "log": "focused.log"
+    },
+    {
+      "command": ".venv/bin/python scripts/validate_gates.py",
+      "exit": 0,
+      "log": "validator-after.log"
+    },
+    {
+      "command": ".venv/bin/python scripts/validate_gates.py --require-approved",
+      "exit": 1,
+      "log": "release-blocked.log"
+    },
+    {
+      "command": ".venv/bin/python scripts/live_g9_06.py --key-workspace /home/danny/Development/ISyCo --model nvidia/nemotron-3-ultra-550b-a55b --out <repo>/docs/evidence/m9-live/20261008-live01/result.json",
+      "exit": 1,
+      "note": "Observed flow succeeded; initial checker expected wrong edit-result schema. Same raw evidence reevaluated successfully; no network replay."
+    }
+  ],
+  "soak": {
+    "status": "IN_PROGRESS",
+    "state": "/tmp/isycode-g9-v2-full-20261008-01.state.json",
+    "cycles": 1069,
+    "restarts": 3,
+    "failures": 0,
+    "source_sha256": "62518ff5ac8d65adad94efd049e91efd5b12b19307f3c5609f2f478c172c0c7d"
+  },
+  "scope": "M9 review packet, not approval. No people recruited/contacted; G9-05 BLOCKED. No full two-hour result yet. Measurements G9-02/03 copied as HISTORICAL, not rerun. Full repository suite NOT_RUN for this packet."
+}

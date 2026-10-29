@@ -1,0 +1,212 @@
+{
+  "settings": {
+    "nerd": "",
+    "code": "f423",
+    "glyph_name": "oct-gear",
+    "unicode": "⚙",
+    "ascii": "cfg",
+    "svg": "settings",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "shield": {
+    "nerd": "",
+    "code": "f49c",
+    "glyph_name": "oct-shield",
+    "unicode": "◇",
+    "ascii": "sec",
+    "svg": "shield-check",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "connection": {
+    "nerd": "",
+    "code": "f492",
+    "glyph_name": "oct-plug",
+    "unicode": "↔",
+    "ascii": "net",
+    "svg": "plug-connected",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "code": {
+    "nerd": "",
+    "code": "f44f",
+    "glyph_name": "oct-code",
+    "unicode": "⌘",
+    "ascii": "<>",
+    "svg": "code",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "skills": {
+    "nerd": "⚡",
+    "code": "26a1",
+    "glyph_name": "oct-zap",
+    "unicode": "ϟ",
+    "ascii": "skl",
+    "svg": "sparkles",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "folder": {
+    "nerd": "",
+    "code": "f413",
+    "glyph_name": "oct-file_directory",
+    "unicode": "▸",
+    "ascii": "dir",
+    "svg": "folder",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "chat": {
+    "nerd": "",
+    "code": "f41f",
+    "glyph_name": "oct-comment",
+    "unicode": "▤",
+    "ascii": "chat",
+    "svg": "message",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "terminal": {
+    "nerd": "",
+    "code": "f489",
+    "glyph_name": "oct-terminal",
+    "unicode": "›",
+    "ascii": "sh",
+    "svg": "terminal-2",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "copy": {
+    "nerd": "",
+    "code": "f4bb",
+    "glyph_name": "oct-copy",
+    "unicode": "▣",
+    "ascii": "cpy",
+    "svg": "copy",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "clock": {
+    "nerd": "",
+    "code": "f43a",
+    "glyph_name": "oct-clock",
+    "unicode": "◷",
+    "ascii": "wait",
+    "svg": "clock",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "check": {
+    "nerd": "",
+    "code": "f42e",
+    "glyph_name": "oct-check",
+    "unicode": "✓",
+    "ascii": "ok",
+    "svg": "check",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "warning": {
+    "nerd": "",
+    "code": "f421",
+    "glyph_name": "oct-alert",
+    "unicode": "△",
+    "ascii": "!",
+    "svg": "alert-triangle",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "error": {
+    "nerd": "",
+    "code": "f467",
+    "glyph_name": "oct-x",
+    "unicode": "×",
+    "ascii": "x",
+    "svg": "x",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "pause": {
+    "nerd": "",
+    "code": "f48b",
+    "glyph_name": "oct-dash",
+    "unicode": "—",
+    "ascii": "-",
+    "svg": "player-pause",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "search": {
+    "nerd": "",
+    "code": "f422",
+    "glyph_name": "oct-search",
+    "unicode": "⌕",
+    "ascii": "find",
+    "svg": "search",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "idea": {
+    "nerd": "",
+    "code": "f400",
+    "glyph_name": "oct-light_bulb",
+    "unicode": "◇",
+    "ascii": "idea",
+    "svg": "bulb",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "branch": {
+    "nerd": "",
+    "code": "f418",
+    "glyph_name": "oct-git_branch",
+    "unicode": "↳",
+    "ascii": "git",
+    "svg": "arrows-split",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "book": {
+    "nerd": "",
+    "code": "f405",
+    "glyph_name": "oct-book",
+    "unicode": "▤",
+    "ascii": "doc",
+    "svg": "book",
+    "glyph_license": "MIT (Octicons)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "python": {
+    "nerd": "",
+    "code": "e606",
+    "glyph_name": "seti-python",
+    "unicode": "◇",
+    "ascii": "py",
+    "svg": "code",
+    "glyph_license": "MIT (Seti/original)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "typescript": {
+    "nerd": "",
+    "code": "e628",
+    "glyph_name": "seti-typescript",
+    "unicode": "◇",
+    "ascii": "ts",
+    "svg": "code",
+    "glyph_license": "MIT (Seti/original)",
+    "svg_license": "MIT (Tabler)"
+  },
+  "rust": {
+    "nerd": "",
+    "code": "e68b",
+    "glyph_name": "seti-rust",
+    "unicode": "◇",
+    "ascii": "rs",
+    "svg": "code",
+    "glyph_license": "MIT (Seti/original)",
+    "svg_license": "MIT (Tabler)"
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "date": "2026-10-11",
+  "command": "python3 verify-design.py",
+  "cwd": "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-11-icons-typography",
+  "exit_status": 0,
+  "asset_hashes_checked": 47,
+  "svg_files_parsed": 24,
+  "http_resources": [
+    {
+      "path": "preview.html",
+      "status": 200,
+      "bytes": 30997
+    },
+    {
+      "path": "GUIA.md",
+      "status": 200,
+      "bytes": 4427
+    },
+    {
+      "path": "INVESTIGACION.md",
+      "status": 200,
+      "bytes": 12392
+    },
+    {
+      "path": "asset-sources.json",
+      "status": 200,
+      "bytes": 13261
+    },
+    {
+      "path": "fonts/cascadia.ttf",
+      "status": 200,
+      "bytes": 2931984
+    },
+    {
+      "path": "fonts/iosevka.ttf",
+      "status": 200,
+      "bytes": 14377008
+    },
+    {
+      "path": "fonts/jetbrains.ttf",
+      "status": 200,
+      "bytes": 2491088
+    },
+    {
+      "path": "fonts/ubuntu-current.ttf",
+      "status": 200,
+      "bytes": 230324
+    },
+    {
+      "path": "fonts/unicode-fallback.ttf",
+      "status": 200,
+      "bytes": 343140
+    },
+    {
+      "path": "hover-motion.js",
+      "status": 200,
+      "bytes": 3900
+    },
+    {
+      "path": "icons/tabler/alert-triangle.svg",
+      "status": 200,
+      "bytes": 569
+    },
+    {
+      "path": "icons/tabler/arrows-split.svg",
+      "status": 200,
+      "bytes": 488
+    },
+    {
+      "path": "icons/tabler/book.svg",
+      "status": 200,
+      "bytes": 522
+    },
+    {
+      "path": "icons/tabler/bulb.svg",
+      "status": 200,
+      "bytes": 530
+    },
+    {
+      "path": "icons/tabler/check.svg",
+      "status": 200,
+      "bytes": 389
+    },
+    {
+      "path": "icons/tabler/clock.svg",
+      "status": 200,
+      "bytes": 445
+    },
+    {
+      "path": "icons/tabler/code.svg",
+      "status": 200,
+      "bytes": 454
+    },
+    {
+      "path": "icons/tabler/copy.svg",
+      "status": 200,
+      "bytes": 627
+    },
+    {
+      "path": "icons/tabler/folder.svg",
+      "status": 200,
+      "bytes": 450
+    },
+    {
+      "path": "icons/tabler/message.svg",
+      "status": 200,
+      "bytes": 553
+    },
+    {
+      "path": "icons/tabler/player-pause.svg",
+      "status": 200,
+      "bytes": 528
+    },
+    {
+      "path": "icons/tabler/plug-connected.svg",
+      "status": 200,
+      "bytes": 625
+    },
+    {
+      "path": "icons/tabler/search.svg",
+      "status": 200,
+      "bytes": 433
+    },
+    {
+      "path": "icons/tabler/settings.svg",
+      "status": 200,
+      "bytes": 942
+    },
+    {
+      "path": "icons/tabler/shield-check.svg",
+      "status": 200,
+      "bytes": 527
+    },
+    {
+      "path": "icons/tabler/sparkles.svg",
+      "status": 200,
+      "bytes": 542
+    },
+    {
+      "path": "icons/tabler/terminal-2.svg",
+      "status": 200,
+      "bytes": 515
+    },
+    {
+      "path": "icons/tabler/x.svg",
+      "status": 200,
+      "bytes": 406
+    },
+    {
+      "path": "itshover-sources.json",
+      "status": 200,
+      "bytes": 3450
+    },
+    {
+      "path": "licenses/itshover-Apache-2.0.txt",
+      "status": 200,
+      "bytes": 9686
+    },
+    {
+      "path": "licenses/nerd-fonts-LICENSE.txt",
+      "status": 200,
+      "bytes": 6200
+    },
+    {
+      "path": "licenses/tabler-MIT.txt",
+      "status": 200,
+      "bytes": 1073
+    }
+  ],
+  "accepted_profile_source_checked": true,
+  "javascript_syntax_checked": true,
+  "font_data": {
+    "ubuntu_sha256": "507870a3fe5737eb5b02f366587d30607c02a5ad45d8fe94b3ee20a80ccad32a",
+    "fallback_sha256": "c805f9436dbc268644c1d9584f01a601a653e028e08fd74b9b949f6cf8304d88",
+    "mapped_symbols": 21,
+    "missing_in_ubuntu": [
+      "settings",
+      "shield",
+      "connection",
+      "code",
+      "skills",
+      "folder",
+      "chat",
+      "copy",
+      "clock",
+      "warning",
+      "search",
+      "idea",
+      "branch",
+      "book",
+      "python",
+      "typescript",
+      "rust"
+    ],
+    "missing_in_fallback": [],
+    "fallback_symbols_match_M_advance": true,
+    "ubuntu_advance_at_14px": 7.84,
+    "fallback_size_adjust_percent": 93.0154095701541,
+    "scope": "cmap/hmtx data and preview resources; actual terminal fallback and cell rendering NOT_DEMONSTRATED"
+  },
+  "browser_revision_review": "NOT_DEMONSTRATED: URL protocol policy rejection",
+  "production_tui_changed": false,
+  "not_demonstrated": [
+    "live browser motion/render/layout for this revision",
+    "native terminal rendering/animation",
+    "terminal point-size calibration",
+    "product gesture contract",
+    "real clipboard with wrapping/scroll",
+    "remote inference/connections",
+    "audit bug fixes"
+  ],
+  "raw_output": "verification.log",
+  "prior_verifier_failure": "verification-first-run.log: manifest key mismatch (file vs path), corrected in verifier; source files were not changed"
+}

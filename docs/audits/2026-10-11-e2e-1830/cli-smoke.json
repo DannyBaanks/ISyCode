@@ -1,0 +1,24 @@
+[
+  {
+    "argv": [
+      "/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python",
+      "-m",
+      "isycode",
+      "--version"
+    ],
+    "exit_code": 0,
+    "stdout": "ISyCode 0.1.0\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/home/danny/Development/ISyCo Git/ISyCode/.venv/bin/python",
+      "-m",
+      "isycode",
+      "--help"
+    ],
+    "exit_code": 0,
+    "stdout": "ISyCode \u00b7 terminal workspace agent\n\nUsage:\n  isycode                 Start the chat TUI in the current directory\n  isycode tui              Start the chat TUI\n  isycode cli              Browse actions by semantic category\n  isycode doctor [--json]  Inspect local dependencies/configuration; no network calls\n  isycode sessions ...      List/show/search/rename/delete local conversations; add --json\n  isycode models [--json]   Show local provider/model metadata; no network calls\n  isycode stats [--json]    Aggregate locally recorded session usage\n  isycode dirs [--json]     Show config/state locations and precedence, never values\n  isycode completion SHELL  Print bash, zsh or fish completion\n  isycode update           Update this ISyCode installation (alias: actualizar)\n  isycode update --check   Check for updates without installing or advancing\n  isycode update --yes     Pre-approve the stash/merge confirmation\n  isycode actualizar       Actualizar el checkout limpio o preparar una instalaci\u00f3n\n  isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama\n  isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta\n  isycode -p \"PROMPT\"      Answer once and exit (stdin if PROMPT is omitted or -);\n                           add --json for machine-readable output. Only read-only\n                           tools that were granted run; nothing asks for approval.\n  isycode --help           Show this help\n  isycode --version        Show the installed version\n\nThe CLI browser groups actions by purpose. It does not run arbitrary shell commands.\n",
+    "stderr": ""
+  }
+]

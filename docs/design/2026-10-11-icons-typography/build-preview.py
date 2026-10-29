@@ -1,0 +1,190 @@
+from pathlib import Path
+import json
+ROOT=Path(__file__).resolve().parent
+glyphs=json.loads((ROOT/"sources/glyphnames.json").read_text())
+specs={
+ "settings":("oct-gear","⚙","cfg","settings"),
+ "shield":("oct-shield","◇","sec","shield-check"),
+ "connection":("oct-plug","↔","net","plug-connected"),
+ "code":("oct-code","⌘","<>","code"),
+ "skills":("oct-zap","ϟ","skl","sparkles"),
+ "folder":("oct-file_directory","▸","dir","folder"),
+ "chat":("oct-comment","▤","chat","message"),
+ "terminal":("oct-terminal","›","sh","terminal-2"),
+ "copy":("oct-copy","▣","cpy","copy"),
+ "clock":("oct-clock","◷","wait","clock"),
+ "check":("oct-check","✓","ok","check"),
+ "warning":("oct-alert","△","!","alert-triangle"),
+ "error":("oct-x","×","x","x"),
+ "pause":("oct-dash","—","-","player-pause"),
+ "search":("oct-search","⌕","find","search"),
+ "idea":("oct-light_bulb","◇","idea","bulb"),
+ "branch":("oct-git_branch","↳","git","arrows-split"),
+ "book":("oct-book","▤","doc","book"),
+ "python":("seti-python","◇","py","code"),
+ "typescript":("seti-typescript","◇","ts","code"),
+ "rust":("seti-rust","◇","rs","code"),
+}
+mapping={k:{"nerd":glyphs[n]["char"],"code":glyphs[n]["code"],"glyph_name":n,"unicode":u,"ascii":a,"svg":s,
+ "glyph_license":"MIT (Octicons)" if n.startswith("oct-") else "MIT (Seti/original)",
+ "svg_license":"MIT (Tabler)"} for k,(n,u,a,s) in specs.items()}
+map_text=json.dumps(mapping,ensure_ascii=False,indent=2)+"\n"
+if not (ROOT/"icon-map.json").exists() or (ROOT/"icon-map.json").read_text()!=map_text:
+ (ROOT/"icon-map.json").write_text(map_text)
+hover=json.loads((ROOT/"itshover-svg.json").read_text())
+hover_names={"copy":"Copiar","terminal":"Comandos","refresh":"Actualizar","connection":"Conectar","shield":"Permisos","check":"Completado"}
+hover_start={"copy":"▣","terminal":"›_","refresh":"◷","connection":"↔","shield":"◇","check":"✓"}
+hover_cards=''.join('<button class="motion-card" data-motion="'+k+'">'+hover[k]+'<span class="motion-label">'+name+'</span><span class="text-frame" aria-hidden="true">'+hover_start[k]+'</span></button>' for k,name in hover_names.items())
+template=r"""<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ISyCode · Fuentes e iconos</title>
+<style>
+@font-face{font-family:JBNerd;src:url(fonts/jetbrains.ttf) format('truetype');font-weight:400;font-display:block}
+@font-face{font-family:CascadiaNerd;src:url(fonts/cascadia.ttf) format('truetype');font-weight:400;font-display:block}
+@font-face{font-family:IosevkaNerd;src:url(fonts/iosevka.ttf) format('truetype');font-weight:400;font-display:block}
+@font-face{font-family:UbuntuCurrent;src:url(fonts/ubuntu-current.ttf) format('truetype');font-weight:100 900;font-display:block}
+@font-face{font-family:UnicodeFallback;src:url(fonts/unicode-fallback.ttf) format('truetype');font-weight:400;font-display:block;size-adjust:93.017%}
+*{box-sizing:border-box}body{margin:0;background:#090c0f;color:#edf1f5;font:15px/1.5 system-ui,sans-serif}
+main{max-width:1480px;margin:auto;padding:28px 30px}h1{font-size:26px;margin:0 0 8px}h2{font-size:19px;margin:0 0 14px}
+p{max-width:100ch;color:#a7b2c0}a{color:#47daed}button,input,select{font:inherit}button,select{cursor:pointer}
+.toolbar{display:flex;flex-wrap:wrap;gap:16px;padding:16px 0;margin:15px 0;border-block:1px solid #303b45}
+.control{display:grid;gap:5px;color:#a7b2c0;font-size:12px}.control select,.control input{background:#11171c;color:#edf1f5;border:1px solid #536371;padding:8px;min-width:145px;border-radius:3px}
+button{background:transparent;color:inherit;border:1px solid #536371;padding:7px 12px}button:hover{border-color:#e4edf4}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #32dcec;outline-offset:3px}
+button[aria-selected=true]{color:#38e1ee;border-color:#38e1ee;background:#03252d}
+.notice{font-size:13px;border-left:2px solid #38e1ee;padding:8px 14px;color:#b2bfcc}.load{color:#7fd99c;font-size:13px}
+.compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:25px 0}
+.specimen{border-top:1px solid #536371;padding-top:12px}.specimen h3{font-size:15px;margin:0 0 8px}.specimen p{font-size:12px;margin:3px 0 10px}.sample{background:#000;color:#eef3f7;padding:12px;font-size:16px;line-height:1.35;overflow:auto;white-space:pre;margin:0;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+.viewtabs{display:flex;gap:8px;margin:18px 0 10px}.ui{--ui-font:UbuntuCurrent;--size:14px;--leading:1.3;background:#000;border:1px solid #718291;padding:16px;font:var(--size)/var(--leading) var(--ui-font),UnicodeFallback,monospace;font-synthesis:none;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+.ui button,.ui input{font:inherit}.ui header{display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:1px solid #3f4d59;padding-bottom:12px;color:#e4edf4}
+.brand{color:#ef7191}.dim{color:#a9b5c2}.cyan{color:#38e1ee}.ok{color:#7fe39d}.warn{color:#f2c068}.error{color:#f7888e}
+.ui-grid{display:grid;grid-template-columns:minmax(0,1fr) 315px;gap:24px;margin-top:18px;min-height:410px}
+.dialog{border:1px solid #82929e;padding:18px;align-self:start}.dialog h2{font:inherit;font-weight:400;color:#fff;font-size:1.15em;margin:0 0 4px}
+.dialog .intro{font-size:.85em;color:#a9b5c2;margin:0 0 15px}.settings-grid{display:grid;grid-template-columns:195px minmax(0,1fr);gap:20px}
+.categories{border-right:1px solid #3f4d59;padding-right:16px}.categories button{display:block;width:100%;border:0;border-left:3px solid transparent;text-align:left;padding:8px;margin-bottom:4px}
+.categories button[aria-selected=true]{border-left-color:#38e1ee;color:#38e1ee;background:#03252d}
+.settings-list{margin:0}.setting{display:grid;grid-template-columns:minmax(170px,1fr) minmax(135px,1fr);gap:5px 16px;padding:8px 0;border-bottom:1px solid #19252e}
+.setting dd,.setting dt{margin:0}.setting dd{color:#fff}.setting .hint{grid-column:1/-1;color:#a9b5c2;font-size:.8em}.setting:last-child{border:0}
+.dialog-footer{margin-top:16px;border-top:1px solid #3f4d59;padding-top:12px;color:#a9b5c2;font-size:.8em}
+.sidebar{border-left:1px solid #3f4d59;padding-left:18px}.side-tabs{display:flex;gap:8px;margin:14px 0}.side-tabs button{flex:1}
+.side-section{padding:12px 0;border-top:1px solid #3f4d59}.side-section h3{font:inherit;font-weight:400;margin:0 0 10px;color:#e7edf3}
+.side-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin:7px 0;font-size:.9em}.side-note{color:#a9b5c2;font-size:.8em;line-height:1.45}
+.glyph{display:inline-block;white-space:nowrap;min-width:1ch;margin-right:1ch}.ascii .glyph{min-width:4ch;color:#a9b5c2;font-size:.9em}
+.prompt{margin-top:20px;border:1px solid #83939f;padding:10px;color:#a9b5c2}.prompt:focus-within{border-color:#38e1ee}.prompt input{color:#fff;background:transparent;width:100%;border:0;outline:0;font:inherit}
+.statusbar{display:flex;flex-wrap:wrap;gap:18px;margin:12px 0 0;color:#a9b5c2;font-size:.8em}
+.output{margin:0;white-space:pre;overflow:auto;padding:15px;background:#090d11;border-left:2px solid #38e1ee;font:inherit}
+.gallery{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin-top:20px;border-top:1px solid #35424b}
+.icon-item{display:flex;gap:10px;align-items:center;padding:13px 9px;border-bottom:1px solid #25313a;color:#c2cad2;font-size:13px}
+.icon-item img{width:23px;height:23px;filter:invert(1);flex-shrink:0}
+.motion-demo{margin-top:32px;border:1px solid #536371;padding:18px;background:#000}.motion-demo h2{margin:0}.motion-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}.motion-head label{color:#a9b5c2;font-size:13px}.motion-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.motion-card{display:grid;grid-template-columns:26px 1fr 4ch;align-items:center;text-align:left;gap:12px;font:14px/1.3 UbuntuCurrent,UnicodeFallback,monospace;padding:15px}.motion-card svg{width:24px;height:24px;overflow:visible;transform-origin:center}.motion-card path{transform-origin:center;transform-box:fill-box}.motion-card:hover,.motion-card:focus-visible{color:#38e1ee}.text-frame{color:#a9b5c2;white-space:pre}.motion-demo p{font-size:13px}.motion-state{min-height:2.5em}.motion-copy{font-family:UbuntuCurrent,UnicodeFallback,monospace}
+.selectiondemo{font:inherit;white-space:pre;line-height:1.65;background:#090d11;padding:18px;border:1px solid #3f4d59;user-select:text}
+::selection{background:#075d74;color:#fff}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.token{margin-left:auto;color:#a9b5c2}.guides{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
+.guides ul{padding-left:22px;color:#b8c4cf}code{font-family:JBNerd,monospace}.preview-state{margin-top:10px;font-size:12px;color:#a9b5c2}
+@media(max-width:1100px){.ui-grid{grid-template-columns:minmax(0,1fr) 275px}.settings-grid{grid-template-columns:150px 1fr}.setting{grid-template-columns:1fr}.compare{gap:12px}.gallery{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:780px){main{padding:20px 15px}.compare,.ui-grid,.guides{grid-template-columns:1fr}.sidebar{border-left:0;border-top:1px solid #3f4d59;padding:18px 0 0}.settings-grid{grid-template-columns:1fr}.categories{border:0;display:flex;flex-wrap:wrap;gap:4px}.categories button{width:auto}.gallery{grid-template-columns:repeat(3,1fr)}.motion-cards{grid-template-columns:1fr}.ui header{flex-wrap:wrap}.token{margin-left:0}}
+</style>
+<main>
+<h1>ISyCode · Menos círculos, más identidad</h1>
+<p>Exploración sobre la primera propuesta elegida. Compara fuentes auténticas y una iconografía con significado. Los datos de la interfaz son ejemplos visuales.</p>
+<div class="notice">Perfil elegido: Ubuntu Sans Mono · Unicode · 14 px · 1.3. Este comparador no modifica ISyCode ni tu terminal. Las referencias SVG y sus animaciones se muestran aparte de la vista de caracteres.</div>
+<div class="toolbar">
+<label class="control">Fuente de la vista<select id="font"><option value="JBNerd">JetBrains Mono NL Nerd Font Mono</option><option value="CascadiaNerd">CaskaydiaCove Nerd Font Mono</option><option value="IosevkaNerd">Iosevka Term Nerd Font Mono</option><option value="UbuntuCurrent" selected>Ubuntu Sans Mono · perfil actual</option></select></label>
+<label class="control">Iconos de la terminal<select id="icons"><option value="nerd">Nerd Fonts · Octicons + Seti</option><option value="unicode" selected>Unicode · alternativa sencilla</option><option value="ascii">ASCII · máxima compatibilidad</option></select></label>
+<label class="control">Tamaño <input id="size" type="range" min="14" max="21" value="14"><span id="size-label">14 px</span></label>
+<label class="control">Interlineado <input id="leading" type="range" min="1.2" max="1.6" step=".05" value="1.3"><span id="leading-label">1.3</span></label>
+</div><div class="load" id="font-state" role="status">Cargando fuentes locales…</div>
+<section class="compare" aria-label="Comparación de tres fuentes">
+<article class="specimen"><h3>JetBrains Mono</h3><p>Alternativa clara y equilibrada. Variante NL sin ligaduras.</p><pre class="sample" style="font-family:JBNerd">Configuración · ISyCode
+Proveedor   NVIDIA NIM
+Modelo      GLM 5.3
+src/hello_world.py
+0 O 1 l I  {} [] != =&gt;
+áéíóú ñ ¿qué cambió?</pre></article>
+<article class="specimen"><h3>Cascadia Code</h3><p>Alternativa más redondeada. Ligaduras desactivadas en esta muestra.</p><pre class="sample" style="font-family:CascadiaNerd">Configuración · ISyCode
+Proveedor   NVIDIA NIM
+Modelo      GLM 5.3
+src/hello_world.py
+0 O 1 l I  {} [] != =&gt;
+áéíóú ñ ¿qué cambió?</pre></article>
+<article class="specimen"><h3>Iosevka Term</h3><p>Alternativa estrecha: más columnas en el mismo ancho, a igual tamaño.</p><pre class="sample" style="font-family:IosevkaNerd">Configuración · ISyCode
+Proveedor   NVIDIA NIM
+Modelo      GLM 5.3
+src/hello_world.py
+0 O 1 l I  {} [] != =&gt;
+áéíóú ñ ¿qué cambió?</pre></article>
+</section>
+<div class="viewtabs" role="tablist" aria-label="Pantalla de ejemplo">
+<button role="tab" data-view="settings" aria-selected="true">Settings</button><button role="tab" data-view="home" aria-selected="false">Inicio y salida</button><button role="tab" data-view="copy" aria-selected="false">Caja y selección</button>
+</div>
+<section class="ui" id="ui" aria-label="Vista de componentes de terminal">
+<header><span class="brand">:3_ ISYCODE</span><span class="dim">~/Development/ISyCo</span><span><span data-icon="shield" class="glyph"></span>Classic</span></header>
+<div class="ui-grid"><div id="main-view"></div><aside class="sidebar"><div>ISYCODE · WORKSPACE</div><div class="side-tabs" role="tablist" aria-label="Sidebar"><button data-side="summary" role="tab" aria-selected="true">Resumen</button><button data-side="files" role="tab" aria-selected="false">Archivos</button></div><div id="side-content"></div></aside></div>
+<div class="prompt"><input aria-label="Ejemplo de caja de entrada" placeholder="Describe una tarea…"></div>
+<div class="statusbar"><span><span class="glyph" data-icon="chat"></span>Sesiones</span><span><span class="glyph" data-icon="branch"></span>Multi Harness</span><span><span class="glyph" data-icon="settings"></span>Configuración</span><span class="token">Space: expandir · Doble clic: menú de copia</span></div>
+</section>
+<p class="preview-state">Ubuntu Sans Mono conserva el texto; los símbolos ausentes usan una copia local de DejaVu Sans Mono ajustada al ancho en esta vista. El fallback y la selección exacta en la terminal real se verificarán durante la implementación.</p>
+<!-- Copyright 2026 itshover. Apache-2.0. Modified 2026-10-11: SVG geometry extracted from preserved TSX; Motion sequences adapted to Web Animations with keyboard access, finite text-frame examples and reduced motion. -->
+<section class="motion-demo" aria-label="Its Hover y adaptación para terminal">
+<div class="motion-head"><h2>Its Hover · movimiento con intención</h2><label><input type="checkbox" id="reduce-motion"> Reducir movimiento</label></div>
+<p>SVG animado a la izquierda; idea equivalente con caracteres a la derecha. La TUI seguirá usando Unicode con Ubuntu Sans Mono. Estas muestras no copian texto ni ejecutan comandos o conexiones.</p>
+<div class="motion-cards">__HOVER_CARDS__</div>
+<p id="motion-status" class="motion-state" role="status">Pasa el mouse, enfoca con Tab o pulsa un ejemplo.</p>
+<p><a href="https://github.com/itshover/itshover">Its Hover</a> · <a href="licenses/itshover-Apache-2.0.txt">Apache 2.0</a> · <a href="itshover-sources.json">Fuentes preservadas y hashes</a>. Adaptación para este comparador; la implementación nativa en terminal queda pendiente.</p>
+</section>
+<h2 style="margin-top:32px">Familia visual SVG · Tabler Icons · MIT</h2>
+<div class="gallery" id="gallery"></div>
+<div class="guides"><section><h2>Reglas que aplicaríamos a toda la TUI</h2><ul><li>Un icono identifica la función; el texto explica el estado.</li><li>Verde para resultados correctos; disponibilidad normal en blanco.</li><li>Aviso, error, espera y pausa usan símbolos distintos.</li><li>Un único estilo para búsqueda, bordes, foco y ayuda.</li><li>Settings por categorías; sidebar plano y con detalles progresivos.</li><li>En terminal pequeña se compacta el contenido; las acciones siguen accesibles.</li></ul></section><section><h2>Fuentes y licencias</h2><p><a href="https://github.com/ryanoasis/nerd-fonts">Nerd Fonts</a> reúne más de 10 000 glifos de varias colecciones. Código MIT; fuentes y glifos con sus propias licencias. JetBrains, Cascadia e Iosevka: OFL. Ubuntu: Ubuntu Font Licence. DejaVu: Bitstream Vera y cambios de DejaVu en dominio público.</p><p>Los glifos usados por la vista pertenecen a <a href="https://github.com/primer/octicons">Octicons</a> y Seti/original, ambos MIT según el registro de Nerd Fonts. La comparación conserva los avisos de las fuentes parcheadas.</p><p><a href="https://github.com/tabler/tabler-icons">Tabler Icons</a> mantiene un trazo uniforme y licencia MIT. Los SVG no son glifos de terminal: esa adaptación es trabajo futuro.</p><p><a href="GUIA.md">Cómo usar el comparador</a> · <a href="INVESTIGACION.md">Investigación y plan completo</a> · <a href="asset-sources.json">Procedencia y hashes</a> · <a href="licenses/nerd-fonts-LICENSE.txt">Avisos de Nerd Fonts</a> · <a href="licenses/tabler-MIT.txt">MIT de Tabler</a></p></section></div>
+</main>
+<script>
+const icons=__ICONS__;
+const categories={
+ conversation:{title:"Conversación",rows:[["Proveedor","NVIDIA NIM","Proveedor de modelos para este workspace."],["Modelo","GLM 5.3","Modelo utilizado en esta conversación."],["Razonamiento","Automático","Nivel de razonamiento del modelo."],["Rol","Programador","Instrucciones de rol para el asistente."],["Archivo de contexto","Ninguno","Añadir un archivo .md / .txt."]]},
+ preferences:{title:"Preferencias",rows:[["Contraste","Alto","Superficies negras y foco cyan."],["Iconos","Unicode","Alternativas Nerd Fonts y ASCII disponibles."],["Sonidos","Activados","Avisos al completar una tarea."],["Densidad","Cómoda","Compactar según el tamaño de terminal."]]},
+ permissions:{title:"Permisos",rows:[["Leer archivos","Permitido","Grant de lectura del workspace."],["Editar archivos","Requiere aprobación","Revisar los cambios antes de aplicarlos."],["Comandos","Sandbox","Revisión y aprobación por acción."],["Copiar selección","Permitido","Sólo el rango marcado, con control del owner."]]},
+ connections:{title:"Conexiones",rows:[["Proveedor","NVIDIA NIM","Configurado en la referencia."],["MCP","Sin configurar","Añadir una conexión cuando la necesites."],["Gateway","Sin comprobar","No se realizó una comprobación real."],["Bridge","Opcional","Coordinación; no concede permisos."]]}}
+const catIcons={conversation:"chat",preferences:"settings",permissions:"shield",connections:"connection"};
+let currentView="settings", currentCategory="conversation",currentSide="summary";
+const ui=document.getElementById("ui");
+function glyph(role){return '<span class="glyph" data-icon="'+role+'" aria-hidden="true"></span>';}
+function paintIcons(){const mode=document.getElementById("icons").value;ui.classList.toggle("ascii",mode==="ascii");document.querySelectorAll("[data-icon]").forEach(el=>{el.textContent=icons[el.dataset.icon][mode];});}
+function renderMain(){
+ let html="";
+ if(currentView==="settings"){
+ const cat=categories[currentCategory];
+ categories.preferences.rows[1][1]=document.getElementById("icons").selectedOptions[0].text.split(" · ")[0];
+ html='<div class="dialog"><h2>'+glyph("settings")+'Configuración</h2><div class="intro">Personaliza ISyCode para este workspace.</div><div class="settings-grid"><nav class="categories" aria-label="Categorías">'+Object.keys(categories).map(k=>'<button data-category="'+k+'" aria-selected="'+(k===currentCategory)+'">'+glyph(catIcons[k])+categories[k].title+'</button>').join("")+'</nav><dl class="settings-list">'+cat.rows.map(r=>'<div class="setting"><dt>'+r[0]+'</dt><dd>'+r[1]+'</dd><div class="hint">'+r[2]+'</div></div>').join("")+'</dl></div><div class="dialog-footer">↑↓ mover · Enter abrir · Esc volver · Shift+Tab buscar</div></div>';
+ } else if(currentView==="home"){
+ html='<div class="dialog"><h2>'+glyph("terminal")+'Salida del comando</h2><div class="intro">python -m unittest -q · ejemplo de resultado</div><pre class="output">$ python -m unittest -q\n\nRan 2 tests in 0.12s\n\n'+icons.check[document.getElementById("icons").value]+' Completado · exit 0</pre><div class="dialog-footer">Space: expandir · Doble clic: menú de copia</div></div><div class="side-section"><h3>'+glyph("skills")+'Skills · 6 disponibles</h3><div class="side-note">planificación · depuración · revisión de código</div></div><div class="side-section"><h3>'+glyph("idea")+'Idea box</h3><div class="side-note">Captura una idea · Ctrl+Shift+Enter</div></div>';
+ } else {
+ html='<div class="dialog"><h2>'+glyph("copy")+'Texto y copia</h2><div class="intro">Marca texto con el mouse. Esta vista muestra exactamente el rango elegido.</div><pre class="selectiondemo" id="selection-text">def helper():\n    x = 1\n    y = 2\n    return x + y</pre><div class="actions"><button id="show-selection">'+glyph("copy")+'Ver selección</button><button id="whole-box">'+glyph("code")+'Ver caja completa</button></div><p class="side-note" id="selection-result" role="status">Marca dos líneas y pulsa “Ver selección”.</p><div class="dialog-footer">Space: expandir · Doble clic: menú de copia</div></div>';
+ }
+ document.getElementById("main-view").innerHTML=html;
+ document.querySelectorAll("[data-category]").forEach(b=>b.onclick=()=>{currentCategory=b.dataset.category;renderMain();});
+ if(currentView==="copy"){
+ document.getElementById("show-selection").onclick=()=>{let sel=window.getSelection(),box=document.getElementById("selection-text");let value=sel&&sel.rangeCount&&box.contains(sel.anchorNode)&&box.contains(sel.focusNode)?sel.toString():"";document.getElementById("selection-result").textContent=value?"Selección exacta: "+JSON.stringify(value):"No hay texto seleccionado. La caja completa no se usa como reemplazo.";};
+ document.getElementById("whole-box").onclick=()=>{document.getElementById("selection-result").textContent="Caja completa (acción separada): "+JSON.stringify(document.getElementById("selection-text").textContent);};
+ }
+ paintIcons();
+}
+function renderSide(){
+ let html=currentSide==="summary"?
+ '<section class="side-section"><h3>'+glyph("shield")+'IsySentinel</h3><div class="side-note">7 herramientas · permisos del workspace</div></section><section class="side-section"><h3>'+glyph("connection")+'MCP</h3><div class="side-row"><span>Conexiones</span><span class="dim">Sin configurar</span></div></section><section class="side-section"><h3>'+glyph("code")+'Lenguajes</h3><div class="side-row"><span>Pyright</span><span>Listo</span></div><div class="side-row"><span>clangd</span><span>Listo</span></div><div class="side-row"><span>rust-analyzer</span><span class="warn">'+glyph("warning")+'No disponible</span></div><div class="side-note">Instalado · sandbox no disponible</div><div class="side-row"><span>TypeScript</span><span class="warn">'+glyph("warning")+'No disponible</span></div><div class="side-row"><span>gopls</span><span class="dim">Fuera de PATH</span></div></section><section class="side-section"><h3>'+glyph("skills")+'Skills</h3><div class="side-note">6 disponibles · ver lista</div></section><section class="side-section"><h3>'+glyph("connection")+'Conexiones</h3><div class="side-row"><span>NVIDIA NIM</span><span>Configurado</span></div></section>':
+ '<section class="side-section"><h3>'+glyph("folder")+'Archivos</h3><div class="side-row"><span>'+glyph("folder")+'src/</span></div><div class="side-row"><span>'+glyph("python")+'main.py</span><span class="dim">Python</span></div><div class="side-row"><span>'+glyph("typescript")+'client.ts</span><span class="dim">TypeScript</span></div><div class="side-row"><span>'+glyph("rust")+'lib.rs</span><span class="dim">Rust</span></div><div class="side-row"><span>'+glyph("book")+'README.md</span></div><div class="side-note">Árbol de ejemplo; no lee archivos reales.</div></section>';
+ document.getElementById("side-content").innerHTML=html;paintIcons();
+}
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{currentView=b.dataset.view;document.querySelectorAll("[data-view]").forEach(x=>x.setAttribute("aria-selected",String(x===b)));renderMain();});
+document.querySelectorAll("[data-side]").forEach(b=>b.onclick=()=>{currentSide=b.dataset.side;document.querySelectorAll("[data-side]").forEach(x=>x.setAttribute("aria-selected",String(x===b)));renderSide();});
+document.getElementById("icons").onchange=()=>{renderMain();renderSide();};
+document.getElementById("font").onchange=async e=>{ui.style.setProperty("--ui-font",e.target.value);await document.fonts.load('16px '+e.target.value);document.getElementById("font-state").textContent="Fuente local cargada · "+e.target.options[e.target.selectedIndex].text;};
+document.getElementById("size").oninput=e=>{ui.style.setProperty("--size",e.target.value+"px");document.getElementById("size-label").textContent=e.target.value+" px";};
+document.getElementById("leading").oninput=e=>{ui.style.setProperty("--leading",e.target.value);document.getElementById("leading-label").textContent=e.target.value;};
+const galleryNames={settings:"Configuración",shield:"Permisos",connection:"Conexiones",code:"Lenguajes",skills:"Skills",folder:"Archivos",chat:"Sesiones",terminal:"Comandos",copy:"Copiar",clock:"En curso",check:"Completado",warning:"Aviso",error:"Error",pause:"Pausa",search:"Buscar",idea:"Ideas",branch:"Multi Harness",book:"Contexto"};
+document.getElementById("gallery").innerHTML=Object.entries(galleryNames).map(([k,name])=>'<div class="icon-item"><img alt="" src="icons/tabler/'+icons[k].svg+'.svg"><span>'+name+'</span></div>').join("");
+renderMain();renderSide();
+Promise.all(["JBNerd","CascadiaNerd","IosevkaNerd","UbuntuCurrent","UnicodeFallback"].map(x=>document.fonts.load("16px "+x))).then(()=>document.fonts.ready).then(()=>{const f=document.getElementById("font");document.getElementById("font-state").textContent="Fuentes locales cargadas · "+f.options[f.selectedIndex].text;document.body.dataset.fontsReady="true";}).catch(()=>{document.getElementById("font-state").textContent="Error cargando alguna fuente; revisar la consola.";});
+</script>
+<script src="hover-motion.js"></script>
+</html>"""
+(ROOT/"preview.html").write_text(template.replace("__ICONS__",json.dumps(mapping,ensure_ascii=False)).replace("__HOVER_CARDS__",hover_cards),encoding="utf-8")
+print("Built local font/icon comparison")

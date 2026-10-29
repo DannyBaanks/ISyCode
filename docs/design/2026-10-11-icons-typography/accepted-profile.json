@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-11",
+  "selected_by": "Danny, explicit message and attached screenshot visible in conversation",
+  "visual_direction": "Proposal 1 / Contraste esencial",
+  "font": "Ubuntu Sans Mono",
+  "font_resource": "fonts/ubuntu-current.ttf",
+  "icons": "unicode",
+  "browser_font_size_px": 14,
+  "browser_line_height": 1.3,
+  "source_reference": "/tmp/codex-clipboard-5d8e6e93-e61a-4a6a-b0d3-0e73b22169fe.png",
+  "source_file_hash_status": "NOT_DEMONSTRATED: supplied temporary file no longer exists; preferences transcribed from image in conversation",
+  "terminal_profile_changed": false,
+  "product_code_changed": false,
+  "note": "Browser CSS pixels and line-height are visual preferences, not a verified terminal point-size conversion."
+}

@@ -1,0 +1,34 @@
+{
+  "scenario": "B",
+  "model": "openai/gpt-oss-20b",
+  "started": "2026-10-08T05:19:42Z",
+  "turn": "completed",
+  "final_role": "assistant",
+  "final_answer": "ZAFIRO-7319",
+  "codeword_in_answer": true,
+  "notes": [],
+  "history_len": 42,
+  "calls": [
+    {
+      "n": 1,
+      "t": 1791436784.426639,
+      "model": "openai/gpt-oss-20b",
+      "kind": "chat",
+      "messages": 42,
+      "chars": 590127,
+      "sha256": "6258fee60f8f11b18359d7ce3bd46d022ae2faeba6bb7d58640feb934b9c2c51",
+      "has_capsule": false,
+      "has_request_0": true,
+      "has_summary_notes": false,
+      "ok": true,
+      "answer": "ZAFIRO-7319",
+      "usage": {
+        "prompt_tokens": 117038,
+        "total_tokens": 117092,
+        "completion_tokens": 54
+      }
+    }
+  ],
+  "journal": "PASS",
+  "finished": "2026-10-08T05:19:55Z"
+}

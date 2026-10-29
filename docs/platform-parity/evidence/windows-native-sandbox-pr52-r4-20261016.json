@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-10-15T21:31:37.304424-06:00",
+  "environment": {
+    "system": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "pytest_environment": "project .venv",
+    "temp_volume": "D:"
+  },
+  "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_process.py tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_registry.py tests/test_windows_sandbox_recovery.py tests/test_windows_sandbox_acceptance.py tests/test_command_runner_windows.py tests/test_platform_sandbox.py tests/test_windows_sandbox_volume.py tests/test_windows_sandbox_volume_api.py tests/test_windows_sandbox_storage_cli.py tests/test_windows_sandbox_volume_acceptance.py --basetemp D:\\isycode-pr52-sandbox-r4",
+  "exit_code": 0,
+  "result": "115 passed, 13 skipped, 1 xfailed in 461.42s (0:07:41)",
+  "output": "docs/platform-parity/evidence/windows-native-sandbox-pr52-r4-20261016.txt",
+  "output_sha256": "8ab488c65e2b341801c046ebbdf1dc569e715d326729dbe795f787b1d38108ca",
+  "notes": "Windows local. Secure scratch creation, unchanged volume-root ACL, recovery from creator death, sandbox process controls and available real-VHD acceptance checks passed. Skips remain explicit host/operator controls."
+}

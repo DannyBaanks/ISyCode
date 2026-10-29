@@ -1,0 +1,16 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- C:\Development\ISyCo Git\ISyCode\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Development\ISyCo Git\ISyCode
+configfile: pyproject.toml
+plugins: platformdirs-4.13.0, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 5 items
+
+tests/test_bridge_presence.py::test_presence_parser_keeps_fresh_public_names_only PASSED [ 20%]
+tests/test_bridge_presence.py::test_presence_button_never_reaches_bridge_client PASSED [ 40%]
+tests/test_bridge_presence.py::test_presence_button_lists_names_only_after_confirmation PASSED [ 60%]
+tests/test_bridge_presence.py::test_presence_line_uses_readable_names_and_stays_on_one_width PASSED [ 80%]
+tests/test_bridge_presence.py::test_real_button_message_pump_can_cancel_modal PASSED [100%]
+
+============================= 5 passed in 10.02s ==============================

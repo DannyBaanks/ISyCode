@@ -1,0 +1,51 @@
+hito: M9
+puerta: G9
+estado: BLOQUEADO
+sha_evaluado: 57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a
+autor: codex_isycode_20261008
+revision: ausente
+casos:
+  - id: G9-01
+    resultado: PASS
+    observado: 130 regresiones seleccionadas PASS; validador historico exit0; full suite nueva NOT_RUN
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a/runtime-regressions.log
+        sha256: 065c31a43704d1b2ddcfd8648b68f2f4881825d3ddb7ecd083437d13281949b4
+      - docs/evidence/classic-security-ux/M9/57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a/validator-after.log
+        sha256: 14448f45b7865c724eb7ad74edb122bb1e74aef32f613159a2bbd2ddd20c05a3
+  - id: G9-02
+    resultado: EN_REVISION
+    observado: Mediciones anteriores HISTORICAL; sin nueva medicion
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a/historical-measurements-87f9fe1.json
+        sha256: 5e096432928b67795ccc643a95138f76d32ea7b7a7709dd1bd731c6af324062d
+  - id: G9-03
+    resultado: EN_REVISION
+    observado: Medicion anterior task.cancel no demuestra tecla Esc fisica
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a/historical-measurements-87f9fe1.json
+        sha256: 5e096432928b67795ccc643a95138f76d32ea7b7a7709dd1bd731c6af324062d
+  - id: G9-04
+    resultado: EN_REVISION
+    observado: Soak v2 activo; el snapshot no es un resultado final
+    artefactos:
+      - docs/evidence/classic-security-ux/M9/57ba3cf09b734f99fa856e94c3f83ed0b7a5f80a/soak-progress-only.json
+        sha256: c9618b8c61868c921672b419f48ac97be66b4947e4ff975bfef09852809ace5b
+  - id: G9-05
+    resultado: EN_REVISION
+    observado: BLOCKED: faltan cinco participantes reales; protocolo preparado
+    artefactos:
+      - docs/usability-g9/GUIA.md
+        sha256: 2c2f407c6a4e08c96f3220822bb1b01beaa7c64214a1aa484e0262056b692c02
+      - docs/usability-g9/observations-template.csv
+        sha256: 272fedbb0315c86f0edbea163e75cfb2710cb002ea1b82b0affe2c8afc3ba73a
+  - id: G9-06
+    resultado: PASS
+    observado: Flujo NVIDIA real; verificador corregido sobre evidencia cruda preservada
+    artefactos:
+      - docs/evidence/m9-live/20261008-live01/result.json
+        sha256: a0b91af504b6bce5ce4393ba7b599faf5b3b974b28ab0b15f064885445ad20c9
+      - docs/evidence/m9-live/20261008-live01/reevaluation.json
+        sha256: 7fa6a54ef180d48637086b44e7df0a2a9002bfcb14dab69fd5e8fe559cd04d3d
+      - docs/evidence/m9-live/20261008-live01/script-executed.py
+        sha256: fd6335e6cb43ddd3e839c2ba636a2c50780c762908d195b83487933b95f2f26f

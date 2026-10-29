@@ -1,0 +1,52 @@
+{
+  "scenario": "B",
+  "model": "openai/gpt-oss-20b",
+  "started": "2026-10-08T05:21:00Z",
+  "turn": "completed",
+  "final_role": "assistant",
+  "final_answer": "ZAFIRO-7319",
+  "codeword_in_answer": true,
+  "notes": [
+    "Context capsule · the request was larger than the model window; 40 earlier messages or tool results condensed and sent again · no tool effects repeated"
+  ],
+  "history_len": 42,
+  "calls": [
+    {
+      "n": 1,
+      "t": 1791436862.7694175,
+      "model": "openai/gpt-oss-20b",
+      "kind": "chat",
+      "messages": 42,
+      "chars": 896367,
+      "sha256": "17ce86cf0d519d3117b097ca2f0b91d55d15305e52eb7acf120f1278907f6e24",
+      "has_capsule": false,
+      "has_request_0": true,
+      "has_summary_notes": false,
+      "error": "StreamError",
+      "error_kind": "CONTEXT",
+      "http_status": 400,
+      "provider_code": "context_length_exceeded"
+    },
+    {
+      "n": 2,
+      "t": 1791436875.4346442,
+      "model": "openai/gpt-oss-20b",
+      "kind": "chat",
+      "messages": 3,
+      "chars": 8696,
+      "sha256": "cd949a186ed780865fa7b5a7d7a37143bd6dc132e2c677daed68491530222e1b",
+      "has_capsule": true,
+      "has_request_0": false,
+      "has_summary_notes": false,
+      "ok": true,
+      "answer": "ZAFIRO-7319",
+      "usage": {
+        "prompt_tokens": 3452,
+        "total_tokens": 3528,
+        "completion_tokens": 76
+      }
+    }
+  ],
+  "journal": "PASS",
+  "finished": "2026-10-08T05:21:18Z"
+}

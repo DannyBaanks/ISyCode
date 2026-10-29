@@ -1,0 +1,65 @@
+{
+  "screen": "WorkspaceModeScreen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-80itaaaf",
+  "mode": null,
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "workspace-mode-card",
+      "region": [
+        2,
+        0,
+        73,
+        27
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "workspace-mode-title",
+      "region": [
+        5,
+        2,
+        67,
+        2
+      ],
+      "focus": false,
+      "text": "¿Cómo debe trabajar ISyCode en esta carpeta?"
+    },
+    {
+      "type": "Static",
+      "id": "workspace-mode-copy",
+      "region": [
+        5,
+        4,
+        67,
+        16
+      ],
+      "focus": false,
+      "text": "/tmp/isycode-e2e-audit-80itaaaf/project\n\nClassic: listo para programar. Lectura/búsqueda, propuestas de edición, chat, sesiones guardadas, revisión de Git y comandos en sandbox (cuando hay) están listos. Una confirmación aparte puede confiar en esta carpeta para que las ediciones normales y las pruebas aisladas dejen de preguntar una a una. Hasta que confirmes eso, cada edición, borrado/movimiento, comando y commit sigue preguntando. Los commits, secretos y cambios de autoridad preguntan igual.\nSecurity: no se permite nada hasta que lo actives en Configuración → Authority.\n\nLos dos modos usan IsySentinel y el diario de acciones. Nunca se implica un shell libre ni archivos sensibles. Cambia cuando quieras en Configuración → Authority."
+    },
+    {
+      "type": "OptionList",
+      "id": "workspace-mode-options",
+      "region": [
+        5,
+        21,
+        67,
+        4
+      ],
+      "focus": true,
+      "options": [
+        "Classic · listo para usar",
+        "Security · todo apagado hasta que yo lo permita"
+      ],
+      "highlighted": 0
+    }
+  ],
+  "provider_mode": "success",
+  "provider_calls": 0,
+  "file_value": "value = 1\n"
+}

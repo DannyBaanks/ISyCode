@@ -1,0 +1,98 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_settings_show_actual_values_and_keep_category_search_back_reachable[size0] _
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:52: in test_settings_show_actual_values_and_keep_category_search_back_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:33: in scenario
+    assert {"providers_open", "models_open", "reasoning_open", "roles_open", "context_inject"} <= rows.keys()
+E   AssertionError: assert {'context_inject', 'models_open', 'providers_open', 'reasoning_open', 'roles_open'} <= dict_keys(['providers_open', 'reasoning_open', 'roles_open', 'context_menu', 'context_inject', 'clear_role'])
+E    +  where dict_keys(['providers_open', 'reasoning_open', 'roles_open', 'context_menu', 'context_inject', 'clear_role']) = <built-in method keys of dict object at 0x7f0c10617440>()
+E    +    where <built-in method keys of dict object at 0x7f0c10617440> = {'providers_open': 0, 'reasoning_open': 1, 'roles_open': 2, 'context_menu': 3, ...}.keys
+_ test_settings_show_actual_values_and_keep_category_search_back_reachable[size1] _
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:52: in test_settings_show_actual_values_and_keep_category_search_back_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:33: in scenario
+    assert {"providers_open", "models_open", "reasoning_open", "roles_open", "context_inject"} <= rows.keys()
+E   AssertionError: assert {'context_inject', 'models_open', 'providers_open', 'reasoning_open', 'roles_open'} <= dict_keys(['providers_open', 'reasoning_open', 'roles_open', 'context_menu', 'context_inject', 'clear_role'])
+E    +  where dict_keys(['providers_open', 'reasoning_open', 'roles_open', 'context_menu', 'context_inject', 'clear_role']) = <built-in method keys of dict object at 0x7f0c0b126b80>()
+E    +    where <built-in method keys of dict object at 0x7f0c0b126b80> = {'providers_open': 0, 'reasoning_open': 1, 'roles_open': 2, 'context_menu': 3, ...}.keys
+_ test_settings_show_actual_values_and_keep_category_search_back_reachable[size2] _
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:52: in test_settings_show_actual_values_and_keep_category_search_back_reachable
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:33: in scenario
+    assert {"providers_open", "models_open", "reasoning_open", "roles_open", "context_inject"} <= rows.keys()
+E   AssertionError: assert {'context_inject', 'models_open', 'providers_open', 'reasoning_open', 'roles_open'} <= dict_keys(['providers_open', 'reasoning_open', 'roles_open', 'context_menu', 'context_inject', 'clear_role'])
+E    +  where dict_keys(['providers_open', 'reasoning_open', 'roles_open', 'context_menu', 'context_inject', 'clear_role']) = <built-in method keys of dict object at 0x7f0c0ab1f6c0>()
+E    +    where <built-in method keys of dict object at 0x7f0c0ab1f6c0> = {'providers_open': 0, 'reasoning_open': 1, 'roles_open': 2, 'context_menu': 3, ...}.keys
+_ test_model_setting_opens_current_provider_picker_without_changing_selection __
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:63: in scenario
+    app._select_menu_entry(next(e for e in app._menu_entries if e["kind"] == "models_open"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+
+The above exception was the direct cause of the following exception:
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:67: in test_model_setting_opens_current_provider_picker_without_changing_selection
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+E   RuntimeError: coroutine raised StopIteration
+__ test_provider_single_click_previews_and_resizes_without_switching_provider __
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:92: in test_provider_single_click_previews_and_resizes_without_switching_provider
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:83: in scenario
+    assert detail.region.x > options.region.x
+E   AssertionError: assert 18 > 18
+E    +  where 18 = Region(x=18, y=32, width=104, height=2).x
+E    +    where Region(x=18, y=32, width=104, height=2) = Static(id='action-detail').region
+E    +  and   18 = Region(x=18, y=9, width=104, height=22).x
+E    +    where Region(x=18, y=9, width=104, height=22) = PreviewOptionList(id='action-list').region
+=========================== short test summary info ============================
+FAILED tests/test_mockup_settings.py::test_settings_show_actual_values_and_keep_category_search_back_reachable[size0]
+FAILED tests/test_mockup_settings.py::test_settings_show_actual_values_and_keep_category_search_back_reachable[size1]
+FAILED tests/test_mockup_settings.py::test_settings_show_actual_values_and_keep_category_search_back_reachable[size2]
+FAILED tests/test_mockup_settings.py::test_model_setting_opens_current_provider_picker_without_changing_selection
+FAILED tests/test_mockup_settings.py::test_provider_single_click_previews_and_resizes_without_switching_provider
+5 failed in 5.07s

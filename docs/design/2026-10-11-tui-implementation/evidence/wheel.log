@@ -1,0 +1,9 @@
+Processing /home/danny/Development/ISyCo Git/ISyCode
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: isycode
+  Building wheel for isycode (pyproject.toml): started
+  Building wheel for isycode (pyproject.toml): finished with status 'done'
+  Created wheel for isycode: filename=isycode-0.1.0-py3-none-any.whl size=9030475 sha256=dd9219a1279d748521777763f85af4e8c23abaf2794a7ba9e89abb09172098ae
+  Stored in directory: /tmp/pip-ephem-wheel-cache-z2fc30xz/wheels/bd/3c/9c/6ca9d0236f57e60b2458067f3c31efdaf98d728131607025bb
+Successfully built isycode

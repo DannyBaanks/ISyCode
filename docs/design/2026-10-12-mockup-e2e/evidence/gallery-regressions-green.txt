@@ -1,0 +1,56 @@
+......F.........................................                         [100%]
+=================================== FAILURES ===================================
+__ test_unscoped_picker_reveals_the_current_model_without_requiring_expansion __
+tests/test_mockup_selectors.py:45: in test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+    current = next(row for row in screen.query(ModelChoice)
+E   StopIteration
+
+During handling of the above exception, another exception occurred:
+tests/test_mockup_selectors.py:41: in test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+    async with app.run_test(size=(100, 30)) as pilot:
+/usr/lib/python3.12/contextlib.py:231: in __aexit__
+    await self.gen.athrow(value)
+.venv/lib/python3.12/site-packages/textual/app.py:2218: in run_test
+    raise self._exception
+.venv/lib/python3.12/site-packages/textual/message_pump.py:663: in _process_messages_loop
+    await self._dispatch_message(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:739: in _dispatch_message
+    await self._on_message(message)
+.venv/lib/python3.12/site-packages/textual/message_pump.py:829: in _on_message
+    await invoke(method, message)
+.venv/lib/python3.12/site-packages/textual/_callback.py:96: in invoke
+    return await _invoke(callback, *params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/textual/_callback.py:56: in _invoke
+    result = callback(*params[:parameter_count])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/isycode/tui_screens_harness.py:362: in on_collapsible_expanded
+    self.app.run_worker(self.app._load_account_models(name), group="provider-models")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'SelectorProbe' object has no attribute '_load_account_models'
+----------------------------- Captured stderr call -----------------------------
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/danny/Development/ISyCo                                                │
+│ Git/ISyCode/src/isycode/tui_screens_harness.py:362 in                        │
+│ on_collapsible_expanded                                                      │
+│                                                                              │
+│   359 │   │   │   if name not in attempted:                                  │
+│   360 │   │   │   │   self.app._account_models_attempted = attempted | {name │
+│   361 │   │   │   │   self.app._account_models_loading = True                │
+│ ❱ 362 │   │   │   │   self.app.run_worker(self.app._load_account_models(name │
+│   363 │                                                                      │
+│   364 │   def on_collapsible_collapsed(self, event: Collapsible.Collapsed) - │
+│   365 │   │   self.expanded_providers.discard((event.collapsible.id or "").r │
+│                                                                              │
+│ ╭────────────── locals ───────────────╮                                      │
+│ │ attempted = set()                   │                                      │
+│ │     event = Expanded()              │                                      │
+│ │  group_id = 'model-provider-openai' │                                      │
+│ │      name = 'openai'                │                                      │
+│ │      self = ModelsScreen()          │                                      │
+│ ╰─────────────────────────────────────╯                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+AttributeError: 'SelectorProbe' object has no attribute '_load_account_models'
+=========================== short test summary info ============================
+FAILED tests/test_mockup_selectors.py::test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+1 failed, 47 passed in 34.77s

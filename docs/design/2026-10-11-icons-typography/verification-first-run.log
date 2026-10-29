@@ -1,0 +1,12 @@
+Command: python3 verify-design.py
+CWD: /home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-11-icons-typography
+Exit status: 1
+Raw output:
+FONT_TABLES: 21 Unicode roles covered by fallback; 17 absent from Ubuntu; terminal rendering NOT_DEMONSTRATED
+Traceback (most recent call last):
+  File "/home/danny/Development/ISyCo Git/ISyCode/docs/design/2026-10-11-icons-typography/verify-design.py", line 53, in <module>
+    file = ROOT / entry["path"]
+                  ~~~~~^^^^^^^^
+KeyError: 'path'
+
+Correction: the earlier asset manifest names the field "file"; later manifests use "path". The verifier now accepts both. No assets were altered to fit the check.

@@ -1,0 +1,30 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_model_setting_escape_returns_to_settings_and_keeps_active_model _____
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:112: in test_model_setting_escape_returns_to_settings_and_keeps_active_model
+    asyncio.run(scenario())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+/home/danny/Development/ISyCo Git/ISyCode/tests/test_mockup_settings.py:108: in scenario
+    assert app._menu_mode == "settings"
+E   AssertionError: assert 'providers' == 'settings'
+E     
+E     - settings
+E     + providers
+__ test_unscoped_picker_reveals_the_current_model_without_requiring_expansion __
+tests/test_mockup_selectors.py:47: in test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+    assert current.region.width > 0
+E   AssertionError: assert 0 > 0
+E    +  where 0 = Region(x=0, y=0, width=0, height=0).width
+E    +    where Region(x=0, y=0, width=0, height=0) = ModelChoice(id='model-choice-0', classes='-style-default model-choice -selected').region
+=========================== short test summary info ============================
+FAILED tests/test_mockup_settings.py::test_model_setting_escape_returns_to_settings_and_keeps_active_model
+FAILED tests/test_mockup_selectors.py::test_unscoped_picker_reveals_the_current_model_without_requiring_expansion
+2 failed in 1.69s

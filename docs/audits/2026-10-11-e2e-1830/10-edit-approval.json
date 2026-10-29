@@ -1,0 +1,131 @@
+{
+  "screen": "WriteApprovalScreen",
+  "size": [
+    140,
+    40
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-r7dduhtt",
+  "mode": "classic",
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "write-approval-card",
+      "region": [
+        15,
+        2,
+        110,
+        36
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "write-approval-title",
+      "region": [
+        18,
+        4,
+        104,
+        2
+      ],
+      "focus": false,
+      "text": "Cambiar archivo · app.py"
+    },
+    {
+      "type": "Static",
+      "id": "write-approval-summary",
+      "region": [
+        18,
+        6,
+        104,
+        3
+      ],
+      "focus": false,
+      "text": "Folder: /tmp/isycode-e2e-audit-r7dduhtt/project\n+1 / -1 lines. The assistant proposed this change; nothing is written unless you apply it. If the file changes before it is applied, the change is refused."
+    },
+    {
+      "type": "VerticalScroll",
+      "id": "write-approval-diff",
+      "region": [
+        18,
+        10,
+        104,
+        23
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": null,
+      "region": [
+        18,
+        10,
+        104,
+        4
+      ],
+      "focus": false,
+      "text": "RichVisual(Static(), <rich.table.Table object at 0x76ebf5f76b40>)"
+    },
+    {
+      "type": "Horizontal",
+      "id": "write-approval-actions",
+      "region": [
+        18,
+        33,
+        104,
+        3
+      ],
+      "focus": false
+    },
+    {
+      "type": "Button",
+      "id": "write-approval-reject",
+      "region": [
+        19,
+        33,
+        25,
+        1
+      ],
+      "focus": true,
+      "label": "Rechazar · n"
+    },
+    {
+      "type": "Button",
+      "id": "write-approval-apply",
+      "region": [
+        45,
+        33,
+        25,
+        1
+      ],
+      "focus": false,
+      "label": "Aplicar cambio · y"
+    },
+    {
+      "type": "Button",
+      "id": "write-approval-session",
+      "region": [
+        71,
+        33,
+        25,
+        2
+      ],
+      "focus": false,
+      "label": "Confiar en la carpeta esta sesión · s"
+    },
+    {
+      "type": "Button",
+      "id": "write-approval-always",
+      "region": [
+        97,
+        33,
+        25,
+        1
+      ],
+      "focus": false,
+      "label": "Permitir siempre…"
+    }
+  ],
+  "provider_mode": "tools",
+  "provider_calls": 2,
+  "file_value": "value = 1\n"
+}

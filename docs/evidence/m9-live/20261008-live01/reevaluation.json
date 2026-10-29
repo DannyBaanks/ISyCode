@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "checks": {
+    "negative_control": true,
+    "read_both_files": true,
+    "edit_applied": true,
+    "sandboxed_tests_pass": true,
+    "independent_tests_pass": true,
+    "tests_unchanged": true,
+    "journal_verified": true,
+    "provider_flow": true
+  },
+  "original_report_sha256": "a0b91af504b6bce5ce4393ba7b599faf5b3b974b28ab0b15f064885445ad20c9",
+  "evaluator_sha256": "ac2ded110fefc33f4a9d7eaac9c14d6002a6dd7ee24e0b224d270a71659fcca9",
+  "correction": "Initial evaluator expected status=applied + decision=ALLOW. Actual TUI contract returns status=written + receipt. Raw report is preserved; this evaluates exactly the same recorded tool results.",
+  "scope": "Real NVIDIA transport/model, owners, journal and bubblewrap; automated explicit approval of fixture edit/test commands through normal screens. Synthetic task, no real participants."
+}

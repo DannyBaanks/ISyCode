@@ -1,0 +1,65 @@
+{
+  "screen": "QuickStartScreen",
+  "size": [
+    80,
+    24
+  ],
+  "fixture": "/tmp/isycode-e2e-audit-80itaaaf",
+  "mode": null,
+  "widgets": [
+    {
+      "type": "Vertical",
+      "id": "quick-start-card",
+      "region": [
+        2,
+        0,
+        73,
+        26
+      ],
+      "focus": false
+    },
+    {
+      "type": "Static",
+      "id": "quick-start-title",
+      "region": [
+        5,
+        2,
+        67,
+        2
+      ],
+      "focus": false,
+      "text": "Bienvenido a ISyCode · ¿cómo quieres empezar?"
+    },
+    {
+      "type": "Static",
+      "id": "quick-start-copy",
+      "region": [
+        5,
+        4,
+        67,
+        15
+      ],
+      "focus": false,
+      "text": "/tmp/isycode-e2e-audit-80itaaaf/project\n\nAún no hay clave de proveedor; puedes añadirla después en Configuración → Proveedores.\n\nInicio rápido: esta carpeta pasa a ser un espacio recurrente en modo Classic — lectura/búsqueda, propuestas de edición y chat están listos. Una confirmación más puede encender todas las herramientas de código, y las ediciones, comandos y commits siguen preguntando hasta que las apruebes.\nConfiguración personalizada: elige recurrencia, Classic o Security, y cada herramienta paso a paso.\n\nLos dos caminos mantienen IsySentinel y el diario de acciones en todo."
+    },
+    {
+      "type": "OptionList",
+      "id": "quick-start-options",
+      "region": [
+        5,
+        20,
+        67,
+        4
+      ],
+      "focus": true,
+      "options": [
+        "Inicio rápido · listo en menos de un minuto",
+        "Configuración personalizada · elige cada paso"
+      ],
+      "highlighted": 0
+    }
+  ],
+  "provider_mode": "success",
+  "provider_calls": 0,
+  "file_value": "value = 1\n"
+}

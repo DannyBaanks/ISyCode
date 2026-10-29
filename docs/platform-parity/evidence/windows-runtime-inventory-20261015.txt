@@ -1,0 +1,8 @@
+Windows command sandbox runtime allowlist
+recorded_at_utc=2026-10-16T00:24:02.269306+00:00
+environment=Windows 11 x64; CPython 3.12.10
+CPython_alias_python=runtime/python.exe
+node_installed=True
+node_absolute_path=REJECTED; reason=native sandbox currently supports its explicit CPython runtime only
+bun_installed=True
+bun_absolute_path=REJECTED; reason=native sandbox currently supports its explicit CPython runtime only

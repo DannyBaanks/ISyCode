@@ -1,0 +1,92 @@
+........................................................................ [  3%]
+.........................s...........................sss................ [  6%]
+........................................................................ [ 10%]
+.....................................................................s.. [ 13%]
+.......sssssssssssssssssssssssssssssssssss.............................. [ 16%]
+........................................................................ [ 20%]
+.............................s..s....................................... [ 23%]
+.................................s...ssssssssss.........s..............s [ 26%]
+.s.s.s.s....ssss.s......ssssss..s...................s.........s.......s. [ 30%]
+.....................................................s.ssssss........... [ 33%]
+...........sss..ss.....................s................................ [ 36%]
+...........................................s...s....ssssss.............. [ 40%]
+......sssssss...ss............sss.s.ssssssssssssssssssssssssssss........ [ 43%]
+........................................................................ [ 46%]
+....................................F...........sss..................... [ 50%]
+.............ss........s..s.......s..................................... [ 53%]
+............sss..ss.sssssssss.ss......s................................. [ 56%]
+........................................................................ [ 60%]
+................................................................ssssssss [ 63%]
+sssss................................................................... [ 66%]
+.........................sssssssssssssssssssss..s....................... [ 70%]
+.............................ssssssssssss............................... [ 73%]
+..............sssss.s....................................s.............. [ 77%]
+........................................................................ [ 80%]
+.................................F..............................s....... [ 83%]
+...x.................................................................... [ 87%]
+....................sssssssssssss............sssssssssssssssssss........ [ 90%]
+.....s...s..................sssssssssssssssssss..ssss................... [ 93%]
+............sssssss................................ss....s..........s... [ 97%]
+..................s..ssssssssssssssssssssssssssssssssssssss...           [100%]
+================================== FAILURES ===================================
+_________________ test_models_screen_renders_family_variants __________________
+C:\Development\ISyCo Git\ISyCode\tests\test_model_families.py:170: in test_models_screen_renders_family_variants
+    assert "glm-5.3-flash" in str(screen.query_one("#model-detail").render())
+E   AssertionError: assert 'glm-5.3-flash' in 'Click a model. Context, reasoning and tools show here.'
+E    +  where 'Click a model. Context, reasoning and tools show here.' = str(Content('Click a model. Context, reasoning and tools show here.', spans=[Span(0, 54, style='#a9b5c2')]))
+E    +    where Content('Click a model. Context, reasoning and tools show here.', spans=[Span(0, 54, style='#a9b5c2')]) = render()
+E    +      where render = Static(id='model-detail').render
+E    +        where Static(id='model-detail') = query_one('#model-detail')
+E    +          where query_one = ModelsScreen().query_one
+_ test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet _
+C:\Development\ISyCo Git\ISyCode\tests\test_visual_tui.py:156: in test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet
+    asyncio.run(scenario())
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\progr\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+C:\Development\ISyCo Git\ISyCode\tests\test_visual_tui.py:123: in scenario
+    assert all(cell_len(line) <= widget.content_size.width for line in board.splitlines()), (
+E   AssertionError: (111, [(114, '\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580'), (114, '\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580...\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580'), (114, '\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580\u2580'), ...])
+E   assert False
+E    +  where False = all(<generator object test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet.<locals>.scenario.<locals>.<genexpr> at 0x000001C2D10B12A0>)
+============================ slowest 30 durations =============================
+181.00s call     tests/test_agent_events.py::test_ten_thousand_events_slow_consumer_preserves_terminals
+31.85s call     tests/test_windows_sandbox_registry.py::test_guard_does_not_change_other_owned_profile_acls
+29.25s call     tests/test_m9_adversarial.py::test_network_down_is_retried_briefly_then_stops_without_changing_authority
+24.99s setup    tests/test_windows_sandbox_process.py::test_native_lpac_loads_standard_native_extensions
+20.42s call     tests/test_continuity_capsule.py::test_a_long_resumed_session_continues_through_the_capsule
+18.28s call     tests/test_command_runner_windows.py::test_native_owner_keeps_approval_and_promotes_accounted_diff
+15.54s call     tests/test_windows_sandbox_recovery.py::test_recovery_after_creator_death
+15.51s setup    tests/test_windows_sandbox_process.py::test_native_lpac_runs_private_runtime
+15.28s call     tests/test_windows_sandbox_resources.py::test_marker_cannot_be_deleted_or_changed
+15.08s setup    tests/test_windows_sandbox_process.py::test_protected_profile_can_be_reused_without_leaking_thread_identity
+15.04s call     tests/test_command_runner_windows.py::test_native_owner_timeout_kills_tree_and_reports
+15.00s call     tests/test_updater.py::test_dirty_generated_snapshot_is_regenerated_after_restoring_local_changes
+14.98s setup    tests/test_windows_sandbox_registry.py::test_registry_read_works_but_key_creation_and_dacl_access_are_denied
+14.81s call     tests/test_command_runner_windows.py::test_native_owner_cancellation_never_promotes
+14.81s call     tests/test_agent_panel.py::test_eight_agents_one_hundred_events_each_never_mix
+14.62s setup    tests/test_windows_sandbox_acceptance.py::test_execution_file_budget_blocks_513_mib
+14.52s call     tests/test_command_runner_windows.py::test_volume_change_prevents_promotion
+14.48s setup    tests/test_windows_sandbox_resources.py::test_marker_parent_cannot_be_renamed
+14.41s setup    tests/test_windows_sandbox_process.py::test_native_lpac_blocks_original_file
+14.28s call     tests/test_command_runner_windows.py::test_cleanup_failure_reports_committed_effect_not_start_failure
+14.26s call     tests/test_windows_sandbox_resources.py::test_marker_owner_cannot_replace_dacl
+14.25s setup    tests/test_windows_sandbox_registry.py::test_registry_failure_restores_caller_and_never_resumes[acl]
+14.15s setup    tests/test_windows_sandbox_process.py::test_registry_protection_failure_never_resumes
+13.93s call     tests/test_windows_sandbox_resources.py::test_sensitive_masks_remove_secret_and_alias
+13.85s setup    tests/test_windows_sandbox_acceptance.py::test_owner_death_kills_job_without_cooperative_shutdown
+13.72s setup    tests/test_windows_sandbox_process.py::test_job_assignment_failure_never_resumes
+13.65s setup    tests/test_windows_sandbox_resources.py::test_registry_read_does_not_open_private_key
+13.53s call     tests/test_windows_sandbox_recovery.py::test_root_acl_unchanged_after_allocation
+13.34s setup    tests/test_windows_sandbox_resources.py::test_stage_writable_but_runtime_readonly
+13.31s setup    tests/test_windows_sandbox_resources.py::test_marker_owner_cannot_replace_dacl
+=========================== short test summary info ===========================
+FAILED tests/test_model_families.py::test_models_screen_renders_family_variants
+FAILED tests/test_visual_tui.py::test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_quiet
+2 failed, 1824 passed, 323 skipped, 11 deselected, 1 xfailed in 2527.90s (0:42:07)

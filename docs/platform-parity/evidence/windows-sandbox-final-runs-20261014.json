@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-14",
+  "workspace": "C:\\Development\\ISyCo Git\\ISyCode",
+  "environment": "Windows 11 10.0.26200, Xeon E5-2678 v3, CPython 3.12.10; Linux controls: disposable python:3.11 Docker container, non-root parity user",
+  "native_product_activation": false,
+  "scope": "Experimental backend controls and shared-owner regression; overlapping selections are not summed. No full-product acceptance, GitHub CI execution, package release or host quota changes.",
+  "runs": [
+    {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_windows_sandbox_resources.py tests/test_windows_sandbox_recovery.py tests/test_command_runner_windows.py::test_native_owner_keeps_approval_and_promotes_accounted_diff",
+      "output": "windows-sandbox-final-delta-20261014.txt",
+      "exit": 0,
+      "result": "18 passed in 239.35s"
+    },
+    {
+      "command": ".venv\\Scripts\\python.exe -m pytest -q tests/test_action_coverage.py::test_checked_in_snapshot_matches_live_catalog_and_owners tests/test_native_toolkit.py::test_bundled_skill_catalog_is_pinned_and_validated tests/test_native_toolkit.py::test_native_skill_activation_enters_owned_prompt_without_granting_tools tests/test_session_continuity_guard.py::test_old_sessions_stay_readable_and_the_format_is_unchanged",
+      "output": "windows-sandbox-integrity-final-20261014.txt",
+      "exit": 0,
+      "result": "4 passed in 9.67s"
+    },
+    {
+      "command": "docker run --rm --cap-add SYS_ADMIN --security-opt seccomp=unconfined --security-opt apparmor=unconfined --mount 'type=bind,source=C:\\Development\\ISyCo Git\\ISyCode,target=/repo,readonly' python:3.11 sh -c 'cp /repo/docs/platform-parity/evidence/linux-sandbox-current.sh /tmp/parity-run.sh && sh /tmp/parity-run.sh'",
+      "test_selection": "linux-sandbox-current.sh",
+      "output": "linux-sandbox-final-20261014.txt",
+      "exit": 0,
+      "result": "77 passed, 3 skipped in 182.67s"
+    }
+  ],
+  "negative_control": {
+    "output": "windows-lpac-budget-negative-20261014.txt",
+    "exit": 1,
+    "observed": "CPython wrote 537919488 bytes and exited 0; proposed per-file limit 536870912 bytes was not enforced",
+    "ruling": "Activation blocked; initial copy budget and disk preflight do not impose execution limits"
+  },
+  "not_demonstrated": ["bounded execution storage including profile storage", "native product activation", "broader IPC/device and IPv6/Internet controls", "project dependency and non-CPython runtime parity", "GitHub execution of updated CI step"]
+}

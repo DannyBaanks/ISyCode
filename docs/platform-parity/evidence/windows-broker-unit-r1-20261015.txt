@@ -1,0 +1,5 @@
+cwd=C:\Development\ISyCo Git\ISyCode
+command=py -m pytest -p no:cacheprovider --basetemp D:\Development\ISyCo\windows-parity\runs\20261015\broker-unit-r1\basetemp -m "not integration" -q tests/test_broker_preview.py
+.....                                                                    [100%]
+5 passed, 3 deselected in 0.57s
+EXIT_STATUS=0
