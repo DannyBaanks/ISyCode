@@ -281,6 +281,9 @@ class WorkspaceModeSwitchScreen(WorkspaceModeScreen):
         options.focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        # Textual dispatches this handler through every class in the MRO.
+        # Without prevent_default the parent would dismiss a second time.
+        event.prevent_default()
         if event.button.id == "workspace-mode-cancel":
             event.stop()
             self.dismiss(None)

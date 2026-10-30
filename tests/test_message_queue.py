@@ -127,6 +127,24 @@ def test_selected_queue_escape_restores_text_and_never_overwrites_draft(tmp_path
     asyncio.run(scenario())
 
 
+def test_queue_screen_keeps_close_reachable_with_eight_long_messages(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            app._queued_messages = [f"queued {index} " + "payload " * 60 for index in range(8)]
+            app.push_screen(QueuedMessagesScreen(app))
+            await pilot.pause()
+            close = app.screen.query_one("#queue-close")
+            assert close.region.y >= 0 and close.region.bottom <= 24
+            await pilot.click(close)
+            await pilot.pause()
+            assert not isinstance(app.screen, QueuedMessagesScreen)
+    asyncio.run(scenario())
+
+
 def test_missing_steering_metadata_revokes_prior_confirmation(monkeypatch):
     monkeypatch.setattr(reasoning_options, '_STEERING', {})
     monkeypatch.setattr(reasoning_options, '_STEERING_OBSERVED', {})
