@@ -865,7 +865,7 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
     DEFAULT_CSS = """
     CommandOutputCard { height: 4; width: 100%; padding: 0 1; margin: 1 0; border: round #414650; background: #17191f; }
     CommandOutputCard:focus-within { border: round #bb8cff; }
-    CommandOutputCard.-expanded { height: 18; }
+    CommandOutputCard.-expanded { height: auto; min-height: 6; max-height: 18; }
     CommandOutputCard .command-output-body { height: auto; width: 100%; }
     """
 

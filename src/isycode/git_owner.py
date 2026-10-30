@@ -294,9 +294,10 @@ class GitOwner:
             return "git rejected this repository root"
         try:
             reported = Path(result[1].decode("utf-8", "strict").strip()).resolve(strict=True)
+            selected = candidate.resolve(strict=True)
         except (UnicodeError, OSError, RuntimeError):
             return "git returned an invalid repository root"
-        if reported != candidate:
+        if reported != selected:
             return "git repository root does not match the selected folder"
         return None
 
@@ -381,6 +382,10 @@ class GitOwner:
                 branch = field[3:]
                 continue
             code, path = field[:2], field[3:]
+            # stderr shares the pipe; a warning line must never be read as a change.
+            if (len(field) < 4 or field[2] != " "
+                    or any(char not in " MADRCU?!" for char in code)):
+                continue
             entry = {"status": code, "path": path}
             if code[0] in "RC" and index < len(fields):
                 entry["from"] = fields[index]
@@ -403,6 +408,20 @@ class GitOwner:
             return ActionOutcome("Git status failed.", "ERROR", None, str(exc)[:300])
         return self._finish(request, {"repository": str(self.repo_root), "branch": branch, "changes": entries,
                                       "clean": not entries})
+
+    def worktree_state(self) -> tuple[str, str]:
+        """``clean``, ``changed`` or ``unavailable``, plus the reason when not clean."""
+        try:
+            problem = self._repository_problem()
+            if problem:
+                return "unavailable", problem
+            _, entries = self._status_entries()
+        except (OSError, ValueError) as exc:
+            return "unavailable", str(exc)[:300] or type(exc).__name__
+        if entries:
+            names = [entry["path"] for entry in entries[:5] if entry.get("path")]
+            return "changed", ("changed: " + ", ".join(names)) if names else "changed"
+        return "clean", ""
 
     def is_path_tracked(self, path: str) -> ActionOutcome:
         """Prove whether the reserved workspace config tree is present in the index."""

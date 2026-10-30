@@ -5,7 +5,10 @@ The phases keep the same statements. TUIApp inherits this mixin.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
 
 from isycode.localization import tr
 from isycode.asyncio_compat import cancel_requested

@@ -34,6 +34,11 @@ _ENTRIES = [
     ("workspace.files.move", "Files", "Move or rename files", "write", True),
     ("workspace.files.delete", "Files", "Delete files", "destructive", True),
     ("workspace.files.read_sensitive", "Files", "Read sensitive files", "sensitive", True),
+    # GUS's machine view (ADR 0015): read-only, never credentials, never state.
+    ("machine.files.list", "Machine", "List a folder on this computer", "read", False),
+    ("machine.files.read", "Machine", "Read a text file on this computer", "read", False),
+    ("machine.files.search", "Machine", "Search file names on this computer", "read", False),
+    ("machine.files.grep", "Machine", "Search text inside files on this computer", "read", False),
     ("provider.authenticate", "Accounts", "Connect/disconnect ChatGPT subscription", "credential", True),
     ("provider.request", "Network", "Send prompts to the selected model provider", "network", False),
     ("grok.login", "Accounts", "Sign in with the official grok CLI", "process", True),
@@ -92,6 +97,9 @@ _ENTRIES = [
     ("workspace.memory.read", "Memory", "Read this workspace's private memory", "read", False),
     ("workspace.memory.write", "Memory", "Write or consolidate this workspace's private memory", "write", True),
     ("workspace.memory.forget", "Memory", "Permanently forget one memory", "destructive", True),
+    # GUS's own memory about the person, shared across workspaces (ADR 0015).
+    ("gus.memory.write", "GUS memory", "Remember one fact about the person", "write", True),
+    ("gus.memory.forget", "GUS memory", "Forget one GUS memory", "destructive", True),
     # Only from a user gesture (selection, Ctrl+C, Copy path); that gesture is the
     # human-presence proof, and the model has no tool that can trigger it.
     ("clipboard.paste", "Desktop", "Paste an image or text from the clipboard", "external", False),
@@ -110,7 +118,13 @@ _ENTRIES = [
 ACTION_CATALOG: tuple[ActionSpec, ...] = tuple(ActionSpec(*entry) for entry in _ENTRIES)
 ACTION_BY_ID = {item.id: item for item in ACTION_CATALOG}
 
+# The machine view is read-only by construction: these are the only actions
+# the machine owner can execute, and none of them writes.
+MACHINE_READ_ACTIONS = frozenset({
+    "machine.files.list", "machine.files.read", "machine.files.search", "machine.files.grep",
+})
+
 if len(ACTION_BY_ID) != len(ACTION_CATALOG):
     raise RuntimeError("ISyCode action registry contains duplicate identifiers.")
 
-__all__ = ["ACTION_BY_ID", "ACTION_CATALOG", "ActionSpec"]
+__all__ = ["ACTION_BY_ID", "ACTION_CATALOG", "ActionSpec", "MACHINE_READ_ACTIONS"]

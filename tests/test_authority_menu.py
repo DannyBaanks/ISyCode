@@ -116,7 +116,9 @@ def test_menu_is_a_large_centered_card_that_explains_each_option(tmp_path, monke
                     if card.size.height >= 25:
                         break
             assert card is not None
-            assert card.size.width >= 100 and card.size.height >= 25
+            # Wide tier of the adaptive sizing standard: 92-100 outer columns
+            # (size is the content box, so width 96 measures 90 here).
+            assert 92 <= card.outer_size.width <= 100 and card.size.height >= 25
             detail = app.query_one("#action-detail")
             labels = [entry["label"] for entry in app._menu_filtered]
             target = labels.index("Read and search workspace files")

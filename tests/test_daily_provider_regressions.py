@@ -68,7 +68,7 @@ def test_classic_ollama_custom_endpoint_matches_transport(tmp_path, monkeypatch,
 
 def test_endpoint_resolution_precedence_does_not_grant_shadowed_hosts(monkeypatch):
     from isycode.providers import provider_base_url
-    from isycode.workspace_authority import _known_provider_hosts
+    from isycode.workspace_authority import known_provider_hosts
 
     monkeypatch.setenv("OLLAMA_HOST", "http://localhost:21434")
     assert provider_base_url("ollama") == "http://localhost:21434/v1"
@@ -76,9 +76,9 @@ def test_endpoint_resolution_precedence_does_not_grant_shadowed_hosts(monkeypatc
     assert provider_base_url("ollama") == "http://localhost:31434/v1"
     monkeypatch.setenv("ISYCODE_BASE_URL", "http://localhost:41434/v1/")
     assert Provider(name="ollama", model="local", api_key="").base_url == "http://localhost:41434/v1"
-    assert "localhost:41434" in _known_provider_hosts()
-    assert "localhost:31434" not in _known_provider_hosts()
-    assert "localhost:21434" not in _known_provider_hosts()
+    assert "localhost:41434" in known_provider_hosts()
+    assert "localhost:31434" not in known_provider_hosts()
+    assert "localhost:21434" not in known_provider_hosts()
     assert provider_base_url("ollama", "http://localhost:51434/v1/") == "http://localhost:51434/v1"
 
 
@@ -86,7 +86,7 @@ def test_endpoint_resolution_precedence_does_not_grant_shadowed_hosts(monkeypatc
     "http://localhost:invalid", "ftp://localhost:21434", "http://user@localhost:21434",
 ])
 def test_unsafe_ollama_endpoint_does_not_add_an_authority_host(monkeypatch, endpoint):
-    from isycode.workspace_authority import _known_provider_hosts
+    from isycode.workspace_authority import known_provider_hosts
 
     monkeypatch.setenv("OLLAMA_HOST", endpoint)
-    assert not any(host.startswith("localhost") for host in _known_provider_hosts())
+    assert not any(host.startswith("localhost") for host in known_provider_hosts())

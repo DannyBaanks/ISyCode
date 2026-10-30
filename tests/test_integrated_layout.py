@@ -57,7 +57,10 @@ def test_opening_narrow_sidebar_hides_model_button_before_refresh(tmp_path, monk
 
     async def scenario():
         app = TUIApp()
-        async with app.run_test(size=(80, 24)) as pilot:
+        # At 100 columns the closed-rail bar still fits Model, GUS and the mode
+        # chip; at 80 the GUS button displaces the model first, so the sidebar
+        # toggle would no longer prove the pre-refresh prediction.
+        async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             rail = app.query_one(SidePanel)
             if rail.display:
@@ -66,6 +69,7 @@ def test_opening_narrow_sidebar_hides_model_button_before_refresh(tmp_path, monk
             assert not rail.display
             model_button = app.query_one('#model-button')
             assert model_button.display
+            assert app.query_one('#gus-button').display
 
             app.action_toggle_sidebar()
 

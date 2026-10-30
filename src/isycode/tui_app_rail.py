@@ -4,6 +4,11 @@ Moved verbatim from tui.py. TUIApp inherits RailMixin.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
+
 from isycode.localization import tr
 from isycode.tui_dialog import Dialog, DialogAction
 
@@ -917,11 +922,10 @@ class RailMixin:
         except (NoMatches, NoScreen):
             gus = None
         if gus is not None:
-            from isycode.gus_role import is_isycode_checkout
             from isycode.tui_screens_gus import GUS_COLOR
-            self._gus_offered = is_isycode_checkout(self._workspace_root)
+            self._gus_offered = True
             gus.label = Text("GUS", style=GUS_COLOR if self._gus_enabled_here() else MUTED)
-            gus.tooltip = tr("GUS, the ISyCode maintainer · click to talk to it")
+            gus.tooltip = tr("GUS, your assistant and ISyCode maintainer · click to talk to it")
         self._update_model_button_visibility()
 
     def _paint_rail_identity(self) -> None:

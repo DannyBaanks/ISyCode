@@ -124,7 +124,9 @@ def test_boundary_rejects_forged_branch_requests(repo, change):
 def test_gus_branch_in_the_tui_refuses_by_default_then_creates_on_approval(tmp_path, monkeypatch, capsys):
     """/gus branch <topic>: the screen opens on Reject; only the approve button creates it."""
     import asyncio
+    from pathlib import Path
     from test_daily_tui import configure
+    from isycode.gus_roots import GusSettingsStore
     from isycode.tui import TUIApp
     from isycode.tui_screens_approval import GusBranchApprovalScreen
     root = configure(tmp_path, monkeypatch)
@@ -133,6 +135,8 @@ def test_gus_branch_in_the_tui_refuses_by_default_then_creates_on_approval(tmp_p
     for marker in ("src/isycode/gus_role.py", "src/isycode/agents/gus.md"):
         (root / marker).parent.mkdir(parents=True, exist_ok=True)
         (root / marker).write_text("# marker\n")
+    store = GusSettingsStore()
+    store.write({**store.read(), "target": str(Path(root).resolve())})
     _git(root, "init", "-q", "-b", "main")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "init")

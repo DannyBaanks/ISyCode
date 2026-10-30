@@ -151,7 +151,8 @@ def test_file_preview_preserves_exact_selection_and_separate_whole_box_copy(tmp_
         app = Host(FilePreviewScreen(tmp_path / "notes.txt", text))
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
-            for selector in ("#preview-copy", "#preview-copy-whole", "#preview-close"):
+            for selector in ("#preview-copy", "#preview-copy-whole", "#preview-close",
+                             ".isy-dialog-hint"):
                 assert_visible(app.screen.query_one(selector), (80, 24))
             editor = app.screen.query_one(TextArea)
             assert editor.read_only
