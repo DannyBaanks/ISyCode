@@ -1456,7 +1456,7 @@ class SessionMixin:
         lane.conversation_summary = state.get("conversation_summary", "") or ""
         lane.idea_box = state.get("idea_box", "") or ""
         lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
-        self._show_lane(lane)
+        # Silent adoption: this lane answers in the background; /msg must not move the screen.
         lane.throughput = ThroughputMeter()
         lane.retry_prompt = None
         lane.draft_text = state.get("draft", "") or ""

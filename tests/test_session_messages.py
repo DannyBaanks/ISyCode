@@ -121,6 +121,53 @@ def test_message_waits_when_the_other_conversation_is_working(tmp_path, monkeypa
     asyncio.run(scenario())
 
 
+def test_message_to_a_closed_saved_conversation_keeps_the_screen(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    UserDefaultsStore().update(new_workspace="recurring")
+    seen = _install_chat(monkeypatch, asyncio.Event())
+
+    async def scenario():
+        first = TUIApp()
+        async with first.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            first._persist_chat_message('user', 'hello-a')
+            first._persist_chat_message('assistant', 'FROM hello-a')
+            sid = first._active_chat_session_id
+            assert sid
+            prompt = first.query_one("#prompt-input")
+            prompt.load_text("half-written draft")
+            await pilot.pause()
+            first._save_draft()
+        reopened = TUIApp()
+        async with reopened.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            home = reopened._foreground_key
+            prompt = reopened.query_one("#prompt-input")
+            prompt.load_text(f"/msg {sid} ping-from-danny")
+            await pilot.press("enter")
+            for _ in range(200):
+                await pilot.pause(0.05)
+                if "ping-from-danny" in seen:
+                    break
+            assert seen[-1] == "ping-from-danny"
+            # Delivering elsewhere never moves the screen or the composer.
+            assert reopened._foreground_key == home
+            assert "Sent to" in _chat_text(reopened)
+            assert "ping-from-danny" not in _chat_text(reopened)
+            target = reopened._lanes[sid]
+            assert target.draft_text == "half-written draft"
+            assert any(kind == "user" and text == "ping-from-danny"
+                       for kind, text, *_ in target.lines)
+            # Opening it later paints its transcript and restores its draft.
+            reopened._show_lane(target)
+            await pilot.pause()
+            assert "hello-a" in _chat_text(reopened)
+            assert "ping-from-danny" in _chat_text(reopened)
+            assert prompt.text == "half-written draft"
+
+    asyncio.run(scenario())
+
+
 def test_same_title_does_not_guess_and_the_open_chat_is_refused(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
     UserDefaultsStore().update(new_workspace="recurring")
