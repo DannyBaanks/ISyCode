@@ -6,10 +6,10 @@ Generado: 2026-10-24  |  Rama: `origin/main` (fab2d1a, tras PR #95)  |  Worktree
 
 - Módulos fuente totales: **225**
 - Líneas de código totales: **63,375**
-- Estable (pruebas directas, CI verde): **95**
+- Estable (pruebas directas, CI verde): **102**
 - Frágil (solo pruebas flaky/plataforma o cobertura muy baja): **0**
-- Sin pruebas (sin archivo de prueba directo): **130**
-- Archivos de prueba: **285**  |  Pruebas recolectadas: **2 682**
+- Sin pruebas (sin archivo de prueba directo): **123**
+- Archivos de prueba: **292**  |  Pruebas recolectadas: **2 722**
 
 ## Criterios de clasificación
 
@@ -35,12 +35,12 @@ Generado: 2026-10-24  |  Rama: `origin/main` (fab2d1a, tras PR #95)  |  Worktree
 | `src/isycode/agent_questions.py` | 62 | `test_agent_questions.py` | 2 | ✅ estable |
 | `src/isycode/agent_tasks.py` | 86 | `test_agent_tasks.py` | 13 | ✅ estable |
 | `src/isycode/anthropic_provider.py` | 306 | `test_anthropic_provider.py` | 8 | ✅ estable |
-| `src/isycode/approvals.py` | 87 | `-` | 0 | ❌ sin pruebas |
-| `src/isycode/asyncio_compat.py` | 31 | `-` | 0 | ❌ sin pruebas |
+| `src/isycode/approvals.py` | 87 | `test_approvals.py` | 8 | ✅ estable |
+| `src/isycode/asyncio_compat.py` | 31 | `test_asyncio_compat.py` | 5 | ✅ estable |
 | `src/isycode/authority.py` | 126 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/authority_view.py` | 141 | `test_authority_view.py` | 5 | ✅ estable |
 | `src/isycode/bridge.py` | 236 | `test_bridge.py` | 2 | ✅ estable |
-| `src/isycode/bridge_contract.py` | 58 | `-` | 0 | ❌ sin pruebas |
+| `src/isycode/bridge_contract.py` | 58 | `test_bridge_contract.py` | 4 | ✅ estable |
 | `src/isycode/bridge_coordination.py` | 196 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/bridge_presence.py` | 134 | `test_bridge_presence.py` | 5 | ✅ estable |
 | `src/isycode/bridge_tools.py` | 113 | `-` | 0 | ❌ sin pruebas |
@@ -52,7 +52,7 @@ Generado: 2026-10-24  |  Rama: `origin/main` (fab2d1a, tras PR #95)  |  Worktree
 | `src/isycode/cat_activity.py` | 285 | `test_cat_activity.py` | 7 | ✅ estable |
 | `src/isycode/catalog.py` | 153 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/chat_sessions.py` | 514 | `-` | 0 | ❌ sin pruebas |
-| `src/isycode/chat_transport.py` | 58 | `-` | 0 | ❌ sin pruebas |
+| `src/isycode/chat_transport.py` | 58 | `test_chat_transport.py` | 7 | ✅ estable |
 | `src/isycode/cli.py` | 224 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/clipboard_owner.py` | 97 | `test_clipboard_owner.py` | 10 | ✅ estable |
 | `src/isycode/codex_connector.py` | 725 | `test_codex_connector.py` | 48 | ✅ estable |
@@ -66,11 +66,11 @@ Generado: 2026-10-24  |  Rama: `origin/main` (fab2d1a, tras PR #95)  |  Worktree
 | `src/isycode/credential_owner.py` | 186 | `test_credential_owner.py` | 19 | ✅ estable |
 | `src/isycode/credentials.py` | 227 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/dataflow.py` | 304 | `test_dataflow.py` | 17 | ✅ estable |
-| `src/isycode/decision_view.py` | 23 | `-` | 0 | ❌ sin pruebas |
+| `src/isycode/decision_view.py` | 23 | `test_decision_view.py` | 6 | ✅ estable |
 | `src/isycode/diagnostics.py` | 67 | `test_diagnostics.py` | 4 | ✅ estable |
 | `src/isycode/diff_view.py` | 112 | `test_diff_view.py` | 5 | ✅ estable |
 | `src/isycode/dry_run.py` | 63 | `test_dry_run.py` | 3 | ✅ estable |
-| `src/isycode/effect_fs.py` | 13 | `-` | 0 | ❌ sin pruebas |
+| `src/isycode/effect_fs.py` | 13 | `test_effect_fs.py` | 2 | ✅ estable |
 | `src/isycode/effect_ledger.py` | 514 | `test_effect_ledger.py` | 10 | ✅ estable |
 | `src/isycode/effect_policy.py` | 105 | `test_effect_policy.py` | 4 | ✅ estable |
 | `src/isycode/egress.py` | 181 | `test_egress.py` | 8 | ✅ estable |
@@ -223,7 +223,7 @@ Generado: 2026-10-24  |  Rama: `origin/main` (fab2d1a, tras PR #95)  |  Worktree
 | `src/isycode/tui_screens_help.py` | 94 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/tui_screens_mcp.py` | 468 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/tui_screens_sessions.py` | 739 | `-` | 0 | ❌ sin pruebas |
-| `src/isycode/tui_theme.py` | 236 | `-` | 0 | ❌ sin pruebas |
+| `src/isycode/tui_theme.py` | 236 | `test_tui_theme.py` | 8 | ✅ estable |
 | `src/isycode/tui_widgets.py` | 964 | `-` | 0 | ❌ sin pruebas |
 | `src/isycode/turn_control.py` | 340 | `test_turn_control.py` | 11 | ✅ estable |
 | `src/isycode/turn_events.py` | 69 | `-` | 0 | ❌ sin pruebas |

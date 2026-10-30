@@ -8,12 +8,12 @@ from textual.widgets import Static
 from rich.text import Text
 from rich.cells import cell_len
 import json
+import os
 from pathlib import Path
 from isycode.localization import tr
 
 
-
-_ASCII_ONLY = False
+_ASCII_ONLY = bool(os.environ.get("NO_COLOR"))
 
 
 def set_ascii_only(enabled: bool) -> None:

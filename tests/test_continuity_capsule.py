@@ -154,6 +154,10 @@ def run_app(scenario):
     async def main():
         app = TUIApp()
         async with app.run_test() as pilot:
+            # The session owner is created by the startup worker. A turn sent
+            # before it lands stays in memory and never reaches the transcript,
+            # so slow runners would resume with the first turn missing.
+            await app.wait_for_ready()
             await pilot.pause()
             await scenario(app, pilot)
     asyncio.run(main())

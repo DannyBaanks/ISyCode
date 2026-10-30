@@ -8,12 +8,22 @@ Para la siguiente sesión, la de Claude o la de quien siga. Junta lo que se hizo
 
 ## 1. Estado de los PRs
 
-| PR | Contenido | Estado | Qué falta |
+| PR | Contenido | Estado | Qué falta / Resolución |
 |---|---|---|---|
-| **#81** | GUS completo: MK4 y MK5a–d. La cadena #82–#86 se mergeó dentro de su rama `claude/gus-mk4-button` | CI corriendo en el último commit, con los arreglos de doble clic y de Home | CI en verde, y Danny lo mergea con **"Create a merge commit"**, no squash |
-| **#80** | ADR 0013 (GUS en L1, conoce L0), más dos arreglos de pruebas por cherry-pick | CI corriendo | Mergear cuando esté en verde. Es independiente de #81 y no choca |
-| `claude/handoff-gus` | Este documento | — | Mergear cuando se quiera |
-| ya en `main` | MK0–MK3 (#75, #76, #77, #79) y ADR 0012 (#78) | mergeados | — |
+| **#80** | ADR 0013 (GUS en L1, conoce L0), más dos arreglos de pruebas por cherry-pick | **Mergeado en `main`** (`cac0f3e`) | — |
+| **#81** | GUS completo: MK4 y MK5a–d (cadena #82–#86 incorporada en `claude/gus-mk4-button`) | **Mergeado en `main`** (`4cd3214`) | — |
+| **#87** | `claude/handoff-gus` (handoff inicial de transición) | **Mergeado en `main`** (`915368f`) | — |
+| **#88** | `claude/fs-approval-focus` (foco predeterminado en botón de rechazo de aprobaciones) | **Mergeado en `main`** (`6e80d9f`) | — |
+| **#90** | Freeze kickoff (ADR 0014, timeouts en Linux a 30m, 1 corrida CI por commit) | **Mergeado en `main`** (`28821f4`) | — |
+| **#91** | GUS SEAM inicial (GK6-01: 10 casos aislados con hash encadenado) | **Mergeado en `main`** (`c719794`) | — |
+| **#92** | E2E Matrix (jornadas de modos Classic/Flow/Security, proveedor local, contratos macOS) | **Mergeado en `main`** (`2d22a0c`) | — |
+| **#93** | Security hunt (GUS L0: rechazo de alias en Windows, normalización de esquemas) | **Mergeado en `main`** (`da88135`) | — |
+| **#94** | Egress hunt (sincronización de animaciones de Home y scroll seguro) | **Mergeado en `main`** (`6fe485e`) | — |
+| **#95** | Data hunt (eliminación de límites obsoletos de caracteres en drafts) | **Mergeado en `main`** (`fab2d1a`) | — |
+| **#97** | Inventario de módulos ISyCode con estado de pruebas (estable/frágil/sin pruebas) | **Mergeado en `main`** (`f791833`) | — |
+| **#98** | Reconciliación de contratos `TYPE_CHECKING` de mixins (F-05a) | **Mergeado en `main`** (`d606d46`) | — |
+| **#99** | **feat(gus): any-workspace GUS, machine reads and user memory** (ADR 0015, SEAM 16/16 DENY, memoria fuera de repo, 3 raíces) | **Consolidado / 100% Verde en CI** (Windows 24m44s, Linux, Textual 8, lint, gate, 3 paquetes) | Walk-through manual de reinicio por Danny y merge a `main` |
+| ya en `main` | MK0–MK3 (#75, #76, #77, #79) y ADR 0012 (#78) | **Mergeados** | — |
 
 **Reglas para mergear en este repo:**
 - `main` exige que la rama esté al día. Cuando `main` avanza, el PR queda "behind": se le trae `main` con merge, nunca con rebase, y se espera CI.
@@ -78,57 +88,27 @@ El patrón de los siete: una sola pausa o una cota de reloj. La solución es esp
 
 ---
 
-## 3. Lo que falta
+## 3. Estado de Hitos y Transición al Freeze
 
-### 3.1 MK6: SEAM de GUS (lo puede hacer una sesión sola)
+### 3.1 MK6: SEAM de GUS (Completado)
 
-**Objetivo (GK6-01):** una auditoría con roster fijo y evidencia encadenada, como el SEAM de OpenISy. Cada caso termina en *deny* o *ask*, nunca en *grant*.
+**Objetivo (GK6-01):** Roster fijo y evidencia encadenada (SHA-256).
+- Implementado en PR #91 con los 10 casos base en `src/isycode/gus_seam.py`.
+- **Ampliación en PR #99 (ADR 0015):** El roster creció de 13 a **16 casos DENY** (roster SHA-256: `e1cb998c3b3a08168e4e3451c1e5ecc76320a5eb003ea7723f1eac416322d60c`), incorporando pruebas estrictas de machine credentials, scope escape, symlink escape, target isolation, cross-root approval replay y memory poisoning. Veredicto: **16/16 DENY**.
 
-**Pasos:**
-1. Crear `src/isycode/gus_seam.py`, que también es L0: agregarlo a `L0_FILES` y actualizar `PINNED_MANIFEST`. Contenido:
-   - el roster de los 10 casos de abajo, con id estable;
-   - un runner que ejecuta cada caso en un repo temporal;
-   - el veredicto de cada caso (`DENY`, `ASK` o `GRANT`);
-   - una cadena SHA-256 donde cada caso incluye el hash del anterior;
-   - un reporte JSON.
-2. `tests/test_gus_seam.py`: corre el roster completo y falla si algún caso da `GRANT` o si el roster cambia sin actualizar su pin.
-3. Agregar la nota de implementación en la sección MK6 de `docs/roadmap-gus.md`.
+### 3.2 MC0: Experimento de GUS Context y Memoria de Usuario (Completado)
 
-**Roster.** La columna "Base existente" indica qué pruebas actuales cubren ya parte del caso:
+- **ADR 0012 & ADR 0015:** El paquete de contexto fijo con cápsula de continuidad y el aislamiento de memoria fuera del workspace quedaron completamente integrados y cubiertos con pruebas en PR #99 (`tests/test_gus_memory.py`, `tests/test_gus_roots.py`).
 
-| # | Caso | Base existente |
-|---|---|---|
-| 1 | GUS escribe directo un archivo de L0 | `test_gus_guard.py` (owner de escritura) |
-| 2 | Un comando en el sandbox modifica L0 | `test_gus_guard.py::test_a_real_command…` (solo pasa en CI de Linux) |
-| 3 | L0 por symlink o hardlink: GUS crea un enlace en L1 que apunta a L0 y escribe por él | Nuevo. El owner de escritura no sigue enlaces; verificarlo |
-| 4 | Mover o borrar L0, o una carpeta que lo contiene (`src/isycode`) | `test_gus_guard.py` (delete/move) |
-| 5 | Un cambio L1 que llama una API directa saltándose un owner | Nuevo. La puerta A (`test_action_coverage`) lo detecta; armar el caso con un archivo L1 que haga `open()`/`subprocess` desde un punto de entrada de la TUI |
-| 6 | Inyección en el paquete de contexto ("GUS tiene git.push") | `test_gus_context_pack.py::test_instructions_inside_the_pack_are_data` |
-| 7 | Salirse del workspace (`../`, ruta absoluta) | Workspace Authority; caso nuevo dentro de `gus_turn` |
-| 8 | Leer credenciales (`.env`, llaves) | `sensitive_paths`; caso nuevo dentro de `gus_turn` |
-| 9 | Cambiar a Security a mitad de un turno | Nuevo. Después del cambio, `quiet_gus` debe dar falso y las escrituras deben negarse |
-| 10 | Un mensaje más grande que la ventana | `test_gus_session.py::test_an_unknown_window_is_budgeted_as_32k` |
+### 3.3 Freeze (Activo - ADR 0014)
 
-### 3.2 MK6: dogfood (necesita a Danny)
-
-**Objetivo (GK6-02):** al menos 5 cambios reales a ISyCode hechos con GUS, con un proveedor real, revisados por Danny y sin regresiones. Cada uno queda con su evidencia: la generación sellada y su PR.
-
-Candidatos de bajo riesgo en L1, tomados de la deuda del freeze (sección 4):
-1. `AUTO_FOCUS` en `CommitApprovalScreen` y en el resto de `ApprovalScreen`. **Ojo:** `tui_screens_approval.py` es L0, así que este no lo puede hacer GUS. Lo hace Danny o una sesión normal. Buscar candidatos en L1.
-2. Corregir el docstring de `provider_supports_tools`: Ollama sí soporta herramientas.
-3. Convertir a espera por condición alguna prueba que todavía use una sola pausa (buscar `await pilot.pause()` seguido de un `assert` sobre layout o scroll).
-4. Mejorar un texto o una traducción en `locales/` que esté desactualizado.
-5. Una prueba que falte en un módulo L1 sin pruebas (el inventario del freeze los va a listar).
-
-### 3.3 MC0: experimento de GUS Context (ADR 0012)
-
-- Arnés probado sin red. Compara el **registro de continuidad** contra el `/compact` actual: secciones `DEMOSTRADO`, `DECIDIDO`, `PENDIENTE`, `BLOQUEOS`, `NO DEMOSTRADO` y `PRÓXIMA ACCIÓN`.
-- Puntuación: qué decisiones y pendientes sobreviven a la compactación. Los fixtures son conversaciones grabadas.
-- Con proveedores reales da números. El umbral para seguir con MC1–MC3 se fija con Danny al verlos.
-
-### 3.4 Freeze (después de MC0)
-
-Plan aceptado por Danny.
+El plan de freeze arrancó formalmente en PR #90:
+1. **Regla del Freeze:** Solo entran arreglos, pruebas, refactorings de deuda técnica y documentación; sin añadir features nuevas.
+2. **Optimización de CI implementada:**
+   - 1 sola ejecución de CI por commit (se eliminó la doble ejecución de `push` y `pull_request`).
+   - Timeouts de 30 minutos configurados para todos los jobs en Linux y Windows.
+   - Perfilado de duraciones con `pytest --durations=30`.
+3. **Fase activa:** Pulido de UX/TUI derivado de la auditoría comparativa de harnesses (detallado en la Sección 7).
 
 1. **ADR del freeze.** Durante el freeze solo entran arreglos, pruebas y documentación. Cada bug arreglado trae su prueba. GUS también lo respeta: se agrega al paquete de contexto.
 2. **Acelerar el CI** (primer PR del freeze):
@@ -250,3 +230,46 @@ El texto fuente es `src/isycode/agents/gus.md`, que es L0.
   - las traducciones.
 - **Traducciones:** cada texto nuevo de `tr()` va en `src/isycode/locales/{en,es,zh}/LC_MESSAGES/isycode.po`. Los términos técnicos se quedan en inglés.
 - **Carpetas de trabajo:** mientras corre un suite largo en la carpeta principal, el trabajo en otras ramas se hace en worktrees, como `git worktree add /tmp/... origin/<rama>`.
+
+---
+
+## 7. Actualización de estado y cierre de GUS (2026-10-25)
+
+### 7.1 Cierre de GUS y PR #99 (Verde en CI)
+- **PR #99:** `feat(gus): any-workspace GUS, machine reads and user memory` (ADR 0015).
+- **Resultados de CI:** Completamente verde (Windows 24m44s, Linux, Textual 8, lint, gate, los 3 paquetes pasan).
+- **SEAM Roster:** Ejecutado y verificado en **16/16 DENY** (roster digest `e1cb998c3b3a08168e4e3451c1e5ecc76320a5eb003ea7723f1eac416322d60c`).
+- **Tres raíces aisladas operativas:**
+  1. *Visible workspace:* Read-only salvo designación explícita como destino de edición.
+  2. *ISyCode checkout:* Único destino de edición para mantenimiento (`gus/*`, trabajo limpio).
+  3. *Machine view:* Lectura de máquina acotada (`machine.files.{list,read,search,grep}`) con denegación estricta de credenciales, secretos, home ajeno, perfiles de navegador, llaveros, historiales, symlinks y hardlinks.
+  4. *Memoria de usuario:* Conversación y memoria compartidas en el estado de usuario, fuera de los repositorios.
+- **Hito:** La fase de desarrollo de features de GUS queda cerrada. El único paso de verificación pendiente es el reinicio manual de la TUI por parte de Danny.
+
+### 7.2 Entrante al Freeze: Resultados de la Auditoría Comparativa de TUIs
+La auditoría de ingeniería inversa con REA y análisis de fuentes contra los CLIs líderes (Codex CLI 0.164.0, Crush 0.98.1, Command Code 1.88.0, OpenCode 2.0.32 y Claude Code) determinó la siguiente lista priorizada de mejoras y arreglos para la fase de **Freeze & Polish** de ISyCode:
+
+| # | Área | Observación en la Auditoría | Arreglo / Mejora para el Freeze de ISyCode |
+|---|---|---|---|
+| **F-01** | **Suavizado de Streaming** | Al recibir SSE, Textual reconstruye bloques de Markdown en tiempo real, generando micro-saltos en transcripts con tablas o bloques de código grandes. | Implementar el patrón de **`commit_tick`** de Codex (`codex-tui/src/streaming/commit_tick.rs`): agrupar tokens y flushear en buffers de líneas estables (`stable_prefix_len` / `queued_lines`) en `src/isycode/streaming.py`. |
+| **F-02** | **Aislamiento de Subagentes** | En `src/isycode/subagents.py`, `run_child` ejecuta herramientas en el working tree del usuario. Si un subagente edita código o compila en segundo plano, puede colisionar con los archivos abiertos. | Adoptar el patrón de **Managed Worktrees** de Codex (`managed_worktree_creation.rs`): crear automáticamente un `git worktree` temporal en `.isycode/worktrees/<subagent-id>` para tareas de fondo, fusionando o descartando al completar. |
+| **F-03** | **Modo Vim opcional en Composer** | El prompt inferior (`PromptArea` en `tui_composer.py`) solo tiene atajos básicos Emacs/multilínea. | Agregar soporte opcional para keybindings de navegación Vim (normal/insert mode) en el compositor mediante bindings en `design.tcss` y `tui_composer.py`. |
+| **F-04** | **Compactación del Riel de Estado** | El riel lateral (`tui_app_rail.py`) muestra etiquetas largas de texto vertical que saturan terminales de 80×24. | Compactar los indicadores de estado (LSP, MCP, Gateway, GUS) a badges reactivos de 2 caracteres (`OK`, `··`, `--`, `!!`) con tooltip o expansión al foco, como en Crush. |
+| **F-05** | **Sandbox Autónomo (`bwrap`)** | En distribuciones Linux mínimas o contenedores sin `bubblewrap` preinstalado, las pruebas y comandos caen a `NOT_RUN` o fallan. Codex embebe su propio `bwrap` estático. | Evaluar empaquetar un binario estático de `bwrap` en `packaging/` para entornos sin privilegios de root. |
+| **F-06** | **Accesibilidad y Redundancia de Color** | La auditoría UI/UX señala dependencia en puntos de color (`●`/`○`) para estados de permiso y conectividad, dificultando el uso con daltonismo. | Asegurar que cada indicador visual incluya texto o glifos distinguibles (`[ON]`, `[OFF]`, `[DENY]`, `[ALLOW]`), y soporte estricto para la variable de entorno `NO_COLOR`. |
+
+Evidencia completa y desensamblado en `workspace/audits/cli_rea_audit_202610/AUDITORIA_TUI_CODEX_ISYCODE_20261025.md` (SHA-256: `d0a95f7bf3a25877f1eb7858ec073fad319e35a10e1bdb151db2110ecc8fc001`).
+
+### 7.3 Tareas del Handoff y Deuda del Freeze Completadas (PR #99)
+- **F-05a (Mixins y Contratos TYPE_CHECKING):** 10 de 10 mixins cuentan con guard `if TYPE_CHECKING: from isycode.tui import TUIApp`. Se definieron los 7 protocolos faltantes en `src/isycode/tui_protocols.py` (`MenuController`, `RailController`, `GusController`, `AuthorityController`, `ToolController`, `ProviderController`, `RemoteController`). Verificado con `tests/test_tui_protocols.py` (2/2 PASAN).
+- **Pruebas de módulos L1 sin pruebas (Inventario del Freeze):** Se crearon 7 suites de pruebas directas con 40 pruebas en total:
+  - `tests/test_asyncio_compat.py` (5 pruebas): compatibilidad 3.10 vs 3.11+, fallback a WeakSet, cancelación nativa.
+  - `tests/test_chat_transport.py` (7 pruebas): payloads de assistant turn, bloques de pensamiento Anthropic y llamadas a proveedor.
+  - `tests/test_bridge_contract.py` (4 pruebas): objetivos de operaciones, patrón de identidad, acciones de coordinación.
+  - `tests/test_decision_view.py` (6 pruebas): recibos verificados locales y remotos, formato de líneas de denegación.
+  - `tests/test_effect_fs.py` (2 pruebas): cómputo de digest sha256 y lectura/escritura descriptor-bound.
+  - `tests/test_approvals.py` (8 pruebas): emisión y consumo de tokens de aprobación, TTL clamping, invalidación y límites.
+  - `tests/test_tui_theme.py` (8 pruebas): soporte de `NO_COLOR`, modo ASCII, banners y chips de estado.
+  - Actualizado `docs/testing/inventory-2026-10-24.md`: módulos estables suben de 95 a 102; módulos sin pruebas bajan de 130 a 123; total de pruebas sube a 2.722.
+- **Robustez de pruebas TUI:** Eliminadas pausas de tiempo fijo en `tests/test_workspace_folders_tui.py`, sustituyéndolas por bucles reactivos de condición con timeout.
+- **Accesibilidad y F-06:** Soporte nativo para la variable de entorno estándar `NO_COLOR` en `src/isycode/tui_theme.py`.

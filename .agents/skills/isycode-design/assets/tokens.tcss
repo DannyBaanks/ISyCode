@@ -22,3 +22,9 @@ Button.isy-action:focus { border: solid #38e1ee; }
 .isy-success { color: #7fe39d; }
 .isy-warning { color: #f2c068; }
 .isy-error { color: #f7888e; }
+
+/* Adaptive Box & Modal Tokens (Anti-Void & Anti-Slit) */
+.isy-card-adaptive { height: auto; min-height: 8; max-height: 90%; width: 84; max-width: 94%; padding: 1 2; }
+.isy-card-narrow { min-width: 44; width: 68; height: auto; min-height: 8; max-height: 88%; }
+.isy-card-wide { min-width: 60; width: 96; height: auto; min-height: 12; max-height: 90%; }
+.isy-box-standard { height: auto; min-height: 3; max-height: 6; }

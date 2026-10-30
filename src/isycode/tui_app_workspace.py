@@ -5,6 +5,10 @@ Moved verbatim from tui.py. TUIApp inherits this mixin.
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
 import json
 import shlex
 from pathlib import Path

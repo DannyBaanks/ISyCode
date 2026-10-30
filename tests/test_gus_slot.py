@@ -89,7 +89,7 @@ def test_only_providers_with_ready_credentials_are_offered(state, monkeypatch):
     assert gus_slot.gus_providers() == ["openai", "ollama"]
 
 
-def test_settings_offer_the_gus_model_only_in_the_isycode_repo(tmp_path, monkeypatch, capsys):
+def test_settings_offer_the_gus_model_in_every_workspace(tmp_path, monkeypatch, capsys):
     from test_daily_tui import configure
     from isycode.tui import TUIApp
     configure(tmp_path, monkeypatch)
@@ -105,14 +105,7 @@ def test_settings_offer_the_gus_model_only_in_the_isycode_repo(tmp_path, monkeyp
             await app.wait_for_ready()
             app._open_settings_menu()
             await pilot.pause()
-            assert "gus_slot_open" not in [entry["kind"] for entry in app._menu_entries]
-            app._close_menu()
-            for marker in ("src/isycode/gus_role.py", "src/isycode/agents/gus.md"):
-                path = app._workspace_root / marker
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text("", encoding="utf-8")
-            app._open_settings_menu()
-            await pilot.pause()
+            # ADR 0015: the GUS model is chosen here even outside an ISyCode checkout.
             gus = next(entry for entry in app._menu_entries if entry["kind"] == "gus_slot_open")
             assert "not set" in gus["label"]
             app._open_gus_slot_menu()

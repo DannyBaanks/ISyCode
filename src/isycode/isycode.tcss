@@ -109,12 +109,12 @@
     #queue-warning { width: 1fr; height: auto; color: #fbbf24; }
     #queue-steer-help { width: 5; min-width: 5; height: 1; min-height: 1; border: none; padding: 0; }
     #idea-box-row {
-        width: 1fr; height: auto; max-height: 3;
+        width: 1fr; height: auto; min-height: 3; max-height: 5;
         align-horizontal: center; margin: 0 1; background: transparent;
     }
-    #shell-box { display: none; width: 60%; height: auto; max-height: 3; padding: 0 1; border: round #514d5a; background: #1e1f22; }
+    #shell-box { display: none; width: 60%; height: auto; min-height: 3; max-height: 5; padding: 0 1; border: round #514d5a; background: #1e1f22; }
     #idea-box {
-        width: 60%; height: auto; max-height: 3; padding: 0 1;
+        width: 60%; height: auto; min-height: 3; max-height: 5; padding: 0 1;
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
@@ -196,9 +196,10 @@
         background: #000000 58%; align: center middle;
     }
     #action-card {
-        width: 110; max-width: 96%; height: 85%; padding: 1 2;
+        width: 104; max-width: 96%; height: auto; min-height: 12; max-height: 88%; padding: 1 2;
         background: #17191f; border: round #514d5a;
     }
+    #action-card.wide-detail-menu { height: 85%; }
     #action-title { height: 2; color: #bb8cff; text-style: bold; }
     #action-search { height: 3; margin-bottom: 1; }
     #action-list { height: 1fr; background: transparent; border: none; padding: 0 1; }

@@ -6308,3 +6308,198 @@ msgstr "已拒绝 {branch} · {gates} · {reason}"
 
 msgid "GUS gates running…"
 msgstr "GUS 检查门正在运行…"
+
+msgid "GUS settings · target, reads and memory"
+msgstr "GUS 设置 · 目标、读取与记忆"
+
+msgid "GUS turn restored · {count} files"
+msgstr "GUS 回合已恢复 · {count} 个文件"
+
+msgid "GUS has no configured ISyCode checkout to edit."
+msgstr "GUS 没有配置可编辑的 ISyCode 检出目录。"
+
+msgid "preparing {target}"
+msgstr "正在准备 {target}"
+
+msgid "GUS settings unavailable · {reason}"
+msgstr "GUS 设置不可用 · {reason}"
+
+msgid "GUS target unavailable · {reason}"
+msgstr "GUS 目标不可用 · {reason}"
+
+msgid "No recorded GUS turn to undo."
+msgstr "没有可撤销的 GUS 回合记录。"
+
+msgid "GUS is your assistant with its own model ({destination}). It can read this computer except credentials and secrets, and everything it reads can be sent to that model. It edits only {target}, on a gus/* branch, and never the L0 kernel. Your conversation and memories are yours, shared across workspaces and stored outside the checkout. It grants itself nothing; turn it off any time in Settings."
+msgstr "GUS 是使用独立模型的助手（{destination}）。它可以读取这台电脑，但不会读取凭据和机密，并且它读取的一切都可能发送给该模型。它只编辑 {target}，在 gus/* 分支上，绝不修改 L0 内核。你的对话和记忆属于你，跨工作区共享并存储在检出目录之外。它不会为自己授予任何权限；你可以随时在设置中关闭它。"
+
+msgid "no checkout configured yet"
+msgstr "尚未配置检出目录"
+
+msgid "GUS, your assistant and ISyCode maintainer · click to talk to it"
+msgstr "GUS，你的助手和 ISyCode 维护者 · 点击与它对话"
+
+msgid "Edits in {target} · reads the machine except credentials · L0 stays human."
+msgstr "编辑 {target} · 读取整台机器但排除凭据 · L0 仍由人负责。"
+
+msgid "Enter send · Esc close · on a gus/* branch GUS edits its target; elsewhere it reads and answers"
+msgstr "Enter 发送 · Esc 关闭 · 在 gus/* 分支上 GUS 编辑其目标；其他情况下只读取并回答"
+
+msgid "Undoing GUS's last turn…"
+msgstr "正在撤销 GUS 的最后一个回合…"
+
+msgid "no target configured"
+msgstr "未配置目标"
+
+msgid "Undo this turn"
+msgstr "撤销此回合"
+
+msgid "GUS turn restored."
+msgstr "GUS 回合已恢复。"
+
+msgid "Nothing undone."
+msgstr "未撤销任何内容。"
+
+msgid "GUS has no editable target yet · open Settings"
+msgstr "GUS 尚无可用编辑目标 · 打开设置"
+
+msgid "GUS settings"
+msgstr "GUS 设置"
+
+msgid "GUS reads the machine except credentials. It edits only the target checkout, on a gus/* branch, and never L0."
+msgstr "GUS 读取整台机器，但排除凭据。它只编辑目标检出目录，在 gus/* 分支上，绝不修改 L0。"
+
+msgid "GUS here: {state}\nTarget: {target}\nRead scope: {scope}"
+msgstr "GUS 在此处：{state}\n目标：{target}\n读取范围：{scope}"
+
+msgid "Turn GUS on or off here"
+msgstr "在此开启或关闭 GUS"
+
+msgid "Use the running checkout"
+msgstr "使用正在运行的检出目录"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "A folder scope needs at least one folder"
+msgstr "文件夹范围至少需要一个文件夹"
+
+msgid "Editable ISyCode checkout"
+msgstr "可编辑的 ISyCode 检出目录"
+
+msgid "none · GUS talks and reads only"
+msgstr "无 · GUS 仅对话和读取"
+
+msgid "This ISyCode is not running from a checkout."
+msgstr "此 ISyCode 并非从检出目录运行。"
+
+msgid "Not saved · {reason}"
+msgstr "未保存 · {reason}"
+
+msgid "Not a folder · {folder}"
+msgstr "不是文件夹 · {folder}"
+
+msgid "/path/to/ISyCode checkout"
+msgstr "/ISyCode/检出目录/路径"
+
+msgid "Read scope"
+msgstr "读取范围"
+
+msgid "Memory mode · explicit or automatic"
+msgstr "记忆模式 · 显式或自动"
+
+msgid "Memory mode must be explicit or automatic"
+msgstr "记忆模式必须为显式或自动"
+
+msgid "Folder unavailable · {folder}"
+msgstr "文件夹不可用 · {folder}"
+
+msgid "all, home, or folders separated by {separator}"
+msgstr "all、home 或以 {separator} 分隔的文件夹"
+
+msgid "GUS read scope not saved · {reason}"
+msgstr "GUS 读取范围未保存 · {reason}"
+
+msgid "GUS read scope unchanged"
+msgstr "GUS 读取范围未改变"
+
+msgid "GUS read scope · {scope}"
+msgstr "GUS 读取范围 · {scope}"
+
+msgid "GUS will be able to read {scope} on this computer, except credentials, keys, private stores, shell histories and the ISyCode state. Everything it reads can be sent to its model. Edits stay limited to {target}, on a gus/* branch."
+msgstr "GUS 将能够读取此计算机上的 {scope}，但不包括凭据、密钥、私有存储、shell 历史记录和 ISyCode 状态。它读取的所有内容都可能发送给其模型。编辑仍仅限于 {target}，且只能位于 gus/* 分支。"
+
+msgid "Let GUS read this scope?"
+msgstr "允许 GUS 读取此范围吗？"
+
+msgid "Use this scope"
+msgstr "使用此范围"
+
+msgid " · showing {shown}"
+msgstr " · 显示 {shown}"
+
+msgid "1"
+msgstr "1"
+
+msgid "Forget"
+msgstr "忘记"
+
+msgid "Forget all"
+msgstr "全部忘记"
+
+msgid "Forget all GUS memories?"
+msgstr "忘记 GUS 的所有记忆？"
+
+msgid "Forget one"
+msgstr "忘记一条"
+
+msgid "Forget this GUS memory?"
+msgstr "忘记这条 GUS 记忆？"
+
+msgid "GUS memory"
+msgstr "GUS 记忆"
+
+msgid "GUS memory mode · {mode}"
+msgstr "GUS 记忆模式 · {mode}"
+
+msgid "GUS memory unchanged"
+msgstr "GUS 记忆未更改"
+
+msgid "GUS memory unchanged · {reason}"
+msgstr "GUS 记忆未更改 · {reason}"
+
+msgid "GUS memory updated"
+msgstr "GUS 记忆已更新"
+
+msgid "GUS remembers these across workspaces. Deleting asks you first; GUS cannot delete a memory by itself."
+msgstr "GUS 会跨工作区记住这些内容。删除前会先询问你；GUS 不能自行删除记忆。"
+
+msgid "GUS will delete all {count} memories. This cannot be undone."
+msgstr "GUS 将删除全部 {count} 条记忆。此操作无法撤销。"
+
+msgid "GUS will delete this memory. This cannot be undone."
+msgstr "GUS 将删除这条记忆。此操作无法撤销。"
+
+msgid "GUS will keep this note for future conversations, across workspaces, and can show or forget it in Settings:\n{text}"
+msgstr "GUS 会为今后的对话跨工作区保存这条笔记，并可在设置中查看或忘记：\n{text}"
+
+msgid "Let GUS remember this?"
+msgstr "让 GUS 记住这个？"
+
+msgid "Memories"
+msgstr "记忆"
+
+msgid "Mode: {mode} · {count} memories{shown}"
+msgstr "模式：{mode} · {count} 条记忆{shown}"
+
+msgid "Number to forget"
+msgstr "要忘记的编号"
+
+msgid "Remember"
+msgstr "记住"
+
+msgid "There is no memory with that number."
+msgstr "没有该编号的记忆。"
+
+msgid "Write the number of one memory."
+msgstr "请输入一条记忆的编号。"

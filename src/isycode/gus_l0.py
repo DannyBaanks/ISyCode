@@ -40,10 +40,20 @@ L0_FILES = (
     "src/isycode/gus_context_pack.py",
     "src/isycode/gus_session.py",
     "src/isycode/gus_generation.py",
+    "src/isycode/gus_roots.py",
+    "src/isycode/gus_dispatch.py",
+    "src/isycode/gus_memory.py",
     "src/isycode/gus_seam.py",
+    "src/isycode/tui_app_gus.py",
+    "src/isycode/tui_screens_gus.py",
+    "src/isycode/tui_screens_gus_settings.py",
     "tests/test_gus_l0.py",
     "tests/test_gus_role.py",
+    "tests/test_gus_roots.py",
+    "tests/test_gus_dispatch.py",
     "tests/test_gus_seam.py",
+    "tests/test_machine_view.py",
+    "tests/test_gus_memory.py",
     # IsySentinel, the action registry and the destructive-action firewall.
     "src/isycode/isysentinel.py",
     "src/isycode/security.py",
@@ -93,6 +103,7 @@ L0_FILES = (
     "src/isycode/platform_windows_git.py",
     "src/isycode/grok_auth.py",
     "src/isycode/iteration.py",
+    "src/isycode/machine_view.py",
     "src/isycode/mcp_local.py",
     "src/isycode/mobile_host.py",
     "src/isycode/provider_auth.py",
@@ -286,6 +297,11 @@ def gus_turn_active(root) -> bool:
         return False
 
 
+def gus_any_turn_active() -> bool:
+    """Whether any GUS turn is open (machine reads run from another root)."""
+    return _GUS_TURN.get() is not None
+
+
 def current_gus_branch(root: Path) -> str | None:
     """The checkout's ``gus/<topic>`` branch from HEAD, or None (a plain .git folder only)."""
     try:
@@ -338,5 +354,6 @@ def l0_change_refusal(root: Path, changes) -> str | None:
 
 
 __all__ = ["L0Fingerprint", "L0_DIRECTORIES", "L0_FILES", "L0_RULE", "fingerprint",
-           "current_gus_branch", "gus_turn", "gus_turn_active", "l0_change_refusal", "l0_refusal", "manifest_text",
+           "current_gus_branch", "gus_any_turn_active", "gus_turn", "gus_turn_active",
+           "l0_change_refusal", "l0_refusal", "manifest_text",
            "on_gus_branch", "repository_path", "touches_l0"]

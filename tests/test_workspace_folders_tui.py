@@ -247,9 +247,9 @@ def test_native_add_and_always_button_at_80_columns(tmp_path, monkeypatch, capsy
                 path='file.py', old_text='value = 1', new_text='value = 2')))
             for _ in range(200):
                 await pilot.pause(.05)
-                if isinstance(app.screen, WriteApprovalScreen):
+                if (isinstance(app.screen, WriteApprovalScreen)
+                        and app.screen.query('#write-approval-always')):
                     break
-            await pilot.pause()
             assert app.screen.query_one('#write-approval-always').region.bottom <= 24
             await pilot.click('#write-approval-always')
             for _ in range(200):
@@ -303,7 +303,11 @@ def test_warning_controls_remain_visible_and_cancel_by_default(tmp_path, monkeyp
         async with app.run_test(size=size) as pilot:
             await pilot.pause()
             task = asyncio.create_task(app._set_folder_auto_edit('main', True))
-            await pilot.pause()
+            for _ in range(200):
+                await pilot.pause(.05)
+                if (isinstance(app.screen, AutomaticEditsWarningScreen)
+                        and app.screen.query('#auto-edit-enable')):
+                    break
             button = app.screen.query_one('#auto-edit-enable')
             assert button.region.bottom <= size[1]
             assert button.region.right <= size[0]

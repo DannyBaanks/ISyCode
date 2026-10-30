@@ -89,7 +89,11 @@ Tree > .tree--cursor, Tree:focus > .tree--cursor { background: $isy-selected-sur
 }
 #prompt-input:focus, #idea-box:focus, #shell-box:focus, ThoughtBlock:focus-within, ExpandableBox:focus-within, CommandOutputCard:focus-within { border: solid $isy-focus; }
 CollapsibleTitle { text-style: none; color: $isy-text; }
-#action-card { background: $isy-surface !important; border: solid $isy-border !important; height: 94%; padding: 1 2; }
+#action-card {
+    background: $isy-surface !important; border: solid $isy-border !important;
+    width: 96; max-width: 96%; height: auto; min-height: 12; max-height: 90%; padding: 1 2;
+}
+#action-card.settings-menu, #action-card.wide-detail-menu { height: 90%; }
 #action-title { height: 1; color: $isy-text; margin-bottom: 1; }
 #action-description { height: auto; max-height: 2; color: $isy-muted; margin-bottom: 1; }
 #action-search { margin-bottom: 1; }
@@ -148,19 +152,19 @@ ModalScreen { align: center middle; background: #000000 65%; }
    No screen declares its own card geometry. */
 Dialog { align: center middle; background: #000000 65%; }
 Dialog .isy-dialog-card {
-    width: 84; max-width: 94%; height: auto; max-height: 92%;
+    min-width: 48; width: 84; max-width: 94%; height: auto; min-height: 8; max-height: 90%;
     padding: 1 2; background: $isy-surface; border: solid $isy-border;
 }
-Dialog.dialog-narrow .isy-dialog-card { width: 76; }
-Dialog.dialog-wide .isy-dialog-card { width: 100; }
-Dialog.dialog-fill .isy-dialog-card { height: 92%; }
+Dialog.dialog-narrow .isy-dialog-card { min-width: 40; width: 68; min-height: 8; }
+Dialog.dialog-wide .isy-dialog-card { min-width: 60; width: 96; min-height: 10; }
+Dialog.dialog-fill .isy-dialog-card { height: 90%; }
 /* Consent must be the loudest surface on screen, not another grey card. */
 Dialog.dialog-approval .isy-dialog-card { border: solid $isy-warning; }
 Dialog.dialog-approval .isy-dialog-title { color: $isy-warning; }
 Dialog.dialog-danger .isy-dialog-card { border: solid $isy-error; }
 Dialog.dialog-danger .isy-dialog-title { color: $isy-error; }
-Dialog .isy-dialog-note { height: auto; max-height: 12; margin-bottom: 1; }
-Dialog .isy-dialog-body { height: auto; max-height: 16; }
+Dialog .isy-dialog-note { height: auto; min-height: 1; max-height: 12; margin-bottom: 1; }
+Dialog .isy-dialog-body { height: auto; min-height: 1; max-height: 18; }
 Dialog.dialog-fill .isy-dialog-body { height: 1fr; max-height: 100%; }
 Dialog .isy-dialog-structural { height: auto; margin-bottom: 1; color: $isy-muted; }
 Dialog .isy-dialog-detail { height: auto; }

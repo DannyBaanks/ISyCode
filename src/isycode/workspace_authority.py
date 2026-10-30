@@ -85,7 +85,7 @@ CLASSIC_ACTIONS = (CLASSIC_PATH_ACTIONS | CLASSIC_GRANTED_ACTIONS | CLASSIC_SERV
                    | {"provider.request", "workspace.command.run"})
 
 
-def _known_provider_hosts() -> list[str]:
+def known_provider_hosts() -> list[str]:
     """Hosts of the provider presets and any configured endpoint override."""
     from isycode.providers import PRESETS, provider_base_url  # providers loads lazily
 
@@ -231,7 +231,7 @@ class WorkspaceAuthority:
         services = _known_services()
         for action in CLASSIC_SERVICE_ACTIONS:
             merge(action, "targets", services)
-        merge("provider.request", "network_hosts", _known_provider_hosts())
+        merge("provider.request", "network_hosts", known_provider_hosts())
         # Commands are ready in Classic only when the verified sandbox exists.
         # The grant is bound to that exact executable; there is no shell fallback.
         try:
@@ -442,4 +442,5 @@ def _trusted_quiet(authority: WorkspaceAuthority, request: ActionRequest) -> boo
         return False
 
 
-__all__ = ["CLASSIC_ACTIONS", "FLOW_PATH_ACTIONS", "MODES", "PRESET_MODES", "WorkspaceAuthority", "WorkspaceAuthorityError"]
+__all__ = ["CLASSIC_ACTIONS", "FLOW_PATH_ACTIONS", "MODES", "PRESET_MODES", "WorkspaceAuthority",
+           "WorkspaceAuthorityError", "known_provider_hosts"]

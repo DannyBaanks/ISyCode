@@ -27,6 +27,35 @@ def test_payload_is_not_recursively_expanded():
     assert store.expand(second) == second_payload
 
 
+def test_the_review_close_button_stays_reachable_on_a_short_screen():
+    import asyncio
+    from textual.app import App
+    from isycode.tui_screens_sessions import PastedTextScreen
+
+    class Prompt:
+        def load_text(self, text):
+            pass
+
+    class Host(App):
+        def __init__(self):
+            super().__init__()
+            self.dialog = PastedTextScreen(Prompt(), [("pasted.txt", "line\n" * 120)])
+
+        def on_mount(self):
+            self.push_screen(self.dialog)
+
+    async def scenario():
+        app = Host()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            # The scroll body adapts to the viewport so the action row is not
+            # pushed below the 24-row minimum supported screen.
+            button = app.screen.query_one("#paste-review-close")
+            assert button.region.bottom <= 24, button.region
+            await pilot.click("#paste-review-close")
+    asyncio.run(scenario())
+
+
 def test_terminal_paste_review_remove_and_lossless_send(tmp_path, monkeypatch):
     import asyncio
     from textual.events import Paste

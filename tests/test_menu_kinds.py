@@ -132,6 +132,7 @@ EXPECTED = {
     "models_open",
     "sidebar_preview_toggle",
     "provider_auth_methods",
+    "gus_settings",
 }
 
 def test_menu_dispatch_keeps_every_extracted_kind():

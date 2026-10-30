@@ -4,6 +4,11 @@ Moved verbatim from tui.py. TUIApp inherits this mixin.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from isycode.tui import TUIApp
+
 import sys
 import os
 import asyncio

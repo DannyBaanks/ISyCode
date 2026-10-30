@@ -433,6 +433,7 @@ class MenuAction(str, Enum):
     USER_DEFAULT_ROLE_CLEAR = "user_default_role_clear"
     WORKFLOW_OPEN = "workflow_open"
     GUS_SLOT_OPEN = "gus_slot_open"
+    GUS_SETTINGS = "gus_settings"
     GUS_TOGGLE = "gus_toggle"
     GUS_OPEN = "gus_open"
     GUS_SLOT_PROVIDER = "gus_slot_provider"
@@ -562,6 +563,7 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.USER_DEFAULT_ROLE_CLEAR: "_menu_user_default_role_clear",
     MenuAction.WORKFLOW_OPEN: "_menu_workflow_open",
     MenuAction.GUS_SLOT_OPEN: "_menu_gus_slot_open",
+    MenuAction.GUS_SETTINGS: "_menu_gus_settings",
     MenuAction.GUS_TOGGLE: "_menu_gus_toggle",
     MenuAction.GUS_OPEN: "_menu_gus_open",
     MenuAction.GUS_SLOT_PROVIDER: "_menu_gus_slot_provider",
@@ -744,7 +746,7 @@ class MenuMixin:
                 PluginCommand("run", "run one command in the workspace sandbox (asks first)", _run_cmd),
                 PluginCommand("idea", "expand the current idea note", _idea_cmd),
                 PluginCommand("compact", "summarize earlier messages to free up context", _compact_cmd),
-                PluginCommand("gus", "talk to GUS, the ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates (ISyCode repository only)", _gus_cmd),
+                PluginCommand("gus", "talk to GUS, your assistant and ISyCode maintainer; /gus branch <topic> creates gus/<topic>, /gus seal runs the gates", _gus_cmd),
                 PluginCommand("mcp", "local MCP: add <preset>, list, start <name>, stop <name>", _mcp_cmd),
                 PluginCommand("iteration", "sequential iteration with three chosen models; /iteration retry <id>", _iteration_cmd),
                 PluginCommand("subagent", "delegate a task; choose a recent model before launch", _subagent_cmd),
@@ -822,6 +824,9 @@ class MenuMixin:
 
     def _menu_gus_slot_open(self, entry) -> None:
         self._open_gus_slot_menu()
+
+    def _menu_gus_settings(self, entry) -> None:
+        self.run_worker(self._open_gus_settings(), exclusive=True, group="gus")
 
     def _menu_gus_toggle(self, entry) -> None:
         self.run_worker(self._toggle_gus_here(), exclusive=True, group="gus")
