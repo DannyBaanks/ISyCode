@@ -27,7 +27,7 @@ class IdeaNoteScreen(ModalScreen):
     IdeaNoteScreen { align: center middle; background: #000000 58%; }
     #idea-note-card { width: 84; max-width: 95%; height: auto; min-height: 9; max-height: 88%; padding: 1 2; border: solid #718291; background: #000000; }
     #idea-note-heading { height: 1; color: #edf1f5; text-style: bold; }
-    #idea-note-scroll { height: auto; min-height: 3; max-height: 22; margin: 1 0; border-top: solid #3f4d59; }
+    #idea-note-scroll { height: auto; min-height: 3; max-height: 40vh; margin: 1 0; border-top: solid #3f4d59; }
     #idea-note-content { height: auto; }
     #idea-note-close { width: 16; }
     """
@@ -126,7 +126,7 @@ class PastedTextScreen(ModalScreen):
     CSS = """
     PastedTextScreen { align: center middle; background: #000000 58%; }
     #paste-review-card { width: 88; max-width: 95%; height: auto; min-height: 9; max-height: 88%; border: solid #718291; padding: 1 2; background: #000000; }
-    #paste-review-scroll { height: auto; min-height: 3; max-height: 22; }
+    #paste-review-scroll { height: auto; min-height: 3; max-height: 40vh; }
     .paste-full-text { height: auto; }
     """
     BINDINGS = [Binding("escape", "close", "Close")]

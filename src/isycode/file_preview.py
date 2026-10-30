@@ -132,7 +132,7 @@ class FilePreviewScreen(ModalScreen[None]):
     FilePreviewScreen { align: center middle; background: #000000 58%; }
     #preview-card { width: 104; max-width: 96%; height: auto; min-height: 12; max-height: 90%; }
     #preview-heading { height: auto; max-height: 4; }
-    #preview-text { height: auto; min-height: 4; max-height: 26; background: #000000; border: none; }
+    #preview-text { height: auto; min-height: 4; max-height: 40vh; background: #000000; border: none; }
     #preview-text .text-area--gutter { background: #000000; color: #718291; }
     #preview-text .text-area--selection { background: #002c36; }
     '''
