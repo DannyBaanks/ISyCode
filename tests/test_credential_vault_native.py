@@ -66,3 +66,32 @@ def test_real_windows_keyring_synthetic_roundtrip(tmp_path):
         assert seed.encode() not in vault.path.read_bytes()
     finally:
         if key is not None:assert vault.revoke(key)
+
+
+def test_every_vault_call_releases_the_database_file(tmp_path,fake_keyring,monkeypatch):
+    """An open sqlite handle keeps credentials.sqlite3 locked on Windows.
+
+    `with conn:` only commits or rolls back; it never closes. The soak then
+    loses the file with WinError 32 when it tries to replace or delete it.
+    """
+    from isycode import credentials as vault_module
+    opened=[]
+    connect=vault_module.sqlite3.connect
+    class Tracked(vault_module.sqlite3.Connection):
+        released=False
+        def close(self):
+            self.released=True
+            super().close()
+    def spy(*args,**kwargs):
+        db=connect(*args,factory=Tracked,**kwargs)
+        opened.append(db)
+        return db
+    monkeypatch.setattr(vault_module.sqlite3,'connect',spy)
+    vault=CredentialVault(tmp_path/'vault'/'credentials.sqlite3')
+    key=vault.add('release control','parity-release','synthetic acceptance','seeded-not-a-real-key')
+    vault.list_metadata()
+    vault.get_secret(key)
+    vault.latest_secret_for_service('parity-release')
+    vault.revoke(key)
+    assert len(opened)>=5,'the vault opened no database'
+    assert [db for db in opened if not db.released]==[]

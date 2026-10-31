@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -264,3 +265,56 @@ def test_the_settings_form_opens_memories_and_forgetting_asks_first(tmp_path, mo
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_a_record_survives_the_window_where_a_writer_replaces_it(world, monkeypatch):
+    """A concurrent atomic replace briefly denies the read on Windows (Errno 13).
+
+    That window is a healthy write in progress, not a corrupt store, so reading
+    must wait it out instead of telling the person their own memories are gone.
+    """
+    store = GusMemoryStore()
+    store.add("Danny prefers Spanish replies", workspace=str(world.visible))
+    read_text = Path.read_text
+    denied = []
+
+    def locked(self, *args, **kwargs):
+        if not denied:
+            denied.append(1)
+            raise PermissionError(13, "used by another process")
+        return read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", locked)
+    assert [entry["text"] for entry in store.entries()] == ["Danny prefers Spanish replies"]
+    assert len(denied) == 1
+
+
+def test_a_record_that_stays_locked_fails_closed_without_hanging(world, monkeypatch):
+    store = GusMemoryStore()
+    store.add("A note", workspace=str(world.visible))
+
+    def always_locked(self, *args, **kwargs):
+        raise PermissionError(13, "used by another process")
+
+    monkeypatch.setattr(Path, "read_text", always_locked)
+    started = time.monotonic()
+    with pytest.raises(GusMemoryError, match="unreadable"):
+        store.entries()
+    assert time.monotonic() - started < 2.0, "the retry budget is unbounded"
+
+
+def test_corrupt_content_is_not_retried(world, monkeypatch):
+    store = GusMemoryStore()
+    store.add("A note", workspace=str(world.visible))
+    store._record.path.write_text("{not json", encoding="utf-8")
+    attempts = []
+    read_text = Path.read_text
+
+    def counted(self, *args, **kwargs):
+        attempts.append(1)
+        return read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", counted)
+    with pytest.raises(GusMemoryError, match="unreadable"):
+        store.entries()
+    assert len(attempts) == 1, "a corrupt record is not a race"
