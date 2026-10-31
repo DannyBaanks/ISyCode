@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import isycode.grit as grit
+from sandbox_gate import REASON, sandbox_missing
 from isycode.action_audit import ActionAuditJournal
 from isycode.action_runtime import GritPeersOwner
 from isycode.approvals import ActionApprovalStore
@@ -66,7 +67,7 @@ def test_advisory_text_names_holder_and_stays_advisory():
     assert grit.advisory_text([]) is None
 
 
-@pytest.mark.skipif(os.name != "posix", reason="grit availability requires the POSIX bwrap sandbox")
+@pytest.mark.skipif(sandbox_missing(), reason="grit availability requires the bwrap sandbox")
 def test_discover_grit_pins_path_and_sha256(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -88,7 +89,7 @@ def test_discover_grit_without_binary_returns_none(tmp_path, monkeypatch):
     assert grit.discover_grit() is None
 
 
-@pytest.mark.skipif(os.name != "posix", reason="grit bubblewrap command is POSIX-specific")
+@pytest.mark.skipif(sandbox_missing(), reason="the grit sandbox command needs the bwrap sandbox")
 def test_sandbox_command_mounts_workspace_ro_and_only_grit_rw(tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -114,8 +115,8 @@ def test_sandbox_command_mounts_workspace_ro_and_only_grit_rw(tmp_path):
 
 @pytest.fixture
 def peers(tmp_path: Path, monkeypatch):
-    if os.name != "posix":
-        pytest.skip("POSIX sandbox only")
+    if sandbox_missing():
+        pytest.skip(REASON)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -212,7 +213,7 @@ def test_unparseable_output_is_unavailable_not_empty(peers, monkeypatch):
     assert _run(owner).decision == "ERROR"
 
 
-@pytest.mark.skipif(os.name != "posix", reason="grit bubblewrap command is POSIX-specific")
+@pytest.mark.skipif(sandbox_missing(), reason="the grit sandbox command needs the bwrap sandbox")
 def test_grit_process_is_launched_without_the_host_environment(tmp_path, monkeypatch):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

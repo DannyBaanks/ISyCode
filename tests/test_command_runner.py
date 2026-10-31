@@ -14,11 +14,9 @@ from isycode.command_runner import CommandRunOwner, sandbox_command, sandbox_exe
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 
-pytestmark = pytest.mark.skipif(
-    sandbox_executable() is None,
-    reason="the command sandbox needs bubblewrap, libseccomp and python3; a POSIX "
-          "system without them, such as macOS, cannot even refuse a run",
-)
+from sandbox_gate import REASON, requires_sandbox
+
+pytestmark = requires_sandbox
 
 # Stand-in for bubblewrap: it cannot mount, so it maps /workspace back to the
 # host folder, applies --chdir/--setenv/--clearenv and logs the masks it was
@@ -65,6 +63,10 @@ os.execve(mapped[0], mapped, env)
 
 @pytest.fixture
 def sandbox(tmp_path: Path, monkeypatch):
+    # Other files import this fixture, so the check lives here too: without a
+    # host sandbox there is no command to review and every case below is moot.
+    if sandbox_executable() is None:
+        pytest.skip(REASON)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
