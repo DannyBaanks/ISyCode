@@ -500,3 +500,20 @@ def test_a_frame_without_newline_cannot_grow_past_the_pending_limit(tmp_path, mo
         assert time.monotonic() - started < 5
         assert connection._process.returncode is not None
     asyncio.run(run())
+
+
+def test_a_failed_startup_names_the_real_reason(tmp_path, monkeypatch):
+    """The person must learn why Codex did not start, not only that it did not."""
+    connection = connector(tmp_path)
+
+    async def broken_exec(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", broken_exec)
+
+    async def run():
+        async with connection:
+            pass
+
+    with pytest.raises(CodexConnectorError, match="No such file or directory"):
+        asyncio.run(run())
