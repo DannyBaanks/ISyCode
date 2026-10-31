@@ -339,6 +339,13 @@ def test_the_settings_form_asks_before_widening_the_machine_scope(tmp_path, monk
     configure(tmp_path, monkeypatch)
     external = tmp_path / "external"
     external.mkdir()
+    # The form validates the target it inherits, and a git worktree carries a
+    # .git file instead of a folder, so the test pins its own checkout.
+    target = _checkout(tmp_path / "target")
+    (target / ".git").mkdir()
+    settings = GusSettingsStore()
+    settings.consent({**DEFAULT_SETTINGS, "target": str(target)},
+                     at="2026-10-24T00:00:00+00:00")
 
     async def until(pilot, condition, what):
         for _ in range(200):
