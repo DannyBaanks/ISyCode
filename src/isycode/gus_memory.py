@@ -27,6 +27,7 @@ import os
 import re
 import secrets
 import stat
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -113,6 +114,11 @@ def redact_memory(text: str) -> str:
 class _PrivateRecord:
     """One bounded, private JSON record under the user's GUS state."""
 
+    # Windows holds the target of an in-flight replace for milliseconds; a lock
+    # that outlasts this window is treated as unreadable, not as a race.
+    TRANSIENT_WINDOW_SECONDS = 0.25
+    TRANSIENT_PAUSE_SECONDS = 0.01
+
     def __init__(self, directory: Path, name: str, *, max_bytes: int) -> None:
         self.directory = directory
         self.path = directory / name
@@ -139,12 +145,29 @@ class _PrivateRecord:
         if os.name == "posix" and (info.st_uid != os.getuid() or info.st_mode & 0o077):
             raise GusMemoryError("GUS's user state is not private")
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
+            data = self._read_json()
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise GusMemoryError("GUS's user state is unreadable") from exc
         if not isinstance(data, dict) or data.get("version") != RECORD_VERSION:
             raise GusMemoryError("GUS's user state does not match this version")
         return data
+
+    def _read_json(self) -> Any:
+        """Parse the record, waiting out a writer's atomic replace.
+
+        On Windows a concurrent ``os.replace`` can deny this read for a moment
+        even though the writer is healthy. Only that denial is transient:
+        unreadable or corrupt content is still raised, not retried.
+        """
+        deadline = time.monotonic() + self.TRANSIENT_WINDOW_SECONDS
+        while True:
+            try:
+                return json.loads(self.path.read_text(encoding="utf-8"))
+            except PermissionError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+                time.sleep(min(self.TRANSIENT_PAUSE_SECONDS, remaining))
 
     def write(self, record: dict[str, Any]) -> None:
         payload = json.dumps({"version": RECORD_VERSION, **record}, ensure_ascii=False,

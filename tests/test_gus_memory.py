@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,7 +16,7 @@ from isycode.gus_context_pack import (
 from isycode.gus_l0 import gus_turn
 from isycode.gus_memory import (
     GusConversation, GusMemoryError, GusMemoryOwner, GusMemoryStore, MEMORY_ACTION,
-    redact_memory,
+    RECORD_VERSION, _PrivateRecord, redact_memory,
 )
 from isycode.gus_roots import DEFAULT_SETTINGS, GusRoots, GusSettingsStore
 from isycode.gus_session import GusState, gus_tools
@@ -264,3 +265,59 @@ def test_the_settings_form_opens_memories_and_forgetting_asks_first(tmp_path, mo
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_a_record_survives_the_window_where_a_writer_replaces_it(tmp_path, monkeypatch):
+    """A concurrent atomic replace briefly denies the read on Windows (Errno 13).
+
+    That window is a healthy write in progress, not a corrupt store, so reading
+    must wait it out instead of telling the person their own memories are gone.
+    """
+    record = _PrivateRecord(tmp_path, "memories.json", max_bytes=4096)
+    record.write({"entries": [{"text": "Danny prefers Spanish replies"}]})
+    read_text = Path.read_text
+    denied = []
+
+    def locked(self, *args, **kwargs):
+        if not denied:
+            denied.append(1)
+            raise PermissionError(13, "used by another process")
+        return read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", locked)
+    assert record.read() == {
+        "version": RECORD_VERSION,
+        "entries": [{"text": "Danny prefers Spanish replies"}],
+    }
+    assert len(denied) == 1
+
+
+def test_a_record_that_stays_locked_fails_closed_without_hanging(tmp_path, monkeypatch):
+    record = _PrivateRecord(tmp_path, "memories.json", max_bytes=4096)
+    record.write({"entries": []})
+
+    def always_locked(self, *args, **kwargs):
+        raise PermissionError(13, "used by another process")
+
+    monkeypatch.setattr(Path, "read_text", always_locked)
+    started = time.monotonic()
+    with pytest.raises(GusMemoryError, match="unreadable"):
+        record.read()
+    assert time.monotonic() - started < 2.0, "the retry budget is unbounded"
+
+
+def test_corrupt_content_is_not_retried(tmp_path, monkeypatch):
+    record = _PrivateRecord(tmp_path, "memories.json", max_bytes=4096)
+    (tmp_path / "memories.json").write_text("{not json", encoding="utf-8")
+    os.chmod(tmp_path / "memories.json", 0o600)
+    attempts = []
+    read_text = Path.read_text
+
+    def counted(self, *args, **kwargs):
+        attempts.append(1)
+        return read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", counted)
+    with pytest.raises(GusMemoryError, match="unreadable"):
+        record.read()
+    assert len(attempts) == 1, "a corrupt record is not a race"
