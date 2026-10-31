@@ -19,7 +19,7 @@ Estados:
 | Modos | Security, Classic, Flow | COVERED |
 | Proveedores | nube y uno local (Ollama) | COVERED |
 | Plataformas | Linux, Windows | COVERED |
-| Plataformas | macOS (suite completa; sandbox, `prlimit` y `sun_path` sin demostrar) | PARTIAL |
+| Plataformas | macOS (suite completa; sandbox, `prlimit`, `sun_path` y las medidas del soak sin demostrar) | PARTIAL |
 | Idiomas | en, es, zh | COVERED |
 | Tamaños | 80×24, 100×30, 140×40 | COVERED |
 | Fallas de red | 429, 503, stream parcial, DNS, redirect, proxy | COVERED |
@@ -65,19 +65,20 @@ Contratos de autoridad por modo:
 |---|---|---|
 | Linux | CI `Tests (Linux)` y `Tests (Linux, Textual 8)`: suite completa | COVERED |
 | Windows | CI `Tests (Windows)`: suite completa; `platform-parity` agrega contratos nativos y el sandbox de Windows | COVERED |
-| macOS | CI `Tests (macOS)`: suite completa en `macos-latest` (Python 3.12), con los tres huecos de la tabla de abajo; `platform-parity` y `Package (macos-arm64)` corren además | PARTIAL |
+| macOS | CI `Tests (macOS)`: suite completa en `macos-latest` (Python 3.12), con los huecos de la tabla de abajo; `platform-parity` y `Package (macos-arm64)` corren además | PARTIAL |
 
 El job `native-contracts` corre en `ubuntu-latest`, `windows-latest` y
 `macos-latest`. `test-macos` se sumó en este PR y ejecuta
 `python -m pytest -q -m "not integration"`: en macOS ya se ejercitan la TUI, la
-autoridad, el transporte SSE, los idiomas y el storage nativo. Quedan tres
+autoridad, el transporte SSE, los idiomas y el storage nativo. Quedan cuatro
 huecos afirmados, cada uno con su marca y su razón escrita en el código:
 
 | Hueco en macOS | Por qué | Dónde está la marca |
 |---|---|---|
-| Sandbox de comandos | `sandbox_executable()` exige `resource.setrlimit`, `bwrap`, `libseccomp` y `/usr/bin/python3`; sólo Linux los tiene. Sin sandbox no hay comando que revisar y el producto no tiene fallback sin sandbox. | `tests/sandbox_gate.py`: `skipif(sandbox_missing())` con la razón `NOT_DEMONSTRATED:`, aplicado en `test_command_runner.py`, `test_staging.py`, `test_staging_budget.py`, `test_rtk_authority.py`, `test_rtk_integration.py`, `test_flow_mode.py`, `test_gus_guard.py`, `test_grit_peers.py`, `test_turn_control.py`, `test_effect_ledger.py`, `test_workspace_trust.py`, `test_everyday_flows.py` |
+| Sandbox de comandos | `sandbox_executable()` exige `resource.setrlimit`, `bwrap`, `libseccomp` y `/usr/bin/python3`; sólo Linux los tiene. Sin sandbox no hay comando que revisar y el producto no tiene fallback sin sandbox. | `tests/sandbox_gate.py`: `skipif(sandbox_missing())` con la razón `NOT_DEMONSTRATED:`, aplicado en `test_command_runner.py`, `test_staging.py`, `test_staging_budget.py`, `test_rtk_authority.py`, `test_rtk_integration.py`, `test_flow_mode.py`, `test_gus_guard.py`, `test_grit_peers.py`, `test_turn_control.py`, `test_effect_ledger.py`, `test_workspace_trust.py`, `test_everyday_flows.py`. La auditoría SEAM lo pregunta al propio producto dentro del caso (`HostCannotRunCase` en `src/isycode/gus_seam.py`) y `seam-02-command-l0` queda en `SKIP` esperado, no en `ERROR`. |
 | LSP bajo sandbox | `lsp.py` pide `resource.prlimit`, que no existe en macOS; el servidor queda `installed_unavailable`, que es el comportamiento correcto del producto allí. | `tests/test_native_toolkit.py::test_native_lsp_catalog_and_read_only_runtime` |
 | Nombre del socket de hook | `sun_path` es de 104 bytes en macOS (108 en Linux); con un `TMPDIR` largo el socket del Hive no cabe y el servidor ni siquiera arranca. | `tests/test_hive_regressions.py::test_hook_server_denies_and_logs_security_violation` |
+| Memoria y descendientes del soak | Script que se corre a mano, no en CI. Sin `/proc` no hay RSS actual (en macOS la stdlib sólo da un pico) ni lista de hijos de un proceso; el soak guarda `null` y sus checks `rss` y `no_orphans` quedan en FAIL. | `scripts/soak_g9.py`: `sample_rss()` / `sample_orphans()`; `tests/test_soak_g9_validation.py::test_a_host_that_reports_nothing_about_memory_or_children_claims_nothing` |
 
 Los marcadores anteriores preguntaban por el sistema operativo (`os.name !=
 "posix"`), y macOS responde "posix": pedían el sandbox con una capacidad que
@@ -139,9 +140,12 @@ aprobaciones y el ciclo de roles en la TUI.
 ## Huecos conocidos
 
 - **macOS, capacidades del SO.** La suite completa corre en macOS, pero el
-  sandbox de comandos, el LSP bajo `prlimit` y el socket de hook con un
-  `TMPDIR` largo no son alcanzables allí y están marcados como tales en la
-  tabla de Plataformas. La paridad total con Linux no se afirma.
+  sandbox de comandos, el LSP bajo `prlimit`, el socket de hook con un `TMPDIR`
+  largo y las medidas del soak (RSS actual y descendientes, que viven en
+  `/proc`) no son alcanzables allí; cada uno está marcado con su
+  `NOT_DEMONSTRATED` en la tabla de arriba. La auditoría SEAM reporta su hueco
+  como el `SKIP` que el roster espera, y el soak guarda `null`: ninguno de los
+  dos afirma un verde que no midió. La paridad total con Linux no se afirma.
 - **Idiomas en la edición completa.** El viaje de modos corre en `en`. La TUI
   por idioma está cubierta por chrome, aprobaciones y ciclo de roles.
 - **Proveedores de nube con transporte real dentro de la TUI.** El protocolo
