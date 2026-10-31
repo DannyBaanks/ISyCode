@@ -159,3 +159,20 @@ El núcleo de seguridad, los contratos de ISySentinel, los Execution Owners y la
 
 El cierre formal hacia la versión **v1.0.0 final** permanece explícitamente supeditado a la ejecución de la prueba de usabilidad con 5 usuarios reales (Gate **G9-05** del roadmap, según el protocolo en [docs/usability-g9/GUIA.md](docs/usability-g9/GUIA.md)), manteniendo el principio *fail-closed* del proyecto hasta contar con los participantes.
 
+## Archivos añadidos al repositorio (2026-10-31)
+
+El commit `cf0063e` versiona la auditoría que estaba sin control de versiones:
+
+- `AUDITORIA_RESUMEN.md` — resumen.
+- `AUDITORIA_CODIGO.md` — detalle de código.
+- `AUDITORIA_HALLAZGOS.txt` — hallazgos en crudo.
+- `LICENSE`.
+
+
+## Licencia
+
+El código original de ISyCode se distribuye bajo la [licencia MIT](LICENSE).
+Los componentes, recursos y dependencias de terceros conservan sus licencias
+y avisos de autoría respectivos, incluidos los de las
+[skills incluidas](src/isycode/bundled_skills/LICENSE) y los
+[recursos de iconografía y tipografía](docs/design/2026-10-11-icons-typography/licenses/).
