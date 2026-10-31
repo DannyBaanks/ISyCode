@@ -42,9 +42,17 @@ def test_native_lsp_catalog_and_read_only_runtime(tmp_path,monkeypatch):
     monkeypatch.setattr(lsp.shutil,'which',lambda name:str(binary) if name=='rust-analyzer' else str(bwrap) if name=='bwrap' else None)
     monkeypatch.setattr(lsp.ctypes.util,'find_library',lambda _: 'libseccomp.so.2')
     server=next(s for s in lsp.discover_servers() if s['id']=='rust-analyzer')
-    expected_state = 'sandbox_ready' if os.name == 'posix' else 'installed_unavailable'
+    # The catalog calls a server sandbox-ready only where the sandbox it builds
+    # can actually install limits: resource.prlimit exists on Linux, not on the
+    # other POSIX systems, so a fake bwrap alone must not claim readiness.
+    try:
+        import resource
+    except ModuleNotFoundError:
+        resource = None
+    sandboxable = resource is not None and hasattr(resource, 'prlimit')
+    expected_state = 'sandbox_ready' if sandboxable else 'installed_unavailable'
     assert server['state']==expected_state
-    if os.name == 'nt':
+    if not sandboxable:
         return
     command=lsp._sandbox_command(tmp_path,server)
     assert '/runtime/server' in command

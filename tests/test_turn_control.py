@@ -22,6 +22,7 @@ import pytest
 
 from isycode.approvals import ActionApprovalStore
 from isycode.command_runner import CommandRunOwner, sandbox_executable
+from sandbox_gate import REASON, sandbox_missing
 from isycode.effect_ledger import CrashInjected, EffectCost, EffectLedger, LedgerDenied
 from isycode.publish import PublishOwner
 from isycode.staging import (
@@ -119,6 +120,7 @@ def test_g6_01_cancel_during_stream_closes_the_socket():
     os.name == "nt",
     reason="NOT_DEMONSTRATED: this witness uses os.fork and /proc; Windows Job Object tree tests cover native termination",
 )
+@pytest.mark.skipif(sandbox_missing(), reason=REASON)
 def test_g6_01_cancel_during_staging_kills_child_and_grandchild(tmp_path, monkeypatch):
     _isolate(monkeypatch, tmp_path)
     sandbox = sandbox_executable()

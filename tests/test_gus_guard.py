@@ -12,6 +12,7 @@ from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_trust import quiet_gus, quiet_request
 from isycode.workspace_write import WorkspaceWriteOwner
+from sandbox_gate import sandbox_missing
 
 
 
@@ -154,7 +155,7 @@ def test_command_promotion_refuses_l0_changes_in_a_gus_turn(repo):
         assert "L0" in owner._revoked_effect([{"path": "docs/decisions/x.md", "kind": "add"}])
 
 
-@pytest.mark.skipif(os.name != "posix", reason="the command sandbox is POSIX only")
+@pytest.mark.skipif(sandbox_missing(), reason="the command sandbox needs bubblewrap, libseccomp and python3")
 def test_a_real_command_in_a_gus_turn_cannot_promote_an_l0_change(tmp_path, monkeypatch):
     """GK5-01 with a real command: L1 and L0 changed in staging; nothing is promoted."""
     from test_command_runner import _run, sandbox as make_sandbox

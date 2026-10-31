@@ -23,6 +23,7 @@ from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_trust import ACCEPT_PHRASE, WorkspaceTrust, modal_required
 from isycode.workspace_write import WorkspaceWriteOwner
 
+from sandbox_gate import requires_sandbox
 from test_workspace_trust import FAKE_BWRAP
 
 
@@ -49,6 +50,7 @@ def repo(tmp_path, monkeypatch):
     return authority, root.resolve()
 
 
+@requires_sandbox
 def test_g7_01_dirty_repo_diagnose_edit_test_diff_undo(repo, monkeypatch):
     authority, root = repo
     approvals = ActionApprovalStore()

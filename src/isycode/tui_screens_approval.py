@@ -124,12 +124,18 @@ class ApprovalScreen(ModalScreen[bool]):
     # Textual focuses this when the screen activates. Without it the app-wide
     # default ("*") could hand focus to the scrolling review body instead of
     # the refusing action, so Enter would do nothing or the wrong thing.
+    # The first action in this family is always the refusing action, and this
+    # selector is what puts the focus there: scrollable review content must
+    # never become an implicit consent.
+    #
+    # Asking for the focus in on_mount instead used to crash the app. A dialog
+    # dismissed in the moment between being pushed and being mounted has no
+    # children at all — Textual drops the composed widgets of a screen that is
+    # already closing — so the query raised NoMatches and the panic took the
+    # whole app down over a dialog that was on its way out. AUTO_FOCUS is
+    # re-applied after every compose and does nothing when there is nothing to
+    # focus.
     AUTO_FOCUS = "Button"
-
-    def on_mount(self) -> None:
-        # Scrollable review content must never become an implicit consent.
-        # The first action in this family is always the refusing action.
-        self.query_one(Button).focus()
 
     def _structural_summary(self, *, owner: str, scope: str, duration: str,
                             not_granted: str) -> Static:
@@ -159,6 +165,7 @@ class ContextAccessScreen(ModalScreen[dict | None]):
                 Binding("n", "decline", "Deny", show=False),
                 Binding("escape", "decline", "Deny", show=False),
                 Binding("ctrl+c", "decline", "Deny", show=False)]
+    AUTO_FOCUS = "#context-access-no"
 
     def __init__(self, path: Path, *, requested_by_agent: bool) -> None:
         super().__init__()
@@ -192,9 +199,6 @@ class ContextAccessScreen(ModalScreen[dict | None]):
                 yield Button(tr("Allow once · y"), id="context-access-yes", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#context-access-no", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
         allowed = event.button.id == "context-access-yes"
@@ -218,6 +222,7 @@ class ConfirmScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
+    AUTO_FOCUS = "#tailscale-cancel"
 
     def __init__(self, title: str, details: str, confirm_label: str,
                  *, owner: str = "tailscale private-access",
@@ -249,9 +254,6 @@ class ConfirmScreen(ApprovalScreen):
                              id="tailscale-confirm", variant="primary")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#tailscale-cancel", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "tailscale-confirm")
 
@@ -270,6 +272,7 @@ class WriteApprovalScreen(ApprovalScreen):
     #write-approval-actions Horizontal { height: 3; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
+    AUTO_FOCUS = "#write-approval-reject"
 
     def __init__(self, preview: WritePreview, *, replaces_whole_file: bool = False,
                  allow_automatic_edits: bool = True, allow_session_trust: bool = False) -> None:
@@ -329,7 +332,6 @@ class WriteApprovalScreen(ApprovalScreen):
             yield decision_hint()
 
     async def on_mount(self) -> None:
-        self.query_one("#write-approval-reject", Button).focus()
         # Advisory peer claims (grit) never gate this approval; a failure or a
         # missing registry only leaves the note hidden.
         loader = getattr(self.app, "_grit_peer_advisory", None)
@@ -340,9 +342,11 @@ class WriteApprovalScreen(ApprovalScreen):
         except Exception:
             return
         if note:
-            widget = self.query_one("#write-approval-peer", Static)
-            widget.update(note)
-            widget.display = True
+            # The note arrives after an await: the dialog may have been dismissed
+            # and torn down by then, and a card that is gone shows nothing.
+            for widget in self.query("#write-approval-peer"):
+                widget.update(note)
+                widget.display = True
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "write-approval-always":
@@ -368,6 +372,7 @@ class BatchApprovalScreen(ModalScreen[str]):
     #batch-approval-card { width: 110; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject all")]
+    AUTO_FOCUS = "#batch-approval-reject"
 
     def __init__(self, previews: list[WritePreview]) -> None:
         super().__init__()
@@ -399,9 +404,6 @@ class BatchApprovalScreen(ModalScreen[str]):
                              id="batch-approval-all", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#batch-approval-reject", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss({"batch-approval-all": "all",
                       "batch-approval-each": "each"}.get(event.button.id, "reject"))
@@ -419,6 +421,7 @@ class CommandApprovalScreen(ApprovalScreen):
     #command-approval-argv { border: solid #718291; padding: 0 1; margin: 1 0; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
+    AUTO_FOCUS = "#command-approval-reject"
 
     def __init__(self, preview: CommandPreview) -> None:
         super().__init__()
@@ -438,7 +441,9 @@ class CommandApprovalScreen(ApprovalScreen):
                 yield Static(tr("Folder: {root}\n", root=preview.request.workspace_root) +
                              tr("Run a command · {cwd}", cwd=preview.cwd if preview.cwd != "." else tr("workspace root")),
                              id="command-approval-location", markup=False)
-                with Vertical(id="command-approval-argv", classes="isy-dialog-detail"):
+                argv_card = Vertical(id="command-approval-argv", classes="isy-dialog-detail")
+                argv_card.border_title = tr("Exact command")
+                with argv_card:
                     yield Static(Text(shlex.join(preview.argv)))
                     if "rtk" in preview.request.parameters:
                         rtk = preview.request.parameters["rtk"]
@@ -464,10 +469,6 @@ class CommandApprovalScreen(ApprovalScreen):
                 yield Button(tr("Run command · y"), id="command-approval-run", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#command-approval-argv").border_title = tr("Exact command")
-        self.query_one("#command-approval-reject", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "command-approval-run")
 
@@ -483,6 +484,7 @@ class CommitApprovalScreen(ApprovalScreen):
     #commit-approval-card { width: 110; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
+    AUTO_FOCUS = "#commit-approval-reject"
 
     def __init__(self, preview: CommitPreview) -> None:
         super().__init__()
@@ -508,9 +510,6 @@ class CommitApprovalScreen(ApprovalScreen):
                 yield Button(tr("Commit · y"), id="commit-approval-apply", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#commit-approval-reject", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "commit-approval-apply")
 
@@ -526,8 +525,6 @@ class GusBranchApprovalScreen(ApprovalScreen):
     #gus-branch-card { width: 84; }
     """
     BINDINGS = [Binding("escape", "reject", "Reject")]
-    # Textual focuses this when the screen activates; a focus asked for only in
-    # on_mount can lose to the first focusable widget (the scrolling body).
     AUTO_FOCUS = "#gus-branch-reject"
 
     def __init__(self, preview: BranchPreview) -> None:
@@ -554,9 +551,6 @@ class GusBranchApprovalScreen(ApprovalScreen):
                 yield Button(tr("Create branch · y"), id="gus-branch-apply", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#gus-branch-reject", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "gus-branch-apply")
 
@@ -572,6 +566,7 @@ class LocalMCPConfirmScreen(ApprovalScreen):
     #local-mcp-card { width: 96; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
+    AUTO_FOCUS = "#local-mcp-cancel"
 
     def __init__(self, title: str, body: str, payload: str, approve_label: str,
                  *, owner: str = "local MCP server",
@@ -602,9 +597,6 @@ class LocalMCPConfirmScreen(ApprovalScreen):
                              id="local-mcp-approve", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#local-mcp-cancel", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "local-mcp-approve")
 
@@ -623,6 +615,7 @@ class BrowserReadPreviewScreen(ApprovalScreen):
                 Binding("n", "decline", "Discard"),
                 Binding("escape", "decline", "Discard", show=False),
                 Binding("ctrl+c", "decline", "Discard", show=False)]
+    AUTO_FOCUS = "#browser-read-discard"
 
     def __init__(self, title: str, content: str, input_chars: int,
                  filtered_chars: int, truncated: bool = False,
@@ -661,9 +654,6 @@ class BrowserReadPreviewScreen(ApprovalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "browser-read-share")
 
-    def on_mount(self) -> None:
-        self.query_one("#browser-read-discard", Button).focus()
-
 
 class WorkspacePackConfirmScreen(ApprovalScreen):
     """Review the exact workspace file inventory and token estimate before reading."""
@@ -674,6 +664,7 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
+    AUTO_FOCUS = "#workspace-pack-cancel"
 
     def __init__(self, details: str) -> None:
         super().__init__()
@@ -700,9 +691,6 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
                              variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#workspace-pack-cancel", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "workspace-pack-approve")
 
@@ -719,6 +707,7 @@ class MemoryConfirmScreen(ApprovalScreen):
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel"),
                 Binding("ctrl+c", "cancel", "Cancel", show=False)]
+    AUTO_FOCUS = "#memory-confirm-cancel"
 
     def __init__(self, operation: str, details: str, *, sends_to_model: bool) -> None:
         super().__init__()
@@ -746,9 +735,6 @@ class MemoryConfirmScreen(ApprovalScreen):
                 yield Button(tr("Approve once · y"), id="memory-confirm-approve", variant="warning")
             yield decision_hint()
 
-    def on_mount(self) -> None:
-        self.query_one("#memory-confirm-cancel", Button).focus()
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "memory-confirm-approve")
 
@@ -764,6 +750,7 @@ class DeleteSessionScreen(ApprovalScreen):
     #delete-session-card { width: 72; }
     """
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
+    AUTO_FOCUS = "#delete-session-cancel"
 
     def __init__(self, title: str, *, kind: str = "conversation") -> None:
         super().__init__()
@@ -793,9 +780,6 @@ class DeleteSessionScreen(ApprovalScreen):
                 yield Button(tr("Keep · n"), id="delete-session-cancel", classes="-refuse")
                 yield Button(button, id="delete-session-confirm", variant="warning")
             yield decision_hint()
-
-    def on_mount(self) -> None:
-        self.query_one("#delete-session-cancel", Button).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "delete-session-confirm")

@@ -16,6 +16,7 @@ from isycode.approvals import ActionApprovalStore
 from isycode.workspace_trust import (
     ACCEPT_PHRASE, WorkspaceTrust, modal_required, quiet_classic,
 )
+from sandbox_gate import requires_sandbox, sandbox_missing
 from test_command_runner import sandbox
 from test_command_runner_tui import _preview
 
@@ -156,7 +157,7 @@ def test_explicit_cap_still_applies_only_to_the_selected_scope(tmp_path, monkeyp
     assert (root / "sibling.bin").read_bytes() == b"x" * 64
 
 
-@pytest.mark.skipif(os.name != "posix", reason="reuses the POSIX command sandbox fixture")
+@requires_sandbox
 class TestCommandBudget:
     def test_default_preview_omits_optional_budget_and_preserves_request_digest(self, sandbox):
         owner = sandbox[0]
@@ -431,7 +432,7 @@ def test_expanded_budget_review_scrolls_without_hiding_actions_at_80x24(tmp_path
     asyncio.run(scenario())
 
 
-@pytest.mark.skipif(os.name != "posix", reason="real bubblewrap check is POSIX only")
+@pytest.mark.skipif(sandbox_missing(), reason="the real bubblewrap check needs the host sandbox")
 def test_reviewed_expansion_keeps_real_bubblewrap_isolation(tmp_path, monkeypatch):
     from test_staging import _bubblewrap_namespace_works, _owner
 

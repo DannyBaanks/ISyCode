@@ -44,6 +44,22 @@ def test_real_cycle_verifies_effects_and_restores_cwd(monkeypatch):
     assert Path.cwd() == cwd
 
 
+def test_a_host_that_reports_nothing_about_memory_or_children_claims_nothing(monkeypatch):
+    """macOS has no /proc: an absent measurement is not a green gate and not a leak."""
+    mod = module(monkeypatch)
+    monkeypatch.setattr(mod, "rss_mib", lambda: None)
+    monkeypatch.setattr(mod, "orphans", lambda: None)
+    assert mod.sample_rss() is None and mod.sample_orphans() is None
+    cycle = asyncio.run(mod.one_cycle(0))
+    assert cycle["rss_mib"] is None and cycle["orphans"] is None
+    assert all(cycle[k] for k in ['write_verified', 'undo_verified', 'journal_verified'])
+    state = valid()
+    state['final_rss_mib'] = None
+    state['rss_samples'][0]['orphans'] = None
+    verdict = mod.evaluate(state)
+    assert verdict['rss'] is False and verdict['no_orphans'] is False
+
+
 def test_denied_undo_is_a_failure_not_a_successful_cycle(monkeypatch):
     mod = module(monkeypatch)
     from isycode.workspace_write import WorkspaceWriteOwner

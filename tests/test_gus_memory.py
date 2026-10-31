@@ -230,32 +230,46 @@ def test_the_settings_form_opens_memories_and_forgetting_asks_first(tmp_path, mo
     store.consent({**DEFAULT_SETTINGS, "target": None}, at="2026-10-24T00:00:00+00:00")
     GusMemoryStore().add("Danny prefers Spanish replies", workspace=str(tmp_path))
 
-    async def until(pilot, condition, what):
-        for _ in range(200):
-            if condition():
-                return
-            await pilot.pause(0.05)
-        raise AssertionError(f"timed out waiting for {what}")
-
-    def memories_mounted(view):
-        screen = view.screen
-        return (isinstance(screen, GusMemoryScreen)
-                and len(screen.query("#gus-memory-list")) > 0)
-
     async def scenario():
         app = TUIApp()
+
+        async def until(pilot, condition, what):
+            for _ in range(200):
+                if condition():
+                    return
+                await pilot.pause(0.05)
+            raise AssertionError(f"timed out waiting for {what} "
+                                 f"(screen: {type(app.screen).__name__})")
+
+        def clickable(selector):
+            """The widget is mounted AND laid out, so a click has a region to land on.
+
+            pilot.click() resolves the id and posts to its region; a widget that
+            is in the DOM but not yet positioned makes the click hit nothing, and
+            the screen it was supposed to push never arrives.
+            """
+            return any(widget.region for widget in app.screen.query(selector))
+
+        def memories_mounted():
+            screen = app.screen
+            return (isinstance(screen, GusMemoryScreen)
+                    and len(screen.query("#gus-memory-list")) > 0)
+
         async with app.run_test(size=(120, 40)) as pilot:
             await app.wait_for_ready()
             task = asyncio.ensure_future(app._open_gus_settings())
-            await until(pilot, lambda: isinstance(app.screen, GusSettingsScreen), "settings")
+            await until(pilot, lambda: isinstance(app.screen, GusSettingsScreen)
+                        and clickable("#gus-settings-memories"), "settings")
             await pilot.click("#gus-settings-memories")
-            await until(pilot, lambda: memories_mounted(app), "memories")
+            await until(pilot, memories_mounted, "memories")
             screen = app.screen
             listed = "\n".join(str(child.render())
                                for child in screen.query_one("#gus-memory-list").children)
             assert "Danny prefers Spanish replies" in listed
+            await until(pilot, lambda: clickable("#gus-memory-forget-all"), "the forget button")
             await pilot.click("#gus-memory-forget-all")
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the confirmation")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen)
+                        and app.screen.focused is not None, "the confirmation")
             app.screen.dismiss(True)
             await until(pilot, lambda: GusMemoryStore().entries() == [], "the forgotten store")
             screen.dismiss(None)

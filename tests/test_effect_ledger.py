@@ -20,6 +20,7 @@ from isycode.safety import Budget
 from isycode.staging import cleanup_staging, measure_changes, prepare_staging, promote_accounted
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_write import WorkspaceWriteOwner
+from sandbox_gate import requires_sandbox
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="the effect ledger uses POSIX locks")
 
@@ -436,6 +437,7 @@ def test_over_limit_keeps_the_approval_and_the_model_cannot_reset(tmp_path, monk
     assert not hasattr(module.EffectLedger, "set_limits")
 
 
+@requires_sandbox
 def test_a_command_over_the_cap_is_not_promoted(tmp_path, monkeypatch):
     import isycode.effect_ledger as module
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg"))

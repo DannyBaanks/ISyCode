@@ -244,9 +244,11 @@ class CodexConnector:
         except asyncio.CancelledError:
             await self.close()
             raise
-        except Exception:
+        except Exception as exc:
             await self.close()
-            raise CodexConnectorError("Codex app-server initialization failed") from None
+            reason = str(exc) or type(exc).__name__
+            raise CodexConnectorError(
+                f"Codex app-server initialization failed: {reason[:180]}") from exc
 
     async def __aexit__(self, *args: Any) -> None:
         await self.close()

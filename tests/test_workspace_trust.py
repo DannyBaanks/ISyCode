@@ -22,6 +22,7 @@ from isycode.workspace_trust import (
     ACCEPT_PHRASE, WorkspaceTrust, modal_required, onboarding_brief, quiet_classic,
 )
 from isycode.workspace_write import WorkspaceWriteOwner
+from sandbox_gate import requires_sandbox
 
 _COMMANDS = importlib.util.spec_from_file_location(
     "isycode_command_tests", Path(__file__).with_name("test_command_runner.py"))
@@ -121,6 +122,7 @@ def test_untrusted_classic_still_asks_and_trust_is_not_a_tool(project):
     assert "no unsandboxed fallback" in methods["_run_workspace_command"]
 
 
+@requires_sandbox
 def test_ordinary_flow_has_zero_per_action_approvals(project, tmp_path, monkeypatch):
     authority, root = project
     assert not quiet_classic(authority, ActionRequest(

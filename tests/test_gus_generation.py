@@ -219,10 +219,19 @@ def test_gus_seal_in_the_tui_records_the_branch_start_and_seals_after_confirmati
 
     async def scenario():
         app = TUIApp()
+
+        def shown(screen_type):
+            """The modal is on the stack AND has its controls focused.
+
+            A pushed screen is the current screen before Textual has composed it, and
+            dismissing it in that window answers a dialog nobody could read.
+            """
+            return isinstance(app.screen, screen_type) and app.screen.focused is not None
+
         async with app.run_test(size=(120, 40)) as pilot:
             await app.wait_for_ready()
             task = asyncio.ensure_future(app._create_gus_branch("notes"))
-            await until(pilot, lambda: isinstance(app.screen, GusBranchApprovalScreen), "the branch approval")
+            await until(pilot, lambda: shown(GusBranchApprovalScreen), "the branch approval")
             app.screen.dismiss(True)
             assert await asyncio.wait_for(task, 10) == "gus/notes"
             assert GusState(root).branch("gus/notes")["base"] == _git(root, "rev-parse", "HEAD").strip()
@@ -230,7 +239,7 @@ def test_gus_seal_in_the_tui_records_the_branch_start_and_seals_after_confirmati
             _git(root, "commit", "-qam", "GUS change")
 
             task = asyncio.ensure_future(app._seal_gus_generation())
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the seal confirmation")
+            await until(pilot, lambda: shown(ConfirmScreen), "the seal confirmation")
             app.screen.dismiss(True)
             record = await asyncio.wait_for(task, 20)
             assert record["state"] == "SEALED", record["gates"]

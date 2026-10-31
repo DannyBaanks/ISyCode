@@ -11,9 +11,11 @@ from pathlib import Path
 import pytest
 
 
+from sandbox_gate import sandbox_missing
+
 _RTK_POSIX_REASON = (
-    'NOT_DEMONSTRATED: RTK command rewriting uses the POSIX Bubblewrap sandbox; '
-    'Windows keeps the original command output'
+    'NOT_DEMONSTRATED: RTK command rewriting uses the Bubblewrap sandbox, which needs '
+    'bubblewrap, libseccomp and python3; Windows and macOS keep the original command output'
 )
 
 
@@ -48,7 +50,7 @@ def test_off_does_not_detect_or_execute_rtk(adapter, monkeypatch):
     assert rtk.plan(('grep', '-n', 'needle', 'notes.txt'), '/usr/bin/grep') is None
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_opt_in_binds_path_hash_version_and_advisory(adapter):
     rtk, binary = adapter
     identity = rtk.Settings().enable()
@@ -61,7 +63,7 @@ def test_opt_in_binds_path_hash_version_and_advisory(adapter):
     assert plan['rewrite_argv'] == ('rtk', 'grep', '-n', 'needle', 'notes.txt')
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_swapped_binary_does_not_inherit_opt_in(adapter):
     rtk, binary = adapter
     rtk.Settings().enable()
@@ -76,7 +78,7 @@ def test_workspace_program_cannot_become_rtk_authorized(adapter):
     assert rtk.plan(('./grep', 'x', 'file'), '/workspace/grep') is None
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_unsupported_command_keeps_native_execution(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -84,7 +86,7 @@ def test_unsupported_command_keeps_native_execution(adapter, monkeypatch):
     assert rtk.plan(('echo', 'hello'), '/usr/bin/echo') is None
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_rewrite_is_data_never_shell_code(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -93,7 +95,7 @@ def test_rewrite_is_data_never_shell_code(adapter, monkeypatch):
         rtk.plan(('grep', 'x', 'file'), '/usr/bin/grep')
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_compression_fallback_keeps_original_output_and_exit(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -107,7 +109,7 @@ def test_compression_fallback_keeps_original_output_and_exit(adapter, monkeypatc
     assert result['rtk']['applied'] is False
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_raw_output_and_result_have_verifiable_private_artifacts(adapter):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -130,7 +132,7 @@ def test_raw_output_and_result_have_verifiable_private_artifacts(adapter):
         assert storage.private(raw_path)
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_filter_cannot_expand_output(adapter, monkeypatch):
     rtk, _ = adapter
     rtk.Settings().enable()
@@ -194,7 +196,7 @@ def test_real_owner_filters_once_keeps_exit_and_journal(tmp_path, monkeypatch):
     assert json.loads(result.text)['exit_code'] == 2
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_raw_artifact_failure_prevents_promotion(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     from isycode.approvals import ActionApprovalStore
@@ -221,7 +223,7 @@ def test_raw_artifact_failure_prevents_promotion(tmp_path, monkeypatch):
     assert (root / 'input.txt').read_text() == 'original'
 
 
-@pytest.mark.skipif(os.name != 'posix', reason=_RTK_POSIX_REASON)
+@pytest.mark.skipif(sandbox_missing(), reason=_RTK_POSIX_REASON)
 def test_enable_rejects_identity_changed_after_display(adapter):
     rtk, binary = adapter
     shown = rtk.Settings().inspect()

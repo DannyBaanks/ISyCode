@@ -15,8 +15,9 @@ from isycode.staging import (
 )
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.workspace_write import WorkspaceWriteOwner
+from sandbox_gate import requires_sandbox
 
-pytestmark = pytest.mark.skipif(os.name != "posix", reason="staging uses POSIX copies and bubblewrap")
+pytestmark = requires_sandbox
 
 
 def _owner(tmp_path, monkeypatch):

@@ -6,11 +6,13 @@ import pytest
 
 from test_command_runner import sandbox
 from test_rtk_integration import adapter
+from sandbox_gate import sandbox_missing
 
 
 pytestmark = pytest.mark.skipif(
-    os.name != 'posix',
-    reason='NOT_DEMONSTRATED: RTK command rewriting uses the POSIX Bubblewrap sandbox; Windows keeps native output',
+    sandbox_missing(),
+    reason='NOT_DEMONSTRATED: RTK command rewriting uses the Bubblewrap sandbox, which '
+           'needs bubblewrap, libseccomp and python3; Windows and macOS keep native output',
 )
 
 

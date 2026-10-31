@@ -193,7 +193,8 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert gus_button.region.right <= mode_button.region.x  # just left of the mode chip
 
             declined = asyncio.ensure_future(app._open_gus("hola"))
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the enable prompt")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen)
+                        and app.screen.focused is not None, "the enable prompt")
             app.screen.dismiss(False)
             await declined
             await pilot.pause()
@@ -201,7 +202,8 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert not isinstance(app.screen, GusScreen)
 
             task = asyncio.ensure_future(app._open_gus("hola GUS"))
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the enable prompt")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen)
+                        and app.screen.focused is not None, "the enable prompt")
             app.screen.dismiss(True)
             await until(pilot, lambda: isinstance(app.screen, GusScreen)
                         and len(app.screen.query(".gus-line")) >= 2, "GUS's answer")
@@ -267,7 +269,11 @@ def test_gus_window_and_settings_fit_80x24(tmp_path, monkeypatch, capsys):
             assert screen.size.width == 80 and screen.size.height == 24
             assert screen.query_one("#gus-input").region.width > 0
             note = str(screen.query_one(".isy-dialog-copy").render())
-            assert str(target) in note and "80" not in note   # the target is named, no overflow copy
+            # The note is the capability sentence with the target named in it.
+            # Testing that no "80" appears was a proxy for the same idea, and a
+            # false one: a folder name can contain 80, as macOS temp paths do.
+            assert note == (f"Edits in {target} · reads the machine except "
+                            "credentials · L0 stays human.")
             screen.dismiss(None)
             await task
             await pilot.pause()

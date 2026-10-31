@@ -24,6 +24,7 @@ from isycode.workspace_trust import (
     quiet_flow, quiet_request,
 )
 from isycode.workspace_write import WorkspaceWriteOwner
+from sandbox_gate import sandbox_missing
 
 _COMMANDS = importlib.util.spec_from_file_location(
     "isycode_flow_command_tests", Path(__file__).with_name("test_command_runner.py"))
@@ -95,7 +96,7 @@ def test_recoverable_local_work_by_profile(project, profile):
     assert (root / "old.txt").exists() is not quiet
 
 
-@pytest.mark.skipif(os.name != "posix", reason="the fake sandbox is a POSIX script")
+@pytest.mark.skipif(sandbox_missing(), reason="the sandboxed command path needs the host sandbox")
 @pytest.mark.parametrize("profile", PROFILES)
 def test_sandboxed_commands_by_profile(project, tmp_path, monkeypatch, profile):
     authority, root = project

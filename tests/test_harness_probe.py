@@ -69,26 +69,30 @@ def test_catalog_has_reviewed_cursor_fallback_and_kimi_folder():
 
 
 def test_probe_catalog_checks_all_entries_concurrently(monkeypatch):
-    calls = []
+    span = {}
 
     def fake(name, *, timeout=3.0):
         import time
-        calls.append(name)
-        time.sleep(0.02)
         from isycode.harness_probe import ProbeResult
+        span[name] = [time.monotonic(), None]
+        time.sleep(0.02)
+        span[name][1] = time.monotonic()
         return ProbeResult(name, None, False, "")
 
     monkeypatch.setattr("isycode.harness_probe.probe_catalog_entry", fake)
 
-    async def run():
-        start = asyncio.get_running_loop().time()
-        results = await probe_catalog()
-        return asyncio.get_running_loop().time() - start, results
-
-    elapsed, results = asyncio.run(run())
+    results = asyncio.run(probe_catalog())
     assert set(results) == set(CATALOG_IDS)
-    assert set(calls) == set(CATALOG_IDS)
-    assert elapsed < 0.15
+    assert set(span) == set(CATALOG_IDS)
+    # A wall-clock bound loses on a loaded runner and says nothing about the
+    # code. Concurrency has a shape: with a small thread pool not every probe
+    # can start at once, but at least two must be in flight together. A
+    # serialized roster shows zero overlap.
+    windows = [(start, finish) for start, finish in span.values()]
+    overlapping = sum(1 for index, (a_start, _) in enumerate(windows)
+                      for (b_start, b_finish) in windows[index + 1:]
+                      if a_start < b_finish and b_start < windows[index][1])
+    assert overlapping, "no two probes ran at the same time"
 
 
 def test_unlock_dotfolder_requires_answered_real_directory(tmp_path, make_directory_link):
