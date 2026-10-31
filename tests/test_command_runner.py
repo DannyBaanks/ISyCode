@@ -10,11 +10,15 @@ import pytest
 from isycode.action_audit import ActionAuditJournal
 from isycode.action_runtime import COMMAND_MAX_OUTPUT_BYTES, ProductActionGate
 from isycode.approvals import ActionApprovalStore
-from isycode.command_runner import CommandRunOwner, sandbox_command
+from isycode.command_runner import CommandRunOwner, sandbox_command, sandbox_executable
 from isycode.security import ActionRequest
 from isycode.workspace_authority import WorkspaceAuthority
 
-pytestmark = pytest.mark.skipif(os.name != "posix", reason="the command sandbox is POSIX only")
+pytestmark = pytest.mark.skipif(
+    sandbox_executable() is None,
+    reason="the command sandbox needs bubblewrap, libseccomp and python3; a POSIX "
+          "system without them, such as macOS, cannot even refuse a run",
+)
 
 # Stand-in for bubblewrap: it cannot mount, so it maps /workspace back to the
 # host folder, applies --chdir/--setenv/--clearenv and logs the masks it was

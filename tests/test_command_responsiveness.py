@@ -1,15 +1,16 @@
 """Slow command preparation must leave the TUI event loop responsive."""
 import asyncio
-import os
 import threading
 
 import pytest
 from test_command_runner import sandbox
 
+from isycode.command_runner import sandbox_executable
 
 pytestmark = pytest.mark.skipif(
-    os.name != "posix",
-    reason="these staging assertions exercise the POSIX command sandbox; Windows stays gated",
+    sandbox_executable() is None,
+    reason="these staging assertions exercise the real command sandbox; a system without it "
+           "stays gated instead of reporting a refusal it never ran",
 )
 
 
