@@ -18,9 +18,18 @@ if [ "$#" -gt 1 ]; then
 fi
 
 mkdir -p -- "$ISYCODE_BIN_DIR"
+# readlink -f prints the part it managed to resolve and then fails, so a failed
+# resolution is not a name. Two failures compared to each other are equal, and
+# that equality used to be read as ownership. Only complete resolutions decide.
+resolved_path() {
+    readlink -f -- "$1" 2>/dev/null || return 1
+}
 if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
-    if [ -L "$ISYCODE_COMMAND" ] \
-        && [ "$(readlink -f -- "$ISYCODE_COMMAND")" = "$(readlink -f -- "$ISYCODE_LAUNCHER")" ]; then
+    ISYCODE_COMMAND_RESOLVED=$(resolved_path "$ISYCODE_COMMAND") || ISYCODE_COMMAND_RESOLVED=
+    ISYCODE_LAUNCHER_RESOLVED=$(resolved_path "$ISYCODE_LAUNCHER") || ISYCODE_LAUNCHER_RESOLVED=
+    ISYCODE_OWNED_RESOLVED=$(resolved_path "$ISYCODE_REPOSITORY/.venv/bin/isycode") || ISYCODE_OWNED_RESOLVED=
+    if [ -L "$ISYCODE_COMMAND" ] && [ -n "$ISYCODE_COMMAND_RESOLVED" ] \
+        && [ "$ISYCODE_COMMAND_RESOLVED" = "$ISYCODE_LAUNCHER_RESOLVED" ]; then
         printf 'ISyCode launcher already installed at %s\n' "$ISYCODE_COMMAND"
         exit 0
     fi
@@ -30,7 +39,8 @@ if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
         if [ "$ISYCODE_OLD_TARGET" = "$ISYCODE_REPOSITORY/.venv/bin/isycode" ]; then
             ISYCODE_LEGACY_OWNED=true
         elif [ "$ISYCODE_OLD_TARGET" = "${HOME:?HOME is not set}/.local/share/isycode-mainline/.venv/bin/isycode" ] \
-            && [ "$(readlink -f -- "$ISYCODE_COMMAND")" = "$(readlink -f -- "$ISYCODE_REPOSITORY/.venv/bin/isycode")" ]; then
+            && [ -n "$ISYCODE_COMMAND_RESOLVED" ] && [ -n "$ISYCODE_OWNED_RESOLVED" ] \
+            && [ "$ISYCODE_COMMAND_RESOLVED" = "$ISYCODE_OWNED_RESOLVED" ]; then
             ISYCODE_LEGACY_OWNED=true
         fi
     fi
@@ -44,10 +54,8 @@ if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
         # A refusal the human cannot read is not a diagnosis: name the link the
         # installer found and both sides of the comparison it failed.
         printf '  found target: %s\n' "${ISYCODE_OLD_TARGET:-not a symbolic link}" >&2
-        printf '  it resolves to: %s\n' \
-            "$(readlink -f -- "$ISYCODE_COMMAND" 2>/dev/null || printf unreadable)" >&2
-        printf '  this checkout resolves to: %s\n' \
-            "$(readlink -f -- "$ISYCODE_REPOSITORY/.venv/bin/isycode" 2>/dev/null || printf unreadable)" >&2
+        printf '  it resolves to: %s\n' "${ISYCODE_COMMAND_RESOLVED:-unreadable}" >&2
+        printf '  this checkout resolves to: %s\n' "${ISYCODE_OWNED_RESOLVED:-unreadable}" >&2
         exit 1
     fi
 fi

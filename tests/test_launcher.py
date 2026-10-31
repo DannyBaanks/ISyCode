@@ -98,23 +98,69 @@ def test_installer_migration_keeps_unknown_symlinks_and_regular_files(tmp_path: 
     assert "this checkout resolves to: " in result.stderr
 
 
-@posix_installer
-def test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv(tmp_path: Path):
-    task_home = tmp_path / "home"
+def _checkout(tmp_path: Path, *, with_virtualenv: bool) -> Path:
+    """A stand-in repository, so the installer compares files this test owns.
+
+    The real checkout has no ``.venv`` on a CI runner: pointing the tests at it
+    made every resolution fail, and on Linux the two empty answers compared
+    equal, which read as "this launcher is ours".
+    """
+    repository = tmp_path / "repo"
+    (repository / "scripts").mkdir(parents=True)
+    for name in ("install-path", "isycode"):
+        script = repository / "scripts" / name
+        script.write_bytes((ROOT / "scripts" / name).read_bytes())
+        script.chmod(0o755)
+    if with_virtualenv:
+        owned = repository / ".venv" / "bin" / "isycode"
+        owned.parent.mkdir(parents=True)
+        owned.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        owned.chmod(0o755)
+    return repository
+
+
+def _mainline_alias(task_home: Path, venv_target: Path | None) -> tuple[Path, Path]:
+    """The retired mainline command name, with or without a runtime behind it."""
     legacy_dir = task_home / ".local/share/isycode-mainline"
     legacy_dir.mkdir(parents=True)
-    (legacy_dir / ".venv").symlink_to(ROOT / ".venv", target_is_directory=True)
+    if venv_target is not None:
+        (legacy_dir / ".venv").symlink_to(venv_target, target_is_directory=True)
     bin_dir = task_home / ".local/bin"
-    bin_dir.mkdir()
+    bin_dir.mkdir(parents=True)
     command = bin_dir / "isycode"
     command.symlink_to(legacy_dir / ".venv/bin/isycode")
+    return bin_dir, command
+
+
+@posix_installer
+def test_installer_migrates_mainline_alias_only_when_it_shares_this_virtualenv(tmp_path: Path):
+    repository = _checkout(tmp_path, with_virtualenv=True)
+    task_home = tmp_path / "home"
+    bin_dir, command = _mainline_alias(task_home, repository / ".venv")
     env = dict(os.environ, HOME=str(task_home), ISYCODE_BIN_DIR=str(bin_dir))
-    result = subprocess.run([str(ROOT / "scripts/install-path"), "--replace-owned"],
+    result = subprocess.run([str(repository / "scripts/install-path"), "--replace-owned"],
                             env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert command.resolve() == (ROOT / "scripts/isycode").resolve()
+    assert command.resolve() == (repository / "scripts/isycode").resolve()
     backups = list(bin_dir.glob("isycode.backup.*"))
-    assert len(backups) == 1 and os.readlink(backups[0]) == str(legacy_dir / ".venv/bin/isycode")
+    assert len(backups) == 1 and os.readlink(backups[0]) == str(
+        task_home / ".local/share/isycode-mainline/.venv/bin/isycode")
+
+
+@posix_installer
+def test_installer_refuses_an_alias_it_cannot_resolve(tmp_path: Path):
+    """Two unreadable names are not one fact about one file."""
+    repository = _checkout(tmp_path, with_virtualenv=False)
+    task_home = tmp_path / "home"
+    bin_dir, command = _mainline_alias(task_home, None)
+    env = dict(os.environ, HOME=str(task_home), ISYCODE_BIN_DIR=str(bin_dir))
+    result = subprocess.run([str(repository / "scripts/install-path"), "--replace-owned"],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert os.readlink(command) == str(
+        task_home / ".local/share/isycode-mainline/.venv/bin/isycode")
+    assert "it resolves to: unreadable" in result.stderr
+    assert not list(bin_dir.glob("isycode.backup.*"))
 
 
 @posix_installer
