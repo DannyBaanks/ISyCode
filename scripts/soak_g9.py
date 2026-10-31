@@ -35,7 +35,13 @@ OUT_PATH = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/g9-soak-v2.json").re
 STATE_PATH = Path(os.environ.get("G9_SOAK_STATE", str(OUT_PATH.with_suffix(".state.json")))).resolve()
 
 
-def rss_mib() -> float:
+def rss_mib() -> float | None:
+    """Current resident memory, or None where this host does not report it.
+
+    macOS has no /proc, and what its standard library offers there is a peak,
+    which cannot be compared against a warm baseline. The soak says nothing
+    about memory rather than guessing at it.
+    """
     if os.name == "nt":
         import ctypes
         from ctypes import wintypes
@@ -65,7 +71,16 @@ def rss_mib() -> float:
                                         ctypes.byref(counters), counters.cb):
             raise ctypes.WinError(ctypes.get_last_error())
         return counters.WorkingSetSize / 1024**2
-    return int(Path("/proc/self/statm").read_text().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1024**2
+    statm = Path("/proc/self/statm")
+    if not statm.exists():
+        return None
+    return int(statm.read_text().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 1024**2
+
+
+def sample_rss() -> float | None:
+    """The measured RSS rounded for reporting, or None when it is unmeasurable."""
+    measured = rss_mib()
+    return None if measured is None else round(measured, 1)
 
 
 def load_state() -> dict:
@@ -82,7 +97,7 @@ def save_state(state: dict) -> None:
     STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def orphans() -> list[str]:
+def orphans() -> list[str] | None:
     # These are actual surviving descendants of this worker, not matches of a
     # never-used command-line marker. Read after the TUI cycle has unmounted.
     if os.name == "nt":
@@ -128,6 +143,11 @@ def orphans() -> list[str]:
             found.extend(str(pid) for pid in descendants)
             pending.extend(descendants)
         return found
+    if not Path("/proc/self").exists():
+        # Nothing on this host lists a process's children, so an empty list
+        # here would be the absence of a measurement, not the absence of
+        # orphans.
+        return None
     found, pending = [], [os.getpid()]
     while pending:
         pid = pending.pop()
@@ -138,6 +158,12 @@ def orphans() -> list[str]:
         found.extend(children)
         pending.extend(int(child) for child in children)
     return found
+
+
+def sample_orphans() -> int | None:
+    """Descendant count, or None where the host cannot list children at all."""
+    listed = orphans()
+    return None if listed is None else len(listed)
 
 
 async def one_cycle(index: int) -> dict:
@@ -206,7 +232,7 @@ async def _cycle(index, monkey):
             require(target.read_text() == "original fixture\n", "undo not verified")
             from isycode.action_audit import ActionAuditJournal
             require(ActionAuditJournal(root).verify().status == "PASS", "journal verification failed")
-    return {"cycle": index, "rss_mib": round(rss_mib(), 1), "orphans": len(orphans()), "write_verified": True, "undo_verified": True, "journal_verified": True}
+    return {"cycle": index, "rss_mib": sample_rss(), "orphans": sample_orphans(), "write_verified": True, "undo_verified": True, "journal_verified": True}
 
 
 
@@ -218,6 +244,7 @@ def require(condition, message):
 def evaluate(state):
     samples = state["rss_samples"]
     baseline = state["warm_baselines"].get(str(state["restarts"]))
+    final = state.get("final_rss_mib")
     return {
         "duration": state["finished"] - state["started"] >= 7200 and state.get("active_seconds", 0) >= 7200,
         "cycles": state["cycles"] >= 100,
@@ -226,7 +253,8 @@ def evaluate(state):
         "no_orphans": bool(samples) and all(s.get("orphans") == 0 for s in samples),
         "effects": bool(samples) and all(all(s.get(k) is True for k in
                     ("write_verified", "undo_verified", "journal_verified")) for s in samples),
-        "rss": baseline is not None and state["final_rss_mib"] <= min(500, baseline * 1.25),
+        # A host that cannot report memory is not a host that leaked.
+        "rss": baseline is not None and final is not None and final <= min(500, baseline * 1.25),
     }
 
 
@@ -248,8 +276,8 @@ def main() -> int:
             try:
                 sample = loop.run_until_complete(one_cycle(index))
             except Exception as exc:
-                sample = {"cycle": index, "rss_mib": round(rss_mib(), 1),
-                          "orphans": len(orphans()), "error": f"{type(exc).__name__}: {exc}"}
+                sample = {"cycle": index, "rss_mib": sample_rss(),
+                          "orphans": sample_orphans(), "error": f"{type(exc).__name__}: {exc}"}
                 state["failures"].append(sample)
             state["worker_cycles"] += 1
             worker = str(state["restarts"])
@@ -273,7 +301,7 @@ def main() -> int:
         loop.close()
     state["active_seconds"] += time.monotonic() - worker_started
     state["finished"] = time.time()
-    state["final_rss_mib"] = round(rss_mib(), 1)
+    state["final_rss_mib"] = sample_rss()
     state["checks"] = evaluate(state)
     state["status"] = "PASS" if all(state["checks"].values()) else "FAIL"
     save_state(state)

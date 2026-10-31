@@ -17,7 +17,10 @@ final, no solo el exit0 del primer worker. Conserva y calcula SHA256 del resulta
 Cada ciclo verifica una escritura, restaura el contenido anterior mediante undo
 con aprobación simulada para ese fixture y verifica el journal. No modifica tu
 proyecto. El modelo es simulado; no prueba un provider real ni usuarios humanos.
-RSS actual se mide con /proc y baseline warm tras diez ciclos por worker.
+RSS actual se mide con /proc y baseline warm tras diez ciclos por worker. Donde
+el host no publica /proc, como macOS, el RSS y los huérfanos quedan sin medir:
+el registro guarda null y esos checks fallan. La ausencia de medición no es un
+PASS ni prueba una fuga; afirma solamente que ese host no puede afirmarlo.
 
 G9_SOAK_SECONDS permite diagnósticos cortos, pero estos devuelven FAIL si no
 cumplen las dos horas, cien ciclos, tres restarts y demás criterios. Un contador
