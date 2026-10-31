@@ -198,3 +198,31 @@ def test_mobile_host_prefixed_health_and_pair_exchange_are_loopback_only(
             await host.stop()
 
     asyncio.run(scenario())
+
+
+def test_keystore_releases_the_database_file(tmp_path, monkeypatch):
+    """Same leak as the credential vault: `with conn:` never closes the handle."""
+    import isycode.mobile_host as host_module
+    opened = []
+    connect = host_module.sqlite3.connect
+
+    class Tracked(host_module.sqlite3.Connection):
+        released = False
+
+        def close(self):
+            self.released = True
+            super().close()
+
+    def spy(*args, **kwargs):
+        db = connect(*args, factory=Tracked, **kwargs)
+        opened.append(db)
+        return db
+
+    monkeypatch.setattr(host_module.sqlite3, "connect", spy)
+    store = ApiKeyStore(tmp_path / "keystore.sqlite3")
+    key_id, raw_key, _ = store.issue("release control")
+    store.authenticate(raw_key)
+    store.list_metadata()
+    store.revoke(key_id)
+    assert len(opened) >= 5, "the keystore opened no database"
+    assert [db for db in opened if not db.released] == []

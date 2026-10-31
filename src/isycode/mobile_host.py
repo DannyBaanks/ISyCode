@@ -17,6 +17,7 @@ import shutil
 import sqlite3
 import ssl
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -67,8 +68,22 @@ class ApiKeyStore:
         db.row_factory = sqlite3.Row
         return db
 
+    @contextmanager
+    def _connection(self):
+        """Hand out a connection and always give the file back.
+
+        ``with conn:`` only commits or rolls back; on Windows the open handle
+        keeps the keystore away from the next replace or delete.
+        """
+        connection = self._connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
+
     def _initialize(self) -> None:
-        with self._connect() as db:
+        with self._connection() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS api_keys (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -102,7 +117,7 @@ class ApiKeyStore:
         key_id = "key_" + secrets.token_hex(8)
         expires_at = time.time() + ttl_seconds
         digest = hashlib.sha256(raw_key.encode()).hexdigest()
-        with self._connect() as db:
+        with self._connection() as db:
             db.execute(
                 "INSERT INTO api_keys VALUES (?, ?, ?, ?, ?, ?, ?, NULL)",
                 (key_id, name, digest, json.dumps(sorted(scopes)),
@@ -115,7 +130,7 @@ class ApiKeyStore:
         if not raw_key or len(raw_key) > 160:
             return None
         digest = hashlib.sha256(raw_key.encode()).hexdigest()
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT * FROM api_keys WHERE digest=? AND revoked_at IS NULL", (digest,)
             ).fetchone()
@@ -145,7 +160,7 @@ class ApiKeyStore:
         }
 
     def revoke(self, key_id: str) -> bool:
-        with self._connect() as db:
+        with self._connection() as db:
             result = db.execute(
                 "UPDATE api_keys SET revoked_at=? WHERE id=? AND revoked_at IS NULL",
                 (time.time(), key_id),
@@ -153,7 +168,7 @@ class ApiKeyStore:
             return result.rowcount == 1
 
     def list_metadata(self) -> list[dict[str, Any]]:
-        with self._connect() as db:
+        with self._connection() as db:
             rows = db.execute(
                 "SELECT id,name,scopes,runtimes,created_at,expires_at,revoked_at "
                 "FROM api_keys ORDER BY created_at DESC"

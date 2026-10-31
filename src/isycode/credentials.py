@@ -6,6 +6,7 @@ import re
 import secrets
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable
 from isycode.platform_storage import storage
@@ -57,7 +58,7 @@ class CredentialVault:
             # from BaseException. Treat any backend load failure as "no secure
             # keyring" so callers fail closed instead of crashing the TUI.
             raise CredentialVaultError("Could not open the operating system keyring") from exc
-        with self._connect() as db:
+        with self._connection() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS credentials (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -76,6 +77,21 @@ class CredentialVault:
         db = sqlite3.connect(self.path, timeout=5)
         db.row_factory = sqlite3.Row
         return db
+
+    @contextmanager
+    def _connection(self):
+        """Hand out a connection and always give the file back.
+
+        ``with conn:`` only commits or rolls back; the handle stays open, and on
+        Windows an open handle locks the database against the next replace or
+        delete.
+        """
+        connection = self._connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def _secure_file(self) -> None:
         if self.path.exists() and not storage.private(self.path):
@@ -102,7 +118,7 @@ class CredentialVault:
         now = time.time()
         try:
             self._keyring.set_password("isycode.api-key", key_id, secret.strip())
-            with self._connect() as db:
+            with self._connection() as db:
                 db.execute(
                     "INSERT INTO credentials VALUES (?, ?, ?, ?, ?, ?, NULL)",
                     (key_id, name, service, purpose, now, now),
@@ -117,7 +133,7 @@ class CredentialVault:
         return key_id
 
     def list_metadata(self) -> list[dict[str, Any]]:
-        with self._connect() as db:
+        with self._connection() as db:
             rows = db.execute(
                 "SELECT id,name,service,purpose,created_at,updated_at,revoked_at "
                 "FROM credentials ORDER BY created_at DESC"
@@ -131,7 +147,7 @@ class CredentialVault:
     def get_secret(self, key_id: str) -> str | None:
         if not isinstance(key_id, str) or not re.fullmatch(r"cred_[a-f0-9]{16}", key_id):
             return None
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT id FROM credentials WHERE id=? AND revoked_at IS NULL",
                 (key_id,),
@@ -144,7 +160,7 @@ class CredentialVault:
             raise CredentialVaultError("Could not read the API key from the OS keyring") from exc
 
     def latest_secret_for_service(self, service: str) -> str | None:
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT id FROM credentials WHERE service=? AND revoked_at IS NULL "
                 "ORDER BY created_at DESC LIMIT 1", (service,),
@@ -159,7 +175,7 @@ class CredentialVault:
     def revoke(self, key_id: str) -> bool:
         if not isinstance(key_id, str) or not re.fullmatch(r"cred_[a-f0-9]{16}", key_id):
             return False
-        with self._connect() as db:
+        with self._connection() as db:
             row = db.execute(
                 "SELECT id FROM credentials WHERE id=? AND revoked_at IS NULL", (key_id,)
             ).fetchone()
@@ -169,7 +185,7 @@ class CredentialVault:
             self._keyring.delete_password("isycode.api-key", key_id)
         except Exception as exc:
             raise CredentialVaultError("Could not revoke the API key in the OS keyring") from exc
-        with self._connect() as db:
+        with self._connection() as db:
             result = db.execute(
                 "UPDATE credentials SET revoked_at=?,updated_at=? WHERE id=? AND revoked_at IS NULL",
                 (time.time(), time.time(), key_id),
