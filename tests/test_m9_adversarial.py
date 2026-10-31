@@ -276,7 +276,7 @@ def test_network_down_is_retried_briefly_then_stops_without_changing_authority(t
             "can stall this shared pytest process"),
 )
 def test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed(tmp_path, monkeypatch, capsys):
-    events = {"closed": None}
+    events = {"hung_up": None}
 
     async def scenario(app, pilot):
         accepted = asyncio.Event()
@@ -287,8 +287,13 @@ def test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed(tmp_path,
                          b"Transfer-Encoding: chunked\r\n\r\n")
             await writer.drain()
             accepted.set()
-            await reader.read()                  # returns b"" once the client hangs up
-            events["closed"] = time.monotonic()
+            # The request body usually arrives in the same segment as the headers,
+            # so one read() answers with bytes and not with the hang-up. Only an
+            # empty read is the client closing: this test names that fact, so it
+            # waits for it instead of timing a body.
+            while await reader.read():
+                pass
+            events["hung_up"] = time.monotonic()
 
         server = await asyncio.start_server(stall, "127.0.0.1", port)
         try:
@@ -300,14 +305,14 @@ def test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed(tmp_path,
                 await asyncio.wait_for(turn, 2)
             stopped = time.monotonic() - pressed
             for _ in range(40):
-                if events["closed"]:
+                if events["hung_up"]:
                     break
                 await asyncio.sleep(0.05)
         finally:
             server.close()
             await server.wait_closed()
         assert stopped <= 0.25                                       # G9-03 UI acknowledgement
-        assert events["closed"] is not None and events["closed"] - pressed <= 2   # socket gone
+        assert events["hung_up"] is not None and events["hung_up"] - pressed <= 2   # socket gone
 
     port = closed_port()
     local_provider(tmp_path, monkeypatch, port)
