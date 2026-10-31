@@ -267,7 +267,11 @@ def test_gus_window_and_settings_fit_80x24(tmp_path, monkeypatch, capsys):
             assert screen.size.width == 80 and screen.size.height == 24
             assert screen.query_one("#gus-input").region.width > 0
             note = str(screen.query_one(".isy-dialog-copy").render())
-            assert str(target) in note and "80" not in note   # the target is named, no overflow copy
+            # The note is the capability sentence with the target named in it.
+            # Testing that no "80" appears was a proxy for the same idea, and a
+            # false one: a folder name can contain 80, as macOS temp paths do.
+            assert note == (f"Edits in {target} · reads the machine except "
+                            "credentials · L0 stays human.")
             screen.dismiss(None)
             await task
             await pilot.pause()

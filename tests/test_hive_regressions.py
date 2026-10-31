@@ -1,6 +1,8 @@
 """Regression controls for the post-merge Hive audit."""
 import asyncio
 import json
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -203,12 +205,20 @@ def test_malformed_registry_denies_instead_of_crashing_hook(tmp_path, registry):
 
 @pytest.mark.asyncio
 async def test_hook_server_denies_and_logs_security_violation(tmp_path):
-    import os
     if os.name == 'nt':
         pytest.skip('Unix domain socket tests skip on Windows')
     from isycode.hive.hook_server import HookServer
     from isycode.hive.hook_shim import send_to_hive
     manager = hive(tmp_path)
+    # A UNIX socket name has to fit the kernel's sun_path: 104 bytes on macOS,
+    # 108 on Linux. The temp folder on macOS is already deep enough that the
+    # bridge cannot be named there, which is a host limit and not a verdict.
+    sock_path = manager.sock_path() or ''
+    sun_path_limit = 104 if sys.platform == 'darwin' else 108
+    if len(os.fsencode(sock_path)) > sun_path_limit:
+        pytest.skip(f'NOT_DEMONSTRATED: the hook socket name is '
+                    f'{len(os.fsencode(sock_path))} bytes, over this host\'s '
+                    f'{sun_path_limit}-byte sun_path')
     server = HookServer(manager)
     await server.start()
     try:
