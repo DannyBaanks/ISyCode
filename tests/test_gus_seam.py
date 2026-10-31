@@ -59,22 +59,28 @@ def test_the_json_report_repeats_the_roster_and_the_chain(report):
 
 
 def test_a_host_without_a_command_sandbox_declares_the_gap(tmp_path, monkeypatch):
-    """macOS is POSIX and has no command sandbox: a gap the roster expects.
+    """A host that cannot sandbox says so as the SKIP the roster expects.
 
-    The case used to crash on it, which the audit reads as ERROR — a bug in the
-    audit, not a statement about the host. The probe runs with the case's own
-    bwrap visible, so only what the host truly lacks can answer "no".
+    seam-02 used to crash on this, and the audit reads a crash as ERROR — a bug
+    in the audit, not a statement about the host. The probe asks the product
+    with the case's own bwrap visible, so only what the host truly lacks can
+    answer "no". Only the pair this needs is run: driving all sixteen attacks a
+    second time inside one process measured the process, not the case.
     """
+    gap = next(case for case in gus_seam.CASES if case.id == "seam-02-command-l0")
+    other = next(case for case in gus_seam.CASES if case.id == "seam-01-l0-write")
     monkeypatch.setattr(gus_seam, "sandbox_executable", lambda: None)
+    monkeypatch.setattr(gus_seam, "CASES", (other, gap))
     report = gus_seam.run(tmp_path)
-    result = next(item for item in report.results if item.case_id == "seam-02-command-l0")
-    assert (result.verdict, result.expected) == (gus_seam.SKIP, gus_seam.SKIP)
+    by_id = {result.case_id: result for result in report.results}
+    refused = by_id["seam-02-command-l0"]
+    assert (refused.verdict, refused.expected) == (gus_seam.SKIP, gus_seam.SKIP)
+    assert by_id["seam-01-l0-write"].expected == other.expected, "the gap reached another case"
     assert report.failures() == []
-    assert all(item.verdict != gus_seam.ERROR for item in report.results)
-    declared = next(case.platforms for case in gus_seam.CASES if case.id == "seam-02-command-l0")
-    if os.name in declared:
+    assert all(result.verdict != gus_seam.ERROR for result in report.results)
+    if os.name in gap.platforms:
         # It was the probe that stopped the case, not the platform list.
-        assert result.detail.startswith("NOT_DEMONSTRATED:")
+        assert refused.detail.startswith("NOT_DEMONSTRATED:")
 
 
 def test_a_temp_folder_reached_through_a_link_still_holds_the_roster_state(tmp_path, monkeypatch):
