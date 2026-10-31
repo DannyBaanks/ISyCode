@@ -2003,7 +2003,7 @@
       "action": null,
       "callable": "isycode.gus_memory.GusMemoryOwner._preview",
       "file": "isycode/gus_memory.py",
-      "line": 390,
+      "line": 413,
       "owner": "gus_memory"
     },
     {
@@ -2247,7 +2247,7 @@
       "action": null,
       "callable": "isycode.gus_memory.GusMemoryOwner._preview",
       "file": "isycode/gus_memory.py",
-      "line": 390,
+      "line": 413,
       "owner": "gus_memory"
     },
     {
@@ -2317,28 +2317,28 @@
       "action": "mobile.host.start",
       "callable": "isycode.mobile_host.MobileHostOwner.start_request",
       "file": "isycode/mobile_host.py",
-      "line": 481,
+      "line": 496,
       "owner": "mobile_host"
     },
     {
       "action": "mobile.pair.issue",
       "callable": "isycode.mobile_host.MobileHostOwner.pin_request",
       "file": "isycode/mobile_host.py",
-      "line": 518,
+      "line": 533,
       "owner": "mobile_host"
     },
     {
       "action": "mobile.pair",
       "callable": "isycode.mobile_host.MobileHostOwner.authorize_pair",
       "file": "isycode/mobile_host.py",
-      "line": 553,
+      "line": 568,
       "owner": "mobile_host"
     },
     {
       "action": "mobile.pair",
       "callable": "isycode.mobile_host.MobileHostOwner.record_pair",
       "file": "isycode/mobile_host.py",
-      "line": 561,
+      "line": 576,
       "owner": "mobile_host"
     },
     {
