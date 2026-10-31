@@ -19,7 +19,7 @@ Estados:
 | Modos | Security, Classic, Flow | COVERED |
 | Proveedores | nube y uno local (Ollama) | COVERED |
 | Plataformas | Linux, Windows | COVERED |
-| Plataformas | macOS | PARTIAL |
+| Plataformas | macOS (suite completa; sandbox, `prlimit` y `sun_path` sin demostrar) | PARTIAL |
 | Idiomas | en, es, zh | COVERED |
 | Tamaños | 80×24, 100×30, 140×40 | COVERED |
 | Fallas de red | 429, 503, stream parcial, DNS, redirect, proxy | COVERED |
@@ -65,11 +65,30 @@ Contratos de autoridad por modo:
 |---|---|---|
 | Linux | CI `Tests (Linux)` y `Tests (Linux, Textual 8)`: suite completa | COVERED |
 | Windows | CI `Tests (Windows)`: suite completa; `platform-parity` agrega contratos nativos y el sandbox de Windows | COVERED |
-| macOS | CI `Package (macos-arm64)` solo empaqueta; `platform-parity` corre el subconjunto nativo (storage, Git, sesión, `test_daily_tui.py`, `test_tui_startup.py`) | PARTIAL |
+| macOS | CI `Tests (macOS)`: suite completa en `macos-latest` (Python 3.12), con los tres huecos de la tabla de abajo; `platform-parity` y `Package (macos-arm64)` corren además | PARTIAL |
 
 El job `native-contracts` corre en `ubuntu-latest`, `windows-latest` y
-`macos-latest` desde este PR. La suite completa en macOS sigue sin ejecutarse:
-no se afirma como demostrada.
+`macos-latest`. `test-macos` se sumó en este PR y ejecuta
+`python -m pytest -q -m "not integration"`: en macOS ya se ejercitan la TUI, la
+autoridad, el transporte SSE, los idiomas y el storage nativo. Quedan tres
+huecos afirmados, cada uno con su marca y su razón escrita en el código:
+
+| Hueco en macOS | Por qué | Dónde está la marca |
+|---|---|---|
+| Sandbox de comandos | `sandbox_executable()` exige `resource.setrlimit`, `bwrap`, `libseccomp` y `/usr/bin/python3`; sólo Linux los tiene. Sin sandbox no hay comando que revisar y el producto no tiene fallback sin sandbox. | `tests/sandbox_gate.py`: `skipif(sandbox_missing())` con la razón `NOT_DEMONSTRATED:`, aplicado en `test_command_runner.py`, `test_staging.py`, `test_staging_budget.py`, `test_rtk_authority.py`, `test_rtk_integration.py`, `test_flow_mode.py`, `test_gus_guard.py`, `test_grit_peers.py`, `test_turn_control.py`, `test_effect_ledger.py`, `test_workspace_trust.py`, `test_everyday_flows.py` |
+| LSP bajo sandbox | `lsp.py` pide `resource.prlimit`, que no existe en macOS; el servidor queda `installed_unavailable`, que es el comportamiento correcto del producto allí. | `tests/test_native_toolkit.py::test_native_lsp_catalog_and_read_only_runtime` |
+| Nombre del socket de hook | `sun_path` es de 104 bytes en macOS (108 en Linux); con un `TMPDIR` largo el socket del Hive no cabe y el servidor ni siquiera arranca. | `tests/test_hive_regressions.py::test_hook_server_denies_and_logs_security_violation` |
+
+Los marcadores anteriores preguntaban por el sistema operativo (`os.name !=
+"posix"`), y macOS responde "posix": pedían el sandbox con una capacidad que
+este SO no tiene. Ahora preguntan por la capacidad.
+
+`TMPDIR` de macOS llega a la carpeta temporal a través de `/var`, que es un
+enlace, y los chequeos de estado privado rechazan una ruta con enlaces. Las
+pruebas usan ahora un nombre sin enlaces (`tests/temp_tree.py`: `fresh_tree()` /
+`temporary_tree()`); dos lugares del producto hacen lo mismo antes de entregar
+el folder a la capa de estado: `gus_seam._temporary_base()` y
+`scripts/soak_g9.py`. Los chequeos estrictos no se relajaron.
 
 ## Idiomas
 
@@ -101,6 +120,7 @@ aprobaciones y el ciclo de roles en la TUI.
 | 429 / 503 / stream parcial en la TUI | `tests/test_daily_tui.py::test_failed_turn_recovers_original_prompt_without_replaying` | COVERED |
 | Stream de herramientas desconectado | `tests/test_daily_transport_regressions.py::test_disconnected_tool_stream_is_not_a_successful_turn` | COVERED |
 | Cuota y `Retry-After` reales | `tests/test_provider_error_diagnostics.py::test_quota_code_and_retry_after_survive_actual_http_error` | COVERED |
+| Página de error que llega a medias (RST) | `tests/test_provider_error_diagnostics.py::test_sync_stream_reports_the_status_when_the_error_page_never_arrives` | COVERED |
 | Redirect, proxy y rebind | `tests/test_egress.py::test_g5_02_redirect_proxy_and_rebind_do_not_widen_the_destination` | COVERED |
 | DNS fijado a la dirección revisada | `tests/test_dns_pin.py::test_sync_stream_dials_the_reviewed_address` | COVERED |
 | Proxy que no recibe la llave | `tests/test_stream_proxy.py::test_https_proxy_denial_never_sends_provider_key` | COVERED |
@@ -118,8 +138,10 @@ aprobaciones y el ciclo de roles en la TUI.
 
 ## Huecos conocidos
 
-- **macOS, suite completa.** El subconjunto nativo ya corre en macOS; falta la
-  suite completa y, con ella, la afirmación de paridad total.
+- **macOS, capacidades del SO.** La suite completa corre en macOS, pero el
+  sandbox de comandos, el LSP bajo `prlimit` y el socket de hook con un
+  `TMPDIR` largo no son alcanzables allí y están marcados como tales en la
+  tabla de Plataformas. La paridad total con Linux no se afirma.
 - **Idiomas en la edición completa.** El viaje de modos corre en `en`. La TUI
   por idioma está cubierta por chrome, aprobaciones y ciclo de roles.
 - **Proveedores de nube con transporte real dentro de la TUI.** El protocolo
@@ -136,5 +158,7 @@ python3 -m pytest -q tests/test_daily_tui.py tests/test_daily_provider_regressio
   tests/test_workspace_folders_tui.py tests/test_daily_transport_regressions.py
 ```
 
-En CI, Linux y Windows corren la suite completa; macOS corre el subconjunto
-nativo de `platform-parity`.
+En CI, Linux, Windows y macOS corren la suite completa. Las pruebas que
+necesitan capacidades que un SO no tiene se saltan con su razón en el nombre
+(`tests/sandbox_gate.py`); nada se salta por preguntar sólo el sistema
+operativo.
