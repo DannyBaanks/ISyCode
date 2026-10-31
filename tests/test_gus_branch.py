@@ -162,7 +162,8 @@ def test_gus_branch_in_the_tui_refuses_by_default_then_creates_on_approval(tmp_p
             assert _branch(root) == "main"
 
             task = asyncio.ensure_future(app._create_gus_branch("Resize fix"))
-            await until(pilot, lambda: isinstance(app.screen, GusBranchApprovalScreen), "the branch approval")
+            await until(pilot, lambda: isinstance(app.screen, GusBranchApprovalScreen)
+                        and app.screen.focused is not None, "the branch approval")
             app.screen.dismiss(True)
             assert await asyncio.wait_for(task, 10) == "gus/resize-fix"
             assert _branch(root) == "gus/resize-fix"

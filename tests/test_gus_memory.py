@@ -268,7 +268,8 @@ def test_the_settings_form_opens_memories_and_forgetting_asks_first(tmp_path, mo
             assert "Danny prefers Spanish replies" in listed
             await until(pilot, lambda: clickable("#gus-memory-forget-all"), "the forget button")
             await pilot.click("#gus-memory-forget-all")
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the confirmation")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen)
+                        and app.screen.focused is not None, "the confirmation")
             app.screen.dismiss(True)
             await until(pilot, lambda: GusMemoryStore().entries() == [], "the forgotten store")
             screen.dismiss(None)

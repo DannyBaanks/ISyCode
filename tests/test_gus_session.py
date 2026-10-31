@@ -193,7 +193,8 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert gus_button.region.right <= mode_button.region.x  # just left of the mode chip
 
             declined = asyncio.ensure_future(app._open_gus("hola"))
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the enable prompt")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen)
+                        and app.screen.focused is not None, "the enable prompt")
             app.screen.dismiss(False)
             await declined
             await pilot.pause()
@@ -201,7 +202,8 @@ def test_gus_in_the_tui_asks_once_then_talks_in_its_own_window(tmp_path, monkeyp
             assert not isinstance(app.screen, GusScreen)
 
             task = asyncio.ensure_future(app._open_gus("hola GUS"))
-            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the enable prompt")
+            await until(pilot, lambda: isinstance(app.screen, ConfirmScreen)
+                        and app.screen.focused is not None, "the enable prompt")
             app.screen.dismiss(True)
             await until(pilot, lambda: isinstance(app.screen, GusScreen)
                         and len(app.screen.query(".gus-line")) >= 2, "GUS's answer")
