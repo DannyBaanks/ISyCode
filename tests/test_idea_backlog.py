@@ -23,3 +23,21 @@ def test_ideas_are_not_sent_until_explicit_promotion(tmp_path, monkeypatch):
             assert app._queued_messages == ["A new feature idea"]
             assert not app._idea_backlog and not app._history
     asyncio.run(scenario())
+
+
+def test_idea_backlog_keeps_close_reachable_with_a_long_list(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            app._idea_backlog = [f"idea {index} " + "detail " * 40 for index in range(40)]
+            app.push_screen(IdeaBacklogScreen(app))
+            await pilot.pause()
+            close = app.screen.query_one("#queue-close")
+            assert close.region.y >= 0 and close.region.bottom <= 24
+            await pilot.click(close)
+            await pilot.pause()
+            assert not isinstance(app.screen, IdeaBacklogScreen)
+    asyncio.run(scenario())

@@ -163,7 +163,7 @@ class QueuedMessagesScreen(ModalScreen):
     CSS = """
     QueuedMessagesScreen { align: center middle; background: #000000 58%; }
     #queue-card { width: 84; max-width: 95%; height: auto; min-height: 9; max-height: 88%; padding: 1 2; border: solid #718291; background: #000000; }
-    #queue-scroll { height: auto; min-height: 3; max-height: 22; }
+    #queue-scroll { height: auto; min-height: 3; max-height: 40vh; }
     .queue-message { height: auto; }
     """
     BINDINGS = [Binding("escape", "close", "Close")]
@@ -219,10 +219,11 @@ class IdeaBacklogScreen(QueuedMessagesScreen):
             yield Button(tr("Close · Esc"), id="queue-close")
 
     def on_button_pressed(self, event):
+        # Textual dispatches Button.Pressed through every class in the MRO, so
+        # QueuedMessagesScreen.on_button_pressed also runs and closes the
+        # screen. Handling "queue-close" here too would pop it twice.
         button_id = event.button.id or ""
-        if button_id == "queue-close":
-            self.dismiss()
-        elif button_id.startswith(("idea-promote-", "idea-discard-")):
+        if button_id.startswith(("idea-promote-", "idea-discard-")):
             text = self.messages[int(button_id.rsplit("-", 1)[1])]
             if text not in self.host._idea_backlog:
                 return
