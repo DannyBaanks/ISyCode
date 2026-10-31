@@ -145,7 +145,14 @@ def stream_complete(
         resp = open_reviewed(reviewed, _RejectRedirectHandler()).open(req, timeout=timeout_s)
     except urllib.error.HTTPError as e:
         from isycode.provider_errors import error_signals
-        code, retry = error_signals(e.read(65536), {"retry-after": e.headers.get("Retry-After", "")})
+        try:
+            body = e.read(65536)
+        except (urllib.error.URLError, OSError):
+            # The provider hung up while its error page was coming in. The
+            # status is still the fact the human needs; the async path below
+            # already treats a missing body that way.
+            body = b""
+        code, retry = error_signals(body, {"retry-after": e.headers.get("Retry-After", "")})
         raise StreamError(f"provider returned HTTP {e.code}", status=e.code, provider_code=code, retry_after=retry) from e
     except (urllib.error.URLError, OSError) as e:
         raise StreamError(f"stream unreachable: {e}")

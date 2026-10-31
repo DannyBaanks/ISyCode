@@ -105,3 +105,27 @@ def test_sync_stream_has_the_async_bounds_and_error_events(body, expected):
         assert "secret-do-not-echo" not in str(caught.value)
     finally:
         server.shutdown()
+
+
+def test_sync_stream_reports_the_status_when_the_error_page_never_arrives(monkeypatch):
+    """A provider that hangs up mid-error-page still answered with a status."""
+    import urllib.error
+
+    from isycode import streaming
+
+    class HungUp(urllib.error.HTTPError):
+        def __init__(self):
+            super().__init__("http://provider.invalid/v1", 503, "Service Unavailable", {}, None)
+
+        def read(self, *_args):
+            raise ConnectionResetError(54, "Connection reset by peer")
+
+    class Opener:
+        def open(self, request, timeout=None):
+            raise HungUp()
+
+    monkeypatch.setattr(streaming, "review_destination", lambda base_url: object())
+    monkeypatch.setattr(streaming, "open_reviewed", lambda reviewed, handler: Opener())
+    with pytest.raises(StreamError) as caught:
+        streaming.stream_complete("http://provider.invalid/v1", "token", "fixture", [])
+    assert caught.value.status == 503
