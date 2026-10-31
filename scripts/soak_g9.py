@@ -157,7 +157,10 @@ async def _cycle(index, monkey):
         # Restore cwd before TemporaryDirectory removes the workspace; Windows
         # refuses to delete the process's current directory.
         cleanup.callback(os.chdir, original_cwd)
-        tmp = Path(raw)
+        # The private-state checks refuse a folder reached through a symlink,
+        # and macOS names its temp folder through /var, so the cycle works in
+        # the folder's link-free name.
+        tmp = Path(raw).resolve()
         root = configure(tmp, monkey)
         (root / "note.txt").write_text("original fixture\n")
         from isycode.tui import TUIApp

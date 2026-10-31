@@ -711,11 +711,20 @@ def _environment(state: Path):
                 os.environ[key] = value
 
 
+def _temporary_base() -> Path:
+    """A fresh seam workspace under the system temp folder."""
+    return Path(tempfile.mkdtemp(prefix="gus-seam-")).resolve()
+
+
 def run(base: Path | None = None) -> SeamReport:
     """Run the whole roster and return its chained report."""
     source = Path(__file__).resolve().parents[2]
     owned = base is None
-    base = Path(tempfile.mkdtemp(prefix="gus-seam-")) if base is None else Path(base)
+    # Every case keeps its authority state under this folder, and the private
+    # state checks refuse a path reached through a symlink — which is how macOS
+    # names its own temp folder, through /var. The link-free name is the same
+    # folder, so a roster run cannot be lost to the host's layout.
+    base = _temporary_base() if base is None else Path(base).resolve()
     base.mkdir(parents=True, exist_ok=True)
     results = []
     previous = roster_digest()

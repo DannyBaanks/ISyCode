@@ -1,5 +1,6 @@
 """GUS SEAM (MK6, GK6-01): the roster never grants, and its evidence chain cannot be edited."""
 import json
+from pathlib import Path
 
 import pytest
 
@@ -54,3 +55,36 @@ def test_the_json_report_repeats_the_roster_and_the_chain(report):
         result.verdict for result in report.results]
     assert [case["id"] for case in data["cases"]] == [
         result.case_id for result in report.results]
+
+
+def test_a_temp_folder_reached_through_a_link_still_holds_the_roster_state(tmp_path, monkeypatch):
+    """The host's own temp layout cannot decide whether the roster can run.
+
+    macOS names its temp folder through the /var link, and private state
+    refuses a path with a linked ancestor: handed over by that name, every case
+    would crash for a reason that is not a verdict.
+    """
+    import shutil
+    import tempfile
+
+    from isycode.platform_storage import storage
+
+    real = tmp_path / "temp-real"
+    real.mkdir()
+    link = tmp_path / "temp-link"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"this host cannot create a folder link: {exc}")
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(link))
+    given = Path(tempfile.mkdtemp(prefix="gus-seam-given-"))
+    base = gus_seam._temporary_base()
+    try:
+        assert given.is_relative_to(link)
+        with pytest.raises(ValueError, match="cannot traverse links"):
+            storage.ensure_directory(given / "workspace-authority")
+        assert base.is_relative_to(real)
+        storage.ensure_directory(base / "workspace-authority")
+    finally:
+        shutil.rmtree(given, ignore_errors=True)
+        shutil.rmtree(base, ignore_errors=True)
