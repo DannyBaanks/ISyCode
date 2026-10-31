@@ -128,6 +128,19 @@ def test_workspace_mode_continue_applies_focused_choice_without_implicit_change(
     asyncio.run(scenario())
 
 
+def test_workspace_mode_switch_continue_applies_once_without_double_dismiss(tmp_path):
+    from isycode.tui_screens_grants import WorkspaceModeSwitchScreen
+
+    async def scenario():
+        app = Host(WorkspaceModeSwitchScreen(tmp_path, "classic"))
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await pilot.click("#workspace-mode-continue")
+            await pilot.pause()
+            assert app.results == ["classic"]
+    asyncio.run(scenario())
+
+
 def test_credential_form_keeps_save_cancel_visible_and_secret_masked():
     async def scenario():
         app = Host(AddCredentialScreen())
