@@ -1,5 +1,6 @@
 """GUS SEAM (MK6, GK6-01): the roster never grants, and its evidence chain cannot be edited."""
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -57,6 +58,25 @@ def test_the_json_report_repeats_the_roster_and_the_chain(report):
         result.case_id for result in report.results]
 
 
+def test_a_host_without_a_command_sandbox_declares_the_gap(tmp_path, monkeypatch):
+    """macOS is POSIX and has no command sandbox: a gap the roster expects.
+
+    The case used to crash on it, which the audit reads as ERROR — a bug in the
+    audit, not a statement about the host. The probe runs with the case's own
+    bwrap visible, so only what the host truly lacks can answer "no".
+    """
+    monkeypatch.setattr(gus_seam, "sandbox_executable", lambda: None)
+    report = gus_seam.run(tmp_path)
+    result = next(item for item in report.results if item.case_id == "seam-02-command-l0")
+    assert (result.verdict, result.expected) == (gus_seam.SKIP, gus_seam.SKIP)
+    assert report.failures() == []
+    assert all(item.verdict != gus_seam.ERROR for item in report.results)
+    declared = next(case.platforms for case in gus_seam.CASES if case.id == "seam-02-command-l0")
+    if os.name in declared:
+        # It was the probe that stopped the case, not the platform list.
+        assert result.detail.startswith("NOT_DEMONSTRATED:")
+
+
 def test_a_temp_folder_reached_through_a_link_still_holds_the_roster_state(tmp_path, monkeypatch):
     """The host's own temp layout cannot decide whether the roster can run.
 
@@ -81,7 +101,9 @@ def test_a_temp_folder_reached_through_a_link_still_holds_the_roster_state(tmp_p
     base = gus_seam._temporary_base()
     try:
         assert given.is_relative_to(link)
-        with pytest.raises(ValueError, match="cannot traverse links"):
+        # The refusal is the fact; the noun for "link" belongs to the platform —
+        # POSIX says links, Windows says a reparse point.
+        with pytest.raises(ValueError, match="private state cannot traverse"):
             storage.ensure_directory(given / "workspace-authority")
         assert base.is_relative_to(real)
         storage.ensure_directory(base / "workspace-authority")

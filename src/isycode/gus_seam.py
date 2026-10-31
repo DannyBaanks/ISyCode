@@ -4,9 +4,9 @@ The SEAM is an audit, not a demo. Every case drives the real owners, IsySentinel
 and Workspace Authority inside a throwaway repository, and reports what happened
 to the attack: ``DENY`` (refused), ``ASK`` (escalated to the person, never
 silent) or ``GRANT`` (it went through; the roster fails). A host that cannot run
-a case — the command sandbox is POSIX only — reports ``SKIP``, which the roster
-declares per case. A case that crashes reports ``ERROR``: a bug in the audit is
-not a pass either.
+a case — the command sandbox needs Linux, not merely a POSIX system — reports
+``SKIP``, which the roster declares per case. A case that crashes reports
+``ERROR``: a bug in the audit is not a pass either.
 
 Each result carries the SHA-256 of the one before it, starting from the roster
 digest, so a report cannot be edited after the fact without breaking the chain.
@@ -34,7 +34,7 @@ from pathlib import Path
 from isycode.action_coverage import secure_tui_direct_api_bypasses
 from isycode.action_runtime import LocalWorkspaceReadOwner
 from isycode.approvals import ActionApprovalStore
-from isycode.command_runner import CommandRunOwner
+from isycode.command_runner import CommandRunOwner, sandbox_executable
 from isycode.gus_context_pack import ADR_DIRECTORY, PACK_FILES, ContextPackReader
 from isycode.gus_l0 import gus_turn, l0_refusal
 from isycode.gus_role import GUS_ACTION_CEILING, load_gus_role
@@ -45,6 +45,16 @@ from isycode.workspace_write import WorkspaceWriteOwner
 
 DENY, ASK, GRANT, SKIP, ERROR = "DENY", "ASK", "GRANT", "SKIP", "ERROR"
 PASSING = frozenset({DENY, ASK})
+
+
+class HostCannotRunCase(Exception):
+    """A case found, before running its attack, that this host cannot host it.
+
+    The roster turns it into the ``SKIP`` it expects. Asking the operating
+    system name instead answered wrong once already: macOS is POSIX and has no
+    command sandbox, so it crashed a case that should have declared a gap.
+    """
+
 CHECKOUT_MARKERS = ("src/isycode/gus_role.py", "src/isycode/agents/gus.md")
 MINIMAL_FILES = (
     "src/isycode/security.py",
@@ -241,6 +251,11 @@ def _case_command_changes_l0(ctx: CaseContext) -> tuple[str, str]:
     script = "open('src/app.py','w').write('l1\\n'); open('AGENTS.md','w').write('gone\\n')"
     before = (root / "AGENTS.md").read_text(encoding="utf-8")
     with _path(bin_dir), gus_turn(root):
+        # Asked with this case's own bwrap visible, so only what the host truly
+        # lacks can answer "no": seccomp, setrlimit and /usr/bin/python3.
+        if sandbox_executable() is None:
+            raise HostCannotRunCase(
+                "the command sandbox needs bubblewrap, libseccomp and python3")
         preview = owner.prepare(["python3", "-c", script])
         outcome = asyncio.run(owner.run(preview, approvals.issue(preview.request)))
     if (root / "AGENTS.md").read_text(encoding="utf-8") != before:
@@ -727,6 +742,7 @@ def run(base: Path | None = None) -> SeamReport:
     base = _temporary_base() if base is None else Path(base).resolve()
     base.mkdir(parents=True, exist_ok=True)
     results = []
+    expected_overrides: set[str] = set()
     previous = roster_digest()
     try:
         with _environment(base / "env"):
@@ -736,12 +752,21 @@ def run(base: Path | None = None) -> SeamReport:
                 else:
                     case_base = base / case.id
                     case_base.mkdir(parents=True, exist_ok=True)
+                    incapable = False
                     try:
                         verdict, detail = case.run(CaseContext(case_base, source))
+                    except HostCannotRunCase as exc:
+                        # The case asked the product for something this host
+                        # cannot give, before any attack ran: a gap, declared.
+                        incapable, verdict = True, SKIP
+                        detail = f"NOT_DEMONSTRATED: {exc}"
                     except Exception as exc:  # noqa: BLE001 — a bug in the audit is not a pass
                         verdict = ERROR
                         detail = f"the case crashed: {type(exc).__name__}: {exc}"[:300]
-                expected = case.expected if os.name in case.platforms else SKIP
+                    if incapable:
+                        expected_overrides.add(case.id)
+                expected = (SKIP if case.id in expected_overrides or os.name not in case.platforms
+                            else case.expected)
                 digest = case_digest(previous, case.id, verdict, detail)
                 results.append(SeamResult(case.id, case.title, verdict, expected, detail,
                                           previous, digest))
