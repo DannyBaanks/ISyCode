@@ -41,6 +41,13 @@ if [ -e "$ISYCODE_COMMAND" ] || [ -L "$ISYCODE_COMMAND" ]; then
         printf 'Preserved legacy launcher at %s\n' "$ISYCODE_BACKUP"
     else
         printf 'Refusing to replace existing command: %s\n' "$ISYCODE_COMMAND" >&2
+        # A refusal the human cannot read is not a diagnosis: name the link the
+        # installer found and both sides of the comparison it failed.
+        printf '  found target: %s\n' "${ISYCODE_OLD_TARGET:-not a symbolic link}" >&2
+        printf '  it resolves to: %s\n' \
+            "$(readlink -f -- "$ISYCODE_COMMAND" 2>/dev/null || printf unreadable)" >&2
+        printf '  this checkout resolves to: %s\n' \
+            "$(readlink -f -- "$ISYCODE_REPOSITORY/.venv/bin/isycode" 2>/dev/null || printf unreadable)" >&2
         exit 1
     fi
 fi

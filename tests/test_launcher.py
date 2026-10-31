@@ -91,6 +91,11 @@ def test_installer_migration_keeps_unknown_symlinks_and_regular_files(tmp_path: 
     assert result.returncode != 0
     assert os.readlink(command) == str(tmp_path / "someone-elses-tool")
     assert not list(bin_dir.glob("isycode.backup.*"))
+    # The refusal has to say what it compared, or the human cannot tell a foreign
+    # tool from a checkout that only looks different because of a symlink.
+    assert f"found target: {tmp_path / 'someone-elses-tool'}" in result.stderr
+    assert "it resolves to: " in result.stderr
+    assert "this checkout resolves to: " in result.stderr
 
 
 @posix_installer
