@@ -1,7 +1,6 @@
 """Tests for ISyCode Hive module."""
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 from isycode.hive import (
@@ -14,10 +13,11 @@ from isycode.hive import (
     hive_write_decision,
 )
 from isycode.hive.guard import HiveWriteInput
+from temp_tree import temporary_tree
 
 
 def test_hive_bootstrap_creates_skeleton():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -33,7 +33,7 @@ def test_hive_bootstrap_creates_skeleton():
 
 
 def test_agent_upsert_and_registry():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -56,7 +56,7 @@ def test_agent_upsert_and_registry():
 
 
 def test_agent_workspace_created():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -75,7 +75,7 @@ def test_agent_workspace_created():
 
 
 def test_message_send_and_read():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -103,7 +103,7 @@ def test_message_send_and_read():
 
 
 def test_task_crud():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -134,7 +134,7 @@ def test_task_crud():
 
 
 def test_write_guard_allows_own_files():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -169,7 +169,7 @@ def test_write_guard_allows_own_files():
 
 
 def test_write_guard_denies_other_agent_files():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()
@@ -188,7 +188,7 @@ def test_write_guard_denies_other_agent_files():
 
 
 def test_write_guard_god_can_write_board():
-    with tempfile.TemporaryDirectory() as tmp:
+    with temporary_tree() as tmp:
         config = HiveConfig(harness_home=Path(tmp))
         mgr = HiveManager(config)
         mgr.ensure_hive()

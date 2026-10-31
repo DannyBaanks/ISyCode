@@ -36,14 +36,14 @@ from isycode.safety import (
     resolve_canonical, build_manifest, seal_manifest, quarantine,
     make_receipt,
 )
+from temp_tree import fresh_tree
 
 
 # ── Helpers ───────────────────────────────────────────────────────
 
 def make_fixture() -> Path:
     """Create a disposable temp tree."""
-    d = Path(tempfile.mkdtemp(prefix="isycode-m15-"))
-    return d
+    return fresh_tree(prefix="isycode-m15-")
 
 
 def cleanup_fixture(d: Path) -> None:

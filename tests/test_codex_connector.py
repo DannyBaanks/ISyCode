@@ -11,6 +11,7 @@ import pytest
 
 from isycode.codex_connector import CodexConnector, CodexConnectorError
 from isycode.platform_storage import storage
+from temp_tree import fresh_tree
 
 
 FAKE = r'''
@@ -460,7 +461,7 @@ def test_auto_model_resolves_from_the_live_catalog(tmp_path):
 
 
 def test_official_published_reasoning_summary_and_usage_are_reported():
-    connection = connector(Path(__import__('tempfile').mkdtemp()), "summary")
+    connection = connector(fresh_tree(prefix="isycode-codex-"), "summary")
     chunks=[]
     async def run():
         async with connection:
