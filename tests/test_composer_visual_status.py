@@ -86,6 +86,8 @@ def test_scroll_thumb_tracks_position_and_remains_after_settle(tmp_path, monkeyp
         app = TUIApp()
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
+            # The idle board fits its chat, so the bar needs real history to appear.
+            await app.query_one('#chat').mount(Static('line\n' * 80, id='chat-grow-probe'))
             bar = app.query_one('#chat').vertical_scrollbar
             for _ in range(100):
                 await pilot.pause(.05)

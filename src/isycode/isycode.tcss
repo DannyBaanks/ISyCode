@@ -137,10 +137,14 @@
     #composer { height: auto; }
     #prompt-input {
         height: auto; min-height: 3; max-height: 7; background: #242529; color: #e0e0e0;
+        /* Textual cannot wrap the placeholder into zero cells: a window growing back
+           from a tiny size passes through that width for one frame. */
+        min-width: 8;
         border: round #484650; margin: 0 1;
     }
     #prompt-input:focus { border: round #9aa3ad; background: #292630; }
-    #idle-board { height: auto; padding: 0 1 1 1; }
+    /* Every line is fitted to the board; a stale wider one is clipped, never folded. */
+    #idle-board { height: auto; padding: 0 1 1 1; text-wrap: nowrap; text-overflow: clip; }
     .message-clock { height: 1; margin: 1 2 0 2; color: #9aa3ad; }
     .user-turn {
         height: auto; margin: 1 2; padding: 0 1;

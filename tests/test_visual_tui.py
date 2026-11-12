@@ -14,6 +14,12 @@ from isycode.tui import ChatArea, SidePanel, TUIApp, ConfirmScreen
 from isycode.tui_widgets import RailHeader
 from isycode.user_defaults import UserDefaultsStore
 from test_daily_tui import configure
+from isycode.terminal_art import QUADRANT_GLYPHS
+
+
+def _art_cells(line):
+    """Cells of the landscape picture in one painted line."""
+    return sum(char in QUADRANT_GLYPHS for char in line)
 
 
 async def _wait_for_header_to_fit(pilot, header):
@@ -161,7 +167,7 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
                 await pilot.pause(0.05)
             board = plain_text(widget)
             assert "LSPs" in board and "MCPs" in board and "Skills" in board
-            assert "▀" in board
+            assert any(_art_cells(line) for line in board.splitlines())
             assert "╱" not in board
             assert "|##|" not in board
             assert not list(app.query("#open-idle-art"))
@@ -177,7 +183,7 @@ def test_idle_board_landscape_is_aligned_and_provider_list_keeps_unwired_rows_qu
                     break
                 await pilot.pause(0.05)
             narrow = plain_text(widget)
-            assert "▀" in narrow or "ISYCODE" in narrow
+            assert any(_art_cells(line) for line in narrow.splitlines()) or "ISYCODE" in narrow
             assert "LSPs" in narrow
             assert "╱" not in narrow
             assert all(cell_len(line) <= widget.content_size.width for line in narrow.splitlines())
@@ -372,11 +378,11 @@ def test_panoramic_header_fills_chat_and_leaves_composer_visible(tmp_path, monke
                 lines = []
                 for _ in range(100):
                     await pilot.pause(0.05)
-                    lines = [line for line in plain_text(board).splitlines() if '▀' in line]
-                    if lines and all(line.count('▀') == board.content_size.width for line in lines):
+                    lines = [line for line in plain_text(board).splitlines() if _art_cells(line)]
+                    if lines and all(_art_cells(line) == board.content_size.width for line in lines):
                         break
                 assert lines
-                assert all(line.count('▀') == board.content_size.width for line in lines)
+                assert all(_art_cells(line) == board.content_size.width for line in lines)
                 assert len(lines) <= 36
                 if height == 60:
                     assert len(lines) == 36
@@ -408,17 +414,16 @@ def test_windows_terminal_size_watchdog_repaints_idle_board(tmp_path, monkeypatc
             monkeypatch.setattr('isycode.tui._terminal_grid_size', lambda: (100, 30))
             app._sync_terminal_size()
             board = app.query_one('#idle-board')
-            block = '\u2580'
             lines = []
             for _ in range(100):
                 await pilot.pause(0.05)
-                lines = [line for line in plain_text(board).splitlines() if block in line]
-                fits = all(line.count(block) == board.content_size.width for line in lines)
+                lines = [line for line in plain_text(board).splitlines() if _art_cells(line)]
+                fits = all(_art_cells(line) == board.content_size.width for line in lines)
                 if app.size.width == 100 and app.size.height == 30 and lines and fits:
                     break
             assert (app.size.width, app.size.height) == (100, 30)
             assert board._painted_width == board.content_size.width
-            assert lines and all(line.count(block) == board.content_size.width for line in lines)
+            assert lines and all(_art_cells(line) == board.content_size.width for line in lines)
             assert len(lines) <= 36
 
     with capsys.disabled():
@@ -472,6 +477,130 @@ def test_files_rail_actions_show_whole_labels_at_80x24(tmp_path, monkeypatch, ca
                     assert panel.contains_region(button.region), (locale, label)
                 for left, right in zip(buttons, buttons[1:]):
                     assert left.region.right < right.region.x, (locale, str(left.label))
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_landscape_follows_the_chat_and_leaves_when_it_cannot_be_read(tmp_path, monkeypatch, capsys):
+    """Every window either shows a whole, unscrolled picture or none at all."""
+    configure(tmp_path, monkeypatch)
+    from isycode.startup_art import MIN_SCENE_COLUMNS, MIN_SCENE_ROWS
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(160, 45)) as pilot:
+            await app.wait_for_ready()
+            await pilot.pause()
+            board = app.query_one('#idle-board')
+            chat = app.query_one(ChatArea)
+            shown = {}
+            for width, height in [(160, 45), (100, 30), (60, 36), (200, 24), (60, 24),
+                                  (50, 40), (40, 12), (160, 45)]:
+                await pilot.resize_terminal(width, height)
+                lines = art = []
+                for _ in range(100):
+                    await pilot.pause(0.05)
+                    lines = plain_text(board).splitlines()
+                    art = [line for line in lines if _art_cells(line)]
+                    if (app.size.width == width and board._painted_width == board.content_size.width
+                            and board._painted_rows == app._landscape_row_budget()
+                            and all(cell_len(line) <= board.content_size.width for line in lines)):
+                        break
+                assert all(cell_len(line) <= board.content_size.width for line in lines), (width, height)
+                assert app.query_one('#composer').region.bottom <= height
+                shown[(width, height)] = len(art)
+                if art:
+                    assert len(art) >= MIN_SCENE_ROWS and _art_cells(art[0]) >= MIN_SCENE_COLUMNS
+                    assert len({_art_cells(line) for line in art}) == 1
+                    # The picture and its status lines fit: nothing to scroll at startup.
+                    assert chat.max_scroll_y == 0, (width, height)
+                else:
+                    assert len(lines) <= 2 and "ISYCODE" in lines[0]
+            assert shown[(160, 45)] and shown[(100, 30)] and shown[(60, 36)]
+            assert not (shown[(200, 24)] or shown[(60, 24)] or shown[(50, 40)] or shown[(40, 12)])
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_archived_landscape_refits_a_narrower_window_instead_of_folding(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(140, 44)) as pilot:
+            await app.wait_for_ready()
+            await pilot.pause()
+            board = app.query_one('#idle-board')
+            app._mount_user_turn("hola")
+            await pilot.pause()
+            assert board.has_class("startup-archived")
+            rows = len([line for line in plain_text(board).splitlines() if _art_cells(line)])
+            assert rows
+            for width, expect_art in [(70, True), (48, False), (140, True)]:
+                await pilot.resize_terminal(width, 30 if width < 140 else 44)
+                lines = []
+                for _ in range(100):
+                    await pilot.pause(0.05)
+                    lines = plain_text(board).splitlines()
+                    if (app.size.width == width and board._painted_width == board.content_size.width
+                            and all(cell_len(line) <= board.content_size.width for line in lines)):
+                        break
+                assert all(cell_len(line) <= board.content_size.width for line in lines), width
+                art = [line for line in lines if _art_cells(line)]
+                assert bool(art) == expect_art, width
+                if art:
+                    assert len(art) <= rows
+                    assert all(_art_cells(line) == board.content_size.width for line in art)
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_ascii_only_display_drops_the_block_picture_and_the_braille_cat(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    from isycode.tui_theme import set_ascii_only
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
+            await pilot.pause()
+            board = app.query_one('#idle-board')
+            status = app.query_one('#activity-status')
+            assert any(_art_cells(line) for line in plain_text(board).splitlines())
+            app._menu_ascii_toggle({})
+            await pilot.pause()
+            assert plain_text(board).isascii() or "·" in plain_text(board)
+            assert not any(_art_cells(line) for line in plain_text(board).splitlines())
+            assert plain_text(status).isascii()
+            app._menu_ascii_toggle({})
+            await pilot.pause()
+            assert any(_art_cells(line) for line in plain_text(board).splitlines())
+
+    try:
+        with capsys.disabled():
+            asyncio.run(scenario())
+    finally:
+        set_ascii_only(False)
+
+
+def test_window_growing_back_from_a_tiny_size_keeps_the_app_alive(tmp_path, monkeypatch, capsys):
+    """The prompt passed through zero width for a frame and Textual could not wrap its placeholder."""
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(160, 45)) as pilot:
+            await app.wait_for_ready()
+            await pilot.pause()
+            for width, height in [(40, 12), (160, 45), (20, 8), (120, 40)]:
+                await pilot.resize_terminal(width, height)
+                for _ in range(6):
+                    await pilot.pause(0.05)
+                assert app.query_one('#prompt-input').content_size.width > 0
+            assert app.is_running
 
     with capsys.disabled():
         asyncio.run(scenario())

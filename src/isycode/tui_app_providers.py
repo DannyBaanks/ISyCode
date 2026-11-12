@@ -1008,6 +1008,9 @@ class ProviderMixin:
         self._ascii_only = enabled
         from isycode.tui_theme import set_ascii_only
         set_ascii_only(enabled)
+        # The picture and the cat are Unicode drawings: repaint both for the new setting.
+        self._paint_idle()
+        self._refresh_activity()
         self._open_settings_menu()
         return
 
