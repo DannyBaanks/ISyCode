@@ -138,9 +138,12 @@ class IdleBoard(Static):
 
     def on_resize(self, event) -> None:
         width = self.content_size.width
-        rows = self.app._landscape_row_budget()
+        archived = self.has_class("startup-archived")
+        rows = self._painted_rows if archived else self.app._landscape_row_budget()
         if width and (width, rows) != (self._painted_width, self._painted_rows):
-            self.app._paint_idle()
+            # Painting inside the resize pass leaves the old height in the layout;
+            # paint once that pass is over so the board is measured again.
+            self.call_after_refresh(self.app._paint_idle, archived)
 
 
 class BoxTitle(CollapsibleTitle, inherit_bindings=False):

@@ -55,7 +55,8 @@ from isycode.tui_widgets import (
 )
 from isycode.bridge_presence import BridgePresenceOwner
 from isycode.search import find_text_matches
-from isycode.startup_art import MAX_SCENE_ROWS, render_landscape
+from rich.cells import cell_len
+from isycode.startup_art import MAX_SCENE_ROWS, landscape_fits, render_landscape
 from isycode.tui_composer import PromptArea
 from isycode.tui_screens_sessions import BridgePresenceScreen, ConsoleSearchScreen
 from isycode.tui_theme import ACCENT, static_content
@@ -770,7 +771,7 @@ class RailMixin:
         """Model line, the blank under it, the integration summary, and board padding."""
         return 4
 
-    def _idle_integration_summary(self) -> Text:
+    def _idle_integration_summary(self, width: int | None = None) -> Text:
         """One line of integration state; the right rail keeps the detail.
 
         The idle board used to repeat every LSP, MCP and Skill name that the
@@ -779,29 +780,43 @@ class RailMixin:
         lsp = getattr(self, "_lsp_status_title", "") or status_chip("LSPs · none")
         mcp = self._format_mcp_snapshot(self._mcp_snapshot)[1]
         skills = self._format_skill_snapshot(self._skill_snapshot)[1]
+        summary = f"{lsp} · {mcp} · {skills}"
+        pointer = "  " + tr("details in the right rail")
         line = Text()
-        line.append(f"{lsp} · {mcp} · {skills}", style=MUTED)
-        line.append("  " + tr("details in the right rail"), style=MUTED)
+        # A wrapped summary would push the board past the rows it was given.
+        if width is None or cell_len(summary + pointer) <= width:
+            line.append(summary + pointer, style=MUTED)
+        else:
+            line.append(_fit_cells(summary, width), style=MUTED)
         return line
 
     def _landscape_row_budget(self) -> int:
-        """Panorama rows that still leave the model line and status columns visible."""
-        chat_h = self.query_one(ChatArea).content_size.height
+        """Panorama rows that leave the status lines and the startup notices on screen."""
+        chat = self.query_one(ChatArea)
+        chat_h = chat.content_size.height
         if chat_h <= 0:
             return 16
-        return max(1, min(MAX_SCENE_ROWS, chat_h - self._idle_status_rows()))
+        notices = sum(child.outer_size.height for child in chat.children
+                      if child.display and getattr(child, "id", None) != "idle-board")
+        return max(0, min(MAX_SCENE_ROWS, chat_h - self._idle_status_rows() - notices))
+
+    def _idle_shows_landscape(self, width: int, max_rows: int | None) -> bool:
+        """The picture needs half-block cells and a grid large enough to read it."""
+        from isycode.tui_theme import ascii_only
+        return not ascii_only() and landscape_fits(width, max_rows)
 
     def _idle_board_text(self, measured_width: int | None = None, max_rows: int | None = None) -> Text:
         """Cell-accurate landscape, model, and integration summary."""
         width = measured_width or self._idle_content_width()
-        height = getattr(self, "size", None) and self.size.height or 40
-        if height <= 28:
+        if not self._idle_shows_landscape(width, max_rows):
             body = Text()
             checking = not self._model_line
             model = self._model_line or tr("Checking the configured model")
             mode = self._workspace_mode() if callable(getattr(self, "_workspace_mode", None)) else getattr(self, "_workspace_mode", "Classic")
-            body.append(f"ISYCODE · {model} · {mode}\n", style=MUTED if checking else TEXT)
-            body.append(tr("Connections and tools (LSPs, MCPs, Skills) in the rail"), style=MUTED)
+            body.append(_fit_cells(f"ISYCODE · {model} · {mode}", width) + "\n",
+                        style=MUTED if checking else TEXT)
+            body.append(_fit_cells(tr("Connections and tools (LSPs, MCPs, Skills) in the rail"), width),
+                        style=MUTED)
             return body
         body = Text()
         body.append(render_landscape(width, max_rows))
@@ -810,7 +825,7 @@ class RailMixin:
         model = self._model_line or tr("Checking the configured model")
         body.append("◇ ", style=MUTED if checking else ACCENT)
         body.append(_fit_cells(model, max(8, width - 2)) + "\n\n", style=self._model_line_style)
-        body.append(self._idle_integration_summary())
+        body.append(self._idle_integration_summary(width))
         return body
 
     def action_find_console(self) -> None:

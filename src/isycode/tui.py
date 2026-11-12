@@ -1923,23 +1923,29 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             board.add_class("startup-archived")
             self.query_one(ChatArea).resume_tail()
 
-    def _paint_idle(self) -> None:
+    def _paint_idle(self, archived: bool = False) -> None:
+        """Paint the welcome board for the space it has now.
+
+        ``archived`` repaints a board that already scrolled into history: it
+        keeps the rows it had and follows only the new width, so a narrower
+        window never folds the picture into broken lines.
+        """
         if not self.is_mounted:
             return
         try:
             board = self.query_one("#idle-board", IdleBoard)
         except (NoMatches, NoScreen, ScreenStackError):
             return
-        if not board.is_mounted or board.has_class("startup-archived"):
+        if not board.is_mounted or board.has_class("startup-archived") != archived:
             return
-        if getattr(self, "size", None) and self.size.height <= 28:
-            board.styles.height = 2
-            board.styles.padding = (0, 0)
-        else:
+        width = board.content_size.width or self._idle_content_width()
+        rows = board._painted_rows if archived else self._landscape_row_budget()
+        if self._idle_shows_landscape(width, rows):
             board.styles.height = "auto"
             board.styles.padding = (0, 1, 1, 1)
-        width = board.content_size.width or self._idle_content_width()
-        rows = self._landscape_row_budget()
+        else:
+            board.styles.height = 2
+            board.styles.padding = (0, 1)
         board._painted_width = width
         board._painted_rows = rows
         board.update(self._idle_board_text(width, rows))
@@ -2172,7 +2178,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._activity_frame += 1
         try:
             status = self.query_one("#activity-status", Static)
-            status.update(walking_cat(status.content_size.width, self._activity_frame))
+            status.update(walking_cat(status.content_size.width, self._activity_frame,
+                                      ascii_only=self._ascii_only))
         except (NoScreen, ScreenStackError):
             pass
 
@@ -2199,7 +2206,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 if self._loop_task is not None and not self._loop_task.done():
                     return
                 from isycode.cat_activity import sleeping_cat
-                status.update(sleeping_cat(status.content_size.width, message, color))
+                status.update(sleeping_cat(status.content_size.width, message, color,
+                                           ascii_only=self._ascii_only))
             except (NoScreen, ScreenStackError):
                 pass
 
@@ -2666,6 +2674,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
     def _append_startup(self, text: str, color: str = TEXT) -> None:
         """Keep startup notices beneath the welcome art without archiving it."""
         self._append(text, color, startup=True)
+        if self.is_mounted:
+            # The notice takes rows from the picture above it once it is laid out.
+            self.call_after_refresh(self._paint_idle)
 
     def _mount_user_turn(self, text: str, sent_at: str | None = None) -> None:
         """Paint one user message as a rounded card and leave the idle board."""

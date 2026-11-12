@@ -1,67 +1,53 @@
 """Original subcell pixel cats for the composer activity track."""
+from rich.cells import cell_len
 from rich.text import Text
 
 
+_CAT = "#f6a34a"
+_TRACK = "#9aa3ad"
 # Original hand-drawn kitten: round head, two ears, short back, four paws
 # and an upright curled tail. Sparse outlines keep the 2×4 subcell dots clear.
-_WALK_FRAMES = (
-    (
-        "........#..#....",
-        "........####....",
-        ".......#....#...",
-        "..##...#.#..##..",
-        ".#..#..#....#...",
-        ".#..#...####....",
-        "..#..####..#....",
-        "..#.#......#....",
-        "...##......#....",
-        "....#.#..#.#....",
-        "....#.#..#.#....",
-        "....##...##.....",
-    ),
-    (
-        "........#..#....",
-        "........####....",
-        ".......#....#...",
-        "..##...#.#..##..",
-        ".#..#..#....#...",
-        ".#..#...####....",
-        "..#..####..#....",
-        "..#.#......#....",
-        "...##......#....",
-        "....#.#..#.#....",
-        "...#..#..#..#...",
-        "...#..#...#.#...",
-    ),
-    (
-        "........#..#....",
-        "........####....",
-        ".......#....#...",
-        "..##...#.#..##..",
-        ".#..#..#....#...",
-        ".#..#...####....",
-        "..#..####..#....",
-        "..#.#......#....",
-        "...##......#....",
-        "....#.#..#.#....",
-        "....#..##..#....",
-        "....##....##....",
-    ),
-    (
-        "........#..#....",
-        "........####....",
-        ".......#....#...",
-        "..##...#.#..##..",
-        ".#..#..#....#...",
-        ".#..#...####....",
-        "..#..####..#....",
-        "..#.#......#....",
-        "...##......#....",
-        "....#.#..#.#....",
-        ".....#.#..#.#...",
-        ".....#.#..#.#...",
-    ),
+_BODY = (
+    "........#..#....",
+    "........####....",
+    ".......#....#...",
+    "..##...#.#..##..",
+    ".#..#..#....#...",
+    ".#..#...####....",
+    "..#..####..#....",
+    "..#.#......#....",
+    "...##......#....",
 )
+# The tail tip leans back on every other step.
+_TAIL_SWAY = (
+    ".##.",
+    "#..#",
+    "#..#",
+    ".#..",
+)
+_EYE = (3, 9)
+# One stride: stand, reach, gather, push. Each pose is held for two ticks.
+_LEGS = (
+    ("....#.#..#.#....",
+     "....#.#..#.#....",
+     "....##...##....."),
+    ("....#.#..#.#....",
+     "...#..#..#..#...",
+     "...#..#...#.#..."),
+    ("....#.#..#.#....",
+     "....#..##..#....",
+     "....##....##...."),
+    ("....#.#..#.#....",
+     ".....#.#..#.#...",
+     ".....#.#..#.#..."),
+)
+_SPRITE_PIXELS = 16
+_SPRITE_CELLS = _SPRITE_PIXELS // 2
+_STEP_TICKS = 2
+_SWAY_TICKS = 4
+# At each end of the track the cat stops, blinks and turns round.
+_TURN_TICKS = 6
+_BLINK = (2, 3)
 # Whole cat curled up on all three rows: ears, closed eyes, back, belly and a
 # tail curling out on the right. Used whenever the column has room for it.
 _REST_LOAF = (
@@ -78,37 +64,17 @@ _REST_LOAF = (
     "...#########...#",
     "...........####.",
 )
-# Face on the left, tail trailing on the right. The widest one is used when
-# the caption line has room; the others keep a face and a tail in narrow columns.
-_REST_FULL = (
-    "#...#.............",
-    "##.##.............",
-    "#####.............",
-    "#...#.............",
-    ".###..##..........",
-    "....#..#.#........",
-    ".......#.#.#......",
-    "........#...#.....",
-)
-_REST_MED = (
-    "#.#.......",
-    "#.#.......",
-    "###.......",
-    "#.........",
-    ".###.#....",
-    "...#.#.#..",
-    "....#.#...",
-    ".....#....",
-)
-_REST_TINY = (
-    "#.#.",
-    "#..#",
-    ".##.",
-    ".#..",
-    ".##.",
-    "..##",
-    "..#.",
-    "...#",
+# The same cat lying flat in two rows. A narrow column keeps the whole animal
+# above its caption instead of a clipped piece of one beside it.
+_REST_LOW = (
+    ".#...#............",
+    ".##.##...#####....",
+    ".#####.##.....#...",
+    "#.....##.......#..",
+    "#.##.##........#.#",
+    "#.....#........#.#",
+    ".#####.........#.#",
+    "..#############.#.",
 )
 
 
@@ -126,40 +92,76 @@ def _dots(bitmap: tuple[str, ...]) -> list[str]:
     return rows
 
 
-def walking_cat(width: int, tick: int) -> Text:
-    width = max(1, width)
+def _walk_pose(step: int, sway: bool, blink: bool) -> tuple[str, ...]:
+    rows = list(_BODY)
+    if sway:
+        for index, tail in enumerate(_TAIL_SWAY):
+            rows[3 + index] = tail + rows[3 + index][len(tail):]
+    if blink:
+        y, x = _EYE
+        rows[y] = rows[y][:x] + "." + rows[y][x + 1:]
+    return tuple(rows) + _LEGS[step % len(_LEGS)]
+
+
+def walk_period(width: int) -> int:
+    """Ticks until the walk repeats: out, turn, back, turn."""
+    travel = (max(10, width) - 2 - _SPRITE_CELLS) * 2
+    if not travel:
+        return len(_LEGS) * _STEP_TICKS * _SWAY_TICKS
+    return 2 * (travel + _TURN_TICKS)
+
+
+def _ascii_walk(width: int, tick: int) -> Text:
+    face = "=^.^="
     if width < 10:
-        return Text(("[:3]" if tick % 2 else "[3:]").ljust(width)[:width], style="#f6a34a")
-    travel = width - 10
-    phase = tick % (2 * travel) if travel else 0
-    right = phase <= travel
-    position = phase if right else 2 * travel - phase
-    bitmap = _WALK_FRAMES[tick % 4]
+        return Text(("[:3]" if tick % 2 else "[3:]").ljust(width)[:width], style=_CAT)
+    travel = width - 2 - len(face)
+    phase = (tick // _STEP_TICKS) % (2 * travel) if travel else 0
+    position = phase if phase <= travel else 2 * travel - phase
+    result = Text(" " * width + "\n")
+    result.append("[", style=_TRACK)
+    result.append(" " * position)
+    result.append(face, style=_CAT)
+    result.append(" " * (travel - position))
+    result.append("]", style=_TRACK)
+    result.append("\n" + " " * width)
+    return result
+
+
+def walking_cat(width: int, tick: int, ascii_only: bool = False) -> Text:
+    """The kitten pacing its track one subcell dot per tick."""
+    width = max(1, width)
+    if ascii_only or width < 10:
+        return _ascii_walk(width, tick)
+    travel = (width - 2 - _SPRITE_CELLS) * 2
+    turning = blink = False
+    right, offset = True, 0
+    tick %= walk_period(width)
+    if travel:
+        phase = tick
+        half = travel + _TURN_TICKS
+        right = phase < half
+        along = phase % half
+        turning = along >= travel
+        blink = turning and along - travel in _BLINK
+        offset = min(along, travel) if right else travel - min(along, travel)
+    step = 0 if turning else tick // _STEP_TICKS
+    bitmap = _walk_pose(step, (tick // _SWAY_TICKS) % 2 == 1, blink)
     if not right:
         bitmap = tuple(row[::-1] for row in bitmap)
+    canvas = tuple("." * offset + row + "." * (travel - offset) for row in bitmap)
     result = Text()
-    for row, pixels in enumerate(_dots(bitmap)):
-        result.append("[" if row == 1 else " ", style="#9aa3ad")
-        result.append(" " * position)
-        result.append(pixels, style="#f6a34a")
-        result.append(" " * (travel - position))
-        result.append("]" if row == 1 else " ", style="#9aa3ad")
+    for row, pixels in enumerate(_dots(canvas)):
+        result.append("[" if row == 1 else " ", style=_TRACK)
+        result.append(pixels, style=_CAT)
+        result.append("]" if row == 1 else " ", style=_TRACK)
         if row != 2:
             result.append("\n")
     return result
 
 
-def _rest_rows(bitmap: tuple[str, ...]) -> tuple[str, str]:
-    cols = max(len(row) for row in bitmap)
-    if cols % 2:
-        cols += 1
-    packed = _dots(tuple(row.ljust(cols, ".")[:cols] for row in bitmap))
-    return packed[0], packed[1]
-
 
 def _clip_cells(text: str, width: int) -> str:
-    from rich.cells import cell_len
-
     if width <= 0:
         return ""
     if cell_len(text) <= width:
@@ -176,8 +178,6 @@ def _clip_cells(text: str, width: int) -> str:
 
 def _wrap_words(label: str, width: int, rows: int = 3) -> list[str]:
     """Fit a status into the activity column. No line paints past that column."""
-    from rich.cells import cell_len
-
     words = label.split(" ")
     lines: list[str] = []
     current = ""
@@ -218,20 +218,28 @@ def _wrapped_status(label: str, width: int, style: str) -> Text:
     return result
 
 
-def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad") -> Text:
+def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "#9aa3ad",
+                 ascii_only: bool = False) -> Text:
     """Curled kitten with a visible tail and stepped sleep marks when space permits.
 
     The walking pose still fills the activity box and bounces when a turn starts.
-    A caption that does not fit beside the cat wraps inside the column.
+    A caption that does not fit beside the cat wraps inside the column, and a
+    column too narrow for the whole cat keeps the caption alone.
     """
-    from rich.cells import cell_len
-
     width = max(1, width)
     label = " ".join((caption or "Chat ready").split()) or "Chat ready"
     if width < 10:
         return Text(_clip_cells(label, width), style=caption_style)
     if cell_len(label) > width:
         return _wrapped_status(label, width, caption_style)
+    blank = " " * width
+    if ascii_only:
+        nap = "=-.-= z"
+        result = Text(blank + "\n")
+        result.append(nap.ljust(width)[:width] if len(nap) <= width else blank, style=_CAT)
+        result.append("\n")
+        result.append(label.ljust(width), style=caption_style)
+        return result
 
     loaf = _dots(_REST_LOAF)
     start = cell_len(label) + 1
@@ -242,44 +250,21 @@ def sleeping_cat(width: int, caption: str = "Chat ready", caption_style: str = "
             line = Text(label, style=caption_style) if row == 2 else Text(" " * cell_len(label))
             line.append(" ")
             sleep = ("  z", " z ", "z  ")[row] if sleep_width == 3 else ("z" if row == 1 else " ")
-            line.append(sleep, style="#f6a34a")
-            line.append(pixels, style="#f6a34a")
+            line.append(sleep, style=_CAT)
+            line.append(pixels, style=_CAT)
             line.append(" " * (width - start - sleep_width - cell_len(pixels)))
             result.append(line)
             if row < 2:
                 result.append("\n")
         return result
 
-    chosen: tuple[str, str, int] | None = None
-    for bitmap, gap in (
-        (_REST_FULL, 1), (_REST_MED, 1), (_REST_TINY, 1), (_REST_TINY, 0),
-    ):
-        top, body = _rest_rows(bitmap)
-        block = 1 + cell_len(top)  # the z sits on the face, then the sprite
-        if cell_len(label) + gap + block <= width:
-            chosen = (top, body, gap)
-            break
-
-    blank = " " * width
-    if chosen is None:
-        result = Text()
-        result.append(blank + "\n" + blank + "\n")
-        result.append(label.ljust(width), style=caption_style)
-        return result
-
-    top, body, gap = chosen
-    start = cell_len(label) + gap
-    face = Text(" " * start)
-    face.append("z" + top, style="#f6a34a")
-    face.append(" " * (width - start - cell_len("z" + top)))
-    feet = Text(label, style=caption_style)
-    feet.append(" " * gap)
-    feet.append(" " + body, style="#f6a34a")  # the space sits under the z
-    feet.append(" " * (width - cell_len(label) - gap - cell_len(" " + body)))
+    # The cat lies on the caption: whole animal above, words below.
+    low = _dots(_REST_LOW)
     result = Text()
-    result.append(blank)
-    result.append("\n")
-    result.append(face)
-    result.append("\n")
-    result.append(feet)
+    for row, pixels in enumerate(low):
+        result.append(pixels, style=_CAT)
+        room = width - cell_len(pixels)
+        result.append((" z" if row == 0 and room >= 2 else "").ljust(room), style=_CAT)
+        result.append("\n")
+    result.append(label.ljust(width), style=caption_style)
     return result

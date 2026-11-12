@@ -129,7 +129,11 @@ MESSAGES = [{"role": "system", "content": "system-imported"},
             {"role": "tool", "tool_call_id": "prior", "content": "external-result"}]
 
 
-def connector(tmp_path, scenario="normal", *, timeout_s=2):
+# The deadline covers the fake peer's interpreter start-up as well as its answer.
+# Two seconds was not enough on a loaded macOS runner. A test that waits the
+# deadline out passes its own short one, so this default costs nothing when the
+# peer answers.
+def connector(tmp_path, scenario="normal", *, timeout_s=10):
     home = tmp_path / "managed"
     if os.name == "nt":
         # Windows cannot execute a POSIX shebang. Use Python as the exact
@@ -315,7 +319,8 @@ def test_unsupported_empty_environments_never_start_turn(tmp_path, scenario):
 @pytest.mark.parametrize("scenario", ["unknown_tool", "approval", "wrong_tool_turn", "large_arguments",
     "failed", "interrupted", "eof", "event_flood", "signed_out", "api_account"])
 def test_unauthorized_requests_and_failed_turns_fail_closed(tmp_path, scenario):
-    connection = connector(tmp_path, scenario)
+    # The flood ends at the turn deadline, so that scenario keeps a short one.
+    connection = connector(tmp_path, scenario, timeout_s=2 if scenario == "event_flood" else 10)
     async def run():
         async with connection:
             with pytest.raises(CodexConnectorError) as exc:
