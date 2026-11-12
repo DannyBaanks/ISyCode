@@ -129,7 +129,10 @@ MESSAGES = [{"role": "system", "content": "system-imported"},
             {"role": "tool", "tool_call_id": "prior", "content": "external-result"}]
 
 
-def connector(tmp_path, scenario="normal", *, timeout_s=2):
+# The deadline covers the fake peer's interpreter start-up as well as its answer.
+# Two seconds was not enough on a loaded macOS runner; no test using this default
+# waits the deadline out, so a generous one costs nothing when the peer answers.
+def connector(tmp_path, scenario="normal", *, timeout_s=10):
     home = tmp_path / "managed"
     if os.name == "nt":
         # Windows cannot execute a POSIX shebang. Use Python as the exact
