@@ -38,6 +38,10 @@ class Staging:
     root: Path
     baseline: dict[str, tuple]
     scope: str = "."
+    # Masked paths are not copied. Their empty mount points are known by inode,
+    # so a renamed parent folder cannot turn one into a promoted change.
+    placeholders: frozenset = frozenset()
+    skipped: frozenset = frozenset()
 
 
 def spill_bytes(payload: bytes) -> Path:
@@ -56,8 +60,17 @@ def remove_spill(path: Path) -> None:
         shutil.rmtree(folder, ignore_errors=True)
 
 
-def prepare_staging(original: Path, *, scope: str = ".", max_stage_bytes: int | None = None) -> Staging:
-    """Copy ``original`` to a new directory outside it. The original is not mounted writable."""
+def prepare_staging(original: Path, *, scope: str = ".", max_stage_bytes: int | None = None,
+                    masked: tuple[tuple[str, bool], ...] | None = None) -> Staging:
+    """Copy ``original`` to a new directory outside it. The original is not mounted writable.
+
+    ``masked`` is the reviewed mask list (workspace-relative paths). Those
+    entries are not copied: secrets and ``.git`` never reach the temporary
+    folder and do not count against the budget. A sensitive name that is not in
+    the list appeared after review, and stops the copy.
+    """
+    skip = None if masked is None else frozenset(path for path, _ in masked)
+    prefix = "" if scope == "." else scope + "/"
     budget = MAX_STAGE_BYTES if max_stage_bytes is None else max_stage_bytes
     if type(budget) is not int or not 1 <= budget <= COMMAND_MAX_STAGE_BYTES:
         raise StagingError("staging budget must be a positive integer of at most 8 GiB")
@@ -68,7 +81,7 @@ def prepare_staging(original: Path, *, scope: str = ".", max_stage_bytes: int | 
     selected = source / scope
     if not selected.is_dir() or is_link(selected):
         raise StagingError("staging scope is not an existing folder")
-    size = _tree_bytes(selected, budget)
+    size = _tree_bytes(selected, budget, skip or frozenset(), prefix)
     if size > budget:
         raise StagingError(f"workspace exceeds staging budget ({budget / (1024 * 1024):g} MiB); command was not run. "
                            "Use a smaller scope or propose max_stage_bytes for user review (up to 8 GiB)")
@@ -86,14 +99,17 @@ def prepare_staging(original: Path, *, scope: str = ".", max_stage_bytes: int | 
     try:
         target = destination / scope
         target.mkdir(parents=True, exist_ok=True)
-        _copy_tree(selected, target, [budget])
+        placeholders: set[tuple[int, int]] = set()
+        _copy_tree(selected, target, [budget], skip, prefix, placeholders)
     except StagingError:
         shutil.rmtree(destination, ignore_errors=True)
         raise
     except OSError as exc:
         shutil.rmtree(destination, ignore_errors=True)
         raise StagingError("workspace could not be copied into staging; command was not run") from exc
-    return Staging(source, destination, _index(destination), scope)
+    marks = frozenset(placeholders)
+    return Staging(source, destination, _index(destination, marks), scope, marks,
+                   skip or frozenset())
 
 
 def cleanup_staging(staging: Staging) -> None:
@@ -103,7 +119,7 @@ def cleanup_staging(staging: Staging) -> None:
 
 def measure_changes(staging: Staging) -> list[dict[str, str]]:
     """Paths whose staged bytes differ from the copy-time original."""
-    current = _index(staging.root)
+    current = _index(staging.root, staging.placeholders)
     changes: list[dict[str, str]] = []
     for relative in sorted(set(staging.baseline) | set(current)):
         if staging.scope != "." and not relative.startswith(staging.scope + "/"):
@@ -125,12 +141,13 @@ def promote_changes(staging: Staging, changes: list[dict[str, str]]) -> tuple[li
     applied: list[str] = []
     refused: list[str] = []
     live = _scoped_index(staging.original, staging.scope)
-    staged_now = _index(staging.root)
+    staged_now = _index(staging.root, staging.placeholders)
     ordered = sorted(changes, key=lambda item: (item.get("kind") != "delete", item.get("path", "")))
     for change in ordered:
         relative = str(change.get("path", ""))
         kind = str(change.get("kind", ""))
-        if _refused(relative, staging.baseline.get(relative), staged_now.get(relative)):
+        if relative in staging.skipped or _refused(
+                relative, staging.baseline.get(relative), staged_now.get(relative)):
             refused.append(relative)
             continue
         if live.get(relative) != staging.baseline.get(relative):
@@ -166,7 +183,7 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
             return replayed
 
     live = _scoped_index(staging.original, staging.scope)
-    staged_now = _index(staging.root)
+    staged_now = _index(staging.root, staging.placeholders)
     refused: list[str] = []
     eligible: list[tuple[str, str, tuple | None, tuple | None]] = []
     ordered = sorted(changes, key=lambda item: (item.get("kind") != "delete", item.get("path", "")))
@@ -175,7 +192,8 @@ def promote_accounted(staging: Staging, changes: list[dict[str, str]], *,
         kind = str(change.get("kind", ""))
         before = staging.baseline.get(relative)
         after = staged_now.get(relative)
-        if _refused(relative, before, after) or live.get(relative) != before:
+        if (relative in staging.skipped or _refused(relative, before, after)
+                or live.get(relative) != before):
             refused.append(relative)
             continue
         if before is not None and before[0] == "dir":
@@ -416,9 +434,9 @@ def _nbytes(root: Path, relative: str) -> int:
 def _refused(relative: str, before: tuple | None, after: tuple | None) -> bool:
     if _protected(relative):
         return True
-    if before is not None and before[0] == "symlink":
+    if before is not None and before[0] in {"symlink", "masked"}:
         return True
-    if after is not None and after[0] == "symlink":
+    if after is not None and after[0] in {"symlink", "masked"}:
         return True
     return False
 
@@ -438,7 +456,8 @@ def _apply(staging: Staging, relative: str, kind: str) -> None:
     if staging.scope != "." and not relative.startswith(staging.scope + "/"):
         raise OSError("effect path is outside the selected staging scope")
     before = staging.baseline.get(relative)
-    if _protected(relative) or (before is not None and before[0] != "file"):
+    if (_protected(relative) or relative in staging.skipped
+            or (before is not None and before[0] != "file")):
         raise OSError("effect path is protected or not a regular file")
     after = None if kind == "delete" else read_file(staging.root, relative)
     if kind != "delete" and after is None:
@@ -491,9 +510,9 @@ def _lexical(root: Path, relative: str) -> Path | None:
     return root / relative
 
 
-def _tree_bytes(root: Path, budget: int) -> int:
+def _tree_bytes(root: Path, budget: int, skip: frozenset = frozenset(), prefix: str = "") -> int:
     total = 0
-    for path in _walk_files(root):
+    for path in _walk_files(root, skip, prefix):
         try:
             total += path.stat(follow_symlinks=False).st_size
         except OSError:
@@ -503,15 +522,32 @@ def _tree_bytes(root: Path, budget: int) -> int:
     return total
 
 
-def _copy_tree(source: Path, destination: Path, remaining: list[int]) -> None:
+def _copy_tree(source: Path, destination: Path, remaining: list[int],
+               skip: frozenset | None = None, prefix: str = "",
+               placeholders: set | None = None) -> None:
     for entry in os.scandir(source):
         target = destination / entry.name
+        relative = prefix + entry.name
         if is_link(Path(entry.path)):
             os.symlink(os.readlink(entry.path), target)
             continue
-        if entry.is_dir(follow_symlinks=False):
+        is_folder = entry.is_dir(follow_symlinks=False)
+        if skip is not None:
+            if relative in skip:
+                # An empty mount point for the mask; the content stays where it is.
+                if is_folder:
+                    target.mkdir(mode=0o700)
+                else:
+                    os.close(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+                info = target.lstat()
+                if placeholders is not None:
+                    placeholders.add((info.st_dev, info.st_ino))
+                continue
+            if WorkspaceReadSystembility.is_sensitive_name(entry.name):
+                raise StagingError("a sensitive path appeared after review; command was not run")
+        if is_folder:
             target.mkdir()
-            _copy_tree(Path(entry.path), target, remaining)
+            _copy_tree(Path(entry.path), target, remaining, skip, relative + "/", placeholders)
             continue
         if entry.is_file(follow_symlinks=False):
             with open(entry.path, "rb") as incoming, target.open("wb") as outgoing:
@@ -523,31 +559,37 @@ def _copy_tree(source: Path, destination: Path, remaining: list[int]) -> None:
             shutil.copystat(entry.path, target, follow_symlinks=False)
 
 
-def _walk_files(root: Path):
+def _walk_files(root: Path, skip: frozenset = frozenset(), prefix: str = ""):
     for entry in os.scandir(root):
-        if is_link(Path(entry.path)):
+        if is_link(Path(entry.path)) or prefix + entry.name in skip:
             continue
         if entry.is_dir(follow_symlinks=False):
-            yield from _walk_files(Path(entry.path))
+            yield from _walk_files(Path(entry.path), skip, prefix + entry.name + "/")
         elif entry.is_file(follow_symlinks=False):
             yield Path(entry.path)
 
 
-def _index(root: Path) -> dict[str, tuple]:
+def _index(root: Path, placeholders: frozenset = frozenset()) -> dict[str, tuple]:
     found: dict[str, tuple] = {}
 
     def walk(current: Path) -> None:
         for entry in os.scandir(current):
+            # A mount point of a mask keeps its own kind, wherever it is found:
+            # anything measured on it or under it is refused, never promoted.
+            masked = False
+            if placeholders:
+                info = entry.stat(follow_symlinks=False)
+                masked = (info.st_dev, info.st_ino) in placeholders
             relative = Path(entry.path).relative_to(root).as_posix()
             if is_link(Path(entry.path)):
                 found[relative] = ("symlink", os.readlink(entry.path))
                 continue
             if entry.is_dir(follow_symlinks=False):
-                found[relative] = ("dir",)
+                found[relative] = ("masked",) if masked else ("dir",)
                 walk(Path(entry.path))
                 continue
             if entry.is_file(follow_symlinks=False):
-                found[relative] = ("file", _sha(Path(entry.path)),
+                found[relative] = ("masked" if masked else "file", _sha(Path(entry.path)),
                                    stat.S_IMODE(entry.stat(follow_symlinks=False).st_mode))
 
     walk(root)

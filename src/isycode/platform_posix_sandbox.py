@@ -1,7 +1,17 @@
-"""Bubblewrap backend; keeps the existing Linux sandbox contract."""
+"""Bubblewrap backend; keeps the existing Linux sandbox contract.
+
+Memory is bounded in two places. Every tmpfs has a size, so files written to
+``/tmp`` or into a masked folder cannot grow into host RAM. The whole sandbox
+runs in a transient systemd user scope with ``MemoryMax`` when the user manager
+is reachable: that is the only aggregate limit, and the kernel then kills
+inside the scope instead of starving the host. Without a user manager each
+process gets ``RLIMIT_DATA`` instead, which stops one runaway process but is
+not an aggregate bound.
+"""
 import asyncio
 import os
 import signal
+import subprocess
 
 
 import ctypes.util
@@ -18,6 +28,12 @@ from isycode.lsp import network_deny_bootstrap
 DEFAULT_TIMEOUT_S = 120
 
 MAX_PROCESSES = 256
+# tmpfs pages are host memory: /tmp and every masked folder get a ceiling.
+SANDBOX_TMP_BYTES = 1024**3
+SANDBOX_MASK_BYTES = 16 * 1024**2
+SYSTEMD_RUN = "/usr/bin/systemd-run"
+ENV = "/usr/bin/env"
+_scope_ready: bool | None = None
 PYTHON = "/usr/bin/python3"
 # Only the files dynamic linking and user lookups need; no hosts, resolv or keys.
 ETC_FILES = ("ld.so.cache", "ld.so.conf", "ld.so.conf.d", "alternatives", "passwd", "group",
@@ -34,6 +50,53 @@ def sandbox_executable() -> str | None:
         return str(Path(found).resolve(strict=True))
     except (OSError, RuntimeError):
         return None
+
+
+def memory_limit_bytes() -> int:
+    """Half of physical memory, never under 1 GiB or over 8 GiB."""
+    try:
+        total = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    except (OSError, ValueError):
+        total = 0
+    return max(1024**3, min(8 * 1024**3, total // 2))
+
+
+def memory_scope(limit: int) -> list[str]:
+    """Launcher prefix that puts the sandbox in a memory-limited cgroup, or [].
+
+    ``systemd-run --scope`` execs the command in place, so the PID, the session
+    and the kill path stay the same. ``env -i`` drops the two bus variables
+    systemd-run needs, so bubblewrap still starts with an empty environment.
+    The first call checks once that the user manager accepts the scope.
+    """
+    global _scope_ready
+    if type(limit) is not int or limit < 1:
+        raise ValueError("memory limit is invalid")
+    prefix = [SYSTEMD_RUN, "--user", "--scope", "--quiet", "--collect",
+              "-p", f"MemoryMax={limit}", "-p", "MemorySwapMax=0", "--", ENV, "-i"]
+    if _scope_ready is None:
+        ready = False
+        if os.access(SYSTEMD_RUN, os.X_OK) and os.access(ENV, os.X_OK) and _scope_environment():
+            try:
+                ready = subprocess.run(
+                    prefix, env=_scope_environment(), stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    timeout=10, check=False).returncode == 0
+            except (OSError, subprocess.TimeoutExpired):
+                ready = False
+        _scope_ready = ready
+    return prefix if _scope_ready else []
+
+
+def _scope_environment() -> dict[str, str]:
+    """Only what systemd-run needs to reach the user manager."""
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if not runtime:
+        return {}
+    env = {"XDG_RUNTIME_DIR": runtime}
+    if os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+        env["DBUS_SESSION_BUS_ADDRESS"] = os.environ["DBUS_SESSION_BUS_ADDRESS"]
+    return env
 
 
 def _is_executable_file(path: Path) -> bool:
@@ -67,7 +130,8 @@ def resolve_program(root: Path, name: str) -> str:
 
 def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...], cwd: str,
                     masks: tuple[tuple[str, bool], ...], *,
-                    timeout_s: int = DEFAULT_TIMEOUT_S) -> list[str]:
+                    timeout_s: int = DEFAULT_TIMEOUT_S,
+                    data_bytes: int | None = None) -> list[str]:
     """Bubblewrap argv: system files read-only, only the workspace writable, sensitive paths masked."""
     args = [sandbox, "--die-with-parent", "--new-session", "--unshare-all",
             "--cap-drop", "ALL", "--clearenv", "--ro-bind", "/usr", "/usr"]
@@ -81,14 +145,15 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
     for name in ETC_FILES:
         if Path("/etc", name).exists():
             args.extend(["--ro-bind", f"/etc/{name}", f"/etc/{name}"])
-    args.extend(["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
+    args.extend(["--proc", "/proc", "--dev", "/dev",
+                 "--size", str(SANDBOX_TMP_BYTES), "--tmpfs", "/tmp",
                  "--dir", "/workspace", "--bind", str(root), "/workspace"])
     # The workspace identity marker stays exactly as it is.
     if (root / ".isyroot").is_file() and not (root / ".isyroot").is_symlink():
         args.extend(["--ro-bind", str(root / ".isyroot"), "/workspace/.isyroot"])
     for relative, is_folder in masks:
         if is_folder:
-            args.extend(["--tmpfs", f"/workspace/{relative}"])
+            args.extend(["--size", str(SANDBOX_MASK_BYTES), "--tmpfs", f"/workspace/{relative}"])
         else:
             args.extend(["--ro-bind", "/dev/null", f"/workspace/{relative}"])
     args.extend(["--chdir", "/workspace" if cwd == "." else f"/workspace/{cwd}",
@@ -96,18 +161,22 @@ def sandbox_command(sandbox: str, root: Path, program: str, argv: tuple[str, ...
                  "--setenv", "PATH", ":".join(COMMAND_SYSTEM_BIN_DIRS),
                  "--setenv", "LANG", "C.UTF-8", "--setenv", "TERM", "dumb",
                  "--setenv", "NO_COLOR", "1",
-                 "--", PYTHON, "-I", "-c", command_bootstrap(timeout_s), program, *argv[1:]])
+                 "--", PYTHON, "-I", "-c", command_bootstrap(timeout_s, data_bytes), program, *argv[1:]])
     return args
 
 
-def command_bootstrap(timeout_s: int) -> str:
+def command_bootstrap(timeout_s: int, data_bytes: int | None = None) -> str:
     """Install hard resource limits in the child before any user program runs.
 
     Setting limits from the parent races both program execution and reaping:
     a fast command can exit while the busy UI is waiting to resume.
+    ``data_bytes`` is the per-process fallback used when no memory cgroup holds
+    the sandbox.
     """
     if type(timeout_s) is not int or not 1 <= timeout_s <= COMMAND_MAX_TIMEOUT_S:
         raise ValueError("command timeout is invalid")
+    if data_bytes is not None and (type(data_bytes) is not int or data_bytes < 1):
+        raise ValueError("memory limit is invalid")
     cpu = timeout_s + 10
     limits = ("import resource\n"
               f"resource.setrlimit(resource.RLIMIT_CPU, ({cpu}, {cpu}))\n"
@@ -123,10 +192,15 @@ def command_bootstrap(timeout_s: int) -> str:
         "        raise SystemExit('sandbox capability check failed')\n"
         "except (OSError, StopIteration, ValueError):\n"
         "    raise SystemExit('sandbox capability check failed')\n")
+    if data_bytes is not None:
+        limits += f"resource.setrlimit(resource.RLIMIT_DATA, ({data_bytes}, {data_bytes}))\n"
     return limits + capability_check + network_deny_bootstrap(MAX_PROCESSES)
 
 
 class PosixSandbox:
+    # Masked paths are never copied into staging; an empty placeholder is the mount point.
+    stages_without_masked = True
+
     def relative_path_valid(self, value):
         return True  # Shared POSIX-relative validation already checked syntax.
 
@@ -148,15 +222,23 @@ class PosixSandbox:
 
     async def start(self, staging, program, argv, cwd, masks, timeout_s, *, executable=None,
                     identity=None):
-        command = sandbox_command(executable or self.executable(), staging, program,
-                                  argv, cwd, masks, timeout_s=timeout_s)
+        limit = memory_limit_bytes()
+        scope = await asyncio.to_thread(memory_scope, limit)
+        command = scope + sandbox_command(executable or self.executable(), staging, program,
+                                          argv, cwd, masks, timeout_s=timeout_s,
+                                          data_bytes=None if scope else limit)
         # bwrap is PID 1 in the sandbox: its own environment must carry nothing
-        # from the host, or /proc/1/environ would leak it to the child.
-        return await asyncio.create_subprocess_exec(*command, cwd='/', env={},
+        # from the host, or /proc/1/environ would leak it to the child. With a
+        # scope, ``env -i`` clears the bus variables before bwrap starts.
+        return await asyncio.create_subprocess_exec(
+            *command, cwd='/', env=_scope_environment() if scope else {},
             stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT, start_new_session=True)
 
     def terminate(self, process):
+        # A reaped PID may already name an unrelated process group.
+        if process.returncode is not None:
+            return
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError):
