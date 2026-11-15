@@ -362,6 +362,11 @@ def test_the_settings_form_asks_before_widening_the_machine_scope(tmp_path, monk
             await until(pilot, lambda: isinstance(app.screen, GusSettingsScreen), "the settings form")
             form = app.screen
             form.query_one("#gus-scope-input", Input).value = str(external)
+            # A click lands on a widget's laid-out region; a button that is mounted
+            # but not yet positioned makes the click hit nothing and no prompt comes.
+            await until(pilot, lambda: any(
+                button.region for button in form.query("#gus-settings-save")),
+                "the save button layout")
             await pilot.click("#gus-settings-save")
             await until(pilot, lambda: isinstance(app.screen, ConfirmScreen), "the scope prompt")
             copy = str(app.screen.query_one("#tailscale-confirm-copy Static").render())

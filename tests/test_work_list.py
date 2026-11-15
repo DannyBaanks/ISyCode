@@ -63,6 +63,9 @@ def test_sessions_panel_switches_here_and_blocks_during_generation(tmp_path, mon
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(150, 45)) as pilot:
+            # The session owner is created during startup; before it is ready the
+            # attribute is None, which made this test depend on scheduler timing.
+            await app.wait_for_ready()
             await pilot.pause()
             owner = app._chat_session_owner
             _, first = owner.record(None, 'user', 'First task')

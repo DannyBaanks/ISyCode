@@ -291,7 +291,12 @@ def test_a_stalled_provider_is_cancelled_quickly_and_its_socket_closed(tmp_path,
             # so one read() answers with bytes and not with the hang-up. Only an
             # empty read is the client closing: this test names that fact, so it
             # waits for it instead of timing a body.
-            while await reader.read():
+            # macOS reports a client that closes with unread bytes as a reset, not
+            # as an empty read. Both are the hang-up this test waits for.
+            try:
+                while await reader.read():
+                    pass
+            except ConnectionResetError:
                 pass
             events["hung_up"] = time.monotonic()
 
