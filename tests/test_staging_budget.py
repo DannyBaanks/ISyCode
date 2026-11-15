@@ -279,7 +279,8 @@ class TestCommandBudget:
         assert outcome.decision == "ALLOW", outcome.reason
         assert outcome.receipt.verify(preview.request, outcome.text)
         assert json.loads(outcome.text)["output"] == "expanded\n"
-        prepare.assert_called_once_with(owner.root, scope=".", max_stage_bytes=DEFAULT + 1)
+        prepare.assert_called_once_with(owner.root, scope=".", max_stage_bytes=DEFAULT + 1,
+                                        masked=preview.masks)
         evidence = log.read_bytes()
         replay = asyncio.run(owner.run(preview, approval))
         assert replay.decision == "DENY" and replay.receipt is None

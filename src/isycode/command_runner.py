@@ -338,7 +338,9 @@ class CommandRunOwner:
         try:
             stage_task = asyncio.create_task(asyncio.to_thread(
                 prepare_staging, self.root, scope=preview.scope,
-                max_stage_bytes=params.get("max_stage_bytes")))
+                max_stage_bytes=params.get("max_stage_bytes"),
+                masked=(preview.masks if getattr(sandbox_backend, "stages_without_masked", False)
+                        else None)))
             try:
                 staging = await asyncio.shield(stage_task)
             except asyncio.CancelledError:
