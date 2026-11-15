@@ -207,7 +207,8 @@ PROVIDER_SCREEN: tuple[tuple[str, str, str, str], ...] = (
 FEATURED_MODELS: tuple[tuple[str, str], ...] = (
     ("GLM 5.3 Flash", r"glm[-_. ]?5[._]3(?![0-9]).*flash"),
     ("GLM 5.3", r"glm[-_. ]?5[._]3(?![0-9])(?!.*flash)"),
-    ("Kimi K3", r"kimi[-_. ]?k3(?![0-9])"),
+    ("Kimi K3.1 Pro", r"kimi[-_. ]?k3[._]1(?![0-9])"),
+    ("Kimi K3", r"kimi[-_. ]?k3(?![0-9._])"),
     ("DeepSeek V4.1 Flash", r"deepseek[-_. ]?v4[._]1(?![0-9]).*flash"),
 )
 
