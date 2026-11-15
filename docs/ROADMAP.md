@@ -997,6 +997,15 @@ Después de M23 (MK6 y MC0). Solo entran arreglos, pruebas y documentación, y c
    PARTIAL: el subconjunto nativo corre en CI, la suite completa no.
 5. Cacería de bugs: primero seguridad, después datos, después UI.
 
+   Hecha (2026-10-24): seguridad — el guardián L0 no veía alias de NTFS
+   (puntos/espacios finales y streams `name:stream`; #93) y el guardián de
+   cleartext de `Provider` comparaba el esquema con `startswith` en vez de
+   parsearlo (#94); datos — el aviso de cap de 16,000 del draft quedó huérfano
+   de la truncación que ya no existe (este PR); UI — la carrera de foco ya
+   estaba resuelta (`6a51cfc`, `tests/test_approval_focus.py`). Sondeos sin
+   hallazgo: reintento de un turno fallido, steering, journals de turno,
+   checkpoints y los stores de sesión (atómicos, con fsync y revisión).
+
 Del kickoff también salió convertido a espera por condición el flake de
 `test_m9_adversarial.py::test_a_hostile_model_reply_cannot_drive_the_terminal`
 (falló en el CI de Windows del merge de la cadena del 2026-10-24 con un solo
