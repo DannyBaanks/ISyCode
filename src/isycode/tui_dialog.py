@@ -18,6 +18,7 @@ from typing import Any, ClassVar
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static
 
@@ -128,11 +129,17 @@ class Dialog(ModalScreen[Any]):
     def on_mount(self) -> None:
         for action in self.dialog_actions():
             if action.focused:
-                self.query_one(f"#{action.id}", Button).focus()
+                try:
+                    self.query_one(f"#{action.id}", Button).focus()
+                except NoMatches:
+                    pass
                 return
         for action in self.dialog_actions():
             if not action.disabled:
-                self.query_one(f"#{action.id}", Button).focus()
+                try:
+                    self.query_one(f"#{action.id}", Button).focus()
+                except NoMatches:
+                    pass
                 return
 
     # -- behaviour -----------------------------------------------------

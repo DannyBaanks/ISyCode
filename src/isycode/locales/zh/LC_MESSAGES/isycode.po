@@ -6533,3 +6533,57 @@ msgstr "会话上下文 · {path}"
 
 msgid "Prompt kept in history (↑) · /retry prepares it if needed."
 msgstr "提示已保留在历史记录中（↑）· 需要时可用 /retry 准备重发。"
+
+msgid "Always allow"
+msgstr "始终允许"
+
+msgid "Apply change"
+msgstr "应用更改"
+
+msgid "Approve all {count}"
+msgstr "全部批准 ({count})"
+
+msgid "Approve once"
+msgstr "批准一次"
+
+msgid "Commit"
+msgstr "提交"
+
+msgid "Copy whole"
+msgstr "复制全部"
+
+msgid "Create branch"
+msgstr "创建分支"
+
+msgid "Delete conversation"
+msgstr "删除对话"
+
+msgid "Delete iteration"
+msgstr "删除迭代"
+
+msgid "Discard"
+msgstr "丢弃"
+
+msgid "Keep"
+msgstr "保留"
+
+msgid "Read and send once"
+msgstr "读取并发送一次"
+
+msgid "Reject"
+msgstr "拒绝"
+
+msgid "Reject all"
+msgstr "全部拒绝"
+
+msgid "Review each"
+msgstr "逐个审查"
+
+msgid "Run command"
+msgstr "运行命令"
+
+msgid "Share with model"
+msgstr "分享给模型"
+
+msgid "Trust folder"
+msgstr "信任文件夹"

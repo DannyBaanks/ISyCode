@@ -377,12 +377,24 @@ class RailMixin:
             self.screen_stack[0].query_one("#sentinel-status", Static).update(body)
         except NoMatches:
             return
-        self._set_rail_title(
-            "rail-sentinel",
-            status_chip("IsySentinel · {allowed} allow · {denied} deny",
-                         allowed=self._sentinel_feed.allowed,
-                         denied=self._sentinel_feed.denied),
-            chip=True)
+        self._paint_sentinel_title()
+
+    def _paint_sentinel_title(self) -> None:
+        title = status_chip("IsySentinel · {allowed} allow · {denied} deny",
+                            allowed=self._sentinel_feed.allowed,
+                            denied=self._sentinel_feed.denied)
+        try:
+            rail = self.query_one("#rail-sentinel", Collapsible)
+        except (NoMatches, NoScreen):
+            return
+        width = rail.size.width or rail.content_size.width or 0
+        if width and width < 36:
+            # Keep the localized deny suffix and its count at the end of the title.
+            denied = title.rsplit(" · ", 1)[-1]
+            prefix_width = width - 2 - cell_len(denied) - 3
+            prefix = _fit_cells("Sentinel", prefix_width)
+            title = f"{prefix} · {denied}" if prefix else _fit_cells(denied, width - 2)
+        self._set_rail_title("rail-sentinel", title, chip=True)
 
     async def _load_sentinel_journal(self) -> None:
         """Verify the hash chain once and show its latest decisions (not counted)."""
@@ -978,6 +990,9 @@ class RailMixin:
             gus.label = Text("GUS", style=GUS_COLOR if self._gus_enabled_here() else MUTED)
             gus.tooltip = tr("GUS, your assistant and ISyCode maintainer · click to talk to it")
         self._update_model_button_visibility()
+        self._paint_rail_identity()
+        self._paint_sentinel_title()
+        self._paint_idea_box()
 
     def _paint_rail_identity(self) -> None:
         try:

@@ -8,6 +8,7 @@ from typing import Any, ClassVar
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.widgets import Button, Input, Static
 
 from isycode.human_shell import run_human_shell_command
@@ -19,7 +20,7 @@ class HumanShellScreen(Dialog):
     """Modal console where the human runs commands and shares sanitized output."""
 
     dialog_width: ClassVar[str] = "wide"
-    dialog_height: ClassVar[str] = "tall"
+    dialog_height: ClassVar[str] = "fill"
     dialog_tone: ClassVar[str] = "plain"
 
     DEFAULT_CSS = """
@@ -88,7 +89,10 @@ class HumanShellScreen(Dialog):
         )
 
     def on_mount(self) -> None:
-        self.query_one("#human-shell-input", Input).focus()
+        try:
+            self.query_one("#human-shell-input", Input).focus()
+        except NoMatches:
+            pass
 
     def _refresh_log(self) -> None:
         if not self.runs:

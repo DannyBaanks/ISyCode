@@ -1358,6 +1358,7 @@ class ChatMixin:
         def _close_chat_turn() -> None:
             # The trial lives on the turn. locals() in this function would not see it.
             on_screen = self._lane_on_screen()
+            interrupted_turn = getattr(self, "_interrupted_turn", None) is not None
             if steer_trial is not None:
                 self._history[:] = steer_trial["history"]
                 self._return_steering_to_queue(steer_trial["instructions"])
@@ -1369,8 +1370,9 @@ class ChatMixin:
                     self._prompt_history.append(original_prompt)
                     self._prompt_history = self._prompt_history[-200:]
                 if cancelled_by_user:
-                    self._append("  " + tr("Prompt kept in history (↑) · /retry prepares it if needed."), MUTED)
-                else:
+                    if not interrupted_turn:
+                        self._append("  " + tr("Prompt kept in history (↑) · /retry prepares it if needed."), MUTED)
+                elif not interrupted_turn:
                     if on_screen:
                         prompt = self.query_one("#prompt-input", PromptArea)
                         if not prompt.text:

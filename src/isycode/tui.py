@@ -109,7 +109,6 @@ if ISYMOTRON_ROOT is not None:
 from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.actions import SkipAction
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
@@ -1002,16 +1001,49 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             line.append("  " + self._role_mark(role_name), style=color)
         return Static(line, classes="message-clock")
 
+    def action_toggle_shell_box(self) -> None:
+        """Switch composer boxes and apply the compact four-column layout."""
+        super().action_toggle_shell_box()
+        self.query_one("#idea-box-row").set_class(bool(self._shell_mode), "shell-mode")
+
+    def action_focus_next(self) -> None:
+        """Keep Tab inside the command menu while its overlay is open."""
+        if isinstance(self.screen, ModalScreen):
+            super().action_focus_next()
+            return
+        menu = self.query_one("#action-menu", Vertical)
+        if menu.display:
+            self.screen.focus_next("#action-menu *")
+            return
+        super().action_focus_next()
+
     def action_cycle_role(self) -> None:
-        """Shift+Tab in the main chat: next primary role, then back to no role.
+        """Shift+Tab in chat/composer cycles roles; elsewhere it reverses focus.
 
         Uses the same role contract as the Role menu: the role's workflow is
-        sent as guidance with the next message and grants nothing. It works
-        wherever focus sits in the chat (composer, command bar, rail); a
-        dialog or the command menu keeps Shift+Tab for its own focus moves.
+        sent as guidance with the next message and grants nothing. Dialogs,
+        the command menu, the session list and workspace rail keep focus moves.
         """
-        if isinstance(self.screen, ModalScreen) or self.query_one("#action-menu").display:
-            raise SkipAction()
+        if isinstance(self.screen, ModalScreen):
+            self.screen.focus_previous()
+            return
+        menu = self.query_one("#action-menu", Vertical)
+        if menu.display:
+            self.screen.focus_previous("#action-menu *")
+            return
+        focus = self.focused
+        node = focus
+        in_chat_composer = False
+        while node is not None:
+            if node.id in {"chat", "composer"}:
+                in_chat_composer = True
+                break
+            node = node.parent
+        if not in_chat_composer:
+            # The priority shortcut must leave reverse focus traversal intact
+            # for the rail and other non-chat controls.
+            self.screen.focus_previous()
+            return
         current = self._active_role["name"] if self._active_role else None
         names = [role["name"] for role in ROLE_CYCLE]
         index = names.index(current) + 1 if current in names else 0

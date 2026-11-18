@@ -6533,3 +6533,57 @@ msgstr "Contexto de sesión · {path}"
 
 msgid "Prompt kept in history (↑) · /retry prepares it if needed."
 msgstr "Prompt guardado en historial (↑) · /retry lo prepara si hace falta."
+
+msgid "Always allow"
+msgstr "Permitir siempre"
+
+msgid "Apply change"
+msgstr "Aplicar cambio"
+
+msgid "Approve all {count}"
+msgstr "Aprobar todos ({count})"
+
+msgid "Approve once"
+msgstr "Aprobar una vez"
+
+msgid "Commit"
+msgstr "Hacer commit"
+
+msgid "Copy whole"
+msgstr "Copiar todo"
+
+msgid "Create branch"
+msgstr "Crear rama"
+
+msgid "Delete conversation"
+msgstr "Eliminar conversación"
+
+msgid "Delete iteration"
+msgstr "Eliminar iteración"
+
+msgid "Discard"
+msgstr "Descartar"
+
+msgid "Keep"
+msgstr "Conservar"
+
+msgid "Read and send once"
+msgstr "Leer y enviar una vez"
+
+msgid "Reject"
+msgstr "Rechazar"
+
+msgid "Reject all"
+msgstr "Rechazar todo"
+
+msgid "Review each"
+msgstr "Revisar uno por uno"
+
+msgid "Run command"
+msgstr "Ejecutar comando"
+
+msgid "Share with model"
+msgstr "Compartir con el modelo"
+
+msgid "Trust folder"
+msgstr "Confiar en carpeta"
