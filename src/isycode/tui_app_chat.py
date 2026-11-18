@@ -1387,7 +1387,7 @@ class ChatMixin:
                 if cancelled_by_user:
                     if not interrupted_turn:
                         self._append("  " + tr("Prompt kept in history (↑) · /retry prepares it if needed."), MUTED)
-                elif not interrupted_turn:
+                else:
                     if on_screen:
                         prompt = self.query_one("#prompt-input", PromptArea)
                         if not prompt.text:
@@ -1396,8 +1396,9 @@ class ChatMixin:
                         parked = self._active_lane()
                         if not parked.draft_text:
                             parked.draft_text = original_prompt
-                    self._append("  " + tr("Prompt kept · /retry prepares it for review. Any completed tool effects "
-                                           "remain; inspect them before sending again."), YELLOW)
+                    if not interrupted_turn:
+                        self._append("  " + tr("Prompt kept · /retry prepares it for review. Any completed tool effects "
+                                               "remain; inspect them before sending again."), YELLOW)
             self._steering_try_active = False
             if self._pending_steering:
                 pending = "\n".join(self._pending_steering)
