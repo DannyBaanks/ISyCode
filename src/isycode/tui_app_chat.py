@@ -762,7 +762,7 @@ class ChatMixin:
             content_buf: list[str] = []
             step_reason: list[str] = []
             step_content: list[str] = []
-            holder: dict = {"widget": None}
+            holder: dict = {"widget": None, "clock": None}
             assistant_sent_at: str | None = None
             prompt_persisted = False
             last_content_paint_at = 0.0
@@ -818,6 +818,7 @@ class ChatMixin:
                     # detached widget captured before the lane switch.
                     w = None
                     holder["widget"] = None
+                    holder["clock"] = None
                 if w is None:
                     live = lane.stream_widget
                     if live is not None and live.parent is chat_now:
@@ -827,7 +828,9 @@ class ChatMixin:
                     assistant_sent_at = assistant_sent_at or datetime.now().astimezone().isoformat(timespec="seconds")
                     clock = clock_label(assistant_sent_at)
                     if clock:
-                        chat_now.mount(self._assistant_clock(clock, turn_role))
+                        clock_widget = self._assistant_clock(clock, turn_role)
+                        holder["clock"] = clock_widget
+                        chat_now.mount(clock_widget)
                     w = SelectableText(RichMarkdown("", code_theme="monokai"),
                                        selection_text="", classes="assistant-turn")
                     self._paint_role_turn(w, turn_role)
@@ -840,12 +843,17 @@ class ChatMixin:
 
             def finish_step() -> None:
                 nonlocal block
-                current = block
-                if current is not None and self._lane_on_screen():
-                    current.collapse_to(_time.monotonic() - thought_started)
-                    self.query_one(ChatArea).follow_tail()
-                block = None
                 lane = self._active_lane()
+                current = block
+                if self._lane_on_screen():
+                    chat_now = self.query_one(ChatArea)
+                    live = lane.stream_block
+                    if live is not None and live.parent is chat_now:
+                        current = live
+                    if current is not None and current.parent is chat_now:
+                        current.collapse_to(_time.monotonic() - thought_started)
+                        chat_now.follow_tail()
+                block = None
                 lane.stream_block = None
                 lane.partial_reason = ""
                 lane.partial_reason_chunks = []
@@ -856,16 +864,23 @@ class ChatMixin:
                 Only that step's partial output goes; earlier steps and every tool
                 result already in ``messages`` stay exactly as they were.
                 """
-                nonlocal block
+                nonlocal block, last_content_paint_at, last_painted_content
                 del content_buf[content_mark:]
                 del reason_buf[reason_mark:]
                 step_content.clear()
                 step_reason.clear()
                 lane = self._active_lane()
-                for widget in (holder.get("widget"), block):
-                    if widget is not None and getattr(widget, "is_mounted", False):
-                        widget.remove()
+                seen_ids: set[int] = set()
+                for widget in (holder.get("clock"), holder.get("widget"), block,
+                               lane.stream_widget, lane.stream_block):
+                    if widget is not None and id(widget) not in seen_ids:
+                        seen_ids.add(id(widget))
+                        if getattr(widget, "is_mounted", False):
+                            widget.remove()
                 holder["widget"] = None
+                holder["clock"] = None
+                last_content_paint_at = 0.0
+                last_painted_content = None
                 lane.stream_widget = None
                 lane.stream_block = None
                 lane.partial = ""
@@ -991,6 +1006,7 @@ class ChatMixin:
                                 self._return_steering_to_queue(steer_trial["instructions"], unsupported=unsupported)
                                 steer_trial = None
                                 if unsupported:
+                                    discard_failed_step(content_mark, reason_mark)
                                     continue
                         from isycode.image_attachments import image_failure_should_continue, record_image_result
                         saw_output = bool(content_buf or reason_buf or step_content or step_reason)

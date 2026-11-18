@@ -446,6 +446,9 @@ def test_content_flushes_latest_partial_on_failure_and_cancel(tmp_path, monkeypa
     partial = "Latest partial text, fully selectable."
     attempts = 0
 
+    from isycode.continuity_recovery import POLICIES
+    expected_attempts = 1 + POLICIES["NETWORK"].max_attempts
+
     async def complete(provider, messages, **kwargs):
         if ending == "cancel":
             kwargs["on_chunk"]("content", partial[:12])
@@ -454,7 +457,7 @@ def test_content_flushes_latest_partial_on_failure_and_cancel(tmp_path, monkeypa
             await asyncio.Event().wait()
         nonlocal attempts
         attempts += 1
-        latest = partial if attempts == 4 else f"Discarded retry {attempts}."
+        latest = partial if attempts == expected_attempts else f"Discarded retry {attempts}."
         kwargs["on_chunk"]("content", latest[:12])
         kwargs["on_chunk"]("content", latest[12:])
         from isycode.streaming import StreamError
@@ -481,7 +484,7 @@ def test_content_flushes_latest_partial_on_failure_and_cancel(tmp_path, monkeypa
                 await task
             await pilot.pause()
             if ending == "failure":
-                assert attempts == 4
+                assert attempts == expected_attempts
                 assert app._interrupted_turn.partial_text == partial
             rendered = [widget.selection_text for widget in app.query_one(ChatArea).query(SelectableText)]
             assert partial in rendered
