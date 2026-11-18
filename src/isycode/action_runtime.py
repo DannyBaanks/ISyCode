@@ -771,7 +771,7 @@ class CommandProcessSystembility:
             program = params.get("program")
             cwd = params.get("cwd")
             try:
-                prog_path = Path(program).resolve(strict=True) if isinstance(program, str) and program.startswith("/") else None
+                prog_path = Path(program).resolve(strict=True) if isinstance(program, str) and Path(program).is_absolute() else None
             except (OSError, RuntimeError):
                 prog_path = None
             if (prog_path is None or not prog_path.is_file() or not os.access(prog_path, os.X_OK)

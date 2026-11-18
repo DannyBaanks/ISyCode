@@ -977,15 +977,19 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         status = f"{spinner_prefix}{tr(self.status)}{note}"
         hint = tr("Space expand / collapse · double-click copy")
         full_subtitle = f"{status} · {hint}"
-        available = max(0, (self.size.width or self.content_size.width) - 4)
-        if available >= cell_len(full_subtitle):
+        width = self.size.width or self.content_size.width
+        if width <= 0:
             subtitle = full_subtitle
-        elif available >= cell_len(status):
-            subtitle = status
-        elif available:
-            subtitle = _fit_cells(status, available)
         else:
-            subtitle = ""
+            available = max(0, width - 4)
+            if available >= cell_len(full_subtitle):
+                subtitle = full_subtitle
+            elif available >= cell_len(status):
+                subtitle = status
+            elif available:
+                subtitle = _fit_cells(status, available)
+            else:
+                subtitle = ""
         self.border_subtitle = Text(subtitle, style=MUTED)
         if self.expanded:
             shown = self.output or tr("No output.")
