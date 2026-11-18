@@ -39,6 +39,8 @@ from isycode.action_runtime import (
 from isycode.mcp_local import LocalMCPOwner, config_path as mcp_config_path, load_config as load_mcp_config
 from isycode.agent_tasks import TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.agent_questions import ASK_USER_TOOL_NAME, validate_question
+from isycode.human_shell import HUMAN_SHELL_TOOL_NAME, validate_human_shell
+from isycode.tui_screens_shell import HumanShellScreen
 from isycode.idea_box import IDEA_BOX_TOOL_NAME, validate_idea_box
 from isycode.git_owner import GIT_TOOL_NAMES
 from isycode.command_runner import COMMAND_TOOL_NAME
@@ -423,7 +425,7 @@ class ToolMixin:
                 and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
                                  DELETE_TOOL_NAME, MOVE_TOOL_NAME,
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
-                                 ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
+                                 ASK_USER_TOOL_NAME, HUMAN_SHELL_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  " + tr("Tool denied · unregistered tool name"), SECURITY)
             return tool_call_id, json.dumps(outcome)
@@ -471,6 +473,17 @@ class ToolMixin:
                 answer = {key: answer[key] for key in ("status", "choice", "text") if key in answer}
             else:
                 answer = {"status": "cancelled"}
+            return tool_call_id, json.dumps(answer, ensure_ascii=False)
+        if name == HUMAN_SHELL_TOOL_NAME:
+            try:
+                req = validate_human_shell(arguments)
+            except ValueError as exc:
+                return tool_call_id, json.dumps({"error": str(exc)[:180]})
+            cwd = req.get("cwd") or str(self._workspace_root)
+            answer = await self._await_screen(HumanShellScreen(
+                req["reason"], req["commands"], cwd))
+            if not isinstance(answer, dict) or answer.get("status") not in {"completed", "no_commands_run", "cancelled"}:
+                answer = {"status": "cancelled", "runs": []}
             return tool_call_id, json.dumps(answer, ensure_ascii=False)
         if name == "update_session_title":
             if not isinstance(arguments, dict) or set(arguments) != {"title"} or not isinstance(arguments["title"], str):

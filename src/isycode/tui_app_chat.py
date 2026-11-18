@@ -69,6 +69,7 @@ from isycode.prompt_expansion import (
 )
 from isycode.agent_tasks import TASK_TOOL
 from isycode.agent_questions import ASK_USER_TOOL, ASK_USER_TOOL_NAME
+from isycode.human_shell import HUMAN_SHELL_TOOL, HUMAN_SHELL_TOOL_NAME
 from isycode.idea_box import IDEA_BOX_TOOL, IDEA_BOX_TOOL_NAME, IDEA_NUDGE_SECONDS
 from isycode.workspace_pack import WORKSPACE_PACK_TOOL
 from isycode.workspace_memory import MEMORY_TOOLS
@@ -457,6 +458,7 @@ class ChatMixin:
                 if not is_flow:
                     chat_tools.append(CONTEXT_ACCESS_TOOL)
                 chat_tools.append(ASK_USER_TOOL)
+                chat_tools.append(HUMAN_SHELL_TOOL)
                 chat_tools.append(IDEA_BOX_TOOL)
                 if self._sessions_enabled():
                     chat_tools.append({"type": "function", "function": {
@@ -616,6 +618,10 @@ class ChatMixin:
                    if provider_supports_tools and not is_flow else "")
                 + ("ask_user asks one question with a short selector or a text answer. "
                    "The person can cancel. The answer grants nothing. "
+                   if provider_supports_tools else "")
+                + ("human_shell opens an interactive shell console for the person at the keyboard "
+                   "when sudo or an interactive TTY is needed, showing your suggested commands above "
+                   "their input box and returning the captured output. "
                    if provider_supports_tools else "")
                 + approval_note
                 + "For the first five user messages, call update_session_title when available to refine the title around the concrete task. A greeting is not the task; preserve manual titles. "

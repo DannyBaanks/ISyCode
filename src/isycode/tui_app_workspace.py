@@ -450,6 +450,19 @@ class WorkspaceMixin:
         card.finish(status, output=result["output"], receipt=outcome.receipt.receipt_id,
                     truncated=result.get("output_truncated", False))
         chat.follow_tail()
+        from isycode.human_shell import is_sudo_or_tty_error
+        if (not getattr(self, "is_headless", False)
+                and is_sudo_or_tty_error(result.get("exit_code"), result.get("output", ""))):
+            import shlex
+            from isycode.tui_screens_shell import HumanShellScreen
+            shell_answer = await self._await_screen(HumanShellScreen(
+                "El comando requiere permisos sudo o una terminal interactiva.",
+                commands=[shlex.join(preview.argv)],
+                cwd=str(preview.cwd),
+            ))
+            if isinstance(shell_answer, dict) and shell_answer.get("runs"):
+                result["human_shell"] = shell_answer
+                return json.dumps(result, ensure_ascii=False)
         return outcome.text
 
     def _file_action_enabled(self, action: str) -> bool:
