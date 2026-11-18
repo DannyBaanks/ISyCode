@@ -2729,7 +2729,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if cmd is not None:
             label = "Planning · IsyMotron" if cmd.name == "plan" else f"Running /{cmd.name}"
             self._start_operation(cmd.handler(self, arg), label)
-        elif text.startswith("/"):
+        elif self._is_slash_command_input(text):
             self._start_operation(self._run_custom_command(text), "Chat · working")
         else:
             self._start_operation(self._run_chat(text), "Chat · working")
