@@ -94,6 +94,12 @@ def test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal(tmp_path,
     (root / "evil.txt").write_text("SEEN " + HOSTILE + "\n", encoding="utf-8")  # narrow preview pane
 
     async def scenario(app, pilot):
+        for _ in range(100):
+            if app._workspace is not None:
+                break
+            await pilot.pause(0.05)
+        if not app._rail_visible:
+            app.action_toggle_sidebar()
         app._set_rail_view("files")
         # Inline preview is an opt-in preference; display it to test sanitization.
         app._apply_sidebar_file_preview(True)

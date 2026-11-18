@@ -194,9 +194,10 @@ def test_classic_without_a_sandbox_runs_no_command_while_flow_runs_on_host(proje
     with pytest.raises(ValueError, match="no unsandboxed fallback"):
         CommandRunOwner(root, authority, ActionApprovalStore()).prepare(["echo", "nope"])
 
+    import sys
     authority.set_mode("flow")
     runner = CommandRunOwner(root, authority, ActionApprovalStore())
-    preview = runner.prepare(["bash", "-c", "echo flow-host-ok"])
+    preview = runner.prepare([sys.executable, "-c", "print('flow-host-ok')"])
     outcome = asyncio.run(runner.run(preview, None))
     assert outcome.decision == "ALLOW", outcome.reason
     assert "flow-host-ok" in json.loads(outcome.text)["output"]
@@ -281,11 +282,15 @@ def test_real_flow_runs_computer_wide_while_classic_stays_bounded(project, tmp_p
     listener.listen()
     port = listener.getsockname()[1]
     try:
+        import sys
         runner = CommandRunOwner(root, authority, approvals)
-        preview = runner.prepare(
-            ['bash', '-c', f'pwd && cat outside.txt && python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect((\'127.0.0.1\', {port})); s.close(); print(\'NET_OK\')"'],
-            cwd=str(outside_dir),
+        script = (
+            "import os, pathlib, socket\n"
+            "print(os.getcwd())\n"
+            "print(pathlib.Path('outside.txt').read_text(encoding='utf-8').strip())\n"
+            f"s = socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', {port})); s.close(); print('NET_OK')\n"
         )
+        preview = runner.prepare([sys.executable, "-c", script], cwd=str(outside_dir))
         outcome = asyncio.run(runner.run(preview, None))
         assert outcome.decision == 'ALLOW', outcome.reason
         result = json.loads(outcome.text)

@@ -1228,6 +1228,12 @@ class WorkspaceWriteOwner:
 
     def _read_back(self, target: Path) -> bytes | None:
         if self._is_external(target):
+            if use_verified_fs() or os.name == "nt":
+                if not target.exists():
+                    return None
+                if target.is_symlink() or not target.is_file():
+                    raise ValueError("target must be a regular file")
+                return target.read_bytes()
             if not target.parent.is_dir():
                 return None
             flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
@@ -1256,6 +1262,13 @@ class WorkspaceWriteOwner:
         if self._is_external(target):
             if new_folders:
                 target.parent.mkdir(parents=True, exist_ok=True)
+            if use_verified_fs() or os.name == "nt":
+                current = target.read_bytes() if target.exists() else None
+                if ("absent" if current is None else _sha(current)) != expected_before:
+                    raise ValueError("the file changed during approval; nothing was written")
+                from isycode.effect_fs import apply_file
+                apply_file(target.parent, target.name, data, expected=None if current is None else _sha(current))
+                return current
             flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
             parent_fd = os.open(target.parent, flags)
         elif use_verified_fs():

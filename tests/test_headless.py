@@ -159,6 +159,7 @@ def test_usage_errors_and_launcher_routing(monkeypatch):
 
 
 def test_flow_headless_allows_writes_and_commands_without_approval(workspace):
+    import sys
     seen_tools = []
     calls = []
 
@@ -180,7 +181,7 @@ def test_flow_headless_allows_writes_and_commands_without_approval(workspace):
                 "type": "function",
                 "function": {
                     "name": "workspace_run",
-                    "arguments": json.dumps({"argv": ["python3", "-c", "print('ok-cmd')"]}),
+                    "arguments": json.dumps({"argv": [sys.executable, "-c", "print('ok-cmd')"]}),
                 },
             }]}
         on_chunk("content", "flow done")

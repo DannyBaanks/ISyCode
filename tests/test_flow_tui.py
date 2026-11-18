@@ -231,12 +231,14 @@ def test_flow_command_tool_describes_host_computer_execution():
 
 def test_rail_mcp_shows_configured_local_servers_even_when_gateway_not_checked(tmp_path, monkeypatch, capsys):
     import json as _json
+    import sys as _sys
+    from isycode.platform_storage import storage
     root = configure(tmp_path, monkeypatch)
     cfg_dir = tmp_path / "xdg-cfg" / "isycode"
-    cfg_dir.mkdir(parents=True)
+    storage.ensure_directory(cfg_dir, repair=True)
     mcp_file = cfg_dir / "mcp.json"
-    mcp_file.write_text(_json.dumps({"servers": {"demo": {"command": ["/usr/bin/true"]}}}), encoding="utf-8")
-    mcp_file.chmod(0o600)
+    mcp_file.write_text(_json.dumps({"servers": {"demo": {"command": [_sys.executable, "-c", "pass"]}}}), encoding="utf-8")
+    storage.protect(mcp_file)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-cfg"))
 
     async def scenario():
