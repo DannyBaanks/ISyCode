@@ -144,6 +144,15 @@ ModalScreen { align: center middle; background: #000000 65%; }
 /* Reusable menu anatomy, also used by approvals and selectors. */
 .isy-dialog { background: $isy-surface; color: $isy-text; border: solid $isy-border; }
 .isy-dialog-title { height: auto; max-height: 2; color: $isy-text; text-style: bold; }
+Dialog .isy-dialog-header { height: auto; width: 100%; align: left middle; }
+Dialog .isy-dialog-header .isy-dialog-title { width: 1fr; }
+Dialog .isy-dialog-header-btn {
+    width: auto; min-width: 10; height: 1; min-height: 1; border: none;
+    padding: 0 1; margin-left: 1; background: $isy-selected-surface; color: $isy-focus;
+}
+Dialog .isy-dialog-header-btn:focus, Dialog .isy-dialog-header-btn:hover {
+    background: $isy-focus; color: $isy-surface;
+}
 .isy-dialog-body { background: $isy-surface; color: $isy-text; }
 .isy-dialog-actions { height: 3; margin-top: 1; align-horizontal: right; }
 .isy-dialog-hint { height: auto; max-height: 2; color: $isy-muted; }

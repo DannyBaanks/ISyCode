@@ -424,10 +424,13 @@ def test_cancelled_preflight_recovers_prompt(tmp_path, monkeypatch, capsys):
             task.cancel()
             with pytest.raises(asyncio.CancelledError):
                 await task
-            assert app.query_one(PromptArea).text == 'Inspect @app.py'
+            assert app.query_one(PromptArea).text == ''
+            assert app._prompt_history[-1] == 'Inspect @app.py'
             assert app._retry_prompt == 'Inspect @app.py'
             assert app._chat_turn_task is None
             assert app._history == []
+            app._prepare_retry()
+            assert app.query_one(PromptArea).text == 'Inspect @app.py'
     with capsys.disabled():
         asyncio.run(scenario())
 

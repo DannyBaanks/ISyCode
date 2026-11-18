@@ -7,19 +7,93 @@ from typing import Any, Awaitable, Callable
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.widgets import Input, Static
+from textual.widgets import Input, OptionList, Static
 
 from isycode.catalog import role_color
 from isycode.gus_l0 import on_gus_branch
 from isycode.gus_session import GusState, GusUnavailable, gus_reply
 from isycode.localization import tr
 from isycode.tui_dialog import Dialog, DialogAction
-from isycode.tui_theme import CYAN, MUTED, RED, TEXT, YELLOW
+from isycode.tui_theme import CYAN, GREEN, MUTED, RED, TEXT, YELLOW
 
 # GUS is the maintainer: it takes the maintainer role's identifying color.
 GUS_COLOR = role_color("maintainer") or TEXT
 Settings = Callable[[], Awaitable[None]]
 Undo = Callable[[], Awaitable[bool]]
+PickProvider = Callable[[], Awaitable[str | None]]
+
+
+class GusProviderPickerScreen(Dialog):
+    """Quick provider list launched from GUS's top-right header button."""
+
+    dialog_width = "normal"
+    dialog_height = "fill"
+    dialog_cancel_result = None
+    AUTO_FOCUS = "#gus-providers-search"
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        super().__init__()
+        self._rows = list(rows)
+        self._visible_rows = list(rows)
+
+    def dialog_heading(self) -> str:
+        return tr("GUS model")
+
+    def dialog_note(self) -> str:
+        return "GUS never falls back to the chat model. It needs tool calls and a window of 32k tokens or more."
+
+    def dialog_hint(self) -> str:
+        return tr("↑↓ move · Enter open · Esc back · Shift+Tab search")
+
+    def compose_body(self) -> ComposeResult:
+        yield Input(placeholder=tr("Filter this list…"), id="gus-providers-search")
+        yield OptionList(id="gus-providers-list")
+
+    def dialog_actions(self) -> tuple[DialogAction, ...]:
+        return (DialogAction("gus-providers-cancel", tr("Back")),)
+
+    def on_mount(self, event) -> None:
+        event.prevent_default()
+        self._populate("")
+        search = self.query("#gus-providers-search").results(Input)
+        field = next(search, None)
+        if field is not None:
+            field.focus()
+
+    def _populate(self, query: str) -> None:
+        needle = query.casefold().strip()
+        self._visible_rows = [
+            row for row in self._rows
+            if not needle or needle in f"{row.get('label', '')} {row.get('key', '')} {row.get('detail', '')}".casefold()
+        ]
+        lst = self.query_one("#gus-providers-list", OptionList)
+        lst.clear_options()
+        lst.add_options([row["label"] for row in self._visible_rows])
+        if self._visible_rows:
+            lst.highlighted = 0
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "gus-providers-search":
+            self._populate(event.value)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "gus-providers-search":
+            event.stop()
+            lst = self.query_one("#gus-providers-list", OptionList)
+            if self._visible_rows:
+                idx = lst.highlighted if lst.highlighted is not None else 0
+                if 0 <= idx < len(self._visible_rows):
+                    self.dismiss(self._visible_rows[idx]["key"])
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if event.option_list.id == "gus-providers-list":
+            event.stop()
+            idx = event.option_index
+            if 0 <= idx < len(self._visible_rows):
+                self.dismiss(self._visible_rows[idx]["key"])
+
+    def dismiss_action(self, action_id: str) -> None:
+        self.dismiss(None)
 
 
 class GusScreen(Dialog):
@@ -35,7 +109,8 @@ class GusScreen(Dialog):
     def __init__(self, roots, model_label: str,
                  *, initial: str = "", complete=None, work=None, remember=None,
                  report_text=None, seal=None, generation_text=None,
-                 settings: Settings | None = None, undo: Undo | None = None) -> None:
+                 settings: Settings | None = None, undo: Undo | None = None,
+                 pick_provider: PickProvider | None = None) -> None:
         super().__init__()
         self.roots = roots
         self.root = roots.visible
@@ -53,11 +128,17 @@ class GusScreen(Dialog):
         self.generation_text = generation_text or (lambda record: record.get("state", ""))
         self.settings = settings
         self.undo = undo
+        self.pick_provider = pick_provider
         self.state = GusState(roots.visible)
         self.busy = False
 
     def dialog_heading(self) -> str:
         return tr("GUS · {model}", model=self.model_label)
+
+    def dialog_header_actions(self) -> tuple[DialogAction, ...]:
+        if self.pick_provider is None:
+            return ()
+        return (DialogAction("gus-provider", f"{tr('Providers')} ▾"),)
 
     def dialog_note(self) -> str:
         target = self.target
@@ -193,7 +274,25 @@ class GusScreen(Dialog):
         finally:
             self.busy = False
 
+    async def _pick_provider(self) -> None:
+        if self.pick_provider is None:
+            return
+        new_label = await self.pick_provider()
+        if new_label:
+            self.model_label = new_label
+            for title in self.query(".isy-dialog-title").results(Static):
+                title.update(self.dialog_heading())
+            self._status(tr("GUS model · {model}", model=new_label), GREEN)
+        for field in self.query("#gus-input").results(Input):
+            field.focus()
+
     def dismiss_action(self, action_id: str) -> None:
+        if action_id == "gus-provider":
+            if self.busy:
+                self._status(tr("GUS is still answering."), YELLOW)
+            elif self.pick_provider is not None:
+                self.run_worker(self._pick_provider(), exclusive=True, group="gus-provider")
+            return
         if action_id == "gus-settings":
             if self.busy:
                 self._status(tr("GUS is still answering."), YELLOW)
@@ -220,4 +319,4 @@ class GusScreen(Dialog):
         self.dismiss(None)
 
 
-__all__ = ["GUS_COLOR", "GusScreen"]
+__all__ = ["GUS_COLOR", "GusProviderPickerScreen", "GusScreen"]

@@ -293,7 +293,7 @@ def list_models(api_key: str | None, base_url: str = ANTHROPIC_BASE_URL) -> list
         raise ProviderError(str(exc), transport=True) from exc
     try:
         client = _pinned_sdk_client(
-            anthropic, api_key=api_key, base_url=base_url, timeout_s=None,
+            anthropic, api_key=api_key, base_url=base_url, timeout_s=30.0,
             peer=reviewed.ips[0], asynchronous=False)
         return sorted(model.id for model in client.models.list())
     except anthropic.APIStatusError as exc:

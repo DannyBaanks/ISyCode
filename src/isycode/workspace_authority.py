@@ -56,13 +56,13 @@ class OneShotActionAuthority:
 
 
 MODES = frozenset({"security", "classic", "flow"})
-# Modes that receive the Classic preset of implicit grants. Flow (ADR 0010) uses
-# the same preset; only its approval rule differs (workspace_trust.quiet_request).
+# Modes that receive the Classic preset of implicit grants.
 PRESET_MODES = frozenset({"classic", "flow"})
 # Grants only Flow adds to the preset. Undoing a whole turn (ADR 0010) moved into
 # Classic's preset with ADR 0013: a GUS turn is recorded in any mode, and Classic
 # still asks before each undo.
 FLOW_PATH_ACTIONS = frozenset()
+FLOW_LOCAL_MCP_ACTIONS = frozenset({"mcp.local.start", "mcp.local.invoke"})
 
 # Classic mode is a per-workspace preset of implicit grants, not a bypass.
 # Without a trust record, edits and commands still need a per-action approval.
@@ -221,11 +221,31 @@ class WorkspaceAuthority:
             if key is not None:
                 current[key] = sorted(set(current.get(key, [])) | set(values or []))
 
+        is_flow = policy.get("mode") == "flow"
+        host_prefix = self._flow_root_prefix() if is_flow else None
         for action in CLASSIC_PATH_ACTIONS:
-            merge(action, "path_prefixes", [str(self.root)])
-        if policy.get("mode") == "flow":
-            for action in FLOW_PATH_ACTIONS:
+            if is_flow and action != "workspace.turn.undo" and host_prefix:
+                merge(action, "path_prefixes", [host_prefix, str(self.root)])
+            else:
                 merge(action, "path_prefixes", [str(self.root)])
+        if is_flow:
+            for action in FLOW_PATH_ACTIONS:
+                merge(action, "path_prefixes", [host_prefix, str(self.root)] if host_prefix else [str(self.root)])
+            try:
+                from isycode.mcp_local import load_config as load_mcp_config, resolve_executable
+                mcp_configs = load_mcp_config()
+            except (ImportError, OSError, ValueError):
+                mcp_configs = {}
+            if mcp_configs:
+                executables: list[str] = []
+                for server_config in mcp_configs.values():
+                    try:
+                        executables.append(resolve_executable(server_config.argv[0]))
+                    except (OSError, ValueError):
+                        continue
+                if executables:
+                    merge("mcp.local.start", "executables", executables)
+                merge("mcp.local.invoke", "targets", list(mcp_configs.keys()))
         for action in CLASSIC_GRANTED_ACTIONS:
             merge(action)
         services = _known_services()
@@ -241,6 +261,8 @@ class WorkspaceAuthority:
             sandbox = None
         if sandbox:
             merge("workspace.command.run", "executables", [sandbox])
+        elif is_flow:
+            merge("workspace.command.run")
         return {**policy, "grants": grants}
 
     @staticmethod
@@ -304,11 +326,19 @@ class WorkspaceAuthority:
         if not grant.get("enabled", False):
             return AuthorityDecision(False, "", "no explicit workspace grant", digest)
 
+        is_flow = policy.get("mode") == "flow"
+        is_config_action = (request.action_id in AUTHORITY_GRANT_ALIASES
+                            or request.action_id.startswith("workspace.config."))
+        flow_host_paths = (is_flow and not is_config_action
+                           and request.action_id != "workspace.turn.undo")
+        canonicalize = self._canonical_host_path if flow_host_paths else self._canonical_path
+
         if (request.action_id.startswith(("workspace.files.", "workspace.context."))
                 or request.action_id in AUTHORITY_GRANT_ALIASES):
             try:
-                target = self._canonical_path(request.target)
-                roots = [self._canonical_path(item) for item in grant.get("path_prefixes", [])]
+                target = canonicalize(request.target)
+                root_canonicalize = self._canonical_host_path if is_flow else self._canonical_path
+                roots = [root_canonicalize(item) for item in grant.get("path_prefixes", [])]
             except (OSError, ValueError, WorkspaceAuthorityError):
                 return AuthorityDecision(False, "", "filesystem target is outside the workspace or unsafe", digest)
             if not roots or not any(self._contains(Path(root), Path(target)) for root in roots):
@@ -316,7 +346,7 @@ class WorkspaceAuthority:
             if request.action_id == "workspace.files.move":
                 # A move writes its destination too; it must be inside the same grant.
                 try:
-                    destination = self._canonical_path((request.parameters or {}).get("to", ""))
+                    destination = canonicalize((request.parameters or {}).get("to", ""))
                 except (OSError, ValueError, TypeError, WorkspaceAuthorityError):
                     return AuthorityDecision(False, "", "move destination is outside the workspace or unsafe", digest)
                 if not any(self._contains(Path(root), Path(destination)) for root in roots):
@@ -356,10 +386,15 @@ class WorkspaceAuthority:
         elif spec.effect == "process":
             executable = (request.parameters or {}).get("executable", "")
             try:
-                binary = str(Path(executable).expanduser().resolve(strict=True))
+                resolved_bin = Path(executable).expanduser().resolve(strict=True)
+                if not resolved_bin.is_file() or not os.access(resolved_bin, os.X_OK):
+                    return AuthorityDecision(False, "", "process executable is unavailable", digest)
+                binary = str(resolved_bin)
             except (OSError, TypeError, ValueError):
                 return AuthorityDecision(False, "", "process executable is unavailable", digest)
-            if binary not in grant.get("executables", []):
+            flow_host_cmd = (is_flow and request.action_id == "workspace.command.run"
+                             and (request.parameters or {}).get("host_execution") is True)
+            if not flow_host_cmd and binary not in grant.get("executables", []):
                 return AuthorityDecision(False, "", "process executable is not explicitly granted", digest)
 
         elif spec.effect in {"external", "destructive", "credential", "sensitive"}:
@@ -370,8 +405,30 @@ class WorkspaceAuthority:
             if approvals is None or not approvals.consume(request, approval):
                 return AuthorityDecision(False, "", "fresh request-bound approval is required", digest)
 
+        flow_host_cmd = (is_flow and request.action_id == "workspace.command.run"
+                         and (request.parameters or {}).get("host_execution") is True)
+        if is_flow and (flow_host_paths or flow_host_cmd or request.action_id in FLOW_LOCAL_MCP_ACTIONS):
+            return AuthorityDecision(True, "grant:flow:" + grant_action_id,
+                                     "Flow computer-wide grant matched", digest)
         return AuthorityDecision(True, "grant:" + grant_action_id,
                                  "explicit workspace grant matched", digest)
+
+    def _flow_root_prefix(self) -> str:
+        anchor = Path(self.root.anchor or "/")
+        try:
+            return str(anchor.resolve())
+        except (OSError, RuntimeError):
+            return str(anchor)
+
+    def _canonical_host_path(self, value: str | Path) -> str:
+        raw = Path(value).expanduser()
+        lexical = raw if raw.is_absolute() else self.root / raw
+        lexical = Path(os.path.abspath(lexical))
+        try:
+            resolved = lexical.resolve(strict=False)
+        except (OSError, RuntimeError) as exc:
+            raise WorkspaceAuthorityError("path cannot be resolved") from exc
+        return str(resolved)
 
     def _canonical_path(self, value: str | Path) -> str:
         raw = Path(value).expanduser()

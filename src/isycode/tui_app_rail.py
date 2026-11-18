@@ -183,7 +183,7 @@ class RailMixin:
         else:
             if generation != self._openisy_refresh_generation:
                 return
-            mcp_body, mcp_title = self._format_mcp_snapshot(mcp)
+            mcp_body, mcp_title = self._format_mcp_snapshot(mcp, local_items=self._local_mcp_items())
             self.query_one("#mcp-status", Static).update(mcp_body)
             self._set_rail_title("rail-mcp", mcp_title, chip=True)
             self._mcp_snapshot = mcp
@@ -196,6 +196,36 @@ class RailMixin:
                 refresh.disabled = False
                 self._paint_idle()
 
+    def _local_mcp_items(self) -> list[dict]:
+        """Configured local stdio MCP servers from ~/.config/isycode/mcp.json."""
+        try:
+            from isycode.mcp_local import load_config as load_mcp_config
+            configs = load_mcp_config()
+        except (OSError, ValueError):
+            return []
+        if not configs:
+            return []
+        sessions = getattr(getattr(self, "_mcp_local", None), "sessions", {}) or {}
+        items = []
+        for name in configs:
+            sess = sessions.get(name)
+            running = sess is not None and sess.process.returncode is None
+            items.append({"name": name, "status": "running" if running else "stopped", "has_error": False})
+        return items
+
+    def _refresh_local_mcp_rail(self) -> None:
+        """Update the sidebar MCP section and idle board immediately when local MCP state changes."""
+        if not self.is_mounted:
+            return
+        try:
+            snapshot = getattr(self, "_mcp_snapshot", None) or CatalogSnapshot(True, [], "not_checked", "")
+            mcp_body, mcp_title = self._format_mcp_snapshot(snapshot, local_items=self._local_mcp_items())
+            self.query_one("#mcp-status", Static).update(mcp_body)
+            self._set_rail_title("rail-mcp", mcp_title, chip=True)
+            self._paint_idle()
+        except (NoMatches, NoScreen):
+            return
+
     @staticmethod
     def _status_note(note: str) -> str:
         """Title-case a short chip. Sentences and server ids stay as written."""
@@ -205,11 +235,27 @@ class RailMixin:
         return status_phrase(text)
 
     @staticmethod
-    def _format_mcp_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
-        """Switch rows for the MCP section, plus its folded title."""
-        if snapshot.state == "loading":
+    def _format_mcp_snapshot(snapshot: CatalogSnapshot, local_items: list[dict] | None = None) -> tuple[Text, str]:
+        """Switch rows for the MCP section (local + gateway), plus its folded title."""
+        local_items = list(local_items or [])
+        if snapshot.state == "loading" and not local_items:
             return (switch_row(None, tr("Checking"), snapshot.detail),
                     status_chip("MCPs · {state}", state=tr("checking")))
+        gateway_items = list(snapshot.items or []) if snapshot.state == "ready" else []
+        combined = local_items + [
+            item for item in gateway_items
+            if not any(local["name"] == item.get("name") for local in local_items)
+        ]
+        if combined:
+            rows, on = [], 0
+            for item in combined:
+                healthy = (str(item.get("status", "")).lower() in {"connected", "ready", "running", "ok", "active"}
+                           and not item.get("has_error"))
+                on += healthy
+                note = ("service reports an error" if item.get("has_error") else str(item.get("status", "")))
+                rows.append(switch_row(
+                    healthy, str(item["name"]), "" if healthy else RailMixin._status_note(note)))
+            return switch_rows(rows), status_chip("MCPs · {on}/{total} on", on=on, total=len(combined))
         if snapshot.state != "ready":
             state = snapshot.state.replace("_", " ")
             inactive = snapshot.state in {"not_configured", "not_checked"}
@@ -218,20 +264,10 @@ class RailMixin:
                 switch_row(False, status_phrase(state), snapshot.detail, inactive=inactive),
                 status_chip("MCPs · {state}", state=shown),
             )
-        if not snapshot.items:
-            return (
-                switch_row(False, tr("No MCP Servers"), status_chip("none configured"), inactive=True),
-                status_chip("MCPs · none"),
-            )
-        rows, on = [], 0
-        for item in snapshot.items:
-            healthy = (str(item.get("status", "")).lower() in {"connected", "ready", "running", "ok", "active"}
-                       and not item.get("has_error"))
-            on += healthy
-            note = ("service reports an error" if item.get("has_error") else str(item.get("status", "")))
-            rows.append(switch_row(
-                healthy, str(item["name"]), "" if healthy else RailMixin._status_note(note)))
-        return switch_rows(rows), status_chip("MCPs · {on}/{total} on", on=on, total=len(snapshot.items))
+        return (
+            switch_row(False, tr("No MCP Servers"), status_chip("none configured"), inactive=True),
+            status_chip("MCPs · none"),
+        )
 
     @staticmethod
     def _format_skill_snapshot(snapshot: CatalogSnapshot) -> tuple[Text, str]:
@@ -778,7 +814,7 @@ class RailMixin:
         rail already lists. Counts plus a pointer keep one detail surface.
         """
         lsp = getattr(self, "_lsp_status_title", "") or status_chip("LSPs · none")
-        mcp = self._format_mcp_snapshot(self._mcp_snapshot)[1]
+        mcp = self._format_mcp_snapshot(self._mcp_snapshot, local_items=self._local_mcp_items())[1]
         skills = self._format_skill_snapshot(self._skill_snapshot)[1]
         summary = f"{lsp} · {mcp} · {skills}"
         pointer = "  " + tr("details in the right rail")

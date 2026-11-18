@@ -117,3 +117,41 @@ def test_onboarding_survives_a_very_long_workspace_path(tmp_path, monkeypatch, s
             await pilot.pause()
 
     asyncio.run(scenario())
+
+
+def test_confirm_screen_keeps_action_buttons_visible_at_80x24(tmp_path, monkeypatch):
+    from isycode.tui_screens_approval import ConfirmScreen
+    from isycode.workspace_trust import onboarding_brief
+
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            brief = onboarding_brief(
+                root=tmp_path / "sample-project",
+                mode="Classic",
+                provider="nvidia",
+                sends_workspace_context=True,
+            )
+            screen = ConfirmScreen(
+                "Trust this folder?",
+                brief,
+                "Trust this folder",
+                owner="workspace trust",
+                scope=str(tmp_path / "sample-project"),
+                duration="persistent workspace trust",
+                not_granted="commits, secrets, authority changes",
+            )
+            app.push_screen(screen)
+            await pilot.pause()
+            await pilot.pause()
+            assert screen.region.y + screen.region.height <= 24
+            for button_id in ("#tailscale-cancel", "#tailscale-confirm"):
+                button = screen.query_one(button_id, Button)
+                assert screen.region.contains_region(button.region), (button_id, button.region, screen.region)
+            app.pop_screen()
+            await pilot.pause()
+
+    asyncio.run(scenario())

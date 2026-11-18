@@ -806,6 +806,47 @@ class ToolMixin:
                                             self._action_approvals)
         return self._mcp_local
 
+    async def _ensure_flow_local_mcps(self) -> None:
+        """Auto-start configured local MCP servers in Flow unless explicitly revoked."""
+        if self._workspace_mode() != "flow":
+            return
+        lock = getattr(self, "_flow_mcp_lock", None)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._flow_mcp_lock = lock
+        async with lock:
+            if self._workspace_mode() != "flow":
+                return
+            try:
+                configs = load_mcp_config()
+            except (OSError, ValueError):
+                return
+            if not configs:
+                return
+            try:
+                grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                return
+            if (grants.get("mcp.local.start", {}).get("enabled") is False
+                    or grants.get("mcp.local.invoke", {}).get("enabled") is False):
+                return
+            mcp_owner = self._local_mcp_owner()
+
+            async def start_one(name: str) -> None:
+                existing = mcp_owner.sessions.get(name)
+                if existing is not None and existing.process.returncode is None:
+                    return
+                try:
+                    preview = await asyncio.to_thread(mcp_owner.prepare_start, name, configs)
+                    await asyncio.wait_for(mcp_owner.start(preview, None), timeout=8.0)
+                except (asyncio.TimeoutError, OSError, ValueError):
+                    return
+
+            await asyncio.gather(*(start_one(name) for name in configs))
+            refresh = getattr(self, "_refresh_local_mcp_rail", None)
+            if callable(refresh):
+                refresh()
+
     def _add_mcp_preset(self, name: str) -> None:
         from isycode.mcp_presets import add_preset
         try:
@@ -875,6 +916,9 @@ class ToolMixin:
         if outcome.decision == "ALLOW":
             tools = json.loads(outcome.text)["tools"]
             self._append("  " + tr("MCP {name} started · {len} tools · receipt {receipt_id}", name=name, len=len(tools), receipt_id=outcome.receipt.receipt_id), GREEN)
+            refresh = getattr(self, "_refresh_local_mcp_rail", None)
+            if callable(refresh):
+                refresh()
         else:
             self._append("  " + tr("MCP {name} {decision} · {value}", name=name, decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
 
@@ -888,18 +932,24 @@ class ToolMixin:
             preview = mcp_owner.prepare_call(server, tool, arguments)
         except ValueError as exc:
             return json.dumps({"error": str(exc)[:200]})
-        self._append("  " + tr("MCP call requested · {server}.{tool} · review it", server=server, tool=tool), CYAN)
-        if not await self._await_screen(LocalMCPConfirmScreen(
-                f"Call MCP tool · {server}.{tool}",
-                "Sends exactly these arguments to the local server. Its answer is untrusted data.",
-                json.dumps(preview.arguments, ensure_ascii=False, indent=2), "Call once",
-                owner="local MCP tool",
-                scope=f"{server}.{tool}",
-                duration="one-use tool call",
-                not_granted="no other tool calls, no automatic retries")):
-            self._append("  " + tr("MCP call rejected · nothing was sent"), MUTED)
-            return json.dumps({"status": "rejected_by_user"})
-        outcome = await mcp_owner.call(preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
+        quiet = self._request_is_quiet(preview.request)
+        if quiet:
+            self._append("  " + tr("MCP · quiet Flow · {server}.{tool}", server=server, tool=tool), CYAN)
+            approval = None
+        else:
+            self._append("  " + tr("MCP call requested · {server}.{tool} · review it", server=server, tool=tool), CYAN)
+            if not await self._await_screen(LocalMCPConfirmScreen(
+                    f"Call MCP tool · {server}.{tool}",
+                    "Sends exactly these arguments to the local server. Its answer is untrusted data.",
+                    json.dumps(preview.arguments, ensure_ascii=False, indent=2), "Call once",
+                    owner="local MCP tool",
+                    scope=f"{server}.{tool}",
+                    duration="one-use tool call",
+                    not_granted="no other tool calls, no automatic retries")):
+                self._append("  " + tr("MCP call rejected · nothing was sent"), MUTED)
+                return json.dumps({"status": "rejected_by_user"})
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await mcp_owner.call(preview, approval)
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             self._append("  " + tr("MCP {decision} · {value}", decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
@@ -907,7 +957,7 @@ class ToolMixin:
             payload = json.loads(outcome.text)
         except (TypeError, json.JSONDecodeError):
             payload = {}
-        if payload.get("browser_read") is True:
+        if payload.get("browser_read") is True and self._workspace_mode() != "flow":
             content = payload.get("content")
             if not isinstance(content, str) or not content.strip():
                 self._append("  " + tr("Browser snapshot contained no readable page text; raw output withheld."), YELLOW)

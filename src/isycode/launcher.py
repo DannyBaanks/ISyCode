@@ -11,6 +11,8 @@ USAGE = """ISyCode · terminal workspace agent
 Usage:
   isycode                 Start the chat TUI in the current directory
   isycode tui              Start the chat TUI
+  isycode --mode MODE      Start in classic, flow, or security mode
+  isycode --prompt "TEXT"  Start the chat TUI and submit an initial prompt (alias: -i)
   isycode cli              Browse actions by semantic category
   isycode doctor [--json]  Inspect local dependencies/configuration; no network calls
   isycode sessions ...      List/show/search/rename/delete local conversations; add --json
@@ -116,6 +118,48 @@ def main(argv: list[str] | None = None) -> int:
 
         TUIApp().run()
         return 0
+    tui_args = arguments[1:] if arguments[:1] == ["tui"] else arguments
+    if tui_args and not arguments[0].startswith("-") or tui_args != arguments or any(
+            a in {"--prompt", "-i", "--mode"} or a.startswith(("--prompt=", "--mode="))
+            for a in tui_args[:1]):
+        parsed_prompt: str | None = None
+        parsed_mode: str | None = None
+        idx = 0
+        valid_tui = bool(tui_args)
+        while idx < len(tui_args) and valid_tui:
+            arg = tui_args[idx]
+            if arg in {"--prompt", "-i"}:
+                if idx + 1 >= len(tui_args):
+                    valid_tui = False
+                    break
+                parsed_prompt = tui_args[idx + 1]
+                idx += 2
+            elif arg.startswith("--prompt="):
+                parsed_prompt = arg.split("=", 1)[1]
+                idx += 1
+            elif arg == "--mode":
+                if idx + 1 >= len(tui_args):
+                    valid_tui = False
+                    break
+                parsed_mode = tui_args[idx + 1].strip().casefold()
+                idx += 2
+            elif arg.startswith("--mode="):
+                parsed_mode = arg.split("=", 1)[1].strip().casefold()
+                idx += 1
+            else:
+                valid_tui = False
+                break
+        if valid_tui and (parsed_mode is None or parsed_mode in {"classic", "flow", "security"}):
+            from isycode.tui import TUIApp
+
+            kwargs: dict[str, object] = {
+                "initial_prompt": parsed_prompt or "",
+                "auto_submit_prompt": parsed_prompt is not None,
+            }
+            if parsed_mode is not None:
+                kwargs["initial_mode"] = parsed_mode
+            TUIApp(**kwargs).run()
+            return 0
     if arguments == ["cli"]:
         from isycode.cli import main as cli_main
 

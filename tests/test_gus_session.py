@@ -288,3 +288,56 @@ def test_gus_window_and_settings_fit_80x24(tmp_path, monkeypatch, capsys):
 
     with capsys.disabled():
         asyncio.run(scenario())
+
+
+def test_gus_uses_isymem_context_and_native_tool(repo, monkeypatch):
+    import json
+    roots = GusRoots(repo.parent)
+    mem_dir = repo.parent / "isymem-gus"
+    mem_dir.mkdir()
+    (mem_dir / "MEMORY.md").write_text(
+        "## Proyectos\n- [ISyCode](hub-isycode.md) — Shared session context & Flow\n",
+        encoding="utf-8",
+    )
+    (mem_dir / "hub-isycode.md").write_text(
+        "# ISyCode\n- @todo#b9c1 #isycode 2026-11-18: Verify top-right provider button in GusScreen\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ISYMEM_DIR", str(mem_dir))
+
+    seen = []
+    calls = {"n": 0}
+
+    async def complete_with_isymem(provider, messages, **kwargs):
+        calls["n"] += 1
+        seen.append(([dict(m) for m in messages], kwargs.get("tools") or []))
+        if calls["n"] == 1:
+            return {
+                "text": "",
+                "tool_calls": [{
+                    "id": "call_isymem_1",
+                    "function": {
+                        "name": "isymem",
+                        "arguments": json.dumps({"action": "card", "target": "isycode"}),
+                    },
+                }],
+            }
+        return {"text": "Ya leí isymem para isycode.", "tool_calls": []}
+
+    async def fake_remember(_args):
+        return json.dumps({"ok": True})
+
+    state = GusState(roots.visible)
+    state.enable()
+    reply = asyncio.run(gus_reply(
+        roots, "puedes usar isymem para ver isycode?",
+        complete=complete_with_isymem, state=state, remember=fake_remember,
+    ))
+    assert reply.text == "Ya leí isymem para isycode."
+    assert "isymem" in reply.tools_used
+    first_messages, first_tools = seen[0]
+    tool_names = {t["function"]["name"] for t in first_tools}
+    assert tool_names == {"memory_remember", "isymem"}
+    combined_prompt = "\n".join(str(m.get("content", "")) for m in first_messages)
+    assert "Shared Multi-Harness Memory (`isymem`" in combined_prompt
+    assert "Verify top-right provider button in GusScreen" in combined_prompt

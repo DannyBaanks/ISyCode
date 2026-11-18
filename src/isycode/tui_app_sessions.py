@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from rich.cells import cell_len
 from isycode.config import ConfigurationError
 from isycode.chat_sessions import ChatSessionStore
+from isycode.session_context import SessionContextFile, fresh_session_context_key
 from isycode.session_owner import MAX_MESSAGE_BYTES
 from isycode.work_list import (
     WorkList,
@@ -317,7 +318,10 @@ class SessionMixin:
         is_narrow = getattr(self, "size", None) and self.size.width < 100
         box.border_title = tr("Idea · Space") if is_narrow else tr("Idea · Space expand")
         busy = self._loop_task is not None and not self._loop_task.done()
-        label = tr("Idea box") + (" · " + tr("Thinking…") if busy else "")
+        started_at = getattr(self, "_thinking_started_at", None)
+        elapsed_s = int(_time.monotonic() - started_at) if busy and started_at is not None else 0
+        thinking = tr("Thinking…") + (f" {elapsed_s}s" if elapsed_s >= 1 else "")
+        label = tr("Idea box") + (" · " + thinking if busy else "")
         heading = Text(label, style=f"bold {TEXT}")
         if is_narrow:
             if busy:
@@ -745,6 +749,8 @@ class SessionMixin:
     def _paint_work_status(self) -> None:
         if not self.screen_stack:
             return  # the 1 s timer can still tick while the app shuts down
+        if self._loop_task is not None and not self._loop_task.done():
+            self._paint_idea_box()
         try:
             panel = self.screen_stack[0].query_one("#work-list", WorkList)
             if not panel.display:
@@ -853,6 +859,9 @@ class SessionMixin:
         self._show_agent_tasks([])
         self._active_chat_session_id = None
         self._session_save_warned = False
+        lane.session_context_key = fresh_session_context_key()
+        lane.session_context_initialized = False
+        lane.session_context_digest = ""
         lane.lines.clear()
         lane.partial = ""
         lane.partial_reason = ""
@@ -941,17 +950,24 @@ class SessionMixin:
         lane.partial_reason_chunks = []
         lane.stream_widget = None
         lane.stream_block = None
+        lane.session_context_key = session.session_id
+        lane.session_context_initialized = True
         lane.lines = []
         for message in session.messages:
             if message["role"] == "user":
                 lane.lines.append(("user", message["content"], message.get("sent_at")))
             elif message["role"] == "assistant":
                 lane.lines.append(("assistant", message["content"], message.get("sent_at")))
+        ctx_file = self._session_context_file(lane=lane)
+        ctx_file.seed_from_messages(session.messages)
+        lane.session_context_digest = ctx_file.file_digest()
         self._show_lane(lane)
         if state.get("provider") and not self._provider_env_override:
             os.environ["ISYCODE_PROVIDER"] = state["provider"]
         if state.get("model") and not self._model_env_override and not self._provider_env_override:
             os.environ["ISYCODE_MODEL"] = state["model"]
+        self._paint_idea_box()
+        self._refresh_model_button()
         self._active_role = None
         role = state.get("role")
         if role:
@@ -1199,6 +1215,19 @@ class SessionMixin:
         if pinned is not None:
             return pinned
         return self._foreground_lane()
+
+    def _session_context_file(self, *, lane=None) -> SessionContextFile:
+        """Return the single canonical live session context file for a lane."""
+        target_lane = lane if lane is not None else self._active_lane()
+        key = (
+            getattr(target_lane, "session_context_key", None)
+            or getattr(target_lane, "session_id", None)
+        )
+        if not key:
+            key = fresh_session_context_key()
+            target_lane.session_context_key = key
+        mode = self._workspace_mode() if hasattr(self, "_workspace_mode") else "classic"
+        return SessionContextFile(self._workspace_root, key, mode=mode)
 
     def _lane_on_screen(self) -> bool:
         if not getattr(self, "_lanes", None):

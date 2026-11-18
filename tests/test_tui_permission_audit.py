@@ -103,3 +103,28 @@ async def test_session_delete_grant_does_not_reactivate_previous_session(tmp_pat
     assert policy["grants"]["session.delete"]["targets"] == ["session-B"]
     # Verify session A is NOT reactivated
     assert "session-A" not in policy["grants"]["session.delete"]["targets"]
+
+
+@pytest.mark.asyncio
+async def test_quiet_trust_confirm_uses_workspace_trust_owner_not_tailscale(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    root = tmp_path / "project"
+    root.mkdir()
+    authority = WorkspaceAuthority(root)
+    authority.set_mode("classic")
+    shown = []
+
+    class FakeApp(AuthorityMixin):
+        def _append(self, text, color=None):
+            pass
+
+        async def _await_screen(self, screen):
+            shown.append(screen)
+            return False
+
+    await FakeApp()._offer_quiet_trust(authority)
+    assert len(shown) == 1
+    assert isinstance(shown[0], ConfirmScreen)
+    assert shown[0].owner == "workspace trust"
+    assert shown[0].duration == "persistent workspace trust"

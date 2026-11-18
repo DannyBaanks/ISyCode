@@ -208,7 +208,7 @@ def test_spanish_chrome_and_first_run_options_render(tmp_path, monkeypatch, caps
             await pilot.pause()
             mode_options = [str(option.prompt) for option in app.screen.query_one("#workspace-mode-options")._options]
             assert "Classic · recomendado" in mode_options
-            assert "Flow · trabajo local recuperable sin preguntas" in mode_options
+            assert "Flow · trabajo libre en toda la computadora sin preguntas" in mode_options
             assert "Security · todo apagado hasta que yo lo permita" in mode_options
 
     with capsys.disabled():

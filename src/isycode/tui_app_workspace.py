@@ -319,14 +319,19 @@ class WorkspaceMixin:
         return outcome.text
 
     def _command_tool_enabled(self) -> bool:
-        """Commands need the read tools plus a grant for the current sandbox executable."""
-        sandbox = sandbox_executable()
-        if sandbox is None or not self._workspace_chat_tools_enabled():
+        """Commands need read tools plus a grant for the sandbox or host Flow mode."""
+        if not self._workspace_chat_tools_enabled():
             return False
+        mode = self._workspace_mode()
         try:
             grant = WorkspaceAuthority(self._workspace_root).effective_policy().get(
                 "grants", {}).get("workspace.command.run", {})
         except (WorkspaceAuthorityError, OSError, ValueError):
+            return False
+        if mode == "flow":
+            return displayed_on("workspace.command.run", grant, True)
+        sandbox = sandbox_executable()
+        if sandbox is None:
             return False
         return displayed_on("workspace.command.run", grant, sandbox in grant.get("executables", []))
 
@@ -346,7 +351,7 @@ class WorkspaceMixin:
     async def _run_workspace_command(self, arguments: dict) -> str:
         """Show one exact command, run it in the sandbox only if approved, return its result."""
         if not self._command_tool_enabled():
-            if sandbox_executable() is None:
+            if self._workspace_mode() != "flow" and sandbox_executable() is None:
                 reason = ("the sandbox backend is absent, so commands stay off. "
                           "There is no unsandboxed fallback.")
             else:
@@ -652,13 +657,14 @@ class WorkspaceMixin:
             if preview.match != "exact":
                 # The model's old_text differed from the file; say how it was located.
                 result["matched_ignoring"] = preview.match
-            problems = await self._post_edit_diagnostics(preview.path, preview.content) if root == self._workspace_root else None
+            internal_target = root == self._workspace_root and not owner._is_external(Path(preview.request.target))
+            problems = await self._post_edit_diagnostics(preview.path, preview.content) if internal_target else None
             if problems is not None:
                 result["diagnostics"] = problems[:50]
             # Peer claims are advisory coordination data from the user's grit
             # registry; they never change this write's authorization.
             try:
-                advisory = await self._grit_peer_advisory(preview.path) if root == self._workspace_root else None
+                advisory = await self._grit_peer_advisory(preview.path) if internal_target else None
             except Exception:
                 advisory = None
             if advisory:

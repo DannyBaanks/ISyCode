@@ -229,11 +229,15 @@ class ModelsScreen(ModalScreen):
                 if not any(item["value"] == entry["value"] for item in bucket):
                     bucket.append(entry)
         scope = self.provider_scope
+        is_gus = getattr(self.app, "_models_target", "chat") == "gus"
         if scope:
             groups = {scope: groups.get(scope, [])}
             self.expanded_providers.add(scope)
-        heading = (tr("Models · {provider}", provider=PRESETS.get(scope, {}).get("label", scope))
-                   if scope else tr("Models"))
+        heading = (
+            (tr("GUS model · {provider}", provider=PRESETS.get(scope, {}).get("label", scope))
+             if is_gus else tr("Models · {provider}", provider=PRESETS.get(scope, {}).get("label", scope)))
+            if scope else tr("Models")
+        )
         with Vertical(id="models-card", classes="isy-dialog"):
             yield Static(Text(heading, style=f"bold {TEXT}"), id="models-title", classes="isy-dialog-title")
             yield Input(value=self.search_query, placeholder=tr("Find a model, id or family…"), id="models-search")
@@ -277,19 +281,29 @@ class ModelsScreen(ModalScreen):
                 yield Button(tr("Choose model"), id="models-use", variant="primary", disabled=True)
             yield Static(tr("↑↓ move · ←→ effort · Enter choose · Esc back · Tab search"), id="models-hint", classes="isy-dialog-hint")
 
+    def _current_target_model_value(self) -> str:
+        if getattr(self.app, "_models_target", "chat") == "gus":
+            from isycode.gus_slot import gus_model
+            slot = gus_model()
+            if slot is not None:
+                return f"{slot['provider']}|{slot['model']}"
+            return ""
+        return f"{selected_provider_name()}|{resolved_chat_model()}"
+
     def _choice_button(self, entry: dict) -> ModelChoice:
         from isycode.model_presentation import model_display_name
         provider, model = entry["value"].split("|", 1)
         key = f"model-choice-{len(self.choices)}"
         self.choices[key] = entry
-        wanted = self.selected_model_value or (
-            f"{selected_provider_name()}|{resolved_chat_model()}")
+        is_gus = getattr(self.app, "_models_target", "chat") == "gus"
+        wanted = self.selected_model_value or self._current_target_model_value()
         if entry.get("value") == wanted:
             self.AUTO_FOCUS = f"#{key}"
         label = Text(model_display_name(model), style=TEXT)
         if entry.get("custom"):
             label.append("  · " + tr("added"), style=MUTED)
-        if provider == selected_provider_name() and model == resolved_chat_model(provider):
+        if wanted == f"{provider}|{model}" and (is_gus or (
+                provider == selected_provider_name() and model == resolved_chat_model(provider))):
             label.append("  · " + tr("current"), style=GREEN)
         return ModelChoice(label, id=key, classes="model-choice")
 
@@ -319,7 +333,7 @@ class ModelsScreen(ModalScreen):
         idle. A query in that gap finds the choice recorded and the widget
         not yet in the tree.
         """
-        wanted = self.selected_model_value or f"{selected_provider_name()}|{resolved_chat_model()}"
+        wanted = self.selected_model_value or self._current_target_model_value()
         for key, entry in list(self.choices.items()):
             if entry.get("kind") != "model" or entry.get("value") != wanted:
                 continue
@@ -395,6 +409,12 @@ class ModelsScreen(ModalScreen):
         for fact in facts:
             card.append(tr(fact.label) + ": ", style=MUTED)
             card.append(fact.value + "\n", style=TEXT)
+        if getattr(self.app, "_models_target", "chat") == "gus":
+            from isycode.gus_slot import check_gus_model
+            check = check_gus_model(provider, model)
+            card.append(tr("GUS") + ": ", style=MUTED)
+            card.append((tr("Ready") if check.allowed else tr(check.reason)) + "\n",
+                        style=GREEN if check.allowed else YELLOW)
         self.query_one("#model-detail", Static).update(card)
 
     def _haystack(self, provider: str, model: str) -> str:

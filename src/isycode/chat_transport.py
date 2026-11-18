@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from isycode.providers import PRESETS
-from isycode.streaming import async_stream_complete
+from isycode.streaming import DEFAULT_STREAM_TIMEOUT_S, async_stream_complete
 
 
 def uses_anthropic(provider: Any) -> bool:
@@ -31,7 +31,7 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         return await anthropic_stream_complete(
             provider.api_key, provider.model, messages, max_tokens=max_tokens,
             effort=provider.reasoning_effort, on_chunk=on_chunk, tools=tools,
-            base_url=provider.base_url, timeout_s=None)
+            base_url=provider.base_url, timeout_s=DEFAULT_STREAM_TIMEOUT_S)
     from isycode.reasoning_options import thinking_options
     thinking = thinking_options(provider.name, provider.model, provider.reasoning_effort)
     extra = {"chat_template_kwargs": thinking} if thinking is not None else {}
@@ -40,7 +40,6 @@ async def provider_complete(provider: Any, messages: list[dict], *, max_tokens: 
         token_limit_field=provider.token_limit_field,
         reasoning_effort=None if thinking is not None else provider.reasoning_effort,
         temperature_supported=provider.temperature_supported,
-        timeout_s=None,
         on_chunk=on_chunk, tools=tools,
         include_usage=provider.name in {"openai", "nvidia"}, **extra)
 

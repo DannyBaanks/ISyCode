@@ -85,11 +85,26 @@ class Dialog(ModalScreen[Any]):
     def dialog_actions(self) -> tuple[DialogAction, ...]:
         return (DialogAction("dialog-cancel", tr("Cancel"), focused=True),)
 
+    def dialog_header_actions(self) -> tuple[DialogAction, ...]:
+        """Optional compact actions placed on the top-right beside the heading."""
+        return ()
+
     # -- frame ---------------------------------------------------------
     def compose(self) -> ComposeResult:
         with Vertical(classes="isy-dialog-card"):
             heading = self.dialog_heading()
-            if heading:
+            header_actions = self.dialog_header_actions()
+            if heading and header_actions:
+                with Horizontal(classes="isy-dialog-header"):
+                    yield Static(heading, classes="isy-dialog-title")
+                    for action in header_actions:
+                        yield Button(
+                            action.label, id=action.id, classes="isy-dialog-header-btn",
+                            variant=action.variant if action.variant in
+                            {"default", "primary", "success", "warning", "error"}
+                            else "default",
+                            disabled=action.disabled)
+            elif heading:
                 yield Static(heading, classes="isy-dialog-title")
             note = self.dialog_note()
             if note:
