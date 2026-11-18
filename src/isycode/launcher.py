@@ -27,8 +27,9 @@ Usage:
   isycode actualizar --check  Consultar actualizaciones sin instalar ni avanzar la rama
   isycode actualizar --yes    Aceptar de antemano el stash/merge que normalmente se pregunta
   isycode -p "PROMPT"      Answer once and exit (stdin if PROMPT is omitted or -);
-                           add --json for machine-readable output. Only read-only
-                           tools that were granted run; nothing asks for approval.
+                           add --json for machine-readable output, --provider/--model,
+                           and --mode flow to allow full Flow edits/commands/isymem
+                           without interactive prompts (classic/security stay read-only).
   isycode --help           Show this help
   isycode --version        Show the installed version
 
@@ -177,8 +178,11 @@ def main(argv: list[str] | None = None) -> int:
         from isycode.inspection_cli import main as inspection_main
 
         return inspection_main(arguments)
-    if arguments and arguments[0] in {"-p", "--print"} or arguments[:2] in (
-            ["--json", "-p"], ["--json", "--print"]):
+    if arguments and any(
+        a in {"-p", "--print"}
+        for i, a in enumerate(arguments)
+        if i == 0 or arguments[i - 1] not in {"--prompt", "-i", "--mode", "--provider", "--model"}
+    ):
         from isycode.headless import main as headless_main
 
         return headless_main(arguments)
