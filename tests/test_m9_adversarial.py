@@ -267,8 +267,9 @@ def test_network_down_is_retried_briefly_then_stops_without_changing_authority(t
         from isycode.tui_widgets import ChatArea
         shown = "\n".join(plain_text(w) for w in app.query_one(ChatArea).walk_children()
                           if hasattr(w, "render"))
-        assert waits == [continuity_recovery.POLICIES["NETWORK"].delay_s] * 3
-        assert "Recovery stopped after 3 automatic attempts" in shown
+        expected = continuity_recovery.POLICIES["NETWORK"].max_attempts
+        assert waits == [continuity_recovery.POLICIES["NETWORK"].delay_s] * expected
+        assert f"Recovery stopped after {expected} automatic attempts" in shown
         assert app.query_one(PromptArea).text == "hello"
         assert WorkspaceAuthority(app._workspace_root).policy() == before
 

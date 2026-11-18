@@ -287,7 +287,7 @@ def test_each_turn_starts_with_a_fresh_budget(chat, monkeypatch, capsys):
     async def scenario(app, pilot):
         await app._run_chat("first")
         assert len(calls) == 1 + budget
-        assert "Recovery stopped after 3 automatic attempts" in transcript_text(app)
+        assert f"Recovery stopped after {budget} automatic attempts" in transcript_text(app)
         await app._run_chat("second")
         assert app._history[-1]["content"] == "ok"
         assert len(calls) == 1 + budget + 2
