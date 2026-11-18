@@ -453,7 +453,6 @@ class WorkspaceMixin:
         from isycode.human_shell import is_sudo_or_tty_error
         if (not getattr(self, "is_headless", False)
                 and is_sudo_or_tty_error(result.get("exit_code"), result.get("output", ""))):
-            import shlex
             from isycode.tui_screens_shell import HumanShellScreen
             shell_answer = await self._await_screen(HumanShellScreen(
                 "El comando requiere permisos sudo o una terminal interactiva.",
