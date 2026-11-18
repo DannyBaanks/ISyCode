@@ -2247,14 +2247,14 @@
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 241,
+      "line": 242,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_start",
       "action": "mcp.local.start",
       "owner": "mcp_local"
     },
     {
       "file": "isycode/mcp_local.py",
-      "line": 343,
+      "line": 355,
       "callable": "isycode.mcp_local.LocalMCPOwner.prepare_call",
       "action": "mcp.local.invoke",
       "owner": "mcp_local"
@@ -2415,14 +2415,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1004,
+      "line": 1001,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1044,
+      "line": 1041,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"

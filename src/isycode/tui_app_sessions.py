@@ -237,9 +237,6 @@ class SessionMixin:
         if steering_support(provider, model) is False:
             self._queue_steer_warning()
             return
-        if self._steering_try_active:
-            self.notify(tr("A steer attempt is still pending; this message stays queued"))
-            return
         previous = len(self._pending_steering)
         position = self._queued_messages.index(selected)
         self._accept_prompt(prompt, "/steer " + selected)

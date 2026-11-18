@@ -2681,9 +2681,6 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                     if steering_support(provider, model) is False:
                         self._queue_steer_warning()
                         return
-                    if self._steering_try_active:
-                        self.notify(tr("Steer attempt pending; draft kept"))
-                        return
                     if len(self._pending_steering) >= 8:
                         self._append(tr("Steering queue is full; this draft is kept."), YELLOW)
                         return
