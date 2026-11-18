@@ -961,7 +961,8 @@ class ProviderMixin:
             self._append("  " + tr("No API key was entered; nothing was saved."), MUTED)
             return
         if keyring:
-            usable = await self._save_key_flow(service, secret, select_chat=not for_gus)
+            usable = (await self._save_key_flow(service, secret, select_chat=False)
+                      if for_gus else await self._save_key_flow(service, secret))
         elif service in PRESETS:
             use_session_key(service, secret)
             self._append("  " + tr("{name} key kept in memory for this session only; nothing was saved.",
