@@ -2628,6 +2628,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         except (OSError, ValueError):
             self._set_activity(tr("Draft not saved · private state unavailable"), YELLOW)
 
+    def _is_slash_command_input(self, text: str) -> bool:
+        """True for slash commands, False for absolute filesystem paths like /home/user/..."""
+        if not text.startswith("/"):
+            return False
+        first = text.split(None, 1)[0]
+        cmd = first.lower()
+        if cmd in {"/steer", "/queue", "/msg", "/idea", "/ideas", "/backlog",
+                   "/clear", "/new", "/retry", "/resume", "/exit", "/quit"}:
+            return True
+        if self._plugins.route(text)[1] is not None:
+            return True
+        if "/" in first[1:] or Path(first).exists():
+            return False
+        return True
+
     def _accept_prompt(self, prompt, raw_text: str) -> None:
         if isinstance(prompt, PromptArea) and hasattr(prompt, "pasted_text"):
             raw_text = prompt.pasted_text.expand(raw_text)
@@ -2658,29 +2673,33 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self.run_worker(self._deliver_session_message(text), group="session-message", exit_on_error=False)
             return
         if self._loop_task and not self._loop_task.done():
-            if self._chat_turn_task is not None and not self._chat_turn_task.done() and text.startswith("/steer "):
-                from isycode.reasoning_options import steering_support
-                provider, model = self._steering_target()
-                if steering_support(provider, model) is False:
-                    self._queue_steer_warning()
-                    return
+            if text.startswith("/steer "):
                 instruction = text.removeprefix("/steer ").strip()
-                if self._steering_try_active:
-                    self.notify(tr("Steer attempt pending; draft kept"))
+                if self._chat_turn_task is not None and not self._chat_turn_task.done():
+                    from isycode.reasoning_options import steering_support
+                    provider, model = self._steering_target()
+                    if steering_support(provider, model) is False:
+                        self._queue_steer_warning()
+                        return
+                    if self._steering_try_active:
+                        self.notify(tr("Steer attempt pending; draft kept"))
+                        return
+                    if len(self._pending_steering) >= 8:
+                        self._append(tr("Steering queue is full; this draft is kept."), YELLOW)
+                        return
+                    self._pending_steering.append(instruction)
+                    self._steering_try_active = True
+                    prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+                    self._mount_user_turn("Steer attempt · " + instruction)
+                    self._append(tr("Steering queued · current tool effects remain; pending calls will be skipped."), CYAN)
+                    request = self._chat_request_task
+                    if request is not None and not request.done():
+                        request.cancel()
                     return
-                if len(self._pending_steering) >= 8:
-                    self._append(tr("Steering queue is full; this draft is kept."), YELLOW)
+                text = instruction
+            if not self._is_slash_command_input(text):
+                if not text:
                     return
-                self._pending_steering.append(instruction)
-                self._steering_try_active = True
-                prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
-                self._mount_user_turn("Steer attempt · " + instruction)
-                self._append(tr("Steering queued · current tool effects remain; pending calls will be skipped."), CYAN)
-                request = self._chat_request_task
-                if request is not None and not request.done():
-                    request.cancel()
-                return
-            if not text.startswith("/"):
                 if len(self._queued_messages) >= 8:
                     self.notify(tr("Message queue is full; draft kept"), severity="warning")
                     return
