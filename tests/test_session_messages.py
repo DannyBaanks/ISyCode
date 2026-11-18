@@ -37,6 +37,7 @@ def test_message_reaches_another_conversation_as_the_user(tmp_path, monkeypatch)
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             prompt = app.query_one("#prompt-input")
             prompt.load_text("hello-a")
@@ -82,6 +83,7 @@ def test_message_waits_when_the_other_conversation_is_working(tmp_path, monkeypa
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             prompt = app.query_one("#prompt-input")
             prompt.load_text("keep-going")
@@ -129,6 +131,7 @@ def test_message_to_a_closed_saved_conversation_keeps_the_screen(tmp_path, monke
     async def scenario():
         first = TUIApp()
         async with first.run_test(size=(120, 40)) as pilot:
+            await first.wait_for_ready()
             await pilot.pause()
             first._persist_chat_message('user', 'hello-a')
             first._persist_chat_message('assistant', 'FROM hello-a')
@@ -140,6 +143,7 @@ def test_message_to_a_closed_saved_conversation_keeps_the_screen(tmp_path, monke
             first._save_draft()
         reopened = TUIApp()
         async with reopened.run_test(size=(120, 40)) as pilot:
+            await reopened.wait_for_ready()
             await pilot.pause()
             home = reopened._foreground_key
             prompt = reopened.query_one("#prompt-input")
@@ -176,6 +180,7 @@ def test_same_title_does_not_guess_and_the_open_chat_is_refused(tmp_path, monkey
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             prompt = app.query_one("#prompt-input")
             prompt.load_text("hello-a")
