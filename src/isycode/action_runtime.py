@@ -2947,20 +2947,21 @@ class LocalWorkspaceReadOwner:
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode):
                 raise ValueError("selected path is not a regular file")
-            if not flow_mode and info.st_nlink > 1:
+            if info.st_nlink > 1:
                 raise ValueError(HARDLINK_READ_REASON)
             if info.st_size > max_bytes:
                 raise ValueError("image exceeds the 8 MiB read limit")
             data = stream.read(max_bytes + 1)
         if len(data) > max_bytes:
             raise ValueError("image grew past the 8 MiB read limit")
-        if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        if data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24 and data[12:16] == b"IHDR":
             mime = "image/png"
-        elif data.startswith(b"\xff\xd8\xff"):
+        elif (data.startswith(b"\xff\xd8\xff") and len(data) >= 4
+              and (data.endswith(b"\xff\xd9") or any(m in data for m in (b"\xff\xc0", b"\xff\xc2", b"\xff\xda")))):
             mime = "image/jpeg"
-        elif data.startswith((b"GIF87a", b"GIF89a")):
+        elif data.startswith((b"GIF87a", b"GIF89a")) and len(data) >= 14:
             mime = "image/gif"
-        elif data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        elif data.startswith(b"RIFF") and len(data) >= 16 and data[8:12] == b"WEBP":
             mime = "image/webp"
         else:
             raise ValueError("unsupported or invalid image format (expected PNG, JPEG, GIF, or WebP)")
@@ -2994,7 +2995,11 @@ class LocalWorkspaceReadOwner:
         payload = json.dumps({"path": shown_path, "mime": mime, "bytes": len(data)}, ensure_ascii=False)
         receipt = ActionReceipt(
             "rcpt_" + secrets.token_hex(8), "workspace.files.read", request.digest, "ALLOW", "SUCCESS",
-            hashlib.sha256(data).hexdigest())
+            hashlib.sha256(payload.encode("utf-8")).hexdigest())
+        if not receipt.verify(request, payload):
+            return ActionOutcome("Receipt verification failed; result blocked.",
+                                 "DENY", None, "receipt verification failed"), None, None
+        self.gate.persist_receipt(request, receipt)
         return ActionOutcome(payload, "ALLOW", receipt, ""), mime, data
 
     def _read(self, target: str, *, max_bytes: int = MAX_FILE_BYTES, flow_mode: bool = False) -> str:
@@ -3004,7 +3009,7 @@ class LocalWorkspaceReadOwner:
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode):
                 raise ValueError("selected path is not a regular file")
-            if not flow_mode and info.st_nlink > 1:
+            if info.st_nlink > 1:
                 raise ValueError(HARDLINK_READ_REASON)
             if info.st_size > max_bytes:
                 raise ValueError(f"file exceeds the {max_bytes // 1024} KiB read limit")
@@ -3174,6 +3179,7 @@ class LocalWorkspaceReadOwner:
         if flow_mode:
             target = path.resolve(strict=False)
             flags = (os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+                     | getattr(os, "O_NOFOLLOW", 0)
                      | getattr(os, "O_NONBLOCK", 0))
             return os.open(target, flags)
         if use_verified_fs():

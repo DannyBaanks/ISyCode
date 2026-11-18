@@ -2009,7 +2009,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2979,
+      "line": 2980,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute_image_read",
       "action": "workspace.files.read",
       "owner": "workspace_read"
@@ -2422,14 +2422,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1001,
+      "line": 1050,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1041,
+      "line": 1090,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"

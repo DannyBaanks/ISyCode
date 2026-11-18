@@ -58,10 +58,13 @@ def record(provider, model, feature, supported):
             with os.fdopen(fd, "a+", encoding="utf-8", newline="\n") as stream:
                 if not storage.private(path, fd=stream.fileno()) or os.fstat(stream.fileno()).st_nlink != 1:
                     raise ValueError('capability observations are not private')
-                stream.seek(0)
-                prior = stream.read()
-                if prior and not prior.endswith("\n"):
-                    stream.write("\n")
+                size = os.fstat(stream.fileno()).st_size
+                if size > 0:
+                    stream.seek(size - 1)
+                    if stream.read(1) != "\n":
+                        stream.write("\n")
+                else:
+                    stream.seek(0)
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())

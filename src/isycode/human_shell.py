@@ -92,8 +92,10 @@ def validate_human_shell(arguments: Any) -> dict[str, Any]:
         if cmd:
             commands.append(cmd)
     cwd = arguments.get("cwd")
-    if cwd is not None and (not isinstance(cwd, str) or "\x00" in cwd):
-        raise ValueError("cwd must be a string path")
+    if cwd is not None:
+        if not isinstance(cwd, str) or "\x00" in cwd:
+            raise ValueError("cwd must be a string path")
+        cwd = strip_controls(cwd).strip() or None
     return {"reason": cleaned_reason, "commands": commands, "cwd": cwd}
 
 
@@ -117,21 +119,32 @@ def run_human_shell_command(
         except termios.error:
             old_tty = None
         captured = bytearray()
+        timed_out = False
+        import time as _time
+        started = _time.monotonic()
+        max_buffer = MAX_OUTPUT_CHARS * 4
         try:
-            proc = subprocess.Popen(
-                command,
-                shell=True,
-                cwd=cwd,
-                stdin=slave_fd,
-                stdout=slave_fd,
-                stderr=slave_fd,
-                close_fds=True,
-            )
+            try:
+                proc = subprocess.Popen(
+                    command,
+                    shell=True,
+                    cwd=cwd,
+                    stdin=slave_fd,
+                    stdout=slave_fd,
+                    stderr=slave_fd,
+                    close_fds=True,
+                )
+            except OSError as exc:
+                return 1, strip_controls(str(exc))
             os.close(slave_fd)
             slave_fd = -1
             stdin_fd = sys.stdin.fileno()
             stdout_fd = sys.stdout.fileno()
             while True:
+                if _time.monotonic() - started > 300:
+                    timed_out = True
+                    proc.terminate()
+                    break
                 rlist = [master_fd]
                 if proc.poll() is None:
                     rlist.append(stdin_fd)
@@ -144,6 +157,8 @@ def run_human_shell_command(
                     if not chunk:
                         break
                     captured.extend(chunk)
+                    if len(captured) > max_buffer:
+                        del captured[:len(captured) - MAX_OUTPUT_CHARS * 2]
                     os.write(stdout_fd, chunk)
                 if stdin_fd in ready:
                     data = os.read(stdin_fd, 1024)
@@ -162,9 +177,11 @@ def run_human_shell_command(
                         if not chunk:
                             break
                         captured.extend(chunk)
+                        if len(captured) > max_buffer:
+                            del captured[:len(captured) - MAX_OUTPUT_CHARS * 2]
                         os.write(stdout_fd, chunk)
                     break
-            code = proc.wait()
+            code = 124 if timed_out else proc.wait()
         finally:
             if slave_fd >= 0:
                 os.close(slave_fd)
@@ -172,15 +189,25 @@ def run_human_shell_command(
             if old_tty is not None:
                 termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old_tty)
         text = strip_controls(captured.decode("utf-8", errors="replace"))
+        if timed_out:
+            text = (text + "\n[command timed out after 300s]").strip()
         return code, text[-MAX_OUTPUT_CHARS:]
 
-    completed = subprocess.run(
-        command,
-        shell=True,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
+    try:
+        completed = subprocess.run(
+            command,
+            shell=True,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired as exc:
+        partial = (exc.stdout or "") + (exc.stderr or "")
+        if isinstance(partial, bytes):
+            partial = partial.decode("utf-8", errors="replace")
+        return 124, strip_controls(partial + "\n[command timed out after 300s]")[-MAX_OUTPUT_CHARS:]
+    except OSError as exc:
+        return 1, strip_controls(str(exc))
     combined = (completed.stdout or "") + (completed.stderr or "")
     return completed.returncode, strip_controls(combined)[-MAX_OUTPUT_CHARS:]

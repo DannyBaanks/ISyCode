@@ -435,6 +435,8 @@ class ChatMixin:
                     model=resolved_chat_model(active_provider),
                     mode=self._workspace_mode(),
                 )
+            elif not self._history or self._history[-1] != {"role": "user", "content": text}:
+                self._history.append({"role": "user", "content": text})
             workspace_tools_granted = self._workspace_chat_tools_enabled() or self._additional_folder_access()
             provider_name = selected_provider_name()
             from isycode.providers import provider_supports_tools as _tools_supported
@@ -864,7 +866,7 @@ class ChatMixin:
                 Only that step's partial output goes; earlier steps and every tool
                 result already in ``messages`` stay exactly as they were.
                 """
-                nonlocal block, last_content_paint_at, last_painted_content
+                nonlocal block, last_content_paint_at, last_painted_content, assistant_sent_at
                 del content_buf[content_mark:]
                 del reason_buf[reason_mark:]
                 step_content.clear()
@@ -881,6 +883,7 @@ class ChatMixin:
                 holder["clock"] = None
                 last_content_paint_at = 0.0
                 last_painted_content = None
+                assistant_sent_at = None
                 lane.stream_widget = None
                 lane.stream_block = None
                 lane.partial = ""
@@ -1005,6 +1008,7 @@ class ChatMixin:
                                 self._history[:] = steer_trial["history"]
                                 self._return_steering_to_queue(steer_trial["instructions"], unsupported=unsupported)
                                 steer_trial = None
+                                steered = False
                                 if unsupported:
                                     discard_failed_step(content_mark, reason_mark)
                                     continue
@@ -1017,6 +1021,7 @@ class ChatMixin:
                             image_fallback_used = True
                             if error_kind == "IMAGES":
                                 record_image_result(provider.name, provider.model, False)
+                            discard_failed_step(content_mark, reason_mark)
                             messages = self._image_attachments.without_images(messages)
                             self._append(
                                 "  " + tr("Picture not accepted · sending the question as text."), YELLOW)
@@ -1156,6 +1161,7 @@ class ChatMixin:
                     lane.stream_widget = None
                     messages.append(assistant_turn(response))
                     self._batch_decisions = await self._review_write_batch(calls)
+                    pending_tool_images: list[tuple[str, str]] = []
                     for call in calls:
                         if self._pending_steering:
                             messages.append({"role": "tool", "tool_call_id": call.get("id") or "skipped",
@@ -1226,14 +1232,21 @@ class ChatMixin:
                                 img_info = {}
                             img_label = img_info.get("image_label") if isinstance(img_info, dict) else None
                             if isinstance(img_label, str) and img_label in self._image_attachments.items:
-                                img_path = str(img_info.get("path") or "")
-                                messages.append({
-                                    "role": "user",
-                                    "content": self._image_attachments.content(
-                                        f"{img_label} Image loaded by workspace_read_image ({img_path})."
-                                    ),
-                                })
-                                image_sent = True
+                                pending_tool_images.append((img_label, str(img_info.get("path") or "")))
+                    for img_label, img_path in pending_tool_images:
+                        if accepts_images(provider.name, provider.model) is False:
+                            self._append(
+                                "  " + tr("Picture not sent · this model does not take images. The question goes as text."),
+                                YELLOW)
+                            continue
+                        messages.append({
+                            "role": "user",
+                            "content": self._image_attachments.content_for_label(
+                                img_label,
+                                f"Image loaded by workspace_read_image ({img_path}).",
+                            ),
+                        })
+                        image_sent = True
             except asyncio.CancelledError:
                 _write_session_event(
                     ctx_file.append_interrupted,
@@ -1357,6 +1370,8 @@ class ChatMixin:
 
         def _close_chat_turn() -> None:
             # The trial lives on the turn. locals() in this function would not see it.
+            if getattr(self, "_chat_request_task", None) is not None and not self._chat_request_task.done():
+                self._chat_request_task.cancel()
             on_screen = self._lane_on_screen()
             interrupted_turn = getattr(self, "_interrupted_turn", None) is not None
             if steer_trial is not None:

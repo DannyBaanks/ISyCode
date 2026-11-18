@@ -120,7 +120,10 @@ class HumanShellScreen(Dialog):
         )
         ctx = self.app.suspend() if can_suspend else nullcontext()
         with ctx:
-            exit_code, output = self._executor(command, self.cwd, use_pty=can_suspend)
+            try:
+                exit_code, output = self._executor(command, self.cwd, use_pty=can_suspend)
+            except Exception as exc:
+                exit_code, output = 1, str(exc)
         self.runs.append({"command": command, "exit_code": exit_code, "output": output})
         self._refresh_log()
         inp = self.query_one("#human-shell-input", Input)
