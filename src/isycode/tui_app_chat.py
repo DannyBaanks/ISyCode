@@ -1009,11 +1009,14 @@ class ChatMixin:
                                     discard_failed_step(content_mark, reason_mark)
                                     continue
                         from isycode.image_attachments import image_failure_should_continue, record_image_result
+                        from isycode.provider_errors import classify_provider_error
+                        error_kind = classify_provider_error(exc)["error_kind"]
                         saw_output = bool(content_buf or reason_buf or step_content or step_reason)
                         if (not steered and image_failure_should_continue(
                                 exc, sent=image_sent, used=image_fallback_used, saw_output=saw_output)):
                             image_fallback_used = True
-                            record_image_result(provider.name, provider.model, False)
+                            if error_kind == "IMAGES":
+                                record_image_result(provider.name, provider.model, False)
                             messages = self._image_attachments.without_images(messages)
                             self._append(
                                 "  " + tr("Picture not accepted · sending the question as text."), YELLOW)
@@ -1063,9 +1066,23 @@ class ChatMixin:
                         raise
                     except asyncio.CancelledError:
                         if self._pending_steering and not cancel_requested(asyncio.current_task()):
+                            _content_line(force=True)
                             finish_step()
-                            if step_content:
+                            lane = self._active_lane()
+                            if step_reason:
+                                lane.lines.append(("reasoning", "".join(step_reason),
+                                                   _time.monotonic() - thought_started))
+                            if "".join(step_content).strip():
+                                lane.lines.append(("assistant", "".join(step_content),
+                                                   assistant_sent_at, turn_role))
                                 messages.append({"role": "assistant", "content": "".join(step_content)})
+                            holder["widget"] = None
+                            holder["clock"] = None
+                            last_content_paint_at = 0.0
+                            last_painted_content = None
+                            assistant_sent_at = None
+                            lane.stream_widget = None
+                            lane.partial = ""
                             self._append(tr("Provider stream interrupted for steering; partial output is retained on screen."), YELLOW)
                             continue
                         raise
@@ -1201,6 +1218,22 @@ class ChatMixin:
                         messages.append({
                             "role": "tool", "tool_call_id": call_id, "content": tool_result,
                         })
+                        if (isinstance(call_function, dict)
+                                and call_function.get("name") == "workspace_read_image"):
+                            try:
+                                img_info = json.loads(tool_result)
+                            except (TypeError, ValueError):
+                                img_info = {}
+                            img_label = img_info.get("image_label") if isinstance(img_info, dict) else None
+                            if isinstance(img_label, str) and img_label in self._image_attachments.items:
+                                img_path = str(img_info.get("path") or "")
+                                messages.append({
+                                    "role": "user",
+                                    "content": self._image_attachments.content(
+                                        f"{img_label} Image loaded by workspace_read_image ({img_path})."
+                                    ),
+                                })
+                                image_sent = True
             except asyncio.CancelledError:
                 _write_session_event(
                     ctx_file.append_interrupted,
@@ -1351,6 +1384,10 @@ class ChatMixin:
             self._steering_try_active = False
             if self._pending_steering:
                 pending = "\n".join(self._pending_steering)
+                for instruction in self._pending_steering:
+                    positions = self._steering_restore_positions.get(instruction)
+                    if positions:
+                        positions.pop()
                 self._pending_steering.clear()
                 if on_screen:
                     prompt = self.query_one("#prompt-input", PromptArea)

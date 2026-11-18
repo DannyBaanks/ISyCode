@@ -539,8 +539,28 @@ class ToolMixin:
         target = arguments.get("path", ".")
         query = arguments.get("query")
         summary = {"workspace_list": f"list {target}", "workspace_read": f"read {target}",
+                   "workspace_read_image": f"read image {target}",
                    "workspace_search": f"find names “{query}” in {target}",
                    "workspace_grep": f"grep “{query}” in {target}"}.get(name, f"{name} {target}")
+        if name == "workspace_read_image":
+            try:
+                owner = LocalWorkspaceReadOwner(root, WorkspaceAuthority(root))
+                result, mime, data = await asyncio.to_thread(owner.execute_image_read, target)
+            except Exception:
+                self._append("  " + tr("Tool denied · {action_id} · authority/owner unavailable", action_id=action_id), SECURITY)
+                return tool_call_id, json.dumps({"error": "ISyCode authorization or read owner unavailable"})
+            if result.decision != "ALLOW" or result.receipt is None or not mime or data is None:
+                reason = result.reason or result.decision
+                self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", SECURITY)
+                return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
+            label = self._image_attachments.capture(mime, data)
+            info = json.loads(result.text)
+            info["image_label"] = label
+            info["note"] = ("Image attached as a multimodal user message for visual inspection; "
+                            "if your provider rejects images, it will be reported.")
+            self._append("  " + tr("✓ {alias} · {value} · completed", alias=alias, value=summary[:160]), TEXT)
+            self._append(self._receipt_text(result, summary), MUTED)
+            return tool_call_id, json.dumps(info, ensure_ascii=False)
         try:
             owner = LocalWorkspaceReadOwner(
                 root, WorkspaceAuthority(root))

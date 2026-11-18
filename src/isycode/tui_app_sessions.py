@@ -249,9 +249,9 @@ class SessionMixin:
 
     def _return_steering_to_queue(self, instructions, *, unsupported=False):
         from isycode.reasoning_options import record_steering_result
-        for instruction in instructions:
+        for instruction in reversed(list(instructions)):
             positions = self._steering_restore_positions.get(instruction, [])
-            position = positions.pop(0) if positions else len(self._queued_messages)
+            position = positions.pop() if positions else len(self._queued_messages)
             self._queued_messages.insert(min(position, len(self._queued_messages)), instruction)
         self._steering_try_active = False
         if unsupported:

@@ -121,6 +121,14 @@ CHAT_WORKSPACE_TOOLS = [
             "path": {"type": "string", "description": "Workspace-relative folder path; defaults to the workspace root."},
         }, "required": ["query"], "additionalProperties": False},
     }},
+    {"type": "function", "function": {
+        "name": "workspace_read_image",
+        "description": ("Read one authorized image file (PNG, JPEG, GIF, or WebP up to 8 MiB) so you can "
+                        "inspect it visually if your provider supports multimodal input."),
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Workspace-relative image file path."},
+        }, "required": ["path"], "additionalProperties": False},
+    }},
 ]
 
 
@@ -146,6 +154,10 @@ def workspace_tools_for_mode(mode: str | None) -> list[dict]:
             "Search file and folder names in the workspace or any computer path.",
             "Workspace-relative, ~, or absolute directory path; defaults to the workspace root.",
         ),
+        "workspace_read_image": (
+            "Read one image file (PNG, JPEG, GIF, or WebP up to 8 MiB) from the workspace or elsewhere on this computer for visual inspection.",
+            "Workspace-relative, ~, or absolute image file path.",
+        ),
     }
     adapted = json.loads(json.dumps(CHAT_WORKSPACE_TOOLS))
     for tool in adapted:
@@ -166,6 +178,7 @@ CONTEXT_ACCESS_TOOL = {"type": "function", "function": {
 TOOL_ACTIONS = {
     "workspace_list": "workspace.files.list",
     "workspace_read": "workspace.files.read",
+    "workspace_read_image": "workspace.files.read",
     "workspace_search": "workspace.files.search",
     # Content search reveals exactly what reading does, so it is a read.
     "workspace_grep": "workspace.files.read",
@@ -2925,6 +2938,64 @@ class LocalWorkspaceReadOwner:
         if truncated:
             payload["truncated"] = True
         return json.dumps(payload, ensure_ascii=False)
+
+    def _read_image_bytes(self, target: str, *, max_bytes: int = 8 * 1024 * 1024,
+                          flow_mode: bool = False) -> tuple[str, str, bytes]:
+        path = Path(target)
+        descriptor = self._open_file(path, flow_mode=flow_mode)
+        with os.fdopen(descriptor, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("selected path is not a regular file")
+            if not flow_mode and info.st_nlink > 1:
+                raise ValueError(HARDLINK_READ_REASON)
+            if info.st_size > max_bytes:
+                raise ValueError("image exceeds the 8 MiB read limit")
+            data = stream.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            raise ValueError("image grew past the 8 MiB read limit")
+        if data.startswith(b"\x89PNG\r\n\x1a\n"):
+            mime = "image/png"
+        elif data.startswith(b"\xff\xd8\xff"):
+            mime = "image/jpeg"
+        elif data.startswith((b"GIF87a", b"GIF89a")):
+            mime = "image/gif"
+        elif data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+            mime = "image/webp"
+        else:
+            raise ValueError("unsupported or invalid image format (expected PNG, JPEG, GIF, or WebP)")
+        return self._display_path(path), mime, data
+
+    def execute_image_read(self, path_value: str) -> tuple[ActionOutcome, str | None, bytes | None]:
+        """Authorize and read one image file (PNG/JPEG/GIF/WebP) up to 8 MiB."""
+        if self.owner_id != "workspace_read" or not isinstance(path_value, str) or len(path_value) > 4096:
+            return ActionOutcome("Malformed action path.", "DENY", None,
+                                 "path must be a bounded string"), None, None
+        flow_mode = self.authority.mode() == "flow"
+        try:
+            target = str(self._lexical_target(path_value, allow_external=flow_mode))
+        except (OSError, RuntimeError, ValueError) as exc:
+            return ActionOutcome("ISySentinel denied this action.", "DENY", None, str(exc)[:300]), None, None
+        request = ActionRequest("workspace.files.read", self.root, target, {"path": path_value},
+                                execution_owner="workspace_read")
+        try:
+            _, decision = self.gate.authorize(request)
+        except Exception:
+            return ActionOutcome("ISySentinel denied this action.", "DENY", None,
+                                 "authorization evaluation failed"), None, None
+        if not decision.allowed:
+            reason = "; ".join(f"{item.name}: {item.reason}" for item in decision.checks if not item.passed)
+            return ActionOutcome("ISySentinel denied this action.", "DENY", None, reason), None, None
+        try:
+            shown_path, mime, data = self._read_image_bytes(target, flow_mode=flow_mode)
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Read action failed; no content was returned.",
+                                 "ERROR", None, str(exc)[:300]), None, None
+        payload = json.dumps({"path": shown_path, "mime": mime, "bytes": len(data)}, ensure_ascii=False)
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "workspace.files.read", request.digest, "ALLOW", "SUCCESS",
+            hashlib.sha256(data).hexdigest())
+        return ActionOutcome(payload, "ALLOW", receipt, ""), mime, data
 
     def _read(self, target: str, *, max_bytes: int = MAX_FILE_BYTES, flow_mode: bool = False) -> str:
         path = Path(target)

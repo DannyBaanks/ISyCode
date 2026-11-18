@@ -790,13 +790,15 @@ class ChatArea(QuietVerticalScroll):
         if self._following_tail():
             self.scroll_end(animate=False, immediate=True)
 
+    def _on_mouse_scroll_up(self, event) -> None:
+        self.pause_tail()
+        super()._on_mouse_scroll_up(event)
+
     def watch_scroll_y(self, old_value, new_value):
         super().watch_scroll_y(old_value, new_value)
         if not self.is_mounted:
             return
-        if new_value < old_value and new_value < self.max_scroll_y:
-            self.pause_tail()
-        elif new_value >= self.max_scroll_y:
+        if new_value >= self.max_scroll_y:
             if _CHILD_ANCHOR:
                 self._tail.anchor(animate=False)
             else:
