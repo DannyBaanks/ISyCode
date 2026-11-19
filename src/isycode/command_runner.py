@@ -300,6 +300,26 @@ def _resolve_host_program(cwd_path: Path, name: str) -> str:
     return os.path.abspath(raw_path)
 
 
+def _ziggrep(argv: tuple[str, ...], program: str, resolve) -> tuple[tuple[str, ...], str]:
+    """With the RTK opt-in on, show a recursive grep/rg as ziggrep in the preview.
+
+    The person approves the ziggrep argv itself, so the approved command still
+    runs unchanged. Kept as is when ziggrep cannot run in this mode (the sandbox
+    only has system bin folders) or anything about it is uncertain.
+    """
+    from isycode.ziggrep_rewrite import rewrite
+    new = rewrite(argv)
+    if new is None:
+        return argv, program
+    try:
+        from isycode.rtk_integration import Settings
+        if not Settings().load()['enabled']:
+            return argv, program
+        return new, resolve(new[0])
+    except (OSError, ValueError, KeyError):
+        return argv, program
+
+
 class CommandRunOwner:
     """The only execution owner for ``workspace.command.run``."""
 
@@ -326,6 +346,7 @@ class CommandRunOwner:
                     raise ValueError(f"staging budget must be 1-{COMMAND_MAX_STAGE_BYTES} bytes (at most 8 GiB)")
             cwd_path = _resolve_host_cwd(self.root, cwd)
             program = _resolve_host_program(cwd_path, argv[0])
+            argv, program = _ziggrep(argv, program, lambda name: _resolve_host_program(cwd_path, name))
             masks: tuple[tuple[str, bool], ...] = ()
             from isycode.rtk_integration import plan as rtk_plan
             rtk = rtk_plan(argv, program)
@@ -355,6 +376,7 @@ class CommandRunOwner:
         if sandbox is None:
             raise ValueError(sandbox_backend.unavailable_reason())
         program = resolve_program(self.root, argv[0])
+        argv, program = _ziggrep(argv, program, lambda name: resolve_program(self.root, name))
         if not isinstance(scope, str) or not command_relative_path_valid(scope, allow_root=True):
             raise ValueError("scope must be a non-sensitive workspace-relative folder")
         if scope != "." and (not _no_symlinks(self.root, scope) or not (self.root / scope).is_dir()):

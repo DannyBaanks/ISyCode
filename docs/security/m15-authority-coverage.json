@@ -2149,14 +2149,14 @@
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 368,
+      "line": 390,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
     },
     {
       "file": "isycode/command_runner.py",
-      "line": 332,
+      "line": 353,
       "callable": "isycode.command_runner.CommandRunOwner.prepare",
       "action": "workspace.command.run",
       "owner": "workspace_command"
