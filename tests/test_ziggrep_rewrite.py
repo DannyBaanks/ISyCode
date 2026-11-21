@@ -1,5 +1,6 @@
 """Recursive grep/rg become ziggrep in the preview, only under the RTK opt-in."""
 import os
+import posixpath
 import types
 
 import pytest
@@ -85,7 +86,10 @@ def test_plan_routes_ziggrep_output_to_rtk_grep_filter(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     identity = {'enabled': True, 'path': '/usr/local/bin/rtk', 'sha256': 'a' * 64, 'version': 'rtk 0.51.0'}
     # Do not mutate the process-wide os module: pathlib depends on os.name.
-    monkeypatch.setattr(rtk, 'os', types.SimpleNamespace(name='posix', path=os.path))
+    # The plan path is POSIX-only, so its path module must be posixpath; on
+    # Windows ntpath.normpath would rewrite the POSIX identity to backslashes
+    # and reject a valid identity.
+    monkeypatch.setattr(rtk, 'os', types.SimpleNamespace(name='posix', path=posixpath))
     monkeypatch.setattr(rtk.Settings, 'load', lambda self: identity)
     monkeypatch.setattr(rtk, '_binary', lambda identity: b'')
     monkeypatch.setattr(rtk, '_cli', lambda *a: pytest.fail('ziggrep needs no rtk rewrite call'))
