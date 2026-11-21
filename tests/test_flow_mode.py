@@ -8,6 +8,7 @@ import importlib.util
 import json
 import os
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -324,8 +325,10 @@ def test_flow_windows_resolves_backslash_program_paths(monkeypatch, tmp_path):
 
     program = tmp_path / "tool.exe"
     program.write_bytes(b"synthetic executable")
-    monkeypatch.setattr("isycode.command_runner.os.name", "nt")
-    monkeypatch.setattr("isycode.command_runner.os.access", lambda *_: True)
+    # os is process-wide: changing os.name also changes pathlib.Path's class.
+    # Keep the real module for path operations and replace only the runner's view.
+    monkeypatch.setattr("isycode.command_runner.os", types.SimpleNamespace(
+        name="nt", path=os.path, access=lambda *_: True, X_OK=os.X_OK))
     monkeypatch.setattr("isycode.command_runner.shutil.which", lambda _: (_ for _ in ()).throw(
         AssertionError("an explicit Windows path must not go through POSIX PATH lookup")))
     resolved = _resolve_host_program(tmp_path, str(program))
@@ -342,7 +345,7 @@ def test_flow_windows_timeout_kills_the_process_tree(monkeypatch):
     def run(argv, **kwargs):
         calls.append((argv, kwargs))
 
-    monkeypatch.setattr("isycode.command_runner.os.name", "nt")
+    monkeypatch.setattr("isycode.command_runner.os", types.SimpleNamespace(name="nt"))
     monkeypatch.setattr("subprocess.run", run)
     CommandRunOwner._kill_host(Process())
     assert calls[0][0] == ["taskkill.exe", "/PID", "4321", "/T", "/F"]

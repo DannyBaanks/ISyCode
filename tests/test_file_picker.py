@@ -1,5 +1,7 @@
 from pathlib import Path
 import asyncio
+import os
+import types
 
 import pytest
 
@@ -68,7 +70,8 @@ def test_context_picker_runs_only_fixed_native_chooser_argv(tmp_path, monkeypatc
         calls.append((argv, timeout))
         return selected
     monkeypatch.setattr("isycode.file_picker._run_picker", fake_run)
-    monkeypatch.setattr("isycode.file_picker.os.name", "posix")
+    # os is shared with pathlib; replace only file_picker's module reference.
+    monkeypatch.setattr("isycode.file_picker.os", types.SimpleNamespace(name="posix"))
     monkeypatch.setattr("isycode.file_picker.sys.platform", "linux")
     monkeypatch.setattr("isycode.file_picker.shutil.which", lambda name: "/usr/bin/zenity" if name == "zenity" else None)
     assert asyncio.run(file_picker.choose_context_file(tmp_path)) == selected

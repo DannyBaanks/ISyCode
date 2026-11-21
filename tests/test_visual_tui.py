@@ -317,7 +317,14 @@ def test_startup_splash_remains_in_chat_and_scrolls_away(tmp_path, monkeypatch, 
             assert app.query_one("#idle-board") is board
             assert board.has_class("startup-archived")
             assert not app._idle_mounted()
-            assert app.query_one(ChatArea).scroll_y > 0
+            chat = app.query_one(ChatArea)
+            # The archived board is repainted and measured after the mount;
+            # Windows CI can observe the frame before follow_tail scrolls it.
+            for _ in range(100):
+                await pilot.pause(0.05)
+                if chat.scroll_y > 0:
+                    break
+            assert chat.scroll_y > 0
 
     with capsys.disabled():
         asyncio.run(scenario())
