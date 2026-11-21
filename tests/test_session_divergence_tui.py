@@ -34,7 +34,7 @@ def _run(tui_env, choice, check):
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             await app._run_chat('Refactoriza el parser')
             sid = app._active_chat_session_id
             owner = app._chat_session_owner

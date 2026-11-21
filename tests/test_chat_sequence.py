@@ -140,7 +140,7 @@ def test_search_history_stays_visible_during_new_output(tmp_path, monkeypatch, c
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             app._append('Old searchable marker.')
             for i in range(60):
                 app._append(f'Later message {i}.')

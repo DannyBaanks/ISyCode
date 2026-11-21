@@ -81,7 +81,7 @@ def test_preview_keeps_grep_when_ziggrep_cannot_run_there(tmp_path, monkeypatch)
 def test_plan_routes_ziggrep_output_to_rtk_grep_filter(tmp_path, monkeypatch):
     from isycode import rtk_integration as rtk
     identity = {'enabled': True, 'path': '/usr/local/bin/rtk', 'sha256': 'a' * 64, 'version': 'rtk 0.51.0'}
-    monkeypatch.setattr(rtk, 'os', __import__('os'))
+    monkeypatch.setattr(rtk.os, 'name', 'posix')
     monkeypatch.setattr(rtk.Settings, 'load', lambda self: identity)
     monkeypatch.setattr(rtk, '_binary', lambda identity: b'')
     monkeypatch.setattr(rtk, '_cli', lambda *a: pytest.fail('ziggrep needs no rtk rewrite call'))

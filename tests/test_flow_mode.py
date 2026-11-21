@@ -315,9 +315,8 @@ def test_flow_windows_discovers_every_drive_and_uses_native_shell(monkeypatch):
     assert any(item.startswith("C:") for item in prefixes)
     assert any(item.startswith("D:") for item in prefixes)
     assert not any(item.startswith("A:") for item in prefixes)
-    monkeypatch.setattr("isycode.host_paths.os.name", "nt")
-    assert "powershell" in shell_example() and "bash" not in shell_example()
-    assert stdin_description() == "NUL"
+    assert "powershell" in shell_example(windows=True) and "bash" not in shell_example(windows=True)
+    assert stdin_description(windows=True) == "NUL"
 
 
 def test_flow_windows_resolves_backslash_program_paths(monkeypatch, tmp_path):

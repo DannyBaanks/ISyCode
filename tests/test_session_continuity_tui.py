@@ -293,7 +293,7 @@ def test_cancellation_retains_unverified_threaded_tool_attempt(tmp_path, monkeyp
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             task = asyncio.create_task(app._run_chat('Do a slow operation.'))
             try:
                 assert await asyncio.to_thread(started.wait, 5)

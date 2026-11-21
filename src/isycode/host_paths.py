@@ -42,9 +42,9 @@ def flow_path_prefixes(root: Path, *, windows: bool | None = None) -> tuple[str,
     return tuple(sorted(resolved, key=lambda item: (item.casefold(), item)))
 
 
-def shell_example() -> str:
+def shell_example(*, windows: bool | None = None) -> str:
     """An argv example for the native shell, or direct execution if none exists."""
-    if os.name == "nt":
+    if os.name == "nt" if windows is None else windows:
         return '["powershell", "-NoProfile", "-Command", "..."]'
     return '["bash", "-c", "..."]'
 
@@ -53,5 +53,6 @@ def shell_name() -> str:
     return "PowerShell" if os.name == "nt" else "bash"
 
 
-def stdin_description() -> str:
-    return "NUL" if os.name == "nt" else "/dev/null"
+def stdin_description(*, windows: bool | None = None) -> str:
+    native_windows = os.name == "nt" if windows is None else windows
+    return "NUL" if native_windows else "/dev/null"
