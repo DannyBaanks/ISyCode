@@ -241,7 +241,8 @@ def test_flow_tells_the_model_about_the_shell_and_nothing_else_changes():
     assert command_tool("classic") is COMMAND_TOOL and command_tool("security") is COMMAND_TOOL
     assert flow["function"]["parameters"] == COMMAND_TOOL["function"]["parameters"]
     assert flow["function"]["name"] == COMMAND_TOOL["function"]["name"]
-    assert "bash" in flow["function"]["description"]
+    from isycode.host_paths import shell_example
+    assert shell_example() in flow["function"]["description"]
     assert "There is no shell" in COMMAND_TOOL["function"]["description"]
 
 
@@ -300,3 +301,69 @@ def test_real_flow_runs_computer_wide_while_classic_stays_bounded(project, tmp_p
         assert 'NET_OK' in result['output']
     finally:
         listener.close()
+
+
+def test_flow_windows_discovers_every_drive_and_uses_native_shell(monkeypatch):
+    """The Windows branch is tested here; native drive enumeration runs in Windows CI."""
+    import ctypes
+    from isycode.host_paths import flow_path_prefixes, shell_example, stdin_description
+
+    monkeypatch.setattr(ctypes, "windll", type("WinDLLs", (), {
+        "kernel32": type("Kernel32", (), {"GetLogicalDrives": staticmethod(lambda: 0b1100)})()
+    })(), raising=False)
+    prefixes = flow_path_prefixes(Path.cwd(), windows=True)
+    assert any(item.startswith("C:") for item in prefixes)
+    assert any(item.startswith("D:") for item in prefixes)
+    assert not any(item.startswith("A:") for item in prefixes)
+    monkeypatch.setattr("isycode.host_paths.os.name", "nt")
+    assert "powershell" in shell_example() and "bash" not in shell_example()
+    assert stdin_description() == "NUL"
+
+
+def test_flow_windows_resolves_backslash_program_paths(monkeypatch, tmp_path):
+    from isycode.command_runner import _resolve_host_program
+
+    program = tmp_path / "tool.exe"
+    program.write_bytes(b"synthetic executable")
+    monkeypatch.setattr("isycode.command_runner.os.name", "nt")
+    monkeypatch.setattr("isycode.command_runner.os.access", lambda *_: True)
+    monkeypatch.setattr("isycode.command_runner.shutil.which", lambda _: (_ for _ in ()).throw(
+        AssertionError("an explicit Windows path must not go through POSIX PATH lookup")))
+    resolved = _resolve_host_program(tmp_path, str(program))
+    assert Path(resolved).name == "tool.exe"
+
+
+def test_flow_windows_timeout_kills_the_process_tree(monkeypatch):
+    calls = []
+
+    class Process:
+        pid = 4321
+        returncode = None
+
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs))
+
+    monkeypatch.setattr("isycode.command_runner.os.name", "nt")
+    monkeypatch.setattr("subprocess.run", run)
+    CommandRunOwner._kill_host(Process())
+    assert calls[0][0] == ["taskkill.exe", "/PID", "4321", "/T", "/F"]
+    assert calls[0][1]["check"] is False
+
+
+def test_flow_external_move_and_delete_work_without_posix_descriptors(project, tmp_path, monkeypatch):
+    authority, root = project
+    authority.set_mode("flow")
+    writer = WorkspaceWriteOwner(root, authority, ActionApprovalStore())
+    outside = tmp_path / "host-move.txt"
+    outside.write_text("move me\n", encoding="utf-8")
+    destination = tmp_path / "host-moved.txt"
+    monkeypatch.setattr("isycode.workspace_write.use_verified_fs", lambda: True)
+
+    moved = writer.apply(writer.preview_move(str(outside), str(destination)), None)
+    assert moved.decision == "ALLOW", moved.reason
+    assert destination.read_text(encoding="utf-8") == "move me\n"
+    assert not outside.exists()
+
+    deleted = writer.apply(writer.preview_delete(str(destination)), None)
+    assert deleted.decision == "ALLOW", deleted.reason
+    assert not destination.exists()

@@ -88,6 +88,7 @@ def test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly(tmp_path, mo
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             block, _ = app._mount_thought()
             await pilot.pause()
             block.set_text("One\nTwo\nThree\nFour")
@@ -100,7 +101,10 @@ def test_thinking_title_keyboard_cycles_back_to_one_line_repeatedly(tmp_path, mo
                 assert not block.collapsed and not block._expanded
                 assert block._body.region.height == 2
                 await pilot.press(key)
-                await pilot.pause()
+                for _ in range(40):
+                    await pilot.pause(0.05)
+                    if block._expanded:
+                        break
                 assert not block.collapsed and block._expanded
                 assert "Four" in plain_text(block._body)
                 await pilot.press(key)

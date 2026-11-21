@@ -236,11 +236,12 @@ async def run_headless(prompt: str, *, root: Path | None = None, out: TextIO = s
     tools = (available_tools(root, authority, flow=is_flow)
              if provider.supports_tools and tool_profile != "none" else [])
     if is_flow:
+        from isycode.host_paths import shell_example
         system_prompt = (
             f"You are ISyCode running in headless Flow mode on this computer. Workspace: {root}. "
             "You have full non-interactive Flow access across this PC: read/list/search/grep anywhere, "
-            "edit/write/delete/move files, run bash/host commands with network access via workspace_run "
-            "([\"bash\", \"-c\", \"...\"]), inspect git, and query/update isymem without approval prompts. "
+            "edit/write/delete/move files, run native-shell/host commands with network access via workspace_run "
+            f"({shell_example()}), inspect git, and query/update isymem without approval prompts. "
             "Work autonomously until the task is verified and complete, then answer concisely."
         )
     else:

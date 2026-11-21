@@ -1325,6 +1325,16 @@ class WorkspaceWriteOwner:
     def _file_digest(self, target: Path) -> str | None:
         """SHA-256 of any regular file up to 16 MiB, opened without following links."""
         if self._is_external(target):
+            if use_verified_fs() or os.name == "nt":
+                try:
+                    if is_link(target) or not target.is_file():
+                        return None
+                    data = target.read_bytes()
+                except FileNotFoundError:
+                    return None
+                if len(data) > MAX_MOVE_BYTES:
+                    raise ValueError("files over 16 MiB cannot be moved by ISyCode")
+                return _sha(data)
             if not target.parent.is_dir():
                 return None
             try:
@@ -1417,6 +1427,14 @@ class WorkspaceWriteOwner:
     def _remove(self, target: Path, expected_current: str) -> None:
         """Remove a file ISyCode created, only if it is still exactly that content."""
         if self._is_external(target):
+            if use_verified_fs() or os.name == "nt":
+                current = self._read_back(target)
+                if current is None or _sha(current) != expected_current:
+                    raise ValueError("the file changed; nothing was removed")
+                if is_link(target):
+                    raise ValueError("linked files cannot be removed through the host owner")
+                target.unlink()
+                return
             parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
             try:
                 current = self._read_at(parent_fd, target.name)

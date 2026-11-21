@@ -222,15 +222,16 @@ class WorkspaceAuthority:
                 current[key] = sorted(set(current.get(key, [])) | set(values or []))
 
         is_flow = policy.get("mode") == "flow"
-        host_prefix = self._flow_root_prefix() if is_flow else None
+        from isycode.host_paths import flow_path_prefixes
+        host_prefixes = flow_path_prefixes(self.root) if is_flow else ()
         for action in CLASSIC_PATH_ACTIONS:
-            if is_flow and action != "workspace.turn.undo" and host_prefix:
-                merge(action, "path_prefixes", [host_prefix, str(self.root)])
+            if is_flow and action != "workspace.turn.undo":
+                merge(action, "path_prefixes", [*host_prefixes, str(self.root)])
             else:
                 merge(action, "path_prefixes", [str(self.root)])
         if is_flow:
             for action in FLOW_PATH_ACTIONS:
-                merge(action, "path_prefixes", [host_prefix, str(self.root)] if host_prefix else [str(self.root)])
+                merge(action, "path_prefixes", [*host_prefixes, str(self.root)])
             try:
                 from isycode.mcp_local import load_config as load_mcp_config, resolve_executable
                 mcp_configs = load_mcp_config()
@@ -412,13 +413,6 @@ class WorkspaceAuthority:
                                      "Flow computer-wide grant matched", digest)
         return AuthorityDecision(True, "grant:" + grant_action_id,
                                  "explicit workspace grant matched", digest)
-
-    def _flow_root_prefix(self) -> str:
-        anchor = Path(self.root.anchor or "/")
-        try:
-            return str(anchor.resolve())
-        except (OSError, RuntimeError):
-            return str(anchor)
 
     def _canonical_host_path(self, value: str | Path) -> str:
         raw = Path(value).expanduser()

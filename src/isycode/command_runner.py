@@ -37,6 +37,7 @@ from isycode.staging import (
 from isycode.workspace_authority import WorkspaceAuthority
 from isycode.platform_sandbox import sandbox_backend
 from isycode.winfs import is_link
+from isycode.host_paths import shell_example, stdin_description
 
 OWNER_ID = "workspace_command"
 COMMAND_TOOL_NAME = "workspace_run"
@@ -72,14 +73,16 @@ COMMAND_TOOL = {"type": "function", "function": {
 }}
 
 
-FLOW_COMMAND_DESCRIPTION = (
-    "Run a command directly on the host computer without asking the user. Flow mode: executes "
-    "on the host with full filesystem visibility, the user's real PATH and environment, and "
-    "network access. For pipes, &&, redirects, globs or variables pass [\"bash\", \"-c\", \"...\"]; "
-    "plain programs can still be passed as a list. cwd can be workspace-relative or any "
-    "absolute/~ folder on the computer. Stdin is closed (/dev/null), so pass CLI arguments "
-    "instead of waiting for interactive input."
-)
+def flow_command_description() -> str:
+    return (
+        "Run a command directly on the host computer without asking the user. Flow mode: executes "
+        "on the host with full filesystem visibility, the user's real PATH and environment, and "
+        f"network access. For pipes, &&, redirects, globs or variables pass {shell_example()}; "
+        "plain programs can still be passed as a list. cwd can be workspace-relative or any "
+        f"absolute/~ folder on the computer. Stdin is closed ({stdin_description()}), so pass CLI "
+        "arguments instead of waiting for interactive input."
+    )
+
 
 
 def command_tool(mode: str | None) -> dict:
@@ -90,7 +93,7 @@ def command_tool(mode: str | None) -> dict:
     """
     if mode != "flow":
         return COMMAND_TOOL
-    function = {**COMMAND_TOOL["function"], "description": FLOW_COMMAND_DESCRIPTION}
+    function = {**COMMAND_TOOL["function"], "description": flow_command_description()}
     return {**COMMAND_TOOL, "function": function}
 
 
@@ -286,7 +289,7 @@ def _resolve_host_cwd(root: Path, cwd: object) -> Path:
 def _resolve_host_program(cwd_path: Path, name: str) -> str:
     if not name or "\0" in name:
         raise ValueError("program name is invalid")
-    if "/" not in name:
+    if "/" not in name and (os.name != "nt" or "\\" not in name):
         found = shutil.which(name)
         if not found:
             raise ValueError(f"program {name!r} was not found on PATH")
@@ -515,7 +518,9 @@ class CommandRunOwner:
             proc = await asyncio.create_subprocess_exec(
                 preview.program, *preview.argv[1:], cwd=preview.cwd, env=env,
                 stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT, start_new_session=True)
+                stderr=asyncio.subprocess.STDOUT,
+                start_new_session=(os.name == "posix"),
+                creationflags=(0x00000200 if os.name == "nt" else 0))
             output = bytearray()
             total = 0
             timed_out = False
@@ -587,9 +592,26 @@ class CommandRunOwner:
 
     @staticmethod
     def _kill_host(proc: asyncio.subprocess.Process) -> None:
-        import signal
         if proc.returncode is not None:
             return
+        if os.name == "nt":  # pragma: no cover - native Windows CI
+            # CREATE_NEW_PROCESS_GROUP is not a POSIX session and has no killpg.
+            # taskkill /T terminates the complete tree, including grandchildren
+            # that inherited our stdout pipe; /F avoids a prompt or a lingering job.
+            import subprocess
+            try:
+                subprocess.run(
+                    ["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"],
+                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL, timeout=10, check=False)
+            except (OSError, subprocess.TimeoutExpired):
+                if proc.returncode is None:
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+            return
+        import signal
         try:
             os.killpg(proc.pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError, AttributeError):
@@ -746,7 +768,7 @@ class CommandRunOwner:
 
 
 __all__ = [
-    "COMMAND_TOOL", "COMMAND_TOOL_NAME", "FLOW_COMMAND_DESCRIPTION", "command_tool", "CommandPreview", "CommandRunOwner", "DEFAULT_TIMEOUT_S",
+    "COMMAND_TOOL", "COMMAND_TOOL_NAME", "flow_command_description", "command_tool", "CommandPreview", "CommandRunOwner", "DEFAULT_TIMEOUT_S",
     "masked_digest", "resolve_program", "sandbox_command", "sandbox_executable",
     "sensitive_entries",
 ]

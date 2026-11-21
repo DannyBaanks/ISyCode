@@ -75,6 +75,7 @@ from isycode.workspace_pack import WORKSPACE_PACK_TOOL
 from isycode.workspace_memory import MEMORY_TOOLS
 from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
 from isycode.command_runner import command_tool
+from isycode.host_paths import shell_example, stdin_description
 from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, write_tools_for_mode
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from rich.markdown import Markdown as RichMarkdown
@@ -552,8 +553,8 @@ class ChatMixin:
                 cmd_note = (
                     "workspace_run executes commands directly on the host computer without approval prompts, "
                     "with full filesystem visibility, real host PATH/environment, and network access "
-                    "(pass [\"bash\", \"-c\", \"...\"] for shell pipes/globs/variables; cwd can be any host directory). "
-                    "Stdin is closed (/dev/null), so pass CLI arguments instead of interactive prompts. "
+                    f"(pass {shell_example()} for shell pipes/globs/variables; cwd can be any host directory). "
+                    f"Stdin is closed ({stdin_description()}), so pass CLI arguments instead of interactive prompts. "
                     if command_active else
                     "Commands (workspace_run) are explicitly disabled in this workspace policy. "
                 )
@@ -565,7 +566,7 @@ class ChatMixin:
                     + (f"Connected MCP server instructions:\n{mcp_extra}\n" if mcp_extra else "")
                     if mcp_tools else ""
                 )
-                shell_trailer = "In Flow mode, use workspace_run with [\"bash\", \"-c\", \"...\"] freely when shell commands are helpful."
+                shell_trailer = f"In Flow mode, use workspace_run with {shell_example()} freely when shell commands are helpful."
                 root_scope_note = "Read, search, edit, write, delete, move and workspace_run tools accept workspace-relative, ~, or absolute computer paths. "
             else:
                 read_note = (
@@ -666,11 +667,11 @@ class ChatMixin:
                         f"You are ISyCode running in Flow mode on this computer. Current workspace: {self._workspace_root} "
                         f"(launch directory: {self._launch_dir}). "
                         "You have direct, unrestricted access across the entire PC — you can inspect, search, edit, "
-                        "run bash/host commands with network access, and call configured local MCP servers immediately "
+                        "run native-shell/host commands with network access, and call configured local MCP servers immediately "
                         "without asking permission or checking folder grants. "
                         "NEVER stop to think about permissions or folder aliases when the user asks about a project or path "
                         "anywhere on their PC (such as 'isyco git/', '~/...', '/tmp/...'): go straight to exploring it "
-                        "with workspace_list, workspace_search, workspace_read, or workspace_run ([\"bash\", \"-c\", \"...\"]). "
+                        f"with workspace_list, workspace_search, workspace_read, or workspace_run ({shell_example()}). "
                         f"{bookmark_note}"
                         f"Session context file: {ctx_file.path} (you can re-read it anytime with workspace_read). "
                         + tools_instruction
