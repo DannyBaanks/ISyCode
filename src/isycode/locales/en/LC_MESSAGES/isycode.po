@@ -3118,6 +3118,18 @@ msgid "Flow turn · {count} files · /undo restores this turn; later human edits
 msgstr "Flow turn · {count} files · /undo restores this turn; later human edits are kept."
 
 # Flow (ADR 0010)
+msgid "Flow · free computer-wide work without questions"
+msgstr "Flow · free computer-wide work without questions"
+
+msgid "MCP · quiet Flow · {server}.{tool}"
+msgstr "MCP · quiet Flow · {server}.{tool}"
+
+msgid "{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\nFlow: computer-wide reads, edits, host shell commands with network, and configured local MCPs run without questions. Each workspace chat turn is recorded; /undo restores its files while keeping later human changes.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel and receipts. Push, secrets, and authority changes still ask or stay off."
+msgstr "{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\nFlow: computer-wide reads, edits, host shell commands with network, and configured local MCPs run without questions. Each workspace chat turn is recorded; /undo restores its files while keeping later human changes.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel and receipts. Push, secrets, and authority changes still ask or stay off."
+
+msgid "Flow works freely across your computer: host reads, edits, moves, deletes, shell commands with network, and configured local MCPs run without asking. Workspace turns are recorded for /undo. Commits of human-edited files, push, credentials, and authority changes still ask or stay off. Classic stays workspace-bounded; Security is for explicit per-action grants."
+msgstr "Flow works freely across your computer: host reads, edits, moves, deletes, shell commands with network, and configured local MCPs run without asking. Workspace turns are recorded for /undo. Commits of human-edited files, push, credentials, and authority changes still ask or stay off. Classic stays workspace-bounded; Security is for explicit per-action grants."
+
 msgid "Flow · recoverable local work without questions"
 msgstr "Flow · recoverable local work without questions"
 
@@ -6503,3 +6515,75 @@ msgstr "There is no memory with that number."
 
 msgid "Write the number of one memory."
 msgstr "Write the number of one memory."
+
+msgid "GUS"
+msgstr "GUS"
+
+msgid "New workspace · using your default {mode} mode · change it in Settings → Authority."
+msgstr "New workspace · using your default {mode} mode · change it in Settings → Authority."
+
+msgid "Temporary workspace · this folder is the workspace; .isyroot is optional. File access follows the selected mode and grants. Chat history is not saved."
+msgstr "Temporary workspace · this folder is the workspace; .isyroot is optional. File access follows the selected mode and grants. Chat history is not saved."
+
+msgid "This conversation stays in memory · turn on “Save conversations” in Settings → Authority (recurring workspaces only)."
+msgstr "This conversation stays in memory · turn on “Save conversations” in Settings → Authority (recurring workspaces only)."
+
+msgid "Session context · {path}"
+msgstr "Session context · {path}"
+
+msgid "Prompt kept in history (↑) · /retry prepares it if needed."
+msgstr "Prompt kept in history (↑) · /retry prepares it if needed."
+
+msgid "Always allow"
+msgstr "Always allow"
+
+msgid "Apply change"
+msgstr "Apply change"
+
+msgid "Approve all {count}"
+msgstr "Approve all {count}"
+
+msgid "Approve once"
+msgstr "Approve once"
+
+msgid "Commit"
+msgstr "Commit"
+
+msgid "Copy whole"
+msgstr "Copy whole"
+
+msgid "Create branch"
+msgstr "Create branch"
+
+msgid "Delete conversation"
+msgstr "Delete conversation"
+
+msgid "Delete iteration"
+msgstr "Delete iteration"
+
+msgid "Discard"
+msgstr "Discard"
+
+msgid "Keep"
+msgstr "Keep"
+
+msgid "Read and send once"
+msgstr "Read and send once"
+
+msgid "Reject"
+msgstr "Reject"
+
+msgid "Reject all"
+msgstr "Reject all"
+
+msgid "Review each"
+msgstr "Review each"
+
+msgid "Run command"
+msgstr "Run command"
+
+msgid "Share with model"
+msgstr "Share with model"
+
+msgid "Trust folder"
+msgstr "Trust folder"

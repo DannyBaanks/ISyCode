@@ -25,8 +25,9 @@ from isycode.tui_screens_approval import (
     CommandApprovalScreen, CommitApprovalScreen, GusBranchApprovalScreen, ConfirmScreen,
     WriteApprovalScreen,
 )
-from isycode.tui_screens_gus import GusScreen
+from isycode.tui_screens_gus import GusProviderPickerScreen, GusScreen
 from isycode.tui_screens_gus_settings import GusMemoryScreen, GusSettingsScreen
+from isycode.tui_screens_harness import ModelsScreen
 from isycode.tui_theme import GREEN, MUTED, RED, YELLOW
 
 
@@ -68,7 +69,8 @@ class GusMixin:
                    "and stored outside the checkout. It grants itself nothing; turn it off any "
                    "time in Settings.", destination=destination,
                    target=target if target is not None else tr("no checkout configured yet")),
-                tr("Enable GUS"))):
+                tr("Enable GUS"),
+                owner="GUS")):
             return False
         try:
             GusState(self._workspace_root).enable()
@@ -99,7 +101,52 @@ class GusMixin:
             work=self._run_gus_turn, remember=self._remember_gus_memory,
             report_text=self._gus_report_text,
             seal=self._seal_gus_generation, generation_text=self._generation_text,
-            settings=self._open_gus_settings, undo=self._undo_latest_gus_turn))
+            settings=self._open_gus_settings, undo=self._undo_latest_gus_turn,
+            pick_provider=self._pick_gus_provider_in_screen))
+
+    async def _pick_gus_provider_in_screen(self) -> str | None:
+        """Top-right provider switcher inside GusScreen; keeps the live GUS dialog open."""
+        while True:
+            chosen = await self._await_screen(GusProviderPickerScreen(self._gus_provider_rows()))
+            if not chosen:
+                return None
+            state = gus_slot.provider_credential_state(chosen)
+            if state in {"missing", "unavailable"}:
+                await self._connect_provider_key(chosen, then_models=False, for_gus=True)
+                if gus_slot.provider_credential_state(chosen) in {"missing", "unavailable"}:
+                    continue
+            elif state == "saved" and not self._saved_key_usable(chosen):
+                if not await self._grant_key_use(chosen):
+                    continue
+            prev_scope = getattr(self, "_models_scope", None)
+            prev_target = getattr(self, "_models_target", "chat")
+            self._models_scope = chosen
+            self._models_target = "gus"
+            try:
+                while True:
+                    entries = self._branch_entries("models")
+                    picked = await self._await_screen(ModelsScreen(entries, provider_scope=chosen))
+                    if picked is None:
+                        break
+                    kind = picked.get("kind")
+                    if kind == "model_list":
+                        await self._fetch_account_models(chosen)
+                        continue
+                    if kind == "model":
+                        prov, model = str(picked.get("value", "")).split("|", 1)
+                        try:
+                            check = gus_slot.save_gus_model(prov, model)
+                        except (gus_slot.GusSlotError, ValueError, OSError) as exc:
+                            reason = str(exc) if isinstance(exc, gus_slot.GusSlotError) else type(exc).__name__
+                            self._set_activity(tr("GUS model not saved · {reason}", reason=tr(reason)), RED)
+                            continue
+                        note = (tr("GUS model · {model} · window unknown, planned as 32k", model=model)
+                                if check.window is None else tr("GUS model · {model}", model=model))
+                        self._set_activity(note, GREEN if check.window is not None else YELLOW)
+                        return self._gus_slot_label()
+            finally:
+                self._models_scope = prev_scope
+                self._models_target = prev_target
 
     async def _open_gus_settings(self) -> None:
         try:
@@ -154,6 +201,13 @@ class GusMixin:
         outcome = await asyncio.to_thread(owner.execute, preview, approval)
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             return self._memory_error(outcome.reason or outcome.decision)
+        from isycode.isymem_bridge import execute_isymem_tool, resolve_isymem_dir
+        if resolve_isymem_dir(roots.visible) is not None:
+            await asyncio.to_thread(
+                execute_isymem_tool,
+                {"action": "add", "target": "isycode", "kind": "state", "text": text.strip()},
+                workspace_root=roots.visible,
+            )
         return outcome.text
 
     @staticmethod
@@ -166,7 +220,8 @@ class GusMixin:
             tr("Let GUS remember this?"),
             tr("GUS will keep this note for future conversations, across workspaces, and can "
                "show or forget it in Settings:\n{text}", text=(preview.text or "")[:2000]),
-            tr("Remember"))))
+            tr("Remember"),
+            owner="GUS")))
 
     async def _forget_gus_memory(self, memory_id: str) -> bool:
         return await self._gus_memory_delete(
@@ -192,7 +247,7 @@ class GusMixin:
         except (GusRootsError, OSError, ValueError) as exc:
             self._set_activity(tr("GUS memory unchanged · {reason}", reason=str(exc)[:160]), YELLOW)
             return False
-        if not await self._await_screen(ConfirmScreen(title, detail, tr("Forget"))):
+        if not await self._await_screen(ConfirmScreen(title, detail, tr("Forget"), owner="GUS")):
             self._set_activity(tr("GUS memory unchanged"), MUTED)
             return False
         approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
@@ -224,7 +279,8 @@ class GusMixin:
                    "be sent to its model. Edits stay limited to {target}, on a gus/* branch.",
                    scope=scope, target=roots.target if roots.target is not None
                    else tr("no checkout configured yet")),
-                tr("Use this scope")))
+                tr("Use this scope"),
+                owner="GUS"))
             if not allowed:
                 self._set_activity(tr("GUS read scope unchanged"), MUTED)
                 return False
@@ -366,7 +422,8 @@ class GusMixin:
                    "T: the tests of the touched code. A: the coverage auditor and L0 tests. "
                    "L: lint. T, A and L run in the command sandbox. Only if all pass is the work "
                    "sealed; you activate it by merging the branch."),
-                tr("Run the gates"))):
+                tr("Run the gates"),
+                owner="GUS")):
             return None
         recorded = state.branch(branch)
         authority = roots.authority()

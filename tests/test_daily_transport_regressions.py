@@ -54,3 +54,28 @@ def test_length_limited_openai_call_is_not_executable(monkeypatch):
             'finish_reason': 'length'}]}, '[DONE]'])
     assert result['finish_reason'] == 'length'
     assert result['tool_calls'] == []
+
+
+def test_chat_transport_never_disables_stream_timeout(monkeypatch):
+    from types import SimpleNamespace
+    from isycode import chat_transport
+
+    seen = {}
+
+    async def fake_stream(*args, **kwargs):
+        seen["timeout_s"] = kwargs.get("timeout_s", "default")
+        return {"text": "ok", "tool_calls": []}
+
+    monkeypatch.setattr(chat_transport, "async_stream_complete", fake_stream)
+    provider = SimpleNamespace(
+        name="nvidia",
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key="test",
+        model="mistralai/mistral-large-4-1t-a52b",
+        token_limit_field="max_tokens",
+        reasoning_effort=None,
+        temperature_supported=True,
+    )
+    res = asyncio.run(chat_transport.provider_complete(provider, [{"role": "user", "content": "hi"}]))
+    assert res["text"] == "ok"
+    assert seen["timeout_s"] != None  # noqa: E711

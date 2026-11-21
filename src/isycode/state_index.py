@@ -31,7 +31,12 @@ class StateIndex:
             return Path(override).expanduser()
         if os.name == "nt":
             return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "ISyCode"
-        return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "isycode"
+        base = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state").expanduser()
+        try:
+            base = base.resolve(strict=False)
+        except OSError:
+            pass
+        return base / "isycode"
 
     def state_root(self) -> Path:
         return self._root

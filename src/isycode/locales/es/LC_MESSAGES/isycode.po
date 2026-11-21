@@ -3118,6 +3118,18 @@ msgid "Flow turn · {count} files · /undo restores this turn; later human edits
 msgstr "Turno de Flow · {count} archivos · /undo restaura este turno; conserva los cambios humanos posteriores."
 
 # Flow (ADR 0010)
+msgid "Flow · free computer-wide work without questions"
+msgstr "Flow · trabajo libre en toda la computadora sin preguntas"
+
+msgid "MCP · quiet Flow · {server}.{tool}"
+msgstr "MCP · Flow directo · {server}.{tool}"
+
+msgid "{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\nFlow: computer-wide reads, edits, host shell commands with network, and configured local MCPs run without questions. Each workspace chat turn is recorded; /undo restores its files while keeping later human changes.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel and receipts. Push, secrets, and authority changes still ask or stay off."
+msgstr "{root}\nClassic (recomendado): acotado al workspace con revisión de ediciones y comandos aislados, o confía en esta carpeta.\nFlow: lecturas y ediciones en toda la computadora, shell del sistema con red y MCPs locales configurados sin preguntas. Cada turno del workspace queda registrado; /undo restaura sus archivos conservando los cambios humanos posteriores.\nSecurity: todo apagado hasta que lo autorices.\nTodos conservan Sentinel y recibos. Push, secretos y cambios de autoridad siguen pidiendo permiso o apagados."
+
+msgid "Flow works freely across your computer: host reads, edits, moves, deletes, shell commands with network, and configured local MCPs run without asking. Workspace turns are recorded for /undo. Commits of human-edited files, push, credentials, and authority changes still ask or stay off. Classic stays workspace-bounded; Security is for explicit per-action grants."
+msgstr "Flow trabaja libremente en toda la computadora: lecturas, ediciones, movimientos, borrados, comandos del sistema con red y MCPs locales configurados sin preguntar. Los turnos del workspace se registran para /undo. Commits de archivos modificados manualmente, push, credenciales y cambios de autoridad siguen pidiendo permiso o apagados. Classic se mantiene acotado al workspace; Security es para permisos explícitos por acción."
+
 msgid "Flow · recoverable local work without questions"
 msgstr "Flow · trabajo local recuperable sin preguntas"
 
@@ -6503,3 +6515,75 @@ msgstr "No hay ninguna memoria con ese número."
 
 msgid "Write the number of one memory."
 msgstr "Escribe el número de una memoria."
+
+msgid "GUS"
+msgstr "GUS"
+
+msgid "New workspace · using your default {mode} mode · change it in Settings → Authority."
+msgstr "Workspace nuevo · usando tu modo predeterminado {mode} · cámbialo en Ajustes → Autoridad."
+
+msgid "Temporary workspace · this folder is the workspace; .isyroot is optional. File access follows the selected mode and grants. Chat history is not saved."
+msgstr "Workspace temporal · esta carpeta es el workspace; .isyroot es opcional. El acceso a archivos sigue el modo y los permisos elegidos. El historial del chat no se guarda."
+
+msgid "This conversation stays in memory · turn on “Save conversations” in Settings → Authority (recurring workspaces only)."
+msgstr "Esta conversación queda en memoria · activa “Guardar conversaciones” en Ajustes → Autoridad (solo en workspaces recurrentes)."
+
+msgid "Session context · {path}"
+msgstr "Contexto de sesión · {path}"
+
+msgid "Prompt kept in history (↑) · /retry prepares it if needed."
+msgstr "Prompt guardado en historial (↑) · /retry lo prepara si hace falta."
+
+msgid "Always allow"
+msgstr "Permitir siempre"
+
+msgid "Apply change"
+msgstr "Aplicar cambio"
+
+msgid "Approve all {count}"
+msgstr "Aprobar todos ({count})"
+
+msgid "Approve once"
+msgstr "Aprobar una vez"
+
+msgid "Commit"
+msgstr "Hacer commit"
+
+msgid "Copy whole"
+msgstr "Copiar todo"
+
+msgid "Create branch"
+msgstr "Crear rama"
+
+msgid "Delete conversation"
+msgstr "Eliminar conversación"
+
+msgid "Delete iteration"
+msgstr "Eliminar iteración"
+
+msgid "Discard"
+msgstr "Descartar"
+
+msgid "Keep"
+msgstr "Conservar"
+
+msgid "Read and send once"
+msgstr "Leer y enviar una vez"
+
+msgid "Reject"
+msgstr "Rechazar"
+
+msgid "Reject all"
+msgstr "Rechazar todo"
+
+msgid "Review each"
+msgstr "Revisar uno por uno"
+
+msgid "Run command"
+msgstr "Ejecutar comando"
+
+msgid "Share with model"
+msgstr "Compartir con el modelo"
+
+msgid "Trust folder"
+msgstr "Confiar en carpeta"

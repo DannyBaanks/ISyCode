@@ -21,6 +21,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import stat
 import time
 from dataclasses import dataclass, field, replace
@@ -92,6 +93,48 @@ MOVE_TOOL = {"type": "function", "function": {
         "to": {"type": "string", "description": "New workspace-relative file path."},
     }, "required": ["path", "to"], "additionalProperties": False},
 }}
+
+
+def write_tools_for_mode(mode: str | None) -> tuple[dict, dict, dict, dict]:
+    """Return (edit_tool, write_tool, delete_tool, move_tool) tailored to workspace mode."""
+    if mode != "flow":
+        return EDIT_TOOL, WRITE_TOOL, DELETE_TOOL, MOVE_TOOL
+    edit_tool = json.loads(json.dumps(EDIT_TOOL))
+    edit_tool["function"]["description"] = (
+        "Replace an exact text fragment in one existing UTF-8 file (workspace or computer host "
+        "path). Runs without approval in Flow mode; workspace edits are turn-recoverable."
+    )
+    edit_tool["function"]["parameters"]["properties"]["path"]["description"] = (
+        "Workspace-relative, ~, or absolute file path."
+    )
+    write_tool = json.loads(json.dumps(WRITE_TOOL))
+    write_tool["function"]["description"] = (
+        "Create or replace one UTF-8 text file (up to 128 KiB) in the workspace or on the host "
+        "computer; missing folders are created. Runs without approval in Flow mode."
+    )
+    write_tool["function"]["parameters"]["properties"]["path"]["description"] = (
+        "Workspace-relative, ~, or absolute file path."
+    )
+    delete_tool = json.loads(json.dumps(DELETE_TOOL))
+    delete_tool["function"]["description"] = (
+        "Delete one UTF-8 text file (up to 128 KiB) in the workspace or host computer. "
+        "Runs without approval in Flow mode; workspace deletes can be restored with /undo."
+    )
+    delete_tool["function"]["parameters"]["properties"]["path"]["description"] = (
+        "Workspace-relative, ~, or absolute file path."
+    )
+    move_tool = json.loads(json.dumps(MOVE_TOOL))
+    move_tool["function"]["description"] = (
+        "Move or rename one file (up to 16 MiB) in the workspace or on the host computer. "
+        "Destination must not exist; missing folders are created. Runs without approval in Flow mode."
+    )
+    move_tool["function"]["parameters"]["properties"]["path"]["description"] = (
+        "Current workspace-relative, ~, or absolute file path."
+    )
+    move_tool["function"]["parameters"]["properties"]["to"]["description"] = (
+        "New workspace-relative, ~, or absolute file path."
+    )
+    return edit_tool, write_tool, delete_tool, move_tool
 
 
 def _sha(data: bytes) -> str:
@@ -333,11 +376,29 @@ class WorkspaceWriteOwner:
 
     # ── preview ────────────────────────────────────────────────
 
+    def _flow_host_allowed(self) -> bool:
+        return self.owner_id != CONFIG_OWNER_ID and self.authority.mode() == "flow"
+
+    def _is_external(self, target: Path) -> bool:
+        return self.root not in target.parents
+
+    def _display_path(self, target: Path) -> str:
+        return target.relative_to(self.root).as_posix() if self.root in target.parents else str(target)
+
     def _target(self, path: str) -> Path:
         if not isinstance(path, str) or not path.strip() or len(path) > 4096 or "\0" in path:
             raise ValueError("path must be a bounded workspace-relative string")
         raw = Path(path).expanduser()
         lexical = Path(os.path.abspath(raw if raw.is_absolute() else self.root / raw))
+        if self._flow_host_allowed():
+            resolved = lexical.resolve(strict=False)
+            if resolved == self.root:
+                raise ValueError("path must name a file, not the workspace root")
+            if any(WorkspaceReadSystembility.is_sensitive_name(part) for part in resolved.parts):
+                raise ValueError("sensitive paths cannot be written")
+            if resolved.name.casefold() in WRITE_PROTECTED_NAMES:
+                raise ValueError("workspace identity markers cannot be written")
+            return resolved
         if self.root not in lexical.parents:
             raise ValueError("path must name a file inside the workspace")
         relative = lexical.relative_to(self.root)
@@ -352,6 +413,22 @@ class WorkspaceWriteOwner:
 
     def _missing_folders(self, target: Path) -> tuple[str, ...]:
         """Folders to create for target, in order; refuses symlinks and non-folders."""
+        if self._is_external(target):
+            missing: list[str] = []
+            ancestors = list(reversed(target.parents))
+            for folder in ancestors:
+                if folder == folder.parent:
+                    continue
+                if missing:
+                    missing.append(folder.as_posix())
+                    continue
+                if not folder.exists():
+                    missing.append(folder.as_posix())
+                elif not folder.is_dir():
+                    raise ValueError("a parent of this path is not a folder")
+            if len(missing) > MAX_NEW_FOLDERS:
+                raise ValueError("too many new folders for one change")
+            return tuple(missing)
         missing: list[str] = []
         current = self.root
         for part in target.parent.relative_to(self.root).parts:
@@ -393,7 +470,7 @@ class WorkspaceWriteOwner:
             raise ValueError("content must be text")
         encoded = content.encode("utf-8")
         target = self._target(path)
-        relative = target.relative_to(self.root).as_posix()
+        relative = self._display_path(target)
         path_limit = self.max_write_bytes
         if self.owner_id == CONFIG_OWNER_ID:
             path_limit = (64 * 1024 if relative == ".isycode/config.json"
@@ -413,7 +490,7 @@ class WorkspaceWriteOwner:
             raise ValueError("the file already has exactly this content")
         diff = self._diff(before, encoded, relative)
         extra_folders = [folder for folder in missing
-                         if folder not in {parent.as_posix() for parent in target.relative_to(self.root).parents}]
+                         if folder not in {parent.as_posix() for parent in target.relative_to(self.root).parents}] if not self._is_external(target) else []
         if extra_folders:
             diff += "\nNew folders: " + ", ".join(extra_folders) + "\n"
         parameters = {
@@ -486,7 +563,7 @@ class WorkspaceWriteOwner:
     def preview_delete(self, path: str) -> WritePreview:
         """Show the whole file being removed; only text files that /undo can restore."""
         target = self._target(path)
-        relative = target.relative_to(self.root).as_posix()
+        relative = self._display_path(target)
         current = self._current(target, self._missing_folders(target))
         if current is None:
             raise ValueError("the file does not exist")
@@ -505,8 +582,8 @@ class WorkspaceWriteOwner:
         destination = self._target(to)
         if source == destination:
             raise ValueError("the source and destination are the same")
-        relative = source.relative_to(self.root).as_posix()
-        target_relative = destination.relative_to(self.root).as_posix()
+        relative = self._display_path(source)
+        target_relative = self._display_path(destination)
         self._missing_folders(source)
         digest = self._file_digest(source)
         if digest is None:
@@ -777,6 +854,37 @@ class WorkspaceWriteOwner:
         if fresh != preview:
             return ActionOutcome("File change denied.", "DENY", None,
                                  "the file changed since the reviewed diff; review a new one")
+        params = preview.request.parameters
+        target = Path(preview.request.target)
+        external = self._is_external(target)
+        if external:
+            denied = self._authorize(preview.request, approval)
+            if denied is not None:
+                return ActionOutcome("File change denied.", "DENY", None, denied)
+            staged = self.stage_preview(preview)
+            try:
+                payload = staged.read_bytes()
+                if payload != preview.content.encode("utf-8"):
+                    raise ValueError("staged bytes do not match the approved content")
+                self._replace(target, payload, params["before_sha256"], tuple(params["new_folders"]))
+                written = self._read_back(target)
+                if written is None or _sha(written) != params["after_sha256"]:
+                    raise ValueError("written content does not match the approved digest")
+            except (OSError, ValueError) as exc:
+                receipt = self._receipt(preview.request, "FAILURE", "write_failed")
+                return ActionOutcome("File change failed; the approved content is not verified.",
+                                     "ERROR", receipt, str(exc)[:300])
+            finally:
+                remove_spill(staged)
+            result = json.dumps({"path": params["path"], "after_sha256": params["after_sha256"]},
+                                sort_keys=True)
+            receipt = ActionReceipt("rcpt_" + secrets.token_hex(8), preview.request.action_id,
+                                    preview.request.digest, "ALLOW", "SUCCESS",
+                                    _sha(result.encode("utf-8")))
+            if not self.gate.persist_receipt(preview.request, receipt):
+                return ActionOutcome("File written, but its receipt could not be journaled.",
+                                     "NOT_VERIFIABLE", None, "durable action journal is unavailable")
+            return ActionOutcome(f"Wrote {params['path']}", "ALLOW", receipt, "Flow host write verified")
         paths, deletes, churn = self._write_cost(preview)
         reservation = self._reserve_effect("File change denied.", paths, deletes, churn)
         if isinstance(reservation, ActionOutcome):
@@ -786,8 +894,6 @@ class WorkspaceWriteOwner:
             self._cancel_effect(reservation)
             return ActionOutcome("File change denied.", "DENY", None, denied)
 
-        params = preview.request.parameters
-        target = Path(preview.request.target)
         try:
             turn = self._turn_capture(target)
             checkpoint = self._prepare_effect(reservation, preview)
@@ -916,6 +1022,20 @@ class WorkspaceWriteOwner:
         if fresh != preview:
             return ActionOutcome("Delete denied.", "DENY", None,
                                  "the file changed since it was reviewed; review it again")
+        params = preview.request.parameters
+        target = Path(preview.request.target)
+        if self._is_external(target):
+            denied = self._authorize(preview.request, approval)
+            if denied is not None:
+                return ActionOutcome("Delete denied.", "DENY", None, denied)
+            try:
+                self._remove(target, params["before_sha256"])
+                if self._exists(target):
+                    raise ValueError("the file is still present")
+            except (OSError, ValueError) as exc:
+                return ActionOutcome("Delete failed; check the file.", "ERROR", None, str(exc)[:300])
+            return self._finish(preview.request, f"deleted:{params['path']}", f"Deleted {params['path']}",
+                                "Flow host delete applied")
         paths, deletes, churn = ((preview.path,), 1, len(preview.content.encode("utf-8")))
         reservation = self._reserve_effect("Delete denied.", paths, deletes, churn)
         if isinstance(reservation, ActionOutcome):
@@ -924,8 +1044,6 @@ class WorkspaceWriteOwner:
         if denied is not None:
             self._cancel_effect(reservation)
             return ActionOutcome("Delete denied.", "DENY", None, denied)
-        params = preview.request.parameters
-        target = Path(preview.request.target)
         try:
             turn = self._turn_capture(target)
             checkpoint = self._prepare_effect(reservation, preview)
@@ -960,6 +1078,20 @@ class WorkspaceWriteOwner:
             return ActionOutcome("Move denied.", "DENY", None,
                                  "the file or destination changed since review; review it again")
         source = Path(preview.request.target)
+        dest_raw = Path(params["to"]).expanduser()
+        destination = (dest_raw if dest_raw.is_absolute() else self.root / dest_raw).resolve(strict=False)
+        if self._is_external(source) or self._is_external(destination):
+            denied = self._authorize(preview.request, approval)
+            if denied is not None:
+                return ActionOutcome("Move denied.", "DENY", None, denied)
+            try:
+                self._move(source, destination, params["sha256"], tuple(params["new_folders"]))
+                if self._file_digest(destination) != params["sha256"] or self._exists(source):
+                    raise ValueError("the moved file could not be verified")
+            except (OSError, ValueError) as exc:
+                return ActionOutcome("Move failed; check both paths.", "ERROR", None, str(exc)[:300])
+            return self._finish(preview.request, f"moved:{params['path']}:{params['to']}",
+                                f"Moved {params['path']} → {params['to']}", "Flow host move applied")
         paths = (params["path"], params["to"])
         deletes, churn = 0, self._regular_size(source)
         reservation = self._reserve_effect("Move denied.", paths, deletes, churn)
@@ -969,7 +1101,6 @@ class WorkspaceWriteOwner:
         if denied is not None:
             self._cancel_effect(reservation)
             return ActionOutcome("Move denied.", "DENY", None, denied)
-        destination = self.root / params["to"]
         try:
             turn = self._turn_capture(source, destination)
             checkpoint = self._prepare_effect(reservation, preview)
@@ -1096,6 +1227,24 @@ class WorkspaceWriteOwner:
         return data
 
     def _read_back(self, target: Path) -> bytes | None:
+        if self._is_external(target):
+            if use_verified_fs() or os.name == "nt":
+                if not target.exists():
+                    return None
+                if target.is_symlink() or not target.is_file():
+                    raise ValueError("target must be a regular file")
+                return target.read_bytes()
+            if not target.parent.is_dir():
+                return None
+            flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+            try:
+                parent_fd = os.open(target.parent, flags)
+            except FileNotFoundError:
+                return None
+            try:
+                return self._read_at(parent_fd, target.name)
+            finally:
+                os.close(parent_fd)
         if use_verified_fs():
             return self._verified_read(target)
         try:
@@ -1110,7 +1259,19 @@ class WorkspaceWriteOwner:
     def _replace(self, target: Path, data: bytes, expected_before: str,
                  new_folders: tuple[str, ...]) -> bytes | None:
         """Atomically replace target; returns the content that was replaced."""
-        if use_verified_fs():
+        if self._is_external(target):
+            if new_folders:
+                target.parent.mkdir(parents=True, exist_ok=True)
+            if use_verified_fs() or os.name == "nt":
+                current = target.read_bytes() if target.exists() else None
+                if ("absent" if current is None else _sha(current)) != expected_before:
+                    raise ValueError("the file changed during approval; nothing was written")
+                from isycode.effect_fs import apply_file
+                apply_file(target.parent, target.name, data, expected=None if current is None else _sha(current))
+                return current
+            flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+            parent_fd = os.open(target.parent, flags)
+        elif use_verified_fs():
             filesystem = VerifiedFS(self.root)
             filesystem.ensure_folders(target.parent, new_folders)
             current = self._verified_read(target)
@@ -1118,7 +1279,8 @@ class WorkspaceWriteOwner:
                 raise ValueError("the file changed during approval; nothing was written")
             filesystem.replace(target, data, current, lambda: self._verified_read(target))
             return current
-        parent_fd = self._open_directory(target.parent, create=new_folders)
+        else:
+            parent_fd = self._open_directory(target.parent, create=new_folders)
         temporary = f".{target.name}.isycode-{secrets.token_hex(6)}.tmp"
         created = False
         try:
@@ -1162,16 +1324,34 @@ class WorkspaceWriteOwner:
 
     def _file_digest(self, target: Path) -> str | None:
         """SHA-256 of any regular file up to 16 MiB, opened without following links."""
-        if use_verified_fs():
+        if self._is_external(target):
+            if use_verified_fs() or os.name == "nt":
+                try:
+                    if is_link(target) or not target.is_file():
+                        return None
+                    data = target.read_bytes()
+                except FileNotFoundError:
+                    return None
+                if len(data) > MAX_MOVE_BYTES:
+                    raise ValueError("files over 16 MiB cannot be moved by ISyCode")
+                return _sha(data)
+            if not target.parent.is_dir():
+                return None
+            try:
+                parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            except FileNotFoundError:
+                return None
+        elif use_verified_fs():
             try:
                 data = VerifiedFS(self.root).read_file(target, MAX_MOVE_BYTES)
             except FileNotFoundError:
                 return None
             return None if data is None else _sha(data)
-        try:
-            parent_fd = self._open_directory(target.parent)
-        except FileNotFoundError:
-            return None
+        else:
+            try:
+                parent_fd = self._open_directory(target.parent)
+            except FileNotFoundError:
+                return None
         try:
             flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
                      | getattr(os, "O_NONBLOCK", 0))
@@ -1200,6 +1380,20 @@ class WorkspaceWriteOwner:
         """Hard-link then unlink: never replaces an existing destination."""
         if self._file_digest(source) != expected:
             raise ValueError("the file changed during approval; nothing was moved")
+        if self._is_external(source) or self._is_external(destination):
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.exists() or destination.is_symlink():
+                raise ValueError("the destination already exists; moves never overwrite")
+            try:
+                os.link(source, destination, follow_symlinks=False)
+                os.unlink(source)
+            except OSError as exc:
+                import errno as _errno
+                if exc.errno != _errno.EXDEV:
+                    raise
+                shutil.copy2(source, destination)
+                os.unlink(source)
+            return
         if use_verified_fs():
             VerifiedFS(self.root).move(source, destination, new_folders)
             book = self._effect_book
@@ -1232,6 +1426,25 @@ class WorkspaceWriteOwner:
 
     def _remove(self, target: Path, expected_current: str) -> None:
         """Remove a file ISyCode created, only if it is still exactly that content."""
+        if self._is_external(target):
+            if use_verified_fs() or os.name == "nt":
+                current = self._read_back(target)
+                if current is None or _sha(current) != expected_current:
+                    raise ValueError("the file changed; nothing was removed")
+                if is_link(target):
+                    raise ValueError("linked files cannot be removed through the host owner")
+                target.unlink()
+                return
+            parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                current = self._read_at(parent_fd, target.name)
+                if current is None or _sha(current) != expected_current:
+                    raise ValueError("the file changed; nothing was removed")
+                os.unlink(target.name, dir_fd=parent_fd)
+                os.fsync(parent_fd)
+            finally:
+                os.close(parent_fd)
+            return
         if use_verified_fs():
             current = self._verified_read(target)
             if current is None or _sha(current) != expected_current:
@@ -1250,5 +1463,5 @@ class WorkspaceWriteOwner:
 
 
 __all__ = ["TURN_UNDO_ACTION", "TurnUndoPreview", "CheckpointStore", "DELETE_TOOL", "DELETE_TOOL_NAME", "EDIT_TOOL", "EDIT_TOOL_NAME",
-           "MOVE_TOOL", "MOVE_TOOL_NAME", "WRITE_TOOL", "WRITE_TOOL_NAME",
+           "MOVE_TOOL", "MOVE_TOOL_NAME", "WRITE_TOOL", "WRITE_TOOL_NAME", "write_tools_for_mode",
            "WorkspaceWriteOwner", "WritePreview"]

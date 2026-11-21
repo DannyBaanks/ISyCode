@@ -153,3 +153,48 @@ def test_missing_steering_metadata_revokes_prior_confirmation(monkeypatch):
     reasoning_options.record_catalog('fixture', 'model', {})
     assert reasoning_options.steering_support('fixture', 'model') is None
     assert ('fixture', 'model') not in reasoning_options.steering_models()
+
+
+def test_absolute_path_message_queues_while_working_and_steer_fallback_queues(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        ready, finish = asyncio.Event(), asyncio.Event()
+        sent = []
+
+        async def chat(self, text):
+            sent.append(text)
+            if text == "first":
+                ready.set()
+                await finish.wait()
+
+        monkeypatch.setattr(TUIApp, "_run_chat", chat)
+        app = TUIApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            prompt = app.query_one("#prompt-input")
+            prompt.load_text("first")
+            await pilot.press("enter")
+            await ready.wait()
+
+            # A message starting with an absolute POSIX path must queue, not trigger Still working.
+            path_msg = "/home/danny/Descargas/ipatool-2.8.1-linux-arm64 DESCARGUE ESTE"
+            prompt.load_text(path_msg)
+            await pilot.press("enter")
+            assert prompt.text == ""
+            assert app._queued_messages == [path_msg]
+
+            # If /steer arrives while _chat_turn_task is not active yet, it falls back to queue.
+            prompt.load_text("/steer usa este archivo")
+            await pilot.press("enter")
+            assert prompt.text == ""
+            assert app._queued_messages == [path_msg, "usa este archivo"]
+
+            finish.set()
+            for _ in range(100):
+                await pilot.pause(0.01)
+                if len(sent) == 3:
+                    break
+            assert sent == ["first", path_msg, "usa este archivo"]
+
+    asyncio.run(scenario())

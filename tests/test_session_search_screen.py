@@ -9,6 +9,7 @@ import pytest
 
 from isycode.chat_sessions import ChatSession
 from isycode.tui import TUIApp, SessionSearchScreen
+from test_daily_tui import configure
 
 
 def _session(session_id, title, contents):
@@ -37,9 +38,11 @@ async def _wait_for_condition(pilot, predicate, description, timeout=10.0):
 
 
 @pytest.mark.asyncio
-async def test_screen_filters_across_titles_and_transcripts():
+async def test_screen_filters_across_titles_and_transcripts(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
     app = TUIApp()
     async with app.run_test(size=(100, 30)) as pilot:
+        await pilot.pause()
         await app.push_screen(SessionSearchScreen(SESSIONS))
         await pilot.pause()
         screen = app.screen
@@ -53,10 +56,12 @@ async def test_screen_filters_across_titles_and_transcripts():
 
 
 @pytest.mark.asyncio
-async def test_screen_dismisses_with_selected_session():
+async def test_screen_dismisses_with_selected_session(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
     app = TUIApp()
     result = []
     async with app.run_test(size=(100, 30)) as pilot:
+        await pilot.pause()
         await app.push_screen(SessionSearchScreen(SESSIONS), result.append)
         await pilot.pause()
         screen = app.screen
@@ -70,10 +75,12 @@ async def test_screen_dismisses_with_selected_session():
 
 
 @pytest.mark.asyncio
-async def test_escape_dismisses_without_choice():
+async def test_escape_dismisses_without_choice(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
     app = TUIApp()
     result = []
     async with app.run_test(size=(100, 30)) as pilot:
+        await pilot.pause()
         await app.push_screen(SessionSearchScreen(SESSIONS), result.append)
         await pilot.pause()
         await pilot.press("escape")

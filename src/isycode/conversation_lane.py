@@ -8,8 +8,10 @@ lane they began on.
 from __future__ import annotations
 
 from contextvars import ContextVar
+import uuid
 
 from isycode.localization import tr
+from isycode.session_context import fresh_session_context_key
 from isycode.throughput import ThroughputMeter
 from isycode.usage import UsageLedger
 
@@ -44,6 +46,10 @@ class ConversationLane:
         self.divergence_prompted = False
         self.agent_tasks: list = []
         self.active_chat_provider = None
+        self.session_context_key = self.session_id or fresh_session_context_key()
+        self.session_context_initialized = False
+        self.session_context_digest = ""
+        self.turn_scope = f"lane-{uuid.uuid4().hex[:12]}"
         self.steering_restore_positions: dict = {}
         self.selected_queued_message = None
         self.idea_nudge_due = False
@@ -84,6 +90,9 @@ LANE_FIELDS = (
     ("_steering_restore_positions", "steering_restore_positions"),
     ("_selected_queued_message", "selected_queued_message"),
     ("_idea_nudge_due", "idea_nudge_due"),
+    ("_session_context_key", "session_context_key"),
+    ("_session_context_initialized", "session_context_initialized"),
+    ("_session_context_digest", "session_context_digest"),
 )
 
 
@@ -137,6 +146,8 @@ def rekey_lane(app, lane: ConversationLane, new_id) -> None:
         del app._lanes[old]
     lane.key = new_id
     lane.session_id = new_id
+    if not getattr(lane, "session_context_initialized", False):
+        lane.session_context_key = new_id
     app._lanes[new_id] = lane
     if app._foreground_key == old:
         app._foreground_key = new_id

@@ -147,11 +147,20 @@ class IdleBoard(Static):
 
 
 class BoxTitle(CollapsibleTitle, inherit_bindings=False):
-    BINDINGS = [Binding("space", "toggle_collapsible", "Expand / collapse", show=False)]
+    BINDINGS = [
+        Binding("space", "toggle_collapsible", "Expand / collapse", show=False),
+        Binding("enter", "activate_box", "Open box", show=False),
+    ]
 
     def action_toggle_collapsible(self) -> None:
         if isinstance(self.parent, ExpandableBox):
             self.parent.action_toggle_box()
+
+    def action_activate_box(self) -> None:
+        """Enter opens a collapsed box; Space remains the cycle/toggle gesture."""
+        parent = self.parent
+        if isinstance(parent, ExpandableBox) and (parent.in_rail() or parent.collapsed):
+            parent.action_toggle_box()
 
     def on_mouse_down(self, event):
         if isinstance(self.parent, ExpandableBox):
@@ -172,7 +181,19 @@ class BoxTitle(CollapsibleTitle, inherit_bindings=False):
             # copied by selecting it, never through the copy menu.
             if event.chain == 1:
                 parent.action_toggle_box()
+        elif event.chain == 1:
+            self._click_restore_state = (
+                parent.collapsed, getattr(parent, "_expanded", None))
+            parent.action_toggle_box()
         elif event.chain == 2:
+            previous = getattr(self, "_click_restore_state", None)
+            if previous is not None:
+                parent.collapsed = previous[0]
+                if previous[1] is not None:
+                    parent._expanded = previous[1]
+                if hasattr(parent, "_paint_preview"):
+                    parent._paint_preview()
+                self._click_restore_state = None
             open_copy_menu(parent, parent.copy_text())
 
 
@@ -622,12 +643,14 @@ class ThoughtBlock(Collapsible, inherit_bindings=False):
         self._preview_more = more
         # Clip the view rather than inserting soft-wrap newlines into its copy source.
         self._body.styles.max_height = 2 if not self._expanded and more else None
+        title_width = max(0, self.content_size.width - 6)
+        base_title = _fit_cells(self._base_title, title_width)
         if self.collapsed:
-            budget = max(1, self.content_size.width - cell_len(self._base_title) - 9)
-            preview = " ".join(self._full_text[:budget * 4].split())
-            self.title = self._base_title + ("     " + _fit_cells(preview, budget) if preview else "")
+            budget = max(0, title_width - cell_len(base_title) - 5)
+            preview = " ".join(self._full_text[:max(1, budget) * 4].split()) if budget else ""
+            self.title = base_title + ("     " + _fit_cells(preview, budget) if preview else "")
         else:
-            self.title = self._base_title
+            self.title = base_title
         self._body.set_selectable_content(text, text.plain)
         self.border_subtitle = (Text(tr("Space expand / collapse · double-click copy"), style=MUTED)
                                 if more and (self.has_focus or self.has_focus_within) else "")
@@ -790,10 +813,27 @@ class ChatArea(QuietVerticalScroll):
         if self._following_tail():
             self.scroll_end(animate=False, immediate=True)
 
+    def _on_mouse_scroll_up(self, event) -> None:
+        self.pause_tail()
+        super()._on_mouse_scroll_up(event)
+
+    def action_scroll_up(self) -> None:
+        self.pause_tail()
+        super().action_scroll_up()
+
+    def action_page_up(self) -> None:
+        self.pause_tail()
+        super().action_page_up()
+
     def watch_scroll_y(self, old_value, new_value):
         super().watch_scroll_y(old_value, new_value)
-        if _CHILD_ANCHOR and self.is_mounted and new_value >= self.max_scroll_y:
-            self._tail.anchor(animate=False)
+        if not self.is_mounted:
+            return
+        if new_value >= self.max_scroll_y:
+            if _CHILD_ANCHOR:
+                self._tail.anchor(animate=False)
+            else:
+                self.call_later(self._anchor_tail)
 
     def action_scroll_end(self):
         super().action_scroll_end()
@@ -869,7 +909,8 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
     CommandOutputCard { height: 4; width: 100%; padding: 0 1; margin: 1 0; border: round #414650; background: #17191f; }
     CommandOutputCard:focus-within { border: round #bb8cff; }
     CommandOutputCard.-expanded { height: auto; min-height: 6; max-height: 18; }
-    CommandOutputCard .command-output-body { height: auto; width: 100%; }
+    CommandOutputCard .command-output-body { height: auto; width: 100%; text-wrap: nowrap; text-overflow: ellipsis; }
+    CommandOutputCard.-expanded .command-output-body { text-wrap: wrap; text-overflow: clip; }
     """
 
     def __init__(self, command: str) -> None:
@@ -889,6 +930,9 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
     def on_mount(self) -> None:
         if self.status == "Running" and self._spinner_timer is None:
             self._spinner_timer = self.set_interval(0.12, self._tick_spinner)
+
+    def on_resize(self, event) -> None:
+        self._paint_output()
 
     def on_unmount(self) -> None:
         self._stop_spinner()
@@ -930,7 +974,23 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
         frame = frames[self._spinner_idx]
         spinner_prefix = f"{frame} " if self.status == "Running" else ""
-        self.border_subtitle = Text(f"{spinner_prefix}{tr(self.status)}{note} · {tr('Space expand / collapse · double-click copy')}", style=MUTED)
+        status = f"{spinner_prefix}{tr(self.status)}{note}"
+        hint = tr("Space expand / collapse · double-click copy")
+        full_subtitle = f"{status} · {hint}"
+        width = self.size.width or self.content_size.width
+        if width <= 0:
+            subtitle = full_subtitle
+        else:
+            available = max(0, width - 4)
+            if available >= cell_len(full_subtitle):
+                subtitle = full_subtitle
+            elif available >= cell_len(status):
+                subtitle = status
+            elif available:
+                subtitle = _fit_cells(status, available)
+            else:
+                subtitle = ""
+        self.border_subtitle = Text(subtitle, style=MUTED)
         if self.expanded:
             shown = self.output or tr("No output.")
             if self.receipt:
@@ -960,7 +1020,7 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
     def on_click(self, event) -> None:
         if event.widget is not self:
             return
-        self.focus()
+        self.focus(scroll_visible=False)
         if event.chain == 2:
             event.prevent_default()
             event.stop()

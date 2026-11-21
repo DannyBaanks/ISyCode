@@ -109,7 +109,6 @@ if ISYMOTRON_ROOT is not None:
 from textual.app import App, ComposeResult, ScreenStackError
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.actions import SkipAction
 from textual.screen import ModalScreen
 from textual.css.query import NoMatches
 from textual.dom import NoScreen
@@ -286,6 +285,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         openisy_client_factory: OpenIsyClientFactory = OpenIsyClient,
         initial_view: str = "overview",
         initial_prompt: str = "",
+        auto_submit_prompt: bool = False,
+        initial_mode: str | None = None,
     ):
         super().__init__()
         # Lanes exist before the per-conversation assignments below, which are properties.
@@ -295,6 +296,8 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._openisy_client_factory = openisy_client_factory
         self._initial_view = initial_view
         self._initial_prompt = initial_prompt
+        self._auto_submit_prompt = auto_submit_prompt
+        self._initial_mode = initial_mode if initial_mode in {"classic", "flow", "security"} else None
         self._openisy_refresh_generation = 0
         # F-01 readiness: set once _startup_workspace finishes (success or failure)
         # so tests and callers never have to guess with blind pilot.pause() loops.
@@ -998,16 +1001,49 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             line.append("  " + self._role_mark(role_name), style=color)
         return Static(line, classes="message-clock")
 
+    def action_toggle_shell_box(self) -> None:
+        """Switch composer boxes and apply the compact four-column layout."""
+        super().action_toggle_shell_box()
+        self.query_one("#idea-box-row").set_class(bool(self._shell_mode), "shell-mode")
+
+    def action_focus_next(self) -> None:
+        """Keep Tab inside the command menu while its overlay is open."""
+        if isinstance(self.screen, ModalScreen):
+            super().action_focus_next()
+            return
+        menu = self.query_one("#action-menu", Vertical)
+        if menu.display:
+            self.screen.focus_next("#action-menu *")
+            return
+        super().action_focus_next()
+
     def action_cycle_role(self) -> None:
-        """Shift+Tab in the main chat: next primary role, then back to no role.
+        """Shift+Tab in chat/composer cycles roles; elsewhere it reverses focus.
 
         Uses the same role contract as the Role menu: the role's workflow is
-        sent as guidance with the next message and grants nothing. It works
-        wherever focus sits in the chat (composer, command bar, rail); a
-        dialog or the command menu keeps Shift+Tab for its own focus moves.
+        sent as guidance with the next message and grants nothing. Dialogs,
+        the command menu, the session list and workspace rail keep focus moves.
         """
-        if isinstance(self.screen, ModalScreen) or self.query_one("#action-menu").display:
-            raise SkipAction()
+        if isinstance(self.screen, ModalScreen):
+            self.screen.focus_previous()
+            return
+        menu = self.query_one("#action-menu", Vertical)
+        if menu.display:
+            self.screen.focus_previous("#action-menu *")
+            return
+        focus = self.focused
+        node = focus
+        in_chat_composer = False
+        while node is not None:
+            if node.id in {"chat", "composer"}:
+                in_chat_composer = True
+                break
+            node = node.parent
+        if not in_chat_composer:
+            # The priority shortcut must leave reverse focus traversal intact
+            # for the rail and other non-chat controls.
+            self.screen.focus_previous()
+            return
         current = self._active_role["name"] if self._active_role else None
         names = [role["name"] for role in ROLE_CYCLE]
         index = names.index(current) + 1 if current in names else 0
@@ -1612,6 +1648,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._menu_stack = []
         self._menu_mode = ""
         self._models_scope = None
+        self._models_target = "chat"
         self._models_return_settings = False
         self.query_one("#prompt-input", PromptArea).focus()
 
@@ -1636,10 +1673,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             return entries
         if key == "models":
             active_provider = selected_provider_name()
+            catalog_provider = getattr(self, "_models_scope", None) or active_provider
             current = selected_model_name()
             models = [self._entry(
-                tr("Load account models · {provider}", provider=active_provider),
-                "model_list", active_provider,
+                tr("Load account models · {provider}", provider=catalog_provider),
+                "model_list", catalog_provider,
                 tr("Makes a read-only catalog request only after you select this item."),
                 translate=False)]
             from isycode.providers import recent_models
@@ -2014,6 +2052,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
     def _start_operation(self, coroutine, label: str) -> None:
         self._activity_label = label
         self._activity_frame = 0
+        self._thinking_started_at = _time.monotonic()
         self._set_activity(label, CYAN)
         timer = getattr(self, "_activity_timer", None)
         if timer is not None:
@@ -2074,6 +2113,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 self._set_activity(tr("Plan ready · review it in Overview"), YELLOW)
             else:
                 self._set_activity(tr("Chat ready"), MUTED)
+            self._thinking_started_at = None
             self._paint_idea_box()
             if self._idea_backlog:
                 self.notify(tr("{len} captured ideas · /ideas reviews and promotes", len=len(self._idea_backlog)))
@@ -2321,7 +2361,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 "Every folder you open for the first time will read files, propose edits you approve, "
                 "chat with your provider and save conversations and keys without asking for each "
                 "permission. IsySentinel and the action journal still check and record everything. "
-                "Folders you already use keep their mode.", "Use Classic for new folders")):
+                "Folders you already use keep their mode.", "Use Classic for new folders",
+                owner="workspace authority",
+                duration="persistent workspace setting",
+                not_granted="commits, secrets, authority changes")):
             self._open_user_defaults_menu()
             return
         try:
@@ -2354,10 +2397,13 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             # Register the journalled key reader before any provider probe so the
             # QuickStart readiness check can see vault-stored keys (F-11). It is
             # registered again below, once the workspace root is final.
-            self._register_saved_key_reader()
+            await asyncio.to_thread(self._register_saved_key_reader)
             if not recurring:
                 choice = setup_store.recurrent_choice(self._launch_dir)
-                if choice is None:
+                if choice is None and self._initial_mode is not None:
+                    choice = False
+                    await asyncio.to_thread(setup_store.choose_recurrent, self._launch_dir, choice)
+                elif choice is None:
                     try:
                         defaults = UserDefaultsStore().load()
                         preference = defaults.get("new_workspace", "ask")
@@ -2417,7 +2463,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                     self._chat_session_owner = None
             try:
                 authority = WorkspaceAuthority(self._workspace_root)
-                if authority.mode() is None:
+                if self._initial_mode is not None:
+                    if authority.mode() != self._initial_mode:
+                        authority.set_mode(self._initial_mode)
+                elif authority.mode() is None:
                     if self._quick_start:
                         chosen = "classic"
                     else:
@@ -2425,10 +2474,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                             preferred = UserDefaultsStore().load().get("new_workspace_mode", "ask")
                         except (OSError, ValueError, json.JSONDecodeError):
                             preferred = "ask"
-                        if preferred in {"classic", "security"}:
+                        if preferred in {"classic", "flow", "security"}:
                             chosen = preferred
-                            self._append_startup(f"  New workspace · using your default {preferred.title()} mode "
-                                         "· change it in Settings → Authority.", MUTED)
+                            self._append_startup("  " + tr(
+                                "New workspace · using your default {mode} mode · change it in Settings → Authority.",
+                                mode=preferred.title()), MUTED)
                         else:
                             chosen = await self._await_screen(WorkspaceModeScreen(self._workspace_root))
                     authority.set_mode(chosen)
@@ -2440,19 +2490,22 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             except (WorkspaceAuthorityError, OSError, ValueError):
                 self._append_startup("  Workspace mode could not be saved · Security rules apply.", YELLOW)
             self._update_workspace_identity_ui()
-            self._register_saved_key_reader()
+            await asyncio.to_thread(self._register_saved_key_reader)
             await self._initialize_workspace()
             self._refresh_lsp_status()
             self.run_worker(self._refresh_openisy(), exclusive=False, exit_on_error=False)
+            if self._workspace_mode() == "flow":
+                self.run_worker(self._ensure_flow_local_mcps(), exclusive=False, exit_on_error=False)
             self.run_worker(self._check_gateway_async(), exclusive=False, exit_on_error=False)
             self.run_worker(self._check_model(), exclusive=False, exit_on_error=False)
             if not recurring:
-                self._append_startup("  Temporary workspace · this folder is the workspace; .isyroot is optional. "
-                                     "File access follows the selected mode and grants. Chat history is not saved.", MUTED)
+                self._append_startup("  " + tr(
+                    "Temporary workspace · this folder is the workspace; .isyroot is optional. "
+                    "File access follows the selected mode and grants. Chat history is not saved."), MUTED)
             if not self._sessions_enabled():
-                self._append_startup(
-                    "  This conversation stays in memory · turn on “Save conversations” in "
-                    "Settings → Authority (recurring workspaces only).", MUTED)
+                self._append_startup("  " + tr(
+                    "This conversation stays in memory · turn on “Save conversations” in "
+                    "Settings → Authority (recurring workspaces only)."), MUTED)
         except Exception as exc:
             # The screen that was current during an awaited load may already be gone.
             # Reporting that must not raise, or Textual fails the worker.
@@ -2463,6 +2516,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         finally:
             # F-01: release waiters even when startup failed partway through.
             self._ready_event.set()
+            if self._auto_submit_prompt and self._initial_prompt.strip():
+                self.call_after_refresh(self._submit_initial_prompt)
+
+    def _submit_initial_prompt(self) -> None:
+        """Auto-submit the CLI-supplied initial prompt once startup is ready."""
+        if not self._auto_submit_prompt or not self._initial_prompt.strip():
+            return
+        if not self.is_mounted or len(self.screen_stack) != 1:
+            return
+        try:
+            prompt = self.query_one("#prompt-input", PromptArea)
+        except (NoMatches, NoScreen):
+            return
+        self._auto_submit_prompt = False
+        self._accept_prompt(prompt, prompt.text or self._initial_prompt)
 
     def _update_workspace_identity_ui(self) -> None:
         if not self.is_mounted:
@@ -2486,7 +2554,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         grant = authority.effective_policy().get("grants", {}).get("clipboard.paste", {})
         if not displayed_on("clipboard.paste", grant, CLIPBOARD_TARGET in grant.get("targets", ())):
             if not await self._await_screen(ConfirmScreen(
-                    "Allow pasting from the clipboard?", "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes.", "Allow paste")):
+                    "Allow pasting from the clipboard?", "Reads text or images only when you press Ctrl+V. Contents stay in the draft until you send it; journal records no image or text bytes.", "Allow paste",
+                    owner="workspace authority",
+                    scope="clipboard.paste",
+                    duration="persistent workspace grant",
+                    not_granted="no writes, no commands, no secrets")):
                 return
             authority.set_grant("clipboard.paste", enabled=True, targets=[CLIPBOARD_TARGET])
         owner = ClipboardOwner(self._workspace_root, authority)
@@ -2533,7 +2605,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                     'Allow copying in this workspace?',
                     'Copies text or paths you select to the OS clipboard. Other applications may read it. '
                     'The model receives no clipboard tool; copied contents are not written to the journal.',
-                    'Allow copy')):
+                    'Allow copy',
+                    owner='workspace authority',
+                    scope='clipboard.copy',
+                    duration='persistent workspace grant',
+                    not_granted='no writes, no commands, no secrets')):
                 return
             authority.set_grant('clipboard.copy', enabled=True, targets=[CLIPBOARD_TARGET])
         self._copy_through_owner(text, source)
@@ -2584,6 +2660,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         except (OSError, ValueError):
             self._set_activity(tr("Draft not saved · private state unavailable"), YELLOW)
 
+    def _is_slash_command_input(self, text: str) -> bool:
+        """True for slash commands, False for absolute filesystem paths like /home/user/..."""
+        if not text.startswith("/"):
+            return False
+        first = text.split(None, 1)[0]
+        cmd = first.lower()
+        if cmd in {"/steer", "/queue", "/msg", "/idea", "/ideas", "/backlog",
+                   "/clear", "/new", "/retry", "/resume", "/exit", "/quit"}:
+            return True
+        if self._plugins.route(text)[1] is not None:
+            return True
+        if "/" in first[1:] or Path(first).exists():
+            return False
+        return True
+
     def _accept_prompt(self, prompt, raw_text: str) -> None:
         if isinstance(prompt, PromptArea) and hasattr(prompt, "pasted_text"):
             raw_text = prompt.pasted_text.expand(raw_text)
@@ -2614,29 +2705,30 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self.run_worker(self._deliver_session_message(text), group="session-message", exit_on_error=False)
             return
         if self._loop_task and not self._loop_task.done():
-            if self._chat_turn_task is not None and not self._chat_turn_task.done() and text.startswith("/steer "):
-                from isycode.reasoning_options import steering_support
-                provider, model = self._steering_target()
-                if steering_support(provider, model) is False:
-                    self._queue_steer_warning()
-                    return
+            if text.startswith("/steer "):
                 instruction = text.removeprefix("/steer ").strip()
-                if self._steering_try_active:
-                    self.notify(tr("Steer attempt pending; draft kept"))
+                if self._chat_turn_task is not None and not self._chat_turn_task.done():
+                    from isycode.reasoning_options import steering_support
+                    provider, model = self._steering_target()
+                    if steering_support(provider, model) is False:
+                        self._queue_steer_warning()
+                        return
+                    if len(self._pending_steering) >= 8:
+                        self._append(tr("Steering queue is full; this draft is kept."), YELLOW)
+                        return
+                    self._pending_steering.append(instruction)
+                    self._steering_try_active = True
+                    prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
+                    self._mount_user_turn("Steer attempt · " + instruction)
+                    self._append(tr("Steering queued · current tool effects remain; pending calls will be skipped."), CYAN)
+                    request = self._chat_request_task
+                    if request is not None and not request.done():
+                        request.cancel()
                     return
-                if len(self._pending_steering) >= 8:
-                    self._append(tr("Steering queue is full; this draft is kept."), YELLOW)
+                text = instruction
+            if not self._is_slash_command_input(text):
+                if not text:
                     return
-                self._pending_steering.append(instruction)
-                self._steering_try_active = True
-                prompt.load_text("") if isinstance(prompt, PromptArea) else setattr(prompt, "value", "")
-                self._mount_user_turn("Steer attempt · " + instruction)
-                self._append(tr("Steering queued · current tool effects remain; pending calls will be skipped."), CYAN)
-                request = self._chat_request_task
-                if request is not None and not request.done():
-                    request.cancel()
-                return
-            if not text.startswith("/"):
                 if len(self._queued_messages) >= 8:
                     self.notify(tr("Message queue is full; draft kept"), severity="warning")
                     return
@@ -2666,7 +2758,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if cmd is not None:
             label = "Planning · IsyMotron" if cmd.name == "plan" else f"Running /{cmd.name}"
             self._start_operation(cmd.handler(self, arg), label)
-        elif text.startswith("/"):
+        elif self._is_slash_command_input(text):
             self._start_operation(self._run_custom_command(text), "Chat · working")
         else:
             self._start_operation(self._run_chat(text), "Chat · working")

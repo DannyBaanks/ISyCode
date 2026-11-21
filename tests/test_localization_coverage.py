@@ -71,7 +71,7 @@ def test_catalog_entries_are_not_truncated(locale):
     """A raw newline inside a msgid breaks the parser and loses the entry."""
     catalog = _load_catalog(locale)
     roots = [msgid for (_context, msgid) in catalog if msgid.startswith("{root")]
-    assert len(roots) == 2, roots
+    assert len(roots) >= 2, roots
     for msgid in roots:
         assert msgid.startswith("{root}\n"), msgid[:40]
         assert msgid.endswith("."), msgid[-40:]

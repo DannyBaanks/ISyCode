@@ -121,7 +121,50 @@ CHAT_WORKSPACE_TOOLS = [
             "path": {"type": "string", "description": "Workspace-relative folder path; defaults to the workspace root."},
         }, "required": ["query"], "additionalProperties": False},
     }},
+    {"type": "function", "function": {
+        "name": "workspace_read_image",
+        "description": ("Read one authorized image file (PNG, JPEG, GIF, or WebP up to 8 MiB) so you can "
+                        "inspect it visually if your provider supports multimodal input."),
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Workspace-relative image file path."},
+        }, "required": ["path"], "additionalProperties": False},
+    }},
 ]
+
+
+def workspace_tools_for_mode(mode: str | None) -> list[dict]:
+    """Read/search tool schemas adapted to the active workspace mode."""
+    if mode != "flow":
+        return CHAT_WORKSPACE_TOOLS
+    flow_descriptions = {
+        "workspace_list": (
+            "List non-sensitive entries in any directory on this computer.",
+            "Workspace-relative, ~, or absolute directory path; defaults to the workspace root.",
+        ),
+        "workspace_read": (
+            "Read one UTF-8 text file (up to 128 KiB) from the workspace or elsewhere on this computer.",
+            "Workspace-relative, ~, or absolute file path.",
+        ),
+        "workspace_grep": (
+            "Find lines containing literal text in UTF-8 files (not a regex) inside the workspace "
+            "or a target computer path; returns path, line number, and line.",
+            "Workspace-relative, ~, or absolute directory or file path; defaults to the workspace root.",
+        ),
+        "workspace_search": (
+            "Search file and folder names in the workspace or any computer path.",
+            "Workspace-relative, ~, or absolute directory path; defaults to the workspace root.",
+        ),
+        "workspace_read_image": (
+            "Read one image file (PNG, JPEG, GIF, or WebP up to 8 MiB) from the workspace or elsewhere on this computer for visual inspection.",
+            "Workspace-relative, ~, or absolute image file path.",
+        ),
+    }
+    adapted = json.loads(json.dumps(CHAT_WORKSPACE_TOOLS))
+    for tool in adapted:
+        desc, path_desc = flow_descriptions[tool["function"]["name"]]
+        tool["function"]["description"] = desc
+        tool["function"]["parameters"]["properties"]["path"]["description"] = path_desc
+    return adapted
 CONTEXT_ACCESS_TOOL_NAME = "request_context_access"
 CONTEXT_ACCESS_TOOL = {"type": "function", "function": {
     "name": CONTEXT_ACCESS_TOOL_NAME,
@@ -135,6 +178,7 @@ CONTEXT_ACCESS_TOOL = {"type": "function", "function": {
 TOOL_ACTIONS = {
     "workspace_list": "workspace.files.list",
     "workspace_read": "workspace.files.read",
+    "workspace_read_image": "workspace.files.read",
     "workspace_search": "workspace.files.search",
     # Content search reveals exactly what reading does, so it is a read.
     "workspace_grep": "workspace.files.read",
@@ -398,7 +442,7 @@ class ActionOutcome:
 
 
 class WorkspaceReadSystembility:
-    """Allow only bounded, non-sensitive reads inside the exact workspace."""
+    """Allow bounded, non-sensitive reads (workspace-scoped in Classic/Security, host-scoped in Flow)."""
 
     name = "WorkspaceReadBoundary"
 
@@ -414,6 +458,19 @@ class WorkspaceReadSystembility:
         target = request.target or str(self.root)
         raw = Path(target).expanduser()
         lexical = Path(os.path.abspath(raw if raw.is_absolute() else self.root / raw))
+        flow_host = (authority.allowed
+                     and authority.grant_id.startswith("grant:flow:")
+                     and request.execution_owner != CONFIG_OWNER_ID
+                     and request.action_id in READ_ACTIONS)
+        if flow_host:
+            try:
+                resolved = lexical.resolve(strict=False)
+            except (OSError, RuntimeError):
+                return SystembilityResult(self.name, False, "target cannot be canonicalized")
+            if (any(self.is_sensitive_name(part) for part in resolved.parts)
+                    or any(self.is_sensitive_name(part) for part in lexical.parts)):
+                return SystembilityResult(self.name, False, "sensitive paths are not available to chat tools")
+            return SystembilityResult(self.name, True, "read-only target authorized in Flow host scope")
         if lexical != self.root and self.root not in lexical.parents:
             return SystembilityResult(self.name, False, "target escapes workspace root")
         current = self.root
@@ -484,6 +541,11 @@ class WorkspaceWriteSystembility:
                                      and item in {".isycode", ".isycode/commands"}))
                             for item in folders))
 
+        flow_host = (authority.allowed
+                     and authority.grant_id.startswith("grant:flow:")
+                     and request.execution_owner != CONFIG_OWNER_ID
+                     and request.action_id in FILE_CHANGE_ACTIONS)
+
         if request.action_id == "workspace.files.restore":
             if (set(params) != RESTORE_PARAMETER_KEYS
                     or not isinstance(params.get("checkpoint_id"), str)
@@ -500,24 +562,30 @@ class WorkspaceWriteSystembility:
         elif request.action_id == "workspace.files.move":
             destination = params.get("to")
             undo_of = params.get("undo_of")
+            dest_ok = (command_relative_path_valid(destination)
+                       or (flow_host and isinstance(destination, str) and bool(destination)
+                           and len(destination) <= 4096 and "\0" not in destination
+                           and not any(WorkspaceReadSystembility.is_sensitive_name(p)
+                                       for p in Path(destination).parts)))
             if (set(params) != MOVE_PARAMETER_KEYS or not digest(params.get("sha256"))
-                    or not command_relative_path_valid(destination)
+                    or not dest_ok
                     or destination == params.get("path")
-                    or Path(destination).name.casefold() in WRITE_PROTECTED_NAMES
+                    or Path(str(destination)).name.casefold() in WRITE_PROTECTED_NAMES
                     or not new_folders_valid(params.get("new_folders"), destination)
                     or not isinstance(undo_of, str)
                     or (undo_of and re.fullmatch(r"ckpt_[0-9]{13}_[0-9a-f]{8}", undo_of) is None)):
                 return SystembilityResult(self.name, False, "move request shape is not the reviewed one")
-            current = self.root
-            for part in destination.split("/"):
-                current = current / part
-                try:
-                    if stat.S_ISLNK(current.lstat().st_mode):
-                        return SystembilityResult(self.name, False, "symlink traversal is denied")
-                except FileNotFoundError:
-                    break
-                except OSError:
-                    return SystembilityResult(self.name, False, "destination metadata is unavailable")
+            if not flow_host:
+                current = self.root
+                for part in destination.split("/"):
+                    current = current / part
+                    try:
+                        if stat.S_ISLNK(current.lstat().st_mode):
+                            return SystembilityResult(self.name, False, "symlink traversal is denied")
+                    except FileNotFoundError:
+                        break
+                    except OSError:
+                        return SystembilityResult(self.name, False, "destination metadata is unavailable")
         else:
             size = params.get("size")
             folders = params.get("new_folders")
@@ -534,6 +602,18 @@ class WorkspaceWriteSystembility:
             if not new_folders_valid(folders, params.get("path")):
                 return SystembilityResult(self.name, False, "new folders must be the file's own parents")
         lexical = Path(os.path.abspath(request.target or ""))
+        if flow_host:
+            resolved = lexical.resolve(strict=False)
+            if resolved == self.root:
+                return SystembilityResult(self.name, False, "write target must name a file")
+            expected = resolved.relative_to(self.root).as_posix() if self.root in resolved.parents else str(resolved)
+            if params.get("path") not in {expected, str(lexical)}:
+                return SystembilityResult(self.name, False, "write path does not match its target")
+            if any(WorkspaceReadSystembility.is_sensitive_name(part) for part in resolved.parts):
+                return SystembilityResult(self.name, False, "sensitive paths cannot be written")
+            if resolved.name.casefold() in WRITE_PROTECTED_NAMES:
+                return SystembilityResult(self.name, False, "workspace identity markers cannot be written")
+            return SystembilityResult(self.name, True, "one reviewed file change authorized in Flow")
         if self.root not in lexical.parents:
             return SystembilityResult(self.name, False, "write target must be a file inside the workspace")
         relative = lexical.relative_to(self.root)
@@ -664,7 +744,7 @@ def sandbox_program_valid(program: object, argv0: str) -> bool:
 
 
 class CommandProcessSystembility:
-    """Allow one reviewed argv inside the bubblewrap workspace sandbox."""
+    """Allow one reviewed argv inside the workspace sandbox, or host execution in Flow."""
 
     name = "CommandProcessBoundary"
 
@@ -674,7 +754,7 @@ class CommandProcessSystembility:
             return SystembilityResult(self.name, True, "not applicable to this action")
         params = request.parameters
         if not (COMMAND_PARAMETER_KEYS <= set(params) <= COMMAND_PARAMETER_KEYS | {
-                'scope', 'rtk', 'sandbox_identity', 'max_stage_bytes'}):
+                'scope', 'rtk', 'sandbox_identity', 'max_stage_bytes', 'host_execution'}):
             return SystembilityResult(self.name, False, "command request shape is not the reviewed one")
         if "rtk" in params:
             from isycode.rtk_integration import valid_plan
@@ -683,11 +763,38 @@ class CommandProcessSystembility:
         argv = params.get("argv")
         if not command_argv_valid(argv):
             return SystembilityResult(self.name, False, "command arguments are invalid")
+        timeout = params.get("timeout_s")
+        count = params.get("masked_count")
+        if params.get("host_execution") is True:
+            if not (authority.allowed and authority.grant_id == "grant:flow:workspace.command.run"):
+                return SystembilityResult(self.name, False, "host command execution requires Flow mode")
+            program = params.get("program")
+            cwd = params.get("cwd")
+            try:
+                prog_path = Path(program).resolve(strict=True) if isinstance(program, str) and Path(program).is_absolute() else None
+            except (OSError, RuntimeError):
+                prog_path = None
+            if (prog_path is None or not prog_path.is_file() or not os.access(prog_path, os.X_OK)
+                    or Path(program).name != Path(argv[0]).name
+                    or request.target != program or params.get("executable") != program):
+                return SystembilityResult(self.name, False, "host program must name an existing executable")
+            if (not isinstance(cwd, str) or not cwd or len(cwd) > 4096 or "\0" in cwd
+                    or not Path(cwd).expanduser().is_dir()):
+                return SystembilityResult(self.name, False, "host command cwd must be an existing directory")
+            if (type(timeout) is not int or not 1 <= timeout <= COMMAND_MAX_TIMEOUT_S
+                    or params.get("network") != "host"
+                    or params.get("max_output_bytes") != COMMAND_MAX_OUTPUT_BYTES
+                    or count != 0
+                    or not isinstance(params.get("masked_sha256"), str)
+                    or re.fullmatch(r"[0-9a-f]{64}", params["masked_sha256"]) is None
+                    or params.get("workspace_root") != str(request.workspace_root)):
+                return SystembilityResult(self.name, False, "host command limits or parameters are invalid")
+            return SystembilityResult(
+                self.name, True,
+                "Flow host command execution authorized with full filesystem and network access")
         from isycode.platform_sandbox import sandbox_backend
         if not sandbox_backend.program_valid(params.get("program"), argv[0]) or request.target != params["program"]:
             return SystembilityResult(self.name, False, "program must be a system or workspace executable")
-        timeout = params.get("timeout_s")
-        count = params.get("masked_count")
         stage_bytes = params.get("max_stage_bytes", COMMAND_DEFAULT_STAGE_BYTES)
         if "scope" in params and not command_relative_path_valid(params["scope"], allow_root=True):
             return SystembilityResult(self.name, False, "command staging scope is invalid")
@@ -2659,14 +2766,15 @@ class LocalWorkspaceReadOwner:
         if not isinstance(path_value, str) or len(path_value) > 4096:
             return ActionOutcome("Malformed action path.", "DENY", None,
                                  "path must be a bounded string")
+        flow_mode = self.owner_id == "workspace_read" and self.authority.mode() == "flow"
         if (self.owner_id == "workspace_read"
-                and path_value.strip() in {"", "/"}
+                and (path_value.strip() == "" or (not flow_mode and path_value.strip() == "/"))
                 and (action_id in {"workspace.files.list", "workspace.files.search"}
                      or (action_id == "workspace.files.read" and "query" in arguments))):
             path_value = "."
             arguments = {**arguments, "path": "."}
         try:
-            target = str(self._lexical_target(path_value))
+            target = str(self._lexical_target(path_value, allow_external=flow_mode))
         except (OSError, RuntimeError, ValueError) as exc:
             return ActionOutcome("ISySentinel denied this action.", "DENY", None,
                                  str(exc)[:300])
@@ -2686,12 +2794,12 @@ class LocalWorkspaceReadOwner:
             return ActionOutcome("ISySentinel denied this action.", "DENY", None, reason)
         try:
             if action_id in {"workspace.files.list", "workspace.config.list"}:
-                result = self._list(target)
+                result = self._list(target, flow_mode=flow_mode)
             elif action_id == "workspace.files.read" and "query" in arguments:
                 query = arguments.get("query", "")
                 if not isinstance(query, str) or not query.strip() or len(query) > 256:
                     raise ValueError("search text must contain 1–256 characters")
-                result = self._grep(query, Path(target))
+                result = self._grep(query, Path(target), flow_mode=flow_mode)
             elif action_id in {"workspace.files.read", "workspace.context.inject",
                                "workspace.config.read"}:
                 if action_id == "workspace.config.read":
@@ -2699,14 +2807,14 @@ class LocalWorkspaceReadOwner:
                     limit = (CONFIG_JSON_MAX_BYTES if relative == ".isycode/config.json"
                              else CONFIG_COMMAND_MAX_BYTES if relative.startswith(".isycode/commands/")
                              else CONFIG_MAX_BYTES)
-                    result = self._read(target, max_bytes=limit)
+                    result = self._read(target, max_bytes=limit, flow_mode=False)
                 else:
-                    result = self._read(target)
+                    result = self._read(target, flow_mode=flow_mode)
             else:
                 query = arguments.get("query", "")
                 if not isinstance(query, str) or not query.strip() or len(query) > 256:
                     raise ValueError("search query must contain 1–256 characters")
-                result = self._search(query.strip(), Path(target))
+                result = self._search(query.strip(), Path(target), flow_mode=flow_mode)
         except (OSError, ValueError) as exc:
             return ActionOutcome("Read action failed; no content was returned.",
                                  "ERROR", None, str(exc)[:300])
@@ -2730,16 +2838,28 @@ class LocalWorkspaceReadOwner:
                                  "durable action journal is unavailable")
         return ActionOutcome(result, "ALLOW", receipt, "verified local read-only operation")
 
-    def _lexical_target(self, path: str) -> Path:
+    def _lexical_target(self, path: str, *, allow_external: bool = False) -> Path:
         raw = Path(path).expanduser()
         candidate = raw if raw.is_absolute() else self.root / raw
         lexical = Path(os.path.abspath(candidate))
+        if allow_external:
+            return lexical.resolve(strict=False)
         if lexical != self.root and self.root not in lexical.parents:
             raise ValueError("path is outside the workspace root")
         return lexical
 
-    def _entries(self, directory: Path) -> list[Any]:
-        """Directory entries without following links (descriptor walk, or verified paths)."""
+    def _display_path(self, target: Path) -> str:
+        if target == self.root:
+            return "."
+        if self.root in target.parents:
+            return target.relative_to(self.root).as_posix()
+        return str(target)
+
+    def _entries(self, directory: Path, *, flow_mode: bool = False) -> list[Any]:
+        """Directory entries without following links in strict modes."""
+        if flow_mode:
+            with os.scandir(directory) as iterator:
+                return list(iterator)
         if use_verified_fs():
             return VerifiedFS(self.root).list_dir(directory)
         descriptor = self._open_directory(directory)
@@ -2797,29 +2917,94 @@ class LocalWorkspaceReadOwner:
                 return best if len(best) <= output_limit else result[:output_limit]
         return result[:output_limit] + "\n[output truncated]"
 
-    def _list(self, target: str) -> str:
+    def _list(self, target: str, *, flow_mode: bool = False) -> str:
         directory = Path(target)
         entries = []
-        for item in self._entries(directory):
-            if WorkspaceReadSystembility.is_sensitive_name(item.name) or item.is_symlink():
+        for item in self._entries(directory, flow_mode=flow_mode):
+            if WorkspaceReadSystembility.is_sensitive_name(item.name):
                 continue
-            kind = "directory" if item.is_dir(follow_symlinks=False) else "file"
+            if not flow_mode and item.is_symlink():
+                continue
+            kind = "directory" if item.is_dir(follow_symlinks=flow_mode) else "file"
             entries.append({"name": item.name, "kind": kind})
         entries.sort(key=lambda value: (value["kind"] != "directory", value["name"].casefold()))
         truncated = len(entries) > LIST_MAX_ENTRIES
         if truncated:
             entries = entries[:LIST_MAX_ENTRIES]
         payload: dict[str, Any] = {
-            "path": str(directory.relative_to(self.root) or "."),
+            "path": self._display_path(directory),
             "entries": entries,
         }
         if truncated:
             payload["truncated"] = True
         return json.dumps(payload, ensure_ascii=False)
 
-    def _read(self, target: str, *, max_bytes: int = MAX_FILE_BYTES) -> str:
+    def _read_image_bytes(self, target: str, *, max_bytes: int = 8 * 1024 * 1024,
+                          flow_mode: bool = False) -> tuple[str, str, bytes]:
         path = Path(target)
-        descriptor = self._open_file(path)
+        descriptor = self._open_file(path, flow_mode=flow_mode)
+        with os.fdopen(descriptor, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("selected path is not a regular file")
+            if info.st_nlink > 1:
+                raise ValueError(HARDLINK_READ_REASON)
+            if info.st_size > max_bytes:
+                raise ValueError("image exceeds the 8 MiB read limit")
+            data = stream.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            raise ValueError("image grew past the 8 MiB read limit")
+        if data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24 and data[12:16] == b"IHDR":
+            mime = "image/png"
+        elif (data.startswith(b"\xff\xd8\xff") and len(data) >= 4
+              and (data.endswith(b"\xff\xd9") or any(m in data for m in (b"\xff\xc0", b"\xff\xc2", b"\xff\xda")))):
+            mime = "image/jpeg"
+        elif data.startswith((b"GIF87a", b"GIF89a")) and len(data) >= 14:
+            mime = "image/gif"
+        elif data.startswith(b"RIFF") and len(data) >= 16 and data[8:12] == b"WEBP":
+            mime = "image/webp"
+        else:
+            raise ValueError("unsupported or invalid image format (expected PNG, JPEG, GIF, or WebP)")
+        return self._display_path(path), mime, data
+
+    def execute_image_read(self, path_value: str) -> tuple[ActionOutcome, str | None, bytes | None]:
+        """Authorize and read one image file (PNG/JPEG/GIF/WebP) up to 8 MiB."""
+        if self.owner_id != "workspace_read" or not isinstance(path_value, str) or len(path_value) > 4096:
+            return ActionOutcome("Malformed action path.", "DENY", None,
+                                 "path must be a bounded string"), None, None
+        flow_mode = self.authority.mode() == "flow"
+        try:
+            target = str(self._lexical_target(path_value, allow_external=flow_mode))
+        except (OSError, RuntimeError, ValueError) as exc:
+            return ActionOutcome("ISySentinel denied this action.", "DENY", None, str(exc)[:300]), None, None
+        request = ActionRequest("workspace.files.read", self.root, target, {"path": path_value},
+                                execution_owner="workspace_read")
+        try:
+            _, decision = self.gate.authorize(request)
+        except Exception:
+            return ActionOutcome("ISySentinel denied this action.", "DENY", None,
+                                 "authorization evaluation failed"), None, None
+        if not decision.allowed:
+            reason = "; ".join(f"{item.name}: {item.reason}" for item in decision.checks if not item.passed)
+            return ActionOutcome("ISySentinel denied this action.", "DENY", None, reason), None, None
+        try:
+            shown_path, mime, data = self._read_image_bytes(target, flow_mode=flow_mode)
+        except (OSError, ValueError) as exc:
+            return ActionOutcome("Read action failed; no content was returned.",
+                                 "ERROR", None, str(exc)[:300]), None, None
+        payload = json.dumps({"path": shown_path, "mime": mime, "bytes": len(data)}, ensure_ascii=False)
+        receipt = ActionReceipt(
+            "rcpt_" + secrets.token_hex(8), "workspace.files.read", request.digest, "ALLOW", "SUCCESS",
+            hashlib.sha256(payload.encode("utf-8")).hexdigest())
+        if not receipt.verify(request, payload):
+            return ActionOutcome("Receipt verification failed; result blocked.",
+                                 "DENY", None, "receipt verification failed"), None, None
+        self.gate.persist_receipt(request, receipt)
+        return ActionOutcome(payload, "ALLOW", receipt, ""), mime, data
+
+    def _read(self, target: str, *, max_bytes: int = MAX_FILE_BYTES, flow_mode: bool = False) -> str:
+        path = Path(target)
+        descriptor = self._open_file(path, flow_mode=flow_mode)
         with os.fdopen(descriptor, "rb") as stream:
             info = os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode):
@@ -2835,12 +3020,13 @@ class LocalWorkspaceReadOwner:
             text = data.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ValueError("binary or non-UTF-8 files are not returned to chat") from exc
-        return json.dumps({"path": path.relative_to(self.root).as_posix(), "text": text},
+        return json.dumps({"path": self._display_path(path), "text": text},
                           ensure_ascii=False)
 
-    def _search(self, query: str, start: Path) -> str:
+    def _search(self, query: str, start: Path, *, flow_mode: bool = False) -> str:
         from collections import deque
         pending = deque([start])
+        seen_dirs: set[tuple[int, int]] = set()
         hits: list[dict[str, str]] = []
         visited = 0
         entries_seen = 0
@@ -2852,15 +3038,26 @@ class LocalWorkspaceReadOwner:
                 truncated = True
                 break
             directory = pending.popleft()
+            if flow_mode:
+                try:
+                    dstat = directory.stat()
+                    key = (dstat.st_dev, dstat.st_ino)
+                    if key in seen_dirs:
+                        continue
+                    seen_dirs.add(key)
+                except OSError:
+                    continue
             try:
-                listed = sorted(self._entries(directory), key=lambda item: item.name.casefold())
+                listed = sorted(self._entries(directory, flow_mode=flow_mode), key=lambda item: item.name.casefold())
             except OSError:
                 continue
             visited += 1
             for child in listed:
-                if WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink():
+                if WorkspaceReadSystembility.is_sensitive_name(child.name):
                     continue
-                is_dir = child.is_dir(follow_symlinks=False)
+                if not flow_mode and child.is_symlink():
+                    continue
+                is_dir = child.is_dir(follow_symlinks=flow_mode)
                 if is_dir and _is_skipped_scan_directory(child.name):
                     continue
                 entries_seen += 1
@@ -2868,12 +3065,12 @@ class LocalWorkspaceReadOwner:
                     truncated = True
                     break
                 path = directory / child.name
-                rel_posix = path.relative_to(self.root).as_posix()
-                matched = (folded in rel_posix.casefold() if match_rel
+                displayed = self._display_path(path)
+                matched = (folded in displayed.casefold() if match_rel
                            else folded in child.name.casefold())
                 if matched:
                     hits.append({
-                        "path": str(path.relative_to(self.root)),
+                        "path": displayed,
                         "kind": "directory" if is_dir else "file",
                     })
                     if len(hits) >= SEARCH_MAX_MATCHES:
@@ -2887,11 +3084,12 @@ class LocalWorkspaceReadOwner:
                            "directories_scanned": visited, "truncated": truncated},
                           ensure_ascii=False)
 
-    def _grep(self, query: str, start: Path) -> str:
+    def _grep(self, query: str, start: Path, *, flow_mode: bool = False) -> str:
         """Literal, case-insensitive line search through descriptor-safe reads."""
         from collections import deque
         folded = query.casefold()
         matches: list[dict[str, Any]] = []
+        seen_dirs: set[tuple[int, int]] = set()
         files = scanned_bytes = 0
         truncated = False
         if start != self.root and not start.is_dir():
@@ -2907,12 +3105,13 @@ class LocalWorkspaceReadOwner:
                     truncated = True
                     break
                 try:
-                    descriptor = self._open_file(path)
+                    descriptor = self._open_file(path, flow_mode=flow_mode)
                 except OSError:
                     continue
                 with os.fdopen(descriptor, "rb") as stream:
                     info = os.fstat(stream.fileno())
-                    if (not stat.S_ISREG(info.st_mode) or info.st_nlink > 1
+                    if (not stat.S_ISREG(info.st_mode)
+                            or (not flow_mode and info.st_nlink > 1)
                             or info.st_size > MAX_FILE_BYTES):
                         continue
                     data = stream.read(MAX_FILE_BYTES + 1)
@@ -2926,7 +3125,7 @@ class LocalWorkspaceReadOwner:
                     continue
                 for number, line in enumerate(text.splitlines(), 1):
                     if folded in line.casefold():
-                        matches.append({"path": str(path.relative_to(self.root)),
+                        matches.append({"path": self._display_path(path),
                                         "line": number, "text": line.strip()[:300]})
                         if len(matches) >= GREP_MAX_MATCHES:
                             truncated = True
@@ -2935,17 +3134,27 @@ class LocalWorkspaceReadOwner:
                     break
                 continue
             directory = pending.popleft()
+            if flow_mode:
+                try:
+                    dstat = directory.stat()
+                    key = (dstat.st_dev, dstat.st_ino)
+                    if key in seen_dirs:
+                        continue
+                    seen_dirs.add(key)
+                except OSError:
+                    continue
             try:
-                children = sorted(self._entries(directory), key=lambda item: item.name.casefold())
+                children = sorted(self._entries(directory, flow_mode=flow_mode), key=lambda item: item.name.casefold())
             except OSError:
                 continue
             for child in children:
-                if (WorkspaceReadSystembility.is_sensitive_name(child.name) or child.is_symlink()
+                if (WorkspaceReadSystembility.is_sensitive_name(child.name)
+                        or (not flow_mode and child.is_symlink())
                         or _is_skipped_scan_directory(child.name)):
                     continue
-                if child.is_dir(follow_symlinks=False):
+                if child.is_dir(follow_symlinks=flow_mode):
                     pending.append(directory / child.name)
-                elif child.is_file(follow_symlinks=False):
+                elif child.is_file(follow_symlinks=flow_mode):
                     candidates.append(directory / child.name)
         return json.dumps({"query": query, "matches": matches, "files_scanned": files,
                            "truncated": truncated}, ensure_ascii=False)
@@ -2966,7 +3175,13 @@ class LocalWorkspaceReadOwner:
             os.close(descriptor)
             raise
 
-    def _open_file(self, path: Path) -> int:
+    def _open_file(self, path: Path, *, flow_mode: bool = False) -> int:
+        if flow_mode:
+            target = path.resolve(strict=False)
+            flags = (os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+                     | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+            return os.open(target, flags)
         if use_verified_fs():
             return VerifiedFS(self.root).open_read(path)
         parent_fd = self._open_directory(path.parent)
@@ -2981,7 +3196,7 @@ class LocalWorkspaceReadOwner:
             os.close(parent_fd)
 
 
-__all__ = ["ActionOutcome", "ActionReceipt", "CHAT_WORKSPACE_TOOLS",
+__all__ = ["ActionOutcome", "ActionReceipt", "CHAT_WORKSPACE_TOOLS", "workspace_tools_for_mode",
            "LocalWorkspaceReadOwner", "MACHINE_READ_ACTIONS", "ProductActionGate",
            "ProviderNetworkSystembility",
            "RemoteReadSystembility", "SessionDeleteOwner", "SessionDeleteSystembility",

@@ -20,7 +20,19 @@ from typing import Callable
 from isycode.egress import EgressDenied, open_reviewed, review_destination
 from isycode.turn_control import TransportRetry, tool_arguments_complete
 
-DEFAULT_STREAM_TIMEOUT_S = None
+import os
+
+def _default_stream_timeout() -> float | None:
+    raw = os.environ.get("ISYCODE_STREAM_TIMEOUT_S", "").strip()
+    if not raw:
+        return 120.0
+    try:
+        value = float(raw)
+        return value if value > 0 else None
+    except ValueError:
+        return 120.0
+
+DEFAULT_STREAM_TIMEOUT_S = _default_stream_timeout()
 
 
 class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):

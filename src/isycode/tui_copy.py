@@ -125,12 +125,12 @@ class CopyMenuScreen(Dialog):
 
     dialog_title = "Copy text"
     dialog_width = "narrow"
-    dialog_default_action = "copy-selection"
 
     def __init__(self, selected: str, whole: str):
         super().__init__()
         self.selected = selected
         self.whole = whole
+        self.dialog_default_action = "copy-selection" if selected else "copy-whole"
 
     def dialog_note(self) -> str:
         return tr("Only the selected characters are copied. Whole-box copy is a separate choice.")
@@ -144,7 +144,7 @@ class CopyMenuScreen(Dialog):
         return (
             DialogAction("copy-selection", tr("Copy selection"), "primary",
                          focused=bool(self.selected), disabled=not self.selected),
-            DialogAction("copy-whole", tr("Copy whole box"),
+            DialogAction("copy-whole", tr("Copy whole"),
                          focused=not self.selected, disabled=not self.whole),
             DialogAction("copy-cancel", tr("Cancel")),
         )

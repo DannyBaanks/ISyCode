@@ -264,3 +264,22 @@ def test_private_file_created_with_default_token_owner_is_protected_for_user(tmp
     assert security.ConvertSidToStringSid(descriptor.GetSecurityDescriptorOwner()) == \
         security.ConvertSidToStringSid(user)
     assert store.private(path)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX XDG_STATE_HOME symlink test')
+def test_state_index_default_root_resolves_symlinked_xdg_state_home(tmp_path, monkeypatch):
+    from isycode.state_index import StateIndex
+    from isycode.workspace_authority import WorkspaceAuthority
+
+    real_state = tmp_path / 'real_state'
+    real_state.mkdir()
+    link_state = tmp_path / 'link_state'
+    link_state.symlink_to(real_state, target_is_directory=True)
+    monkeypatch.delenv('ISYCODE_STATE_HOME', raising=False)
+    monkeypatch.setenv('XDG_STATE_HOME', str(link_state))
+
+    assert StateIndex.default_root() == real_state.resolve() / 'isycode'
+    proj = tmp_path / 'proj'
+    proj.mkdir()
+    WorkspaceAuthority(proj).set_mode('classic')
+    assert (real_state / 'isycode').exists()

@@ -287,10 +287,35 @@ def test_each_turn_starts_with_a_fresh_budget(chat, monkeypatch, capsys):
     async def scenario(app, pilot):
         await app._run_chat("first")
         assert len(calls) == 1 + budget
-        assert "Recovery stopped after 3 automatic attempts" in transcript_text(app)
+        assert f"Recovery stopped after {budget} automatic attempts" in transcript_text(app)
         await app._run_chat("second")
         assert app._history[-1]["content"] == "ok"
         assert len(calls) == 1 + budget + 2
+
+    with capsys.disabled():
+        run_app(scenario)
+
+
+def test_retries_do_not_leave_orphaned_message_clocks(chat, monkeypatch, capsys):
+    root, waits = chat
+    attempts = 0
+
+    async def complete(provider, messages, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            kwargs["on_chunk"]("content", f"partial attempt {attempts}")
+            raise StreamError("provider connection failed")
+        kwargs["on_chunk"]("content", "final answer")
+        return {"text": "final answer", "tool_calls": [], "usage": {"prompt_tokens": 1, "completion_tokens": 1}}
+
+    monkeypatch.setattr("isycode.tui.provider_complete", complete)
+
+    async def scenario(app, pilot):
+        from isycode.tui_widgets import ChatArea
+        await app._run_chat("hello")
+        clocks = list(app.query_one(ChatArea).query(".message-clock"))
+        assert len(clocks) == 1
 
     with capsys.disabled():
         run_app(scenario)

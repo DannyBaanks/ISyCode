@@ -72,6 +72,14 @@ Se añaden al modelo del roadmap (sección 3):
 - **Borrado masivo o fraccionado.** Mitigación: el mismo ledger compartido; Flow no sube límites.
 - **Carpetas amplias** (home, raíz). Flow no se activa en silencio; las acciones vuelven a preguntar.
 
+## Actualización v2 (uso libre en computadora — 2026-11-17)
+
+Por decisión explícita de Danny, **Flow** evoluciona respecto a v1 para funcionar como agente libre en toda la computadora (análogo a AGY / Codex / Claude Code), mientras **Classic** se mantiene acotado al workspace y **Security** permanece en permisos explícitos:
+
+- **Lectura/escritura/búsqueda:** en Flow aceptan rutas del workspace y rutas del host (`~` o absolutas), respetando los bloqueos de archivos sensibles/credenciales (`.env`, `.ssh`, llaves) y `.isyroot`. Los cambios dentro del workspace siguen registrándose en `TurnJournal` para `/undo`.
+- **Comandos (`workspace_run`):** en Flow se ejecutan directamente en el host (con visibilidad completa del sistema de archivos, `PATH` real, red y cualquier `cwd` válido, y `stdin=/dev/null`). Classic y Security mantienen Bubblewrap sin red ni acceso al host.
+- **MCPs locales configurados (`~/.config/isycode/mcp.json`):** en Flow cuentan con concesión implícita y ejecución silenciosa sin diálogo por llamada (salvo revocación explícita); Classic y Security siguen pidiendo confirmación.
+
 ## Alternativas rechazadas
 
 - **Relajar Classic.** Rompe el contrato de ADR 0005 y la promesa a quien ya lo usa.

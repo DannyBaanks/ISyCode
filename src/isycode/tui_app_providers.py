@@ -85,6 +85,22 @@ from rich.text import Text
 class ProviderMixin:
     """Provider menu, model selection, and saved keys."""
 
+    def _provider_credential_status(self, key: str, state: str | None = None) -> tuple[str, str]:
+        """Return (raw_state, human_status) for one preset provider without reading its secret."""
+        preset = PRESETS[key]
+        resolved_state = state if state is not None else provider_credential_state(key)
+        if resolved_state == "missing":
+            status = tr("needs {env}", env=preset["key_env"])
+        else:
+            status = tr({
+                "environment": "key in environment", "saved": "key saved",
+                "stored": "legacy key saved", "legacy": "legacy key",
+                "optional": "no key required", "subscription": "subscription",
+                "signed-in": "Grok sign-in", "session": "key for this session",
+                "unavailable": "credential store unavailable",
+            }.get(resolved_state, resolved_state))
+        return resolved_state, status
+
     def _open_provider_menu(self) -> None:
         active = selected_provider_name()
         entries = []
@@ -95,19 +111,8 @@ class ProviderMixin:
                 entries.append(self._entry("Popular" if section == "popular" else "Providers", "section"))
             if key and key in PRESETS:
                 preset = PRESETS[key]
-                state = provider_credential_state(key)
-                if key == "openai" and active == "chatgpt":
-                    state = "subscription"
-                if state == "missing":
-                    status = tr("needs {env}", env=preset["key_env"])
-                else:
-                    status = tr({
-                        "environment": "key in environment", "saved": "key saved",
-                        "stored": "legacy key saved", "legacy": "legacy key",
-                        "optional": "no key required", "subscription": "subscription",
-                        "signed-in": "Grok sign-in", "session": "key for this session",
-                        "unavailable": "credential store unavailable",
-                    }.get(state, state))
+                override = "subscription" if (key == "openai" and active == "chatgpt") else None
+                _, status = self._provider_credential_status(key, state=override)
                 current = key == active or (key == "openai" and active == "chatgpt")
                 mark = "*" if current else " "
                 note = tr("  ·  Current") if current else ""
@@ -428,8 +433,8 @@ class ProviderMixin:
         self._render_menu("reasoning",
                           tr("Reasoning · {model}", model=model_display_name(model)), entries)
 
-    async def _load_account_models(self, name: str | None = None) -> None:
-        """Opening Models requests the active catalog through its existing owner."""
+    async def _fetch_account_models(self, name: str | None = None) -> list[dict]:
+        """Fetch live models for one provider, update cached catalog, and return rows."""
         name = name or selected_provider_name()
         try:
             provider = Provider(
@@ -512,6 +517,11 @@ class ProviderMixin:
             self._account_model_catalogs = catalogs
         self._account_models_loading = False
         self._account_model_status = rows[0]["label"] if not models_available else "Account catalog loaded · choose a concrete model"
+        return rows
+
+    async def _load_account_models(self, name: str | None = None) -> None:
+        """Opening Models requests the active catalog through its existing owner."""
+        await self._fetch_account_models(name)
         if self._menu_mode == "model_account" or (self._menu_mode == "branch" and self._menu_title == "Models"):
             self._render_menu("branch", "Models", self._branch_entries("models"))
 
@@ -588,29 +598,74 @@ class ProviderMixin:
             return tr("not set")
         return f"{PRESETS[slot['provider']]['label']} / {slot['model']}"
 
+    def _gus_provider_rows(self) -> list[dict[str, str]]:
+        """Shared provider rows for both Settings → GUS model and GUS's in-dialog switcher."""
+        rows: list[dict[str, str]] = []
+        for section, key, label, blurb in gus_slot.gus_provider_catalog():
+            state = gus_slot.provider_credential_state(key)
+            _, status = self._provider_credential_status(key, state=state)
+            ready_mark = "✓ " if state in gus_slot.READY_CREDENTIALS else "  "
+            detail = f"{tr(blurb)}. {status}." if blurb else status
+            rows.append({
+                "section": section,
+                "key": key,
+                "label": f"{ready_mark}{label}  ·  {status}",
+                "detail": detail,
+            })
+        return rows
+
     def _open_gus_slot_menu(self) -> None:
-        """Settings → GUS model: providers GUS can use with keys the user already set up."""
+        """Settings → GUS model: same provider catalog as chat, sharing API keys and subscriptions."""
         entries = [self._entry(
             tr("Current · {model}", model=self._gus_slot_label()), "info", "",
             "GUS never falls back to the chat model. It needs tool calls and a window of 32k tokens or more.")]
-        providers = gus_slot.gus_providers()
-        for name in providers:
-            ready = provider_supports_tools(name)
+        group = ""
+        for row in self._gus_provider_rows():
+            if row["section"] != group:
+                group = row["section"]
+                entries.append(self._entry("Popular" if group == "popular" else "Providers", "section"))
             entries.append(self._entry(
-                PRESETS[name]["label"], "gus_slot_provider" if ready else "info", name,
-                "" if ready else tr("Tool calls are off for this provider; GUS needs them to edit."),
+                row["label"],
+                "gus_slot_provider", row["key"],
+                row["detail"],
                 translate=False))
-        if not providers:
-            entries.append(self._entry(
-                "No provider is ready yet", "info", "",
-                "Add a key in Providers & models, or start a local model server (Ollama, LM Studio, llama.cpp)."))
         if self._menu_mode != "gus_slot":
             self._menu_stack.append((self._menu_mode, self._menu_title, self._menu_entries))
         self._render_menu("gus_slot", tr("GUS model"), entries)
 
+    def _open_gus_model_picker(self, provider: str) -> None:
+        """Open the full scoped ModelsScreen picker for GUS (with refresh & + Add)."""
+        self._models_scope = provider
+        self._models_target = "gus"
+        self._render_menu("branch", "Models", self._branch_entries("models"))
+
+    def _open_gus_provider(self, provider: str) -> None:
+        """Open GUS models directly when credentials are ready, or share-connect a key first."""
+        state = gus_slot.provider_credential_state(provider)
+        if state in {"missing", "unavailable"}:
+            self._close_menu()
+            self.run_worker(
+                self._connect_provider_key(provider, then_models=True, for_gus=True),
+                exclusive=True, group="credentials")
+            return
+        if state == "saved" and not self._saved_key_usable(provider):
+            self._close_menu()
+            self.run_worker(
+                self._use_saved_key_then_models(provider, for_gus=True),
+                exclusive=True, group="credentials")
+            return
+        self._open_gus_model_picker(provider)
+
     def _open_gus_models_menu(self, provider: str) -> None:
+        live_rows = getattr(self, "_account_model_catalogs", {}).get(provider) or []
+        live_ids = [
+            row["value"].split("|", 1)[1]
+            for row in live_rows
+            if isinstance(row, dict) and row.get("kind") == "model" and "|" in str(row.get("value", ""))
+        ]
+        model_ids = list(dict.fromkeys([*gus_slot.gus_model_choices(provider), *live_ids]))
         entries = []
-        for model in gus_slot.gus_model_choices(provider):
+        for model in model_ids:
             check = gus_slot.check_gus_model(provider, model)
             label = f"{model} · {self._window_label(check.window)}"
             entries.append(self._entry(
@@ -672,6 +727,11 @@ class ProviderMixin:
             self._clear_pending_plan()
         self._paint_idea_box()
         self._refresh_model_button()
+        ctx_file = self._session_context_file()
+        if ctx_file.has_entries() or self._history:
+            ctx_file.append_model_switch(name, provider.model)
+            self._session_context_initialized = True
+            self._session_context_digest = ctx_file.file_digest()
         if provider.configured():
             self._append("  " + tr("Selected for this session · {model_display_label}", model_display_label=self._model_display_label(name, provider.model)), GREEN)
             self._close_menu()
@@ -739,7 +799,7 @@ class ProviderMixin:
             owner.authority.set_grant(action, enabled=True, targets=sorted(targets))
         return True
 
-    async def _save_key_flow(self, service: str, secret: str) -> bool:
+    async def _save_key_flow(self, service: str, secret: str, *, select_chat: bool = True) -> bool:
         label = self._credential_label(service)
         try:
             owner = CredentialOwner(self._workspace_root, WorkspaceAuthority(self._workspace_root),
@@ -769,7 +829,7 @@ class ProviderMixin:
             self._append("  " + tr("API key not saved · {value}", value=outcome.reason[:180]), YELLOW)
             return False
         self._append("  " + tr("{label} API key saved · receipt {receipt_id}", label=label, receipt_id=outcome.receipt.receipt_id), GREEN)
-        if service in PRESETS:
+        if select_chat and service in PRESETS:
             self._select_provider(service)
         return True
 
@@ -884,7 +944,13 @@ class ProviderMixin:
         use = grants.get("credentials.use", {})
         return displayed_on("credentials.use", use, service in use.get("targets", []))
 
-    async def _connect_provider_key(self, service: str, *, then_models: bool = True) -> None:
+    async def _connect_provider_key(
+        self,
+        service: str,
+        *,
+        then_models: bool = True,
+        for_gus: bool = False,
+    ) -> None:
         """Explain where the key comes from, take it, save it through the owner."""
         preset = PRESETS.get(service, {})
         keyring = keyring_available()
@@ -895,21 +961,28 @@ class ProviderMixin:
             self._append("  " + tr("No API key was entered; nothing was saved."), MUTED)
             return
         if keyring:
-            usable = await self._save_key_flow(service, secret)
+            usable = (await self._save_key_flow(service, secret, select_chat=False)
+                      if for_gus else await self._save_key_flow(service, secret))
         elif service in PRESETS:
             use_session_key(service, secret)
             self._append("  " + tr("{name} key kept in memory for this session only; nothing was saved.",
                                    name=self._credential_label(service)), GREEN)
-            usable = self._select_provider(service)
+            usable = True if for_gus else self._select_provider(service)
         else:
             self._append("  " + tr("No secure OS keyring is available here; nothing was saved."), YELLOW)
             usable = False
         if usable and then_models and service in PRESETS:
-            self._open_scoped_models(service)
+            if for_gus:
+                self._open_gus_model_picker(service)
+            else:
+                self._open_scoped_models(service)
 
-    async def _use_saved_key_then_models(self, service: str) -> None:
+    async def _use_saved_key_then_models(self, service: str, *, for_gus: bool = False) -> None:
         if await self._grant_key_use(service):
-            self._open_scoped_models(service)
+            if for_gus:
+                self._open_gus_model_picker(service)
+            else:
+                self._open_scoped_models(service)
 
     def _menu_provider_auth_methods(self, entry: dict[str, str | bool]) -> None:
         self._open_auth_methods()
@@ -1062,6 +1135,11 @@ class ProviderMixin:
     def _menu_model(self, entry: dict[str, str | bool]) -> None:
         value = entry["value"]
         provider_name, model_name = value.split("|", 1)
+        if getattr(self, "_models_target", "chat") == "gus":
+            self._models_target = "chat"
+            self._models_scope = None
+            self._choose_gus_model(f"{provider_name}\n{model_name}")
+            return
         from isycode.reasoning_options import reasoning_levels
         level = entry.get("reasoning")
         if isinstance(level, str) and (level == "default"

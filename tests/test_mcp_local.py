@@ -350,3 +350,23 @@ def test_mcp_confirm_screen_cancels_by_default():
     asyncio.run(scenario(lambda pilot: pilot.press("enter")))
     asyncio.run(scenario(lambda pilot: pilot.click("#local-mcp-approve")))
     assert results == [False, False, True]
+
+
+def test_local_mcp_session_instructions_exposed(tmp_path):
+    from types import SimpleNamespace
+    from isycode.mcp_local import LocalMCPOwner, MCPSession, ServerConfig
+    from isycode.approvals import ActionApprovalStore
+    from isycode.workspace_authority import WorkspaceAuthority
+
+    owner = LocalMCPOwner(tmp_path, WorkspaceAuthority(tmp_path), ActionApprovalStore())
+    proc = SimpleNamespace(returncode=None)
+    session = MCPSession(
+        ServerConfig("isymcp-hub", ("isymcp-hub", "connect")),
+        proc,
+        tools=[{"name": "hub_discover", "description": "discover", "inputSchema": {"type": "object"}}],
+        instructions="Use hub_discover -> hub_describe -> hub_execute for craft-anything.",
+    )
+    owner.sessions["isymcp-hub"] = session
+    rendered = owner.session_instructions()
+    assert "[isymcp-hub]" in rendered
+    assert "craft-anything" in rendered

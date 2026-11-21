@@ -94,6 +94,12 @@ def test_a_hostile_file_shown_in_the_preview_cannot_drive_the_terminal(tmp_path,
     (root / "evil.txt").write_text("SEEN " + HOSTILE + "\n", encoding="utf-8")  # narrow preview pane
 
     async def scenario(app, pilot):
+        for _ in range(100):
+            if app._workspace is not None:
+                break
+            await pilot.pause(0.05)
+        if not app._rail_visible:
+            app.action_toggle_sidebar()
         app._set_rail_view("files")
         # Inline preview is an opt-in preference; display it to test sanitization.
         app._apply_sidebar_file_preview(True)
@@ -261,8 +267,9 @@ def test_network_down_is_retried_briefly_then_stops_without_changing_authority(t
         from isycode.tui_widgets import ChatArea
         shown = "\n".join(plain_text(w) for w in app.query_one(ChatArea).walk_children()
                           if hasattr(w, "render"))
-        assert waits == [continuity_recovery.POLICIES["NETWORK"].delay_s] * 3
-        assert "Recovery stopped after 3 automatic attempts" in shown
+        expected = continuity_recovery.POLICIES["NETWORK"].max_attempts
+        assert waits == [continuity_recovery.POLICIES["NETWORK"].delay_s] * expected
+        assert f"Recovery stopped after {expected} automatic attempts" in shown
         assert app.query_one(PromptArea).text == "hello"
         assert WorkspaceAuthority(app._workspace_root).policy() == before
 

@@ -37,7 +37,7 @@ MAX_TURN_PATHS = 4000
 MAX_KEPT_TURNS = 20
 
 _LOCK = threading.Lock()
-_ACTIVE: dict[str, "TurnJournal"] = {}
+_ACTIVE: dict[tuple[str, str], "TurnJournal"] = {}
 _PINNED: ContextVar["TurnJournal | None"] = ContextVar("isycode_flow_turn", default=None)
 
 
@@ -80,10 +80,11 @@ def _write_private(path: Path, payload: bytes) -> None:
 class TurnJournal:
     """Preimages and final hashes of the paths one turn changed."""
 
-    def __init__(self, root: Path, turn_id: str, directory: Path) -> None:
+    def __init__(self, root: Path, turn_id: str, directory: Path, *, scope: str = "") -> None:
         self.root = Path(root).resolve()
         self.turn_id = turn_id
         self.directory = directory
+        self.scope = str(scope or "")
         self.entries: dict[str, dict[str, Any]] = {}
         self.preimage_bytes = 0
         self.started_at = 0.0
@@ -97,35 +98,54 @@ class TurnJournal:
         return Path(base or (state_root() / "turns")).expanduser() / key
 
     @classmethod
-    def begin(cls, root: Path, *, base: Path | None = None) -> "TurnJournal":
-        """Start recording a turn of ``root``; an unfinished earlier turn is closed."""
+    def begin(cls, root: Path, *, base: Path | None = None, scope: str = "") -> "TurnJournal":
+        """Start recording a turn of ``root`` (isolated per conversation scope)."""
         turn_id = f"turn_{int(time.time() * 1000):013d}_{secrets.token_hex(4)}"
         directory = _private_dir(cls.base_directory(root, base) / turn_id)
-        journal = cls(root, turn_id, directory)
+        scope_key = str(scope or "")
+        journal = cls(root, turn_id, directory, scope=scope_key)
         journal.started_at = time.time()
         journal._save()
+        active_key = (_root_key(root), scope_key)
         with _LOCK:
-            previous = _ACTIVE.get(_root_key(root))
-            _ACTIVE[_root_key(root)] = journal
+            previous = _ACTIVE.get(active_key)
+            _ACTIVE[active_key] = journal
         if previous is not None and previous is not journal:
             previous._close()
         journal._prune()
         return journal
 
     @classmethod
-    def active(cls, root: Path) -> "TurnJournal | None":
-        """The turn that records changes made from here: the pinned one, else the open one."""
+    def active(cls, root: Path, *, scope: str | None = None) -> "TurnJournal | None":
+        """The turn that records changes made from here: the pinned one, else an open one."""
         pinned = _PINNED.get()
         if pinned is not None and pinned.root == Path(root).resolve():
             return pinned
+        rk = _root_key(root)
         with _LOCK:
-            return _ACTIVE.get(_root_key(root))
+            if scope is not None:
+                match = _ACTIVE.get((rk, str(scope)))
+                if match is not None:
+                    return match
+            global_match = _ACTIVE.get((rk, ""))
+            if global_match is not None:
+                return global_match
+            return next((j for (r, _), j in _ACTIVE.items() if r == rk), None)
 
     @classmethod
-    def running(cls, root: Path) -> "TurnJournal | None":
-        """The open turn of ``root`` in this process, ignoring any pin."""
+    def running(cls, root: Path, *, scope: str | None = None) -> "TurnJournal | None":
+        """The open turn of ``root`` in this process (scoped to one lane when provided)."""
+        rk = _root_key(root)
         with _LOCK:
-            return _ACTIVE.get(_root_key(root))
+            if scope is None:
+                global_match = _ACTIVE.get((rk, ""))
+                if global_match is not None:
+                    return global_match
+                return next((j for (r, _), j in _ACTIVE.items() if r == rk), None)
+            scoped = _ACTIVE.get((rk, str(scope)))
+            if scoped is not None:
+                return scoped
+            return _ACTIVE.get((rk, ""))
 
     def pin(self):
         """Record work started from this context into this turn; returns the reset token."""
@@ -179,9 +199,10 @@ class TurnJournal:
 
     def finish(self) -> None:
         """The turn ended; its record stays for review and undo."""
+        active_key = (_root_key(self.root), self.scope)
         with _LOCK:
-            if _ACTIVE.get(_root_key(self.root)) is self:
-                del _ACTIVE[_root_key(self.root)]
+            if _ACTIVE.get(active_key) is self:
+                del _ACTIVE[active_key]
         self._close()
 
     def _close(self) -> None:
