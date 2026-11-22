@@ -90,6 +90,11 @@ def test_resume_shows_idea_box_and_new_conversation_clears_it():
         def list_conversations(self):
             return SimpleNamespace(decision="ALLOW", reason=""), []
 
+        def manage(self, operation, session_id, state):
+            # The draft timer/on_unmount may save the resumed state depending
+            # on suite timing; the fake must support that lifecycle too.
+            return SimpleNamespace(decision="ALLOW", reason=""), session_id
+
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:

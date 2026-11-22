@@ -326,6 +326,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._idea_backlog: list[str] = []
         from isycode.image_attachments import ImageAttachments
         self._shell_jobs = {}
+        self._foreground_shell_job_id = None
         self._shell_mode = False
         self._command_run_lock = asyncio.Lock()
         self._image_attachments = ImageAttachments()

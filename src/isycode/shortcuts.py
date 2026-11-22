@@ -24,7 +24,7 @@ APP_SHORTCUTS: tuple[Shortcut, ...] = (
     Shortcut("ctrl+p", "toggle_commands_menu", "Commands", "Open the semantic command palette"),
     Shortcut("alt+c,f2", "open_copy_menu", "Copy text",
              "Open the copy menu for the focused message or preview", True),
-    Shortcut("ctrl+b", "toggle_sidebar", "Toggle sidebar", "Show or hide the workspace rail"),
+    Shortcut("ctrl+b", "toggle_sidebar", "Background / sidebar", "Move the live foreground process to ShellBox; otherwise show or hide the workspace rail"),
     Shortcut("ctrl+l", "focus_input", "Focus composer", "Move focus to the chat composer"),
     Shortcut("shift+tab", "cycle_role", "Next role",
              "Cycle the role in the main chat or composer", True),

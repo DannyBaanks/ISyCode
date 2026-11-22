@@ -62,7 +62,7 @@ COMMAND_TOOL = {"type": "function", "function": {
     "parameters": {"type": "object", "properties": {
         "argv": {"type": "array", "items": {"type": "string"}, "minItems": 1,
                  "description": "Program and arguments, e.g. [\"python3\", \"-m\", \"pytest\", \"-q\"]."},
-        "background": {"type": "boolean", "description": "TUI only: return a process ID immediately after review; inspect or stop it in Ctrl+S ShellBox. Existing timeout and sandbox still apply."},
+        "background": {"type": "boolean", "description": "TUI only: return a process ID immediately after review; inspect or stop it in Ctrl+S ShellBox. Ctrl+B also detaches a live foreground command without killing it. Existing timeout and sandbox still apply."},
         "cwd": {"type": "string", "description": "Workspace-relative folder; defaults to the root."},
         "scope": {"type": "string", "description": "Optional workspace-relative folder to stage in isolation for a small project inside a large workspace. Paths remain workspace-relative; siblings are not mounted."},
         "max_stage_bytes": {"type": "integer", "minimum": 1, "maximum": COMMAND_MAX_STAGE_BYTES,

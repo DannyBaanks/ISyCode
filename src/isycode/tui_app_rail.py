@@ -727,6 +727,10 @@ class RailMixin:
                     f"Workspace read failed closed ({type(exc).__name__}).")
 
     def action_toggle_sidebar(self) -> None:
+        # Ctrl+B is contextual: a live foreground command goes to ShellBox;
+        # otherwise it keeps its usual sidebar meaning.
+        if self._detach_foreground_shell_job():
+            return
         self._rail_visible = not self._rail_visible
         self._rail_visibility_override = self._rail_visible
         self._rail_auto_hidden = False

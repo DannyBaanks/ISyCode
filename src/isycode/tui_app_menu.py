@@ -177,7 +177,7 @@ async def _run_cmd(app: "TUIApp", arg: str) -> None:
 _TOUR_LINES = (
     "  Tour · the lay of the land",
     "  1. The composer at the bottom is where you talk. Enter sends, Ctrl+J adds a newline.",
-    "  2. Ctrl+B opens the sidebar: overview, files, skills and providers live there.",
+    "  2. Ctrl+B sends a live foreground process to ShellBox; otherwise it opens the sidebar.",
     "  3. The command bar shows your model (▾) — click it to switch provider or model family.",
     "  4. Ctrl+P opens the command palette; Ctrl+Shift+F searches every saved conversation.",
     "  5. Edits, commands and commits ask before they run. Approving a batch applies each",

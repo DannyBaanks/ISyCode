@@ -52,7 +52,7 @@ class QuickHelpScreen(ModalScreen[None]):
             with VerticalScroll(id="quick-help-scroll"):
                 # Navigation
                 yield Static(tr("Navigation"), classes="help-group-title")
-                yield HelpRow("Ctrl+B", tr("Toggle Workspace Rail / sidebar"))
+                yield HelpRow("Ctrl+B", tr("Background the live process / toggle sidebar"))
                 yield HelpRow("Ctrl+L", tr("Move focus to chat composer"))
                 yield HelpRow("Ctrl+P", tr("Open semantic command palette"))
                 yield HelpRow("Ctrl+F", tr("Search rendered console output"))

@@ -2731,6 +2731,12 @@ msgstr "思考中…"
 msgid "Toggle Workspace Rail / sidebar"
 msgstr "切换工作区侧栏"
 
+msgid "Background the live process / toggle sidebar"
+msgstr "将前台进程转入后台 / 切换侧栏"
+
+msgid "{job} moved to background · Ctrl+S opens ShellBox"
+msgstr "{job} 已转入后台 · Ctrl+S 打开 ShellBox"
+
 msgid "Tools & Clipboard"
 msgstr "工具与剪贴板"
 
