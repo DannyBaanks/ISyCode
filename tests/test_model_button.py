@@ -21,11 +21,14 @@ async def test_model_button_opens_chatgpt_account_model_picker(tmp_path, monkeyp
     from test_daily_tui import configure
     original_models = Provider.models
     root = configure(tmp_path, monkeypatch)
+    # Anchor workspace root to the project directory so the app discovers
+    # the same workspace as the test authority.
+    (root / ".isyroot").write_text("")
     from isycode.workspace_authority import WorkspaceAuthority
     from isycode.tui import ModelsScreen
 
-    executable = tmp_path / "codex"
-    executable.write_text("#!/bin/sh\nexit 0\n")
+    executable = tmp_path / "codex.bat"
+    executable.write_text("@echo off\nexit 0\n")
     executable.chmod(0o700)
     monkeypatch.setenv("ISYCODE_CODEX_EXECUTABLE", str(executable))
     monkeypatch.setenv("ISYCODE_PROVIDER", "chatgpt")  # post-OAuth session
@@ -71,8 +74,8 @@ async def test_model_button_opens_chatgpt_account_model_picker(tmp_path, monkeyp
 
     app = TUIApp()
     async with app.run_test(size=(100, 30)) as pilot:
+        await app.wait_for_ready()
         await pilot.click("#model-button")
-        assert isinstance(app.screen, ModelsScreen)
         screen = await wait_for_picker(app, pilot)
         assert screen.provider_scope == "chatgpt"
         assert any(entry.get("value") == "chatgpt|fixture-chat-model"
