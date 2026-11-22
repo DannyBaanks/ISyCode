@@ -12,6 +12,9 @@ class NativePanic(BaseException):
 
 
 def _fake_keyring(monkeypatch, get_keyring):
+    # Clear the global keyring cache so the mock takes effect.
+    import isycode.credentials as credentials_mod
+    credentials_mod._KEYRING_CACHE = None
     keyring = types.ModuleType("keyring")
     keyring.get_keyring = get_keyring
     backends = types.ModuleType("keyring.backends")
