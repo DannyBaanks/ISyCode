@@ -2072,6 +2072,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._activity_timer = None if self._reduced_motion else self.set_interval(0.12, self._animate_activity)
         task = self._pin_task(coroutine)
         self._loop_task = task
+        self._begin_lane_operation(label, kind="turn", new_turn=True)
         self._animate_activity()
         self._paint_idea_box()
         task.add_done_callback(self._operation_finished)

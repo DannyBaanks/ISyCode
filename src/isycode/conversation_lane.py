@@ -56,6 +56,10 @@ class ConversationLane:
         self.idea_nudge_due = False
         self.activity_message = tr("Chat ready")
         self.activity_color = None
+        self.turn_started_at = None
+        self.operation_started_at = None
+        self.operation_label = ""
+        self.operation_kind = ""
         # ("user"|"note"|"assistant", text, sent_at or color); answers add their role name
         self.lines: list = []
         self.partial = ""

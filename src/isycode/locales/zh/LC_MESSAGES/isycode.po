@@ -3798,6 +3798,15 @@ msgstr "未在运行"
 msgid "/run · {exc}"
 msgstr "/run · {exc}"
 
+msgid "Waiting for provider response"
+msgstr "等待提供商响应"
+
+msgid "Generating response"
+msgstr "正在生成回复"
+
+msgid "Processing tool result"
+msgstr "正在处理工具结果"
+
 msgid "Usage: /run <program> [arguments] · no shell, pipes or redirects"
 msgstr "用法：/run <程序> [参数] · 不支持 shell、管道或重定向"
 

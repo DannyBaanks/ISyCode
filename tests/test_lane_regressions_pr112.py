@@ -1,6 +1,7 @@
 """Regressions for lane ownership, repaint structure, clocks and shutdown."""
 import asyncio
 from datetime import datetime as RealDateTime, timezone
+from types import SimpleNamespace
 
 from isycode.conversation_lane import open_lane
 from isycode.turn_resume import InterruptedTurn
@@ -178,6 +179,62 @@ def test_background_tool_finishes_only_in_its_own_lane(tmp_path, monkeypatch, ca
             assert len(app.query_one(ChatArea).query(ToolActivityGroup)) == 1
             assert "before A tool" in _chat_text(app)
             assert "after A tool" in _chat_text(app)
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_idea_box_separates_current_operation_from_total_turn(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    clock = {"value": 0.0}
+    monkeypatch.setattr(
+        "isycode.tui_app_sessions._time",
+        SimpleNamespace(monotonic=lambda: clock["value"]),
+    )
+
+    async def scenario():
+        started = asyncio.Event()
+        release = asyncio.Event()
+        snapshots = []
+        calls = 0
+
+        async def complete(provider, messages, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                clock["value"] = 100.0
+                return {"text": "before tool", "tool_calls": [_tool_call()]}
+            kwargs["on_chunk"]("content", "streaming now")
+            clock["value"] = 1760.0
+            app._paint_idea_box()
+            snapshots.append(app.query_one("#idea-box").render().plain)
+            return {"text": "streaming now", "tool_calls": []}
+
+        async def dispatch(call):
+            clock["value"] = 1755.0
+            app._paint_idea_box()
+            snapshots.append(app.query_one("#idea-box").render().plain)
+            started.set()
+            await release.wait()
+            return call["id"], '{"status":"ok"}'
+
+        monkeypatch.setattr("isycode.tui.provider_complete", complete)
+        app = TUIApp()
+        async with app.run_test(size=(140, 40)) as pilot:
+            await pilot.pause()
+            monkeypatch.setattr(app, "_dispatch_chat_tool_impl", dispatch)
+            app._start_background_turn(app._foreground_lane(), "timed work")
+            await asyncio.wait_for(started.wait(), 5)
+            release.set()
+            task = app._foreground_lane().loop_task
+            await asyncio.gather(task)
+            assert task.exception() is None
+            tool_view, stream_view = snapshots
+            assert "workspace_read" in tool_view
+            assert "1655s" in tool_view and "total 1755s" in tool_view
+            assert "Thinking…" not in tool_view
+            assert "Generating response" in stream_view
+            assert "5s" in stream_view and "total 1760s" in stream_view
 
     with capsys.disabled():
         asyncio.run(scenario())

@@ -104,6 +104,7 @@ class ToolMixin:
             detail = " · ".join(sanitize_historical_text(str(arguments[key]))[:80] for key in ("path", "query", "pattern", "url") if isinstance(arguments.get(key), str))
             if detail:
                 label += " · " + detail
+        self._begin_lane_operation(label, kind="tool")
         started_at = _time.monotonic()
         notes = Text()
         body = SelectableText(Text(""), selection_text="", classes="tool-activity-body")
@@ -164,6 +165,7 @@ class ToolMixin:
             elapsed = _elapsed_label(_time.monotonic() - started_at)
             event["state"] = state
             event["label"] = f"{label} · {state} · {elapsed}"
+            self._begin_lane_operation(tr("Processing tool result"), kind="tool_result")
             self._append(tr("Tool duration · {label} · {elapsed}", label=label, elapsed=elapsed), MUTED)
             _tool_display_context.reset(token)
             current_group = event.get("group")

@@ -3798,6 +3798,15 @@ msgstr "no estaba en ejecución"
 msgid "/run · {exc}"
 msgstr "/run · {exc}"
 
+msgid "Waiting for provider response"
+msgstr "Esperando la respuesta del proveedor"
+
+msgid "Generating response"
+msgstr "Generando respuesta"
+
+msgid "Processing tool result"
+msgstr "Procesando el resultado de la herramienta"
+
 msgid "Usage: /run <program> [arguments] · no shell, pipes or redirects"
 msgstr "Uso: /run <programa> [argumentos] · sin shell, tuberías ni redirecciones"
 

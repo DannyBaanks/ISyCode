@@ -897,6 +897,8 @@ class ChatMixin:
                 if not chunk:
                     return
                 lane = self._active_lane()
+                if lane.operation_kind != "streaming":
+                    lane = self._begin_lane_operation(tr("Generating response"), kind="streaming")
                 if kind == "reasoning":
                     reason_buf.append(chunk)
                     step_reason.append(chunk)
@@ -989,6 +991,7 @@ class ChatMixin:
                         self._append(tr("Trying steering · original turn retained until response."), CYAN)
                     self._apply_idea_nudge(messages, chat_tools)
                     request_material["messages"] = messages
+                    self._begin_lane_operation(tr("Waiting for provider response"), kind="provider_wait")
                     self._chat_request_task = asyncio.create_task(owner.execute(
                         provider, request_material, send_provider_request))
                     try:
@@ -1437,6 +1440,7 @@ class ChatMixin:
             lane.partial = ""
             lane.partial_reason = ""
             lane.partial_reason_chunks = []
+            self._finish_lane_operation()
             if block is not None and getattr(block, "is_mounted", False) and on_screen:
                 block.collapse_to(_time.monotonic() - thought_started)
                 self.query_one(ChatArea).follow_tail()
