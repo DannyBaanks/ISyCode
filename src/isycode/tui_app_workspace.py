@@ -19,6 +19,7 @@ from isycode.prompt_expansion import read_result_text
 from isycode.git_owner import GitOwner, git_executable
 from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, CommandRunOwner, sandbox_executable
 from isycode.workspace_write import DELETE_TOOL_NAME, MOVE_TOOL_NAME, WorkspaceWriteOwner
+from isycode.workspace_transaction import WorkspaceTransactionOwner
 from isycode.authority_view import displayed_on
 from isycode.localization import tr
 from isycode.security import ActionRequest
@@ -28,7 +29,10 @@ from isycode.tui_widgets import Collapsible
 from isycode.tui_theme import MUTED, GREEN, YELLOW, RED, CYAN, SECURITY
 from isycode.tui_widgets import ChatArea, CommandOutputCard
 from isycode.tui_composer import IdeaBox, ShellBox
-from isycode.tui_screens_approval import ContextAccessScreen, WriteApprovalScreen, CommandApprovalScreen, CommitApprovalScreen
+from isycode.tui_screens_approval import (
+    BatchApprovalScreen, ContextAccessScreen, WriteApprovalScreen,
+    CommandApprovalScreen, CommitApprovalScreen,
+)
 from isycode.tui_screens_sessions import ShellProcessesScreen
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
 from isycode.file_picker import SiblingFolderPickerOwner
@@ -542,6 +546,71 @@ class WorkspaceMixin:
             return self._folder_store().auto_edit_available(folder_alias)
         except (OSError, ValueError):
             return False
+
+    async def _dispatch_edit_pack(self, arguments: dict, *, root: Path | None = None,
+                                  folder_alias: str = "main") -> str:
+        """Review and apply one manifest; never delegated to quiet/session trust."""
+        root = root or self._workspace_root
+        try:
+            binding = self._folder_store().binding(folder_alias)
+        except (OSError, ValueError) as exc:
+            return json.dumps({"error": str(exc)[:180]})
+        if not self._workspace_write_tool_enabled(root):
+            self._append("  " + tr("Tool denied · {action} · not enabled for this workspace",
+                                   action="workspace.files.transaction"), SECURITY)
+            return json.dumps({"error": "file editing is not enabled for this workspace"})
+        edits = arguments.get("edits")
+        if not isinstance(edits, list):
+            return json.dumps({"error": "workspace_edit_pack requires an edits array"})
+        owner = WorkspaceTransactionOwner(root, WorkspaceAuthority(root), self._action_approvals)
+        try:
+            preview = await asyncio.to_thread(owner.preview, edits)
+        except (OSError, ValueError) as exc:
+            reason = str(exc)[:220] or type(exc).__name__
+            self._append("  " + tr("Tool denied · {action} · {reason}",
+                                   action="workspace.files.transaction", reason=reason), SECURITY)
+            return json.dumps({"error": "edit pack cannot be previewed", "reason": reason})
+        label = f"{len(preview.operations)} file(s)"
+        self._append("  " + tr("Tool requested · {action} · {path} · review it",
+                               action="workspace.files.transaction", path=label), CYAN)
+        # Deliberately no quiet, delegated or session-trust branch: the pack
+        # always shows its complete manifest before the one-use approval.
+        choice = await self._await_screen(
+            BatchApprovalScreen(list(preview.operations), transaction=True))
+        if choice != "all":
+            self._append("  " + tr("✗ Batch rejected · nothing was written"), MUTED)
+            return json.dumps({"status": "rejected_by_user", "approved_by_user": False,
+                               "paths": list(preview.paths)})
+        try:
+            current = self._folder_store().resolve(folder_alias, write=True)
+            if (current != root or self._folder_store().binding(folder_alias) != binding
+                    or not self._workspace_write_tool_enabled(root)):
+                raise ValueError("Folder or write access changed during review")
+        except (OSError, ValueError) as exc:
+            return json.dumps({"error": str(exc)[:180]})
+        self._append("  " + tr("✓ You approved · {value} {path}",
+                               value="edit pack", path=label), MUTED)
+        approval = self._action_approvals.issue(preview.request, ttl_seconds=60, mode="user")
+        outcome = await self._settled_file_effect(owner.apply, preview, approval)
+        if outcome.decision == "ALLOW" and outcome.receipt is not None:
+            self._append("  " + tr("Tool ALLOW · {text} · receipt {receipt_id}",
+                                   text=outcome.text, receipt_id=outcome.receipt.receipt_id), GREEN)
+            return json.dumps({
+                "status": "written", "approved_by_user": True, "approval_mode": "reviewed",
+                "folder": folder_alias, "paths": list(preview.paths),
+                "scope_id": preview.scope_id, "manifest_sha256": preview.manifest_sha256,
+                "receipt": outcome.receipt.receipt_id,
+            })
+        self._append("  " + tr("Tool {decision} · {action} · {value}",
+                               decision=outcome.decision, action="workspace.files.transaction",
+                               value=outcome.reason[:180]), SECURITY)
+        result = {"error": "edit pack was not applied", "decision": outcome.decision,
+                  "reason": outcome.reason[:300]}
+        if outcome.decision == "ERROR":
+            result.update({"status": "rolled_back", "rolled_back": True})
+        elif outcome.decision == "NOT_VERIFIABLE":
+            result.update({"status": "not_verifiable", "uncertain": True})
+        return json.dumps(result)
 
     async def _dispatch_write_tool(self, arguments: dict, *, edit: bool = False,
                                    root: Path | None = None, folder_alias: str = 'main',

@@ -73,6 +73,7 @@ L0_FILES = (
     # Journal, effect ledger, verified file effects and Flow's undo.
     "src/isycode/action_audit.py",
     "src/isycode/effect_ledger.py",
+    "src/isycode/workspace_transaction.py",
     "src/isycode/effect_fs.py",
     "src/isycode/platform_posix_effect_fs.py",
     "src/isycode/platform_windows_effect_fs.py",

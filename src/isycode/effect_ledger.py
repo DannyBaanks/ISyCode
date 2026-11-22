@@ -250,31 +250,43 @@ class EffectLedger:
             return "uncertain"
         from isycode.effect_fs import digest, read_file
         try:
-            current = digest(read_file(self.root, relative))
+            current = read_file(self.root, relative)
         except OSError:
             return "uncertain"
-        if current == item["target"]:
+        current_digest = digest(current)
+        current_mode = None if current is None else current[1]
+        mode_checked = item.get("mode_checked") is True
+        if (current_digest == item["target"]
+                and (not mode_checked or current_mode == item.get("target_mode"))):
             return "target"
-        if current == item["preimage"]:
+        if (current_digest == item["preimage"]
+                and (not mode_checked or current_mode == item.get("preimage_mode"))):
             return "preimage"
         return "uncertain"
 
     def _restore(self, reservation_id: str, relative: str, item: dict) -> str:
         from isycode.effect_fs import apply_file, digest, read_file
         try:
-            current = digest(read_file(self.root, relative))
+            current = read_file(self.root, relative)
         except OSError:
             return "uncertain"
-        if current == item["preimage"]:
+        current_digest = digest(current)
+        current_mode = None if current is None else current[1]
+        mode_checked = item.get("mode_checked") is True
+        if (current_digest == item["preimage"]
+                and (not mode_checked or current_mode == item.get("preimage_mode"))):
             return "preimage"
-        if current != item["target"]:
+        if (current_digest != item["target"]
+                or (mode_checked and current_mode != item.get("target_mode"))):
             return "uncertain"
         try:
             payload = None if item["preimage"] is None else self.read_backup(reservation_id, relative)
             if payload is not None and hashlib.sha256(payload).hexdigest() != item["preimage"]:
                 return "uncertain"
+            preimage_mode = item.get("preimage_mode")
             apply_file(self.root, relative, payload, expected=item["target"],
-                       mode=item.get("preimage_mode") or 0o600)
+                       expected_mode=item.get("target_mode") if mode_checked else None,
+                       mode=0o600 if preimage_mode is None else preimage_mode)
         except (LedgerDenied, OSError):
             return "uncertain"
         return "restored"

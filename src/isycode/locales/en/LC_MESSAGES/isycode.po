@@ -5238,6 +5238,18 @@ msgstr "Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{r
 msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
 msgstr "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
 
+msgid "Review edit pack · {len} files · all or rollback"
+msgstr "Review edit pack · {len} files · all or rollback"
+
+msgid "Owner: workspace edit pack\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use approval bound to the whole manifest\nNot granted: no other files, no commands, no secrets"
+msgstr "Owner: workspace edit pack\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use approval bound to the whole manifest\nNot granted: no other files, no commands, no secrets"
+
+msgid "Total +{added} / -{removed} lines across {len} files. One approval covers this exact manifest. Every file is applied, or every applied file is rolled back. If recovery cannot be verified, the result is NOT_VERIFIABLE. Parent folders are not created."
+msgstr "Total +{added} / -{removed} lines across {len} files. One approval covers this exact manifest. Every file is applied, or every applied file is rolled back. If recovery cannot be verified, the result is NOT_VERIFIABLE. Parent folders are not created."
+
+msgid "Apply pack {count}"
+msgstr "Apply pack {count}"
+
 msgid "RTK suggestion: {join}"
 msgstr "RTK suggestion: {join}"
 

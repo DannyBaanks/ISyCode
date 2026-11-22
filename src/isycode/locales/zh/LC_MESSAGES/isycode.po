@@ -5238,6 +5238,18 @@ msgstr "所有者：工作区文件编辑（batch）\n范围：{len} 个文件 �
 msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
 msgstr "共 {len} 个文件 +{added} / -{removed} 行。在此批准会为每项更改发放一次性、绑定摘要的批准——不会创建持久权限，应用前发生变化的文件将被拒绝。"
 
+msgid "Review edit pack · {len} files · all or rollback"
+msgstr "审查编辑包 · {len} 个文件 · 全部应用或回滚"
+
+msgid "Owner: workspace edit pack\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use approval bound to the whole manifest\nNot granted: no other files, no commands, no secrets"
+msgstr "所有者：工作区编辑包\n范围：{len} 个文件 · +{added} / -{removed} 行\n期限：绑定整个清单的一次性批准\n未授予：其他文件、命令或密钥"
+
+msgid "Total +{added} / -{removed} lines across {len} files. One approval covers this exact manifest. Every file is applied, or every applied file is rolled back. If recovery cannot be verified, the result is NOT_VERIFIABLE. Parent folders are not created."
+msgstr "共 {len} 个文件 +{added} / -{removed} 行。一次批准覆盖此确切清单。所有文件都会应用，或所有已应用文件都会回滚。如果无法验证恢复，结果为 NOT_VERIFIABLE。不会创建父目录。"
+
+msgid "Apply pack {count}"
+msgstr "应用编辑包 {count}"
+
 msgid "RTK suggestion: {join}"
 msgstr "RTK 建议：{join}"
 

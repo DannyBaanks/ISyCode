@@ -77,6 +77,7 @@ from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
 from isycode.command_runner import command_tool
 from isycode.host_paths import shell_example, stdin_description
 from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL, WRITE_TOOL, WRITE_TOOL_NAME, WorkspaceWriteOwner, write_tools_for_mode
+from isycode.workspace_transaction import EDIT_PACK_TOOL, EDIT_PACK_TOOL_NAME
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from rich.markdown import Markdown as RichMarkdown
 from isycode.providers import (
@@ -451,6 +452,8 @@ class ChatMixin:
             command_active = tools_active and self._command_tool_enabled()
             chat_tools = (list(read_tools) + [edit_tool, write_tool] if write_active
                           else list(read_tools) if tools_active else [])
+            if write_active:
+                chat_tools.append(EDIT_PACK_TOOL)
             if tools_active:
                 chat_tools = chat_tools + [WORKSPACE_PACK_TOOL]
                 chat_tools = chat_tools + MEMORY_TOOLS
@@ -521,7 +524,7 @@ class ChatMixin:
                 if not is_flow:
                     aliases = [item['alias'] for item in folder_data]
                     for tool in chat_tools:
-                        if tool['function']['name'] in TOOL_ACTIONS or tool['function']['name'] in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
+                        if tool['function']['name'] in TOOL_ACTIONS or tool['function']['name'] in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, EDIT_PACK_TOOL_NAME}:
                             tool['function']['parameters']['properties']['folder'] = {
                                 'type': 'string', 'enum': aliases or ['main'],
                                 'description': 'Explicit folder alias; defaults to main. Paths are relative to this folder.'}

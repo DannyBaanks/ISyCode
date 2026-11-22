@@ -383,9 +383,11 @@ class BatchApprovalScreen(ModalScreen[str]):
                 Binding("a", "all", "Approve all", show=False)]
     AUTO_FOCUS = "#batch-approval-reject"
 
-    def __init__(self, previews: list[WritePreview]) -> None:
+    def __init__(self, previews: list[WritePreview], *, transaction: bool = False) -> None:
         super().__init__()
         self.previews = list(previews)
+        # A transaction has one manifest approval and no per-file fallback.
+        self.transaction = transaction
 
     def compose(self) -> ComposeResult:
         added = removed = 0
@@ -394,13 +396,19 @@ class BatchApprovalScreen(ModalScreen[str]):
             added += sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
             removed += sum(1 for line in lines if line.startswith("-") and not line.startswith("---"))
         with Vertical(id="batch-approval-card", classes="isy-dialog"):
-            yield Static(tr("Review {len} proposed changes in one go", len=len(self.previews)),
+            yield Static(tr("Review edit pack · {len} files · all or rollback", len=len(self.previews))
+                         if self.transaction else
+                         tr("Review {len} proposed changes in one go", len=len(self.previews)),
                          id="batch-approval-title", classes="isy-dialog-title")
             with VerticalScroll(id="batch-approval-body", classes="isy-dialog-body"):
                 yield Static(
+                    tr("Owner: workspace edit pack\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use approval bound to the whole manifest\nNot granted: no other files, no commands, no secrets", len=len(self.previews), added=added, removed=removed)
+                    if self.transaction else
                     tr("Owner: workspace file edit (batch)\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use, digest-bound approval per change\nNot granted: no other files, no commands, no secrets", len=len(self.previews), added=added, removed=removed),
                     id="batch-approval-structural", markup=False)
                 yield Static(
+                    tr("Total +{added} / -{removed} lines across {len} files. One approval covers this exact manifest. Every file is applied, or every applied file is rolled back. If recovery cannot be verified, the result is NOT_VERIFIABLE. Parent folders are not created.", added=added, removed=removed, len=len(self.previews))
+                    if self.transaction else
                     tr("Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused.", added=added, removed=removed, len=len(self.previews)), id="batch-approval-summary", markup=False)
                 with Vertical(id="batch-approval-diffs", classes="isy-dialog-detail"):
                     for preview in self.previews:
@@ -408,8 +416,11 @@ class BatchApprovalScreen(ModalScreen[str]):
                         yield Static(review_diff(preview.diff), markup=False)
             with Horizontal(id="batch-approval-actions", classes="isy-dialog-actions"):
                 yield Button(tr("Reject all"), id="batch-approval-reject")
-                yield Button(tr("Review each"), id="batch-approval-each")
-                yield Button(tr("Approve all {count}", count=len(self.previews)),
+                if not self.transaction:
+                    yield Button(tr("Review each"), id="batch-approval-each")
+                yield Button(tr("Apply pack {count}", count=len(self.previews))
+                             if self.transaction else
+                             tr("Approve all {count}", count=len(self.previews)),
                              id="batch-approval-all", variant="warning")
             yield decision_hint()
 

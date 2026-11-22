@@ -26,6 +26,9 @@ AUTHORITY_GRANT_ALIASES = {
     "workspace.config.read": "workspace.files.read",
     "workspace.config.list": "workspace.files.list",
     "workspace.config.write": "workspace.files.write",
+    # A pack is a batch of ordinary file writes. The existing write grant is
+    # still required, but every path in the manifest is checked separately.
+    "workspace.files.transaction": "workspace.files.write",
 }
 
 
@@ -337,13 +340,33 @@ class WorkspaceAuthority:
         if (request.action_id.startswith(("workspace.files.", "workspace.context."))
                 or request.action_id in AUTHORITY_GRANT_ALIASES):
             try:
-                target = canonicalize(request.target)
                 root_canonicalize = self._canonical_host_path if is_flow else self._canonical_path
                 roots = [root_canonicalize(item) for item in grant.get("path_prefixes", [])]
             except (OSError, ValueError, WorkspaceAuthorityError):
                 return AuthorityDecision(False, "", "filesystem target is outside the workspace or unsafe", digest)
-            if not roots or not any(self._contains(Path(root), Path(target)) for root in roots):
-                return AuthorityDecision(False, "", "filesystem target is outside granted paths", digest)
+            if request.action_id == "workspace.files.transaction":
+                # The root of a pack is not enough: every file has to be inside
+                # an explicitly granted prefix, so one allowed path cannot
+                # smuggle a second, ungranted path into the same transaction.
+                operations = (request.parameters or {}).get("operations", ())
+                if not isinstance(operations, (tuple, list)) or not operations:
+                    return AuthorityDecision(False, "", "edit pack has no file operations", digest)
+                for operation in operations:
+                    if not isinstance(operation, Mapping):
+                        return AuthorityDecision(False, "", "edit pack operation is malformed", digest)
+                    try:
+                        target = canonicalize(operation.get("path", ""))
+                    except (OSError, TypeError, ValueError, WorkspaceAuthorityError):
+                        return AuthorityDecision(False, "", "edit pack path is outside the workspace or unsafe", digest)
+                    if not roots or not any(self._contains(Path(root), Path(target)) for root in roots):
+                        return AuthorityDecision(False, "", "every edit pack path must be inside granted paths", digest)
+            else:
+                try:
+                    target = canonicalize(request.target)
+                except (OSError, TypeError, ValueError, WorkspaceAuthorityError):
+                    return AuthorityDecision(False, "", "filesystem target is outside the workspace or unsafe", digest)
+                if not roots or not any(self._contains(Path(root), Path(target)) for root in roots):
+                    return AuthorityDecision(False, "", "filesystem target is outside granted paths", digest)
             if request.action_id == "workspace.files.move":
                 # A move writes its destination too; it must be inside the same grant.
                 try:
