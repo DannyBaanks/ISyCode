@@ -4710,6 +4710,18 @@ msgstr "Enable Delete current conversation in Settings → Authority first."
 msgid "Conversation kept."
 msgstr "Conversation kept."
 
+msgid "Usage: /log [count]"
+msgstr "Usage: /log [count]"
+
+msgid "Operational log is empty."
+msgstr "Operational log is empty."
+
+msgid "Operational log · last {count} events · these are not part of the conversation"
+msgstr "Operational log · last {count} events · these are not part of the conversation"
+
+msgid "show recent operational events; not chat messages"
+msgstr "show recent operational events; not chat messages"
+
 msgid "Memory {decision} · {value}"
 msgstr "Memory {decision} · {value}"
 

@@ -190,6 +190,10 @@ _TOUR_LINES = (
 )
 
 
+async def _log_cmd(app: "TUIApp", arg: str) -> None:
+    app._show_operational_log(arg.strip())
+
+
 async def _help_cmd(app: "TUIApp", arg: str) -> None:
     if arg.strip() == "tour":
         for line in _TOUR_LINES:
@@ -772,6 +776,7 @@ class MenuMixin:
                 PluginCommand("diff", "show the git diff (optional path, --staged)", _diff_cmd),
                 PluginCommand("commit", "commit changed files after reviewing the diff", _commit_cmd),
                 PluginCommand("help", "list commands", _help_cmd),
+                PluginCommand("log", "show recent operational events; not chat messages", _log_cmd),
                 PluginCommand("session", "show current workspace, provider, and chat role", _session_cmd),
                 PluginCommand("sessions", "list/new/resume/search/rename/fork/export/import conversations", _sessions_cmd),
                 PluginCommand("msg", "send your words to another conversation; it answers them as your message", _msg_cmd),

@@ -4710,6 +4710,18 @@ msgstr "请先在 设置 → Authority 中开启“删除当前对话”。"
 msgid "Conversation kept."
 msgstr "已保留对话。"
 
+msgid "Usage: /log [count]"
+msgstr "用法：/log [数量]"
+
+msgid "Operational log is empty."
+msgstr "操作日志为空。"
+
+msgid "Operational log · last {count} events · these are not part of the conversation"
+msgstr "操作日志 · 最近 {count} 个事件 · 不属于对话内容"
+
+msgid "show recent operational events; not chat messages"
+msgstr "显示最近的操作事件；不是聊天消息"
+
 msgid "Memory {decision} · {value}"
 msgstr "记忆 {decision} · {value}"
 

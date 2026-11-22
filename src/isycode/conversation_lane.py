@@ -7,8 +7,9 @@ lane they began on.
 """
 from __future__ import annotations
 
-from contextvars import ContextVar
+import time
 import uuid
+from contextvars import ContextVar
 
 from isycode.localization import tr
 from isycode.session_context import fresh_session_context_key
@@ -17,6 +18,7 @@ from isycode.usage import UsageLedger
 
 
 conversation_lane_context: ContextVar = ContextVar("isycode_conversation_lane", default=None)
+MAX_OPERATIONAL_EVENTS = 200
 
 
 class ConversationLane:
@@ -62,6 +64,8 @@ class ConversationLane:
         self.operation_kind = ""
         # ("user"|"note"|"assistant", text, sent_at or color); answers add their role name
         self.lines: list = []
+        # Operational events stay out of the transcript; /log shows them on demand.
+        self.operational_log: list[tuple[float, str]] = []
         self.partial = ""
         self.partial_reason = ""
         self.partial_reason_chunks: list[str] = []
@@ -69,6 +73,11 @@ class ConversationLane:
         self.stream_block = None
         # Role of the answer streaming in this lane, kept to repaint its color.
         self.stream_role = None
+
+    def record_operational(self, text: str) -> None:
+        """Keep one bounded, non-transcript event for /log."""
+        self.operational_log.append((time.time(), text.strip()))
+        del self.operational_log[:-MAX_OPERATIONAL_EVENTS]
 
 
 LANE_FIELDS = (

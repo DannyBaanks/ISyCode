@@ -1914,9 +1914,18 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
     # ── helpers ──────────────────────────────────────────────────
 
 
-    def _append(self, text: str, color: str = TEXT, *, startup: bool = False) -> None:
-        """Append output, releasing the welcome pause only on the first message."""
+    def _append(self, text: str, color: str = TEXT, *, startup: bool = False,
+                log_only: bool = False) -> None:
+        """Append output, releasing the welcome pause only on the first message.
+
+        ``log_only`` keeps an operational event out of the transcript. The
+        action journal remains the durable record; ``/log`` shows the recent
+        per-conversation events without turning them into assistant messages.
+        """
         lane = self._active_lane()
+        if log_only:
+            lane.record_operational(text)
+            return
         on_screen = self._lane_on_screen() and not getattr(self, "_shutting_down", False)
         if not startup and on_screen:
             self._dismiss_idle()
