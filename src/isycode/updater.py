@@ -234,6 +234,31 @@ class SelfUpdater:
     def _overlap(path: str, ignored: str) -> bool:
         return path == ignored or path.startswith(ignored + "/") or ignored.startswith(path + "/")
 
+    @staticmethod
+    def _external_symlinks(root: Path, paths: list[str]) -> list[str]:
+        """Dirty links whose target is outside the checkout; never pack their contents.
+
+        A self-update may stash ordinary local work, but following a private
+        external link (agent memory, credentials, personal state) could copy
+        data that does not belong to the repository. The link itself is left
+        dirty and untouched; an incoming change to it blocks instead.
+        """
+        canonical_root = root.resolve()
+        external = []
+        for path in paths:
+            candidate = root / path
+            try:
+                if not candidate.is_symlink():
+                    continue
+                resolved = candidate.resolve(strict=False)
+            except (OSError, RuntimeError):
+                continue
+            try:
+                resolved.relative_to(canonical_root)
+            except ValueError:
+                external.append(path)
+        return external
+
     def run(self, check_only: bool = False) -> UpdateReport:
         root = self.source_root
         if root is None:
@@ -305,6 +330,16 @@ class SelfUpdater:
             ignored_paths = self._ignored_paths()
             collisions = [incoming for incoming in incoming_paths
                           if any(self._overlap(incoming, ignored) for ignored in ignored_paths)]
+            private_links = self._external_symlinks(root, dirty_paths)
+            private_collisions = [incoming for incoming in incoming_paths
+                                  if any(self._overlap(incoming, link) for link in private_links)]
+            if private_collisions:
+                return UpdateReport("blocked", (
+                    "Hay un enlace privado externo que la actualización podría tocar; no se actualizó el checkout.",
+                    "El enlace y su contenido externo se conservaron sin cambios; revisa esa integración manualmente.",
+                    *(f"Enlace privado: {path}" for path in private_collisions[:30]),
+                ))
+            stash_paths = [path for path in dirty_paths if path not in private_links]
             head_short = self._git("rev-parse", "--short", "HEAD", check=False).stdout.strip()
             remote_url_display = re.sub(r"^https?://", "", remote.stdout.strip()).removesuffix(".git")
             channel_info = f"{remote_name}/{remote_branch} ({remote_url_display})"
@@ -332,10 +367,12 @@ class SelfUpdater:
                 lines.append("  isycode")
                 return UpdateReport("current", tuple(lines))
             if dirty_paths or collisions:
-                if (dirty_paths and not collisions and not check_only and self._confirmed(
-                        f"Tienes {len(dirty_paths)} cambio(s) local(es). ¿Guardarlos en un git stash, "
-                        "actualizar y volver a aplicarlos?", tuple(f"Local: {p}" for p in dirty_paths[:30]))):
-                    saved = self._stash_local_changes()
+                if (stash_paths and not collisions and not check_only and self._confirmed(
+                        f"Tienes {len(stash_paths)} cambio(s) local(es). ¿Guardarlos en un git stash, "
+                        "actualizar y volver a aplicarlos?",
+                        tuple(f"Local: {p}" for p in stash_paths[:30])
+                        + tuple(f"Externo sin tocar: {p}" for p in private_links[:30]))):
+                    saved = self._stash_local_changes(excluded=private_links)
                     if isinstance(saved, UpdateReport):
                         return saved
                     stash_oid = saved
@@ -345,28 +382,32 @@ class SelfUpdater:
                         return UpdateReport(restored.status,
                                             (*integrated.lines, *restored.lines))
                     return integrated
-                lines = [
-                    "Updating ISyCode...",
-                    "",
-                    f"→ Canal / Rama: {channel_info}",
-                    f"⚠️ Hay {len(dirty_paths)} cambio(s) local(es); no se actualizó el checkout.",
-                ]
-                if behind:
-                    lines.append(
-                        f"El remoto todavía tiene {behind} commit(s) pendiente(s); "
-                        "guarda o confirma tus cambios locales y vuelve a ejecutar el comando."
-                    )
-                lines.extend(f"Local: {p}" for p in dirty_paths[:30])
-                lines.extend(f"Archivo ignorado que coincide con la actualización: {p}" for p in collisions[:30])
-                if commits:
-                    lines.append("")
-                    lines.append("Novedades remotas:")
-                    lines.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
-                if summary:
-                    lines.append("")
-                    lines.append("Resumen de cambios:")
-                    lines.extend(f"  {self._clean_line(line)}" for line in summary[:12])
-                return UpdateReport("dirty", tuple(lines))
+                # Only private external links are dirty: there is nothing to
+                # pack, and the incoming change does not touch them. Continue
+                # without stashing or following them.
+                if stash_paths or collisions or check_only:
+                    lines = [
+                        "Updating ISyCode...",
+                        "",
+                        f"→ Canal / Rama: {channel_info}",
+                        f"⚠️ Hay {len(dirty_paths)} cambio(s) local(es); no se actualizó el checkout.",
+                    ]
+                    if behind:
+                        lines.append(
+                            f"El remoto todavía tiene {behind} commit(s) pendiente(s); "
+                            "guarda o confirma tus cambios locales y vuelve a ejecutar el comando."
+                        )
+                    lines.extend(f"Local: {p}" for p in dirty_paths[:30])
+                    lines.extend(f"Archivo ignorado que coincide con la actualización: {p}" for p in collisions[:30])
+                    if commits:
+                        lines.append("")
+                        lines.append("Novedades remotas:")
+                        lines.extend(f"  • {self._clean_line(line)}" for line in commits[:12])
+                    if summary:
+                        lines.append("")
+                        lines.append("Resumen de cambios:")
+                        lines.extend(f"  {self._clean_line(line)}" for line in summary[:12])
+                    return UpdateReport("dirty", tuple(lines))
             details = [
                 "Comprobando actualizaciones de ISyCode...",
                 "",
@@ -516,8 +557,10 @@ class SelfUpdater:
             "No se integró nada: el merge necesita tu confirmación.",
             "Ejecuta isycode actualizar en una terminal y responde «s», o integra con git merge."))
 
-    def _stash_local_changes(self) -> str | UpdateReport:
+    def _stash_local_changes(self, *, excluded: list[str] | None = None) -> str | UpdateReport:
         """Back up staged-safe dirty work before merging; never absorb an existing index."""
+        excluded = excluded or []
+        pathspec = [".", *(f":(exclude){path}" for path in excluded)]
         staged = self._git("diff", "--cached", "--quiet", check=False)
         if staged.returncode != 0:
             return UpdateReport("dirty", (
@@ -526,14 +569,14 @@ class SelfUpdater:
             ))
         before = self._git("rev-parse", "--verify", "refs/stash", check=False)
         before_oid = before.stdout.strip() if before.returncode == 0 else ""
-        added = self._git("add", "--all", check=False)
+        added = self._git("add", "--all", "--", *pathspec, check=False)
         if added.returncode:
             self._git("reset", "--mixed", "HEAD", check=False)
             return UpdateReport("error", (
                 "No se pudieron preparar temporalmente los cambios locales; se conservaron los archivos.",
             ))
         saved = self._git("stash", "push", "--include-untracked", "-m",
-                          "isycode actualizar: respaldo temporal", check=False)
+                          "isycode actualizar: respaldo temporal", "--", *pathspec, check=False)
         after = self._git("rev-parse", "--verify", "refs/stash", check=False)
         after_oid = after.stdout.strip() if after.returncode == 0 else ""
         if saved.returncode or not after_oid or after_oid == before_oid:
