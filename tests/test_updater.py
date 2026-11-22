@@ -216,6 +216,93 @@ def test_dirty_checkout_is_preserved_and_never_fast_forwarded(tmp_path, untracke
         assert "my edits" in git("stash", "show", "-p", "stash@{0}", cwd=repo)
 
 
+def external_memory_link(repo: Path, peer: Path, target: Path) -> Path:
+    """Track a memory symlink in the base commit, with its content outside Git."""
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "MEMORY.md").write_text("private agent memory\n", encoding="utf-8")
+    (target / "secret.txt").write_text("do-not-pack-this\n", encoding="utf-8")
+    link = repo / "docs" / "agent" / "memory"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(target, target_is_directory=True)
+    git("add", "docs/agent/memory", cwd=repo)
+    git("commit", "-m", "link external memory", cwd=repo)
+    git("push", cwd=repo)
+    git("fetch", "origin", "main", cwd=peer)
+    git("merge", "--ff-only", "FETCH_HEAD", cwd=peer)
+    git("config", "core.symlinks", "false", cwd=repo)
+    return link
+
+
+def replace_link_target(link: Path, target: Path) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "MEMORY.md").write_text("private agent memory, new target\n", encoding="utf-8")
+    link.unlink()
+    link.symlink_to(target, target_is_directory=True)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink fixture")
+def test_external_memory_link_is_never_stashed_or_followed(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    first = tmp_path / "private-one"
+    second = tmp_path / "private-two"
+    link = external_memory_link(repo, peer, first)
+    replace_link_target(link, second)
+    (second / "secret.txt").write_text("still-outside-git\n", encoding="utf-8")
+    push_peer_commit(peer, "remote README update")
+
+    report = updater(repo).run()
+
+    assert report.status == "updated", report.lines
+    assert os.readlink(link) == str(second)
+    assert (second / "MEMORY.md").read_text() == "private agent memory, new target\n"
+    assert (second / "secret.txt").read_text() == "still-outside-git\n"
+    assert git("stash", "list", cwd=repo) == ""
+    assert "secret.txt" not in git("ls-tree", "-r", "--name-only", "HEAD", cwd=repo)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink fixture")
+def test_stash_excludes_external_link_but_keeps_ordinary_local_work(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    link = external_memory_link(repo, peer, tmp_path / "private-one")
+    replace_link_target(link, tmp_path / "private-two")
+    note = repo / "developer-note.txt"
+    note.write_text("keep local work\n", encoding="utf-8")
+    push_peer_commit(peer, "remote README update")
+
+    report = updater(repo).run()
+
+    assert report.status == "updated", report.lines
+    assert note.read_text() == "keep local work\n"
+    assert os.readlink(link) == str(tmp_path / "private-two")
+    stashed = git("stash", "show", "--name-only", "stash@{0}", cwd=repo)
+    assert "developer-note.txt" in stashed
+    assert "docs/agent/memory" not in stashed
+    assert "MEMORY.md" not in stashed
+    assert "secret.txt" not in stashed
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink fixture")
+def test_incoming_change_to_external_memory_link_is_blocked(tmp_path):
+    _, repo, peer = repositories(tmp_path)
+    link = external_memory_link(repo, peer, tmp_path / "private-one")
+    replace_link_target(link, tmp_path / "private-two")
+    peer_link = peer / "docs" / "agent" / "memory"
+    peer_link.unlink()
+    peer_link.symlink_to(tmp_path / "remote-target", target_is_directory=True)
+    git("add", "docs/agent/memory", cwd=peer)
+    git("commit", "-m", "remote changes memory link", cwd=peer)
+    git("push", cwd=peer)
+    before_head = git("rev-parse", "HEAD", cwd=repo)
+
+    report = updater(repo).run()
+
+    assert report.status == "blocked", report.lines
+    assert git("rev-parse", "HEAD", cwd=repo) == before_head
+    assert os.readlink(link) == str(tmp_path / "private-two")
+    assert git("stash", "list", cwd=repo) == ""
+    assert any("Enlace privado: docs/agent/memory" in line for line in report.lines)
+
+
 def diverge_without_conflict(repo: Path, peer: Path) -> tuple[str, str]:
     (repo / "local.txt").write_text("local side\n", encoding="utf-8")
     git("add", "local.txt", cwd=repo)

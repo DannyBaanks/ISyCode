@@ -173,6 +173,12 @@ uno conservando ambas historias. Si el único conflicto es el snapshot generado
 Cualquier otro conflicto muestra sus rutas y detiene el merge. `--check` hace
 fetch para comparar, pero no integra ni instala dependencias.
 
+Los enlaces simbólicos que apuntan fuera del checkout se consideran privados:
+el actualizador los deja intactos y los excluye del `git add --all` y del stash.
+Así, una ruta como `docs/agent/memory`, enlazada a tu banco de memorias en home,
+no se empaqueta ni se sigue. Si el cambio remoto necesita modificar ese mismo
+enlace, la actualización se detiene para revisión manual.
+
 ## Preferencias de un proyecto
 
 En la TUI abre **⚙ Settings → Initialize this workspace's .isycode/**. Solo se

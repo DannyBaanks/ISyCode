@@ -105,6 +105,10 @@ are rejected before fetching.
   terminal, the default is no unless this flag is present.
 - If the only conflict is `docs/security/m15-authority-coverage.json`, the
   updater regenerates it. Other conflicts stop the update.
+- Dirty symlinks whose targets are outside the checkout are treated as private
+  external state. They are excluded from `git add --all` and from the temporary
+  stash, so their contents are never followed or packed. If the incoming
+  update changes one of those links, the update stops for manual review.
 - Dependencies are synced with pip inside the isolated environment. An
   environment that has no pip, as the `uv` installer builds it, is seeded with
   `ensurepip` first so the sync can run.
