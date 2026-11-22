@@ -1336,7 +1336,7 @@ class SessionMixin:
         lane.loop_task = task
         lane.activity_message = "Chat · working"
         lane.activity_color = CYAN
-        self._begin_lane_operation("Chat · working", kind="turn", new_turn=True)
+        self._begin_lane_operation(tr("Thinking…"), kind="turn", new_turn=True)
         task.add_done_callback(self._operation_finished)
 
     def _copy_composer_draft(self) -> None:

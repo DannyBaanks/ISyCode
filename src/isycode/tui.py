@@ -2072,7 +2072,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._activity_timer = None if self._reduced_motion else self.set_interval(0.12, self._animate_activity)
         task = self._pin_task(coroutine)
         self._loop_task = task
-        self._begin_lane_operation(label, kind="turn", new_turn=True)
+        self._begin_lane_operation(
+            tr("Thinking…") if label == "Chat · working" else label,
+            kind="turn", new_turn=True)
         self._animate_activity()
         self._paint_idea_box()
         task.add_done_callback(self._operation_finished)
@@ -2100,6 +2102,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if lane is None:
             return
         lane.loop_task = None
+        lane.operation_started_at = None
+        lane.operation_label = ""
+        lane.operation_kind = ""
+        lane.turn_started_at = None
         if getattr(self, "_shutting_down", False):
             lane.activity_message = tr("Interrupted")
             lane.activity_color = YELLOW
