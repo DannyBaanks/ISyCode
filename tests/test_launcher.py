@@ -269,3 +269,30 @@ def test_update_command_rejects_unknown_flags(capsys):
 
     assert main(["actualizar", "--force"]) == 2
     assert "Uso:" in capsys.readouterr().err
+
+
+def test_tui_prompt_flag_launches_with_auto_submit(monkeypatch):
+    import isycode.tui
+    from isycode.launcher import main
+
+    seen = []
+
+    class FakeApp:
+        def __init__(self, **kwargs):
+            seen.append(kwargs)
+
+        def run(self):
+            seen.append("ran")
+
+    monkeypatch.setattr(isycode.tui, "TUIApp", FakeApp)
+
+    assert main(["--prompt", "Hola mundo"]) == 0
+    assert seen[-2:] == [{"initial_prompt": "Hola mundo", "auto_submit_prompt": True}, "ran"]
+    assert main(["tui", "-i", "Segunda"]) == 0
+    assert seen[-2:] == [{"initial_prompt": "Segunda", "auto_submit_prompt": True}, "ran"]
+    assert main(["--prompt=Tercera"]) == 0
+    assert seen[-2:] == [{"initial_prompt": "Tercera", "auto_submit_prompt": True}, "ran"]
+    assert main(["--mode", "flow", "--prompt", "Libre"]) == 0
+    assert seen[-2:] == [{"initial_prompt": "Libre", "auto_submit_prompt": True, "initial_mode": "flow"}, "ran"]
+    assert main(["tui", "--mode=flow"]) == 0
+    assert seen[-2:] == [{"initial_prompt": "", "auto_submit_prompt": False, "initial_mode": "flow"}, "ran"]

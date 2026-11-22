@@ -38,6 +38,7 @@ def test_tool_context_survives_next_turn_and_restart_without_replay(tmp_path, mo
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             await app._run_chat('Read first.py.')
             sid = app._active_chat_session_id
@@ -48,6 +49,7 @@ def test_tool_context_survives_next_turn_and_restart_without_replay(tmp_path, mo
             assert stored.state['tool_history'][0]['name'] == 'workspace_read'
         resumed = TUIApp()
         async with resumed.run_test() as pilot:
+            await resumed.wait_for_ready()
             await pilot.pause()
             await resumed._resume_chat_session(sid)
             before = len(requests)
@@ -184,6 +186,7 @@ def test_unreadable_legacy_budget_settings_do_not_block_provider_requests(tmp_pa
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             UserDefaultsStore().path.write_text('invalid JSON')
             await app._run_chat('Explain this.')
@@ -290,7 +293,7 @@ def test_cancellation_retains_unverified_threaded_tool_attempt(tmp_path, monkeyp
     async def scenario():
         app = TUIApp()
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await app.wait_for_ready()
             task = asyncio.create_task(app._run_chat('Do a slow operation.'))
             try:
                 assert await asyncio.to_thread(started.wait, 5)

@@ -31,14 +31,14 @@ class RetryPolicy:
     retry_after_cap_s: float = 0.0  # 0: Retry-After is not consulted
 
 
-# Delays are interactive: long enough for a dropped stream or a 5xx blip to
-# clear, short enough that the user would not have retried faster by hand.
+# Delays are interactive: long enough for a dropped stream, cold-start timeout,
+# or 5xx blip to clear without stopping long agentic turns prematurely.
 POLICIES: dict[str, RetryPolicy] = {
-    "STREAM": RetryPolicy("STREAM", 0.75, 4),
-    "NETWORK": RetryPolicy("NETWORK", 1.5, 3),
-    "TIMEOUT": RetryPolicy("TIMEOUT", 2.0, 3),
-    "PROVIDER": RetryPolicy("PROVIDER", 3.0, 3, retry_after_cap_s=15.0),
-    "RATE_LIMIT": RetryPolicy("RATE_LIMIT", 7.0, 3, retry_after_cap_s=15.0),
+    "STREAM": RetryPolicy("STREAM", 1.0, 10),
+    "NETWORK": RetryPolicy("NETWORK", 2.0, 10),
+    "TIMEOUT": RetryPolicy("TIMEOUT", 3.0, 10),
+    "PROVIDER": RetryPolicy("PROVIDER", 3.0, 8, retry_after_cap_s=30.0),
+    "RATE_LIMIT": RetryPolicy("RATE_LIMIT", 7.0, 8, retry_after_cap_s=30.0),
 }
 # Everything else (APIKEY, QUOTA, PERMISSION, CONFIG, MODEL, REQUEST, AUTHORITY,
 # IMAGES, STEER, PROTOCOL, UNKNOWN) is terminal: retrying cannot fix it or would guess.

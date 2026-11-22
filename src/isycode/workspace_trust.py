@@ -40,10 +40,9 @@ QUIET_CLASSIC_ACTIONS = frozenset({
     "workspace.command.run",
 })
 
-# Flow (ADR 0010): the same recoverable local work, without the trust ceremony;
-# choosing Flow with its warning is the consent. Everything else still asks.
-# Undoing a whole turn is a Flow-only recoverable action and also runs quietly.
-QUIET_FLOW_ACTIONS = QUIET_CLASSIC_ACTIONS | {"workspace.turn.undo"}
+# Flow (ADR 0010 v2): computer-wide recoverable & host execution work without
+# interactive confirmation prompts; configured local MCPs run cleanly too.
+QUIET_FLOW_ACTIONS = QUIET_CLASSIC_ACTIONS | {"workspace.turn.undo", "mcp.local.start", "mcp.local.invoke"}
 
 
 def onboarding_brief(*, root: Path, mode: str, provider: str,
@@ -95,7 +94,7 @@ def quiet_flow(authority, request) -> bool:
     """Whether a Flow workspace covers this one request without a question.
 
     Does not grant, consume or execute: the grant, IsySentinel, the ledger and
-    the journal still decide. A broad folder never runs quietly.
+    the journal still decide.
     """
     try:
         if request.action_id not in QUIET_FLOW_ACTIONS:
@@ -104,11 +103,11 @@ def quiet_flow(authority, request) -> bool:
             return False
         if authority.mode() != "flow":
             return False
-        if broad_workspace_reason(authority.root):
-            return False
         if not WorkspaceTrust._policy_current(authority):
             return False
-        if request.action_id == "workspace.command.run" and not _sandboxed_default_stage(request):
+        if (request.action_id == "workspace.command.run"
+                and not (request.parameters or {}).get("host_execution")
+                and not _sandboxed_default_stage(request)):
             return False
         return True
     except Exception:

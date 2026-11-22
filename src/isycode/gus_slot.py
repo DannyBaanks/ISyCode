@@ -13,8 +13,8 @@ from dataclasses import dataclass
 
 from isycode.model_catalog import catalog_models
 from isycode.providers import (
-    PRESETS, Provider, custom_models, load_provider_key, model_context_limit, model_slot,
-    provider_credential_state, provider_supports_tools, resolved_chat_model, save_model_slot)
+    PRESETS, PROVIDER_SCREEN, Provider, custom_models, load_provider_key, model_context_limit, model_slot,
+    provider_credential_state, provider_supports_tools, recent_models, resolved_chat_model, save_model_slot)
 
 SLOT = "gus"
 MIN_CONTEXT_TOKENS = 32_000
@@ -22,9 +22,11 @@ MIN_CONTEXT_TOKENS = 32_000
 # server configured for less would truncate or reject GUS's requests.
 UNKNOWN_WINDOW_PLAN_TOKENS = MIN_CONTEXT_TOKENS
 MAX_MODEL_CHOICES = 40
-# Usable without asking for anything new: a key the user already gave, or none needed.
-READY_CREDENTIALS = frozenset({"saved", "environment", "session", "signed-in", "optional"})
-# Bridges to a chat product rather than a model endpoint GUS can drive with tools.
+# Usable without asking for anything new: saved/stored/env/session keys, subscriptions, or local endpoints.
+READY_CREDENTIALS = frozenset({
+    "saved", "stored", "legacy", "environment", "session", "signed-in", "subscription", "optional",
+})
+# Browser-driven web bridge is chat-only; official Codex subscription ("chatgpt") supports tools.
 EXCLUDED_PROVIDERS = frozenset({"isyco-web"})
 
 
@@ -58,15 +60,14 @@ def model_window(provider: str, model: str) -> tuple[int | None, str]:
 
 def check_gus_model(provider: str, model: str) -> GusModelCheck:
     """Whether this model can serve GUS, and why not."""
-    if provider not in PRESETS or provider in EXCLUDED_PROVIDERS \
-            or PRESETS[provider].get("api") == "codex":
+    if provider not in PRESETS or provider in EXCLUDED_PROVIDERS:
         return GusModelCheck(False, None, "unknown", "GUS cannot use this provider.")
-    if not provider_supports_tools(provider):
-        return GusModelCheck(False, None, "unknown",
-                             "Tool calls are off for this provider; GUS needs them to edit.")
     entry = _catalog_entry(provider, model)
     if entry is not None and entry.get("tool_call") is False:
         return GusModelCheck(False, None, "catalog", "This model has no tool calls; GUS needs them to edit.")
+    if (entry is None or entry.get("tool_call") is not True) and not provider_supports_tools(provider):
+        return GusModelCheck(False, None, "unknown",
+                             "Tool calls are off for this provider; GUS needs them to edit.")
     window, source = model_window(provider, model)
     if window is not None and window < MIN_CONTEXT_TOKENS:
         return GusModelCheck(False, window, source,
@@ -79,18 +80,41 @@ def planning_window(check: GusModelCheck) -> int:
     return check.window if check.window is not None else UNKNOWN_WINDOW_PLAN_TOKENS
 
 
+def gus_provider_catalog() -> list[tuple[str, str, str, str]]:
+    """Same configurable providers as Providers & models, plus ChatGPT subscription."""
+    rows: list[tuple[str, str, str, str]] = []
+    seen: set[str] = set()
+    for section, key, label, blurb in PROVIDER_SCREEN:
+        if key and key in PRESETS and key not in EXCLUDED_PROVIDERS and key not in seen:
+            seen.add(key)
+            if key == "openai":
+                rows.append((section, key, PRESETS[key]["label"], blurb))
+                rows.append((section, "chatgpt", PRESETS["chatgpt"]["label"], ""))
+                seen.add("chatgpt")
+            else:
+                rows.append((section, key, label, blurb))
+    for key in PRESETS:
+        if key not in EXCLUDED_PROVIDERS and key not in seen:
+            seen.add(key)
+            rows.append(("providers", key, str(PRESETS[key].get("label", key)), ""))
+    return rows
+
+
 def gus_providers() -> list[str]:
-    """Providers GUS can use now with the credentials the user already set up."""
-    return [name for name in PRESETS
-            if name not in EXCLUDED_PROVIDERS and PRESETS[name].get("api") != "codex"
-            and provider_credential_state(name) in READY_CREDENTIALS]
+    """Providers GUS can use right now with credentials/subscriptions already set up."""
+    return [name for _, name, _, _ in gus_provider_catalog()
+            if provider_credential_state(name) in READY_CREDENTIALS]
 
 
 def gus_model_choices(provider: str) -> list[str]:
-    """Catalog, typed and currently selected model ids for one provider, without repeats."""
+    """Catalog, typed, recent and selected model ids for one provider, without repeats."""
     ids = [row["id"] for row in catalog_models(provider)]
     ids += custom_models(provider)
+    ids += [item["model"] for item in recent_models() if item.get("provider") == provider]
     ids.append(resolved_chat_model(provider))
+    default_model = PRESETS.get(provider, {}).get("default_model")
+    if isinstance(default_model, str) and default_model:
+        ids.append(default_model)
     return list(dict.fromkeys(item for item in ids if item))[:MAX_MODEL_CHOICES]
 
 
@@ -120,5 +144,5 @@ def gus_provider() -> Provider:
 
 
 __all__ = ["GusModelCheck", "GusSlotError", "MIN_CONTEXT_TOKENS", "UNKNOWN_WINDOW_PLAN_TOKENS",
-           "check_gus_model", "gus_model", "gus_model_choices", "gus_provider", "gus_providers",
-           "model_window", "planning_window", "save_gus_model"]
+           "check_gus_model", "gus_model", "gus_model_choices", "gus_provider", "gus_provider_catalog",
+           "gus_providers", "model_window", "planning_window", "save_gus_model"]

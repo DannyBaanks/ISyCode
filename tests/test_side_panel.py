@@ -104,6 +104,7 @@ def test_command_bar_labels_survive_hover_and_sections_fold(tmp_path, monkeypatc
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(140, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             button = app.query_one("#context-button")
             await pilot.hover("#context-button")
@@ -139,6 +140,7 @@ def test_space_expands_content_and_second_click_activates_tree_node(tmp_path, mo
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(140, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             app._set_rail_view("overview")
             await pilot.pause()
@@ -232,6 +234,7 @@ def test_install_commands_are_shown_and_nothing_is_launched(tmp_path, monkeypatc
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(140, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             app.action_toggle_sidebar()
             await pilot.pause()

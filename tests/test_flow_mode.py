@@ -8,6 +8,7 @@ import importlib.util
 import json
 import os
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -148,7 +149,7 @@ def test_quiet_flow_list_is_the_recoverable_local_list():
         "workspace.files.list", "workspace.files.read", "workspace.files.search",
         "workspace.context.inject", "workspace.files.write", "workspace.files.restore",
         "workspace.files.delete", "workspace.files.move", "workspace.command.run",
-        "workspace.turn.undo",
+        "workspace.turn.undo", "mcp.local.start", "mcp.local.invoke",
     }
 
 
@@ -172,25 +173,35 @@ def test_flow_does_not_need_or_use_the_classic_trust_record(project):
         WorkspaceTrust().accept(authority, ACCEPT_PHRASE)   # trust is a Classic record
 
 
-def test_flow_in_a_broad_folder_asks_again(project, monkeypatch):
+def test_flow_works_in_a_broad_folder_while_classic_still_asks(project, monkeypatch):
     authority, root = project
-    authority.set_mode("flow")
     monkeypatch.setattr("isycode.workspace_trust.broad_workspace_reason", lambda _root: "home folder")
+    authority.set_mode("flow")
     writer = WorkspaceWriteOwner(root, authority, ActionApprovalStore())
     preview = writer.preview("app.py", "x = 4\n")
-    assert modal_required(authority, preview.request)
-    assert writer.apply(preview, None).decision == "DENY"
+    assert not modal_required(authority, preview.request)
+    assert writer.apply(preview, None).decision == "ALLOW"
+
+    authority.set_mode("classic")
+    preview2 = writer.preview("app.py", "x = 5\n")
+    assert modal_required(authority, preview2.request)
+    assert writer.apply(preview2, None).decision == "DENY"
 
 
-def test_flow_without_a_sandbox_runs_no_command(project, monkeypatch):
+def test_classic_without_a_sandbox_runs_no_command_while_flow_runs_on_host(project, monkeypatch):
     authority, root = project
-    authority.set_mode("flow")
+    authority.set_mode("classic")
     monkeypatch.setattr("isycode.command_runner.sandbox_executable", lambda: None)
     with pytest.raises(ValueError, match="no unsandboxed fallback"):
         CommandRunOwner(root, authority, ActionApprovalStore()).prepare(["echo", "nope"])
-    command = ActionRequest("workspace.command.run", root, "/usr/bin/echo", {"argv": ["echo"]},
-                            execution_owner="workspace_command")
-    assert not quiet_flow(authority, command)
+
+    import sys
+    authority.set_mode("flow")
+    runner = CommandRunOwner(root, authority, ActionApprovalStore())
+    preview = runner.prepare([sys.executable, "-c", "print('flow-host-ok')"])
+    outcome = asyncio.run(runner.run(preview, None))
+    assert outcome.decision == "ALLOW", outcome.reason
+    assert "flow-host-ok" in json.loads(outcome.text)["output"]
 
 
 def test_leaving_flow_brings_the_questions_back_at_once(project):
@@ -231,62 +242,130 @@ def test_flow_tells_the_model_about_the_shell_and_nothing_else_changes():
     assert command_tool("classic") is COMMAND_TOOL and command_tool("security") is COMMAND_TOOL
     assert flow["function"]["parameters"] == COMMAND_TOOL["function"]["parameters"]
     assert flow["function"]["name"] == COMMAND_TOOL["function"]["name"]
-    assert "bash" in flow["function"]["description"]
+    from isycode.host_paths import shell_example
+    assert shell_example() in flow["function"]["description"]
     assert "There is no shell" in COMMAND_TOOL["function"]["description"]
 
 
-def test_real_flow_sandbox_keeps_host_environment_secrets_and_paths_out(project, tmp_path, monkeypatch):
+def test_real_flow_runs_computer_wide_while_classic_stays_bounded(project, tmp_path):
+    """Flow can inspect, edit, and execute across host paths and loopback sockets; Classic cannot."""
     import socket
-    from isycode.command_runner import sandbox_executable
-    if sandbox_executable() is None:
-        pytest.skip('a verified native sandbox is not available on this platform')
     authority, root = project
+    outside_dir = tmp_path / 'host_dir'
+    outside_dir.mkdir()
+    outside = outside_dir / 'outside.txt'
+    outside.write_text('human outside\n', encoding='utf-8')
+    approvals = ActionApprovalStore()
+
+    # Classic stays strictly workspace-bounded.
+    authority.set_mode('classic')
+    classic_reader = LocalWorkspaceReadOwner(root, authority)
+    classic_writer = WorkspaceWriteOwner(root, authority, approvals)
+    assert classic_reader.execute('workspace.files.read', {'path': str(outside)}).decision == 'DENY'
+    with pytest.raises(ValueError, match='inside the workspace'):
+        classic_writer.preview(str(outside), 'escape\n')
+
+    # Flow operates freely across the computer, while still guarding sensitive secrets.
     authority.set_mode('flow')
-    outside = tmp_path / 'outside.txt'
-    outside.write_text('human outside\n')
-    (root / '.env').write_text('FLOW_TEST_SECRET=must-stay-hidden\n')
-    monkeypatch.setenv('FLOW_HOST_SECRET', 'host-environment-canary')
-    if os.name == 'posix':
-        (root / 'linked.txt').symlink_to(outside)
-        os.link(outside, root / 'hardlinked.txt')
+    (root / '.env').write_text('SECRET=must-stay-hidden\n', encoding='utf-8')
+    flow_reader = LocalWorkspaceReadOwner(root, authority)
+    flow_writer = WorkspaceWriteOwner(root, authority, approvals)
+    read_out = flow_reader.execute('workspace.files.read', {'path': str(outside)})
+    assert read_out.decision == 'ALLOW', read_out.reason
+    assert 'human outside' in json.loads(read_out.text)['text']
+    assert flow_reader.execute('workspace.files.read', {'path': '.env'}).decision == 'DENY'
+
+    edit_out = flow_writer.apply(flow_writer.preview(str(outside), 'flow host edit\n'), None)
+    assert edit_out.decision == 'ALLOW', edit_out.reason
+    assert outside.read_text(encoding='utf-8') == 'flow host edit\n'
+
     listener = socket.socket()
     listener.bind(('127.0.0.1', 0))
     listener.listen()
     port = listener.getsockname()[1]
-    code = f'''import os,socket,pathlib,json
-assert 'FLOW_HOST_SECRET' not in os.environ
-assert b'host-environment-canary' not in pathlib.Path('/proc/1/environ').read_bytes()
-for name in ('.env', 'linked.txt', 'hardlinked.txt', {str(outside)!r}):
     try:
-        data = pathlib.Path(name).read_bytes()
-    except OSError:
-        continue
-    assert b'must-stay-hidden' not in data and b'human outside' not in data, name
-try:
-    pathlib.Path({str(outside)!r}).write_text('escape')
-except OSError:
-    pass
-else:
-    raise AssertionError('outside write succeeded')
-try:
-    s=socket.socket();s.settimeout(1)
-    assert s.connect_ex(('127.0.0.1', {port})) != 0
-except OSError:
-    pass
-print('FLOW_ISOLATION_OK')
-'''
-    journal = None
-    try:
-        from isycode.turn_journal import TurnJournal
-        journal = TurnJournal.begin(root)
-        runner = CommandRunOwner(root, authority, ActionApprovalStore())
-        preview = runner.prepare(['bash', '-c', "python3 -c " + __import__('shlex').quote(code)])
+        import sys
+        runner = CommandRunOwner(root, authority, approvals)
+        script = (
+            "import os, pathlib, socket\n"
+            "print(os.getcwd())\n"
+            "print(pathlib.Path('outside.txt').read_text(encoding='utf-8').strip())\n"
+            f"s = socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', {port})); s.close(); print('NET_OK')\n"
+        )
+        preview = runner.prepare([sys.executable, "-c", script], cwd=str(outside_dir))
         outcome = asyncio.run(runner.run(preview, None))
         assert outcome.decision == 'ALLOW', outcome.reason
         result = json.loads(outcome.text)
-        assert 'FLOW_ISOLATION_OK' in result['output'], result
-        assert outside.read_text() == 'human outside\n'
+        assert result['exit_code'] == 0, result
+        assert str(outside_dir.resolve()) in result['output']
+        assert 'flow host edit' in result['output']
+        assert 'NET_OK' in result['output']
     finally:
         listener.close()
-        if journal is not None:
-            journal.finish()
+
+
+def test_flow_windows_discovers_every_drive_and_uses_native_shell(monkeypatch):
+    """The Windows branch is tested here; native drive enumeration runs in Windows CI."""
+    import ctypes
+    from isycode.host_paths import flow_path_prefixes, shell_example, stdin_description
+
+    monkeypatch.setattr(ctypes, "windll", type("WinDLLs", (), {
+        "kernel32": type("Kernel32", (), {"GetLogicalDrives": staticmethod(lambda: 0b1100)})()
+    })(), raising=False)
+    prefixes = flow_path_prefixes(Path.cwd(), windows=True)
+    assert any(item.startswith("C:") for item in prefixes)
+    assert any(item.startswith("D:") for item in prefixes)
+    assert not any(item.startswith("A:") for item in prefixes)
+    assert "powershell" in shell_example(windows=True) and "bash" not in shell_example(windows=True)
+    assert stdin_description(windows=True) == "NUL"
+
+
+def test_flow_windows_resolves_backslash_program_paths(monkeypatch, tmp_path):
+    from isycode.command_runner import _resolve_host_program
+
+    program = tmp_path / "tool.exe"
+    program.write_bytes(b"synthetic executable")
+    # os is process-wide: changing os.name also changes pathlib.Path's class.
+    # Keep the real module for path operations and replace only the runner's view.
+    monkeypatch.setattr("isycode.command_runner.os", types.SimpleNamespace(
+        name="nt", path=os.path, access=lambda *_: True, X_OK=os.X_OK))
+    monkeypatch.setattr("isycode.command_runner.shutil.which", lambda _: (_ for _ in ()).throw(
+        AssertionError("an explicit Windows path must not go through POSIX PATH lookup")))
+    resolved = _resolve_host_program(tmp_path, str(program))
+    assert Path(resolved).name == "tool.exe"
+
+
+def test_flow_windows_timeout_kills_the_process_tree(monkeypatch):
+    calls = []
+
+    class Process:
+        pid = 4321
+        returncode = None
+
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs))
+
+    monkeypatch.setattr("isycode.command_runner.os", types.SimpleNamespace(name="nt"))
+    monkeypatch.setattr("subprocess.run", run)
+    CommandRunOwner._kill_host(Process())
+    assert calls[0][0] == ["taskkill.exe", "/PID", "4321", "/T", "/F"]
+    assert calls[0][1]["check"] is False
+
+
+def test_flow_external_move_and_delete_work_without_posix_descriptors(project, tmp_path, monkeypatch):
+    authority, root = project
+    authority.set_mode("flow")
+    writer = WorkspaceWriteOwner(root, authority, ActionApprovalStore())
+    outside = tmp_path / "host-move.txt"
+    outside.write_text("move me\n", encoding="utf-8")
+    destination = tmp_path / "host-moved.txt"
+    monkeypatch.setattr("isycode.workspace_write.use_verified_fs", lambda: True)
+
+    moved = writer.apply(writer.preview_move(str(outside), str(destination)), None)
+    assert moved.decision == "ALLOW", moved.reason
+    assert destination.read_text(encoding="utf-8") == "move me\n"
+    assert not outside.exists()
+
+    deleted = writer.apply(writer.preview_delete(str(destination)), None)
+    assert deleted.decision == "ALLOW", deleted.reason
+    assert not destination.exists()

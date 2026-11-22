@@ -87,7 +87,11 @@ class AuthorityMixin:
                 root=authority.root, mode="Classic", provider=selected_provider_name(),
                 sends_workspace_context=True)
             confirmed = await self._await_screen(ConfirmScreen(
-                "Trust this folder?", brief, "Trust this folder"))
+                "Trust this folder?", brief, "Trust this folder",
+                owner="workspace trust",
+                scope=str(authority.root),
+                duration="persistent workspace trust",
+                not_granted="commits, secrets, authority changes"))
             if confirmed:
                 trust.accept(authority, ACCEPT_PHRASE)
                 self._append("  " + tr("Quiet Classic is on for ordinary edits and sandboxed tests. Commits, secrets and authority changes still ask."), GREEN)
@@ -109,12 +113,11 @@ class AuthorityMixin:
                     "stay unavailable."),
         "security": ("Everything starts off; you allow each capability in Settings → Authority. "
                      "Permissions you granted explicitly stay as they are."),
-        "flow": ("Flow works on its own: reading, edits, moves, deletes and sandboxed commands "
-                 "run without asking, and a shell is available inside the sandbox. Each turn is "
-                 "recorded so you can undo it with /undo. Push, credentials, provider and "
-                 "authority changes, integrations and network for commands still ask or stay off. "
-                 "Classic is recommended for large work, if you are new to the TUI or want more "
-                 "control; Security is for sensitive files and explicit permissions."),
+        "flow": ("Flow works freely across your computer: host reads, edits, moves, deletes, "
+                 "shell commands with network, and configured local MCPs run without asking. "
+                 "Workspace turns are recorded for /undo. Commits of human-edited files, push, "
+                 "credentials, and authority changes still ask or stay off. "
+                 "Classic stays workspace-bounded; Security is for explicit per-action grants."),
     }
 
     async def _change_workspace_mode(self, mode: str, reopen_menu: bool = True) -> None:

@@ -1,10 +1,12 @@
 """Shared filename policy for workspace paths that may contain credentials."""
 
 SENSITIVE_NAMES = frozenset({
-    ".git", ".isycode", ".ssh", ".aws", ".gnupg",
+    ".git", ".isycode", ".ssh", ".aws", ".gnupg", ".kube",
     ".netrc", ".npmrc", ".pypirc", ".git-credentials", ".htpasswd", ".pgpass",
+    ".bash_history", ".zsh_history",
     "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials", "credentials.json",
     "secrets.json", "secrets.yaml", "secrets.yml", "vault.json",
+    "shadow", "gshadow", "sudoers",
 })
 # Suffixes that name a credential container regardless of its base name. The
 # list stays conservative on purpose: generic stems ("config.json", "token",

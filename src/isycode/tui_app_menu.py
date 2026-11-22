@@ -274,8 +274,7 @@ async def _review_cmd(app: "TUIApp", artifact: str) -> None:
             max_tokens=None,
             token_limit_field=reviewer.token_limit_field,
             reasoning_effort=reviewer.reasoning_effort,
-            temperature_supported=reviewer.temperature_supported,
-            timeout_s=None)
+            temperature_supported=reviewer.temperature_supported)
 
     try:
         request_task = asyncio.create_task(review_owner.execute(
@@ -387,6 +386,13 @@ async def _check_cmd(app: "TUIApp", arg: str) -> None:
 async def _usage_cmd(app: "TUIApp", arg: str) -> None:
     app._append(app._usage_status_text(), MUTED)
     app._append("  " + tr("Provider-reported usage only; ISyCode does not cap tokens or estimate billing."), MUTED)
+
+
+async def _isymem_cmd(app: "TUIApp", arg: str) -> None:
+    from isycode.isymem_bridge import run_isymem_cli
+    rc, output = await asyncio.to_thread(run_isymem_cli, arg, workspace_root=app._workspace_root)
+    color = MUTED if rc == 0 else YELLOW
+    app._append(output, color)
 
 async def _sessions_cmd(app: "TUIApp", arg: str) -> None:
     await app._manage_sessions(arg)
@@ -721,6 +727,10 @@ class MenuMixin:
     def _model_picker_result(self, entry: dict | None) -> None:
         if entry is not None:
             self._select_menu_entry(entry)
+        elif getattr(self, "_models_target", "chat") == "gus":
+            self._models_target = "chat"
+            self._models_scope = None
+            self._open_gus_slot_menu()
         elif getattr(self, "_models_return_settings", False):
             self._models_return_settings = False
             self._models_scope = None
@@ -766,6 +776,7 @@ class MenuMixin:
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
                 PluginCommand("usage", "show provider-reported chat token usage", _usage_cmd),
                 PluginCommand("context", "read workspace AGENTS.md with permission, or clear", _context_cmd),
+                PluginCommand("isymem", "query or update shared multi-harness memory (isymem)", _isymem_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),
             ],
         ))
@@ -836,7 +847,7 @@ class MenuMixin:
         self.run_worker(self._open_gus(), exclusive=True, group="gus")
 
     def _menu_gus_slot_provider(self, entry) -> None:
-        self._open_gus_models_menu(str(entry["value"]))
+        self._open_gus_provider(str(entry["value"]))
 
     def _menu_gus_slot_model(self, entry) -> None:
         self._choose_gus_model(str(entry["value"]))

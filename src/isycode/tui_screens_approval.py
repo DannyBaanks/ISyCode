@@ -41,10 +41,10 @@ DECISION_CSS = """
 .isy-dialog-options > .option-list--option-highlighted { color: #00d7ff; background: #002c36; text-style: none; }
 /* Short confirmations adapt to content rather than taking 90% of the screen. */
 .isy-dialog.dialog-fit, #tailscale-confirm-card, #context-access-card {
-    height: auto; min-height: 8; max-height: 85%;
+    height: auto; min-height: 8; max-height: 92%;
 }
 .isy-dialog.dialog-fit .isy-dialog-body, #tailscale-confirm-card .isy-dialog-body, #context-access-card .isy-dialog-body {
-    height: auto; max-height: 14;
+    height: auto; max-height: 45%;
 }
 """
 
@@ -271,7 +271,9 @@ class WriteApprovalScreen(ApprovalScreen):
     #write-approval-actions { height: auto; }
     #write-approval-actions Horizontal { height: 3; }
     """
-    BINDINGS = [Binding("escape", "reject", "Reject")]
+    BINDINGS = [Binding("escape", "reject", "Reject"),
+                Binding("ctrl+c", "reject", "Reject", show=False),
+                Binding("s", "session", "Trust folder this session", show=False)]
     AUTO_FOCUS = "#write-approval-reject"
 
     def __init__(self, preview: WritePreview, *, replaces_whole_file: bool = False,
@@ -320,15 +322,15 @@ class WriteApprovalScreen(ApprovalScreen):
                     yield Static(review_diff(self.preview.diff), markup=False)
             with Vertical(id="write-approval-actions", classes="isy-dialog-actions"):
                 with Horizontal():
-                    yield Button(tr("Reject · n"), id="write-approval-reject", classes="-refuse")
-                    yield Button(tr("Apply change · y"), id="write-approval-apply", variant="warning")
+                    yield Button(tr("Reject"), id="write-approval-reject", classes="-refuse")
+                    yield Button(tr("Apply change"), id="write-approval-apply", variant="warning")
                 if (self.allow_session_trust or self.allow_automatic_edits) and self.preview.kind == "write" and not self.preview.is_undo:
                     with Horizontal():
                         if self.allow_session_trust:
-                            yield Button(tr("Trust folder this session · s"), id="write-approval-session",
+                            yield Button(tr("Trust folder"), id="write-approval-session",
                                          variant="primary")
                         if self.allow_automatic_edits:
-                            yield Button(tr("Always allow…"), id="write-approval-always", variant="error")
+                            yield Button(tr("Always allow"), id="write-approval-always", variant="error")
             yield decision_hint()
 
     async def on_mount(self) -> None:
@@ -359,6 +361,9 @@ class WriteApprovalScreen(ApprovalScreen):
     def action_reject(self) -> None:
         self.dismiss(False)
 
+    def action_session(self) -> None:
+        self.dismiss("session")
+
 
 class BatchApprovalScreen(ModalScreen[str]):
     """One gesture for N proposed writes; every write keeps its own one-use digest.
@@ -371,7 +376,11 @@ class BatchApprovalScreen(ModalScreen[str]):
     BatchApprovalScreen { align: center middle; background: #000000 58%; }
     #batch-approval-card { width: 110; }
     """
-    BINDINGS = [Binding("escape", "reject", "Reject all")]
+    BINDINGS = [Binding("escape", "reject", "Reject all"),
+                Binding("ctrl+c", "reject", "Reject all", show=False),
+                Binding("n", "reject", "Reject all", show=False),
+                Binding("e", "each", "Review each", show=False),
+                Binding("a", "all", "Approve all", show=False)]
     AUTO_FOCUS = "#batch-approval-reject"
 
     def __init__(self, previews: list[WritePreview]) -> None:
@@ -398,9 +407,9 @@ class BatchApprovalScreen(ModalScreen[str]):
                         yield Static(preview.path, markup=False)
                         yield Static(review_diff(preview.diff), markup=False)
             with Horizontal(id="batch-approval-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Reject all · n"), id="batch-approval-reject")
-                yield Button(tr("Review each · e"), id="batch-approval-each")
-                yield Button(tr("Approve all {count} · a", count=len(self.previews)),
+                yield Button(tr("Reject all"), id="batch-approval-reject")
+                yield Button(tr("Review each"), id="batch-approval-each")
+                yield Button(tr("Approve all {count}", count=len(self.previews)),
                              id="batch-approval-all", variant="warning")
             yield decision_hint()
 
@@ -411,6 +420,12 @@ class BatchApprovalScreen(ModalScreen[str]):
     def action_reject(self) -> None:
         self.dismiss("reject")
 
+    def action_each(self) -> None:
+        self.dismiss("each")
+
+    def action_all(self) -> None:
+        self.dismiss("all")
+
 
 class CommandApprovalScreen(ApprovalScreen):
     """Show the exact argv of one sandboxed command; Reject is the default."""
@@ -420,7 +435,8 @@ class CommandApprovalScreen(ApprovalScreen):
     #command-approval-card { width: 100; }
     #command-approval-argv { border: solid #718291; padding: 0 1; margin: 1 0; }
     """
-    BINDINGS = [Binding("escape", "reject", "Reject")]
+    BINDINGS = [Binding("escape", "reject", "Reject"),
+                Binding("ctrl+c", "reject", "Reject", show=False)]
     AUTO_FOCUS = "#command-approval-reject"
 
     def __init__(self, preview: CommandPreview) -> None:
@@ -465,8 +481,8 @@ class CommandApprovalScreen(ApprovalScreen):
                        "cannot be undone with /undo. Nothing runs unless you approve it.",
                        program=preview.program, timeout=preview.timeout_s, hidden=hidden), markup=False)
             with Horizontal(id="command-approval-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Reject · n"), id="command-approval-reject", classes="-refuse")
-                yield Button(tr("Run command · y"), id="command-approval-run", variant="warning")
+                yield Button(tr("Reject"), id="command-approval-reject", classes="-refuse")
+                yield Button(tr("Run command"), id="command-approval-run", variant="warning")
             yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -483,7 +499,8 @@ class CommitApprovalScreen(ApprovalScreen):
     CommitApprovalScreen { align: center middle; background: #000000 58%; }
     #commit-approval-card { width: 110; }
     """
-    BINDINGS = [Binding("escape", "reject", "Reject")]
+    BINDINGS = [Binding("escape", "reject", "Reject"),
+                Binding("ctrl+c", "reject", "Reject", show=False)]
     AUTO_FOCUS = "#commit-approval-reject"
 
     def __init__(self, preview: CommitPreview) -> None:
@@ -506,8 +523,8 @@ class CommitApprovalScreen(ApprovalScreen):
                 with Vertical(id="commit-approval-diff", classes="isy-dialog-detail"):
                     yield Static(review_diff(preview.diff or "(no content changes)"), markup=False)
             with Horizontal(id="commit-approval-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Reject · n"), id="commit-approval-reject", classes="-refuse")
-                yield Button(tr("Commit · y"), id="commit-approval-apply", variant="warning")
+                yield Button(tr("Reject"), id="commit-approval-reject", classes="-refuse")
+                yield Button(tr("Commit"), id="commit-approval-apply", variant="warning")
             yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -524,7 +541,8 @@ class GusBranchApprovalScreen(ApprovalScreen):
     GusBranchApprovalScreen { align: center middle; background: #000000 58%; }
     #gus-branch-card { width: 84; }
     """
-    BINDINGS = [Binding("escape", "reject", "Reject")]
+    BINDINGS = [Binding("escape", "reject", "Reject"),
+                Binding("ctrl+c", "reject", "Reject", show=False)]
     AUTO_FOCUS = "#gus-branch-reject"
 
     def __init__(self, preview: BranchPreview) -> None:
@@ -547,8 +565,8 @@ class GusBranchApprovalScreen(ApprovalScreen):
                     branch=preview.branch, base=preview.base[:12], current=preview.current)),
                     id="gus-branch-summary")
             with Horizontal(id="gus-branch-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Reject · n"), id="gus-branch-reject", classes="-refuse")
-                yield Button(tr("Create branch · y"), id="gus-branch-apply", variant="warning")
+                yield Button(tr("Reject"), id="gus-branch-reject", classes="-refuse")
+                yield Button(tr("Create branch"), id="gus-branch-apply", variant="warning")
             yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -592,9 +610,8 @@ class LocalMCPConfirmScreen(ApprovalScreen):
                 with Vertical(id="local-mcp-payload", classes="isy-dialog-detail"):
                     yield Static(Text(self.payload))
             with Horizontal(id="local-mcp-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="local-mcp-cancel", classes="-refuse")
-                yield Button(tr("{label} · y", label=tr(self.approve_label)),
-                             id="local-mcp-approve", variant="warning")
+                yield Button(tr("Cancel"), id="local-mcp-cancel", classes="-refuse")
+                yield Button(tr(self.approve_label), id="local-mcp-approve", variant="warning")
             yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -646,8 +663,8 @@ class BrowserReadPreviewScreen(ApprovalScreen):
                 with Vertical(id="browser-read-content", classes="isy-dialog-detail"):
                     yield Static(Text(self.content), markup=False)
             with Horizontal(id="browser-read-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Discard · n"), id="browser-read-discard", classes="-refuse")
-                yield Button(tr("Share with model · y"), id="browser-read-share",
+                yield Button(tr("Discard"), id="browser-read-discard", classes="-refuse")
+                yield Button(tr("Share with model"), id="browser-read-share",
                              variant="warning")
             yield decision_hint()
 
@@ -686,8 +703,8 @@ class WorkspacePackConfirmScreen(ApprovalScreen):
                 with Vertical(id="workspace-pack-files", classes="isy-dialog-detail"):
                     yield Static(Text(self.details))
             with Horizontal(id="workspace-pack-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="workspace-pack-cancel", classes="-refuse")
-                yield Button(tr("Read and send once · y"), id="workspace-pack-approve",
+                yield Button(tr("Cancel"), id="workspace-pack-cancel", classes="-refuse")
+                yield Button(tr("Read and send once"), id="workspace-pack-approve",
                              variant="warning")
             yield decision_hint()
 
@@ -731,8 +748,8 @@ class MemoryConfirmScreen(ApprovalScreen):
                 with Vertical(id="memory-confirm-payload", classes="isy-dialog-detail"):
                     yield Static(Text(self.details))
             with Horizontal(id="memory-confirm-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Cancel · n"), id="memory-confirm-cancel", classes="-refuse")
-                yield Button(tr("Approve once · y"), id="memory-confirm-approve", variant="warning")
+                yield Button(tr("Cancel"), id="memory-confirm-cancel", classes="-refuse")
+                yield Button(tr("Approve once"), id="memory-confirm-approve", variant="warning")
             yield decision_hint()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -749,7 +766,8 @@ class DeleteSessionScreen(ApprovalScreen):
     DeleteSessionScreen { align: center middle; background: #000000 58%; }
     #delete-session-card { width: 72; }
     """
-    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+    BINDINGS = [Binding("escape", "cancel", "Cancel"),
+                Binding("ctrl+c", "cancel", "Cancel", show=False)]
     AUTO_FOCUS = "#delete-session-cancel"
 
     def __init__(self, title: str, *, kind: str = "conversation") -> None:
@@ -760,11 +778,11 @@ class DeleteSessionScreen(ApprovalScreen):
     def compose(self) -> ComposeResult:
         if self.kind == "iteration":
             heading = tr("Delete this iteration?")
-            button = tr("Delete iteration · y")
+            button = tr("Delete iteration")
             detail = tr("This permanently removes this one iteration ledger.")
         else:
             heading = tr("Delete this conversation?")
-            button = tr("Delete conversation · y")
+            button = tr("Delete conversation")
             detail = tr("This permanently removes this one transcript.")
         with Vertical(id="delete-session-card", classes="isy-dialog"):
             yield Static(heading, id="delete-session-title", classes="isy-dialog-title")
@@ -777,7 +795,7 @@ class DeleteSessionScreen(ApprovalScreen):
                                 title=self.title_text, detail=detail),
                              id="delete-session-copy")
             with Horizontal(id="delete-session-actions", classes="isy-dialog-actions"):
-                yield Button(tr("Keep · n"), id="delete-session-cancel", classes="-refuse")
+                yield Button(tr("Keep"), id="delete-session-cancel", classes="-refuse")
                 yield Button(button, id="delete-session-confirm", variant="warning")
             yield decision_hint()
 

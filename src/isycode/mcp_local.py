@@ -142,6 +142,7 @@ class MCPSession:
     config: ServerConfig
     process: asyncio.subprocess.Process
     tools: list[dict[str, Any]] = field(default_factory=list)
+    instructions: str = ""
     next_id: int = 1
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -273,7 +274,7 @@ class LocalMCPOwner:
             return ActionOutcome("MCP server could not start.", "ERROR", None, type(exc).__name__)
         session = MCPSession(config, process)
         try:
-            await session.request("initialize", {
+            init_result = await session.request("initialize", {
                 "protocolVersion": PROTOCOL_VERSION, "capabilities": {},
                 "clientInfo": {"name": "isycode", "version": "0.1.0"}}, START_TIMEOUT_S)
             await session.notify("notifications/initialized")
@@ -282,6 +283,9 @@ class LocalMCPOwner:
             await session.stop()
             return ActionOutcome("MCP server handshake failed.", "ERROR", None,
                                  f"{type(exc).__name__}: {str(exc)[:160]}")
+        raw_instructions = (init_result or {}).get("instructions") if isinstance(init_result, dict) else None
+        if isinstance(raw_instructions, str) and raw_instructions.strip():
+            session.instructions = raw_instructions.strip()[:4000]
         tools = []
         for tool in (listed or {}).get("tools", [])[:MAX_TOOLS_PER_SERVER]:
             if (isinstance(tool, dict) and isinstance(tool.get("name"), str)
@@ -321,6 +325,14 @@ class LocalMCPOwner:
                                     + tool["description"])[:1000],
                     "parameters": tool["inputSchema"]}})
         return tools
+
+    def session_instructions(self) -> str:
+        """Compact server instructions advertised during MCP initialize."""
+        parts = []
+        for name, session in self.sessions.items():
+            if session.process.returncode is None and session.instructions:
+                parts.append(f"[{name}] {session.instructions}")
+        return "\n".join(parts)[:6000]
 
     def resolve_function(self, function: str) -> tuple[str, str] | None:
         for name, session in self.sessions.items():

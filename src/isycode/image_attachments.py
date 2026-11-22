@@ -58,6 +58,16 @@ class ImageAttachments:
         self.items[label] = (mime, bytes(data))
         return label
 
+    def content_for_label(self, label: str, caption: str):
+        """Build a multimodal content list for one captured label without parsing ``caption``."""
+        if label not in self.items:
+            raise ValueError("Image attachment unavailable; paste it again before sending")
+        mime, data = self.items[label]
+        return [
+            {"type": "text", "text": caption},
+            {"type": "image_url", "image_url": {"url": "data:" + mime + ";base64," + base64.b64encode(data).decode("ascii")}},
+        ]
+
     def content(self, text):
         labels = list(dict.fromkeys(re.findall(r"\[IMAGE#\d+\]", text)))
         if not labels:

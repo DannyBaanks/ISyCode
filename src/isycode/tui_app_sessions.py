@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from rich.cells import cell_len
 from isycode.config import ConfigurationError
 from isycode.chat_sessions import ChatSessionStore
+from isycode.session_context import SessionContextFile, fresh_session_context_key
 from isycode.session_owner import MAX_MESSAGE_BYTES
 from isycode.work_list import (
     WorkList,
@@ -236,9 +237,6 @@ class SessionMixin:
         if steering_support(provider, model) is False:
             self._queue_steer_warning()
             return
-        if self._steering_try_active:
-            self.notify(tr("A steer attempt is still pending; this message stays queued"))
-            return
         previous = len(self._pending_steering)
         position = self._queued_messages.index(selected)
         self._accept_prompt(prompt, "/steer " + selected)
@@ -251,9 +249,9 @@ class SessionMixin:
 
     def _return_steering_to_queue(self, instructions, *, unsupported=False):
         from isycode.reasoning_options import record_steering_result
-        for instruction in instructions:
+        for instruction in reversed(list(instructions)):
             positions = self._steering_restore_positions.get(instruction, [])
-            position = positions.pop(0) if positions else len(self._queued_messages)
+            position = positions.pop() if positions else len(self._queued_messages)
             self._queued_messages.insert(min(position, len(self._queued_messages)), instruction)
         self._steering_try_active = False
         if unsupported:
@@ -317,29 +315,32 @@ class SessionMixin:
         is_narrow = getattr(self, "size", None) and self.size.width < 100
         box.border_title = tr("Idea · Space") if is_narrow else tr("Idea · Space expand")
         busy = self._loop_task is not None and not self._loop_task.done()
-        label = tr("Idea box") + (" · " + tr("Thinking…") if busy else "")
+        started_at = getattr(self, "_thinking_started_at", None)
+        elapsed_s = int(_time.monotonic() - started_at) if busy and started_at is not None else 0
+        thinking = tr("Thinking…") + (f" {elapsed_s}s" if elapsed_s >= 1 else "")
+        label = tr("Idea box") + (" · " + thinking if busy else "")
         heading = Text(label, style=f"bold {TEXT}")
-        if is_narrow:
-            if busy:
-                heading.append("\n")
-                heading.append(body, style=TEXT)
-                box.update(heading)
-            else:
-                box.update(Text(body, style=TEXT))
-            return
         try:
             name = selected_provider_name()
             model = resolved_chat_model(name)
             from isycode.model_presentation import model_display_name
-            from isycode.reasoning_options import reasoning_label
             preset = PRESETS.get(name, {})
             preset_label = preset.get("label") or name
-            suffix = f" / {tr(reasoning_label(name, model, preset.get('reasoning_effort')).capitalize())} · {preset_label}"
-            available = box.content_size.width - cell_len(label) - 3
             model_name = model_display_name(model)
-            if box.content_size.width and available > cell_len(suffix):
-                model_name = _fit_cells(model_name, available - cell_len(suffix))
-            heading.append(" · " + model_name + suffix, style=CYAN)
+            available = box.content_size.width - cell_len(label) - 3
+            if is_narrow:
+                if box.content_size.width and available >= 7:
+                    provider_budget = min(cell_len(preset_label), max(3, min(8, available // 3)))
+                    compact_provider = _fit_cells(preset_label, provider_budget)
+                    model_budget = max(1, available - cell_len(compact_provider) - 1)
+                    compact_model = _fit_cells(model_name, model_budget)
+                    heading.append(" · " + compact_provider + "/" + compact_model, style=CYAN)
+            else:
+                from isycode.reasoning_options import reasoning_label
+                suffix = f" / {tr(reasoning_label(name, model, preset.get('reasoning_effort')).capitalize())} · {preset_label}"
+                if box.content_size.width and available > cell_len(suffix):
+                    model_name = _fit_cells(model_name, available - cell_len(suffix))
+                heading.append(" · " + model_name + suffix, style=CYAN)
         except (ConfigurationError, ProviderError):
             pass
         if box.content_size.width:
@@ -745,6 +746,8 @@ class SessionMixin:
     def _paint_work_status(self) -> None:
         if not self.screen_stack:
             return  # the 1 s timer can still tick while the app shuts down
+        if self._loop_task is not None and not self._loop_task.done():
+            self._paint_idea_box()
         try:
             panel = self.screen_stack[0].query_one("#work-list", WorkList)
             if not panel.display:
@@ -853,6 +856,9 @@ class SessionMixin:
         self._show_agent_tasks([])
         self._active_chat_session_id = None
         self._session_save_warned = False
+        lane.session_context_key = fresh_session_context_key()
+        lane.session_context_initialized = False
+        lane.session_context_digest = ""
         lane.lines.clear()
         lane.partial = ""
         lane.partial_reason = ""
@@ -919,6 +925,37 @@ class SessionMixin:
             return
         await self._load_session_into_lane(open_lane(self, session.session_id), session)
 
+    def _capture_lane_ui_state(self) -> dict:
+        try:
+            provider = selected_provider_name()
+            model = resolved_chat_model(provider)
+        except (ConfigurationError, ProviderError):
+            provider, model = None, None
+        return {
+            "provider": provider,
+            "model": model,
+            "role": dict(self._active_role) if self._active_role else None,
+            "context": dict(self._agent_context) if self._agent_context else None,
+        }
+
+    def _remember_lane_ui_state(self, lane) -> None:
+        lane._isycode_ui_state = self._capture_lane_ui_state()
+
+    def _restore_lane_ui_state(self, lane) -> bool:
+        state = getattr(lane, "_isycode_ui_state", None)
+        if not isinstance(state, dict):
+            return False
+        if state.get("provider") and not self._provider_env_override:
+            os.environ["ISYCODE_PROVIDER"] = state["provider"]
+        if (state.get("model") and not self._model_env_override
+                and not self._provider_env_override):
+            os.environ["ISYCODE_MODEL"] = state["model"]
+        role = state.get("role")
+        context = state.get("context")
+        self._active_role = dict(role) if isinstance(role, dict) else None
+        self._agent_context = dict(context) if isinstance(context, dict) else None
+        return True
+
     async def _load_session_into_lane(self, lane, session) -> None:
         """Replace a lane's transcript, notes and draft with exactly this saved session."""
         lane.divergence_prompted = False
@@ -930,6 +967,11 @@ class SessionMixin:
         lane.conversation_summary = state.get("conversation_summary", "")
         lane.idea_box = state.get("idea_box", "")
         lane.usage = UsageLedger.from_state(state["usage"]) if "usage" in state else UsageLedger()
+        try:
+            previous_provider = selected_provider_name()
+            previous_model = resolved_chat_model(previous_provider)
+        except (ConfigurationError, ProviderError):
+            previous_provider, previous_model = None, None
         self._show_lane(lane)
         lane.throughput = ThroughputMeter()
         if "usage" not in state and session.messages:
@@ -941,17 +983,24 @@ class SessionMixin:
         lane.partial_reason_chunks = []
         lane.stream_widget = None
         lane.stream_block = None
+        lane.session_context_key = session.session_id
+        lane.session_context_initialized = True
         lane.lines = []
         for message in session.messages:
             if message["role"] == "user":
                 lane.lines.append(("user", message["content"], message.get("sent_at")))
             elif message["role"] == "assistant":
                 lane.lines.append(("assistant", message["content"], message.get("sent_at")))
+        ctx_file = self._session_context_file(lane=lane)
+        ctx_file.seed_from_messages(session.messages)
+        lane.session_context_digest = ctx_file.file_digest()
         self._show_lane(lane)
         if state.get("provider") and not self._provider_env_override:
             os.environ["ISYCODE_PROVIDER"] = state["provider"]
         if state.get("model") and not self._model_env_override and not self._provider_env_override:
             os.environ["ISYCODE_MODEL"] = state["model"]
+        self._paint_idea_box()
+        self._refresh_model_button()
         self._active_role = None
         role = state.get("role")
         if role:
@@ -965,6 +1014,19 @@ class SessionMixin:
         self.query_one("#context-button", Button).label = tr("Context")
         if state.get("context_path"):
             await self._load_project_context()
+        self.query_one("#context-button", Button).label = self._context_button_label()
+        try:
+            active_provider = selected_provider_name()
+            active_model = resolved_chat_model(active_provider)
+        except (ConfigurationError, ProviderError):
+            active_provider, active_model = None, None
+        if ((active_provider, active_model) != (previous_provider, previous_model)
+                and active_provider and active_model):
+            self._append(
+                "  " + tr("Selected for this session · {model_display_label}",
+                          model_display_label=self._model_display_label(active_provider, active_model)),
+                MUTED)
+        self._remember_lane_ui_state(lane)
         self._append("  " + tr("Conversation reopened · {title} · {len} messages", title=session.title, len=len(session.messages)), GREEN)
         await self._refresh_work_list()
 
@@ -1200,6 +1262,19 @@ class SessionMixin:
             return pinned
         return self._foreground_lane()
 
+    def _session_context_file(self, *, lane=None) -> SessionContextFile:
+        """Return the single canonical live session context file for a lane."""
+        target_lane = lane if lane is not None else self._active_lane()
+        key = (
+            getattr(target_lane, "session_context_key", None)
+            or getattr(target_lane, "session_id", None)
+        )
+        if not key:
+            key = fresh_session_context_key()
+            target_lane.session_context_key = key
+        mode = self._workspace_mode() if hasattr(self, "_workspace_mode") else "classic"
+        return SessionContextFile(self._workspace_root, key, mode=mode)
+
     def _lane_on_screen(self) -> bool:
         if not getattr(self, "_lanes", None):
             return True
@@ -1266,11 +1341,15 @@ class SessionMixin:
     def _show_lane(self, lane) -> None:
         current = self._foreground_lane()
         if current is not lane:
+            self._remember_lane_ui_state(current)
             self._copy_composer_draft()
             current.stream_widget = None
             current.stream_block = None
             self._foreground_key = lane.key
             lane.last_context_input_tokens = None
+            restored_ui = self._restore_lane_ui_state(lane)
+        else:
+            restored_ui = False
         self._show_chat_again()
         self._repaint_conversation()
         try:
@@ -1279,6 +1358,10 @@ class SessionMixin:
         except (NoMatches, NoScreen):
             pass
         self._paint_idea_box()
+        if restored_ui:
+            self._refresh_model_button()
+            self.query_one("#role-button", Button).label = self._role_button_label()
+            self.query_one("#context-button", Button).label = self._context_button_label()
         self._refresh_usage()
         self._paint_queued_messages()
         self._show_agent_tasks(list(lane.agent_tasks))

@@ -39,6 +39,8 @@ from isycode.action_runtime import (
 from isycode.mcp_local import LocalMCPOwner, config_path as mcp_config_path, load_config as load_mcp_config
 from isycode.agent_tasks import TASK_TOOL_NAME, render_tasks, validate_tasks
 from isycode.agent_questions import ASK_USER_TOOL_NAME, validate_question
+from isycode.human_shell import HUMAN_SHELL_TOOL_NAME, validate_human_shell
+from isycode.tui_screens_shell import HumanShellScreen
 from isycode.idea_box import IDEA_BOX_TOOL_NAME, validate_idea_box
 from isycode.git_owner import GIT_TOOL_NAMES
 from isycode.command_runner import COMMAND_TOOL_NAME
@@ -423,7 +425,7 @@ class ToolMixin:
                 and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
                                  DELETE_TOOL_NAME, MOVE_TOOL_NAME,
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
-                                 ASK_USER_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
+                                 ASK_USER_TOOL_NAME, HUMAN_SHELL_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
             outcome = {"error": "tool is not registered by ISyCode"}
             self._append("  " + tr("Tool denied · unregistered tool name"), SECURITY)
             return tool_call_id, json.dumps(outcome)
@@ -471,6 +473,17 @@ class ToolMixin:
                 answer = {key: answer[key] for key in ("status", "choice", "text") if key in answer}
             else:
                 answer = {"status": "cancelled"}
+            return tool_call_id, json.dumps(answer, ensure_ascii=False)
+        if name == HUMAN_SHELL_TOOL_NAME:
+            try:
+                req = validate_human_shell(arguments)
+            except ValueError as exc:
+                return tool_call_id, json.dumps({"error": str(exc)[:180]})
+            cwd = req.get("cwd") or str(self._workspace_root)
+            answer = await self._await_screen(HumanShellScreen(
+                req["reason"], req["commands"], cwd))
+            if not isinstance(answer, dict) or answer.get("status") not in {"completed", "no_commands_run", "cancelled"}:
+                answer = {"status": "cancelled", "runs": []}
             return tool_call_id, json.dumps(answer, ensure_ascii=False)
         if name == "update_session_title":
             if not isinstance(arguments, dict) or set(arguments) != {"title"} or not isinstance(arguments["title"], str):
@@ -526,8 +539,28 @@ class ToolMixin:
         target = arguments.get("path", ".")
         query = arguments.get("query")
         summary = {"workspace_list": f"list {target}", "workspace_read": f"read {target}",
+                   "workspace_read_image": f"read image {target}",
                    "workspace_search": f"find names “{query}” in {target}",
                    "workspace_grep": f"grep “{query}” in {target}"}.get(name, f"{name} {target}")
+        if name == "workspace_read_image":
+            try:
+                owner = LocalWorkspaceReadOwner(root, WorkspaceAuthority(root))
+                result, mime, data = await asyncio.to_thread(owner.execute_image_read, target)
+            except Exception:
+                self._append("  " + tr("Tool denied · {action_id} · authority/owner unavailable", action_id=action_id), SECURITY)
+                return tool_call_id, json.dumps({"error": "ISyCode authorization or read owner unavailable"})
+            if result.decision != "ALLOW" or result.receipt is None or not mime or data is None:
+                reason = result.reason or result.decision
+                self._append(f"  ✗ {summary} · {result.decision} · {reason[:180]}", SECURITY)
+                return tool_call_id, json.dumps({"error": "ISyCode denied the action", "reason": reason[:300]})
+            label = self._image_attachments.capture(mime, data)
+            info = json.loads(result.text)
+            info["image_label"] = label
+            info["note"] = ("Image attached as a multimodal user message for visual inspection; "
+                            "if your provider rejects images, it will be reported.")
+            self._append("  " + tr("✓ {alias} · {value} · completed", alias=alias, value=summary[:160]), TEXT)
+            self._append(self._receipt_text(result, summary), MUTED)
+            return tool_call_id, json.dumps(info, ensure_ascii=False)
         try:
             owner = LocalWorkspaceReadOwner(
                 root, WorkspaceAuthority(root))
@@ -806,6 +839,47 @@ class ToolMixin:
                                             self._action_approvals)
         return self._mcp_local
 
+    async def _ensure_flow_local_mcps(self) -> None:
+        """Auto-start configured local MCP servers in Flow unless explicitly revoked."""
+        if self._workspace_mode() != "flow":
+            return
+        lock = getattr(self, "_flow_mcp_lock", None)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._flow_mcp_lock = lock
+        async with lock:
+            if self._workspace_mode() != "flow":
+                return
+            try:
+                configs = load_mcp_config()
+            except (OSError, ValueError):
+                return
+            if not configs:
+                return
+            try:
+                grants = WorkspaceAuthority(self._workspace_root).effective_policy().get("grants", {})
+            except (WorkspaceAuthorityError, OSError, ValueError):
+                return
+            if (grants.get("mcp.local.start", {}).get("enabled") is False
+                    or grants.get("mcp.local.invoke", {}).get("enabled") is False):
+                return
+            mcp_owner = self._local_mcp_owner()
+
+            async def start_one(name: str) -> None:
+                existing = mcp_owner.sessions.get(name)
+                if existing is not None and existing.process.returncode is None:
+                    return
+                try:
+                    preview = await asyncio.to_thread(mcp_owner.prepare_start, name, configs)
+                    await asyncio.wait_for(mcp_owner.start(preview, None), timeout=8.0)
+                except (asyncio.TimeoutError, OSError, ValueError):
+                    return
+
+            await asyncio.gather(*(start_one(name) for name in configs))
+            refresh = getattr(self, "_refresh_local_mcp_rail", None)
+            if callable(refresh):
+                refresh()
+
     def _add_mcp_preset(self, name: str) -> None:
         from isycode.mcp_presets import add_preset
         try:
@@ -875,6 +949,9 @@ class ToolMixin:
         if outcome.decision == "ALLOW":
             tools = json.loads(outcome.text)["tools"]
             self._append("  " + tr("MCP {name} started · {len} tools · receipt {receipt_id}", name=name, len=len(tools), receipt_id=outcome.receipt.receipt_id), GREEN)
+            refresh = getattr(self, "_refresh_local_mcp_rail", None)
+            if callable(refresh):
+                refresh()
         else:
             self._append("  " + tr("MCP {name} {decision} · {value}", name=name, decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
 
@@ -888,18 +965,24 @@ class ToolMixin:
             preview = mcp_owner.prepare_call(server, tool, arguments)
         except ValueError as exc:
             return json.dumps({"error": str(exc)[:200]})
-        self._append("  " + tr("MCP call requested · {server}.{tool} · review it", server=server, tool=tool), CYAN)
-        if not await self._await_screen(LocalMCPConfirmScreen(
-                f"Call MCP tool · {server}.{tool}",
-                "Sends exactly these arguments to the local server. Its answer is untrusted data.",
-                json.dumps(preview.arguments, ensure_ascii=False, indent=2), "Call once",
-                owner="local MCP tool",
-                scope=f"{server}.{tool}",
-                duration="one-use tool call",
-                not_granted="no other tool calls, no automatic retries")):
-            self._append("  " + tr("MCP call rejected · nothing was sent"), MUTED)
-            return json.dumps({"status": "rejected_by_user"})
-        outcome = await mcp_owner.call(preview, self._action_approvals.issue(preview.request, ttl_seconds=60))
+        quiet = self._request_is_quiet(preview.request)
+        if quiet:
+            self._append("  " + tr("MCP · quiet Flow · {server}.{tool}", server=server, tool=tool), CYAN)
+            approval = None
+        else:
+            self._append("  " + tr("MCP call requested · {server}.{tool} · review it", server=server, tool=tool), CYAN)
+            if not await self._await_screen(LocalMCPConfirmScreen(
+                    f"Call MCP tool · {server}.{tool}",
+                    "Sends exactly these arguments to the local server. Its answer is untrusted data.",
+                    json.dumps(preview.arguments, ensure_ascii=False, indent=2), "Call once",
+                    owner="local MCP tool",
+                    scope=f"{server}.{tool}",
+                    duration="one-use tool call",
+                    not_granted="no other tool calls, no automatic retries")):
+                self._append("  " + tr("MCP call rejected · nothing was sent"), MUTED)
+                return json.dumps({"status": "rejected_by_user"})
+            approval = self._action_approvals.issue(preview.request, ttl_seconds=60)
+        outcome = await mcp_owner.call(preview, approval)
         if outcome.decision != "ALLOW" or outcome.receipt is None:
             self._append("  " + tr("MCP {decision} · {value}", decision=outcome.decision, value=outcome.reason[:180]), SECURITY)
             return json.dumps({"error": "MCP call did not run", "reason": outcome.reason[:300]})
@@ -907,7 +990,7 @@ class ToolMixin:
             payload = json.loads(outcome.text)
         except (TypeError, json.JSONDecodeError):
             payload = {}
-        if payload.get("browser_read") is True:
+        if payload.get("browser_read") is True and self._workspace_mode() != "flow":
             content = payload.get("content")
             if not isinstance(content, str) or not content.strip():
                 self._append("  " + tr("Browser snapshot contained no readable page text; raw output withheld."), YELLOW)

@@ -15,6 +15,7 @@ and the caller records the turn in a turn journal and checks the L0 fingerprint.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import stat
@@ -231,9 +232,12 @@ def gus_tools() -> list[dict]:
     """The tool schemas of GUS's role: machine reads, edits, sandboxed commands, git, memory."""
     from isycode.command_runner import command_tool
     from isycode.git_owner import GIT_COMMIT_TOOL, GIT_TOOLS
+    from isycode.isymem_bridge import ISYMEM_TOOL, resolve_isymem_dir
     from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, MOVE_TOOL, WRITE_TOOL
     tools = [*MACHINE_TOOLS, EDIT_TOOL, WRITE_TOOL, DELETE_TOOL, MOVE_TOOL,
              command_tool("flow"), *GIT_TOOLS, GIT_COMMIT_TOOL, MEMORY_TOOL]
+    if resolve_isymem_dir() is not None:
+        tools.append(ISYMEM_TOOL)
     return json.loads(json.dumps(tools))
 
 
@@ -284,13 +288,18 @@ def _prepare(roots, text: str, state: "GusState"):
         raise GusUnavailable(str(exc)) from exc
     check = check_gus_model(provider.name, provider.model)
     from isycode.gus_memory import memory_texts
+    from isycode.isymem_bridge import load_isymem_context
+    memories = list(memory_texts(state._root))
+    shared_mem = load_isymem_context(roots.visible, query=text, max_chars=2200)
+    if shared_mem:
+        memories.insert(0, shared_mem)
     history = [{"role": entry["role"], "content": entry["text"]} for entry in state.transcript()]
     history.append({"role": "user", "content": text})
     try:
         messages = plan_gus_request(pack=pack, role_instructions=role.instructions,
                                     history=history, tool_history=[],
                                     window_tokens=planning_window(check),
-                                    memories=memory_texts(state._root))
+                                    memories=memories)
     except ContextPackError as exc:
         raise GusUnavailable(str(exc)) from exc
     # The planner keeps the newest message whole (ADR 0009); one larger than the
@@ -335,11 +344,15 @@ async def gus_reply(roots, text: str, *,
     offered here; edits stay on a ``gus/*`` branch through ``gus_work``.
     """
     from isycode.chat_transport import assistant_turn
+    from isycode.isymem_bridge import ISYMEM_TOOL, ISYMEM_TOOL_NAME, execute_isymem_tool, resolve_isymem_dir
     state = state or roots.visible_state()
     provider, check, messages = _prepare(roots, text, state)
     if complete is None:
         from isycode.chat_transport import provider_complete as complete
-    tools = [MEMORY_TOOL] if remember is not None else None
+    if remember is not None:
+        tools = [MEMORY_TOOL, ISYMEM_TOOL] if resolve_isymem_dir(state.workspace) is not None else [MEMORY_TOOL]
+    else:
+        tools = None
     budget = window_chars(planning_window(check)) * REQUEST_WINDOW_SHARE
     used: list[str] = []
     answer, stopped, receipt_id, step = "", "", "", 0
@@ -367,11 +380,15 @@ async def gus_reply(roots, text: str, *,
                 call_id = call.get("id") if isinstance(call, dict) else None
                 if not isinstance(call_id, str) or not call_id or not isinstance(name, str):
                     raise GusUnavailable("GUS's model returned a tool call without identity.")
-                if name != MEMORY_TOOL_NAME or remember is None:
-                    output = json.dumps({"error": f"{name} is not one of GUS's tools"})
-                else:
+                if name == MEMORY_TOOL_NAME and remember is not None:
                     output = await remember(function.get("arguments"))
                     used.append(name)
+                elif name == ISYMEM_TOOL_NAME and remember is not None and resolve_isymem_dir(state.workspace) is not None:
+                    output = await asyncio.to_thread(
+                        execute_isymem_tool, function.get("arguments"), workspace_root=state.workspace)
+                    used.append(name)
+                else:
+                    output = json.dumps({"error": f"{name} is not one of GUS's tools"})
                 messages.append({"role": "tool", "tool_call_id": call_id, "content": output})
     if not answer:
         answer = {"steps": "GUS stopped after its step limit before answering.",

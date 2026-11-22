@@ -49,10 +49,11 @@ def test_scroll_indicator_uses_same_stroke_in_both_directions(tmp_path, monkeypa
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             chat = app.query_one("#chat")
             await chat.mount(Static("\n".join(f"message {index}" for index in range(80))))
-            await pilot.pause()
+            await pilot.pause(0.05)
             bar = chat.vertical_scrollbar
             assert bar.display
             assert bar.size.height >= 3

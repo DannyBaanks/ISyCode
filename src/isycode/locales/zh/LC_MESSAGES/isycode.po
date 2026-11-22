@@ -3118,6 +3118,18 @@ msgid "Flow turn · {count} files · /undo restores this turn; later human edits
 msgstr "Flow 回合 · {count} 个文件 · /undo 恢复此回合；保留之后的人工修改。"
 
 # Flow (ADR 0010)
+msgid "Flow · free computer-wide work without questions"
+msgstr "Flow · 无需确认即可自由操作整台计算机"
+
+msgid "MCP · quiet Flow · {server}.{tool}"
+msgstr "MCP · Flow 直连 · {server}.{tool}"
+
+msgid "{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\nFlow: computer-wide reads, edits, host shell commands with network, and configured local MCPs run without questions. Each workspace chat turn is recorded; /undo restores its files while keeping later human changes.\nSecurity: everything off until you allow it.\nAll modes keep Sentinel and receipts. Push, secrets, and authority changes still ask or stay off."
+msgstr "{root}\nClassic（推荐）：限定在工作区范围内审核编辑和隔离命令，或信任此文件夹。\nFlow：无需逐次确认即可读写计算机文件、运行带网络的主机 shell 命令以及已配置的本地 MCP。工作区回合仍会记录，可通过 /undo 恢复并保留后续人工修改。\nSecurity：默认关闭所有权限，直到您明确授权。\n所有模式均保留 Sentinel 和收据。推送、密钥与权限更改仍需确认或保持关闭。"
+
+msgid "Flow works freely across your computer: host reads, edits, moves, deletes, shell commands with network, and configured local MCPs run without asking. Workspace turns are recorded for /undo. Commits of human-edited files, push, credentials, and authority changes still ask or stay off. Classic stays workspace-bounded; Security is for explicit per-action grants."
+msgstr "Flow 可在整个计算机上自由工作：读取、编辑、移动、删除、带网络的主机命令以及已配置的本地 MCP 均无需逐次确认。工作区回合会记录以便 /undo 撤销。人工修改文件的 commit、推送、密钥与权限更改仍需确认或保持关闭。Classic 限定于工作区；Security 用于逐项显式授权。"
+
 msgid "Flow · recoverable local work without questions"
 msgstr "Flow · 无需逐次确认的可恢复本地工作"
 
@@ -6503,3 +6515,75 @@ msgstr "没有该编号的记忆。"
 
 msgid "Write the number of one memory."
 msgstr "请输入一条记忆的编号。"
+
+msgid "GUS"
+msgstr "GUS"
+
+msgid "New workspace · using your default {mode} mode · change it in Settings → Authority."
+msgstr "新工作区 · 正在使用默认模式 {mode} · 可在设置 → 权限中更改。"
+
+msgid "Temporary workspace · this folder is the workspace; .isyroot is optional. File access follows the selected mode and grants. Chat history is not saved."
+msgstr "临时工作区 · 此文件夹即为工作区；.isyroot 为可选。文件访问遵循所选模式和授权。聊天记录不会保存。"
+
+msgid "This conversation stays in memory · turn on “Save conversations” in Settings → Authority (recurring workspaces only)."
+msgstr "此对话仅保留在内存中 · 可在设置 → 权限中开启“保存对话”（仅限常驻工作区）。"
+
+msgid "Session context · {path}"
+msgstr "会话上下文 · {path}"
+
+msgid "Prompt kept in history (↑) · /retry prepares it if needed."
+msgstr "提示已保留在历史记录中（↑）· 需要时可用 /retry 准备重发。"
+
+msgid "Always allow"
+msgstr "始终允许"
+
+msgid "Apply change"
+msgstr "应用更改"
+
+msgid "Approve all {count}"
+msgstr "全部批准 ({count})"
+
+msgid "Approve once"
+msgstr "批准一次"
+
+msgid "Commit"
+msgstr "提交"
+
+msgid "Copy whole"
+msgstr "复制全部"
+
+msgid "Create branch"
+msgstr "创建分支"
+
+msgid "Delete conversation"
+msgstr "删除对话"
+
+msgid "Delete iteration"
+msgstr "删除迭代"
+
+msgid "Discard"
+msgstr "丢弃"
+
+msgid "Keep"
+msgstr "保留"
+
+msgid "Read and send once"
+msgstr "读取并发送一次"
+
+msgid "Reject"
+msgstr "拒绝"
+
+msgid "Reject all"
+msgstr "全部拒绝"
+
+msgid "Review each"
+msgstr "逐个审查"
+
+msgid "Run command"
+msgstr "运行命令"
+
+msgid "Share with model"
+msgstr "分享给模型"
+
+msgid "Trust folder"
+msgstr "信任文件夹"

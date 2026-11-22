@@ -34,6 +34,7 @@ def test_switching_leaves_the_other_conversation_running(tmp_path, monkeypatch):
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             prompt = app.query_one("#prompt-input")
             prompt.load_text("keep-going")
@@ -79,6 +80,7 @@ def test_overlapping_refresh_keeps_the_list_that_arrived_while_loading(tmp_path,
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             entered = threading.Event()
             release = threading.Event()
@@ -123,6 +125,7 @@ def test_escape_cancels_only_the_visible_conversation(tmp_path, monkeypatch):
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
             await pilot.pause()
             back = asyncio.create_task(asyncio.Event().wait())
             app._loop_task = back

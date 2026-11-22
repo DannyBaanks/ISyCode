@@ -96,9 +96,16 @@ def test_copy_path_for_selected_directory(tmp_path,monkeypatch,capsys):
         from isycode.workspace_authority import WorkspaceAuthority
         app=TUIApp()
         async with app.run_test(size=(100,30)) as pilot:
-            await pilot.pause();app._set_rail_view('files');await app._load_directory(str(root))
+            await app.wait_for_ready()
+            app._set_rail_view('files');await app._load_directory(str(root))
             tree=app.query_one('#workspace-tree',Tree)
-            node=next(n for n in tree.root.children if n.data['path']==str(folder))
+            node=None
+            for _ in range(40):
+                node=next((n for n in tree.root.children if n.data['path']==str(folder)),None)
+                if node is not None:
+                    break
+                await pilot.pause(0.05)
+            assert node is not None
             tree.select_node(node)
             copy_path=app.query_one('#file-copy-path')
             for _ in range(20):

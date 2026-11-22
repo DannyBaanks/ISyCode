@@ -223,7 +223,75 @@ def test_a_typed_run_command_is_its_own_undoable_turn(tmp_path, monkeypatch, cap
         asyncio.run(scenario())
 
 
-def test_flow_command_tool_says_the_network_is_off():
+def test_flow_command_tool_describes_host_computer_execution():
     from isycode.command_runner import command_tool
     text = command_tool('flow')['function']['description']
-    assert 'always blocked' in text and 'granted' not in text
+    assert 'host computer' in text and 'network' in text and 'always blocked' not in text
+
+
+def test_rail_mcp_shows_configured_local_servers_even_when_gateway_not_checked(tmp_path, monkeypatch, capsys):
+    import json as _json
+    import sys as _sys
+    from isycode.platform_storage import storage
+    root = configure(tmp_path, monkeypatch)
+    cfg_dir = tmp_path / "xdg-cfg" / "isycode"
+    storage.ensure_directory(cfg_dir, repair=True)
+    mcp_file = cfg_dir / "mcp.json"
+    mcp_file.write_text(_json.dumps({"servers": {"demo": {"command": [_sys.executable, "-c", "pass"]}}}), encoding="utf-8")
+    storage.protect(mcp_file)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-cfg"))
+
+    async def scenario():
+        app = TUIApp(initial_mode="flow")
+        async with app.run_test(size=(110, 32)) as pilot:
+            await app.wait_for_ready()
+            app._refresh_local_mcp_rail()
+            await pilot.pause()
+            title = str(app.query_one("#rail-mcp").title)
+            assert "1" in title and "MCPs" in title
+            assert WorkspaceAuthority(root).mode() == "flow"
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
+def test_opening_second_session_while_first_flow_turn_runs_sends_messages_cleanly(tmp_path, monkeypatch, capsys):
+    root = configure(tmp_path, monkeypatch)
+    WorkspaceAuthority(root).set_mode('flow')
+    lane1_entered = asyncio.Event()
+    lane1_release = asyncio.Event()
+
+    async def fake_complete(provider, messages, **kwargs):
+        last_user = next((m['content'] for m in reversed(messages) if m.get('role') == 'user'), '')
+        if 'first session' in str(last_user):
+            lane1_entered.set()
+            await lane1_release.wait()
+            return {'text': 'first done', 'tool_calls': []}
+        kwargs.get('on_chunk', lambda *_: None)('content', 'second done')
+        return {'text': 'second done', 'tool_calls': []}
+
+    monkeypatch.setattr('isycode.tui.provider_complete', fake_complete)
+
+    async def scenario():
+        app = TUIApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app.wait_for_ready()
+            lane1 = app._foreground_lane()
+            app._post_user_text(lane1, 'first session slow turn')
+            await asyncio.wait_for(lane1_entered.wait(), 5)
+
+            app._start_new_conversation()
+            await pilot.pause()
+            lane2 = app._foreground_lane()
+            assert lane2 is not lane1
+
+            await app._run_chat('Hola')
+            assert any(line[0] == 'assistant' and 'second done' in line[1] for line in lane2.lines)
+            assert not any('could not prepare recovery' in str(line[1]) for line in lane2.lines)
+
+            lane1_release.set()
+            await asyncio.wait_for(lane1.loop_task, 5)
+            assert TurnJournal.running(root) is None
+
+    with capsys.disabled():
+        asyncio.run(scenario())

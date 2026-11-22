@@ -23,6 +23,7 @@ from typing import Any, Awaitable, Callable
 from isycode.command_runner import COMMAND_DEFAULT_STAGE_BYTES, COMMAND_TOOL_NAME, CommandRunOwner
 from isycode.git_owner import GIT_TOOL_NAMES, GitOwner
 from isycode.gus_memory import GusMemoryOwner
+from isycode.isymem_bridge import ISYMEM_TOOL_NAME, execute_isymem_tool, resolve_isymem_dir
 from isycode.machine_view import MachineView
 from isycode.gus_session import MACHINE_TOOL_ACTIONS, MEMORY_TOOL_NAME
 from isycode.workspace_write import (
@@ -106,6 +107,9 @@ class GusToolDispatcher:
             return await self._machine(MACHINE_TOOL_ACTIONS[name], arguments)
         if name == MEMORY_TOOL_NAME:
             return await self._memory(arguments)
+        if name == ISYMEM_TOOL_NAME and resolve_isymem_dir(self.roots.visible) is not None:
+            return await asyncio.to_thread(
+                execute_isymem_tool, arguments, workspace_root=self.roots.visible)
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             return await self._write(name, arguments)
         if name in {DELETE_TOOL_NAME, MOVE_TOOL_NAME}:

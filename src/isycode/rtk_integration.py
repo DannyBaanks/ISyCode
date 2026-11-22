@@ -224,6 +224,12 @@ def plan(argv: tuple[str, ...], program: str) -> dict | None:
     _binary(identity)
     if program.startswith('/workspace/') or Path(argv[0]).name == 'rtk':
         return None
+    if Path(argv[0]).name == 'ziggrep':
+        # Already the search the person approved (ziggrep_rewrite); RTK has no
+        # rewrite for it, but its output is grep's, so route it to RTK's grep filter.
+        value = {key: identity[key] for key in ('path', 'sha256', 'version')}
+        value.update(strategy='pipe', decision='ask', rewrite_argv=('rtk', 'grep', *argv[1:]))
+        return value if valid_plan(value) else None
     query = shlex.join((Path(argv[0]).name, *argv[1:]))
     code, rewritten = _cli(identity, ('rewrite', query))
     if code == 1 and not rewritten.strip():

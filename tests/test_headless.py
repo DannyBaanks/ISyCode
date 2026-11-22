@@ -150,4 +150,75 @@ def test_usage_errors_and_launcher_routing(monkeypatch):
     seen = []
     monkeypatch.setattr("isycode.headless.main", lambda arguments: seen.append(arguments) or 0)
     assert launcher_main(["-p", "hello"]) == 0 and launcher_main(["--json", "-p", "x"]) == 0
-    assert seen == [["-p", "hello"], ["--json", "-p", "x"]]
+    assert launcher_main(["--mode", "flow", "--provider", "openai", "--model", "gpt-5.4", "-p", "w"]) == 0
+    assert seen == [
+        ["-p", "hello"],
+        ["--json", "-p", "x"],
+        ["--mode", "flow", "--provider", "openai", "--model", "gpt-5.4", "-p", "w"],
+    ]
+
+
+def test_flow_headless_allows_writes_and_commands_without_approval(workspace):
+    import sys
+    seen_tools = []
+    calls = []
+
+    async def transport(messages, tools, on_chunk):
+        seen_tools.append([t["function"]["name"] for t in tools])
+        calls.append(messages[-1])
+        if len(calls) == 1:
+            return {"text": "", "tool_calls": [{
+                "id": "c1",
+                "type": "function",
+                "function": {
+                    "name": "workspace_write",
+                    "arguments": json.dumps({"path": "hello.txt", "content": "from flow\n"}),
+                },
+            }]}
+        if len(calls) == 2:
+            return {"text": "", "tool_calls": [{
+                "id": "c2",
+                "type": "function",
+                "function": {
+                    "name": "workspace_run",
+                    "arguments": json.dumps({"argv": [sys.executable, "-c", "print('ok-cmd')"]}),
+                },
+            }]}
+        on_chunk("content", "flow done")
+        return {"text": "flow done", "tool_calls": []}
+
+    out, log = io.StringIO(), io.StringIO()
+    code = asyncio.run(run_headless(
+        "write and run",
+        root=workspace,
+        out=out,
+        log=log,
+        transport=transport,
+        tool_profile="flow",
+        mode="flow",
+    ))
+    assert code == EXIT_OK
+    assert out.getvalue() == "flow done\n"
+    assert {"workspace_write", "workspace_edit", "workspace_run"} <= set(seen_tools[0])
+    assert (workspace / "hello.txt").read_text(encoding="utf-8") == "from flow\n"
+    assert "ok-cmd" in calls[2]["content"]
+
+
+def test_headless_main_parses_flow_mode_and_provider_model(monkeypatch):
+    captured = []
+
+    async def fake_run_headless(prompt, **kwargs):
+        captured.append((prompt, kwargs))
+        return EXIT_OK
+
+    monkeypatch.setattr("isycode.headless.run_headless", fake_run_headless)
+    assert main(["--mode", "flow", "--provider", "openai", "--model", "gpt-5.4", "-p", "worker"]) == EXIT_OK
+    assert main(["-p", "readonly"]) == EXIT_OK
+    assert captured[0][0] == "worker"
+    assert captured[0][1]["mode"] == "flow"
+    assert captured[0][1]["tool_profile"] == "flow"
+    assert captured[0][1]["provider_name"] == "openai"
+    assert captured[0][1]["model_name"] == "gpt-5.4"
+    assert captured[1][0] == "readonly"
+    assert captured[1][1]["mode"] is None
+    assert captured[1][1]["tool_profile"] == "read-only"

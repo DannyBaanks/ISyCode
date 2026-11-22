@@ -204,7 +204,7 @@ class WorkspaceModeScreen(ModalScreen[str]):
             yield self._mode_copy()
             yield OptionList(
                 Option(tr("Classic · recommended"), id="classic"),
-                Option(tr("Flow · recoverable local work without questions"), id="flow"),
+                Option(tr("Flow · free computer-wide work without questions"), id="flow"),
                 Option(tr("Security · everything off until I allow it"), id="security"),
                 id="workspace-mode-options", classes="isy-dialog-options")
             with Horizontal(id="workspace-mode-actions", classes="isy-dialog-actions"):
@@ -214,13 +214,11 @@ class WorkspaceModeScreen(ModalScreen[str]):
 
     def _mode_copy(self) -> OnboardingCopy:
         return OnboardingCopy(
-            tr("{root}\nClassic (recommended): review edits and commands, or trust this folder for quiet local work.\n"
-               "Flow: edits, moves, deletes and sandboxed shell commands run without questions. "
-               "Each chat turn is recorded; /undo restores its files while keeping later human changes. "
-               "Commits of this turn's own files can run quietly.\n"
+            tr("{root}\nClassic (recommended): workspace-bounded review of edits and sandboxed commands, or trust this folder.\n"
+               "Flow: computer-wide reads, edits, host shell commands with network, and configured local MCPs run without questions. "
+               "Each workspace chat turn is recorded; /undo restores its files while keeping later human changes.\n"
                "Security: everything off until you allow it.\n"
-               "All modes keep Sentinel, budgets and receipts. Push, secrets, integrations and authority "
-               "changes still ask or stay off. Flow commands need a verified sandbox; command network stays off.",
+               "All modes keep Sentinel and receipts. Push, secrets, and authority changes still ask or stay off.",
                root=str(self.root)),
             id="workspace-mode-copy", classes="isy-dialog-body")
 
@@ -254,7 +252,7 @@ class WorkspaceModeSwitchScreen(WorkspaceModeScreen):
     BINDINGS = [Binding("escape", "cancel", "Back")]
     _LABELS = {
         "classic": "Classic · recommended",
-        "flow": "Flow · recoverable local work without questions",
+        "flow": "Flow · free computer-wide work without questions",
         "security": "Security · everything off until I allow it",
     }
 

@@ -33,7 +33,8 @@ def test_the_ceiling_is_pinned_to_adr_0011_and_0015():
         "workspace.files.delete", "workspace.files.move", "workspace.command.run",
         "workspace.turn.undo", "git.status", "git.diff", "git.commit",
         "machine.files.list", "machine.files.read", "machine.files.search",
-        "machine.files.grep", "gus.memory.write"}
+        "machine.files.grep", "gus.memory.write",
+        "mcp.local.start", "mcp.local.invoke"}
 
 
 @pytest.mark.parametrize("action", [

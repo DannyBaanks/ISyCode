@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import types
 from pathlib import Path
 
 import pytest
@@ -86,7 +87,8 @@ def test_choose_harness_folder_reuses_native_directory_picker_with_harness_title
     picked.mkdir()
     seen = {}
 
-    monkeypatch.setattr("isycode.file_picker.os.name", "posix")
+    # Do not change pathlib's platform through the process-wide os module.
+    monkeypatch.setattr("isycode.file_picker.os", types.SimpleNamespace(name="posix"))
     monkeypatch.setattr("isycode.file_picker.sys.platform", "linux")
     monkeypatch.setattr("isycode.file_picker.shutil.which", lambda name: "/usr/bin/zenity" if name == "zenity" else None)
 
@@ -107,7 +109,8 @@ def test_choose_harness_folder_reuses_native_directory_picker_with_harness_title
 def test_choose_harness_folder_rewords_picker_failure(tmp_path, monkeypatch):
     initial = tmp_path / "home"
     initial.mkdir()
-    monkeypatch.setattr("isycode.file_picker.os.name", "posix")
+    # Do not change pathlib's platform through the process-wide os module.
+    monkeypatch.setattr("isycode.file_picker.os", types.SimpleNamespace(name="posix"))
     monkeypatch.setattr("isycode.file_picker.sys.platform", "linux")
     monkeypatch.setattr("isycode.file_picker.shutil.which", lambda name: "/usr/bin/zenity" if name == "zenity" else None)
 

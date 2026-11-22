@@ -75,7 +75,7 @@
     #skills-tree .tree--label { text-wrap: nowrap; }
     #skill-detail { display: none; height: auto; padding: 0 0 1 0; }
     #lsp-install-note { display: none; height: auto; width: 1fr; min-width: 0; }
-    #files-view { display: none; }
+    #files-view { display: none; min-height: 12; }
     #file-controls { height: 1; }
     /* No side padding: three labels share a 25-column rail at 80x24. A label
        that still does not fit ends in an ellipsis instead of wrapping away. */
@@ -93,7 +93,7 @@
     #file-actions { height: 1; }
     #file-preview-scroll { height: 7; min-height: 4; border: round #414650; background: #11151b; }
     #chat {
-        height: 1fr; background: $surface; padding: 1 2;
+        height: 1fr; min-height: 2; background: $surface; padding: 1 2;
         scrollbar-size-vertical: 3; scrollbar-background: transparent;
     }
     Static.console-search-match { border-left: tall #9b5de5; padding-left: 1; background: #34313b; }
@@ -118,15 +118,18 @@
         border: round #514d5a; border-bottom: none;
         background: #1e1f22; color: #c7b8d4;
     }
-    /* 20/60/20 is an invariant, not a taste: the idea box must stay 60% of the
-       composer and centred on it, and #queued-row mirrors it with a 20% spacer
-       and a 60% #queue-stack. Changing one column moves all three boxes. */
+    /* IdeaBox keeps its 20/60/20 proportions in normal mode. Shell mode has
+       four visible columns, so its two boxes share the space between statuses. */
     #activity-status { width: 20%; height: 3; padding: 0 1; color: #9aa3ad; background: transparent; overflow-x: hidden; overflow-y: hidden; text-overflow: clip; }
     #usage-status {
         width: 20%; height: 3; padding: 0 1; content-align: right top;
         color: #9aa3ad; text-wrap: nowrap;
         overflow-x: hidden; overflow-y: hidden; text-overflow: ellipsis;
     }
+    #idea-box-row.shell-mode #activity-status { width: 20%; min-width: 20; }
+    #idea-box-row.shell-mode #idea-box,
+    #idea-box-row.shell-mode #shell-box { width: 1fr; min-width: 10; }
+    #idea-box-row.shell-mode #usage-status { width: 20%; min-width: 16; }
     #agent-tasks {
         height: auto; max-height: 12; padding: 0 2; background: #242529;
         border-top: solid #48494e; display: none;
@@ -225,4 +228,3 @@
     #action-hint { height: 1; color: #9aa3ad; }
     Collapsible { background: transparent; padding: 0; }
     CollapsibleTitle { color: #9aa3ad; text-style: italic; }
-    

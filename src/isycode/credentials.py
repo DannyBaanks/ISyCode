@@ -18,6 +18,30 @@ def _vault_path() -> Path:
     return state_root() / "credentials.sqlite3"
 
 
+_KEYRING_CACHE: tuple[int, str, Any] | None = None
+
+
+def _resolve_keyring_backend():
+    """Cache the real OS keyring backend per process/bus to avoid repeated D-Bus stalls."""
+    global _KEYRING_CACHE
+    import keyring
+    from keyring.backends.fail import Keyring as FailKeyring
+
+    getter = keyring.get_keyring
+    bus = os.environ.get("DBUS_SESSION_BUS_ADDRESS", "")
+    cached = _KEYRING_CACHE
+    if cached is not None and cached[0] == id(getter) and cached[1] == bus:
+        return cached[2]
+    backend = getter()
+    backend_priority = getattr(type(backend), "priority", 0)
+    children = getattr(backend, "backends", ())
+    if isinstance(backend, FailKeyring) or backend_priority <= 0 or any(
+            getattr(type(child), "priority", 0) <= 0 for child in children):
+        raise CredentialVaultError("No secure OS keyring backend is available")
+    _KEYRING_CACHE = (id(getter), bus, backend)
+    return backend
+
+
 class CredentialVault:
     """Keep labels in a private DB and secret values in the OS keyring."""
 
@@ -39,15 +63,7 @@ class CredentialVault:
             try:storage.protect(self.path)
             finally:os.close(fd)
         try:
-            import keyring
-            from keyring.backends.fail import Keyring as FailKeyring
-
-            self._keyring = keyring.get_keyring()
-            backend_priority = getattr(type(self._keyring), "priority", 0)
-            children = getattr(self._keyring, "backends", ())
-            if isinstance(self._keyring, FailKeyring) or backend_priority <= 0 or any(
-                    getattr(type(child), "priority", 0) <= 0 for child in children):
-                raise CredentialVaultError("No secure OS keyring backend is available")
+            self._keyring = _resolve_keyring_backend()
         except CredentialVaultError:
             raise
         except (KeyboardInterrupt, SystemExit):
