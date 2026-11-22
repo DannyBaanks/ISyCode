@@ -42,7 +42,15 @@ el test y su documentación antes de habilitar una integración externa.
 4. Ejecuta las comprobaciones pertinentes y anota exactamente cuáles corriste
    y sus resultados. No presentes pruebas simuladas como evidencia de una
    integración real.
-5. Abre un pull request con resumen, motivo, validación y limitaciones
+5. Publica la rama con upstream desde el primer push:
+   ```bash
+   git push -u origin <rama-actual>
+   git rev-parse --abbrev-ref --symbolic-full-name @{upstream}
+   ```
+   No uses un `git push` genérico para el primer envío de una rama. Si falta o
+   es incorrecto, configúralo explícitamente antes de abrir o cerrar la PR;
+   `isycode actualizar` lo necesita para encontrar el canal remoto.
+6. Abre un pull request con resumen, motivo, validación y limitaciones
    pendientes. Incluye capturas si el cambio modifica la TUI.
 
 ## Reglas de seguridad
