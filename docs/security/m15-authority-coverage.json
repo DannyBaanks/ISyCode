@@ -1,9 +1,9 @@
 {
   "format": "isycode.m15-authority-coverage.v1",
   "summary": {
-    "actions": 92,
-    "effectful": 67,
-    "owner_valid": 71,
+    "actions": 93,
+    "effectful": 68,
+    "owner_valid": 72,
     "owner_shared_read": 1,
     "owner_variants": 1,
     "explicit_deny": 18,
@@ -153,6 +153,22 @@
       "authority": "Workspace Authority",
       "sentinel": [
         "WorkspaceWriteBoundary"
+      ],
+      "variants": [],
+      "status": "OWNER_VALID",
+      "secure_reachability": "OWNER_PATH_DECLARED; END_TO_END_REACHABILITY_NOT_PROVEN"
+    },
+    {
+      "action": "workspace.files.transaction",
+      "effect": "write",
+      "approval_required": true,
+      "owners": [
+        "workspace_transaction"
+      ],
+      "classification": "OWNER_VALID",
+      "authority": "Workspace Authority",
+      "sentinel": [
+        "WorkspaceTransactionBoundary"
       ],
       "variants": [],
       "status": "OWNER_VALID",
@@ -1592,6 +1608,12 @@
       "status": "COVERED"
     },
     {
+      "action": "workspace.files.transaction",
+      "callsite": "WorkspaceTransactionOwner.apply",
+      "owner": "workspace_transaction",
+      "status": "COVERED"
+    },
+    {
       "action": "workspace.files.restore",
       "callsite": "WorkspaceWriteOwner._apply_undo",
       "owner": "workspace_write",
@@ -1995,87 +2017,94 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2500,
+      "line": 2599,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2626,
+      "line": 2725,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "workspace.files.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2980,
+      "line": 3079,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner.execute_image_read",
       "action": "workspace.files.read",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2281,
+      "line": 2380,
       "callable": "isycode.action_runtime.SessionDeleteOwner.delete",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2353,
+      "line": 2452,
       "callable": "isycode.action_runtime.GatewayMCPInvocationOwner.invoke",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2423,
+      "line": 2522,
       "callable": "isycode.action_runtime.GatewaySemanticOwner.invoke",
       "action": "gateway.semantic.read",
       "owner": "gateway_semantic"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2509,
+      "line": 2608,
       "callable": "isycode.action_runtime.LPSSymbolOwner.search",
       "action": "lsp.start",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2560,
+      "line": 2659,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "workspace.files.read",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2568,
+      "line": 2667,
       "callable": "isycode.action_runtime.LPSSymbolOwner.diagnostics",
       "action": "lsp.diagnostics",
       "owner": "lsp_symbols"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2634,
+      "line": 2733,
       "callable": "isycode.action_runtime.GritPeersOwner.claims",
       "action": "grit.claims.read",
       "owner": "grit_peers"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2696,
+      "line": 2795,
       "callable": "isycode.action_runtime.ProviderNetworkOwner.execute",
       "action": "provider.request",
       "owner": "provider_network"
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2784,
+      "line": 2883,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
+    },
+    {
+      "file": "isycode/action_runtime.py",
+      "line": 760,
+      "callable": "isycode.action_runtime.WorkspaceTransactionSystembility.evaluate",
+      "action": "workspace.files.write",
+      "owner": "workspace_write"
     },
     {
       "file": "isycode/bridge_coordination.py",
@@ -2436,21 +2465,21 @@
     },
     {
       "file": "isycode/tui_app_tools.py",
-      "line": 295,
+      "line": 296,
       "callable": "isycode.tui_app_tools.ToolMixin._call_gateway_chat_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 99,
+      "line": 103,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._confirm_and_load_external_context",
       "action": "workspace.context.inject",
       "owner": "workspace_read"
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 181,
+      "line": 185,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"
@@ -2468,6 +2497,13 @@
       "callable": "isycode.workspace_memory.WorkspaceMemoryOwner.prepare",
       "action": null,
       "owner": "workspace_memory"
+    },
+    {
+      "file": "isycode/workspace_transaction.py",
+      "line": 191,
+      "callable": "isycode.workspace_transaction.WorkspaceTransactionOwner.preview",
+      "action": "workspace.files.transaction",
+      "owner": "workspace_transaction"
     },
     {
       "file": "isycode/workspace_write.py",
@@ -2522,7 +2558,7 @@
     },
     {
       "file": "isycode/action_runtime.py",
-      "line": 2784,
+      "line": 2883,
       "callable": "isycode.action_runtime.LocalWorkspaceReadOwner._execute",
       "action": null,
       "owner": "workspace_read"
@@ -2578,7 +2614,7 @@
     },
     {
       "file": "isycode/tui_app_workspace.py",
-      "line": 181,
+      "line": 185,
       "callable": "isycode.tui_app_workspace.WorkspaceMixin._workspace_request",
       "action": null,
       "owner": "workspace_read"

@@ -44,7 +44,8 @@ def _digest(current):
 
 
 def apply_file(root: Path, relative: str, payload: bytes | None, *,
-               expected: str | None, mode: int = 0o644, expected_mode: int | None = None):
+               expected: str | None, mode: int = 0o644, expected_mode: int | None = None,
+               create_parents: bool = True):
     target = _target(root, relative)
     fs = VerifiedFS(root)
     current = read_file(root, relative)
@@ -57,9 +58,12 @@ def apply_file(root: Path, relative: str, payload: bytes | None, *,
                 raise OSError('effect preimage changed')
             fs.remove(target)
     else:
-        create = tuple(Path(*target.parent.relative_to(root).parts[:i]).as_posix()
-                       for i in range(1, len(target.parent.relative_to(root).parts) + 1))
-        fs.ensure_folders(target.parent, create)
+        if create_parents:
+            create = tuple(Path(*target.parent.relative_to(root).parts[:i]).as_posix()
+                           for i in range(1, len(target.parent.relative_to(root).parts) + 1))
+            fs.ensure_folders(target.parent, create)
+        else:
+            fs.check_chain(target.parent)
         if current is None:
             # Exclusive hard-link creation refuses a concurrently-created target.
             temporary = target.parent / ('.isycode-effect-' + secrets.token_hex(16) + '.tmp')

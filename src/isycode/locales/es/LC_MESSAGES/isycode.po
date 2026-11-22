@@ -5238,6 +5238,18 @@ msgstr "Owner: edición de archivos del workspace (batch)\nAlcance: {len} archiv
 msgid "Total +{added} / -{removed} lines across {len} files. Approving here issues one single-use, digest-bound approval per change — no lasting permission is created, and a file that changes before it is applied is refused."
 msgstr "Total +{added} / -{removed} líneas en {len} archivos. Aprobar aquí emite una aprobación de un solo uso ligada al digest por cada cambio — no se crea ningún permiso duradero, y un archivo que cambie antes de aplicarse se rechaza."
 
+msgid "Review edit pack · {len} files · all or rollback"
+msgstr "Revisar paquete · {len} archivos · todo o rollback"
+
+msgid "Owner: workspace edit pack\nScope: {len} files · +{added} / -{removed} lines\nDuration: one-use approval bound to the whole manifest\nNot granted: no other files, no commands, no secrets"
+msgstr "Owner: paquete de edición del workspace\nScope: {len} archivos · +{added} / -{removed} líneas\nDuration: aprobación de un solo uso ligada a todo el manifiesto\nNot granted: ningún otro archivo, comando ni secreto"
+
+msgid "Total +{added} / -{removed} lines across {len} files. One approval covers this exact manifest. Every file is applied, or every applied file is rolled back. If recovery cannot be verified, the result is NOT_VERIFIABLE. Parent folders are not created."
+msgstr "Total +{added} / -{removed} líneas en {len} archivos. Una aprobación cubre este manifiesto exacto. Se aplican todos los archivos o se revierten todos los aplicados. Si la recuperación no puede verificarse, el resultado es NOT_VERIFIABLE. No se crean carpetas padre."
+
+msgid "Apply pack {count}"
+msgstr "Aplicar paquete {count}"
+
 msgid "RTK suggestion: {join}"
 msgstr "Sugerencia de RTK: {join}"
 

@@ -262,6 +262,7 @@ KNOWN_EFFECT_CALLSITES = (
     ("workspace.context.inject", "WorkspaceMixin._inject_agent_context", "workspace_read", "COVERED"),
     ("workspace.files.read", "WorkspaceMixin._workspace_request", "workspace_read", "COVERED"),
     ("workspace.files.write", "WorkspaceWriteOwner.apply", "workspace_write", "COVERED"),
+    ("workspace.files.transaction", "WorkspaceTransactionOwner.apply", "workspace_transaction", "COVERED"),
     ("workspace.files.restore", "WorkspaceWriteOwner._apply_undo", "workspace_write", "COVERED"),
     ("workspace.files.delete", "WorkspaceWriteOwner._apply_delete", "workspace_write", "COVERED"),
     ("workspace.files.move", "WorkspaceWriteOwner._apply_move", "workspace_write", "COVERED"),

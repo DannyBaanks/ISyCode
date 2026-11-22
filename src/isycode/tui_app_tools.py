@@ -45,6 +45,7 @@ from isycode.idea_box import IDEA_BOX_TOOL_NAME, validate_idea_box
 from isycode.git_owner import GIT_TOOL_NAMES
 from isycode.command_runner import COMMAND_TOOL_NAME
 from isycode.workspace_write import DELETE_TOOL_NAME, EDIT_TOOL, EDIT_TOOL_NAME, MOVE_TOOL_NAME, WRITE_TOOL, WRITE_TOOL_NAME
+from isycode.workspace_transaction import EDIT_PACK_TOOL_NAME
 from textual.widgets import Static, Collapsible
 from rich.text import Text
 from rich.markdown import Markdown as RichMarkdown
@@ -441,7 +442,7 @@ class ToolMixin:
                 memory_arguments = None
             return tool_call_id, await self._call_workspace_memory(name, memory_arguments)
         if (name not in TOOL_ACTIONS and name not in GIT_TOOL_NAMES
-                and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, COMMAND_TOOL_NAME,
+                and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME, EDIT_PACK_TOOL_NAME, COMMAND_TOOL_NAME,
                                  DELETE_TOOL_NAME, MOVE_TOOL_NAME,
                                  TASK_TOOL_NAME, CONTEXT_ACCESS_TOOL_NAME,
                                  ASK_USER_TOOL_NAME, HUMAN_SHELL_TOOL_NAME, IDEA_BOX_TOOL_NAME, "update_session_title"}):
@@ -520,15 +521,19 @@ class ToolMixin:
             self._paint_idea_box()
             self._save_draft()
             return tool_call_id, json.dumps({"status": "shown"})
-        if 'folder' in arguments and name not in TOOL_ACTIONS and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
+        write_tools = {WRITE_TOOL_NAME, EDIT_TOOL_NAME, EDIT_PACK_TOOL_NAME}
+        if 'folder' in arguments and name not in TOOL_ACTIONS and name not in write_tools:
             return tool_call_id, json.dumps({'error': 'This tool does not support folder selection'})
         alias = arguments.pop('folder', 'main')
-        if not isinstance(alias, str) or (alias != 'main' and name not in TOOL_ACTIONS and name not in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}):
+        if not isinstance(alias, str) or (alias != 'main' and name not in TOOL_ACTIONS and name not in write_tools):
             return tool_call_id, json.dumps({'error': 'Additional folders support file reads/searches/creation/edits only'})
         try:
-            root = self._folder_store().resolve(alias, write=name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME})
+            root = self._folder_store().resolve(alias, write=name in write_tools)
         except (OSError, ValueError) as exc:
             return tool_call_id, json.dumps({'error': str(exc)[:180]})
+        if name == EDIT_PACK_TOOL_NAME:
+            return tool_call_id, await self._dispatch_edit_pack(
+                arguments, root=root, folder_alias=alias)
         if name in {WRITE_TOOL_NAME, EDIT_TOOL_NAME}:
             batch_decision = self._batch_decisions.pop(tool_call_id, None)
             if batch_decision == "reject":

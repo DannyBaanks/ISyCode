@@ -68,14 +68,14 @@ def digest(current: tuple[bytes, int] | None) -> str | None:
 
 def apply_file(root: Path, relative: str, payload: bytes | None, *,
                expected: str | None, mode: int = 0o644,
-               expected_mode: int | None = None) -> None:
+               expected_mode: int | None = None, create_parents: bool = True) -> None:
     """Apply only a matching preimage; never open an existing temporary file.
 
     The final preimage check detects edits arriving after the plan snapshot.
     A simultaneous external writer after that check cannot be serialized by a
     userspace hash check; no universal filesystem compare-and-swap is claimed.
     """
-    parent = open_parent(root, relative, create=payload is not None)
+    parent = open_parent(root, relative, create=payload is not None and create_parents)
     name = Path(relative).name
     temporary = ".isycode-effect-" + secrets.token_hex(16) + ".tmp"
     created = False

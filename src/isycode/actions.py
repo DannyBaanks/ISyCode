@@ -23,6 +23,7 @@ _ENTRIES = [
     ("workspace.config.list", "Files", "List ISyCode workspace prompt commands", "read", False),
     ("workspace.config.write", "Files", "Initialize or update ISyCode workspace config", "write", True),
     ("workspace.files.write", "Files", "Create or edit files", "write", True),
+    ("workspace.files.transaction", "Files", "Apply a reviewed multi-file edit pack", "write", True),
     ("workspace.files.restore", "Files", "Undo an ISyCode file change", "write", True),
     ("workspace.turn.undo", "Files", "Undo every file change of one ISyCode turn", "write", True),
     ("workspace.command.run", "Commands", "Run a command in the workspace sandbox", "process", True),

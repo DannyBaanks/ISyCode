@@ -217,6 +217,32 @@ MOVE_PARAMETER_KEYS = frozenset({"path", "to", "sha256", "new_folders", "undo_of
 MAX_MOVE_BYTES = 16 * 1024 * 1024
 FILE_CHANGE_ACTIONS = frozenset({"workspace.files.write", "workspace.files.restore",
                                  "workspace.files.delete", "workspace.files.move"})
+TRANSACTION_ACTION = "workspace.files.transaction"
+TRANSACTION_PARAMETER_KEYS = frozenset({"scope_id", "operations", "manifest_sha256", "nonce"})
+MAX_PACK_OPERATIONS = 8
+MAX_PACK_TOTAL_BYTES = 48 * 1024
+
+
+def _pack_plain(value):
+    """JSON-ready view of a frozen edit-pack manifest."""
+    if isinstance(value, Mapping):
+        return {key: _pack_plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_pack_plain(item) for item in value]
+    return value
+
+
+def edit_pack_manifest_sha256(operations) -> str:
+    """Digest of the ordered, reviewed operations; the request binds it."""
+    canonical = json.dumps(_pack_plain(operations), ensure_ascii=False,
+                           sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def edit_pack_scope_id(root: Path, paths) -> str:
+    """Bind the pack to this workspace and the exact set of paths."""
+    payload = str(Path(root).resolve()) + "\0" + "\0".join(sorted(paths))
+    return "pack_" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 RESTORE_PARAMETER_KEYS = frozenset({"path", "checkpoint_id", "current_sha256", "restore_sha256",
                                     "diff_sha256"})
 # Workspace identity: a non-empty marker stops being a boundary, so the chat
@@ -307,6 +333,7 @@ OWNER_ACTION_VARIANTS = (
 OWNER_REQUIRED_SYSTEMBILITIES = {
     "workspace_read": frozenset({"WorkspaceReadBoundary"}),
     "workspace_write": frozenset({"WorkspaceWriteBoundary"}),
+    "workspace_transaction": frozenset({"WorkspaceTransactionBoundary"}),
     CONFIG_OWNER_ID: frozenset({"WorkspaceReadBoundary", "WorkspaceWriteBoundary",
                                 "WorkspaceConfigBoundary"}),
     "provider_auth": frozenset({"ProviderAuthBoundary"}),
@@ -354,6 +381,7 @@ OWNER_REQUIRED_SYSTEMBILITIES = {
 OWNER_ACTIONS = {
     "workspace_read": READ_ACTIONS,
     "workspace_write": FILE_CHANGE_ACTIONS | {"workspace.turn.undo"},
+    "workspace_transaction": frozenset({TRANSACTION_ACTION}),
     CONFIG_OWNER_ID: CONFIG_ACTIONS,
     "provider_auth": frozenset({"provider.authenticate"}),
     "provider_network": frozenset({"provider.request"}),
@@ -675,6 +703,76 @@ def _turn_undo_paths_valid(root: Path, paths: object) -> bool:
             except OSError:
                 return False
     return True
+
+
+class WorkspaceTransactionSystembility:
+    """One reviewed manifest of bounded file writes, never a scope-level bypass.
+
+    Each operation is re-checked by the same write boundary as a single write.
+    The pack adds only aggregate limits, manifest/scope binding and per-path
+    Authority; it never grants a new path, a sensitive file or a larger file.
+    """
+
+    name = "WorkspaceTransactionBoundary"
+
+    def __init__(self, root: Path):
+        self.root = root.resolve(strict=True)
+
+    def evaluate(self, request: ActionRequest,
+                 authority: AuthorityDecision) -> SystembilityResult:
+        if request.action_id != TRANSACTION_ACTION:
+            return SystembilityResult(self.name, True, "not applicable to this action")
+        if request.workspace_root != self.root or request.target != str(self.root):
+            return SystembilityResult(self.name, False, "edit pack must target this workspace root")
+        params = request.parameters
+        if set(params) != TRANSACTION_PARAMETER_KEYS:
+            return SystembilityResult(self.name, False, "transaction request shape is not the reviewed manifest")
+        operations = params.get("operations")
+        scope_id = params.get("scope_id")
+        manifest_sha256 = params.get("manifest_sha256")
+        nonce = params.get("nonce")
+        if (not isinstance(operations, tuple) or not 1 <= len(operations) <= MAX_PACK_OPERATIONS
+                or not isinstance(scope_id, str) or not re.fullmatch(r"pack_[0-9a-f]{16}", scope_id)
+                or not isinstance(nonce, str) or not re.fullmatch(r"[0-9a-f]{16}", nonce)
+                or not isinstance(manifest_sha256, str)
+                or re.fullmatch(r"[0-9a-f]{64}", manifest_sha256) is None):
+            return SystembilityResult(self.name, False, "edit pack limits or identifiers are invalid")
+        if edit_pack_manifest_sha256(operations) != manifest_sha256:
+            return SystembilityResult(self.name, False, "edit pack manifest digest does not match its operations")
+        paths = []
+        total_size = 0
+        write_boundary = WorkspaceWriteSystembility(self.root)
+        for operation in operations:
+            if not isinstance(operation, Mapping) or set(operation) != WRITE_PARAMETER_KEYS:
+                return SystembilityResult(self.name, False, "edit pack operation is not a reviewed write")
+            path = operation.get("path")
+            size = operation.get("size")
+            if not isinstance(path, str) or type(size) is not int:
+                return SystembilityResult(self.name, False, "edit pack path or size is invalid")
+            if operation.get("before_sha256") == operation.get("after_sha256"):
+                return SystembilityResult(self.name, False, "edit pack contains a no-op write")
+            paths.append(path)
+            total_size += size
+            try:
+                # Reuse the single-write path/digest/folder checks. A denied
+                # Authority decision is intentional: a pack never inherits
+                # Flow's host-wide write scope.
+                write_request = ActionRequest(
+                    "workspace.files.write", self.root, str(self.root / path),
+                    dict(operation), execution_owner="workspace_write")
+            except (TypeError, ValueError):
+                return SystembilityResult(self.name, False, "edit pack operation cannot be represented safely")
+            result = write_boundary.evaluate(
+                write_request, AuthorityDecision(False, "", "pack path check", write_request.digest))
+            if not result.passed:
+                return SystembilityResult(self.name, False, f"edit pack path denied: {result.reason}")
+        if total_size > MAX_PACK_TOTAL_BYTES:
+            return SystembilityResult(self.name, False, "edit pack exceeds the aggregate byte limit")
+        if len({path.casefold() for path in paths}) != len(paths):
+            return SystembilityResult(self.name, False, "edit pack cannot contain the same path twice")
+        if edit_pack_scope_id(self.root, paths) != scope_id:
+            return SystembilityResult(self.name, False, "edit pack scope does not match its paths")
+        return SystembilityResult(self.name, True, "reviewed multi-file manifest inside the workspace")
 
 
 class WorkspaceConfigBoundary:
@@ -2168,6 +2266,7 @@ class ProductActionGate:
         self.sentinel = IsySentinel([
             ExecutionOwnerBindingSystembility(),
             WorkspaceReadSystembility(canonical), WorkspaceWriteSystembility(canonical),
+            WorkspaceTransactionSystembility(canonical),
             WorkspaceConfigBoundary(canonical),
             ProviderAuthSystembility(), ProviderNetworkSystembility(),
             GrokAuthSystembility(),

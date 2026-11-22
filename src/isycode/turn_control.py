@@ -233,7 +233,9 @@ class OperationJournal:
         descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
                              | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o600)
         try:
-            os.write(descriptor, payload)
+            view = memoryview(payload)
+            while view:
+                view = view[os.write(descriptor, view):]
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
