@@ -2422,14 +2422,14 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1080,
+      "line": 1113,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1120,
+      "line": 1158,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"

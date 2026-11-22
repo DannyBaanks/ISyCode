@@ -988,7 +988,9 @@ class ChatMixin:
                             messages.append({"role": "user", "content": self._image_attachments.content(instruction)})
                             self._history.append({"role": "user", "content": instruction})
                         self._pending_steering.clear()
-                        self._append(tr("Trying steering · original turn retained until response."), CYAN)
+                        message = tr("Trying steering · original turn retained until response.")
+                        self._set_activity(message, CYAN)
+                        self._append(message, CYAN, log_only=True)
                     self._apply_idea_nudge(messages, chat_tools)
                     request_material["messages"] = messages
                     self._begin_lane_operation(tr("Waiting for provider response"), kind="provider_wait")
@@ -1096,7 +1098,9 @@ class ChatMixin:
                             assistant_sent_at = None
                             lane.stream_widget = None
                             lane.partial = ""
-                            self._append(tr("Provider stream interrupted for steering; partial output is retained on screen."), YELLOW)
+                            message = tr("Provider stream interrupted for steering; partial output is retained on screen.")
+                            self._set_activity(message, YELLOW)
+                            self._append(message, YELLOW, log_only=True)
                             continue
                         raise
                     if provider_result.decision != "ALLOW" or not isinstance(response, dict):
@@ -1147,7 +1151,9 @@ class ChatMixin:
                                 positions.pop(0)
                         steer_trial = None
                         self._steering_try_active = False
-                        self._append(tr("Steering accepted · continuing the turn."), CYAN)
+                        message = tr("Steering accepted · continuing the turn.")
+                        self._set_activity(message, CYAN)
+                        self._append(message, CYAN, log_only=True)
                     if not step_content and isinstance(response.get("text"), str) and response["text"].strip():
                         on_chunk("content", response["text"])
                     _content_line(force=True)

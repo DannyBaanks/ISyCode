@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -248,6 +249,25 @@ class SessionMixin:
             self.screen_stack[0].query_one("#queue-notice").display = False
             self._paint_queued_messages()
 
+    def _show_operational_log(self, arg: str = "") -> None:
+        """Show recent non-transcript events for this conversation."""
+        limit = 20
+        if arg:
+            try:
+                limit = max(1, min(int(arg), 100))
+            except ValueError:
+                self._append("  " + tr("Usage: /log [count]"), MUTED)
+                return
+        entries = self._active_lane().operational_log[-limit:]
+        if not entries:
+            self._append("  " + tr("Operational log is empty."), MUTED)
+            return
+        self._append("  " + tr(
+            "Operational log · last {count} events · these are not part of the conversation",
+            count=len(entries)), MUTED)
+        for timestamp, text in entries:
+            self._append(f"  {time.strftime('%H:%M:%S', time.localtime(timestamp))} · {text}", MUTED)
+
     def _return_steering_to_queue(self, instructions, *, unsupported=False):
         from isycode.reasoning_options import record_steering_result
         for instruction in reversed(list(instructions)):
@@ -262,7 +282,10 @@ class SessionMixin:
             self._queue_steer_warning()
             if not unsupported:
                 self.screen_stack[0].query_one("#queue-warning", Static).update(Text(tr("Steer got no confirmed response · message returned to the queue"), style=YELLOW))
-        self._append("Steer no soportado por provider · mensaje devuelto a queued; continuando el turno original." if unsupported else "Steer no confirmado · devuelto a queued.", YELLOW)
+        message = ("Steer no soportado por provider · mensaje devuelto a queued; continuando el turno original."
+                   if unsupported else "Steer no confirmado · devuelto a queued.")
+        self._set_activity(message, YELLOW)
+        self._append(message, YELLOW, log_only=True)
 
     def _undo_queued_message(self):
         selected = self._selected_queued_message
@@ -1067,15 +1090,25 @@ class SessionMixin:
         # Review without re-basing: an open, diverged continuity must stay diverged.
         outcome, session, reviewed = owner.review(session_id)
         if session is None:
-            self._append("  " + tr("Conversation unavailable · {value}", value=outcome.reason[:160]), YELLOW)
+            message = tr("Conversation unavailable · {value}", value=outcome.reason[:160])
+            if session_id == self._active_chat_session_id:
+                self._set_activity(message, YELLOW)
+            self._append(message, YELLOW, log_only=True)
             return
         authority = WorkspaceAuthority(self._workspace_root)
         grant = authority.effective_policy().get("grants", {}).get("session.delete", {})
         if not allow_once and (not grant.get("enabled") or session_id not in grant.get("targets", [])):
-            self._append("  " + tr("Enable Delete current conversation in Settings → Authority first."), YELLOW)
+            message = tr("Enable Delete current conversation in Settings → Authority first.")
+            if session_id == self._active_chat_session_id:
+                self._set_activity(message, YELLOW)
+                self.notify_semantic(message, "warning")
+            self._append(message, YELLOW, log_only=True)
             return
         if not await self._await_screen(DeleteSessionScreen(session.title)):
-            self._append("  " + tr("Conversation kept."), MUTED)
+            message = tr("Conversation kept.")
+            if session_id == self._active_chat_session_id:
+                self._set_activity(message, MUTED)
+            self._append(message, MUTED, log_only=True)
             return
         request = ActionRequest("session.delete", self._workspace_root, session_id,
                                 {"session_id": session_id, "title": session.title[:80]},
@@ -1090,7 +1123,8 @@ class SessionMixin:
         if not owner.is_diverged(session_id) and owner.base_revision(session_id):
             expected = owner.base_revision(session_id)
         result = delete_owner.delete(session_id, session.title, approval, expected_revision=expected)
-        self._append("  " + tr("Conversation deletion · {decision} · {value}", decision=result.decision, value=result.reason[:160]), MUTED)
+        message = tr("Conversation deletion · {decision} · {value}",
+                     decision=result.decision, value=result.reason[:160])
         if result.decision == "ALLOW":
             if self._active_chat_session_id == session_id:
                 lane = self._foreground_lane()
@@ -1101,9 +1135,13 @@ class SessionMixin:
                 if task is not None and not task.done():
                     task.cancel()
                 self._clear_open_conversation()
+                self._set_activity(message, GREEN)
             else:
                 self._drop_background_lane(session_id)
             self.run_worker(self._refresh_work_list(), group="work-list")
+        elif session_id == self._active_chat_session_id:
+            self._set_activity(message, YELLOW)
+        self._append(message, MUTED, log_only=True)
 
     async def _delete_iteration_session(self, session_id: str) -> None:
         """Remove one iteration ledger after the same one-use session.delete gate."""
@@ -1128,8 +1166,10 @@ class SessionMixin:
             self._workspace_root, authority, ledger, self._action_approvals)
         result = delete_owner.delete(session_id, shown, approval)
         reason = ledger.error or result.reason
-        self._append("  " + tr("Iteration deletion · {decision} · {value}", decision=result.decision, value=reason[:160]),
-                     GREEN if result.decision == "ALLOW" else YELLOW)
+        message = tr("Iteration deletion · {decision} · {value}",
+                     decision=result.decision, value=reason[:160])
+        self._set_activity(message, GREEN if result.decision == "ALLOW" else YELLOW)
+        self._append(message, MUTED, log_only=True)
         if result.decision == "ALLOW":
             self.run_worker(self._refresh_work_list(), group="work-list")
 

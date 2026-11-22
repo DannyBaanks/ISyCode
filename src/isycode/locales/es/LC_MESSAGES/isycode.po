@@ -4710,6 +4710,18 @@ msgstr "Activa primero Borrar la conversación actual en Configuración → Auth
 msgid "Conversation kept."
 msgstr "Conversación conservada."
 
+msgid "Usage: /log [count]"
+msgstr "Uso: /log [cantidad]"
+
+msgid "Operational log is empty."
+msgstr "El registro operativo está vacío."
+
+msgid "Operational log · last {count} events · these are not part of the conversation"
+msgstr "Registro operativo · últimos {count} eventos · no forman parte de la conversación"
+
+msgid "show recent operational events; not chat messages"
+msgstr "muestra eventos operativos recientes; no son mensajes del chat"
+
 msgid "Memory {decision} · {value}"
 msgstr "Memoria {decision} · {value}"
 
