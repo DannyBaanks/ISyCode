@@ -133,6 +133,56 @@ def test_switching_back_restores_tool_structure_in_place(tmp_path, monkeypatch, 
         asyncio.run(scenario())
 
 
+def test_background_tool_finishes_only_in_its_own_lane(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+
+    async def scenario():
+        started = asyncio.Event()
+        release = asyncio.Event()
+        calls = 0
+
+        async def complete(provider, messages, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return {"text": "before A tool", "tool_calls": [_tool_call()]}
+            return {"text": "after A tool", "tool_calls": []}
+
+        async def dispatch(call):
+            started.set()
+            await release.wait()
+            return call["id"], '{"status":"ok"}'
+
+        monkeypatch.setattr("isycode.tui.provider_complete", complete)
+        app = TUIApp()
+        async with app.run_test(size=(110, 40)) as pilot:
+            await pilot.pause()
+            monkeypatch.setattr(app, "_dispatch_chat_tool_impl", dispatch)
+            owner = app._foreground_lane()
+            app._start_background_turn(owner, "A")
+            await asyncio.wait_for(started.wait(), 5)
+            app._start_new_conversation()
+            other = app._foreground_lane()
+            await pilot.pause()
+            assert "workspace_read" not in _chat_text(app)
+            assert not app.query_one(ChatArea).query(ToolActivityGroup)
+            release.set()
+            task = owner.loop_task
+            await asyncio.gather(task)
+            assert task.exception() is None
+            assert app._foreground_lane() is other
+            assert "after A tool" not in _chat_text(app)
+            assert not app.query_one(ChatArea).query(ToolActivityGroup)
+            app._show_lane(owner)
+            await pilot.pause()
+            assert len(app.query_one(ChatArea).query(ToolActivityGroup)) == 1
+            assert "before A tool" in _chat_text(app)
+            assert "after A tool" in _chat_text(app)
+
+    with capsys.disabled():
+        asyncio.run(scenario())
+
+
 def test_empty_final_step_does_not_duplicate_previous_answer(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
 
