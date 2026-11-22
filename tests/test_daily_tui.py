@@ -384,7 +384,14 @@ def test_long_draft_saves_in_full_and_claims_no_cap(tmp_path, monkeypatch, capsy
             await pilot.pause()
             app.query_one(PromptArea).load_text(draft)
             await pilot.pause()
-            app._save_draft()
+            # The chat-session owner is created during startup; a single
+            # immediate save can lose that race on a slow runner. Retry until
+            # the draft is actually saved so the CI cannot flake on timing.
+            for _ in range(100):
+                app._save_draft()
+                if app._active_chat_session_id:
+                    break
+                await pilot.pause(0.05)
             session_id = app._active_chat_session_id
             assert session_id
             assert not any('16,000' in notice for notice in notices), notices
