@@ -466,13 +466,15 @@ class SidePanel(Vertical):
 class ToolActivityGroup(ExpandableBox):
     """Consecutive identical operations form one parent with retained branches."""
 
-    def __init__(self, operation: str, leaf: ExpandableBox, label: str):
+    def __init__(self, operation: str, leaf: ExpandableBox, label: str, *,
+                 additional_leaves=()):
         self.operation = operation
-        self.leaves = [(leaf, label)]
-        self._running_leaves: set[int] = {id(leaf)}
+        self.leaves = [(leaf, label), *additional_leaves]
+        self._running_leaves: set[int] = {id(item) for item, _ in self.leaves}
         self._spinner_idx = 0
         self._spinner_timer = None
-        super().__init__(leaf, title=label + " · Running", collapsed=True, classes="tool-activity")
+        super().__init__(*(item for item, _ in self.leaves),
+                         title=label + " · Running", collapsed=True, classes="tool-activity")
         self._paint_branches()
 
     def on_mount(self) -> None:
@@ -482,11 +484,17 @@ class ToolActivityGroup(ExpandableBox):
         self._stop_spinner()
 
     def _check_spinner(self) -> None:
-        if bool(self._running_leaves):
-            if self._spinner_timer is None and self.is_mounted:
+        reduced = bool(getattr(self.app, "_reduced_motion", False))
+        if self._running_leaves and not reduced:
+            if self._spinner_timer is None:
                 self._spinner_timer = self.set_interval(0.12, self._tick_spinner)
-        else:
-            self._stop_spinner()
+            return
+        self._stop_spinner()
+        if self._running_leaves and reduced:
+            if len(self.leaves) == 1:
+                self.title = self.leaves[0][1].split(" · Running")[0] + " · Running"
+            else:
+                self.title = f"{self.operation} · {len(self.leaves)} calls · Running"
 
     def _stop_spinner(self) -> None:
         if self._spinner_timer is not None:
@@ -494,6 +502,9 @@ class ToolActivityGroup(ExpandableBox):
             self._spinner_timer = None
 
     def _tick_spinner(self) -> None:
+        if bool(getattr(self.app, "_reduced_motion", False)):
+            self._check_spinner()
+            return
         if not bool(self._running_leaves):
             self._stop_spinner()
             return
@@ -928,8 +939,15 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         self._paint_output()
 
     def on_mount(self) -> None:
-        if self.status == "Running" and self._spinner_timer is None:
+        self._check_spinner()
+
+    def _check_spinner(self) -> None:
+        if (self.status == "Running" and not getattr(self.app, "_reduced_motion", False)
+                and self._spinner_timer is None):
             self._spinner_timer = self.set_interval(0.12, self._tick_spinner)
+        elif self.status != "Running" or getattr(self.app, "_reduced_motion", False):
+            self._stop_spinner()
+        self._paint_output()
 
     def on_resize(self, event) -> None:
         self._paint_output()
@@ -943,8 +961,9 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
             self._spinner_timer = None
 
     def _tick_spinner(self) -> None:
-        if self.status != "Running":
+        if self.status != "Running" or getattr(self.app, "_reduced_motion", False):
             self._stop_spinner()
+            self._paint_output()
             return
         from isycode.tui_theme import ascii_only
         frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
@@ -973,7 +992,8 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         from isycode.tui_theme import ascii_only
         frames = SPINNER_FRAMES_ASCII if ascii_only() else SPINNER_FRAMES
         frame = frames[self._spinner_idx]
-        spinner_prefix = f"{frame} " if self.status == "Running" else ""
+        spinner_prefix = (f"{frame} " if self.status == "Running"
+                          and not getattr(self.app, "_reduced_motion", False) else "")
         status = f"{spinner_prefix}{tr(self.status)}{note}"
         hint = tr("Space expand / collapse · double-click copy")
         full_subtitle = f"{status} · {hint}"
@@ -1000,7 +1020,9 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
         else:
             shown = "\n".join(self.output.splitlines()[-2:])
             if not shown:
-                shown = f"{frame} " + tr("Waiting for output…") if self.status == "Running" else tr("No output.")
+                shown = (f"{frame} " + tr("Waiting for output…")
+                         if self.status == "Running" and not getattr(self.app, "_reduced_motion", False)
+                         else tr("Waiting for output…") if self.status == "Running" else tr("No output."))
         self._body.set_selectable_content(
             Text(shown, style=MUTED), shown)
 

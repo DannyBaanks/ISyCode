@@ -897,6 +897,8 @@ class ChatMixin:
                 if not chunk:
                     return
                 lane = self._active_lane()
+                if lane.operation_kind != "streaming":
+                    lane = self._begin_lane_operation(tr("Generating response"), kind="streaming")
                 if kind == "reasoning":
                     reason_buf.append(chunk)
                     step_reason.append(chunk)
@@ -973,6 +975,10 @@ class ChatMixin:
                     last_content_paint_at = 0.0
                     last_painted_content = None
                     content_mark, reason_mark = len(content_buf), len(reason_buf)
+                    # A long turn can contain several assistant messages separated by
+                    # tools. Each message gets the clock of its own first chunk, not
+                    # the clock of the whole turn's first response.
+                    assistant_sent_at = None
                     if self._pending_steering:
                         if steer_trial is None:
                             steer_trial = {"messages": list(messages), "history": list(self._history), "instructions": list(self._pending_steering)}
@@ -985,6 +991,7 @@ class ChatMixin:
                         self._append(tr("Trying steering · original turn retained until response."), CYAN)
                     self._apply_idea_nudge(messages, chat_tools)
                     request_material["messages"] = messages
+                    self._begin_lane_operation(tr("Waiting for provider response"), kind="provider_wait")
                     self._chat_request_task = asyncio.create_task(owner.execute(
                         provider, request_material, send_provider_request))
                     try:
@@ -1346,8 +1353,12 @@ class ChatMixin:
                 if step_reason:
                     done_lane.lines.append(("reasoning", "".join(step_reason),
                                             _time.monotonic() - thought_started))
-                done_lane.lines.append(("assistant", "".join(step_content).strip() or full,
-                                        assistant_sent_at, turn_role))
+                final_step_text = "".join(step_content).strip()
+                if final_step_text:
+                    # Earlier steps are already in the visual timeline. ``full`` is
+                    # cumulative for persistence, not a new message to paint again.
+                    done_lane.lines.append(("assistant", final_step_text,
+                                            assistant_sent_at, turn_role))
                 _write_session_event(
                     ctx_file.append_assistant,
                     full,
@@ -1429,6 +1440,7 @@ class ChatMixin:
             lane.partial = ""
             lane.partial_reason = ""
             lane.partial_reason_chunks = []
+            self._finish_lane_operation()
             if block is not None and getattr(block, "is_mounted", False) and on_screen:
                 block.collapse_to(_time.monotonic() - thought_started)
                 self.query_one(ChatArea).follow_tail()
@@ -1484,17 +1496,19 @@ class ChatMixin:
             _close_chat_turn()
 
     def action_resume_interrupted_turn(self) -> None:
-        """Resume an interrupted turn without repeating completed tools."""
-        if self._chat_turn_task and not self._chat_turn_task.done():
+        """Resume this lane's interrupted turn without repeating completed tools."""
+        lane = self._active_lane()
+        if ((lane.chat_turn_task is not None and not lane.chat_turn_task.done())
+                or (lane.loop_task is not None and not lane.loop_task.done())):
             self.notify_semantic(tr("A response is already running"), kind="warning")
             return
-        if getattr(self, "_interrupted_turn", None) is None:
+        interrupted = lane.interrupted_turn
+        if interrupted is None:
             self._append("  " + tr("No interrupted turn to resume."), MUTED)
             self.notify_semantic(tr("No interrupted turn to resume"), kind="warning")
             return
-        interrupted = self._interrupted_turn
-        self._interrupted_turn = None
-        self.run_worker(self._run_chat(interrupted.prompt, resume=interrupted), group="chat-turn")
+        lane.interrupted_turn = None
+        self._start_background_turn(lane, interrupted.prompt, resume=interrupted)
 
     def _prepare_retry(self) -> None:
         """Prepare a draft; never replay provider requests or tool effects automatically."""

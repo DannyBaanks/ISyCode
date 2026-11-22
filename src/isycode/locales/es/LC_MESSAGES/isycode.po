@@ -3378,8 +3378,8 @@ msgstr "Lee texto o imágenes solo cuando pulsas Ctrl+V. El contenido queda en e
 msgid "Allow paste"
 msgstr "Permitir pegar"
 
-msgid "Image attached · Ctrl+P reviews attachments"
-msgstr "Imagen adjunta · Ctrl+P revisa los adjuntos"
+msgid "Image attached · Ctrl+Shift+P reviews attachments"
+msgstr "Imagen adjunta · Ctrl+Shift+P revisa los adjuntos"
 
 msgid "Clipboard content could not be attached"
 msgstr "No se pudo adjuntar el contenido del portapapeles"
@@ -3797,6 +3797,15 @@ msgstr "no estaba en ejecución"
 
 msgid "/run · {exc}"
 msgstr "/run · {exc}"
+
+msgid "Waiting for provider response"
+msgstr "Esperando la respuesta del proveedor"
+
+msgid "Generating response"
+msgstr "Generando respuesta"
+
+msgid "Processing tool result"
+msgstr "Procesando el resultado de la herramienta"
 
 msgid "Usage: /run <program> [arguments] · no shell, pipes or redirects"
 msgstr "Uso: /run <programa> [argumentos] · sin shell, tuberías ni redirecciones"

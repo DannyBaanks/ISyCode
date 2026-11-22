@@ -2422,21 +2422,21 @@
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1050,
+      "line": 1080,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_chat_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_sessions.py",
-      "line": 1090,
+      "line": 1120,
       "callable": "isycode.tui_app_sessions.SessionMixin._delete_iteration_session",
       "action": "session.delete",
       "owner": "session_delete"
     },
     {
       "file": "isycode/tui_app_tools.py",
-      "line": 276,
+      "line": 295,
       "callable": "isycode.tui_app_tools.ToolMixin._call_gateway_chat_tool",
       "action": "mcp.invoke",
       "owner": "gateway_mcp"

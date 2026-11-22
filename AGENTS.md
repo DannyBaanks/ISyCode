@@ -12,6 +12,7 @@
 - When using the Bridge, call `bridge_core/capabilities/cap.agent_bridge/handshake.py`; do not edit `workspace/agents/bridge/` files directly. Keep identity and lease tokens in process memory and never print them in chat or logs.
 - Preserve unrelated user changes. Inspect repository state before editing and keep changes scoped to the requested work.
 - Do not claim that commands, tests, integrations, or external services ran unless they actually ran.
+- Publish every new branch with upstream from the first push: `git push -u origin <current-branch>`. Before opening or finishing a PR, verify it with `git rev-parse --abbrev-ref --symbolic-full-name @{upstream}` and repair a missing or wrong upstream explicitly. Do not use an unscoped `git push` for a new branch; `isycode actualizar` requires a valid upstream.
 
 ## ISyCode Design Skills
 

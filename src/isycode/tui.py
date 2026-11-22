@@ -435,7 +435,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._rail_visible = False
         self._rail_auto_hidden = False
         self._rail_visibility_override: bool | None = None
-        self._interrupted_turn: Any | None = None
+        self._shutting_down = False
         self._rail_width = 38
         self._rail_compact_width = 28
         self._work_rows: list[dict[str, Any]] = []
@@ -662,13 +662,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._bridge_enabled = False
 
     async def on_unmount(self, event) -> None:
-        """Release local temporary state; unowned optional services never start in Secure."""
+        """Stop every lane before releasing widgets and optional local services."""
         del event
+        self._shutting_down = True
         remove_decision_listener(self._on_journal_decision)
-        if self._draft_timer is not None:
-            self._draft_timer.stop()
+        for name in ("_draft_timer", "_activity_timer", "_idea_nudge_timer"):
+            timer = getattr(self, name, None)
+            if timer is not None:
+                timer.stop()
+                setattr(self, name, None)
         self._save_draft()
-        tasks = [job["task"] for job in self._shell_jobs.values() if not job["task"].done()]
+        tasks = {job["task"] for job in self._shell_jobs.values() if not job["task"].done()}
+        for lane in self._lanes.values():
+            for task in (lane.loop_task, lane.chat_turn_task, lane.chat_request_task):
+                if task is not None and not task.done():
+                    tasks.add(task)
         for task in tasks:
             task.cancel()
         if tasks:
@@ -1909,19 +1917,23 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
     def _append(self, text: str, color: str = TEXT, *, startup: bool = False) -> None:
         """Append output, releasing the welcome pause only on the first message."""
         lane = self._active_lane()
-        on_screen = self._lane_on_screen()
+        on_screen = self._lane_on_screen() and not getattr(self, "_shutting_down", False)
         if not startup and on_screen:
             self._dismiss_idle()
         context = _tool_display_context.get()
         if context is not None and context[0] is self:
-            _, body, notes = context
+            _, body, notes, *event_data = context
+            event = event_data[0] if event_data else None
+            if notes.plain:
+                notes.append("\n")
+            notes.append(text, style=color)
+            if event is not None:
+                event["notes"] = notes.plain
+                event["rich_notes"] = notes.copy()
+                body = event.get("body") or body
             if on_screen and getattr(body, "is_mounted", False):
-                if notes.plain:
-                    notes.append("\n")
-                notes.append(text, style=color)
                 body.set_selectable_content(notes.copy(), notes.plain)
-                return
-            if not startup:
+            elif not startup and event is None:
                 lane.lines.append(("note", text, color))
             return
         if not startup:
@@ -2060,6 +2072,9 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._activity_timer = None if self._reduced_motion else self.set_interval(0.12, self._animate_activity)
         task = self._pin_task(coroutine)
         self._loop_task = task
+        self._begin_lane_operation(
+            tr("Thinking…") if label == "Chat · working" else label,
+            kind="turn", new_turn=True)
         self._animate_activity()
         self._paint_idea_box()
         task.add_done_callback(self._operation_finished)
@@ -2087,6 +2102,14 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if lane is None:
             return
         lane.loop_task = None
+        lane.operation_started_at = None
+        lane.operation_label = ""
+        lane.operation_kind = ""
+        lane.turn_started_at = None
+        if getattr(self, "_shutting_down", False):
+            lane.activity_message = tr("Interrupted")
+            lane.activity_color = YELLOW
+            return
         cancelled = task.cancelled()
         failed = None if cancelled else task.exception()
         foreground = lane.key == self._foreground_key
@@ -2236,7 +2259,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         lane = self._active_lane()
         lane.activity_message = message
         lane.activity_color = color
-        if not self._lane_on_screen():
+        if getattr(self, "_shutting_down", False) or not self._lane_on_screen():
             return
         self._activity_message = message
         self._activity_color = color
@@ -2248,7 +2271,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                 from isycode.cat_activity import sleeping_cat
                 status.update(sleeping_cat(status.content_size.width, message, color,
                                            ascii_only=self._ascii_only))
-            except (NoScreen, ScreenStackError):
+            except (NoMatches, NoScreen, ScreenStackError):
                 pass
 
     def _blocked_notice(self, short: str, detail: str = "") -> None:
@@ -2569,7 +2592,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         try:
             if mime.startswith("image/"):
                 prompt.insert(self._image_attachments.capture(mime, data))
-                self.notify(tr("Image attached · Ctrl+P reviews attachments"))
+                self.notify(tr("Image attached · Ctrl+Shift+P reviews attachments"))
             else:
                 from textual.events import Paste
                 await prompt._on_paste(Paste(data.decode("utf-8")))
@@ -2582,11 +2605,11 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         from textual.screen import ModalScreen
         from isycode.tui_copy import CopyTextArea, open_copy_menu
         from isycode.tui_widgets import SelectableText
-        if isinstance(self.screen, ModalScreen):
-            return
         widget = self.focused
         if isinstance(widget, CopyTextArea):
             open_copy_menu(widget, widget.text, widget.selected_text)
+            return
+        if isinstance(self.screen, ModalScreen):
             return
         if isinstance(widget, SelectableText):
             container = next(

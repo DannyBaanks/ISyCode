@@ -3378,8 +3378,8 @@ msgstr "仅在你按下 Ctrl+V 时读取文本或图片。内容会保留在草�
 msgid "Allow paste"
 msgstr "允许粘贴"
 
-msgid "Image attached · Ctrl+P reviews attachments"
-msgstr "已附加图片 · Ctrl+P 查看附件"
+msgid "Image attached · Ctrl+Shift+P reviews attachments"
+msgstr "已附加图片 · Ctrl+Shift+P 查看附件"
 
 msgid "Clipboard content could not be attached"
 msgstr "无法附加剪贴板内容"
@@ -3797,6 +3797,15 @@ msgstr "未在运行"
 
 msgid "/run · {exc}"
 msgstr "/run · {exc}"
+
+msgid "Waiting for provider response"
+msgstr "等待提供商响应"
+
+msgid "Generating response"
+msgstr "正在生成回复"
+
+msgid "Processing tool result"
+msgstr "正在处理工具结果"
 
 msgid "Usage: /run <program> [arguments] · no shell, pipes or redirects"
 msgstr "用法：/run <程序> [参数] · 不支持 shell、管道或重定向"

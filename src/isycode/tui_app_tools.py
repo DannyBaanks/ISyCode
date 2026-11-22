@@ -104,14 +104,27 @@ class ToolMixin:
             detail = " · ".join(sanitize_historical_text(str(arguments[key]))[:80] for key in ("path", "query", "pattern", "url") if isinstance(arguments.get(key), str))
             if detail:
                 label += " · " + detail
+        self._begin_lane_operation(label, kind="tool")
         started_at = _time.monotonic()
         notes = Text()
         body = SelectableText(Text(""), selection_text="", classes="tool-activity-body")
         card = Collapsible(body, title=f"{label} · Running", collapsed=True,
                            collapsed_symbol="", expanded_symbol="", classes="tool-activity-leaf")
+        event = {
+            "operation": name,
+            "base_label": label,
+            "label": label + " · Running",
+            "state": "Running",
+            "body": body,
+            "card": card,
+            "group": None,
+            "notes": "",
+        }
+        # Keep an in-memory visual timeline alongside the semantic tool history.
+        # It is never persisted as authority or replayed: it only rebuilds this lane.
+        self._active_lane().lines.append(("tool", label, event))
         group = None
         chat = None
-        token = None
         if self._lane_on_screen():
             self._dismiss_idle()
             chat = self.query_one(ChatArea)
@@ -124,8 +137,9 @@ class ToolMixin:
             else:
                 group = ToolActivityGroup(name, card, label)
                 await chat.mount(group)
+            event["group"] = group
             chat.follow_tail()
-            token = _tool_display_context.set((self, body, notes))
+        token = _tool_display_context.set((self, body, notes, event))
         state = "Failed"
         try:
             result = await self._dispatch_chat_tool_impl(call)
@@ -149,11 +163,16 @@ class ToolMixin:
             raise
         finally:
             elapsed = _elapsed_label(_time.monotonic() - started_at)
+            event["state"] = state
+            event["label"] = f"{label} · {state} · {elapsed}"
+            self._begin_lane_operation(tr("Processing tool result"), kind="tool_result")
             self._append(tr("Tool duration · {label} · {elapsed}", label=label, elapsed=elapsed), MUTED)
-            if token is not None:
-                _tool_display_context.reset(token)
-            if group is not None and card.is_mounted and self._lane_on_screen():
-                group.finish_leaf(card, f"{label} · {state} · {elapsed}")
+            _tool_display_context.reset(token)
+            current_group = event.get("group")
+            current_card = event.get("card")
+            if (current_group is not None and current_card is not None
+                    and current_card.is_mounted and self._lane_on_screen()):
+                current_group.finish_leaf(current_card, event["label"])
                 self.query_one(ChatArea).follow_tail()
 
     def _bridge_tools_enabled(self) -> bool:
