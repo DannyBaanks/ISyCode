@@ -37,6 +37,7 @@ class ConversationLane:
         self.chat_turn_task = None
         self.chat_request_task = None
         self.retry_prompt = None
+        self.interrupted_turn = None
         self.idea_box = ""
         self.draft_text = ""
         self.steering_try_active = False
@@ -79,6 +80,7 @@ LANE_FIELDS = (
     ("_chat_turn_task", "chat_turn_task"),
     ("_chat_request_task", "chat_request_task"),
     ("_retry_prompt", "retry_prompt"),
+    ("_interrupted_turn", "interrupted_turn"),
     ("_idea_box", "idea_box"),
     ("_draft_text", "draft_text"),
     ("_steering_try_active", "steering_try_active"),

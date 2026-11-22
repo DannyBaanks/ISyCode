@@ -27,13 +27,11 @@ def extract_range(text, selection):
             return len(text)
         line = lines[y].rstrip("\r\n")
         expanded = 0
-        cells = 0
         for index, char in enumerate(line):
-            size = 8 - cells % 8 if char == "\t" else 1
+            size = 8 - expanded % 8 if char == "\t" else cell_len(char)
             if offset.x < expanded + size:
                 return sum(map(len, lines[:y])) + index + (1 if end and offset.x > expanded else 0)
             expanded += size
-            cells += size if char == "\t" else cell_len(char)
         return sum(map(len, lines[:y])) + len(line)
 
     start = position(selection.start, end=False)
@@ -158,6 +156,15 @@ class CopyMenuScreen(Dialog):
             self.dismiss(None)
 
 
+def _owned_selections(widget, selections):
+    """Keep only ranges owned by this text widget or one of its descendants."""
+    return {
+        item: selection
+        for item, selection in selections.items()
+        if item is widget or widget in item.ancestors
+    }
+
+
 def remember_copy_selection(widget):
     """Capture before Textual clears a marked range on a stationary mouse-up.
 
@@ -170,7 +177,7 @@ def remember_copy_selection(widget):
     """
     screen = widget.screen
     if screen.selections:
-        widget._copy_selection_snapshot = (0, dict(screen.selections))
+        widget._copy_selection_snapshot = (0, _owned_selections(widget, screen.selections))
         return
     presses, kept = getattr(widget, "_copy_selection_snapshot", (2, {}))
     widget._copy_selection_snapshot = (1, kept) if presses == 0 and kept else (2, {})
@@ -181,10 +188,10 @@ def open_copy_menu(widget, whole: str, selected: str | None = None, *, restore=N
     """``remembered=False`` (the keyboard) never uses a range kept from a double-click."""
     app = widget.app
     screen = widget.screen
-    selections = dict(screen.selections)
+    selections = _owned_selections(widget, screen.selections)
     presses, kept = getattr(widget, "_copy_selection_snapshot", (2, {}))
     if not selections and remembered and presses <= 1:
-        selections = kept
+        selections = _owned_selections(widget, kept)
     widget._copy_selection_snapshot = (2, {})
     focused = screen.focused
     if selected is None:

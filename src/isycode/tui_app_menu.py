@@ -13,7 +13,9 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from textual.widgets import Button, OptionList, Static
 from isycode.tui_theme import CYAN, GREEN, MUTED, RED, TEXT, YELLOW
-from isycode.tui_widgets import ChatArea, ExpandableBox, SelectableText
+from isycode.tui_widgets import (
+    ChatArea, CommandOutputCard, ExpandableBox, SelectableText, ToolActivityGroup,
+)
 from isycode.config import ConfigurationError
 from isycode.catalog import ISYCODE_AGENTS, ISYCODE_SUBAGENTS, ISYCO_MOTORS
 from isycode.providers import PRESETS, Provider, ProviderError, load_provider_key, provider_credential_state, resolved_chat_model, selected_provider_name
@@ -692,6 +694,10 @@ class MenuMixin:
             for box in screen.query(ExpandableBox):
                 if self._reduced_motion and box._marquee_enabled:
                     box.toggle_marquee()
+            for group in screen.query(ToolActivityGroup):
+                group._check_spinner()
+            for card in screen.query(CommandOutputCard):
+                card._check_spinner()
         self._open_settings_menu()
 
     def _menu_rtk_settings(self, entry):

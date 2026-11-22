@@ -41,7 +41,7 @@ async def _wait_for_visible_widget(pilot, widget, description):
 @pytest.mark.parametrize("source,start,end,expected", [
     ("  uno  \ndos\ntres\n", (2, 0), (3, 1), "uno  \ndos"),
     ("uno\ndos\ntres\n", (0, 0), (0, 2), "uno\ndos\n"),
-    ("\tα界 = 2  \n", (8, 0), (16, 0), "α界 = 2  "),
+    ("\tα界 = 2  \n", (8, 0), (17, 0), "α界 = 2  "),
     ("abc\ndef", (2, 0), (2, 0), ""),
 ])
 def test_exact_logical_ranges(source, start, end, expected):

@@ -3378,8 +3378,8 @@ msgstr "Reads text or images only when you press Ctrl+V. Contents stay in the dr
 msgid "Allow paste"
 msgstr "Allow paste"
 
-msgid "Image attached · Ctrl+P reviews attachments"
-msgstr "Image attached · Ctrl+P reviews attachments"
+msgid "Image attached · Ctrl+Shift+P reviews attachments"
+msgstr "Image attached · Ctrl+Shift+P reviews attachments"
 
 msgid "Clipboard content could not be attached"
 msgstr "Clipboard content could not be attached"

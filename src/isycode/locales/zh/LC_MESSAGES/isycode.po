@@ -3378,8 +3378,8 @@ msgstr "仅在你按下 Ctrl+V 时读取文本或图片。内容会保留在草�
 msgid "Allow paste"
 msgstr "允许粘贴"
 
-msgid "Image attached · Ctrl+P reviews attachments"
-msgstr "已附加图片 · Ctrl+P 查看附件"
+msgid "Image attached · Ctrl+Shift+P reviews attachments"
+msgstr "已附加图片 · Ctrl+Shift+P 查看附件"
 
 msgid "Clipboard content could not be attached"
 msgstr "无法附加剪贴板内容"

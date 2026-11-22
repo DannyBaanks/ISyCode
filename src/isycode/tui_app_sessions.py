@@ -105,6 +105,7 @@ from isycode.tui_widgets import (
     ChatArea,
     SelectableText,
     ThoughtBlock,
+    ToolActivityGroup,
 )
 from isycode.tui_composer import (
     QueuedBox,
@@ -1300,8 +1301,9 @@ class SessionMixin:
         finally:
             conversation_lane_context.reset(token)
 
-    def _start_background_turn(self, lane, text: str) -> None:
-        task = self._pin_task(self._run_chat(text), lane)
+    def _start_background_turn(self, lane, text: str, *, resume=None) -> None:
+        coroutine = self._run_chat(text) if resume is None else self._run_chat(text, resume=resume)
+        task = self._pin_task(coroutine, lane)
         lane.loop_task = task
         lane.activity_message = "Chat · working"
         lane.activity_color = CYAN
@@ -1396,7 +1398,49 @@ class SessionMixin:
         if not lane.lines and not lane.partial and not partial_reason and not lane.tool_history:
             self._mount_idle_board()
             return
-        for kind, text, extra, *role in list(lane.lines):
+        entries = list(lane.lines)
+        has_tool_timeline = False
+        index = 0
+        while index < len(entries):
+            kind, text, extra, *role = entries[index]
+            if kind == "tool":
+                operation = str(extra.get("operation") or "tool")
+                run = []
+                while index < len(entries):
+                    next_kind, next_text, next_event, *_ = entries[index]
+                    if (next_kind != "tool" or not isinstance(next_event, dict)
+                            or str(next_event.get("operation") or "tool") != operation):
+                        break
+                    run.append((next_text, next_event))
+                    index += 1
+                cards = []
+                for base_label, event in run:
+                    notes = str(event.get("notes") or "")
+                    rich_notes = event.get("rich_notes")
+                    content = rich_notes.copy() if rich_notes is not None else Text(notes, style=MUTED)
+                    body = SelectableText(content, selection_text=notes, classes="tool-activity-body")
+                    running = event.get("state") == "Running"
+                    base_label = str(event.get("base_label") or base_label)
+                    label = base_label + " · Running" if running else str(event.get("label") or base_label)
+                    card = Collapsible(
+                        body, title=label, collapsed=True,
+                        collapsed_symbol="", expanded_symbol="", classes="tool-activity-leaf")
+                    cards.append((event, card, base_label, body))
+                first_card, first_label = cards[0][1:3]
+                group = ToolActivityGroup(
+                    operation, first_card, first_label,
+                    additional_leaves=[(card, label) for _, card, label, _ in cards[1:]])
+                for event, card, _, body in cards:
+                    event["body"] = body
+                    event["card"] = card
+                    event["group"] = group
+                chat.mount(group)
+                for event, card, _, _ in cards:
+                    if event.get("state") != "Running":
+                        group.finish_leaf(card, str(event.get("label") or card.title))
+                has_tool_timeline = True
+                continue
+            index += 1
             if kind == "user":
                 if clock_label(extra):
                     chat.mount(Static(Text(clock_label(extra), style=MUTED), classes="message-clock"))
@@ -1417,7 +1461,7 @@ class SessionMixin:
                 chat.mount(block)
             elif kind == "note":
                 chat.mount(SelectableText(Text(text, style=extra or TEXT), selection_text=text))
-        if lane.tool_history:
+        if lane.tool_history and not has_tool_timeline:
             history_text = (
                 "Earlier tool notes. They may be stale. No tool was run again.\n\n"
                 + "\n".join(
