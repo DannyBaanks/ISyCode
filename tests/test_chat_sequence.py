@@ -225,6 +225,10 @@ def test_fast_reasoning_round_preserves_history_position(tmp_path, monkeypatch, 
     async def scenario():
         app = TUIApp()
         async with app.run_test(size=(80, 24)) as pilot:
+            # Startup can restore focus to the prompt after the first paint.
+            # Wait for it before focusing the chat, or Home goes to the wrong
+            # widget on a loaded runner and the scroll position never changes.
+            await app.wait_for_ready()
             await pilot.pause()
             for i in range(60):
                 app._append(f'History message {i}.')
