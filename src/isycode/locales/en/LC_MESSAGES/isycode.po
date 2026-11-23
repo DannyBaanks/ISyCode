@@ -2731,6 +2731,12 @@ msgstr "Thinking…"
 msgid "Toggle Workspace Rail / sidebar"
 msgstr "Toggle Workspace Rail / sidebar"
 
+msgid "Background the live process / toggle sidebar"
+msgstr "Background the live process / toggle sidebar"
+
+msgid "{job} moved to background · Ctrl+S opens ShellBox"
+msgstr "{job} moved to background · Ctrl+S opens ShellBox"
+
 msgid "Tools & Clipboard"
 msgstr "Tools & Clipboard"
 

@@ -352,6 +352,20 @@ class WorkspaceMixin:
     def _open_shell_box(self):
         self.push_screen(ShellProcessesScreen())
 
+    def _detach_foreground_shell_job(self) -> bool:
+        """Move the active foreground command to ShellBox without cancelling it."""
+        job_id = getattr(self, "_foreground_shell_job_id", None)
+        if not job_id:
+            return False
+        job = self._shell_jobs.get(job_id)
+        if job is None or job["task"].done():
+            return False
+        job["background"] = True
+        job["detached"].set()
+        self._foreground_shell_job_id = None
+        self._set_activity(tr("{job} moved to background · Ctrl+S opens ShellBox", job=job_id), CYAN)
+        return True
+
     async def _run_workspace_command(self, arguments: dict) -> str:
         """Show one exact command, run it in the sandbox only if approved, return its result."""
         if not self._command_tool_enabled():
@@ -397,62 +411,78 @@ class WorkspaceMixin:
         card = CommandOutputCard(shown)
         chat.mount(card)
         chat.follow_tail()
-        def show_output(chunk):
-            card.append_output(chunk)
-            chat.follow_tail()
-        if background:
-            job_id = "process-" + str(len(self._shell_jobs) + 1)
-            job = {"command": shown, "status": "queued", "output": "", "task": None}
-            async def execute_job():
-                try:
-                    async with self._command_run_lock:
-                        job["status"] = "running"
-                        self._paint_shell_box()
-                        def output(chunk):
-                            job["output"] = (job["output"] + chunk)[-262144:]
-                            card.append_output(chunk)
-                        outcome = await owner.run(preview, approval, on_output=output)
-                    job["status"] = outcome.decision
-                    job["output"] = outcome.text if outcome.decision == "ALLOW" else outcome.reason
-                    if outcome.decision == "ALLOW":
-                        result = json.loads(outcome.text)
-                        job["status"] = "timeout" if result["timed_out"] else "exit " + str(result["exit_code"])
-                        job["output"] = result["output"]
-                    card.finish(job["status"], output=job["output"], receipt=outcome.receipt.receipt_id if outcome.receipt else "")
-                except asyncio.CancelledError:
-                    job["status"] = "cancelled"
-                    card.finish("Cancelled")
-                except Exception as exc:
-                    job["status"] = "failed"
-                    job["output"] = type(exc).__name__
-                    card.finish("Failed")
-                finally:
+        job_id = "process-" + str(len(self._shell_jobs) + 1)
+        job = {"command": shown, "status": "queued", "output": "", "task": None,
+               "background": background, "detached": asyncio.Event()}
+
+        async def execute_job():
+            try:
+                async with self._command_run_lock:
+                    job["status"] = "running"
                     self._paint_shell_box()
-            job["task"] = asyncio.create_task(execute_job())
-            self._shell_jobs[job_id] = job
-            self._paint_shell_box()
+
+                    def show_output(chunk):
+                        job["output"] = (job["output"] + chunk)[-262144:]
+                        card.append_output(chunk)
+                        chat.follow_tail()
+
+                    outcome = await owner.run(preview, approval, on_output=show_output)
+                if outcome.decision == "ALLOW":
+                    result = json.loads(outcome.text)
+                    job["status"] = (tr("stopped after the time limit") if result["timed_out"]
+                                     else tr("exit code {code}", code=result["exit_code"]))
+                    job["output"] = result["output"]
+                    card.finish(job["status"], output=result["output"],
+                                receipt=outcome.receipt.receipt_id if outcome.receipt else "",
+                                truncated=result.get("output_truncated", False))
+                else:
+                    job["status"] = outcome.decision
+                    job["output"] = outcome.reason
+                    card.finish(outcome.decision, output=outcome.reason[:300])
+                return outcome
+            except asyncio.CancelledError:
+                job["status"] = "cancelled"
+                card.finish("Cancelled")
+                raise
+            except Exception as exc:
+                job["status"] = "failed"
+                job["output"] = type(exc).__name__
+                card.finish("Failed")
+                raise
+            finally:
+                if getattr(self, "_foreground_shell_job_id", None) == job_id:
+                    self._foreground_shell_job_id = None
+                self._paint_shell_box()
+
+        job["task"] = asyncio.create_task(execute_job())
+        self._shell_jobs[job_id] = job
+        self._paint_shell_box()
+        if background:
             return json.dumps({"process_id": job_id, "status": "queued", "background": True,
                                "inspect": "Ctrl+S → ShellBox → Enter", "timeout_s": preview.timeout_s})
+        self._foreground_shell_job_id = job_id
+        detach_waiter = asyncio.create_task(job["detached"].wait())
         try:
-            async with self._command_run_lock:
-                outcome = await owner.run(preview, approval, on_output=show_output)
+            await asyncio.wait({job["task"], detach_waiter},
+                               return_when=asyncio.FIRST_COMPLETED)
+            if job["detached"].is_set() and not job["task"].done():
+                return json.dumps({"process_id": job_id, "status": "running", "background": True,
+                                   "inspect": "Ctrl+S → ShellBox → Enter", "timeout_s": preview.timeout_s})
+            outcome = await job["task"]
         except asyncio.CancelledError:
-            card.finish("Cancelled")
+            # Cancelling the chat turn kills a foreground command, but not one
+            # the user deliberately moved to the background.
+            if not job["background"]:
+                job["task"].cancel()
             raise
-        except Exception:
-            card.finish("Failed")
-            raise
+        finally:
+            detach_waiter.cancel()
         if outcome.decision != "ALLOW" or outcome.receipt is None:
-            card.finish(outcome.decision, output=outcome.reason[:300])
             self.notify_semantic(tr("Command outcome · {decision}", decision=outcome.decision),
                                  kind="denied" if outcome.decision == "DENY" else "error")
             return json.dumps({"error": "command did not run", "decision": outcome.decision,
                                "reason": outcome.reason[:300]})
         result = json.loads(outcome.text)
-        status = (tr("stopped after the time limit") if result["timed_out"]
-                  else tr("exit code {code}", code=result['exit_code']))
-        card.finish(status, output=result["output"], receipt=outcome.receipt.receipt_id,
-                    truncated=result.get("output_truncated", False))
         chat.follow_tail()
         from isycode.human_shell import is_sudo_or_tty_error
         if (not getattr(self, "is_headless", False)

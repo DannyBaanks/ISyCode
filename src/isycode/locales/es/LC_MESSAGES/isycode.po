@@ -2731,6 +2731,12 @@ msgstr "Pensando…"
 msgid "Toggle Workspace Rail / sidebar"
 msgstr "Muestra u oculta la barra lateral"
 
+msgid "Background the live process / toggle sidebar"
+msgstr "Envía el proceso activo a background / muestra la barra lateral"
+
+msgid "{job} moved to background · Ctrl+S opens ShellBox"
+msgstr "{job} pasó a background · Ctrl+S abre ShellBox"
+
 msgid "Tools & Clipboard"
 msgstr "Herramientas y portapapeles"
 

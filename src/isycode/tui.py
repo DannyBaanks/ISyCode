@@ -326,6 +326,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._idea_backlog: list[str] = []
         from isycode.image_attachments import ImageAttachments
         self._shell_jobs = {}
+        self._foreground_shell_job_id = None
         self._shell_mode = False
         self._command_run_lock = asyncio.Lock()
         self._image_attachments = ImageAttachments()
@@ -2230,8 +2231,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._play_notification_sound("approval")
         future = asyncio.get_running_loop().create_future()
 
+        descendants = []
+
+        async def wait_for_descendants() -> None:
+            if descendants:
+                await asyncio.wait_for(
+                    asyncio.gather(*(widget._mounted_event.wait() for widget in descendants)),
+                    timeout=10,
+                )
+
         def finished(result) -> None:
-            def resolve_after_pop() -> None:
+            async def resolve_after_pop() -> None:
+                # A screen may dismiss itself from on_mount before its children
+                # have finished mounting. Do not release the next modal until
+                # those controls are ready, even if the screen is already gone.
+                await wait_for_descendants()
                 if not future.done():
                     future.set_result(result)
 
@@ -2241,6 +2255,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         # Otherwise a fast second modal can receive input before its controls
         # have mounted (the race is especially visible on Windows).
         await self.push_screen(screen, finished)
+        # Capture the controls before a screen can dismiss itself and Textual
+        # removes them from the DOM. AwaitMount waits for the screen's Mount
+        # event, not for every descendant's Mount event.
+        descendants.extend(screen.query("*"))
         return await future
 
     def _animate_activity(self) -> None:

@@ -62,6 +62,8 @@ Si el modelo todavía está respondiendo, **Enter** en un mensaje normal lo deja
 
 **Ctrl+S** cambia la Idea Box por ShellBox, en el mismo hueco. Ahí ves los procesos de esta sesión que ya aprobaste. Espacio abre la lista; Stop cancela solo el proceso elegido. No hay shell libre ni camino sin sandbox. Textual desactiva IXON, así que Ctrl+S no congela la terminal.
 
+**Ctrl+B** es contextual: si un comando aprobado está corriendo en primer plano, lo mueve a background **sin cancelarlo ni reiniciarlo** y el agente recibe su `process_id` para seguir trabajando. Después se inspecciona o se detiene desde ShellBox. Si no hay un proceso en primer plano, Ctrl+B conserva su función habitual de mostrar u ocultar la barra lateral. El agente también puede lanzar `workspace_run` con `background: true` tras la revisión correspondiente.
+
 **Comandos en un workspace grande**
 
 Si aparece `workspace exceeds staging budget`, el comando no llegó a ejecutarse:

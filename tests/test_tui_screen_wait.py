@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 from textual.app import App
+from textual.containers import Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
@@ -37,6 +38,69 @@ def test_await_screen_works_outside_a_textual_worker():
 
     asyncio.run(scenario())
     assert result == {"value": True}
+
+
+def test_await_screen_waits_for_descendants_before_returning():
+    from isycode.tui import TUIApp
+
+    async def scenario():
+        child_mounted = asyncio.Event()
+        release_child = asyncio.Event()
+        result = {}
+
+        class PendingChild:
+            def __init__(self):
+                self._mounted_event = child_mounted
+
+        class FakeScreen:
+            def __init__(self):
+                self.child = PendingChild()
+
+            def query(self, selector):
+                assert selector == "*"
+                return [self.child]
+
+        class Host(App):
+            _await_screen = TUIApp._await_screen
+
+            def compose(self):
+                yield Static("host")
+
+            def push_screen(self, screen, callback=None, wait_for_dismiss=False, *, mode=None):
+                # Model the Textual window that matters: the screen has
+                # composed its child, but that child is not mounted yet when
+                # the screen's result callback fires.
+                callback(True)
+                async def mounted():
+                    return None
+                return mounted()
+
+            def on_mount(self):
+                async def operation():
+                    result["value"] = await self._await_screen(FakeScreen())
+                    result["child_mounted"] = child_mounted.is_set()
+
+                asyncio.get_running_loop().create_task(operation())
+
+        async def release_later():
+            await asyncio.sleep(0.2)
+            result["released"] = True
+            child_mounted.set()
+
+        asyncio.create_task(release_later())
+        async with Host().run_test() as pilot:
+            for _ in range(100):
+                await pilot.pause(0.01)
+                if "value" in result:
+                    break
+
+        assert result == {
+            "released": True,
+            "value": True,
+            "child_mounted": True,
+        }
+
+    asyncio.run(scenario())
 
 
 def test_tui_app_never_calls_push_screen_wait():
