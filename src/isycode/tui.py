@@ -2348,7 +2348,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             status = self.query_one("#activity-status", Static)
             status.update(walking_cat(status.content_size.width, self._activity_frame,
                                       ascii_only=self._ascii_only))
-        except (NoScreen, ScreenStackError):
+        except (NoMatches, NoScreen, ScreenStackError):
+            # The status widget is transient during teardown and repaints; a
+            # walking-cat tick must never crash shutdown (same contract as
+            # _set_activity).
             pass
 
 
