@@ -1528,9 +1528,10 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
                     if isinstance(title, str) and title.strip():
                         return title
             owner = getattr(self, "_chat_session_owner", None)
-            if owner is not None and self._sessions_enabled():
+            review = getattr(owner, "review", None)
+            if callable(review) and self._sessions_enabled():
                 try:
-                    _, session, _ = owner.review(sid)
+                    _, session, _ = review(sid)
                     if session is not None and isinstance(session.title, str) and session.title.strip():
                         return session.title
                 except (OSError, ValueError):
