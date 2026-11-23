@@ -799,6 +799,7 @@ class SessionMixin:
     def _paint_work_status(self) -> None:
         if not self.screen_stack:
             return  # the 1 s timer can still tick while the app shuts down
+        self._sync_terminal_title()
         if self._loop_task is not None and not self._loop_task.done():
             self._paint_idea_box()
         try:
@@ -921,6 +922,7 @@ class SessionMixin:
         self.query_one(ChatArea).remove_children()
         self._show_chat_again()
         self._mount_idle_board()
+        self._sync_terminal_title("")
 
     def _start_new_conversation(self) -> None:
         self.call_after_refresh(self.query_one("#prompt-input", PromptArea).focus)
@@ -1081,6 +1083,7 @@ class SessionMixin:
                 MUTED)
         self._remember_lane_ui_state(lane)
         self._append("  " + tr("Conversation reopened · {title} · {len} messages", title=session.title, len=len(session.messages)), GREEN)
+        self._sync_terminal_title(session.title)
         await self._refresh_work_list()
 
     async def _delete_chat_session(self, session_id: str, *, allow_once: bool = False) -> None:
@@ -1188,6 +1191,7 @@ class SessionMixin:
             return
         if session_id is not None:
             self._active_chat_session_id = session_id
+            self._sync_terminal_title()
         if outcome.decision != "ALLOW" and not self._session_save_warned:
             self._session_save_warned = True
             self._append("  " + tr("Conversation not saved · {value}", value=outcome.reason[:160]), YELLOW)
@@ -1241,7 +1245,10 @@ class SessionMixin:
             outcome, changed = owner.manage(operation, sid if operation != "import" else None, data)
             if changed and outcome.decision == "ALLOW":
                 self._append("  " + tr("Session {operation} completed · {changed}", operation=operation, changed=changed), GREEN)
-                if operation in {"fork", "import"}:
+                if operation == "rename":
+                    self._sync_terminal_title(data.strip())
+                    self.run_worker(self._refresh_work_list(), group="work-list")
+                elif operation in {"fork", "import"}:
                     await self._resume_chat_session(changed)
             else:
                 self._append("  " + tr("Session unchanged · {value}", value=outcome.reason[:180]), YELLOW)
@@ -1436,6 +1443,7 @@ class SessionMixin:
             self.query_one("#context-button", Button).label = self._context_button_label()
         self._refresh_usage()
         self._paint_queued_messages()
+        self._sync_terminal_title()
         self._show_agent_tasks(list(lane.agent_tasks))
         self._sync_visible_activity(lane)
 

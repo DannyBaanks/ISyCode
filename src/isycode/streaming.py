@@ -43,11 +43,15 @@ class _RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 class StreamError(Exception):
-    def __init__(self, message: str, status: int | None = None, *, provider_code: str | None = None, retry_after: float | None = None):
+    def __init__(self, message: str, status: int | None = None, *, provider_code: str | None = None,
+                 retry_after: float | None = None, context_limit: int | None = None,
+                 prompt_tokens: int | None = None):
         super().__init__(message)
         self.status = status
         self.provider_code = provider_code
         self.retry_after = retry_after
+        self.context_limit = context_limit
+        self.prompt_tokens = prompt_tokens
         self.transport = status is None
 
 
@@ -156,7 +160,7 @@ def stream_complete(
     try:
         resp = open_reviewed(reviewed, _RejectRedirectHandler()).open(req, timeout=timeout_s)
     except urllib.error.HTTPError as e:
-        from isycode.provider_errors import error_signals
+        from isycode.provider_errors import error_signals, parse_context_overflow_limit
         try:
             body = e.read(65536)
         except (urllib.error.URLError, OSError):
@@ -165,7 +169,12 @@ def stream_complete(
             # already treats a missing body that way.
             body = b""
         code, retry = error_signals(body, {"retry-after": e.headers.get("Retry-After", "")})
-        raise StreamError(f"provider returned HTTP {e.code}", status=e.code, provider_code=code, retry_after=retry) from e
+        ctx_limit, prompt_toks = (
+            parse_context_overflow_limit(body)
+            if (code == "context_length_exceeded" or e.code in {400, 413}) else (None, None)
+        )
+        raise StreamError(f"provider returned HTTP {e.code}", status=e.code, provider_code=code,
+                          retry_after=retry, context_limit=ctx_limit, prompt_tokens=prompt_toks) from e
     except (urllib.error.URLError, OSError) as e:
         raise StreamError(f"stream unreachable: {e}")
     try:
@@ -190,9 +199,15 @@ def stream_complete(
                 continue
             if "error" in evt:
                 # Providers may fail after HTTP 200; never echo their body.
-                from isycode.provider_errors import error_signals
-                code, _ = error_signals(json.dumps(evt))
-                raise StreamError("provider reported a streaming API error", provider_code=code)
+                from isycode.provider_errors import error_signals, parse_context_overflow_limit
+                serialized = json.dumps(evt)
+                code, _ = error_signals(serialized)
+                ctx_limit, prompt_toks = (
+                    parse_context_overflow_limit(serialized)
+                    if code == "context_length_exceeded" else (None, None)
+                )
+                raise StreamError("provider reported a streaming API error", provider_code=code,
+                                  context_limit=ctx_limit, prompt_tokens=prompt_toks)
             choices = evt.get("choices") or []
             if not choices:
                 if "usage" in evt:
@@ -338,9 +353,15 @@ async def async_stream_complete(
         if "error" in event:
             # Providers may fail after sending HTTP 200. Never echo their body:
             # it can contain credentials or private request/transcript data.
-            from isycode.provider_errors import error_signals
-            code, _ = error_signals(json.dumps(event))
-            raise StreamError("provider reported a streaming API error", provider_code=code)
+            from isycode.provider_errors import error_signals, parse_context_overflow_limit
+            serialized = json.dumps(event)
+            code, _ = error_signals(serialized)
+            ctx_limit, prompt_toks = (
+                parse_context_overflow_limit(serialized)
+                if code == "context_length_exceeded" else (None, None)
+            )
+            raise StreamError("provider reported a streaming API error", provider_code=code,
+                              context_limit=ctx_limit, prompt_tokens=prompt_toks)
         choices = event.get("choices") or []
         if not choices:
             if isinstance(event.get("usage"), dict):
@@ -440,7 +461,13 @@ async def async_stream_complete(
             except (ValueError, OSError, asyncio.TimeoutError, asyncio.IncompleteReadError):
                 pass
             code, retry = error_signals(error_body, headers)
-            raise StreamError(f"provider returned HTTP {status}", status=status, provider_code=code, retry_after=retry)
+            from isycode.provider_errors import parse_context_overflow_limit
+            ctx_limit, prompt_toks = (
+                parse_context_overflow_limit(error_body)
+                if (code == "context_length_exceeded" or status in {400, 413}) else (None, None)
+            )
+            raise StreamError(f"provider returned HTTP {status}", status=status, provider_code=code,
+                              retry_after=retry, context_limit=ctx_limit, prompt_tokens=prompt_toks)
 
         async def read_chunked() -> None:
             while True:

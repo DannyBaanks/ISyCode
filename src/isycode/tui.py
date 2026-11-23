@@ -263,6 +263,24 @@ def _terminal_grid_size() -> tuple[int, int] | None:
     return size.columns, size.lines
 
 
+def format_terminal_title(session_title: str | None, workspace_name: str = "") -> str:
+    """Format a safe terminal tab/window title as ``ISyCode | <session>``."""
+    def _clean(raw: str | None) -> str:
+        if not isinstance(raw, str):
+            return ""
+        # Strip control chars (including ESC/BEL) so untrusted titles can never inject OSC sequences.
+        return " ".join("".join(ch if ch.isprintable() else " " for ch in raw).split())
+
+    label = _clean(session_title)
+    if not label or label in {"New session", "Draft conversation"}:
+        label = _clean(workspace_name) or label
+    if not label:
+        return "ISyCode"
+    if len(label) > 40:
+        label = label[:37].rstrip() + "…"
+    return f"ISyCode | {label}"
+
+
 class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, RemoteMixin, WorkspaceMixin, ToolMixin, ChatMixin, MenuMixin, App):
     """ISyCode TUI — Crush-inspired, chat-first, IsyMotron as a plugin."""
 
@@ -445,6 +463,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         self._prompt_history: list[str] = []
         self._prompt_history_idx = -1
         self._prompt_history_draft = ""
+        self._session_soft_context_limits: dict[tuple[str, str], int] = {}
+        self._tokens_per_char_by_model: dict[tuple[str, str], tuple[float, int]] = {}
+        self._last_request_chars: int | None = None
+        self._last_output_tokens: int = 0
+        self._last_usage_model: tuple[str, str] | None = None
+        self._last_terminal_title: str = ""
         self._register_builtin_plugins()
 
     # ── layout ───────────────────────────────────────────────────
@@ -639,6 +663,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self.query_one(SidePanel).display = False
         self._mount_idle_board()
         self.sub_title = (tr("{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}", name=self._workspace_root.name, workspace_root=self._workspace_root, launch_dir=self._launch_dir))
+        self._sync_terminal_title()
         self.query_one("#workspace-label", Static).update(tr("Workspace Root · {workspace_root}", workspace_root=self._workspace_root))
         self.query_one("#workspace-launch-label", Static).update(tr("Launch Directory · {launch_dir}", launch_dir=self._launch_dir))
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
@@ -1494,12 +1519,51 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             provider_limit_tokens=limit, limit_source=source,
             reported_tokens=getattr(self, "_last_context_input_tokens", None)))
 
+    def _current_session_title(self) -> str | None:
+        sid = self._active_chat_session_id
+        if sid:
+            for row in getattr(self, "_work_rows", []):
+                if isinstance(row, dict) and row.get("id") == sid:
+                    title = row.get("title")
+                    if isinstance(title, str) and title.strip():
+                        return title
+            owner = getattr(self, "_chat_session_owner", None)
+            if owner is not None and self._sessions_enabled():
+                try:
+                    _, session, _ = owner.review(sid)
+                    if session is not None and isinstance(session.title, str) and session.title.strip():
+                        return session.title
+                except (OSError, ValueError):
+                    pass
+        return None
+
+    def _sync_terminal_title(self, explicit_title: str | None = None) -> str:
+        """Keep the console tab title synced to ``ISyCode | <Session name>``."""
+        session_title = explicit_title if explicit_title is not None else self._current_session_title()
+        workspace_name = self._workspace_root.name if getattr(self, "_workspace_root", None) else ""
+        formatted = format_terminal_title(session_title, workspace_name)
+        if formatted != getattr(self, "_last_terminal_title", ""):
+            self._last_terminal_title = formatted
+            if hasattr(self, "_id"):
+                self.title = formatted
+            try:
+                console = getattr(self, "console", None)
+                if console is not None and callable(getattr(console, "set_window_title", None)):
+                    console.set_window_title(formatted)
+            except (OSError, RuntimeError, AttributeError):
+                pass
+        return formatted
+
     async def _complete_accounted_chat(self, provider, messages, *, max_tokens: int | None = None,
                                        on_chunk=None, tools=None) -> dict:
         # Called only by the authorized provider owner's send callback.
         # The rate is output tokens divided by this call's own clock.
+        from isycode.continuity_capsule import request_chars, update_tokens_per_char
+        from isycode.providers import heal_observed_context_limit
+
         self._throughput.measuring = True
         self._refresh_usage()
+        sent_chars = request_chars(messages, tools)
         started = _time.monotonic()
         try:
             response = await provider_complete(provider, messages, max_tokens=max_tokens,
@@ -1514,8 +1578,21 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         usage = response.get("usage") if isinstance(response, dict) else None
         if isinstance(usage, dict):
             input_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
+            output_tokens = usage.get("completion_tokens", usage.get("output_tokens"))
             if type(input_tokens) is int and 0 <= input_tokens <= 10**12:
                 self._last_context_input_tokens = input_tokens
+                self._last_request_chars = sent_chars
+                self._last_output_tokens = output_tokens if type(output_tokens) is int and output_tokens >= 0 else 0
+                key = (provider.name, provider.model)
+                self._last_usage_model = key
+                updated = update_tokens_per_char(self._tokens_per_char_by_model.get(key), input_tokens, sent_chars)
+                if updated is not None:
+                    self._tokens_per_char_by_model[key] = updated
+                if input_tokens > 0:
+                    soft = self._session_soft_context_limits.get(key)
+                    if type(soft) is int and input_tokens > soft:
+                        self._session_soft_context_limits.pop(key, None)
+                    heal_observed_context_limit(provider.name, provider.model, input_tokens)
         self._usage.record(usage)
         self._throughput.note(usage, elapsed)
         self._throughput.measuring = False
@@ -2586,6 +2663,7 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
         if not self.is_mounted:
             return
         self.sub_title = (tr("{name}  ·  workspace {workspace_root}  ·  launch {launch_dir}", name=self._workspace_root.name, workspace_root=self._workspace_root, launch_dir=self._launch_dir))
+        self._sync_terminal_title()
         self.query_one("#workspace-label", Static).update(tr("Workspace Root · {workspace_root}", workspace_root=self._workspace_root))
         self.query_one("#workspace-launch-label", Static).update(tr("Launch Directory · {launch_dir}", launch_dir=self._launch_dir))
         self.query_one("#workspace-source-label", Static).update(self._root_source_label())
@@ -2800,6 +2878,12 @@ class TUIApp(SessionMixin, RailMixin, ProviderMixin, GusMixin, AuthorityMixin, R
             self._prompt_history = self._prompt_history[-200:]
         self._prompt_history_idx = -1
         self._prompt_history_draft = ""
+        self._session_soft_context_limits: dict[tuple[str, str], int] = {}
+        self._tokens_per_char_by_model: dict[tuple[str, str], tuple[float, int]] = {}
+        self._last_request_chars: int | None = None
+        self._last_output_tokens: int = 0
+        self._last_usage_model: tuple[str, str] | None = None
+        self._last_terminal_title: str = ""
         self._clear_pending_plan()
         plugin, cmd, arg = self._plugins.route(text)
         self._pending_user_sent_at = datetime.now().astimezone().isoformat(timespec="seconds")
