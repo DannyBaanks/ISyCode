@@ -390,8 +390,19 @@ async def _check_cmd(app: "TUIApp", arg: str) -> None:
     await app._check_provider_connection()
 
 async def _usage_cmd(app: "TUIApp", arg: str) -> None:
+    del arg
     app._append(app._usage_status_text(), MUTED)
     app._append("  " + tr("Provider-reported usage only; ISyCode does not cap tokens or estimate billing."), MUTED)
+    if selected_provider_name() == "antigravity":
+        await app._refresh_antigravity_quota(report=True)
+
+
+async def _quota_cmd(app: "TUIApp", arg: str) -> None:
+    del arg
+    if selected_provider_name() != "antigravity":
+        app._append("  " + tr("Subscription 5h & weekly quota is available when Google Antigravity is selected."), MUTED)
+        return
+    await app._refresh_antigravity_quota(report=True)
 
 
 async def _isymem_cmd(app: "TUIApp", arg: str) -> None:
@@ -490,6 +501,11 @@ class MenuAction(str, Enum):
     AUTH_LOGOUT = "auth_logout"
     AUTH_SAVED = "auth_saved"
     PROVIDER_AUTH_METHODS = "provider_auth_methods"
+    ANTIGRAVITY_AUTH_METHODS = "antigravity_auth_methods"
+    ANTIGRAVITY_AUTH_BROWSER = "antigravity_auth_browser"
+    ANTIGRAVITY_AUTH_LOGOUT = "antigravity_auth_logout"
+    ANTIGRAVITY_AUTH_SAVED = "antigravity_auth_saved"
+    ANTIGRAVITY_QUOTA = "antigravity_quota"
     PROVIDERS_OPEN = "providers_open"
     MODELS_OPEN = "models_open"
     ROLES_OPEN = "roles_open"
@@ -620,6 +636,11 @@ MENU_DISPATCH: dict[MenuAction, str] = {
     MenuAction.AUTH_LOGOUT: "_menu_auth_browser",
     MenuAction.AUTH_SAVED: "_menu_auth_saved",
     MenuAction.PROVIDER_AUTH_METHODS: "_menu_provider_auth_methods",
+    MenuAction.ANTIGRAVITY_AUTH_METHODS: "_menu_antigravity_auth_methods",
+    MenuAction.ANTIGRAVITY_AUTH_BROWSER: "_menu_antigravity_auth_browser",
+    MenuAction.ANTIGRAVITY_AUTH_LOGOUT: "_menu_antigravity_auth_browser",
+    MenuAction.ANTIGRAVITY_AUTH_SAVED: "_menu_antigravity_auth_saved",
+    MenuAction.ANTIGRAVITY_QUOTA: "_menu_antigravity_quota",
     MenuAction.PROVIDERS_OPEN: "_menu_providers_open",
     MenuAction.MODELS_OPEN: "_menu_models_open",
     MenuAction.ROLES_OPEN: "_menu_roles_open",
@@ -786,6 +807,7 @@ class MenuMixin:
                 PluginCommand("doctor", "local configuration and dependencies; no network requests", _doctor_cmd),
                 PluginCommand("check", "test selected provider with one owned request (uses API quota)", _check_cmd),
                 PluginCommand("usage", "show provider-reported chat token usage", _usage_cmd),
+                PluginCommand("quota", "show Antigravity 5h and weekly subscription quota", _quota_cmd),
                 PluginCommand("context", "read workspace AGENTS.md with permission, or clear", _context_cmd),
                 PluginCommand("isymem", "query or update shared multi-harness memory (isymem)", _isymem_cmd),
                 PluginCommand("review", "ask GPT-6 Luna for one explicit external review", _review_cmd),

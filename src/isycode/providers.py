@@ -33,6 +33,10 @@ PRESETS: dict[str, dict[str, Any]] = {
                 "label": "ChatGPT subscription (Codex)", "default_model": "auto",
                 "key_required": False, "supports_tools": True, "api": "codex",
                 "auth_hosts": ["auth.openai.com", "chatgpt.com"]},
+    "antigravity": {"base_url": "https://daily-cloudcode-pa.googleapis.com", "key_env": "",
+                    "label": "Google Antigravity (OAuth)", "default_model": "auto",
+                    "key_required": False, "supports_tools": True, "api": "antigravity",
+                    "auth_hosts": ["accounts.google.com", "daily-cloudcode-pa.googleapis.com"]},
     "nvidia": {"base_url": "https://integrate.api.nvidia.com/v1",
                "key_env": "NVIDIA_NIM_API_KEY", "label": "NVIDIA NIM",
                "supports_tools": True},
@@ -159,6 +163,7 @@ PROVIDER_SCREEN: tuple[tuple[str, str, str, str], ...] = (
     ("popular", "isyco-web", "ISyCo Web (ChatGPT)", "ChatGPT Web via the local bridge on 127.0.0.1:8792"),
     ("popular", "xai", "xAI Grok", "API key or Grok sign-in"),
     ("popular", "google", "Google AI Studio", "Gemini, OpenAI-compatible endpoint"),
+    ("popular", "antigravity", "Google Antigravity", "Google OAuth subscription · Gemini & plan models"),
     ("popular", "openrouter", "OpenRouter", "One key, many models"),
     ("providers", "groq", "Groq", "Fast OpenAI-compatible inference"),
     ("providers", "deepseek", "DeepSeek", "Direct API"),
@@ -627,7 +632,7 @@ def use_session_key(name: str, secret: str) -> None:
 
 def load_provider_key(name: str) -> str:
     """Prefer a named ISyCode key; keep environment/legacy stores as fallback."""
-    if name == "chatgpt":
+    if name in {"chatgpt", "antigravity"}:
         return ""
     if name in _SESSION_KEYS:
         return _SESSION_KEYS[name]
@@ -650,7 +655,7 @@ def provider_credential_state(name: str) -> str:
     preset = PRESETS.get(provider)
     if preset is None:
         return "unavailable"
-    if preset.get("api") == "codex":
+    if preset.get("api") in {"codex", "antigravity"}:
         return "subscription"
     if provider == "xai":
         from isycode.grok_session import status as grok_status, xai_auth_mode
@@ -717,10 +722,17 @@ class Provider:
             except (ValueError, OSError) as exc:
                 raise ProviderError("Official Codex CLI is required for ChatGPT subscription login") from exc
             self.base_url = CHATGPT_ENDPOINT
+        elif preset.get("api") == "antigravity":
+            from isycode.provider_auth import ANTIGRAVITY_ENDPOINT, antigravity_identity
+            try:
+                self.connector_identity = antigravity_identity()
+            except (ValueError, OSError) as exc:
+                raise ProviderError("Official Antigravity CLI (agy) is required for Antigravity OAuth login") from exc
+            self.base_url = ANTIGRAVITY_ENDPOINT
         self.key_env = preset["key_env"]
         self.key_required = preset.get("key_required", True)
         self.supports_tools = provider_supports_tools(self.name)
-        self.api_key = "" if preset.get("api") == "codex" else (api_key if api_key is not None else load_provider_key(self.name))
+        self.api_key = "" if preset.get("api") in {"codex", "antigravity"} else (api_key if api_key is not None else load_provider_key(self.name))
         self.token_limit_field = preset.get("token_limit_field", "max_tokens")
         from isycode.reasoning_options import effective_reasoning
         self.reasoning_effort = effective_reasoning(self.name, self.model, preset.get("reasoning_effort"))
@@ -743,6 +755,14 @@ class Provider:
             async def catalog():
                 async with CodexConnector(self.connector_identity["executable"],
                                           Path(self.connector_identity["home"])) as connector:
+                    return await connector.models()
+            return asyncio.run(catalog())
+        if PRESETS[self.name].get("api") == "antigravity":
+            import asyncio
+            from isycode.antigravity_connector import AntigravityConnector
+            async def catalog():
+                async with AntigravityConnector(self.connector_identity["executable"],
+                                                Path(self.connector_identity["home"])) as connector:
                     return await connector.models()
             return asyncio.run(catalog())
         if not self.configured():
