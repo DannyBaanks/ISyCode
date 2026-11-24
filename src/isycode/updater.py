@@ -848,18 +848,85 @@ class SelfUpdater:
                         "y no se pudo añadirlo.",
                         f"Reintenta: {environment_python} -m ensurepip --upgrade",
                     ))
+            self._discard_stale_dist_info(root)
+            locked = self._launcher_lock(root)
+            if locked is not None:
+                return locked
             installed = self.command_runner(
                 [str(environment_python), "-m", "pip", "install", "--upgrade", "-e", str(root)],
                 cwd=str(root), env=os.environ.copy(), text=True, capture_output=True,
                 timeout=900, check=False,
             )
             if installed.returncode:
-                return UpdateReport("error", (
-                    "El código quedó actualizado, pero no se pudieron sincronizar sus dependencias.",
-                    f"Reintenta: {environment_python} -m pip install --upgrade -e {shlex.quote(str(root))}",
-                ))
+                return UpdateReport("error", self._sync_failure_lines(
+                    environment_python, root, installed))
         except (OSError, subprocess.TimeoutExpired):
             return UpdateReport("error", ("No se pudo sincronizar el entorno virtual de ISyCode.",))
+        return None
+
+    @staticmethod
+    def _sync_failure_lines(environment_python: Path, root: Path, installed) -> tuple[str, ...]:
+        """Explain a failed sync, naming the Windows launcher lock when it caused it."""
+        output = f"{getattr(installed, 'stdout', '') or ''}\n{getattr(installed, 'stderr', '') or ''}"
+        lines = ["El código quedó actualizado, pero no se pudieron sincronizar sus dependencias."]
+        if "WinError 32" in output or "being used by another process" in output:
+            lines.append("Windows no pudo reemplazar el launcher: otra ventana de ISyCode lo tiene abierto.")
+            lines.append("Cierra todas las ventanas de ISyCode y vuelve a ejecutar `isycode actualizar`.")
+        lines.append(f"Reintenta: {environment_python} -m pip install --upgrade -e {shlex.quote(str(root))}")
+        return tuple(lines)
+
+    @staticmethod
+    def _windows_site_packages(root: Path) -> Path:
+        return root / ".venv" / "Lib" / "site-packages"
+
+    def _discard_stale_dist_info(self, root: Path, platform: str | None = None) -> None:
+        """Remove pip's ``~name`` leftovers so one failed run cannot poison the next.
+
+        A sync that dies while replacing the launcher leaves the previous
+        distribution stashed as ``~isycode-<version>.dist-info``; pip keeps
+        warning about it and the next run starts from a half-installed venv.
+        """
+        if (platform or os.name) != "nt":
+            return
+        try:
+            stale = list(self._windows_site_packages(root).glob("~*.dist-info"))
+        except OSError:
+            return
+        for path in stale:
+            shutil.rmtree(path, ignore_errors=True)
+
+    def _launcher_lock(self, root: Path, platform: str | None = None) -> UpdateReport | None:
+        """Report a live ISyCode window that would make the sync destroy the install.
+
+        pip's uninstall stashes the console script and its install rewrites it,
+        but Windows refuses both operations while another process keeps
+        ``isycode.exe`` open. Renaming the file with the same operation pip uses
+        answers the question directly: if it fails, running pip would abort
+        half-way and leave the venv without a distribution. Blocking here keeps
+        the working install intact. ``platform`` is injectable for tests.
+        """
+        if (platform or os.name) != "nt":
+            return None
+        launcher = root / ".venv" / "Scripts" / "isycode.exe"
+        if not launcher.is_file():
+            return None
+        probe = launcher.with_name(f"{launcher.name}.lock-{os.getpid()}")
+        try:
+            os.replace(launcher, probe)
+        except OSError:
+            return UpdateReport("blocked", (
+                "Otra ventana de ISyCode está abierta y Windows no permite reemplazar su launcher.",
+                f"  En uso: {launcher}",
+                "Cierra todas las ventanas de ISyCode y vuelve a ejecutar `isycode actualizar`.",
+                "El código ya quedó actualizado; el entorno virtual no se tocó.",
+            ))
+        try:
+            os.replace(probe, launcher)
+        except OSError:
+            return UpdateReport("blocked", (
+                "No se pudo devolver el launcher a su sitio después de comprobarlo.",
+                f"  Mueve {probe} a {launcher} antes de seguir.",
+            ))
         return None
 
     @staticmethod

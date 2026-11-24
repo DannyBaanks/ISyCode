@@ -8,9 +8,10 @@ from pathlib import Path
 import pytest
 
 try:
-    from isycode.updater import SelfUpdater
+    from isycode.updater import SelfUpdater, UpdateReport
 except ImportError:
     SelfUpdater = None
+    UpdateReport = None
 
 
 def git(*args: str, cwd: Path) -> str:
@@ -865,3 +866,92 @@ def test_without_anyone_to_ask_local_changes_are_never_stashed(tmp_path):
     assert git("rev-parse", "HEAD", cwd=repo) == before_head
     assert (repo / "notes.txt").read_text() == "my edits\n"
     assert git("stash", "list", cwd=repo) == ""
+
+
+def windows_launcher_root(tmp_path: Path) -> tuple[Path, Path]:
+    """A checkout whose venv already published the Windows console launcher."""
+    root = tmp_path / "checkout"
+    root.mkdir()
+    (root / "pyproject.toml").write_text("[project]\nname='isycode'\n", encoding="utf-8")
+    python = root / ".venv" / "Scripts" / "python.exe"
+    python.parent.mkdir(parents=True, exist_ok=True)
+    python.write_text("", encoding="utf-8")
+    launcher = python.parent / "isycode.exe"
+    launcher.write_bytes(b"launcher")
+    return root, launcher
+
+
+def test_launcher_lock_blocks_while_another_window_holds_the_launcher(tmp_path, monkeypatch):
+    root, launcher = windows_launcher_root(tmp_path)
+
+    def locked(source, destination):
+        raise OSError(32, "The process cannot access the file")
+
+    monkeypatch.setattr("isycode.updater.os.replace", locked)
+    report = SelfUpdater(source_root=root)._launcher_lock(root, platform="nt")
+
+    assert report is not None and report.status == "blocked"
+    assert any("Cierra todas las ventanas de ISyCode" in line for line in report.lines)
+    assert launcher.read_bytes() == b"launcher"
+
+
+def test_launcher_lock_keeps_the_launcher_when_it_can_be_renamed(tmp_path):
+    root, launcher = windows_launcher_root(tmp_path)
+
+    report = SelfUpdater(source_root=root)._launcher_lock(root, platform="nt")
+
+    assert report is None
+    assert launcher.read_bytes() == b"launcher"
+    assert sorted(path.name for path in launcher.parent.iterdir()) == ["isycode.exe", "python.exe"]
+
+
+def test_launcher_lock_is_inert_off_windows(tmp_path):
+    root, _ = windows_launcher_root(tmp_path)
+    assert SelfUpdater(source_root=root)._launcher_lock(root, platform="posix") is None
+
+
+def test_blocked_launcher_stops_the_sync_before_pip_runs(tmp_path, monkeypatch):
+    root, _ = windows_launcher_root(tmp_path)
+    calls: list[list[str]] = []
+
+    def runner(args, **kwargs):
+        calls.append(list(args))
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    instance = SelfUpdater(source_root=root, allow_local_remotes=True, command_runner=runner)
+    blocked = UpdateReport("blocked", ("otra ventana",))
+    monkeypatch.setattr(instance, "_launcher_lock", lambda root: blocked)
+
+    report = instance._sync_environment(root)
+
+    assert report is blocked
+    assert not any("install" in call for call in calls)
+
+
+def test_stale_dist_info_leftovers_are_swept_before_the_next_sync(tmp_path):
+    root, _ = windows_launcher_root(tmp_path)
+    site_packages = root / ".venv" / "Lib" / "site-packages"
+    stale = site_packages / "~sycode-1.0.0rc1.dist-info"
+    current = site_packages / "isycode-1.0.0rc1.dist-info"
+    stale.mkdir(parents=True)
+    current.mkdir()
+
+    SelfUpdater(source_root=root)._discard_stale_dist_info(root, platform="nt")
+
+    assert not stale.exists()
+    assert current.exists()
+
+
+def test_sync_failure_names_the_windows_launcher_lock(tmp_path):
+    root, _ = windows_launcher_root(tmp_path)
+    python = root / ".venv" / "Scripts" / "python.exe"
+    failed = subprocess.CompletedProcess(
+        [], 1, "",
+        "[WinError 32] El proceso no tiene acceso al archivo porque está siendo utilizado "
+        "por otro proceso: 'isycode.exe'",
+    )
+
+    lines = SelfUpdater._sync_failure_lines(python, root, failed)
+
+    assert any("Cierra todas las ventanas de ISyCode" in line for line in lines)
+    assert any("pip install --upgrade -e" in line for line in lines)

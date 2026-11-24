@@ -177,6 +177,11 @@ uno conservando ambas historias. Si el único conflicto es el snapshot generado
 Cualquier otro conflicto muestra sus rutas y detiene el merge. `--check` hace
 fetch para comparar, pero no integra ni instala dependencias.
 
+En Windows la sincronización reemplaza el launcher `.venv\Scripts\isycode.exe`.
+Si otra ventana de ISyCode lo tiene abierto, Windows no permite reemplazarlo y
+el actualizador se detiene antes de tocar el entorno virtual: cierra todas las
+ventanas y vuelve a ejecutar el comando. El código ya descargado se conserva.
+
 Los enlaces simbólicos que apuntan fuera del checkout se consideran privados:
 el actualizador los deja intactos y los excluye del `git add --all` y del stash.
 Así, una ruta como `docs/agent/memory`, enlazada a tu banco de memorias en home,
