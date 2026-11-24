@@ -11,7 +11,7 @@ import stat
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Awaitable, Callable, TypeGuard
 from urllib.parse import urlsplit
 
@@ -831,6 +831,41 @@ def command_relative_path_valid(value: object, *, allow_root: bool = False) -> T
                and not WorkspaceReadSystembility.is_sensitive_name(part) for part in parts)
 
 
+WINDOWS_PROGRAM_EXTENSIONS = (".com", ".exe", ".bat", ".cmd")
+
+
+def windows_program_extensions() -> tuple[str, ...]:
+    """The suffixes a Windows PATH lookup may append, lower-cased."""
+    configured = tuple(part.strip().casefold()
+                       for part in os.environ.get("PATHEXT", "").split(";")
+                       if part.strip().startswith("."))
+    return configured or WINDOWS_PROGRAM_EXTENSIONS
+
+
+def host_program_name_matches(program: object, argv0: object, *,
+                              platform: str | None = None) -> bool:
+    """Whether a resolved host program is the one ``argv[0]`` named.
+
+    ``CommandRunOwner.prepare`` resolves ``argv[0]`` through ``PATH`` and keeps
+    the reviewed argv unchanged, so on Windows the resolved file carries the
+    suffix the lookup appended (``powershell`` becomes ``powershell.EXE``) and
+    the case the filesystem stored. Comparing the raw names rejects every
+    program whose real file has a PATHEXT suffix. Only that suffix may differ;
+    a different program name is still refused. ``platform`` is injectable so
+    the Windows rule is testable anywhere.
+    """
+    if not isinstance(program, str) or not isinstance(argv0, str):
+        return False
+    if (platform or os.name) != "nt":
+        return bool(program) and Path(program).name == Path(argv0).name
+    resolved = PureWindowsPath(program).name.casefold()
+    requested = PureWindowsPath(argv0).name.casefold()
+    if not resolved or not requested:
+        return False
+    return resolved == requested or any(
+        requested + suffix == resolved for suffix in windows_program_extensions())
+
+
 def sandbox_program_valid(program: object, argv0: str) -> bool:
     """A system program from a fixed bin folder, or a workspace file, named like argv[0]."""
     if not isinstance(program, str) or Path(program).name != Path(argv0).name:
@@ -873,7 +908,7 @@ class CommandProcessSystembility:
             except (OSError, RuntimeError):
                 prog_path = None
             if (prog_path is None or not prog_path.is_file() or not os.access(prog_path, os.X_OK)
-                    or Path(program).name != Path(argv[0]).name
+                    or not host_program_name_matches(program, argv[0])
                     or request.target != program or params.get("executable") != program):
                 return SystembilityResult(self.name, False, "host program must name an existing executable")
             if (not isinstance(cwd, str) or not cwd or len(cwd) > 4096 or "\0" in cwd

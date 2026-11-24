@@ -235,6 +235,27 @@ En `/` → **MCP**, agrega `playwright` y luego ejecuta `/mcp start playwright`;
 
 Aviso de pares (grit): si otros agentes usan [grit](https://github.com/rtk-ai/grit) en este workspace, la tarjeta de aprobación de una edición puede mostrar qué símbolos tienen reclamados (`Peer claims (grit, advisory only)`). Es solo un aviso de coordinación: no bloquea ni autoriza nada y requiere tus grants explícitos. Detalles y evaluación en [docs/grit-peer-claims.md](grit-peer-claims.md).
 
+## Ejecutar comandos desde el agente
+
+La herramienta de comandos no pasa por un shell: recibe el programa y sus
+argumentos como una lista.
+
+```text
+["powershell", "-NoProfile", "-Command", "Get-ChildItem -Name"]
+```
+
+- El primer elemento se resuelve por `PATH` o como ruta absoluta. `powershell`
+  y `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.EXE` son el mismo
+  programa; si no existe, la tarjeta lo rechaza antes de pedir aprobación.
+- Tuberías, `&&`, redirecciones, comodines y variables necesitan un shell
+  explícito como primer elemento: `["powershell", "-NoProfile", "-Command", "..."]`.
+- `cwd` acepta una carpeta del workspace; en Flow también una ruta absoluta o
+  con `~`.
+- La entrada estándar va cerrada (`NUL` en Windows): pasa las opciones por
+  argumentos en vez de esperar a que el programa pregunte.
+- Classic ejecuta dentro del sandbox del workspace; Flow ejecuta en el equipo
+  con tu `PATH`, tu entorno y red. Cada ejecución se revisa y se aprueba aparte.
+
 ## Comandos observados
 
 ### `isycode`
