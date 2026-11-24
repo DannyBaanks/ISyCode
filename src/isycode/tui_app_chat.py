@@ -91,6 +91,7 @@ from isycode.workspace_write import DELETE_TOOL, EDIT_TOOL, EDIT_TOOL_NAME, MOVE
 from isycode.workspace_transaction import EDIT_PACK_TOOL, EDIT_PACK_TOOL_NAME
 from isycode.workspace_config_owner import WorkspaceConfigOwner
 from rich.markdown import Markdown as RichMarkdown
+from isycode.terminal_links import rich_markdown
 from isycode.providers import (
     Provider,
     ProviderError,
@@ -979,7 +980,7 @@ class ChatMixin:
                     lane.stream_widget = w
                     chat_now.mount(w)
                 w.set_selectable_content(
-                    RichMarkdown(content, code_theme="monokai"), content)
+                    rich_markdown(content, root=self._workspace_root), content)
                 chat_now.follow_tail()
 
             def finish_step() -> None:

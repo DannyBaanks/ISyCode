@@ -1,15 +1,15 @@
 """Stable operation colors, independent from execution status."""
-from isycode.tui_theme import TEXT, MUTED
+from isycode.tui_theme import MUTED, CYAN, GREEN, YELLOW, RED
 
 # An operation's identity is distinct from permission and outcome colors.
 COLORS = {
-    "workspace_list": TEXT, "workspace_read": TEXT,
-    "workspace_search": TEXT, "workspace_grep": TEXT,
-    "workspace_write": TEXT, "workspace_edit": TEXT,
-    "workspace_run": TEXT, "workspace_delete": TEXT,
-    "workspace_move": TEXT, "delegate_task": TEXT,
-    "update_tasks": MUTED, "git_status": TEXT, "git_diff": TEXT,
-    "webfetch": TEXT, "git_commit": TEXT,
+    "workspace_list": CYAN, "workspace_read": CYAN,
+    "workspace_search": CYAN, "workspace_grep": CYAN,
+    "workspace_write": GREEN, "workspace_edit": GREEN,
+    "workspace_run": YELLOW, "workspace_delete": RED,
+    "workspace_move": "#c792ea", "delegate_task": "#c792ea",
+    "update_tasks": MUTED, "git_status": "#82aaff", "git_diff": "#82aaff",
+    "webfetch": CYAN, "git_commit": "#82aaff",
 }
 
 

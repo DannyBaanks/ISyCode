@@ -40,6 +40,7 @@ from isycode.tui_theme import (
 from isycode.localization import tr
 from isycode.tui_copy import extract_range, exact_selected_text, open_copy_menu, selectable_markdown, remember_copy_selection
 from rich.markdown import Markdown as RichMarkdown
+from isycode.terminal_links import semantic_plain
 
 SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
 SPINNER_FRAMES_ASCII = ("|", "/", "-", "\\")
@@ -1039,8 +1040,9 @@ class CommandOutputCard(VerticalScroll, inherit_bindings=False):
                 shown = (f"{frame} " + tr("Waiting for output…")
                          if self.status == "Running" and not getattr(self.app, "_reduced_motion", False)
                          else tr("Waiting for output…") if self.status == "Running" else tr("No output."))
+        app = getattr(self, "app", None)
         self._body.set_selectable_content(
-            Text(shown, style=MUTED), shown)
+            semantic_plain(shown, root=getattr(app, "_workspace_root", None)), shown)
 
     def copy_text(self) -> str:
         return self.output

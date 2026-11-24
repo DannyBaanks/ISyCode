@@ -48,7 +48,7 @@ from isycode.workspace_write import DELETE_TOOL_NAME, EDIT_TOOL, EDIT_TOOL_NAME,
 from isycode.workspace_transaction import EDIT_PACK_TOOL_NAME
 from textual.widgets import Static, Collapsible
 from rich.text import Text
-from rich.markdown import Markdown as RichMarkdown
+from isycode.terminal_links import rich_markdown
 from isycode.providers import PRESETS, Provider, ProviderError, load_provider_key, selected_provider_name
 from isycode.streaming import StreamError
 import time as _time
@@ -647,7 +647,7 @@ class ToolMixin:
             p = participants.get(turn["actor_id"])
             label = self._model_display_label(p["provider"], p["model"]) if p else "Human"
             self._append(str(turn["seq"]) + " · " + label + " · " + turn["kind"], CYAN)
-            self.query_one(ChatArea).mount(SelectableText(RichMarkdown(turn["content"], code_theme="monokai"), selection_text=turn["content"]))
+            self.query_one(ChatArea).mount(SelectableText(rich_markdown(turn["content"], root=self._workspace_root), selection_text=turn["content"]))
         self.query_one(ChatArea).follow_tail()
         if state["status"] == "PARTICIPANT_ERROR":
             self._append(tr("Iteration paused · {text} · /iteration retry {iteration_session_id}", text=str(state["receipts"][-1].get("error_kind")), iteration_session_id=state["iteration_session_id"]), YELLOW)

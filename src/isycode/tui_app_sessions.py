@@ -77,7 +77,7 @@ from textual.widgets import (
 )
 from textual.widgets.option_list import Option
 from rich.text import Text
-from rich.markdown import Markdown as RichMarkdown
+from isycode.terminal_links import rich_markdown
 from isycode.providers import (
     PRESETS,
     ProviderError,
@@ -584,7 +584,7 @@ class SessionMixin:
             else:
                 chat = self.query_one(ChatArea)
                 chat.mount(SelectableText(
-                    RichMarkdown(content, code_theme="monokai"),
+                    rich_markdown(content, root=self._workspace_root),
                     selection_text=content,
                 ))
                 chat.follow_tail()
@@ -1528,7 +1528,7 @@ class SessionMixin:
                 if clock_label(extra):
                     chat.mount(self._assistant_clock(clock_label(extra), role_name))
                 answer = SelectableText(
-                    RichMarkdown(text or "", code_theme="monokai"), selection_text=text or "",
+                    rich_markdown(text or "", root=self._workspace_root), selection_text=text or "",
                     classes="assistant-turn")
                 self._paint_role_turn(answer, role_name)
                 chat.mount(answer)
@@ -1563,7 +1563,7 @@ class SessionMixin:
             lane.stream_block = None
         if lane.partial:
             widget = SelectableText(
-                RichMarkdown(lane.partial, code_theme="monokai"), selection_text=lane.partial,
+                rich_markdown(lane.partial, root=self._workspace_root), selection_text=lane.partial,
                 classes="assistant-turn")
             self._paint_role_turn(widget, lane.stream_role)
             chat.mount(widget)
